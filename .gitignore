@@ -1,0 +1,11 @@
+# Dependencies
+vendor/
+.vendor-new/
+
+# Created by devspace init
+.devspace/
+chart/
+Dockerfile
+
+# Build files
+*.exe

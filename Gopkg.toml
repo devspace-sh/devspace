@@ -1,0 +1,83 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/mitchellh/go-homedir"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/otiai10/copy"
+
+[[constraint]]
+  name = "github.com/rjeczalik/notify"
+  version = "0.9.0"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "0.0.3"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "1.0.2"
+
+[[constraint]]
+  name = "gopkg.in/src-d/enry.v1"
+  version = "1.6.4"
+
+[[constraint]]
+  name = "gopkg.in/src-d/go-git.v4"
+  version = "4.5.0"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "2.2.1"
+
+[[constraint]]
+  name = "k8s.io/helm"
+  version = "~v2.9.0"
+
+[[override]]
+  name = "k8s.io/client-go"
+  version = "kubernetes-1.10.0"
+
+[[override]]
+  name = "k8s.io/kubernetes"
+  branch = "release-1.10"
+
+[[override]]
+  name = "k8s.io/api"
+  branch = "release-1.10"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  branch = "release-1.10"
+
+[[override]]
+  name = "k8s.io/apiserver"
+  branch = "release-1.10"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  branch = "release-1.10"
+
+[[override]]
+  name = "github.com/russross/blackfriday"
+  version = "v1.5.1"
+
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "245ca4659e09e9745f3cc1217bf56e946509220c"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+
+[[override]]
+  name = "github.com/Sirupsen/logrus"
+  version = "v1.0.6"
+
+[[override]]
+  name = "github.com/docker/docker"
+  revision = "v1.13.1"
+
+[[constraint]]
+  name = "github.com/foomo/htpasswd"
+  revision = "cb63c4ac0e5029b961b3ac7dcc281ed2a9232e4e"

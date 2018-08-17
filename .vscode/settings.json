@@ -1,0 +1,5 @@
+{
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "go.formatTool": "goreturns"
+}

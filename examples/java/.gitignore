@@ -1,0 +1,10 @@
+*.class
+target/
+bin/
+.project
+.classpath
+.settings/
+
+# Package Files #
+*.jar
+hs_err_pid*

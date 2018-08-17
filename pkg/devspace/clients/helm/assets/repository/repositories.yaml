@@ -1,0 +1,8 @@
+apiVersion: v1
+repositories:
+- caFile: ""
+  cache: repository/cache/stable-index.yaml
+  certFile: ""
+  keyFile: ""
+  name: stable
+  url: https://kubernetes-charts.storage.googleapis.com
