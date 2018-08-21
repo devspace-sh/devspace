@@ -226,21 +226,15 @@ func (cmd *UpCmd) buildDockerfile() {
 			RestartPolicy: k8sv1.RestartPolicyOnFailure,
 		},
 	}
-	var buildPodCreated *k8sv1.Pod
-
 	deleteBuildPod := func() {
-		if buildPodCreated != nil {
-			gracePeriod := int64(0)
+		gracePeriod := int64(0)
 
-			deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
-				GracePeriodSeconds: &gracePeriod,
-			})
+		deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
+			GracePeriodSeconds: &gracePeriod,
+		})
 
-			if deleteErr != nil {
-				log.WithError(deleteErr).Error("Failed delete build pod")
-			} else {
-				buildPodCreated = nil
-			}
+		if deleteErr != nil {
+			log.WithError(deleteErr).Error("Failed delete build pod")
 		}
 	}
 	defer deleteBuildPod()
