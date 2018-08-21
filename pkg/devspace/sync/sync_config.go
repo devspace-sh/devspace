@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rjeczalik/notify"
+	gitignore "github.com/sabhiram/go-gitignore"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -32,13 +32,13 @@ type SyncConfig struct {
 	Container    *k8sv1.Container
 	WatchPath    string
 	DestPath     string
-	ExcludeRegEx []string
+	ExcludePaths []string
 
 	fileMap      map[string]*FileInformation
 	fileMapMutex sync.Mutex
 
-	compExcludeRegEx []*regexp.Regexp
-	log              *logrus.Logger
+	ignoreMatcher gitignore.IgnoreParser
+	log           *logrus.Logger
 
 	upstream   *upstream
 	downstream *downstream
@@ -57,7 +57,7 @@ func (s *SyncConfig) Logf(format string, args ...interface{}) {
 		"PodNamespace": s.Pod.Namespace,
 		"WatchPath":    s.WatchPath,
 		"DestPath":     s.DestPath,
-		"ExcludeRegEx": s.ExcludeRegEx,
+		"ExcludePaths": s.ExcludePaths,
 	}).Infof(format, args)
 }
 
@@ -67,32 +67,32 @@ func (s *SyncConfig) Logln(line interface{}) {
 		"PodNamespace": s.Pod.Namespace,
 		"WatchPath":    s.WatchPath,
 		"DestPath":     s.DestPath,
-		"ExcludeRegEx": s.ExcludeRegEx,
+		"ExcludePaths": s.ExcludePaths,
 	}).Infoln(line)
 }
 
 // CopyToContainer copies a local folder or file to a container path
-func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludeRegEx []string) error {
+func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
 	s := &SyncConfig{
 		Kubectl:      Kubectl,
 		Pod:          Pod,
 		Container:    Container,
 		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
 		DestPath:     ContainerPath,
-		ExcludeRegEx: ExcludeRegEx,
+		ExcludePaths: ExcludePaths,
 	}
 
 	syncLog = logrus.New()
 	syncLog.SetLevel(logrus.InfoLevel)
 
-	if s.ExcludeRegEx != nil {
-		compRegExp, err := compileRegExp(s.ExcludeRegEx)
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.compExcludeRegEx = compRegExp
+		s.ignoreMatcher = ignoreMatcher
 	}
 
 	s.fileMap = make(map[string]*FileInformation)
@@ -131,12 +131,12 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 
 // Starts a new sync instance
 func (s *SyncConfig) Start() {
-	if s.ExcludeRegEx == nil {
-		s.ExcludeRegEx = make([]string, 0, 2)
+	if s.ExcludePaths == nil {
+		s.ExcludePaths = make([]string, 0, 2)
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
-	s.ExcludeRegEx = append(s.ExcludeRegEx, "^/\\.devspace\\/logs\\/.*$")
+	s.ExcludePaths = append(s.ExcludePaths, "^/\\.devspace\\/logs\\/.*$")
 
 	if syncLog == nil {
 		syncLog = logutil.GetLogger("sync", false)
@@ -144,14 +144,14 @@ func (s *SyncConfig) Start() {
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
-	if s.ExcludeRegEx != nil {
-		compRegExp, err := compileRegExp(s.ExcludeRegEx)
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.compExcludeRegEx = compRegExp
+		s.ignoreMatcher = ignoreMatcher
 	}
 
 	s.fileMap = make(map[string]*FileInformation)
@@ -179,20 +179,18 @@ func (s *SyncConfig) Start() {
 	go s.mainLoop()
 }
 
-func compileRegExp(excludeRegEx []string) ([]*regexp.Regexp, error) {
-	compExcludeRegEx := make([]*regexp.Regexp, len(excludeRegEx))
-
-	for index, element := range excludeRegEx {
-		compiledRegEx, err := regexp.Compile(element)
+func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
+	if len(excludePaths) > 0 {
+		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
 
 		if err != nil {
 			return nil, err
 		}
 
-		compExcludeRegEx[index] = compiledRegEx
+		return ignoreParser, nil
 	}
 
-	return compExcludeRegEx, nil
+	return nil, nil
 }
 
 func (s *SyncConfig) mainLoop() {

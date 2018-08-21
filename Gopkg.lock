@@ -592,6 +592,14 @@
   version = "v1.5.1"
 
 [[projects]]
+  digest = "1:7d9e2efc92185089bb2e3fe50459624b7f9914165c01cc1e8497fd4c5f77e325"
+  name = "github.com/sabhiram/go-gitignore"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d3107576ba9425fc1c85f4b3569c4631b805a02e"
+  version = "1.0.2"
+
+[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -1450,6 +1458,7 @@
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",
     "github.com/rjeczalik/notify",
+    "github.com/sabhiram/go-gitignore",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "gopkg.in/src-d/enry.v1",

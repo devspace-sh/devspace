@@ -662,11 +662,9 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 
 	fileinfo.Name = t[0][len(d.config.DestPath):]
 
-	if d.config.compExcludeRegEx != nil {
-		for _, regExp := range d.config.compExcludeRegEx {
-			if regExp.MatchString(fileinfo.Name) {
-				return nil, nil
-			}
+	if d.config.ignoreMatcher != nil {
+		if d.config.ignoreMatcher.MatchesPath(fileinfo.Name) {
+			return nil, nil
 		}
 	}
 
