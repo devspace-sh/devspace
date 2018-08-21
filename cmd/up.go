@@ -404,8 +404,8 @@ func (cmd *UpCmd) initRegistry() {
 		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
 		latestImageTag, _ := randutil.GenerateRandomString(10)
 
-		cmd.latestImageHostname = registryHostname + "/devspace:" + latestImageTag
-		cmd.latestImageIP = registryIP + "/devspace:" + latestImageTag
+		cmd.latestImageHostname = registryHostname + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
+		cmd.latestImageIP = registryIP + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
 
 		pullSecretDataValue := []byte(`{
 			"auths": {
