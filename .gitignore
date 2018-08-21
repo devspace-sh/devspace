@@ -10,3 +10,6 @@ Dockerfile
 # Build files
 *.exe
 *.exe~
+
+# History from VSC
+.history/

@@ -72,6 +72,65 @@ func (s *SyncConfig) Logln(line interface{}) {
 	}).Infoln(line)
 }
 
+// CopyToContainer copies a local folder or file to a container path
+func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludeRegEx []string) error {
+	s := &SyncConfig{
+		Kubectl:      Kubectl,
+		Pod:          Pod,
+		Container:    Container,
+		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
+		DestPath:     ContainerPath,
+		ExcludeRegEx: ExcludeRegEx,
+	}
+
+	syncLog = logrus.New()
+	syncLog.SetLevel(logrus.InfoLevel)
+
+	if s.ExcludeRegEx != nil {
+		compRegExp, err := compileRegExp(s.ExcludeRegEx)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.compExcludeRegEx = compRegExp
+	}
+
+	s.fileMap = make(map[string]*FileInformation)
+	s.upstream = &upstream{
+		config: s,
+	}
+
+	err := s.upstream.start()
+
+	if err != nil {
+		return err
+	}
+
+	stat, err := os.Stat(LocalPath)
+
+	if err != nil {
+		return err
+	}
+
+	err = s.upstream.sendFiles([]*FileInformation{
+		&FileInformation{
+			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
+			IsDirectory: stat.IsDir(),
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	s.Stop()
+	syncLog = nil
+
+	return nil
+}
+
+// Starts a new sync instance
 func (s *SyncConfig) Start() {
 	if s.ExcludeRegEx == nil {
 		s.ExcludeRegEx = make([]string, 0, 2)
@@ -87,17 +146,13 @@ func (s *SyncConfig) Start() {
 	}
 
 	if s.ExcludeRegEx != nil {
-		s.compExcludeRegEx = make([]*regexp.Regexp, len(s.ExcludeRegEx))
+		compRegExp, err := compileRegExp(s.ExcludeRegEx)
 
-		for index, element := range s.ExcludeRegEx {
-			compiledRegEx, err := regexp.Compile(element)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			s.compExcludeRegEx[index] = compiledRegEx
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		s.compExcludeRegEx = compRegExp
 	}
 
 	s.fileMap = make(map[string]*FileInformation)
@@ -123,6 +178,22 @@ func (s *SyncConfig) Start() {
 	}
 
 	go s.mainLoop()
+}
+
+func compileRegExp(excludeRegEx []string) ([]*regexp.Regexp, error) {
+	compExcludeRegEx := make([]*regexp.Regexp, len(excludeRegEx))
+
+	for index, element := range excludeRegEx {
+		compiledRegEx, err := regexp.Compile(element)
+
+		if err != nil {
+			return nil, err
+		}
+
+		compExcludeRegEx[index] = compiledRegEx
+	}
+
+	return compExcludeRegEx, nil
 }
 
 func (s *SyncConfig) mainLoop() {
@@ -281,6 +352,7 @@ func (s *SyncConfig) removeDirInFileMap(dirpath string) {
 	}
 }
 
+<<<<<<< HEAD
 // CopyToContainer copies a local folder or file to a container path
 func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string) error {
 	syncObj := &SyncConfig{
@@ -328,6 +400,8 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	return nil
 }
 
+=======
+>>>>>>> 69689ba6b9ff0c5edcb07b0faad3540b0f515c76
 // We need this function because tar ceils up the mtime to seconds on the server
 func ceilMtime(mtime time.Time) int64 {
 	if mtime.UnixNano()%1000000000 != 0 {
@@ -494,4 +568,19 @@ func dirExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, errors.Trace(err)
+}
+
+func deleteSafe(path string, fileInformation *FileInformation) bool {
+	// Only delete if mtime and size did not change
+	stat, err := os.Stat(path)
+
+	if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
+		err = os.Remove(path)
+
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
 }

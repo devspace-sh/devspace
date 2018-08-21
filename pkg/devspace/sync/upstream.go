@@ -485,6 +485,15 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 		return nil
 	}
 
+	// Exclude files on the exclude list
+	if u.config.compExcludeRegEx != nil {
+		for _, regExp := range u.config.compExcludeRegEx {
+			if regExp.MatchString(relativePath) {
+				return nil
+			}
+		}
+	}
+
 	stat, err := os.Lstat(filepath)
 
 	// We skip files that are suddenly not there anymore

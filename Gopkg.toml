@@ -1,4 +1,8 @@
 [[constraint]]
+  name = "github.com/daviddengcn/go-colortext"
+  branch = "master"
+
+[[constraint]]
   name = "github.com/juju/errors"
   branch = "master"
 
