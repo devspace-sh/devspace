@@ -73,7 +73,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 	}
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, os.Stderr)
+	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, nil)
 
 	if err != nil {
 		return err
