@@ -227,7 +227,7 @@ func (cmd *UpCmd) buildDockerfile() {
 		},
 	}
 	deleteBuildPod := func() {
-		gracePeriod := int64(0)
+		gracePeriod := int64(3)
 
 		deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
