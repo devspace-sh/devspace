@@ -18,6 +18,7 @@ import (
 	"github.com/rjeczalik/notify"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"github.com/juju/errors"
 )
 
 var syncLog *logrus.Logger
@@ -301,13 +302,13 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	err := syncObj.upstream.start()
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	stat, err := os.Stat(LocalPath)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	err = syncObj.upstream.sendFiles([]*FileInformation{
@@ -318,7 +319,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	})
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	syncObj.Stop()
@@ -353,7 +354,7 @@ func pipeStream(w io.Writer, r io.Reader) error {
 
 			_, err := w.Write(d)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 		if err != nil {
@@ -361,7 +362,7 @@ func pipeStream(w io.Writer, r io.Reader) error {
 			if err == io.EOF {
 				err = nil
 			}
-			return err
+			return errors.Trace(err)
 		}
 	}
 }
@@ -384,12 +385,12 @@ func readTill(keyword string, reader io.Reader) (string, error) {
 				break
 			}
 
-			return "", err
+			return "", errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return "", err
+			return "", errors.Trace(err)
 		}
 
 		lines := strings.Split(string(buf), "\n")
@@ -443,12 +444,12 @@ func waitTill(keyword string, reader io.Reader) error {
 				break
 			}
 
-			return err
+			return errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return err
+			return errors.Trace(err)
 		}
 
 		lines := strings.Split(string(buf), "\n")
@@ -492,5 +493,5 @@ func dirExists(path string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return false, err
+	return false, errors.Trace(err)
 }

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"testing"
 	jujuerr "github.com/juju/errors"
 )
@@ -24,5 +25,5 @@ func funcThatCallsFailingFunc() error{
 }
 
 func failingFunc() error {
-	return jujuerr.New("Some error")
+	return errors.New("Some error")
 }

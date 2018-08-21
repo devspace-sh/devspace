@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	jujuerr "github.com/juju/errors"
+	"github.com/juju/errors"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 )
@@ -43,7 +43,7 @@ func (d *downstream) start() error {
 	err := d.startShell()
 
 	if err != nil {
-		return jujuerr.Trace(err)
+		return errors.Trace(err)
 	}
 
 	return nil
@@ -68,7 +68,7 @@ func (d *downstream) mainLoop() error {
 		_, err := d.stdinPipe.Write([]byte(cmd))
 
 		if err != nil {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		err = d.collectChanges(&createFiles, removeFiles)
@@ -79,7 +79,7 @@ func (d *downstream) mainLoop() error {
 				continue
 			}
 
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		amountChanges := len(createFiles) + len(removeFiles)
@@ -92,7 +92,7 @@ func (d *downstream) mainLoop() error {
 			err = d.applyChanges(createFiles, removeFiles)
 
 			if err != nil {
-				return jujuerr.Trace(err)
+				return errors.Trace(err)
 			}
 		}
 
@@ -114,7 +114,7 @@ func (d *downstream) populateFileMap() error {
 	_, err := d.stdinPipe.Write([]byte(cmd))
 
 	if err != nil {
-		return jujuerr.Trace(err)
+		return errors.Trace(err)
 	}
 
 	err = d.collectChanges(&createFiles, nil)
@@ -126,7 +126,7 @@ func (d *downstream) populateFileMap() error {
 			return d.populateFileMap()
 		}
 
-		return jujuerr.Trace(err)
+		return errors.Trace(err)
 	}
 
 	d.config.fileMapMutex.Lock()
@@ -143,7 +143,7 @@ func (d *downstream) startShell() error {
 	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false)
 
 	if err != nil {
-		return jujuerr.Trace(err)
+		return errors.Trace(err)
 	}
 
 	d.stdinPipe = stdinPipe
@@ -177,7 +177,7 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		tempDownloadpath, err = d.downloadFiles(downloadFiles)
 
 		if err != nil {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		defer os.Remove(tempDownloadpath)
@@ -245,7 +245,7 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		f, err := os.Open(tempDownloadpath)
 
 		if err != nil {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		defer f.Close()
@@ -255,7 +255,7 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		d.config.Logln("[Downstream] End untaring")
 
 		if err != nil {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 	}
 
@@ -269,7 +269,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	header, err := tarReader.Next()
 	if err != nil {
 		if err != io.EOF {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		return false, nil
@@ -291,12 +291,12 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	}
 
 	if err := os.MkdirAll(baseName, 0755); err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 
 	if header.FileInfo().IsDir() {
 		if err := os.MkdirAll(outFileName, 0755); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		d.config.createDirInFileMap(relativePath)
@@ -310,7 +310,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	if entrySeq == 0 && !header.FileInfo().IsDir() {
 		exists, err := dirExists(outFileName)
 		if err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 		if exists {
 			outFileName = filepath.Join(outFileName, path.Base(clean(header.Name)))
@@ -321,7 +321,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 		// Skip the processing of symlinks for now, because windows has problems with them
 		// err := os.Symlink(header.Linkname, outFileName)
 		// if err != nil {
-		//	 return jujuerr.Trace(err)
+		//	 return errors.Trace(err)
 		// }
 	} else {
 		outFile, err := os.Create(outFileName)
@@ -332,24 +332,24 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 			outFile, err = os.Create(outFileName)
 
 			if err != nil {
-				return false, err
+				return false, errors.Trace(err)
 			}
 		}
 
 		defer outFile.Close()
 
 		if _, err := io.Copy(outFile, tarReader); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		if err := outFile.Close(); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
 
 		if err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		relativePath = getRelativeFromFullPath(outFileName, destPath)
@@ -376,7 +376,7 @@ func (d *downstream) untarAll(reader io.Reader, destPath, prefix string) error {
 		shouldContinue, err := d.untarNext(tarReader, entrySeq, destPath, prefix)
 
 		if err != nil {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		} else if shouldContinue == false {
 			return nil
 		}
@@ -443,21 +443,21 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 	defer tempFile.Close()
 
 	if err != nil {
-		return "", jujuerr.Trace(err)
+		return "", errors.Trace(err)
 	}
 
 	d.stdinPipe.Write([]byte(cmd))
 	err = waitTill(StartAck, d.stdoutPipe)
 
 	if err != nil {
-		return "", jujuerr.Trace(err)
+		return "", errors.Trace(err)
 	}
 
 	d.stdinPipe.Write([]byte(filenames))
 	readString, err := readTill(EndAck, d.stderrPipe)
 
 	if err != nil {
-		return "", jujuerr.Trace(err)
+		return "", errors.Trace(err)
 	}
 
 	tarSize := 0
@@ -467,14 +467,14 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 		tarSize, err = strconv.Atoi(splitted[len(splitted)-2])
 
 		if err != nil {
-			return "", jujuerr.Trace(err)
+			return "", errors.Trace(err)
 		}
 	} else {
-		return "", jujuerr.New("[Downstream] Cannot find DONE in " + readString)
+		return "", errors.New("[Downstream] Cannot find DONE in " + readString)
 	}
 
 	if tarSize == 0 || tarSize%512 != 0 {
-		return "", jujuerr.New("[Downstream] Invalid tarSize: " + strconv.Itoa(tarSize))
+		return "", errors.New("[Downstream] Invalid tarSize: " + strconv.Itoa(tarSize))
 	}
 
 	d.config.Logln("[Downstream] Write tar with " + strconv.Itoa(tarSize) + " size")
@@ -493,18 +493,18 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 				break
 			}
 
-			return "", jujuerr.Trace(err)
+			return "", errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return "", jujuerr.Trace(err)
+			return "", errors.Trace(err)
 		}
 
 		n, err = tempFile.Write(buf)
 
 		if err != nil {
-			return "", jujuerr.Trace(err)
+			return "", errors.Trace(err)
 		}
 
 		// d.config.Logln("Wrote " + strconv.Itoa(n) + " bytes")
@@ -533,12 +533,12 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 				break
 			}
 
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return jujuerr.Trace(err)
+			return errors.Trace(err)
 		}
 
 		lines := strings.Split(string(buf), "\n")
@@ -568,7 +568,7 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 				err = d.evaluateFile(line, createFiles, removeFiles)
 
 				if err != nil {
-					return jujuerr.Trace(err)
+					return errors.Trace(err)
 				}
 			}
 		}
@@ -584,7 +584,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformati
 	fileinformation, err := d.parseFileInformation(fileline)
 
 	if err != nil {
-		return jujuerr.Trace(err)
+		return errors.Trace(err)
 	}
 
 	if fileinformation == nil {
@@ -615,7 +615,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	t := strings.Split(fileline, "///")
 
 	if len(t) != 2 {
-		return nil, jujuerr.New("[Downstream] Wrong fileline: " + fileline)
+		return nil, errors.New("[Downstream] Wrong fileline: " + fileline)
 	}
 
 	if len(t[0]) <= len(d.config.DestPath) {
@@ -635,13 +635,13 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	t = strings.Split(t[1], ",")
 
 	if len(t) != 3 {
-		return nil, jujuerr.New("[Downstream] Wrong fileline: " + fileline)
+		return nil, errors.New("[Downstream] Wrong fileline: " + fileline)
 	}
 
 	size, err := strconv.Atoi(t[0])
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	fileinfo.Size = int64(size)
@@ -649,7 +649,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	mTime, err := strconv.Atoi(t[1])
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	fileinfo.Mtime = int64(mTime)
@@ -657,7 +657,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	rawMode, err := strconv.ParseUint(t[2], 16, 32) // Parse hex string into uint64
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	// We skip symbolic links for now, because windows has problems with them
