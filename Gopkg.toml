@@ -1,4 +1,8 @@
 [[constraint]]
+  name = "github.com/juju/errors"
+  branch = "master"
+
+[[constraint]]
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
 
