@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -274,7 +276,47 @@ func (cmd *UpCmd) buildDockerfile() {
 		} else {
 			log.Info("Uploading files to build container")
 
+			ignoreRules := []string{}
+			ignoreFiles, err := filepath.Glob(cmd.workdir + "/.dockerignore")
+
+			if err != nil {
+				return err
+			}
+			fmt.Println(cmd.workdir)
+			fmt.Println(ignoreFiles)
+
+			for _, ignoreFile := range ignoreFiles {
+				ignoreBytes, err := ioutil.ReadFile(ignoreFile)
+
+				if err != nil {
+					return err
+				}
+				pathPrefix := strings.TrimPrefix(filepath.Dir(ignoreFile), cmd.workdir)
+				ignoreLines := strings.Split(string(ignoreBytes), "\n")
+
+				for _, ignoreRule := range ignoreLines {
+					ignoreRule = strings.Trim(ignoreRule, " ")
+					prefixedIgnoreRule := ""
+					initialOffset := 0
+
+					if len(ignoreRule) > 0 && ignoreRule[initialOffset] != '#' {
+						if ignoreRule[initialOffset] == '!' {
+							prefixedIgnoreRule = prefixedIgnoreRule + "!"
+							initialOffset = 1
+						}
+
+						if ignoreRule[initialOffset] == '/' {
+							prefixedIgnoreRule = prefixedIgnoreRule + ignoreRule[initialOffset:]
+						} else {
+							prefixedIgnoreRule = prefixedIgnoreRule + pathPrefix + "/**/" + ignoreRule[initialOffset:]
+						}
+						ignoreRules = append(ignoreRules, prefixedIgnoreRule)
+					}
+				}
+			}
 			buildContainer := &buildPod.Spec.Containers[0]
+
+			fmt.Println(ignoreRules)
 
 			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src")
 
