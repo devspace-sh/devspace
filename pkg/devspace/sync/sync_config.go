@@ -494,3 +494,18 @@ func dirExists(path string) (bool, error) {
 	}
 	return false, err
 }
+
+func deleteSafe(path string, fileInformation *FileInformation) bool {
+	// Only delete if mtime and size did not change
+	stat, err := os.Stat(path)
+
+	if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
+		err = os.Remove(path)
+
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
+}
