@@ -89,7 +89,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().StringVarP(&cmd.flags.open, "open", "o", cmd.flags.open, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistry, "init-registry", cmd.flags.initRegistry, "Install or upgrade Docker registry")
-	cobraCmd.Flags().BoolVar(&cmd.flags.build, "build", cmd.flags.build, "Build image if Dockerfile has been modified")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 }
 
@@ -136,10 +136,14 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		} else {
 			dockerfileModTime = dockerfileInfo.ModTime()
 
-			if len(cmd.privateConfig.Release.LatestBuild) != 0 {
-				latestBuildTime, _ := time.Parse(time.RFC3339Nano, cmd.privateConfig.Release.LatestBuild)
+			// When user has not used -b or --build flags
+			if cobraCmd.Flags().Changed("build") == false {
+				if len(cmd.privateConfig.Release.LatestBuild) != 0 {
+					latestBuildTime, _ := time.Parse(time.RFC3339Nano, cmd.privateConfig.Release.LatestBuild)
 
-				mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
+					// only rebuild Docker image when Dockerfile has changed since latest build
+					mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
+				}
 			}
 		}
 
@@ -222,21 +226,15 @@ func (cmd *UpCmd) buildDockerfile() {
 			RestartPolicy: k8sv1.RestartPolicyOnFailure,
 		},
 	}
-	var buildPodCreated *k8sv1.Pod
-
 	deleteBuildPod := func() {
-		if buildPodCreated != nil {
-			gracePeriod := int64(0)
+		gracePeriod := int64(0)
 
-			deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
-				GracePeriodSeconds: &gracePeriod,
-			})
+		deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
+			GracePeriodSeconds: &gracePeriod,
+		})
 
-			if deleteErr != nil {
-				log.WithError(deleteErr).Error("Failed delete build pod")
-			} else {
-				buildPodCreated = nil
-			}
+		if deleteErr != nil {
+			log.WithError(deleteErr).Error("Failed delete build pod")
 		}
 	}
 	defer deleteBuildPod()
@@ -383,10 +381,27 @@ func (cmd *UpCmd) initRegistry() {
 		registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(cmd.privateConfig.Registry.User.Username + ":" + cmd.privateConfig.Registry.User.Password))
 
 		registryServiceName := registryReleaseName + "-docker-registry"
-		registryService, _ := cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
+		var registryService *k8sv1.Service
+		maxServiceWaiting := 60 * time.Second
+		serviceWaitingInterval := 3 * time.Second
+
+		for true {
+			registryService, _ = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
+
+			if len(registryService.Spec.ClusterIP) > 0 {
+				break
+			}
+			log.Info("Waiting for registry service to start")
+			time.Sleep(serviceWaitingInterval)
+			maxServiceWaiting = maxServiceWaiting - serviceWaitingInterval
+
+			if maxServiceWaiting <= 0 {
+				log.Panic("Timeout waiting for registry service to start")
+			}
+		}
 		registryPort := 5000
-		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
 		registryIP := registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort)
+		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
 		latestImageTag, _ := randutil.GenerateRandomString(10)
 
 		cmd.latestImageHostname = registryHostname + "/devspace:" + latestImageTag
