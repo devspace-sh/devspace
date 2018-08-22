@@ -315,13 +315,16 @@ func (cmd *UpCmd) buildDockerfile() {
 						} else {
 							prefixedIgnoreRule = ignoreRule
 						}
-						ignoreRules = append(ignoreRules, prefixedIgnoreRule)
+
+						if strings.Compare(prefixedIgnoreRule, "Dockerfile") != 0 && strings.Compare(prefixedIgnoreRule, "/Dockerfile") != 0 {
+							ignoreRules = append(ignoreRules, prefixedIgnoreRule)
+						}
 					}
 				}
 			}
 			buildContainer := &buildPod.Spec.Containers[0]
 
-			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src")
+			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
 
 			log.Info("Starting build process")
 
