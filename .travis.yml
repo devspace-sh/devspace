@@ -1,0 +1,46 @@
+language: go
+sudo: false
+notifications:
+  email: false
+jobs:
+  include:
+  - go: 1.10.x
+    os: osx
+    stage: deploy
+    go_import_path: github.com/covexo/devspace
+    install: skip
+    script: skip
+    before_deploy:
+    - "./scripts/build-all.bash"
+    deploy:
+    - provider: releases
+      file:
+      - release/dep-linux-amd64
+      - release/dep-linux-amd64.sha256
+      - release/dep-darwin-amd64
+      - release/dep-darwin-amd64.sha256
+      - release/dep-freebsd-amd64
+      - release/dep-freebsd-amd64.sha256
+      - release/dep-windows-amd64.exe
+      - release/dep-windows-amd64.exe.sha256
+      - release/dep-linux-386
+      - release/dep-linux-386.sha256
+      - release/dep-darwin-386
+      - release/dep-darwin-386.sha256
+      - release/dep-freebsd-386
+      - release/dep-freebsd-386.sha256
+      - release/dep-windows-386.exe
+      - release/dep-windows-386.exe.sha256
+      - release/dep-linux-ppc64
+      - release/dep-linux-ppc64.sha256
+      - release/dep-linux-ppc64le
+      - release/dep-linux-ppc64le.sha256
+      skip_cleanup: true
+      api_key:
+        secure: j7mrCt1BRbeVapHnHpqzJ5tyHw6zp0jzn6gcRVk1tCbaIfoNBnIuqOJlcVyDDDuOfb0z6xkba0eGmzHZsSORga9NwFlgzH05xKwiDEXRRF6ZbpJJUol9HEYRypRBl4qPA2ngaGej10LU+vPB1P+edcpeEG3etAyA6/b4UOsBiG2IKElEOkMLmnJqInS1IXG4RcvkPj4S79Ad8mkQl8o6lddLDcmn/lTmjZHY+czfY959wDniZLEoW5V6pzIaxS18JBd5J/SlkMLH61lEXdiWxJcdpu7fZdktD7bSF3Tkqb172gsW6NZ7V+c+ObE3Jq3/c75hEAr56MFtIvjd8izgv7OjfEOjOz1K1jNvyX9gPgneXVVE48CLUGCi0ZJHPw1Vk9IrrtN/jR+8RNXpmdTEGFtiEw2JfUFTfVe3f9wB9MllTODUGbuL5hTMcULywEuITEOxJh13Eo1HVk1oELSLe6S7n1TppMU3iWd2mhMTgNtyivDTl9/ftoZ771k1M9xBtQWZ5mJMHqbMHNJvpBgnpiB3+layp6P8CH0n2yJetlvkABUV6HKDli+6qNC+oKT3eFeKctK+JCr0PWmZvKTFxH7FnRJ/6TtLcxf7KrxiVIPRQUrcpEJiQcjUteDNqoWrMhC5NK+lIHdsenhjzwXN610QAaogjNxcfRdPC+mtR98=
+      on:
+        repo: FabianK1991/devspace
+        branch: master
+        tags: true
+addons:
+  ssh_known_hosts: github.com
