@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
+	"github.com/covexo/devspace/pkg/devspace/upgrade"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,6 +26,17 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	if upgrade.GetVersion() != "" {
+		rootCmd.Version = upgrade.GetVersion()
+		newerVersion, err := upgrade.CheckForNewerVersion()
+
+		if err == nil && newerVersion != "" {
+			log.Warnf("There is a newer version of devspace cli v%s. Run `devspace upgrade` to update the cli.\n", newerVersion)
+		} else if err != nil {
+			log.Warnf("Couldn't check for newest version: %s\n", err.Error())
+		}
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 	}
