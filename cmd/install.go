@@ -1,3 +1,4 @@
+// +build windows
 package cmd
 
 import (
