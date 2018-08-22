@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
+	glob "github.com/bmatcuk/doublestar"
 	"github.com/foomo/htpasswd"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
@@ -44,22 +47,24 @@ type UpCmd struct {
 }
 
 type UpCmdFlags struct {
-	sync         bool
-	tiller       bool
-	open         string
-	initRegistry bool
-	build        bool
-	shell        string
+	tiller         bool
+	open           string
+	initRegistry   bool
+	build          bool
+	shell          string
+	sync           bool
+	portforwarding bool
 }
 
 const pullSecretName = "devspace-pull-secret"
 
 var UpFlagsDefault = &UpCmdFlags{
-	sync:         true,
-	tiller:       true,
-	open:         "cmd",
-	initRegistry: true,
-	build:        true,
+	tiller:         true,
+	open:           "cmd",
+	initRegistry:   true,
+	build:          true,
+	sync:           true,
+	portforwarding: true,
 }
 
 func init() {
@@ -85,12 +90,13 @@ Starts and connects your DevSpace:
 	}
 	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Start sync client")
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().StringVarP(&cmd.flags.open, "open", "o", cmd.flags.open, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistry, "init-registry", cmd.flags.initRegistry, "Install or upgrade Docker registry")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
+	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
+	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 }
 
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
@@ -168,7 +174,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.startSync()
 	}
 
-	cmd.startPortForwards()
+	if cmd.flags.portforwarding {
+		cmd.startPortForwards()
+	}
 	cmd.enterTerminal()
 }
 
@@ -227,7 +235,7 @@ func (cmd *UpCmd) buildDockerfile() {
 		},
 	}
 	deleteBuildPod := func() {
-		gracePeriod := int64(0)
+		gracePeriod := int64(3)
 
 		deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
@@ -237,8 +245,6 @@ func (cmd *UpCmd) buildDockerfile() {
 			log.WithError(deleteErr).Error("Failed delete build pod")
 		}
 	}
-	defer deleteBuildPod()
-
 	intr := interrupt.New(nil, deleteBuildPod)
 
 	intr.Run(func() error {
@@ -271,9 +277,54 @@ func (cmd *UpCmd) buildDockerfile() {
 		} else {
 			log.Info("Uploading files to build container")
 
+			ignoreRules := []string{}
+			ignoreFiles, err := glob.Glob(cmd.workdir + "/**/.dockerignore")
+
+			if err != nil {
+				return err
+			}
+
+			for _, ignoreFile := range ignoreFiles {
+				fmt.Println(ignoreFile)
+				ignoreBytes, err := ioutil.ReadFile(ignoreFile)
+
+				if err != nil {
+					return err
+				}
+				pathPrefix := strings.Replace(strings.TrimPrefix(filepath.Dir(ignoreFile), cmd.workdir), "\\", "/", -1)
+				ignoreLines := strings.Split(string(ignoreBytes), "\r\n")
+
+				for _, ignoreRule := range ignoreLines {
+					ignoreRule = strings.Trim(ignoreRule, " ")
+					initialOffset := 0
+
+					if len(ignoreRule) > 0 && ignoreRule[initialOffset] != '#' {
+						prefixedIgnoreRule := ""
+
+						if len(pathPrefix) > 0 {
+							if ignoreRule[initialOffset] == '!' {
+								prefixedIgnoreRule = prefixedIgnoreRule + "!"
+								initialOffset = 1
+							}
+
+							if ignoreRule[initialOffset] == '/' {
+								prefixedIgnoreRule = prefixedIgnoreRule + ignoreRule[initialOffset:]
+							} else {
+								prefixedIgnoreRule = prefixedIgnoreRule + pathPrefix + "/**/" + ignoreRule[initialOffset:]
+							}
+						} else {
+							prefixedIgnoreRule = ignoreRule
+						}
+
+						if strings.Compare(prefixedIgnoreRule, "Dockerfile") != 0 && strings.Compare(prefixedIgnoreRule, "/Dockerfile") != 0 {
+							ignoreRules = append(ignoreRules, prefixedIgnoreRule)
+						}
+					}
+				}
+			}
 			buildContainer := &buildPod.Spec.Containers[0]
 
-			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src")
+			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
 
 			log.Info("Starting build process")
 
@@ -404,8 +455,8 @@ func (cmd *UpCmd) initRegistry() {
 		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
 		latestImageTag, _ := randutil.GenerateRandomString(10)
 
-		cmd.latestImageHostname = registryHostname + "/devspace:" + latestImageTag
-		cmd.latestImageIP = registryIP + "/devspace:" + latestImageTag
+		cmd.latestImageHostname = registryHostname + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
+		cmd.latestImageIP = registryIP + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
 
 		pullSecretDataValue := []byte(`{
 			"auths": {
