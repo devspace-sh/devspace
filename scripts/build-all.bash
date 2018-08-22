@@ -7,7 +7,7 @@
 set -e
 
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
-VERSION=$(git describe --tags --dirty)
+VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
 DATE=$(date "+%Y-%m-%d")
 BUILD_PLATFORM=$(uname -a | awk '{print tolower($1);}')
