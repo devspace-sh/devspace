@@ -1,0 +1,46 @@
+language: go
+sudo: false
+notifications:
+  email: false
+jobs:
+  include:
+  - go: 1.10.x
+    os: osx
+    stage: deploy
+    go_import_path: github.com/covexo/devspace
+    install: skip
+    script: skip
+    before_deploy:
+    - "./scripts/build-all.bash"
+    deploy:
+    - provider: releases
+      file:
+      - release/devspace-linux-amd64
+      - release/devspace-linux-amd64.sha256
+      - release/devspace-darwin-amd64
+      - release/devspace-darwin-amd64.sha256
+      - release/devspace-freebsd-amd64
+      - release/devspace-freebsd-amd64.sha256
+      - release/devspace-windows-amd64.exe
+      - release/devspace-windows-amd64.exe.sha256
+      - release/devspace-linux-386
+      - release/devspace-linux-386.sha256
+      - release/devspace-darwin-386
+      - release/devspace-darwin-386.sha256
+      - release/devspace-freebsd-386
+      - release/devspace-freebsd-386.sha256
+      - release/devspace-windows-386.exe
+      - release/devspace-windows-386.exe.sha256
+      - release/devspace-linux-ppc64
+      - release/devspace-linux-ppc64.sha256
+      - release/devspace-linux-ppc64le
+      - release/devspace-linux-ppc64le.sha256
+      skip_cleanup: true
+      api_key:
+        secure: WndsxTNeWW7xJcmxJWaKprHbzWmpub2R0Yi+LkJOiXdndOi993l/W/iRMGXxJ9uUAOWDT/AOn6HjnpEuAHHLSIzmA+HsdWSnsivBInWG4VGIh+qMAt6QmJGE+l+5sTrsqUXuchBkQpQKJdGc8FdMfGtc/H4gRWO+Egs3RKU/ycSbh7WfllhRYe8IOg7gBMeNoVddd/s4wTr99Prge5RjncPohO1jEeE0YOksRgZ9SnBm3okcmub+GD85CQRITJVZB31GNaqPxxlRhmN9olPl4YLKglejbFUw9rC0pKW4yzThG4T3n+I8KbI+yjSN3Uc/GD1NsqVnDAoKSqL6nDWzBLn8hOJt0f52wXvZhY37vGkyP8ZCzn6OxR0f1s78uz4CIr2PcMT6sNF65DaSA8tlBcZJGSQz0QZ8elmQ766svCXBlxuzoNGXpxxn9EZeKmAsQkcLzv7BBOlJfenx8aKCeZ/LuOCrDIo7J2VWfBF8objeHcEbpoEIDf/FINvoZsMwC4hSj5WJgviNnBdBWNt3d0Q819TYqJGQcNLnqSUDB/9UXJLhFeca5BUWCtl9NLaSGKF/KkgB/kXGFpC1ix5+EPOCGH2s9+eVB/2w08KKNxH2dfd3ZbPA3zE4mF148d8k184BK4fRTh6XSWG0P1jE1tZmsGuG7FRNIqtGQAqTj4Y=
+      on:
+        repo: covexo/devspace
+        branch: master
+        tags: true
+addons:
+  ssh_known_hosts: github.com
