@@ -743,11 +743,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4d16433c0d2c24761b8a507e8c2e9c8cf9193b497d6b38aaeffca038070bc8f5"
+  digest = "1:ee1de62e3112862c7e44b7b78670c939f66a4ac71123e6360f5c634f021ffc15"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "904bdc257025c7b3f43c19360ad3ab85783fad78"
@@ -1470,6 +1471,7 @@
     "github.com/sabhiram/go-gitignore",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
+    "golang.org/x/sys/windows/registry",
     "gopkg.in/src-d/enry.v1",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/yaml.v2",

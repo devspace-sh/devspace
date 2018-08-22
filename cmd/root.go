@@ -3,13 +3,14 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/Sirupsen/logrus"
+
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var log = logutil.GetLogger("default", true)
+var log *logrus.Logger
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -25,7 +26,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Panic(err)
+		fmt.Println(err)
 	}
 }
 
