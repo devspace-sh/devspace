@@ -26,6 +26,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
+	glob "github.com/bmatcuk/doublestar"
 	"github.com/foomo/htpasswd"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
@@ -277,46 +278,48 @@ func (cmd *UpCmd) buildDockerfile() {
 			log.Info("Uploading files to build container")
 
 			ignoreRules := []string{}
-			ignoreFiles, err := filepath.Glob(cmd.workdir + "/.dockerignore")
+			ignoreFiles, err := glob.Glob(cmd.workdir + "/**/.dockerignore")
 
 			if err != nil {
 				return err
 			}
-			fmt.Println(cmd.workdir)
-			fmt.Println(ignoreFiles)
 
 			for _, ignoreFile := range ignoreFiles {
+				fmt.Println(ignoreFile)
 				ignoreBytes, err := ioutil.ReadFile(ignoreFile)
 
 				if err != nil {
 					return err
 				}
-				pathPrefix := strings.TrimPrefix(filepath.Dir(ignoreFile), cmd.workdir)
-				ignoreLines := strings.Split(string(ignoreBytes), "\n")
+				pathPrefix := strings.Replace(strings.TrimPrefix(filepath.Dir(ignoreFile), cmd.workdir), "\\", "/", -1)
+				ignoreLines := strings.Split(string(ignoreBytes), "\r\n")
 
 				for _, ignoreRule := range ignoreLines {
 					ignoreRule = strings.Trim(ignoreRule, " ")
-					prefixedIgnoreRule := ""
 					initialOffset := 0
 
 					if len(ignoreRule) > 0 && ignoreRule[initialOffset] != '#' {
-						if ignoreRule[initialOffset] == '!' {
-							prefixedIgnoreRule = prefixedIgnoreRule + "!"
-							initialOffset = 1
-						}
+						prefixedIgnoreRule := ""
 
-						if ignoreRule[initialOffset] == '/' {
-							prefixedIgnoreRule = prefixedIgnoreRule + ignoreRule[initialOffset:]
+						if len(pathPrefix) > 0 {
+							if ignoreRule[initialOffset] == '!' {
+								prefixedIgnoreRule = prefixedIgnoreRule + "!"
+								initialOffset = 1
+							}
+
+							if ignoreRule[initialOffset] == '/' {
+								prefixedIgnoreRule = prefixedIgnoreRule + ignoreRule[initialOffset:]
+							} else {
+								prefixedIgnoreRule = prefixedIgnoreRule + pathPrefix + "/**/" + ignoreRule[initialOffset:]
+							}
 						} else {
-							prefixedIgnoreRule = prefixedIgnoreRule + pathPrefix + "/**/" + ignoreRule[initialOffset:]
+							prefixedIgnoreRule = ignoreRule
 						}
 						ignoreRules = append(ignoreRules, prefixedIgnoreRule)
 					}
 				}
 			}
 			buildContainer := &buildPod.Spec.Containers[0]
-
-			fmt.Println(ignoreRules)
 
 			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src")
 
