@@ -41,6 +41,5 @@ jobs:
       on:
         repo: FabianK1991/devspace
         branch: master
-        tags: true
 addons:
   ssh_known_hosts: github.com
