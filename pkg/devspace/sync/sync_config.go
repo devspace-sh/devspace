@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rjeczalik/notify"
+	gitignore "github.com/sabhiram/go-gitignore"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -32,13 +32,13 @@ type SyncConfig struct {
 	Container    *k8sv1.Container
 	WatchPath    string
 	DestPath     string
-	ExcludeRegEx []string
+	ExcludePaths []string
 
 	fileMap      map[string]*FileInformation
 	fileMapMutex sync.Mutex
 
-	compExcludeRegEx []*regexp.Regexp
-	log              *logrus.Logger
+	ignoreMatcher gitignore.IgnoreParser
+	log           *logrus.Logger
 
 	upstream   *upstream
 	downstream *downstream
@@ -57,7 +57,7 @@ func (s *SyncConfig) Logf(format string, args ...interface{}) {
 		"PodNamespace": s.Pod.Namespace,
 		"WatchPath":    s.WatchPath,
 		"DestPath":     s.DestPath,
-		"ExcludeRegEx": s.ExcludeRegEx,
+		"ExcludePaths": s.ExcludePaths,
 	}).Infof(format, args)
 }
 
@@ -67,17 +67,76 @@ func (s *SyncConfig) Logln(line interface{}) {
 		"PodNamespace": s.Pod.Namespace,
 		"WatchPath":    s.WatchPath,
 		"DestPath":     s.DestPath,
-		"ExcludeRegEx": s.ExcludeRegEx,
+		"ExcludePaths": s.ExcludePaths,
 	}).Infoln(line)
 }
 
+// CopyToContainer copies a local folder or file to a container path
+func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
+	s := &SyncConfig{
+		Kubectl:      Kubectl,
+		Pod:          Pod,
+		Container:    Container,
+		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
+		DestPath:     ContainerPath,
+		ExcludePaths: ExcludePaths,
+	}
+
+	syncLog = logrus.New()
+	syncLog.SetLevel(logrus.InfoLevel)
+
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.ignoreMatcher = ignoreMatcher
+	}
+
+	s.fileMap = make(map[string]*FileInformation)
+	s.upstream = &upstream{
+		config: s,
+	}
+
+	err := s.upstream.start()
+
+	if err != nil {
+		return err
+	}
+
+	stat, err := os.Stat(LocalPath)
+
+	if err != nil {
+		return err
+	}
+
+	err = s.upstream.sendFiles([]*FileInformation{
+		&FileInformation{
+			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
+			IsDirectory: stat.IsDir(),
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	s.Stop()
+	syncLog = nil
+
+	return nil
+}
+
+// Starts a new sync instance
 func (s *SyncConfig) Start() {
-	if s.ExcludeRegEx == nil {
-		s.ExcludeRegEx = make([]string, 0, 2)
+	if s.ExcludePaths == nil {
+		s.ExcludePaths = make([]string, 0, 2)
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
-	s.ExcludeRegEx = append(s.ExcludeRegEx, "^/\\.devspace\\/logs\\/.*$")
+	s.ExcludePaths = append(s.ExcludePaths, "^/\\.devspace\\/logs\\/.*$")
 
 	if syncLog == nil {
 		syncLog = logutil.GetLogger("sync", false)
@@ -85,18 +144,14 @@ func (s *SyncConfig) Start() {
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
-	if s.ExcludeRegEx != nil {
-		s.compExcludeRegEx = make([]*regexp.Regexp, len(s.ExcludeRegEx))
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
-		for index, element := range s.ExcludeRegEx {
-			compiledRegEx, err := regexp.Compile(element)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			s.compExcludeRegEx[index] = compiledRegEx
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		s.ignoreMatcher = ignoreMatcher
 	}
 
 	s.fileMap = make(map[string]*FileInformation)
@@ -122,6 +177,20 @@ func (s *SyncConfig) Start() {
 	}
 
 	go s.mainLoop()
+}
+
+func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
+	if len(excludePaths) > 0 {
+		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return ignoreParser, nil
+	}
+
+	return nil, nil
 }
 
 func (s *SyncConfig) mainLoop() {
@@ -278,53 +347,6 @@ func (s *SyncConfig) removeDirInFileMap(dirpath string) {
 			}
 		}
 	}
-}
-
-// CopyToContainer copies a local folder or file to a container path
-func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string) error {
-	syncObj := &SyncConfig{
-		Kubectl:   Kubectl,
-		Pod:       Pod,
-		Container: Container,
-		WatchPath: path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
-		DestPath:  ContainerPath,
-	}
-
-	syncLog = logrus.New()
-	syncLog.SetLevel(logrus.InfoLevel)
-
-	syncObj.fileMap = make(map[string]*FileInformation)
-	syncObj.upstream = &upstream{
-		config: syncObj,
-	}
-
-	err := syncObj.upstream.start()
-
-	if err != nil {
-		return err
-	}
-
-	stat, err := os.Stat(LocalPath)
-
-	if err != nil {
-		return err
-	}
-
-	err = syncObj.upstream.sendFiles([]*FileInformation{
-		&FileInformation{
-			Name:        getRelativeFromFullPath(LocalPath, syncObj.WatchPath),
-			IsDirectory: stat.IsDir(),
-		},
-	})
-
-	if err != nil {
-		return err
-	}
-
-	syncObj.Stop()
-	syncLog = nil
-
-	return nil
 }
 
 // We need this function because tar ceils up the mtime to seconds on the server
@@ -493,4 +515,19 @@ func dirExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func deleteSafe(path string, fileInformation *FileInformation) bool {
+	// Only delete if mtime and size did not change
+	stat, err := os.Stat(path)
+
+	if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
+		err = os.Remove(path)
+
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
 }

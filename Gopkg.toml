@@ -1,4 +1,16 @@
 [[constraint]]
+  name = "sabhiram/go-gitignore"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/daviddengcn/go-colortext"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/juju/errors"
+  branch = "master"
+
+[[constraint]]
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
 
