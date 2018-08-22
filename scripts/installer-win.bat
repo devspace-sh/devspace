@@ -14,7 +14,7 @@ set DEVSPACE_EXE="https://github.com/covexo/devspace/releases/download/%LATEST_V
 
 echo 1. Downloading executable...
 set INSTALL_PATH=%INSTALL_DIR%\devspace.exe
-if not exist %INSTALL_PATH% curl -L %DEVSPACE_EXE% >INSTALL_PATH || echo Unable to download latest release && exit /B 1
+if not exist %INSTALL_PATH% curl -L %DEVSPACE_EXE% >%INSTALL_PATH% || echo Unable to download latest release && exit /B 1
 
 echo 2. Running installation...
 start /WAIT /D %INSTALL_DIR% /B devspace.exe "install"
