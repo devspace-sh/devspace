@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/pkg/util/logutil"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -100,6 +101,7 @@ Starts and connects your DevSpace:
 }
 
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
+	log = logutil.GetLogger("default", true)
 	var err error
 	workdir, workdirErr := os.Getwd()
 
@@ -316,7 +318,7 @@ func (cmd *UpCmd) buildDockerfile() {
 							prefixedIgnoreRule = ignoreRule
 						}
 
-						if strings.Compare(prefixedIgnoreRule, "Dockerfile") != 0 && strings.Compare(prefixedIgnoreRule, "/Dockerfile") != 0 {
+						if prefixedIgnoreRule != "Dockerfile" && prefixedIgnoreRule != "/Dockerfile" {
 							ignoreRules = append(ignoreRules, prefixedIgnoreRule)
 						}
 					}

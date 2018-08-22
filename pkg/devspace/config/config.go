@@ -54,7 +54,7 @@ func LoadConfig(config ConfigInterface) error {
 	}
 	unmarshalErr := yaml.Unmarshal(loadedFile, config)
 
-	if strings.Compare(configType, "PrivateConfig") == 0 {
+	if configType == "PrivateConfig" {
 		privateConf, isPrivateConf := config.(*v1.PrivateConfig)
 
 		if isPrivateConf && privateConf.Cluster.UseKubeConfig {
@@ -123,7 +123,7 @@ func LoadClusterConfig(config *v1.Cluster, overwriteExistingValues bool) {
 func SaveConfig(config ConfigInterface) error {
 	configType, _ := getConfigType(config)
 	var currentClusterConfig v1.Cluster
-	isPrivateConf := (strings.Compare(configType, "PrivateConfig") == 0)
+	isPrivateConf := (configType == "PrivateConfig")
 
 	if isPrivateConf {
 		privateConf, isPrivateConf := config.(*v1.PrivateConfig)
@@ -172,7 +172,7 @@ func loadYamlFromFile(configType string) error {
 func saveYamlToFile(configType string) error {
 	os.MkdirAll(filepath.Dir(configPaths[configType]), os.ModePerm)
 
-	if strings.Compare(configType, "PrivateConfig") == 0 {
+	if configType == "PrivateConfig" {
 		gitignoreTemplate := filepath.Join(fsutil.GetCurrentGofileDir(), "assets", ".gitignore")
 
 		fsutil.Copy(gitignoreTemplate, filepath.Join(filepath.Dir(configPaths[configType]), ".gitignore"))

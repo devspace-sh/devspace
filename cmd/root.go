@@ -3,14 +3,15 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
-	"github.com/covexo/devspace/pkg/util/logutil"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var log = logutil.GetLogger("default", true)
+var log *logrus.Logger
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,7 +38,7 @@ func Execute() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		log.Panic(err)
+		fmt.Println(err)
 	}
 }
 
