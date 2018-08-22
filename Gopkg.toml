@@ -1,5 +1,5 @@
 [[constraint]]
-  name = "sabhiram/go-gitignore"
+  name = "github.com/sabhiram/go-gitignore"
   branch = "master"
 
 [[constraint]]
