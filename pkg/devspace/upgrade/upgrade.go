@@ -65,8 +65,16 @@ func CheckForNewerVersion() (string, error) {
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
 func Upgrade() error {
+	newerVersion, err := CheckForNewerVersion()
+
+	if newerVersion == "" {
+		log.Println("Current binary is the latest version: ", version)
+		return nil
+	}
+
 	v := semver.MustParse(version)
 
+	log.Println("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)
 
 	if err != nil {
