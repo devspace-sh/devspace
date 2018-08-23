@@ -32,11 +32,9 @@ func GetFromStdin(params *GetFromStdin_params) string {
 	validationRegexp, _ := regexp.Compile(params.ValidationRegexPattern)
 
 	if reader == nil {
-		fmt.Println("Reader Set in GetFromStdin")
 		reader = bufio.NewReader(os.Stdin)
 		
 		defer func() {
-			fmt.Println("reader reset in GetFrom Stdin")
 			reader = nil
 		}()
 	}
@@ -55,8 +53,6 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			fmt.Print("> ")
 			nextLine, _ := reader.ReadString('\n')
 			nextLine = strings.Trim(nextLine, "\r\n ")
-
-			fmt.Println("Input: " + nextLine)
 
 			if strings.Compare(params.InputTerminationString, "\n") == 0 {
 				input = nextLine
@@ -88,11 +84,9 @@ func AskChangeQuestion(params *GetFromStdin_params) string{
 	paramutil.SetDefaults(params, defaultParams)
 
 	if reader == nil {
-		fmt.Println("Reader Set in AskChangeQuestion")
 		reader = bufio.NewReader(os.Stdin)
 		
 		defer func() {
-			fmt.Println("reader reset")
 			reader = nil
 		}()
 	}
