@@ -61,6 +61,13 @@
   version = "v1.0.6"
 
 [[projects]]
+  digest = "1:28ab83b9be11510ecca7151dc765b2d43bbd8a9bc44986eeaa07bb11d42c1d35"
+  name = "github.com/badgerodon/penv"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
+
+[[projects]]
   branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
@@ -463,6 +470,14 @@
   version = "0.4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:256554af8321e28c57fab65ec53c3497d6e5d03c8b9eab1530875530030b68ef"
+  name = "github.com/lxn/win"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "785c4956069227e430929ac27bfa26af2ff25dfb"
+
+[[projects]]
   digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
   name = "github.com/magiconair/properties"
   packages = ["."]
@@ -497,6 +512,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d0c95a34e79df79eb96ca870d6b6fc43361d34c9c05495f93a5ad0077f7bbb24"
+  name = "github.com/mitchellh/go-ps"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4fdf99ab29366514c69ccccddab5dc58b8d84062"
 
 [[projects]]
   branch = "master"
@@ -1578,6 +1601,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Sirupsen/logrus",
+    "github.com/badgerodon/penv",
     "github.com/blang/semver",
     "github.com/bmatcuk/doublestar",
     "github.com/daviddengcn/go-colortext",

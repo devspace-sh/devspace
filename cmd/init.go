@@ -438,6 +438,10 @@ func (cmd *InitCmd) determineLanguage() {
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, langErr := cmd.chartGenerator.GetSupportedLanguages()
 
+		if cmd.chartGenerator.Language == "" {
+			cmd.chartGenerator.Language = "none"
+		}
+
 		if langErr != nil {
 			log.WithError(langErr).Panic("Unable to get supported languages")
 		}
