@@ -17,7 +17,7 @@ import (
 func WriteToFile(data []byte, filePath string) error {
 	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 
-	file, fopenErr := os.OpenFile(filePath, os.O_CREATE, os.ModePerm)
+	file, fopenErr := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 
 	defer file.Close()
 
