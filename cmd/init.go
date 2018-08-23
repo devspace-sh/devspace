@@ -465,13 +465,13 @@ func (cmd *InitCmd) createChart() {
 
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
-	if !chartHasContainerValues {
+	if !chartHasContainerValues && containerValues != nil {
 		containerValues["port"] = cmd.appConfig.Container.Port
 		createdChartValuesYaml["container"] = containerValues
 	}
 	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
 
-	if !chartHasExternalValues {
+	if !chartHasExternalValues && externalValues != nil {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
