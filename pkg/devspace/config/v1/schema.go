@@ -74,7 +74,7 @@ type AppConfig struct {
 
 type AppContainer struct {
 	Image string
-	Port  int
+	Ports []int
 }
 
 type AppExternal struct {
