@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/covexo/devspace/pkg/util/fsutil"
 
@@ -133,7 +134,19 @@ func (cg *ChartGenerator) detectLanguage() error {
 	contentReadLimit := int64(16 * 1024 * 1024)
 	bytesByLanguage := make(map[string]int64, 0)
 
+	// Cancel the language detection after 10sec
+	cancelDetect := false
+	time.AfterFunc(10*time.Second, func() {
+		cancelDetect = true
+	})
+
 	walkError := filepath.Walk(cg.Path, func(path string, fileInfo os.FileInfo, err error) error {
+
+		// If timeout is over, then cancel detect
+		if cancelDetect {
+			return filepath.SkipDir
+		}
+
 		if err != nil {
 			log.Println(err)
 			return filepath.SkipDir
