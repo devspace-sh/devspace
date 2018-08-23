@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/covexo/devspace/pkg/util/logutil"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/logutil"
 
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
@@ -55,6 +56,7 @@ type UpCmdFlags struct {
 	shell          string
 	sync           bool
 	portforwarding bool
+	nosleep        bool
 }
 
 const pullSecretName = "devspace-pull-secret"
@@ -66,6 +68,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:          true,
 	sync:           true,
 	portforwarding: true,
+	nosleep:        true,
 }
 
 func init() {
@@ -98,6 +101,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVar(&cmd.flags.nosleep, "nosleep", cmd.flags.nosleep, "Enable no-sleep")
 }
 
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
@@ -524,7 +528,9 @@ func (cmd *UpCmd) deployChart() {
 	values := map[interface{}]interface{}{}
 	containerValues := map[interface{}]interface{}{}
 	containerValues["image"] = cmd.latestImageIP
-	containerValues["command"] = []string{"sleep", "99999999"}
+	if !cmd.flags.nosleep {
+		containerValues["command"] = []string{"sleep", "99999999"}
+	}
 	values["container"] = containerValues
 
 	deploymentErr := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
