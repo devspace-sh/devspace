@@ -20,18 +20,15 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	assert.Nil(t, e)
 
 	writeData := []byte("Content " + randomString)
-	file, e := ioutil.TempFile("", randomString)
-	assert.Nil(t, e)
-	defer os.Remove(file.Name())
 
-	t.Log(file.Name())
+	fileName := os.TempDir() + "/" + randomString
 	
-	e = WriteToFile(writeData, file.Name())
+	e = WriteToFile(writeData, fileName)
 
 	assert.Nilf(t, e, errors.Details(e))
 
 	//There should be 18 bytes in the file. We'll only read 17 to test out whether this method reads the correct amount of bytes.
-	readedData, e := ReadFile(file.Name(), 17) 
+	readedData, e := ReadFile(fileName, 17) 
 
 	assert.Nil(t, e)
 	assert.Len(t, readedData, 17)
@@ -44,10 +41,10 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 
 	newData := []byte("New Content " + randomString)
 
-	WriteToFile(newData, file.Name())
+	WriteToFile(newData, fileName)
 
 	//Read everything
-	readedData, e = ReadFile(file.Name(), -1)
+	readedData, e = ReadFile(fileName, -1)
 
 	assert.Nil(t, e)
 	assert.Len(t, readedData, 22)
@@ -66,17 +63,15 @@ func TestCopy(t *testing.T) {
 	defer os.Remove(sourceFile.Name())
 
 	randomString, e = randutil.GenerateRandomString(10)
-	destFile, e := ioutil.TempFile("", randomString)
 	assert.Nil(t, e)
-	destPath := destFile.Name()
-	os.Remove(destFile.Name())
+	destPath := os.TempDir() + "/" + randomString
 
 	randomString, e = randutil.GenerateRandomString(10)
 	WriteToFile([]byte(randomString), sourceFile.Name())
 	assert.Nil(t, e)
 
-	Copy(sourceFile.Name(), destFile.Name())
-	defer os.Remove(destFile.Name())
+	Copy(sourceFile.Name(), destPath)
+	defer os.Remove(destPath)
 
 	sourceContent, e1 := ReadFile(sourceFile.Name(), -1)
 	destContent, e2 := ReadFile(destPath, -1)
