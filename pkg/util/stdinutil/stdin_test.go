@@ -50,7 +50,7 @@ func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 	}
 }
 
-func TestGetFromStdin_ChangeQuestion(t *testing.T) {
+func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 
 	params := GetFromStdin_params{
 		Question: "Is this a test?",

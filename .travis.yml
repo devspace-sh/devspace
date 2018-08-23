@@ -1,0 +1,46 @@
+language: go
+sudo: false
+notifications:
+  email: false
+jobs:
+  include:
+  - go: 1.10.x
+    os: osx
+    stage: deploy
+    go_import_path: github.com/covexo/devspace
+    install: skip
+    script: skip
+    before_deploy:
+    - "./scripts/build-all.bash"
+    deploy:
+    - provider: releases
+      file:
+      - release/devspace-linux-amd64
+      - release/devspace-linux-amd64.sha256
+      - release/devspace-darwin-amd64
+      - release/devspace-darwin-amd64.sha256
+      - release/devspace-freebsd-amd64
+      - release/devspace-freebsd-amd64.sha256
+      - release/devspace-windows-amd64.exe
+      - release/devspace-windows-amd64.exe.sha256
+      - release/devspace-linux-386
+      - release/devspace-linux-386.sha256
+      - release/devspace-darwin-386
+      - release/devspace-darwin-386.sha256
+      - release/devspace-freebsd-386
+      - release/devspace-freebsd-386.sha256
+      - release/devspace-windows-386.exe
+      - release/devspace-windows-386.exe.sha256
+      - release/devspace-linux-ppc64
+      - release/devspace-linux-ppc64.sha256
+      - release/devspace-linux-ppc64le
+      - release/devspace-linux-ppc64le.sha256
+      skip_cleanup: true
+      api_key:
+        secure: "KGCqYQmeEirDMoghu88D4hzUaG6ypBIFlY+QBtqlvyIbjbkyoOJ2cYJlcGG3SVssnXHgNQFGa8OZJosjVysNQorYY2P4ckF/V0GM+u0mSAeRcSSrorMOL6c8UQEY5695st2VqZBFtlpW7mNo75pU6Xgkcqhxb4/j/aj0I/+vhHbakFAQXcC6iMsuKQqRkXsh7g/G5/xgc2oxxK7dcfbJqC4QeUddKX0bZdLyml4yVrrI9XR/7bS1h+Q5S6ZyJ2EO3HRE7h6hAuGU21R4lrzRpDJh7Kopg4Fo6zqrU8lF3/Gw+RtmkWGoo6tXn+r6+HBu8xSbkw0NhGdL2iKraE2pOkRDlYZsR1XTNM5WKRMx+cZGY0OJT+Q04/5hs8uIuGwEATOZ2IAj2AWMba750Hx5h18dyLijpvSjNPtPo+ki0MYbMyYuZtlQDqvBfOclLfKoScsHz9ffGf0oz7p9/Z0riLIaMLmQXY5Zq3OSXATnXBAfgwtOppgR1foUKYb0P92uPePYIsmZN+p2HZDgS1nP2++Mg33BCLf+HUVhyekGc+wLbcEZTz49FCPjDRhGZz7FGe1ovvnYmtr00gaUcR6pq2nJGackkTOeuggu5ahmcc6xtFBxRT/JHi+LCeoqESsi6mvF7QEK4Widpn+sFwbAZlhGUVzhYnwfDNM9RK1pF+Q="
+      on:
+        repo: covexo/devspace
+        branch: master
+        tags: true
+addons:
+  ssh_known_hosts: github.com

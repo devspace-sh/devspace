@@ -10,6 +10,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/generator"
+	"github.com/covexo/devspace/pkg/util/logutil"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -88,6 +89,7 @@ YOUR_PROJECT_PATH/
 }
 
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
+	log = logutil.GetLogger("default", true)
 	workdir, workdirErr := os.Getwd()
 
 	if workdirErr != nil {
@@ -137,7 +139,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			})
-			createChart = (strings.Compare(overwriteAnswer, "yes") == 0)
+			createChart = (overwriteAnswer == "yes")
 		} else {
 			createChart = true
 		}
@@ -267,7 +269,7 @@ func (cmd *InitCmd) addSyncPath() {
 	syncPathMissing := true
 
 	for _, syncPath := range cmd.dsConfig.SyncPaths {
-		if strings.Compare(syncPath.LocalSubPath, "./") == 0 || strings.Compare(syncPath.ContainerPath, "/app") == 0 {
+		if syncPath.LocalSubPath == "./" || syncPath.ContainerPath == "/app" {
 			syncPathMissing = false
 			break
 		}
@@ -314,7 +316,7 @@ func (cmd *InitCmd) reconfigure() {
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		})
-		skipClusterConfig = (strings.Compare(skipAnswer, "yes") == 0)
+		skipClusterConfig = (skipAnswer == "yes")
 	}
 
 	if skipClusterConfig {
@@ -369,7 +371,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		ValidationRegexPattern: "^(yes)|(no)$",
 	})
 
-	if strings.Compare(enableAutomaticBuilds, "yes") == 0 {
+	if enableAutomaticBuilds == "yes" {
 		if registryConfig == nil {
 			registryConfig = &v1.RegistryAccess{}
 			cmd.privateConfig.Registry = registryConfig
