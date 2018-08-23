@@ -48,6 +48,51 @@ func (d *downstream) start() error {
 	return nil
 }
 
+func (d *downstream) populateFileMap() error {
+	createFiles := make([]*fileInformation, 0, 128)
+
+	cmd := "mkdir -p '" + d.config.DestPath + "' && find '" + d.config.DestPath + "' -exec stat -c \"%n///%s,%Y,%f\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
+	_, err := d.stdinPipe.Write([]byte(cmd))
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = d.collectChanges(&createFiles, nil)
+
+	if err != nil {
+		if _, ok := err.(parsingError); ok {
+			time.Sleep(time.Second * 4)
+
+			return d.populateFileMap()
+		}
+
+		return errors.Trace(err)
+	}
+
+	d.config.fileIndex.ExecuteSafe(func(fileMap map[string]*fileInformation) {
+		for _, element := range createFiles {
+			fileMap[element.Name] = element
+		}
+	})
+
+	return nil
+}
+
+func (d *downstream) startShell() error {
+	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false)
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	d.stdinPipe = stdinPipe
+	d.stdoutPipe = stdoutPipe
+	d.stderrPipe = stderrPipe
+
+	return nil
+}
+
 func (d *downstream) mainLoop() error {
 	lastAmountChanges := 0
 
@@ -109,55 +154,6 @@ func (d *downstream) mainLoop() error {
 	}
 }
 
-func (d *downstream) populateFileMap() error {
-	createFiles := make([]*fileInformation, 0, 128)
-
-	cmd := "mkdir -p '" + d.config.DestPath + "' && find '" + d.config.DestPath + "' -exec stat -c \"%n///%s,%Y,%f\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
-	_, err := d.stdinPipe.Write([]byte(cmd))
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	err = d.collectChanges(&createFiles, nil)
-
-	if err != nil {
-		if _, ok := err.(parsingError); ok {
-			time.Sleep(time.Second * 4)
-
-			return d.populateFileMap()
-		}
-
-		return errors.Trace(err)
-	}
-
-	d.config.fileIndex.ExecuteSafe(func(fileMap map[string]*fileInformation) {
-		for _, element := range createFiles {
-			fileMap[element.Name] = element
-		}
-	})
-
-	return nil
-}
-
-func (d *downstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false)
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	d.stdinPipe = stdinPipe
-	d.stdoutPipe = stdoutPipe
-	d.stderrPipe = stderrPipe
-
-	// go func() {
-	//	pipeStream(os.Stderr, d.stderrPipe)
-	// }()
-
-	return nil
-}
-
 func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles map[string]*fileInformation) error {
 	var err error
 	downloadFiles := make([]*fileInformation, 0, int(len(createFiles)/2))
@@ -211,64 +207,6 @@ func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles ma
 	}
 
 	return nil
-}
-
-func (d *downstream) removeFilesAndFolders(fileMap map[string]*fileInformation, removeFiles map[string]*fileInformation) {
-	// Remove Files & Folders
-	numRemoveFiles := len(removeFiles)
-
-	if numRemoveFiles > 10 {
-		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
-	}
-
-	// A file is only deleted if the following conditions are met:
-	// - The file name is present in the d.config.fileMap map
-	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
-	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
-	for key, value := range removeFiles {
-		if value != nil && fileMap[key] != nil {
-			if numRemoveFiles <= 10 {
-				d.config.Logf("[Downstream] Remove %s\n", key)
-			}
-
-			if fileMap[key].IsDirectory {
-				deleteSafeRecursive(d.config.WatchPath, key, fileMap, removeFiles, d.config)
-			} else {
-				if value.Mtime == fileMap[key].Mtime && value.Size == fileMap[key].Size {
-					if deleteSafe(path.Join(d.config.WatchPath, key), fileMap[key]) == false {
-						d.config.Logf("[Downstream] Skip file delete %s\n", key)
-					}
-				}
-
-				delete(fileMap, key)
-			}
-		}
-	}
-}
-
-func (d *downstream) createFolders(fileMap map[string]*fileInformation, createFolders []*fileInformation) {
-	numCreateFolders := len(createFolders)
-
-	// Create Folders
-	if numCreateFolders > 10 {
-		d.config.Logf("[Downstream] Create %d folders\n", len(createFolders))
-	}
-
-	for _, element := range createFolders {
-		if fileMap[element.Name] == nil && element.IsDirectory {
-			if numCreateFolders <= 10 {
-				d.config.Logln("[Downstream] Create folder: " + element.Name)
-			}
-
-			err := os.MkdirAll(path.Join(d.config.WatchPath, element.Name), 0755)
-
-			if err != nil {
-				d.config.Logln(err)
-			}
-
-			d.config.fileIndex.CreateDirInFileMap(element.Name)
-		}
-	}
 }
 
 func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
@@ -396,6 +334,64 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 	d.config.Logln("[Downstream] Wrote Tempfile " + tempFile.Name())
 
 	return tempFile.Name(), nil
+}
+
+func (d *downstream) removeFilesAndFolders(fileMap map[string]*fileInformation, removeFiles map[string]*fileInformation) {
+	// Remove Files & Folders
+	numRemoveFiles := len(removeFiles)
+
+	if numRemoveFiles > 10 {
+		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
+	}
+
+	// A file is only deleted if the following conditions are met:
+	// - The file name is present in the d.config.fileMap map
+	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
+	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
+	for key, value := range removeFiles {
+		if value != nil && fileMap[key] != nil {
+			if numRemoveFiles <= 10 {
+				d.config.Logf("[Downstream] Remove %s\n", key)
+			}
+
+			if fileMap[key].IsDirectory {
+				deleteSafeRecursive(d.config.WatchPath, key, fileMap, removeFiles, d.config)
+			} else {
+				if value.Mtime == fileMap[key].Mtime && value.Size == fileMap[key].Size {
+					if deleteSafe(path.Join(d.config.WatchPath, key), fileMap[key]) == false {
+						d.config.Logf("[Downstream] Skip file delete %s\n", key)
+					}
+				}
+
+				delete(fileMap, key)
+			}
+		}
+	}
+}
+
+func (d *downstream) createFolders(fileMap map[string]*fileInformation, createFolders []*fileInformation) {
+	numCreateFolders := len(createFolders)
+
+	// Create Folders
+	if numCreateFolders > 10 {
+		d.config.Logf("[Downstream] Create %d folders\n", len(createFolders))
+	}
+
+	for _, element := range createFolders {
+		if fileMap[element.Name] == nil && element.IsDirectory {
+			if numCreateFolders <= 10 {
+				d.config.Logln("[Downstream] Create folder: " + element.Name)
+			}
+
+			err := os.MkdirAll(path.Join(d.config.WatchPath, element.Name), 0755)
+
+			if err != nil {
+				d.config.Logln(err)
+			}
+
+			d.config.fileIndex.CreateDirInFileMap(element.Name)
+		}
+	}
 }
 
 func (d *downstream) collectChanges(createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) error {

@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/covexo/devspace/pkg/util/logutil"
 
@@ -60,64 +59,6 @@ func (s *SyncConfig) Logln(line interface{}) {
 	}).Infoln(line)
 }
 
-// CopyToContainer copies a local folder or file to a container path
-func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
-	s := &SyncConfig{
-		Kubectl:      Kubectl,
-		Pod:          Pod,
-		Container:    Container,
-		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
-		DestPath:     ContainerPath,
-		ExcludePaths: ExcludePaths,
-	}
-
-	syncLog = logrus.New()
-	syncLog.SetLevel(logrus.InfoLevel)
-
-	if s.ExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.ExcludePaths)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.ignoreMatcher = ignoreMatcher
-	}
-
-	s.fileIndex = newFileIndex()
-	s.upstream = &upstream{
-		config: s,
-	}
-
-	err := s.upstream.start()
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	stat, err := os.Stat(LocalPath)
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	err = s.upstream.sendFiles([]*fileInformation{
-		&fileInformation{
-			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
-			IsDirectory: stat.IsDir(),
-		},
-	})
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	s.Stop()
-	syncLog = nil
-
-	return nil
-}
-
 // Starts a new sync instance
 func (s *SyncConfig) Start() {
 	if s.ExcludePaths == nil {
@@ -167,74 +108,18 @@ func (s *SyncConfig) Start() {
 	go s.mainLoop()
 }
 
-func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
-	if len(excludePaths) > 0 {
-		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
-
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		return ignoreParser, nil
-	}
-
-	return nil, nil
-}
-
 func (s *SyncConfig) mainLoop() {
-	s.Logf("[Sync] Start syncing\n")
-
 	defer s.Stop()
-	err := s.downstream.populateFileMap()
+
+	s.Logf("[Sync] Start syncing\n")
+	err := s.initialSync()
 
 	if err != nil {
 		syncLog.Errorln(err)
 		return
 	}
 
-	sendChanges := make([]*fileInformation, 0, 10)
-	fileMapClone := make(map[string]*fileInformation)
-
-	for key, element := range s.fileIndex.fileMap {
-		fileMapClone[key] = element
-	}
-
-	err = s.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
-		return s.diffServerClient(s.WatchPath, fileMap, &sendChanges, fileMapClone)
-	})
-
-	if err != nil {
-		syncLog.Errorln(err)
-		return
-	}
-
-	if len(sendChanges) > 0 {
-		s.Logf("[Sync] Upload %d changes initially\n", len(sendChanges))
-		err = s.upstream.sendFiles(sendChanges)
-
-		if err != nil {
-			syncLog.Errorln(err)
-			return
-		}
-	}
-
-	if len(fileMapClone) > 0 {
-		downloadChanges := make([]*fileInformation, 0, len(fileMapClone))
-
-		for _, element := range fileMapClone {
-			downloadChanges = append(downloadChanges, element)
-		}
-
-		s.Logf("[Sync] Download %d changes initially\n", len(downloadChanges))
-		err = s.downstream.applyChanges(downloadChanges, nil)
-
-		if err != nil {
-			syncLog.Errorln(err)
-			return
-		}
-	}
-
-	// Run upstream
+	// Run upstream in goroutine
 	go func() {
 		defer s.Stop()
 
@@ -259,48 +144,53 @@ func (s *SyncConfig) mainLoop() {
 	}
 }
 
-func (s *SyncConfig) Stop() {
-	if s.upstream != nil {
-		select {
-		case <-s.upstream.interrupt:
-		default:
-			close(s.upstream.interrupt)
+func (s *SyncConfig) initialSync() error {
+	err := s.downstream.populateFileMap()
 
-			if s.upstream.stdinPipe != nil {
-				s.upstream.stdinPipe.Write([]byte("exit\n"))
-				s.upstream.stdinPipe.Close()
-			}
+	if err != nil {
+		return errors.Trace(err)
+	}
 
-			if s.upstream.stdoutPipe != nil {
-				s.upstream.stdoutPipe.Close()
-			}
+	sendChanges := make([]*fileInformation, 0, 10)
+	fileMapClone := make(map[string]*fileInformation)
 
-			if s.upstream.stderrPipe != nil {
-				s.upstream.stderrPipe.Close()
-			}
+	for key, element := range s.fileIndex.fileMap {
+		fileMapClone[key] = element
+	}
+
+	err = s.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
+		return s.diffServerClient(s.WatchPath, fileMap, &sendChanges, fileMapClone)
+	})
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if len(sendChanges) > 0 {
+		s.Logf("[Sync] Upload %d changes initially\n", len(sendChanges))
+		err = s.upstream.sendFiles(sendChanges)
+
+		if err != nil {
+			return errors.Trace(err)
 		}
 	}
 
-	if s.downstream != nil {
-		select {
-		case <-s.downstream.interrupt:
-		default:
-			close(s.downstream.interrupt)
+	if len(fileMapClone) > 0 {
+		downloadChanges := make([]*fileInformation, 0, len(fileMapClone))
 
-			if s.downstream.stdinPipe != nil {
-				s.downstream.stdinPipe.Write([]byte("exit\n"))
-				s.downstream.stdinPipe.Close()
-			}
+		for _, element := range fileMapClone {
+			downloadChanges = append(downloadChanges, element)
+		}
 
-			if s.downstream.stdoutPipe != nil {
-				s.downstream.stdoutPipe.Close()
-			}
+		s.Logf("[Sync] Download %d changes initially\n", len(downloadChanges))
+		err = s.downstream.applyChanges(downloadChanges, nil)
 
-			if s.downstream.stderrPipe != nil {
-				s.downstream.stderrPipe.Close()
-			}
+		if err != nil {
+			return errors.Trace(err)
 		}
 	}
+
+	return nil
 }
 
 func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileInformation, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
@@ -361,5 +251,49 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		}
 
 		return nil
+	}
+}
+
+func (s *SyncConfig) Stop() {
+	if s.upstream != nil {
+		select {
+		case <-s.upstream.interrupt:
+		default:
+			close(s.upstream.interrupt)
+
+			if s.upstream.stdinPipe != nil {
+				s.upstream.stdinPipe.Write([]byte("exit\n"))
+				s.upstream.stdinPipe.Close()
+			}
+
+			if s.upstream.stdoutPipe != nil {
+				s.upstream.stdoutPipe.Close()
+			}
+
+			if s.upstream.stderrPipe != nil {
+				s.upstream.stderrPipe.Close()
+			}
+		}
+	}
+
+	if s.downstream != nil {
+		select {
+		case <-s.downstream.interrupt:
+		default:
+			close(s.downstream.interrupt)
+
+			if s.downstream.stdinPipe != nil {
+				s.downstream.stdinPipe.Write([]byte("exit\n"))
+				s.downstream.stdinPipe.Close()
+			}
+
+			if s.downstream.stdoutPipe != nil {
+				s.downstream.stdoutPipe.Close()
+			}
+
+			if s.downstream.stderrPipe != nil {
+				s.downstream.stderrPipe.Close()
+			}
+		}
 	}
 }

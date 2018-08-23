@@ -4,14 +4,77 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/juju/errors"
+	gitignore "github.com/sabhiram/go-gitignore"
+	k8sv1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
+
+// CopyToContainer copies a local folder or file to a container path
+func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
+	s := &SyncConfig{
+		Kubectl:      Kubectl,
+		Pod:          Pod,
+		Container:    Container,
+		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
+		DestPath:     ContainerPath,
+		ExcludePaths: ExcludePaths,
+	}
+
+	syncLog = logrus.New()
+	syncLog.SetLevel(logrus.InfoLevel)
+
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.ignoreMatcher = ignoreMatcher
+	}
+
+	s.fileIndex = newFileIndex()
+	s.upstream = &upstream{
+		config: s,
+	}
+
+	err := s.upstream.start()
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	stat, err := os.Stat(LocalPath)
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = s.upstream.sendFiles([]*fileInformation{
+		&fileInformation{
+			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
+			IsDirectory: stat.IsDir(),
+		},
+	})
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	s.Stop()
+	syncLog = nil
+
+	return nil
+}
 
 // We need this function because tar ceils up the mtime to seconds on the server
 func ceilMtime(mtime time.Time) int64 {
@@ -245,4 +308,18 @@ func deleteSafe(path string, fileInformation *fileInformation) bool {
 	}
 
 	return false
+}
+
+func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
+	if len(excludePaths) > 0 {
+		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
+
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		return ignoreParser, nil
+	}
+
+	return nil, nil
 }
