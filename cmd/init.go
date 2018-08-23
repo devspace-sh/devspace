@@ -112,7 +112,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.appConfig = &v1.AppConfig{
 		Name: filepath.Base(cmd.workdir),
 		Container: &v1.AppContainer{
-			Port: 8080,
+			Ports: []int{},
 		},
 		External: &v1.AppExternal{
 			Domain: "mydomain.com",
@@ -206,7 +206,7 @@ func (cmd *InitCmd) determineAppConfig() {
 			value, isCorrect := applicationValues["port"].(int)
 
 			if isCorrect {
-				cmd.appConfig.Container.Port = value
+				cmd.appConfig.Container.Ports = []int{value}
 			}
 		}
 
@@ -223,11 +223,29 @@ func (cmd *InitCmd) determineAppConfig() {
 		DefaultValue:           cmd.appConfig.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-	cmd.appConfig.Container.Port, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which port does your application listen on?",
-		DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
-		ValidationRegexPattern: "^[1-9][0-9]{0,4}$",
-	}))
+
+	// cmd.appConfig.Container.Ports, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	// 	Question:               "Which port(s) does your application listen on? (separated by spaces)",
+	// 	DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
+	// 	ValidationRegexPattern: "^[1-9][0-9]{0,4}?(\\s[1-9][0-9]{0,4})?$",
+	// }))
+
+	portsToSliceStr := []string{}
+
+	for _, port := range cmd.appConfig.Container.Ports {
+		portsToSliceStr = append(portsToSliceStr, strconv.Itoa(port))
+	}
+
+	portStrings := strings.Split(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		Question:               "Which port(s) does your application listen on? (separated by spaces)",
+		DefaultValue:           strings.Join(portsToSliceStr, " "),
+		ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
+	}), " ")
+
+	for _, port := range portStrings {
+		portInt, _ := strconv.Atoi(port)
+		cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
+	}
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
 		Question:               "Which domain do you want to run your application on?",
@@ -242,26 +260,30 @@ func (cmd *InitCmd) addPortForwarding() {
 OUTER:
 	for _, portForwarding := range cmd.dsConfig.PortForwarding {
 		for _, portMapping := range portForwarding.PortMappings {
-			if portMapping.RemotePort == cmd.appConfig.Container.Port {
-				portForwardingMissing = false
-				break OUTER
+			for _, port := range cmd.appConfig.Container.Ports {
+				if portMapping.RemotePort == port {
+					portForwardingMissing = false
+					break OUTER
+				}
 			}
 		}
 	}
 
 	if portForwardingMissing {
-		cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
-			PortMappings: []*v1.PortMapping{
-				&v1.PortMapping{
-					LocalPort:  cmd.appConfig.Container.Port,
-					RemotePort: cmd.appConfig.Container.Port,
+		for _, port := range cmd.appConfig.Container.Ports {
+			cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
+				PortMappings: []*v1.PortMapping{
+					&v1.PortMapping{
+						LocalPort:  port,
+						RemotePort: port,
+					},
 				},
-			},
-			ResourceType: "pod",
-			LabelSelector: map[string]string{
-				"release": cmd.privateConfig.Release.Name,
-			},
-		})
+				ResourceType: "pod",
+				LabelSelector: map[string]string{
+					"release": cmd.privateConfig.Release.Name,
+				},
+			})
+		}
 	}
 }
 
@@ -470,7 +492,7 @@ func (cmd *InitCmd) createChart() {
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
 	if !chartHasContainerValues && containerValues != nil {
-		containerValues["port"] = cmd.appConfig.Container.Port
+		containerValues["port"] = cmd.appConfig.Container.Ports
 		createdChartValuesYaml["container"] = containerValues
 	}
 	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
