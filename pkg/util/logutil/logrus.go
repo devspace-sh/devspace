@@ -4,7 +4,10 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/runtime"
 )
+
+var runtimeErrorHandlersOverriden = false
 
 var logs = map[string]*logrus.Logger{}
 var terminalHook = TerminalHook{
@@ -41,5 +44,18 @@ func GetLogger(name string, logToTerminal bool) *logrus.Logger {
 		}
 		logs[name] = log
 	}
+
+	// We also override the standard runtime error handler
+	if runtimeErrorHandlersOverriden == false {
+		runtimeErrorHandlersOverriden = true
+		errorLog := GetLogger("errors", false)
+
+		if len(runtime.ErrorHandlers) == 2 {
+			runtime.ErrorHandlers[0] = func(err error) {
+				errorLog.Errorf("Runtime error occurred: %s", err)
+			}
+		}
+	}
+
 	return log
 }
