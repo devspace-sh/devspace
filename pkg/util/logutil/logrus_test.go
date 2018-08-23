@@ -1,7 +1,7 @@
 package logutil
 
 import (
-	"git.covexo.com/covexo/devspace/pkg/util/fsutil"
+	"github.com/covexo/devspace/pkg/util/fsutil"
 	"testing"
 	"encoding/json"
 	"strings"

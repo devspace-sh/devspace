@@ -403,6 +403,14 @@
   version = "1.1.5"
 
 [[projects]]
+  branch = "master"
+  digest = "1:1261ccace00babbf02bb702e71c85c8e81f65bad7bdb98c12c7a409c14de1d86"
+  name = "github.com/juju/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "22422dad46e14561a0854ad42497a75af9b61909"
+
+[[projects]]
   digest = "1:19cbd171739c98ab0c6532f340f217ee6aa5c3623e58b7c54d2c3cbff80a3114"
   name = "github.com/kevinburke/ssh_config"
   packages = ["."]
@@ -1447,6 +1455,7 @@
     "github.com/daviddengcn/go-colortext",
     "github.com/docker/docker/pkg/term",
     "github.com/foomo/htpasswd",
+    "github.com/juju/errors",
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",
     "github.com/rjeczalik/notify",

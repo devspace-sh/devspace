@@ -106,7 +106,7 @@ func TestGetHomeDir(t *testing.T) {
 func TestGetCurrentGofileDir(t *testing.T) {
 
 	currentGofileDirByMethod := GetCurrentGofileDir()
-	expected := os.Getenv("GOPATH") + "\\src\\git.covexo.com\\covexo\\devspace\\pkg\\util\\fsutil"
+	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil"
 
 	if currentGofileDirByMethod != expected && currentGofileDirByMethod != strings.Replace(expected, "\\", "/", -1){
 		t.Error("CurrentGoFileDir is not correct.\nMethod result: " + currentGofileDirByMethod + 
@@ -119,7 +119,7 @@ func TestGetCurrentGofileDir(t *testing.T) {
 func TestGetCurrentGofile(t *testing.T) {
 
 	currentGofileByMethod := GetCurrentGofile()
-	expected := os.Getenv("GOPATH") + "\\src\\git.covexo.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
+	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
 
 	if currentGofileByMethod != expected && currentGofileByMethod != strings.Replace(expected, "\\", "/", -1){
 		t.Error("CurrentGoFile is not correct.\nMethod result: " + currentGofileByMethod + 

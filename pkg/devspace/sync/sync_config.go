@@ -352,53 +352,6 @@ func (s *SyncConfig) removeDirInFileMap(dirpath string) {
 	}
 }
 
-// CopyToContainer copies a local folder or file to a container path
-func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string) error {
-	syncObj := &SyncConfig{
-		Kubectl:   Kubectl,
-		Pod:       Pod,
-		Container: Container,
-		WatchPath: path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
-		DestPath:  ContainerPath,
-	}
-
-	syncLog = logrus.New()
-	syncLog.SetLevel(logrus.InfoLevel)
-
-	syncObj.fileMap = make(map[string]*FileInformation)
-	syncObj.upstream = &upstream{
-		config: syncObj,
-	}
-
-	err := syncObj.upstream.start()
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	stat, err := os.Stat(LocalPath)
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	err = syncObj.upstream.sendFiles([]*FileInformation{
-		&FileInformation{
-			Name:        getRelativeFromFullPath(LocalPath, syncObj.WatchPath),
-			IsDirectory: stat.IsDir(),
-		},
-	})
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	syncObj.Stop()
-	syncLog = nil
-
-	return nil
-}
-
 // We need this function because tar ceils up the mtime to seconds on the server
 func ceilMtime(mtime time.Time) int64 {
 	if mtime.UnixNano()%1000000000 != 0 {
