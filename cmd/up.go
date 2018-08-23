@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/covexo/devspace/pkg/util/logutil"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/logutil"
 
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
@@ -379,12 +380,12 @@ func (cmd *UpCmd) initRegistry() {
 		if !secretIsMap {
 			//TODO
 		}
-		log.Info("Initalizing docker registry")
+		log.Info("Initializing docker registry")
 
 		deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
 
 		if deploymentErr != nil {
-			log.WithError(deploymentErr).Panic("Unable to initalize docker registry")
+			log.WithError(deploymentErr).Panic("Unable to initialize docker registry")
 		}
 		htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
 		htpasswdSecret, secretGetErr := cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
@@ -507,7 +508,7 @@ func (cmd *UpCmd) initHelm() {
 		client, helmErr := helmClient.NewClient(cmd.kubectl, false)
 
 		if helmErr != nil {
-			log.WithError(helmErr).Panic("Unable to initalize helm client")
+			log.WithError(helmErr).Panic("Unable to initialize helm client")
 		}
 		cmd.helm = client
 	}
