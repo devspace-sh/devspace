@@ -1,27 +1,26 @@
 package logutil
 
 import (
-	"github.com/covexo/devspace/pkg/util/fsutil"
-	"testing"
 	"encoding/json"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/covexo/devspace/pkg/util/fsutil"
 )
 
 func TestGetLogger(t *testing.T) {
 
-	fsutil.WriteToFile(make([]byte, 0), "./.devspace/logs/TestLogger.log")
+	fsutil.WriteToFile([]byte(""), "./.devspace/logs/TestLogger.log")
 	
 	logger := GetLogger("TestLogger", true)
 	
-	logger.Info("Some Test Log")
-	logger.Warn("More Logs")
+	logger.Info("Some Info")
+	logger.Warn("Some Warning")
+	logger.Debug("Some Debug")
 
 	fileContent, err := fsutil.ReadFile("./.devspace/logs/TestLogger.log", -1)
-
-	if err != nil {
-		t.Error("Error while reading Logfile")
-		t.Fail()
-	}
+	assert.Nil(t, err)
 
 	t.Logf(string(fileContent))
 
@@ -37,18 +36,13 @@ func TestGetLogger(t *testing.T) {
 		json.Unmarshal([]byte(logAsString + "}"), &logsAsStructs[n])
 	}
 
-	if logsAsStructs[0].Level != "info" || logsAsStructs[1].Level != "warning" {
-		t.Error("Logs aren't shown as info and warning. Instead they are: " + logsAsStructs[0].Level + " and " + logsAsStructs[1].Level)
-		t.Fail()
-	}
+	assert.Equal(t, "info", logsAsStructs[0].Level)
+	assert.Equal(t, "warning", logsAsStructs[1].Level)
+	assert.Equal(t, "debug", logsAsStructs[2].Level)
 
-	if logsAsStructs[0].Msg != "Some Test Log" || logsAsStructs[1].Msg != "More Logs" {
-		t.Error("Wrong messages in logs.\nMessage 1: " + logsAsStructs[0].Msg + 
-		"\nExpected: Some Test Log" + 
-		"\nMessage 2: " + logsAsStructs[1].Msg + 
-		"\nExpected: More Logs")
-		t.Fail()
-	}
+	assert.Equal(t, "Some Info", logsAsStructs[0].Msg)
+	assert.Equal(t, "Some Warning", logsAsStructs[1].Msg)
+	assert.Equal(t, "Some Debug", logsAsStructs[2].Msg)
 }
 
 

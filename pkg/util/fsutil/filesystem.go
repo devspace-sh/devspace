@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	recursiveCopy "github.com/otiai10/copy"
+	"github.com/juju/errors"
 )
 
 func WriteToFile(data []byte, filePath string) error {
@@ -21,18 +22,18 @@ func WriteToFile(data []byte, filePath string) error {
 	defer file.Close()
 
 	if fopenErr != nil {
-		return fopenErr
+		return errors.Trace(fopenErr)
 	}
 	fileWriter := bufio.NewWriter(file)
 	_, fwriteErr := fileWriter.Write(data)
 
 	if fwriteErr != nil {
-		return fwriteErr
+		return errors.Trace(fwriteErr)
 	}
 	flushErr := fileWriter.Flush()
 
 	if flushErr != nil {
-		return flushErr
+		return errors.Trace(flushErr)
 	}
 	return nil
 }
@@ -47,12 +48,12 @@ func ReadFile(path string, limit int64) ([]byte, error) {
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	defer f.Close()
 	st, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	size := st.Size()
 	if limit > 0 && size > limit {
@@ -63,7 +64,7 @@ func ReadFile(path string, limit int64) ([]byte, error) {
 
 	_, err = io.Copy(buf, io.LimitReader(f, limit))
 
-	return buf.Bytes(), err
+	return buf.Bytes(), errors.Trace(err)
 }
 
 func GetHomeDir() string {
