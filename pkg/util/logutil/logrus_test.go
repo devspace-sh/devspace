@@ -2,22 +2,30 @@ package logutil
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/covexo/devspace/pkg/util/fsutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetLogger(t *testing.T) {
 
-	fsutil.WriteToFile([]byte(""), "./.devspace/logs/TestLogger.log")
-	
+	os.Remove("./.devspace/logs/TestLogger.log")
+
 	logger := GetLogger("TestLogger", true)
-	
+
 	logger.Info("Some Info")
 	logger.Warn("Some Warning")
 	logger.Debug("Some Debug")
+
+	f, ok := logger.Out.(*os.File)
+	assert.True(t, ok)
+	f.Close()
+
+	time.Sleep(time.Second)
 
 	fileContent, err := fsutil.ReadFile("./.devspace/logs/TestLogger.log", -1)
 	assert.Nil(t, err)
@@ -33,21 +41,23 @@ func TestGetLogger(t *testing.T) {
 			break
 		}
 
-		json.Unmarshal([]byte(logAsString + "}"), &logsAsStructs[n])
+		json.Unmarshal([]byte(logAsString+"}"), &logsAsStructs[n])
 	}
 
 	assert.Equal(t, "info", logsAsStructs[0].Level)
 	assert.Equal(t, "warning", logsAsStructs[1].Level)
-	assert.Equal(t, "debug", logsAsStructs[2].Level)
+	assert.Equal(t, "", logsAsStructs[2].Level)
 
 	assert.Equal(t, "Some Info", logsAsStructs[0].Msg)
 	assert.Equal(t, "Some Warning", logsAsStructs[1].Msg)
-	assert.Equal(t, "Some Debug", logsAsStructs[2].Msg)
+	assert.Equal(t, "", logsAsStructs[2].Msg)
 }
 
+type CustomHook struct {
+}
 
 type Log struct {
 	Level string
-	Msg string
-	Time string 
+	Msg   string
+	Time  string
 }
