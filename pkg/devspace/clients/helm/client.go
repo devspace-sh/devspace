@@ -385,7 +385,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		)
 
 		if releaseInstallErr != nil {
-			return releaseExistsErr
+			return releaseInstallErr
 		}
 	}
 	return nil

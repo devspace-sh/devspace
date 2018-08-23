@@ -4,6 +4,18 @@ notifications:
   email: false
 jobs:
   include:
+  - stage: test
+    go_import_path: github.com/covexo/devspace
+    install:
+      - go get -u github.com/golang/dep/...
+      - dep ensure -v
+      - npm install -g codeclimate-test-reporter
+    os: linux
+    go: 1.10.x
+    script:
+      - ./scripts/coverage.bash
+    after_success:
+      - codeclimate-test-reporter < coverage.txt
   - go: 1.10.x
     os: osx
     stage: deploy
