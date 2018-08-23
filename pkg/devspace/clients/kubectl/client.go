@@ -11,6 +11,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/util/logutil"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -72,8 +73,9 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		return err
 	}
 
+	logger := logutil.GetLogger(pod.Namespace+"-"+pod.Name+"-portforwarding", false)
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, nil)
+	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, logger.Out)
 
 	if err != nil {
 		return err
