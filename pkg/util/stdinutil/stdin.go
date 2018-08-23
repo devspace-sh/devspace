@@ -22,29 +22,30 @@ var defaultParams = &GetFromStdin_params{
 	InputTerminationString: "\n",
 }
 
+var reader *bufio.Reader
+
+const changeQuestion = "Would you like to change it? (yes, no/ENTER))"
+
 func GetFromStdin(params *GetFromStdin_params) string {
 	paramutil.SetDefaults(params, defaultParams)
 
 	validationRegexp, _ := regexp.Compile(params.ValidationRegexPattern)
-	reader := bufio.NewReader(os.Stdin)
+
+	if reader == nil {
+		reader = bufio.NewReader(os.Stdin)
+		
+		defer func() {
+			reader = nil
+		}()
+	}
 	input := ""
 
 	for {
 		fmt.Print(params.Question)
 
-		changeQuestion := "Would you like to change it? (yes, no/ENTER))"
-		isChangeQuestion := false
-
 		if len(params.DefaultValue) > 0 {
 			fmt.Print("\n")
-
-			if params.InputTerminationString == "\n" {
-				fmt.Print("Press ENTER to use: " + params.DefaultValue + "")
-			} else {
-				fmt.Println("This is the current value:\n#################\n" + strings.TrimRight(params.DefaultValue, "\r\n") + "\n#################")
-				fmt.Print(changeQuestion)
-				isChangeQuestion = true
-			}
+			fmt.Print("Press ENTER to use: " + params.DefaultValue + "")
 		}
 		fmt.Print("\n")
 
@@ -53,25 +54,14 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			nextLine, _ := reader.ReadString('\n')
 			nextLine = strings.Trim(nextLine, "\r\n ")
 
-			if isChangeQuestion {
-				if nextLine == "yes" {
-					isChangeQuestion = false
-					fmt.Println("Please enter the new value:")
-				} else if len(nextLine) == 0 || nextLine == "no" {
-					break
-				} else {
-					fmt.Println(changeQuestion)
-				}
-				continue
-			}
-
-			if params.InputTerminationString == "\n" {
+			if strings.Compare(params.InputTerminationString, "\n") == 0 {
 				input = nextLine
 				break
 			}
 			input += nextLine + "\n"
 
-			if strings.HasSuffix(nextLine, params.InputTerminationString) {
+			if strings.HasSuffix(input, params.InputTerminationString + "\n") {
+				input = strings.TrimSuffix(input, params.InputTerminationString + "\n")
 				break
 			}
 		}
@@ -84,7 +74,42 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			break
 		} else {
 			fmt.Print("Input must match " + params.ValidationRegexPattern + "\n")
+			input = ""
 		}
 	}
 	return input
+}
+
+func AskChangeQuestion(params *GetFromStdin_params) string{
+	paramutil.SetDefaults(params, defaultParams)
+
+	if reader == nil {
+		reader = bufio.NewReader(os.Stdin)
+		
+		defer func() {
+			reader = nil
+		}()
+	}
+
+	shouldValueChangeQuestion := GetFromStdin_params{
+		Question: params.Question + "\nThis is the current value:\n#################\n" + strings.TrimRight(params.DefaultValue, "\r\n") + "\n#################\n" + changeQuestion,
+		DefaultValue: "no",
+		ValidationRegexPattern: "yes|no",
+	}
+
+	shouldChangeAnswer := GetFromStdin(&shouldValueChangeQuestion)
+
+	if shouldChangeAnswer == "no" {
+		return params.DefaultValue
+	}
+
+	newValueQuestion := GetFromStdin_params{
+		Question: "Please enter the new value:",
+		DefaultValue: params.DefaultValue,
+		ValidationRegexPattern: params.ValidationRegexPattern,
+		InputTerminationString: params.InputTerminationString,
+	}
+
+	newValue := GetFromStdin(&newValueQuestion)
+	return newValue
 }

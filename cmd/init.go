@@ -327,17 +327,17 @@ func (cmd *InitCmd) reconfigure() {
 			DefaultValue:           clusterConfig.ApiServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
-		clusterConfig.CaCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
 			DefaultValue:           clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is your Kubernetes username?",
 			DefaultValue:           clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
-		clusterConfig.User.ClientCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
 			DefaultValue:           clusterConfig.User.ClientCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
