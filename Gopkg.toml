@@ -99,9 +99,5 @@
   version = "1.1.1"
 
 [[constraint]]
-  name = "golang.org/x/sys"
-  branch = "master"
-  
-[[constraint]]
   name = "github.com/badgerodon/penv"
   revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"

@@ -1590,7 +1590,6 @@
     "github.com/sabhiram/go-gitignore",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
-    "golang.org/x/sys/windows/registry",
     "gopkg.in/src-d/enry.v1",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/yaml.v2",
