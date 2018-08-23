@@ -1,3 +1,4 @@
 Dockerfile
 .devspace/
 chart/
+node_modules/

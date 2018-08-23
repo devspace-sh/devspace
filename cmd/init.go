@@ -10,6 +10,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/generator"
+	"github.com/covexo/devspace/pkg/util/logutil"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -88,6 +89,7 @@ YOUR_PROJECT_PATH/
 }
 
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
+	log = logutil.GetLogger("default", true)
 	workdir, workdirErr := os.Getwd()
 
 	if workdirErr != nil {
@@ -137,7 +139,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			})
-			createChart = (strings.Compare(overwriteAnswer, "yes") == 0)
+			createChart = (overwriteAnswer == "yes")
 		} else {
 			createChart = true
 		}
@@ -289,7 +291,7 @@ func (cmd *InitCmd) addSyncPath() {
 	syncPathMissing := true
 
 	for _, syncPath := range cmd.dsConfig.SyncPaths {
-		if strings.Compare(syncPath.LocalSubPath, "./") == 0 || strings.Compare(syncPath.ContainerPath, "/app") == 0 {
+		if syncPath.LocalSubPath == "./" || syncPath.ContainerPath == "/app" {
 			syncPathMissing = false
 			break
 		}
@@ -336,7 +338,7 @@ func (cmd *InitCmd) reconfigure() {
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		})
-		skipClusterConfig = (strings.Compare(skipAnswer, "yes") == 0)
+		skipClusterConfig = (skipAnswer == "yes")
 	}
 
 	if skipClusterConfig {
@@ -347,17 +349,17 @@ func (cmd *InitCmd) reconfigure() {
 			DefaultValue:           clusterConfig.ApiServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
-		clusterConfig.CaCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
 			DefaultValue:           clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is your Kubernetes username?",
 			DefaultValue:           clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
-		clusterConfig.User.ClientCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
 			DefaultValue:           clusterConfig.User.ClientCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
@@ -391,7 +393,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		ValidationRegexPattern: "^(yes)|(no)$",
 	})
 
-	if strings.Compare(enableAutomaticBuilds, "yes") == 0 {
+	if enableAutomaticBuilds == "yes" {
 		if registryConfig == nil {
 			registryConfig = &v1.RegistryAccess{}
 			cmd.privateConfig.Registry = registryConfig
@@ -458,6 +460,10 @@ func (cmd *InitCmd) determineLanguage() {
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, langErr := cmd.chartGenerator.GetSupportedLanguages()
 
+		if cmd.chartGenerator.Language == "" {
+			cmd.chartGenerator.Language = "none"
+		}
+
 		if langErr != nil {
 			log.WithError(langErr).Panic("Unable to get supported languages")
 		}
@@ -485,13 +491,14 @@ func (cmd *InitCmd) createChart() {
 
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
-	if !chartHasContainerValues {
+	if !chartHasContainerValues && containerValues != nil {
 		containerValues["port"] = cmd.appConfig.Container.Ports
+
 		createdChartValuesYaml["container"] = containerValues
 	}
 	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
 
-	if !chartHasExternalValues {
+	if !chartHasExternalValues && externalValues != nil {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}

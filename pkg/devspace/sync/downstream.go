@@ -3,7 +3,6 @@ package sync
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/juju/errors"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 )
@@ -43,7 +43,7 @@ func (d *downstream) start() error {
 	err := d.startShell()
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	return nil
@@ -54,12 +54,17 @@ func (d *downstream) mainLoop() error {
 
 	for {
 		createFiles := make([]*FileInformation, 0, 128)
-		removeFiles := make(map[string]bool)
+		removeFiles := make(map[string]*FileInformation)
 
 		d.config.fileMapMutex.Lock()
 
-		for key := range d.config.fileMap {
-			removeFiles[key] = true
+		for key, value := range d.config.fileMap {
+			removeFiles[key] = &FileInformation{
+				Name:        value.Name,
+				Size:        value.Size,
+				Mtime:       value.Mtime,
+				IsDirectory: value.IsDirectory,
+			}
 		}
 
 		d.config.fileMapMutex.Unlock()
@@ -68,7 +73,7 @@ func (d *downstream) mainLoop() error {
 		_, err := d.stdinPipe.Write([]byte(cmd))
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		err = d.collectChanges(&createFiles, removeFiles)
@@ -79,7 +84,7 @@ func (d *downstream) mainLoop() error {
 				continue
 			}
 
-			return err
+			return errors.Trace(err)
 		}
 
 		amountChanges := len(createFiles) + len(removeFiles)
@@ -92,7 +97,7 @@ func (d *downstream) mainLoop() error {
 			err = d.applyChanges(createFiles, removeFiles)
 
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 
@@ -114,7 +119,7 @@ func (d *downstream) populateFileMap() error {
 	_, err := d.stdinPipe.Write([]byte(cmd))
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	err = d.collectChanges(&createFiles, nil)
@@ -126,7 +131,7 @@ func (d *downstream) populateFileMap() error {
 			return d.populateFileMap()
 		}
 
-		return err
+		return errors.Trace(err)
 	}
 
 	d.config.fileMapMutex.Lock()
@@ -143,7 +148,7 @@ func (d *downstream) startShell() error {
 	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	d.stdinPipe = stdinPipe
@@ -157,7 +162,7 @@ func (d *downstream) startShell() error {
 	return nil
 }
 
-func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]*FileInformation) error {
 	var err error
 	downloadFiles := make([]*FileInformation, 0, int(len(createFiles)/2))
 	createFolders := make([]*FileInformation, 0, int(len(createFiles)/2))
@@ -177,7 +182,7 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		tempDownloadpath, err = d.downloadFiles(downloadFiles)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		defer os.Remove(tempDownloadpath)
@@ -192,27 +197,27 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
 	}
 
+	// A file is only deleted if the following conditions are met:
+	// - The file name is present in the d.config.fileMap map
+	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
+	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 	for key, value := range removeFiles {
-		if value == true && d.config.fileMap[key] != nil {
+		if value != nil && d.config.fileMap[key] != nil {
 			if numRemoveFiles <= 10 {
 				d.config.Logf("[Downstream] Remove %s\n", key)
 			}
 
 			if d.config.fileMap[key].IsDirectory {
-				os.RemoveAll(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete folder
-
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				d.deleteSafeRecursive(d.config.WatchPath, key, removeFiles)
 			} else {
-				os.Remove(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete file
+				if value.Mtime == d.config.fileMap[key].Mtime && value.Size == d.config.fileMap[key].Size {
+					if deleteSafe(path.Join(d.config.WatchPath, key), d.config.fileMap[key]) == false {
+						d.config.Logf("[Downstream] Skip file delete %s\n", key)
+					}
+				}
 
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				delete(d.config.fileMap, key)
 			}
-
-			delete(d.config.fileMap, key)
 		}
 	}
 
@@ -245,7 +250,7 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		f, err := os.Open(tempDownloadpath)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		defer f.Close()
@@ -255,11 +260,62 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		d.config.Logln("[Downstream] End untaring")
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 	}
 
 	return nil
+}
+
+func (d *downstream) deleteSafeRecursive(basepath string, relativePath string, removeFiles map[string]*FileInformation) {
+	absolutePath := path.Join(basepath, relativePath)
+	relativePath = getRelativeFromFullPath(absolutePath, basepath)
+
+	// We don't delete the folder or the contents if we haven't tracked it
+	if d.config.fileMap[relativePath] == nil || removeFiles[relativePath] == nil {
+		d.config.Logf("[Downstream] Skip delete directory %s\n", relativePath)
+
+		return
+	}
+
+	// Delete directory from fileMap
+	defer delete(d.config.fileMap, relativePath)
+	files, err := ioutil.ReadDir(absolutePath)
+
+	if err != nil {
+		return
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			d.deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()), removeFiles)
+		} else {
+			filepath := path.Join(relativePath, f.Name())
+			fileDeleted := false
+
+			// We don't delete the file if we haven't tracked it
+			if d.config.fileMap[filepath] != nil && removeFiles[filepath] != nil {
+				// We don't delete the file if it has changed in the map since we collected changes
+				if removeFiles[filepath].Mtime == d.config.fileMap[filepath].Mtime && removeFiles[filepath].Size == d.config.fileMap[filepath].Size {
+					// We don't delete the file if it has changed on the filesystem meanwhile
+					fileDeleted = deleteSafe(path.Join(basepath, filepath), d.config.fileMap[filepath])
+				}
+			}
+
+			if fileDeleted == false {
+				d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+			} else {
+				delete(d.config.fileMap, filepath)
+			}
+		}
+	}
+
+	// This will not remove the directory if there is still a file or directory in it
+	err = os.Remove(absolutePath)
+
+	if err != nil {
+		d.config.Logf("[Downstream] Skip delete directory %s, because %s\n", relativePath, err.Error())
+	}
 }
 
 func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string) (bool, error) {
@@ -269,7 +325,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	header, err := tarReader.Next()
 	if err != nil {
 		if err != io.EOF {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		return false, nil
@@ -291,12 +347,12 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	}
 
 	if err := os.MkdirAll(baseName, 0755); err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 
 	if header.FileInfo().IsDir() {
 		if err := os.MkdirAll(outFileName, 0755); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		d.config.createDirInFileMap(relativePath)
@@ -310,7 +366,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 	if entrySeq == 0 && !header.FileInfo().IsDir() {
 		exists, err := dirExists(outFileName)
 		if err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 		if exists {
 			outFileName = filepath.Join(outFileName, path.Base(clean(header.Name)))
@@ -321,7 +377,7 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 		// Skip the processing of symlinks for now, because windows has problems with them
 		// err := os.Symlink(header.Linkname, outFileName)
 		// if err != nil {
-		//	 return err
+		//	 return errors.Trace(err)
 		// }
 	} else {
 		outFile, err := os.Create(outFileName)
@@ -332,24 +388,24 @@ func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, pr
 			outFile, err = os.Create(outFileName)
 
 			if err != nil {
-				return false, err
+				return false, errors.Trace(err)
 			}
 		}
 
 		defer outFile.Close()
 
 		if _, err := io.Copy(outFile, tarReader); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		if err := outFile.Close(); err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
 
 		if err != nil {
-			return false, err
+			return false, errors.Trace(err)
 		}
 
 		relativePath = getRelativeFromFullPath(outFileName, destPath)
@@ -376,7 +432,7 @@ func (d *downstream) untarAll(reader io.Reader, destPath, prefix string) error {
 		shouldContinue, err := d.untarNext(tarReader, entrySeq, destPath, prefix)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		} else if shouldContinue == false {
 			return nil
 		}
@@ -443,21 +499,21 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 	defer tempFile.Close()
 
 	if err != nil {
-		return "", err
+		return "", errors.Trace(err)
 	}
 
 	d.stdinPipe.Write([]byte(cmd))
 	err = waitTill(StartAck, d.stdoutPipe)
 
 	if err != nil {
-		return "", err
+		return "", errors.Trace(err)
 	}
 
 	d.stdinPipe.Write([]byte(filenames))
 	readString, err := readTill(EndAck, d.stderrPipe)
 
 	if err != nil {
-		return "", err
+		return "", errors.Trace(err)
 	}
 
 	tarSize := 0
@@ -467,7 +523,7 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 		tarSize, err = strconv.Atoi(splitted[len(splitted)-2])
 
 		if err != nil {
-			return "", err
+			return "", errors.Trace(err)
 		}
 	} else {
 		return "", errors.New("[Downstream] Cannot find DONE in " + readString)
@@ -493,18 +549,18 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 				break
 			}
 
-			return "", err
+			return "", errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return "", err
+			return "", errors.Trace(err)
 		}
 
 		n, err = tempFile.Write(buf)
 
 		if err != nil {
-			return "", err
+			return "", errors.Trace(err)
 		}
 
 		// d.config.Logln("Wrote " + strconv.Itoa(n) + " bytes")
@@ -516,7 +572,7 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 	return tempFile.Name(), nil
 }
 
-func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	buf := make([]byte, 0, 512)
 	overlap := ""
 
@@ -533,12 +589,12 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 				break
 			}
 
-			return err
+			return errors.Trace(err)
 		}
 
 		// process buf
 		if err != nil && err != io.EOF {
-			return err
+			return errors.Trace(err)
 		}
 
 		lines := strings.Split(string(buf), "\n")
@@ -568,7 +624,7 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 				err = d.evaluateFile(line, createFiles, removeFiles)
 
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 			}
 		}
@@ -577,21 +633,21 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 	return nil
 }
 
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	d.config.fileMapMutex.Lock()
 	defer d.config.fileMapMutex.Unlock()
 
 	fileinformation, err := d.parseFileInformation(fileline)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	if fileinformation == nil {
 		return nil
 	}
 
-	if removeFiles[fileinformation.Name] == true {
+	if removeFiles[fileinformation.Name] != nil {
 		delete(removeFiles, fileinformation.Name)
 	}
 
@@ -624,11 +680,9 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 
 	fileinfo.Name = t[0][len(d.config.DestPath):]
 
-	if d.config.compExcludeRegEx != nil {
-		for _, regExp := range d.config.compExcludeRegEx {
-			if regExp.MatchString(fileinfo.Name) {
-				return nil, nil
-			}
+	if d.config.ignoreMatcher != nil {
+		if d.config.ignoreMatcher.MatchesPath(fileinfo.Name) {
+			return nil, nil
 		}
 	}
 
@@ -641,7 +695,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	size, err := strconv.Atoi(t[0])
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	fileinfo.Size = int64(size)
@@ -649,7 +703,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	mTime, err := strconv.Atoi(t[1])
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	fileinfo.Mtime = int64(mTime)
@@ -657,7 +711,7 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 	rawMode, err := strconv.ParseUint(t[2], 16, 32) // Parse hex string into uint64
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	// We skip symbolic links for now, because windows has problems with them

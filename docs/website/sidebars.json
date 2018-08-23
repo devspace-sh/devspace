@@ -1,10 +1,24 @@
 {
   "docs": {
-    "Docusaurus": ["doc1"],
-    "First Category": ["doc2"],
-    "Second Category": ["doc3"]
-  },
-  "docs-other": {
-    "First Category": ["doc4", "doc5"]
+    "Getting Started": [
+      "getting-started/quickstart",
+      "getting-started/faq"
+    ],
+    "Commands": [
+      "cli/init",
+      "cli/up",
+      "cli/upgrade"
+    ],
+    "Configuration": [
+      "configuration/dockerfile",
+      "configuration/chart",
+      "configuration/config.yaml",
+      "configuration/private.yaml"
+    ],
+    "Advanced": [
+      "advanced/logs",
+      "advanced/kubernetes",
+      "advanced/architecture"
+    ]
   }
 }

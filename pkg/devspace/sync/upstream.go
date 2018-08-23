@@ -2,7 +2,7 @@ package sync
 
 import (
 	"archive/tar"
-	"errors"
+	"github.com/juju/errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,7 +32,7 @@ func (u *upstream) start() error {
 	err := u.startShell()
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	return nil
@@ -53,11 +53,9 @@ func (u *upstream) diffServerClient(filepath string, sendChanges *[]*FileInforma
 	}
 
 	// Exclude files on the exclude list
-	if u.config.compExcludeRegEx != nil {
-		for _, regExp := range u.config.compExcludeRegEx {
-			if regExp.MatchString(relativePath) {
-				return nil
-			}
+	if u.config.ignoreMatcher != nil {
+		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+			return nil
 		}
 	}
 
@@ -82,7 +80,7 @@ func (u *upstream) diffServerClient(filepath string, sendChanges *[]*FileInforma
 
 		for _, f := range files {
 			if err := u.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 
@@ -159,7 +157,7 @@ func (u *upstream) collectChanges() error {
 					err := u.sendFiles(files)
 
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					u.config.Logf("[Upstream] Successfully sent %d create changes\n", len(changes))
@@ -178,7 +176,7 @@ func (u *upstream) collectChanges() error {
 					err := u.applyRemoves(files)
 
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					u.config.Logf("[Upstream] Successfully sent %d delete changes\n", len(changes))
@@ -201,11 +199,10 @@ OUTER:
 		fullpath := event.Path()
 		relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
 
-		if u.config.compExcludeRegEx != nil {
-			for _, regExp := range u.config.compExcludeRegEx {
-				if regExp.MatchString(relativePath) {
-					continue OUTER // Path is excluded
-				}
+		// Exclude files on the exclude list
+		if u.config.ignoreMatcher != nil {
+			if u.config.ignoreMatcher.MatchesPath(relativePath) {
+				continue OUTER // Path is excluded
 			}
 		}
 
@@ -280,7 +277,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 				_, err := u.stdinPipe.Write([]byte(rmCommand))
 
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				waitTill(EndAck, u.stdoutPipe)
@@ -295,7 +292,7 @@ func (u *upstream) startShell() error {
 	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	u.stdinPipe = stdinPipe
@@ -313,7 +310,7 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 	filename, writtenFiles, err := u.writeTar(files)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	if len(writtenFiles) == 0 {
@@ -325,14 +322,14 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 	f, err := os.Open(filename)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	defer f.Close()
 	stat, err := f.Stat()
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	if stat.Size()%512 != 0 {
@@ -375,14 +372,14 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 		if err != nil {
 			u.config.Logf("[Upstream] Writing to u.stdinPipe failed: %s\n", err.Error())
 
-			return err
+			return errors.Trace(err)
 		}
 
 		// Wait till confirmation
 		err = waitTill(StartAck, u.stdoutPipe)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		buf := make([]byte, 512, 512)
@@ -398,18 +395,18 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 					break
 				}
 
-				return err
+				return errors.Trace(err)
 			}
 
 			// process buf
 			if err != nil && err != io.EOF {
-				return err
+				return errors.Trace(err)
 			}
 
 			n, err = u.stdinPipe.Write(buf)
 
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if n < 512 {
@@ -423,14 +420,14 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 	err = os.Remove(f.Name())
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// Wait till confirmation
 	err = waitTill(EndAck, u.stdoutPipe)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// Update filemap
@@ -446,7 +443,7 @@ func (u *upstream) writeTar(files []*FileInformation) (string, map[string]*FileI
 	f, err := ioutil.TempFile("", "")
 
 	if err != nil {
-		return "", nil, err
+		return "", nil, errors.Trace(err)
 	}
 
 	defer f.Close()
@@ -485,6 +482,13 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 		return nil
 	}
 
+	// Exclude files on the exclude list
+	if u.config.ignoreMatcher != nil {
+		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+			return nil
+		}
+	}
+
 	stat, err := os.Lstat(filepath)
 
 	// We skip files that are suddenly not there anymore
@@ -520,7 +524,7 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 			hdr.Name = strings.Replace(destFile, "\\", "/", -1) // Need to replace \ with / for windows
 
 			if err := tw.WriteHeader(hdr); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			writtenFiles[relativePath] = fileInformation
@@ -528,7 +532,7 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 
 		for _, f := range files {
 			if err := u.recursiveTar(srcBase, path.Join(srcFile, f.Name()), destBase, path.Join(destFile, f.Name()), writtenFiles, tw); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 
@@ -537,7 +541,7 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 		f, err := os.Open(filepath)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		defer f.Close()
@@ -546,17 +550,17 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 		hdr, err := tar.FileInfoHeader(stat, filepath)
 
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		hdr.Name = strings.Replace(destFile, "\\", "/", -1)
 
 		if err := tw.WriteHeader(hdr); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		if _, err := io.Copy(tw, f); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		writtenFiles[relativePath] = fileInformation
