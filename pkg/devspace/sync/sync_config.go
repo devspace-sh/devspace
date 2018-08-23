@@ -104,13 +104,13 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	err := s.upstream.start()
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	stat, err := os.Stat(LocalPath)
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	err = s.upstream.sendFiles([]*FileInformation{
@@ -121,7 +121,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	})
 
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	s.Stop()
@@ -187,7 +187,7 @@ func compileRegExp(excludeRegEx []string) ([]*regexp.Regexp, error) {
 		compiledRegEx, err := regexp.Compile(element)
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
 
 		compExcludeRegEx[index] = compiledRegEx
@@ -352,7 +352,6 @@ func (s *SyncConfig) removeDirInFileMap(dirpath string) {
 	}
 }
 
-<<<<<<< HEAD
 // CopyToContainer copies a local folder or file to a container path
 func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string) error {
 	syncObj := &SyncConfig{
@@ -400,8 +399,6 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	return nil
 }
 
-=======
->>>>>>> 69689ba6b9ff0c5edcb07b0faad3540b0f515c76
 // We need this function because tar ceils up the mtime to seconds on the server
 func ceilMtime(mtime time.Time) int64 {
 	if mtime.UnixNano()%1000000000 != 0 {
