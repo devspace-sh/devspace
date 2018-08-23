@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -49,7 +50,7 @@ const tillerRoleName = "devspace-tiller"
 const tillerDeploymentName = "tiller-deploy"
 
 var privateConfig = &v1.PrivateConfig{}
-var log = logutil.GetLogger("default", true)
+var log *logrus.Logger
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 	k8sv1beta1.PolicyRule{
 		APIGroups: []string{
@@ -63,6 +64,7 @@ var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 }
 
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
+	log = logutil.GetLogger("default", true)
 	config.LoadConfig(privateConfig)
 
 	kubeconfig, err := kubectl.GetClientConfig()
@@ -322,13 +324,13 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 			return chartReqError
 		}
 		chartDownloader := &helmdownloader.Manager{
-			/*		Out:        i.out,
-					ChartPath:  i.chartPath,
-					HelmHome:   settings.Home,
-					Keyring:    defaultKeyring(),
-					SkipUpdate: false,
-					Getters:    getter.All(settings),
-			*/
+		/*		Out:        i.out,
+				ChartPath:  i.chartPath,
+				HelmHome:   settings.Home,
+				Keyring:    defaultKeyring(),
+				SkipUpdate: false,
+				Getters:    getter.All(settings),
+		*/
 		}
 		chartDownloadErr := chartDownloader.Update()
 

@@ -197,6 +197,10 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
 	}
 
+	// A file is only deleted if the following conditions are met:
+	// - The file name is present in the d.config.fileMap map
+	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
+	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 	for key, value := range removeFiles {
 		if value != nil && d.config.fileMap[key] != nil {
 			if numRemoveFiles <= 10 {
@@ -204,14 +208,16 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 			}
 
 			if d.config.fileMap[key].IsDirectory {
-				d.deleteSafeRecursive(d.config.WatchPath, key)
+				d.deleteSafeRecursive(d.config.WatchPath, key, removeFiles)
 			} else {
-				if deleteSafe(path.Join(d.config.WatchPath, key), d.config.fileMap[key]) == false {
-					d.config.Logf("[Downstream] Skip file delete %s\n", key)
+				if value.Mtime == d.config.fileMap[key].Mtime && value.Size == d.config.fileMap[key].Size {
+					if deleteSafe(path.Join(d.config.WatchPath, key), d.config.fileMap[key]) == false {
+						d.config.Logf("[Downstream] Skip file delete %s\n", key)
+					}
 				}
-			}
 
-			delete(d.config.fileMap, key)
+				delete(d.config.fileMap, key)
+			}
 		}
 	}
 
@@ -261,17 +267,19 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 	return nil
 }
 
-func (d *downstream) deleteSafeRecursive(basepath string, relativePath string) {
+func (d *downstream) deleteSafeRecursive(basepath string, relativePath string, removeFiles map[string]*FileInformation) {
 	absolutePath := path.Join(basepath, relativePath)
 	relativePath = getRelativeFromFullPath(absolutePath, basepath)
 
 	// We don't delete the folder or the contents if we haven't tracked it
-	if d.config.fileMap[relativePath] == nil {
+	if d.config.fileMap[relativePath] == nil || removeFiles[relativePath] == nil {
 		d.config.Logf("[Downstream] Skip delete directory %s\n", relativePath)
 
 		return
 	}
 
+	// Delete directory from fileMap
+	defer delete(d.config.fileMap, relativePath)
 	files, err := ioutil.ReadDir(absolutePath)
 
 	if err != nil {
@@ -280,23 +288,33 @@ func (d *downstream) deleteSafeRecursive(basepath string, relativePath string) {
 
 	for _, f := range files {
 		if f.IsDir() {
-			d.deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()))
+			d.deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()), removeFiles)
 		} else {
 			filepath := path.Join(relativePath, f.Name())
+			fileDeleted := false
 
 			// We don't delete the file if we haven't tracked it
-			if d.config.fileMap[filepath] != nil {
-				if deleteSafe(path.Join(basepath, filepath), d.config.fileMap[filepath]) == false {
-					d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+			if d.config.fileMap[filepath] != nil && removeFiles[filepath] != nil {
+				// We don't delete the file if it has changed in the map since we collected changes
+				if removeFiles[filepath].Mtime == d.config.fileMap[filepath].Mtime && removeFiles[filepath].Size == d.config.fileMap[filepath].Size {
+					// We don't delete the file if it has changed on the filesystem meanwhile
+					fileDeleted = deleteSafe(path.Join(basepath, filepath), d.config.fileMap[filepath])
 				}
-			} else {
+			}
+
+			if fileDeleted == false {
 				d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+			} else {
+				delete(d.config.fileMap, filepath)
 			}
 		}
 	}
 
-	if d.config.fileMap[relativePath] != nil {
-		os.Remove(absolutePath) // This will not remove the directory if there is still a file or directory in it
+	// This will not remove the directory if there is still a file or directory in it
+	err = os.Remove(absolutePath)
+
+	if err != nil {
+		d.config.Logf("[Downstream] Skip delete directory %s, because %s\n", relativePath, err.Error())
 	}
 }
 
