@@ -1,9 +1,13 @@
 [[constraint]]
-  name = "github.com/daviddengcn/go-colortext"
+  name = "github.com/rhysd/go-github-selfupdate"
   branch = "master"
 
 [[constraint]]
-  name = "github.com/juju/errors"
+  name = "github.com/sabhiram/go-gitignore"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/daviddengcn/go-colortext"
   branch = "master"
 
 [[constraint]]
@@ -89,3 +93,11 @@
 [[constraint]]
   name = "github.com/foomo/htpasswd"
   revision = "cb63c4ac0e5029b961b3ac7dcc281ed2a9232e4e"
+
+[[constraint]]
+  name = "github.com/bmatcuk/doublestar"
+  version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/badgerodon/penv"
+  revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"

@@ -38,7 +38,7 @@ func GetFromStdin(params *GetFromStdin_params) string {
 		if len(params.DefaultValue) > 0 {
 			fmt.Print("\n")
 
-			if strings.Compare(params.InputTerminationString, "\n") == 0 {
+			if params.InputTerminationString == "\n" {
 				fmt.Print("Press ENTER to use: " + params.DefaultValue + "")
 			} else {
 				fmt.Println("This is the current value:\n#################\n" + strings.TrimRight(params.DefaultValue, "\r\n") + "\n#################")
@@ -54,10 +54,10 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			nextLine = strings.Trim(nextLine, "\r\n ")
 
 			if isChangeQuestion {
-				if strings.Compare(nextLine, "yes") == 0 {
+				if nextLine == "yes" {
 					isChangeQuestion = false
 					fmt.Println("Please enter the new value:")
-				} else if len(nextLine) == 0 || strings.Compare(nextLine, "no") == 0 {
+				} else if len(nextLine) == 0 || nextLine == "no" {
 					break
 				} else {
 					fmt.Println(changeQuestion)
@@ -65,8 +65,8 @@ func GetFromStdin(params *GetFromStdin_params) string {
 				continue
 			}
 
-			if strings.Compare(params.InputTerminationString, "\n") == 0 {
-				// Assign the input value to input var
+
+			if params.InputTerminationString == "\n" {
 				input = nextLine
 				break
 			}

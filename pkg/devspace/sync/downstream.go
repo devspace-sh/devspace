@@ -54,12 +54,17 @@ func (d *downstream) mainLoop() error {
 
 	for {
 		createFiles := make([]*FileInformation, 0, 128)
-		removeFiles := make(map[string]bool)
+		removeFiles := make(map[string]*FileInformation)
 
 		d.config.fileMapMutex.Lock()
 
-		for key := range d.config.fileMap {
-			removeFiles[key] = true
+		for key, value := range d.config.fileMap {
+			removeFiles[key] = &FileInformation{
+				Name:        value.Name,
+				Size:        value.Size,
+				Mtime:       value.Mtime,
+				IsDirectory: value.IsDirectory,
+			}
 		}
 
 		d.config.fileMapMutex.Unlock()
@@ -157,7 +162,7 @@ func (d *downstream) startShell() error {
 	return nil
 }
 
-func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]*FileInformation) error {
 	var err error
 	downloadFiles := make([]*FileInformation, 0, int(len(createFiles)/2))
 	createFolders := make([]*FileInformation, 0, int(len(createFiles)/2))
@@ -192,27 +197,27 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
 	}
 
+	// A file is only deleted if the following conditions are met:
+	// - The file name is present in the d.config.fileMap map
+	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
+	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 	for key, value := range removeFiles {
-		if value == true && d.config.fileMap[key] != nil {
+		if value != nil && d.config.fileMap[key] != nil {
 			if numRemoveFiles <= 10 {
 				d.config.Logf("[Downstream] Remove %s\n", key)
 			}
 
 			if d.config.fileMap[key].IsDirectory {
-				os.RemoveAll(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete folder
-
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				d.deleteSafeRecursive(d.config.WatchPath, key, removeFiles)
 			} else {
-				os.Remove(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete file
+				if value.Mtime == d.config.fileMap[key].Mtime && value.Size == d.config.fileMap[key].Size {
+					if deleteSafe(path.Join(d.config.WatchPath, key), d.config.fileMap[key]) == false {
+						d.config.Logf("[Downstream] Skip file delete %s\n", key)
+					}
+				}
 
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				delete(d.config.fileMap, key)
 			}
-
-			delete(d.config.fileMap, key)
 		}
 	}
 
@@ -260,6 +265,57 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 	}
 
 	return nil
+}
+
+func (d *downstream) deleteSafeRecursive(basepath string, relativePath string, removeFiles map[string]*FileInformation) {
+	absolutePath := path.Join(basepath, relativePath)
+	relativePath = getRelativeFromFullPath(absolutePath, basepath)
+
+	// We don't delete the folder or the contents if we haven't tracked it
+	if d.config.fileMap[relativePath] == nil || removeFiles[relativePath] == nil {
+		d.config.Logf("[Downstream] Skip delete directory %s\n", relativePath)
+
+		return
+	}
+
+	// Delete directory from fileMap
+	defer delete(d.config.fileMap, relativePath)
+	files, err := ioutil.ReadDir(absolutePath)
+
+	if err != nil {
+		return
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			d.deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()), removeFiles)
+		} else {
+			filepath := path.Join(relativePath, f.Name())
+			fileDeleted := false
+
+			// We don't delete the file if we haven't tracked it
+			if d.config.fileMap[filepath] != nil && removeFiles[filepath] != nil {
+				// We don't delete the file if it has changed in the map since we collected changes
+				if removeFiles[filepath].Mtime == d.config.fileMap[filepath].Mtime && removeFiles[filepath].Size == d.config.fileMap[filepath].Size {
+					// We don't delete the file if it has changed on the filesystem meanwhile
+					fileDeleted = deleteSafe(path.Join(basepath, filepath), d.config.fileMap[filepath])
+				}
+			}
+
+			if fileDeleted == false {
+				d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+			} else {
+				delete(d.config.fileMap, filepath)
+			}
+		}
+	}
+
+	// This will not remove the directory if there is still a file or directory in it
+	err = os.Remove(absolutePath)
+
+	if err != nil {
+		d.config.Logf("[Downstream] Skip delete directory %s, because %s\n", relativePath, err.Error())
+	}
 }
 
 func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string) (bool, error) {
@@ -516,7 +572,7 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 	return tempFile.Name(), nil
 }
 
-func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	buf := make([]byte, 0, 512)
 	overlap := ""
 
@@ -577,7 +633,7 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 	return nil
 }
 
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	d.config.fileMapMutex.Lock()
 	defer d.config.fileMapMutex.Unlock()
 
@@ -591,7 +647,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformati
 		return nil
 	}
 
-	if removeFiles[fileinformation.Name] == true {
+	if removeFiles[fileinformation.Name] != nil {
 		delete(removeFiles, fileinformation.Name)
 	}
 
@@ -624,11 +680,9 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 
 	fileinfo.Name = t[0][len(d.config.DestPath):]
 
-	if d.config.compExcludeRegEx != nil {
-		for _, regExp := range d.config.compExcludeRegEx {
-			if regExp.MatchString(fileinfo.Name) {
-				return nil, nil
-			}
+	if d.config.ignoreMatcher != nil {
+		if d.config.ignoreMatcher.MatchesPath(fileinfo.Name) {
+			return nil, nil
 		}
 	}
 
