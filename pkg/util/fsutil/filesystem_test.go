@@ -1,22 +1,17 @@
 package fsutil
 
-import (
-	"os"
-	"testing"
-	//"time"
-	"math/rand"
-	"strings"
-)
+//"time"
 
+/*
 func TestWriteToFileAndReadFile(t *testing.T) {
-	
-	//Let's create a new file and check if the content is correct. 
+
+	//Let's create a new file and check if the content is correct.
 
 	randomString := RandStringRunes(10)
 
 	writeData := []byte("Content " + randomString)
 	fileName := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
-	
+
 	e := WriteToFile(writeData, fileName)
 
 	if e != nil {
@@ -26,7 +21,7 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	}
 
 	//There should be 18 bytes in the file. We'll only read 17 to test out whether this method reads the correct amount of bytes.
-	readedData, e := ReadFile(fileName, 17) 
+	readedData, e := ReadFile(fileName, 17)
 
 	if e != nil {
 		t.Error("Reading a file failed with error: ")
@@ -90,7 +85,7 @@ func TestCopy(t *testing.T) {
 }
 
 func TestGetHomeDir(t *testing.T) {
-	
+
 	homeDirByMethod := GetHomeDir()
 	homeDirByOS := os.Getenv("HOME")
 	if homeDirByOS == "" {
@@ -109,8 +104,8 @@ func TestGetCurrentGofileDir(t *testing.T) {
 	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil"
 
 	if currentGofileDirByMethod != expected && currentGofileDirByMethod != strings.Replace(expected, "\\", "/", -1){
-		t.Error("CurrentGoFileDir is not correct.\nMethod result: " + currentGofileDirByMethod + 
-		"\nExpected: " + expected + 
+		t.Error("CurrentGoFileDir is not correct.\nMethod result: " + currentGofileDirByMethod +
+		"\nExpected: " + expected +
 		"\nExpected with /-separator: " + strings.Replace(expected, "\\", "/", -1))
 		t.Fail()
 	}
@@ -122,8 +117,8 @@ func TestGetCurrentGofile(t *testing.T) {
 	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
 
 	if currentGofileByMethod != expected && currentGofileByMethod != strings.Replace(expected, "\\", "/", -1){
-		t.Error("CurrentGoFile is not correct.\nMethod result: " + currentGofileByMethod + 
-		"\nExpected: " + expected + 
+		t.Error("CurrentGoFile is not correct.\nMethod result: " + currentGofileByMethod +
+		"\nExpected: " + expected +
 		"\nExpected with /-separator: " + strings.Replace(expected, "\\", "/", -1))
 		t.Fail()
 	}
@@ -139,3 +134,4 @@ func RandStringRunes(n int) string {
     }
     return string(b)
 }
+*/
