@@ -22,13 +22,20 @@ var defaultParams = &GetFromStdin_params{
 	InputTerminationString: "\n",
 }
 
+var reader *bufio.Reader
+
 const changeQuestion = "Would you like to change it? (yes, no/ENTER))"
 
 func GetFromStdin(params *GetFromStdin_params) string {
 	paramutil.SetDefaults(params, defaultParams)
 
 	validationRegexp, _ := regexp.Compile(params.ValidationRegexPattern)
-	reader := bufio.NewReader(os.Stdin)
+	if reader == nil {
+		reader = bufio.NewReader(os.Stdin)
+	}
+	defer func() {
+		reader = nil
+	}()
 	input := ""
 
 	for {
@@ -44,6 +51,8 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			fmt.Print("> ")
 			nextLine, _ := reader.ReadString('\n')
 			nextLine = strings.Trim(nextLine, "\r\n ")
+
+			fmt.Println("Input: " + nextLine)
 
 			if strings.Compare(params.InputTerminationString, "\n") == 0 {
 				input = nextLine

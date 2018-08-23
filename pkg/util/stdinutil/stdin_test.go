@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/juju/errors"
 )
@@ -16,7 +17,7 @@ func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
 		ValidationRegexPattern: "No|Yes",
 	}
 
-	err := mockStdin("invalid\ninvalid\n")
+	err := mockStdin("invalid\ninvalid\n\n")
 	if err != nil {
 		t.Error(errors.ErrorStack(err))
 	}
@@ -53,22 +54,55 @@ func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 
 	params := GetFromStdin_params{
-		Question: "Is this a test?",
-		DefaultValue: "No",
-		ValidationRegexPattern: "No|Yes",
+		Question: "Hello?",
+		DefaultValue: "World",
+		ValidationRegexPattern: "World|Universe",
 		InputTerminationString: " ",
 	}
 
-	err := mockStdin("invalid\nYes\n")
+	err := mockStdin("invalid\nno\n")
 	if err != nil {
 		t.Error(errors.ErrorStack(err))
 	}
 	defer cleanUpMockedStdin()
 
-	answer := GetFromStdin(&params)
+	answer := AskChangeQuestion(&params)
 
-	if answer != "Yes" {
-		t.Error("Wrong Answer.\nExpected: Yes\nBut Got: " + answer)
+	if answer != "World" {
+		t.Error("Wrong Answer.\nExpected default: World\nBut Got: " + answer)
+	}
+}
+
+func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
+
+	params := GetFromStdin_params{
+		Question: "Hello?",
+		DefaultValue: "World",
+		ValidationRegexPattern: "World|Universe",
+		InputTerminationString: "!",
+	}
+
+	err := mockStdin("invalid\nyes\ninvalid!\nUniverse!\n")
+	if err != nil {
+		t.Error(errors.ErrorStack(err))
+	}
+	go func() {
+		time.Sleep(time.Millisecond)
+		cleanUpMockedStdin()
+
+		err := mockStdin("iinvalid!\nUniverse!\n")
+		if err != nil {
+			t.Error(errors.ErrorStack(err))
+		}
+		
+		time.Sleep(time.Millisecond)
+		cleanUpMockedStdin()
+	}()
+
+	answer := AskChangeQuestion(&params)
+
+	if answer != "Universe" {
+		t.Error("Wrong Answer.\nExpected default: Universe\nBut Got: " + answer)
 	}
 }
 

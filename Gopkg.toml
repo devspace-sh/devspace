@@ -1,4 +1,8 @@
 [[constraint]]
+  name = "github.com/juju/errors"
+  branch = "master"
+
+[[constraint]]
   name = "github.com/rhysd/go-github-selfupdate"
   branch = "master"
 
