@@ -53,11 +53,9 @@ func (u *upstream) diffServerClient(filepath string, sendChanges *[]*FileInforma
 	}
 
 	// Exclude files on the exclude list
-	if u.config.compExcludeRegEx != nil {
-		for _, regExp := range u.config.compExcludeRegEx {
-			if regExp.MatchString(relativePath) {
-				return nil
-			}
+	if u.config.ignoreMatcher != nil {
+		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+			return nil
 		}
 	}
 
@@ -201,11 +199,10 @@ OUTER:
 		fullpath := event.Path()
 		relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
 
-		if u.config.compExcludeRegEx != nil {
-			for _, regExp := range u.config.compExcludeRegEx {
-				if regExp.MatchString(relativePath) {
-					continue OUTER // Path is excluded
-				}
+		// Exclude files on the exclude list
+		if u.config.ignoreMatcher != nil {
+			if u.config.ignoreMatcher.MatchesPath(relativePath) {
+				continue OUTER // Path is excluded
 			}
 		}
 
@@ -483,6 +480,13 @@ func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, wri
 
 	if writtenFiles[relativePath] != nil {
 		return nil
+	}
+
+	// Exclude files on the exclude list
+	if u.config.ignoreMatcher != nil {
+		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+			return nil
+		}
 	}
 
 	stat, err := os.Lstat(filepath)

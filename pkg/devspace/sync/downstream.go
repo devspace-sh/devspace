@@ -54,12 +54,17 @@ func (d *downstream) mainLoop() error {
 
 	for {
 		createFiles := make([]*FileInformation, 0, 128)
-		removeFiles := make(map[string]bool)
+		removeFiles := make(map[string]*FileInformation)
 
 		d.config.fileMapMutex.Lock()
 
-		for key := range d.config.fileMap {
-			removeFiles[key] = true
+		for key, value := range d.config.fileMap {
+			removeFiles[key] = &FileInformation{
+				Name:        value.Name,
+				Size:        value.Size,
+				Mtime:       value.Mtime,
+				IsDirectory: value.IsDirectory,
+			}
 		}
 
 		d.config.fileMapMutex.Unlock()
@@ -157,7 +162,7 @@ func (d *downstream) startShell() error {
 	return nil
 }
 
-func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles map[string]*FileInformation) error {
 	var err error
 	downloadFiles := make([]*FileInformation, 0, int(len(createFiles)/2))
 	createFolders := make([]*FileInformation, 0, int(len(createFiles)/2))
@@ -193,23 +198,17 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 	}
 
 	for key, value := range removeFiles {
-		if value == true && d.config.fileMap[key] != nil {
+		if value != nil && d.config.fileMap[key] != nil {
 			if numRemoveFiles <= 10 {
 				d.config.Logf("[Downstream] Remove %s\n", key)
 			}
 
 			if d.config.fileMap[key].IsDirectory {
-				os.RemoveAll(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete folder
-
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				d.deleteSafeRecursive(d.config.WatchPath, key)
 			} else {
-				os.Remove(path.Join(d.config.WatchPath, key)) // Ignore if we cannot delete file
-
-				// if err != nil {
-				//	d.config.Logln(err)
-				// }
+				if deleteSafe(path.Join(d.config.WatchPath, key), d.config.fileMap[key]) == false {
+					d.config.Logf("[Downstream] Skip file delete %s\n", key)
+				}
 			}
 
 			delete(d.config.fileMap, key)
@@ -260,6 +259,45 @@ func (d *downstream) applyChanges(createFiles []*FileInformation, removeFiles ma
 	}
 
 	return nil
+}
+
+func (d *downstream) deleteSafeRecursive(basepath string, relativePath string) {
+	absolutePath := path.Join(basepath, relativePath)
+	relativePath = getRelativeFromFullPath(absolutePath, basepath)
+
+	// We don't delete the folder or the contents if we haven't tracked it
+	if d.config.fileMap[relativePath] == nil {
+		d.config.Logf("[Downstream] Skip delete directory %s\n", relativePath)
+
+		return
+	}
+
+	files, err := ioutil.ReadDir(absolutePath)
+
+	if err != nil {
+		return
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			d.deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()))
+		} else {
+			filepath := path.Join(relativePath, f.Name())
+
+			// We don't delete the file if we haven't tracked it
+			if d.config.fileMap[filepath] != nil {
+				if deleteSafe(path.Join(basepath, filepath), d.config.fileMap[filepath]) == false {
+					d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+				}
+			} else {
+				d.config.Logf("[Downstream] Skip file delete %s\n", relativePath)
+			}
+		}
+	}
+
+	if d.config.fileMap[relativePath] != nil {
+		os.Remove(absolutePath) // This will not remove the directory if there is still a file or directory in it
+	}
 }
 
 func (d *downstream) untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string) (bool, error) {
@@ -516,7 +554,7 @@ func (d *downstream) downloadFiles(files []*FileInformation) (string, error) {
 	return tempFile.Name(), nil
 }
 
-func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	buf := make([]byte, 0, 512)
 	overlap := ""
 
@@ -577,7 +615,7 @@ func (d *downstream) collectChanges(createFiles *[]*FileInformation, removeFiles
 	return nil
 }
 
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]bool) error {
+func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformation, removeFiles map[string]*FileInformation) error {
 	d.config.fileMapMutex.Lock()
 	defer d.config.fileMapMutex.Unlock()
 
@@ -591,7 +629,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*FileInformati
 		return nil
 	}
 
-	if removeFiles[fileinformation.Name] == true {
+	if removeFiles[fileinformation.Name] != nil {
 		delete(removeFiles, fileinformation.Name)
 	}
 
@@ -624,11 +662,9 @@ func (d *downstream) parseFileInformation(fileline string) (*FileInformation, er
 
 	fileinfo.Name = t[0][len(d.config.DestPath):]
 
-	if d.config.compExcludeRegEx != nil {
-		for _, regExp := range d.config.compExcludeRegEx {
-			if regExp.MatchString(fileinfo.Name) {
-				return nil, nil
-			}
+	if d.config.ignoreMatcher != nil {
+		if d.config.ignoreMatcher.MatchesPath(fileinfo.Name) {
+			return nil, nil
 		}
 	}
 
