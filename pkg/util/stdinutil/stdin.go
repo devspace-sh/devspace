@@ -30,12 +30,16 @@ func GetFromStdin(params *GetFromStdin_params) string {
 	paramutil.SetDefaults(params, defaultParams)
 
 	validationRegexp, _ := regexp.Compile(params.ValidationRegexPattern)
+
 	if reader == nil {
+		fmt.Println("Reader Set in GetFromStdin")
 		reader = bufio.NewReader(os.Stdin)
+		
+		defer func() {
+			fmt.Println("reader reset in GetFrom Stdin")
+			reader = nil
+		}()
 	}
-	defer func() {
-		reader = nil
-	}()
 	input := ""
 
 	for {
@@ -60,7 +64,8 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			}
 			input += nextLine + "\n"
 
-			if strings.HasSuffix(nextLine, params.InputTerminationString) {
+			if strings.HasSuffix(input, params.InputTerminationString + "\n") {
+				input = strings.TrimSuffix(input, params.InputTerminationString + "\n")
 				break
 			}
 		}
@@ -73,6 +78,7 @@ func GetFromStdin(params *GetFromStdin_params) string {
 			break
 		} else {
 			fmt.Print("Input must match " + params.ValidationRegexPattern + "\n")
+			input = ""
 		}
 	}
 	return input
@@ -80,6 +86,16 @@ func GetFromStdin(params *GetFromStdin_params) string {
 
 func AskChangeQuestion(params *GetFromStdin_params) string{
 	paramutil.SetDefaults(params, defaultParams)
+
+	if reader == nil {
+		fmt.Println("Reader Set in AskChangeQuestion")
+		reader = bufio.NewReader(os.Stdin)
+		
+		defer func() {
+			fmt.Println("reader reset")
+			reader = nil
+		}()
+	}
 
 	shouldValueChangeQuestion := GetFromStdin_params{
 		Question: params.Question + "\nThis is the current value:\n#################\n" + strings.TrimRight(params.DefaultValue, "\r\n") + "\n#################\n" + changeQuestion,
@@ -100,5 +116,6 @@ func AskChangeQuestion(params *GetFromStdin_params) string{
 		InputTerminationString: params.InputTerminationString,
 	}
 
-	return GetFromStdin(&newValueQuestion)
+	newValue := GetFromStdin(&newValueQuestion)
+	return newValue
 }

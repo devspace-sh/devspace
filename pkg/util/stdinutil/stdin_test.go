@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/juju/errors"
 )
@@ -86,18 +85,7 @@ func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
 	if err != nil {
 		t.Error(errors.ErrorStack(err))
 	}
-	go func() {
-		time.Sleep(time.Millisecond)
-		cleanUpMockedStdin()
-
-		err := mockStdin("iinvalid!\nUniverse!\n")
-		if err != nil {
-			t.Error(errors.ErrorStack(err))
-		}
-		
-		time.Sleep(time.Millisecond)
-		cleanUpMockedStdin()
-	}()
+	defer cleanUpMockedStdin()
 
 	answer := AskChangeQuestion(&params)
 
