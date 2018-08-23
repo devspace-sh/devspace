@@ -7,6 +7,7 @@ jobs:
   - stage: test
     go_import_path: github.com/covexo/devspace
     install:
+      - go get -u github.com/golang/dep/...
       - dep ensure -v
       - npm install -g codeclimate-test-reporter
     os: linux

@@ -6,6 +6,9 @@
 # This script will generate coverage.txt
 set -e
 
+# Test if we can build the program
+go build main.go
+
 PKGS=$(go list ./... | grep -v /vendor/)
 for pkg in $PKGS; do
   go test -race -coverprofile=profile.out -covermode=atomic $pkg
