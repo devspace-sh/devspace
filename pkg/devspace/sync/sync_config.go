@@ -1,24 +1,20 @@
 package sync
 
 import (
-	"bytes"
-	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/covexo/devspace/pkg/util/logutil"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/juju/errors"
 )
 
 var syncLog *logrus.Logger
@@ -35,21 +31,13 @@ type SyncConfig struct {
 	DestPath     string
 	ExcludePaths []string
 
-	fileMap      map[string]*FileInformation
-	fileMapMutex sync.Mutex
+	fileIndex *fileIndex
 
 	ignoreMatcher gitignore.IgnoreParser
 	log           *logrus.Logger
 
 	upstream   *upstream
 	downstream *downstream
-}
-
-type FileInformation struct {
-	Name        string // %n
-	Size        int64  // %s
-	Mtime       int64  // %Y
-	IsDirectory bool   // parseHex(%f) & S_IFDIR
 }
 
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
@@ -96,7 +84,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		s.ignoreMatcher = ignoreMatcher
 	}
 
-	s.fileMap = make(map[string]*FileInformation)
+	s.fileIndex = newFileIndex()
 	s.upstream = &upstream{
 		config: s,
 	}
@@ -113,8 +101,8 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		return errors.Trace(err)
 	}
 
-	err = s.upstream.sendFiles([]*FileInformation{
-		&FileInformation{
+	err = s.upstream.sendFiles([]*fileInformation{
+		&fileInformation{
 			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
 			IsDirectory: stat.IsDir(),
 		},
@@ -155,8 +143,7 @@ func (s *SyncConfig) Start() {
 		s.ignoreMatcher = ignoreMatcher
 	}
 
-	s.fileMap = make(map[string]*FileInformation)
-
+	s.fileIndex = newFileIndex()
 	s.upstream = &upstream{
 		config: s,
 	}
@@ -205,14 +192,16 @@ func (s *SyncConfig) mainLoop() {
 		return
 	}
 
-	sendChanges := make([]*FileInformation, 0, 10)
-	fileMapClone := make(map[string]*FileInformation)
+	sendChanges := make([]*fileInformation, 0, 10)
+	fileMapClone := make(map[string]*fileInformation)
 
-	for key, element := range s.fileMap {
+	for key, element := range s.fileIndex.fileMap {
 		fileMapClone[key] = element
 	}
 
-	err = s.upstream.diffServerClient(s.WatchPath, &sendChanges, fileMapClone)
+	err = s.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
+		return s.diffServerClient(s.WatchPath, fileMap, &sendChanges, fileMapClone)
+	})
 
 	if err != nil {
 		syncLog.Errorln(err)
@@ -230,7 +219,7 @@ func (s *SyncConfig) mainLoop() {
 	}
 
 	if len(fileMapClone) > 0 {
-		downloadChanges := make([]*FileInformation, 0, len(fileMapClone))
+		downloadChanges := make([]*fileInformation, 0, len(fileMapClone))
 
 		for _, element := range fileMapClone {
 			downloadChanges = append(downloadChanges, element)
@@ -314,221 +303,63 @@ func (s *SyncConfig) Stop() {
 	}
 }
 
-// Function assumes that fileMap is locked for access
-func (s *SyncConfig) createDirInFileMap(dirpath string) {
-	if dirpath == "/" {
-		return
+func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileInformation, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
+	stat, err := os.Lstat(filepath)
+
+	// We skip files that are suddenly not there anymore
+	if err != nil {
+		return nil
 	}
 
-	pathParts := strings.Split(dirpath, "/")
+	// We skip symlinks
+	if stat.Mode()&os.ModeSymlink != 0 {
+		return nil
+	}
 
-	for i := len(pathParts); i > 1; i-- {
-		subPath := strings.Join(pathParts[:i], "/")
-
-		if s.fileMap[subPath] == nil && subPath != "" {
-			s.fileMap[subPath] = &FileInformation{
-				Name:        subPath,
-				IsDirectory: true,
-			}
+	// Exclude files on the exclude list
+	if s.ignoreMatcher != nil {
+		if s.ignoreMatcher.MatchesPath(relativePath) {
+			return nil
 		}
 	}
-}
 
-// Function assumes that fileMap is locked for access
-// TODO: This function is very expensive O(n), is there a better solution?
-func (s *SyncConfig) removeDirInFileMap(dirpath string) {
-	if s.fileMap[dirpath] != nil {
-		delete(s.fileMap, dirpath)
+	delete(downloadChanges, relativePath)
 
-		dirpath = dirpath + "/"
+	if stat.IsDir() {
+		files, err := ioutil.ReadDir(filepath)
 
-		for key := range s.fileMap {
-			if strings.Index(key, dirpath) == 0 {
-				delete(s.fileMap, key)
+		if err != nil {
+			s.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
+			return nil
+		}
+
+		if len(files) == 0 {
+			if fileMap[relativePath] == nil {
+				*sendChanges = append(*sendChanges, &fileInformation{
+					Name:        relativePath,
+					IsDirectory: true,
+				})
 			}
 		}
-	}
-}
 
-// We need this function because tar ceils up the mtime to seconds on the server
-func ceilMtime(mtime time.Time) int64 {
-	if mtime.UnixNano()%1000000000 != 0 {
-		num := strconv.FormatInt(mtime.UnixNano(), 10)
-		ret, _ := strconv.Atoi(num[:len(num)-9])
-
-		return int64(ret) + 1
-	} else {
-		return mtime.Unix()
-	}
-}
-
-func getRelativeFromFullPath(fullpath string, prefix string) string {
-	return strings.Replace(strings.Replace(fullpath[len(prefix):], "\\", "/", -1), "//", "/", -1)
-}
-
-func pipeStream(w io.Writer, r io.Reader) error {
-	buf := make([]byte, 1024, 1024)
-
-	for {
-		n, err := r.Read(buf[:])
-		if n > 0 {
-			d := buf[:n]
-
-			_, err := w.Write(d)
-			if err != nil {
+		for _, f := range files {
+			if err := s.diffServerClient(path.Join(filepath, f.Name()), fileMap, sendChanges, downloadChanges); err != nil {
 				return errors.Trace(err)
 			}
 		}
-		if err != nil {
-			// Read returns io.EOF at the end of file, which is not an error for us
-			if err == io.EOF {
-				err = nil
-			}
-			return errors.Trace(err)
+
+		return nil
+	} else {
+		if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {
+			*sendChanges = append(*sendChanges, &fileInformation{
+				Name:        relativePath,
+				Mtime:       ceilMtime(stat.ModTime()),
+				Size:        stat.Size(),
+				IsDirectory: false,
+			})
 		}
+
+		return nil
 	}
-}
-
-func readTill(keyword string, reader io.Reader) (string, error) {
-	var output bytes.Buffer
-	buf := make([]byte, 0, 512)
-	overlap := ""
-
-	for keywordFound := false; keywordFound == false; {
-		n, err := reader.Read(buf[:cap(buf)])
-
-		buf = buf[:n]
-
-		if n == 0 {
-			if err == nil {
-				continue
-			}
-			if err == io.EOF {
-				break
-			}
-
-			return "", errors.Trace(err)
-		}
-
-		// process buf
-		if err != nil && err != io.EOF {
-			return "", errors.Trace(err)
-		}
-
-		lines := strings.Split(string(buf), "\n")
-
-		for index, element := range lines {
-			line := ""
-
-			if index == 0 {
-				if len(lines) > 1 {
-					line = overlap + element
-				} else {
-					overlap += element
-				}
-			} else if index == len(lines)-1 {
-				overlap = element
-			} else {
-				line = element
-			}
-
-			if line == keyword {
-				output.WriteString(line)
-				keywordFound = true
-				break
-			} else if overlap == keyword {
-				output.WriteString(overlap)
-				keywordFound = true
-				break
-			} else if line != "" {
-				output.WriteString(line + "\n")
-			}
-		}
-	}
-
-	return output.String(), nil
-}
-
-func waitTill(keyword string, reader io.Reader) error {
-	buf := make([]byte, 0, 512)
-	overlap := ""
-
-	for {
-		n, err := reader.Read(buf[:cap(buf)])
-
-		buf = buf[:n]
-
-		if n == 0 {
-			if err == nil {
-				continue
-			}
-			if err == io.EOF {
-				break
-			}
-
-			return errors.Trace(err)
-		}
-
-		// process buf
-		if err != nil && err != io.EOF {
-			return errors.Trace(err)
-		}
-
-		lines := strings.Split(string(buf), "\n")
-
-		for index, element := range lines {
-			line := ""
-
-			if index == 0 {
-				if len(lines) > 1 {
-					line = overlap + element
-				} else {
-					overlap += element
-				}
-			} else if index == len(lines)-1 {
-				overlap = element
-			} else {
-				line = element
-			}
-
-			if line == keyword || overlap == keyword {
-				return nil
-			}
-		}
-	}
-
-	return nil
-}
-
-// clean prevents path traversals by stripping them out.
-// This is adapted from https://golang.org/src/net/http/fs.go#L74
-func clean(fileName string) string {
-	return path.Clean(string(os.PathSeparator) + fileName)
-}
-
-// dirExists checks if a path exists and is a directory.
-func dirExists(path string) (bool, error) {
-	fi, err := os.Stat(path)
-	if err == nil && fi.IsDir() {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, errors.Trace(err)
-}
-
-func deleteSafe(path string, fileInformation *FileInformation) bool {
-	// Only delete if mtime and size did not change
-	stat, err := os.Stat(path)
-
-	if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
-		err = os.Remove(path)
-
-		if err == nil {
-			return true
-		}
-	}
-
-	return false
 }
