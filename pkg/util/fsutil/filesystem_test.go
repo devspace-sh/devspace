@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/juju/errors"
 )
 
 func TestWriteToFileAndReadFile(t *testing.T) {
@@ -22,10 +23,12 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	file, e := ioutil.TempFile("", randomString)
 	assert.Nil(t, e)
 	defer os.Remove(file.Name())
+
+	t.Log(file.Name())
 	
 	e = WriteToFile(writeData, file.Name())
 
-	assert.Nil(t, e)
+	assert.Nilf(t, e, errors.Details(e))
 
 	//There should be 18 bytes in the file. We'll only read 17 to test out whether this method reads the correct amount of bytes.
 	readedData, e := ReadFile(file.Name(), 17) 

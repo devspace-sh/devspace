@@ -24,6 +24,7 @@ func WriteToFile(data []byte, filePath string) error {
 	if fopenErr != nil {
 		return errors.Trace(fopenErr)
 	}
+
 	fileWriter := bufio.NewWriter(file)
 	_, fwriteErr := fileWriter.Write(data)
 
