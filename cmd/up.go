@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"io"
 	"os"
@@ -128,7 +129,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.kubectl, err = kubectl.NewClient()
 
 	if err != nil {
+		logutil.PrintFailMessage(fmt.Sprintf("Unable to create new kubectl client: %s", err.Error()), os.Stdout)
 		log.WithError(err).Panic("Unable to create new kubectl client")
+		return
 	}
 
 	if cmd.flags.build {
@@ -138,7 +141,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		if statErr != nil {
 			if len(cmd.privateConfig.Release.LatestImage) == 0 {
+				logutil.PrintFailMessage(fmt.Sprintf("Unable to call stat on Dockerfile: %s", statErr.Error()), os.Stdout)
 				log.WithError(statErr).Panic("Unable to call stat on Dockerfile")
+				return
 			} else {
 				mustRebuild = false
 			}
@@ -165,7 +170,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			privateConfigErr := config.SaveConfig(cmd.privateConfig)
 
 			if privateConfigErr != nil {
+				logutil.PrintFailMessage(fmt.Sprintf("Config saving error: %s", privateConfigErr.Error()), os.Stdout)
 				log.WithError(privateConfigErr).Panic("Config saving error")
+				return
 			}
 		} else {
 			cmd.latestImageIP = cmd.privateConfig.Release.LatestImage
@@ -280,7 +287,7 @@ func (cmd *UpCmd) buildDockerfile() {
 		if !buildPodReady {
 			log.Panic("Unable to start build pod")
 		} else {
-			log.Info("Uploading files to build container")
+			logutil.PrintDoneMessage("Uploading files to build container", os.Stdout)
 
 			ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
 
@@ -291,7 +298,7 @@ func (cmd *UpCmd) buildDockerfile() {
 
 			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
 
-			log.Info("Starting build process")
+			logutil.PrintDoneMessage("Starting build process", os.Stdout)
 
 			containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
 
@@ -317,7 +324,8 @@ func (cmd *UpCmd) buildDockerfile() {
 			if exitError != nil {
 				log.WithError(exitError).Panic("Failed building image")
 			}
-			log.Info("Done building image")
+
+			logutil.PrintDoneMessage("Done building image", os.Stdout)
 		}
 		return nil
 	})
@@ -349,7 +357,7 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 }
 
 func (cmd *UpCmd) initRegistry() {
-	log.Info("Initializing helm client")
+	logutil.PrintDoneMessage("Initializing helm client", os.Stdout)
 	cmd.initHelm()
 
 	installRegistry := cmd.flags.initRegistry
@@ -368,7 +376,7 @@ func (cmd *UpCmd) initRegistry() {
 		if !secretIsMap {
 			//TODO
 		}
-		log.Info("Initializing docker registry")
+		logutil.PrintDoneMessage("Initializing docker registry", os.Stdout)
 
 		deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
 
@@ -506,7 +514,7 @@ func (cmd *UpCmd) initHelm() {
 }
 
 func (cmd *UpCmd) deployChart() {
-	log.Info("Deploying helm chart")
+	logutil.PrintDoneMessage("Deploying helm chart", os.Stdout)
 	cmd.initHelm()
 
 	releaseName := cmd.privateConfig.Release.Name
@@ -634,7 +642,6 @@ func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime 
 		if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].Ready {
 			return nil
 		}
-		log.Info(waitingMessage)
 
 		time.Sleep(checkInterval)
 		maxWaitTime = maxWaitTime - checkInterval

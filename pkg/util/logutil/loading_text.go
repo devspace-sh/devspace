@@ -102,7 +102,6 @@ func PrintDoneMessage(message string, log io.Writer) {
 	ct.ResetColor()
 
 	log.Write([]byte(message + "\n"))
-	log.Write([]byte("\n"))
 }
 
 func PrintFailMessage(message string, log io.Writer) {
