@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
-	params := GetFromStdin_params{
+	params := GetFromStdinParams{
 		Question:               "Is this a test?",
 		DefaultValue:           "Yes",
 		ValidationRegexPattern: "No|Yes",
@@ -30,7 +30,7 @@ func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
 
 func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 
-	params := GetFromStdin_params{
+	params := GetFromStdinParams{
 		Question:               "Is this a test?",
 		DefaultValue:           "No",
 		ValidationRegexPattern: "No|Yes",
@@ -51,7 +51,7 @@ func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 
 func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 
-	params := GetFromStdin_params{
+	params := GetFromStdinParams{
 		Question:               "Hello?",
 		DefaultValue:           "World",
 		ValidationRegexPattern: "World|Universe",
@@ -73,7 +73,7 @@ func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 
 func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
 
-	params := GetFromStdin_params{
+	params := GetFromStdinParams{
 		Question:               "Hello?",
 		DefaultValue:           "World",
 		ValidationRegexPattern: "World|Universe",
