@@ -225,7 +225,7 @@ func (u *upstream) applyRemoves(fileMap map[string]*fileInformation, files []*fi
 }
 
 func (u *upstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false)
+	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
 
 	if err != nil {
 		return errors.Trace(err)
