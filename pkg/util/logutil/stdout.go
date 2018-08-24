@@ -23,11 +23,11 @@ func (hook TerminalHook) Fire(entry *logrus.Entry) error {
 	message := entry.Message + "\n"
 
 	if entry.Level == logrus.DebugLevel {
-		ct.Foreground(ct.Yellow, false)
+		ct.Foreground(ct.Green, false)
 	} else if entry.Level == logrus.InfoLevel {
 		ct.Foreground(ct.Green, false)
 	} else if entry.Level == logrus.WarnLevel {
-		ct.Foreground(ct.Magenta, false)
+		ct.Foreground(ct.Red, false)
 	} else {
 		ct.Foreground(ct.Red, false)
 	}
