@@ -1,0 +1,20 @@
+version: v1
+portForwarding:
+- resourceType: pod
+  labelSelector:
+    release: devspace-docs
+  portMappings:
+  - localPort: 3000
+    remotePort: 3000
+  - localPort: 35729
+    remotePort: 35729
+syncPath:
+- resourceType: pod
+  labelSelector:
+    release: devspace-docs
+  localSubPath: ./
+  containerPath: /app
+  excludeRegex: []
+registry:
+  secrets:
+    htpasswd: ""

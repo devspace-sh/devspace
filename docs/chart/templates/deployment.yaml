@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    release: "{{ .Release.Name }}"
+    chartName: "{{ .Chart.Name }}"
+    chartVersion: "{{ .Chart.Version }}"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        release: "{{ .Release.Name }}"
+        chartName: "{{ .Chart.Name }}"
+        chartVersion: "{{ .Chart.Version }}"
+    spec:
+      imagePullSecrets:
+      {{- range $index, $secretName := .Values.container.pullSecrets }}
+      - name: "{{ $secretName }}"
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.container.image }}"
+        command:
+        {{- range $index, $command := .Values.container.command }}
+        - "{{ $command }}"
+        {{- end }}
+        args:
+        {{- range $index, $arg := .Values.container.args }}
+        - "{{ $arg }}"
+        {{- end }}
+        resources:
+{{ toYaml .Values.container.resources | indent 12 }}

@@ -1,0 +1,477 @@
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:11:57+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-21T08:12:18+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:14:42+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:14:42+02:00"}
+{"error":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/default/configmaps?labelSelector=NAME%3Ddevspace-registry%2COWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T08:15:13+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:16:16+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-21T08:16:16+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-21T08:16:16+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-21T08:16:21+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:16:28+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T08:16:29+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T08:16:34+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T08:17:39+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T08:18:51+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T08:18:51+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:18:54+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:04+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:14+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:24+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:34+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:44+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:19:54+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:20:04+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:20:14+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:20:24+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:20:34+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:20:44+02:00"}
+{"error":"unable to upgrade connection: container not found (\"devspace-docs\")","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T08:20:54+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T08:40:19+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:40:22+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:40:32+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T08:50:35+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:50:37+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:50:47+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T08:50:57+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:51:03+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:51:03+02:00"}
+{"error":"rpc error: code = Unknown desc = \"devspace-registry\" has no deployed releases","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T08:51:04+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:51:40+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:51:40+02:00"}
+{"error":"rpc error: code = Unknown desc = \"devspace-registry\" has no deployed releases","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T08:51:40+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:54:21+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:54:21+02:00"}
+{"error":"rpc error: code = Unknown desc = Unauthorized","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T08:54:22+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T08:55:22+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T08:55:22+02:00"}
+{"error":"rpc error: code = Unknown desc = Unauthorized","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T08:55:23+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:01:29+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:01:29+02:00"}
+{"error":"rpc error: code = Unknown desc = Unauthorized","level":"panic","msg":"Unable to initalize docker registry","time":"2018-08-21T09:01:30+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:02:26+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-21T09:02:26+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-21T09:02:26+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-21T09:02:31+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:02:37+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:03:18+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:03:18+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T09:03:21+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T09:03:26+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T09:03:32+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T09:04:39+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:04:39+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:09:22+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:09:22+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T09:09:25+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T09:09:30+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T09:09:36+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:09:47+02:00"}
+{"error":"rpc error: code = Unknown desc = \"devspace-docs\" has no deployed releases","level":"panic","msg":"Unable to deploy helm chart","time":"2018-08-21T09:09:47+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:10:19+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:10:28+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:19:27+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:19:30+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:19:40+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:19:50+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:19:54+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:19:54+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T09:19:57+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T09:20:02+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T09:20:08+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T09:21:19+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:21:19+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:21:22+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:21:32+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:21:42+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:21:52+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:22:02+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:22:12+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:22:22+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T09:22:29+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T09:22:30+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T09:22:33+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T09:22:38+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T09:22:45+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T09:26:19+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T09:26:19+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T09:26:22+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T14:39:26+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T14:39:26+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T14:39:30+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T14:39:35+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T14:40:53+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T14:44:14+02:00"}
+{"error":"pods \"devspace-build-tzj4f\" not found","level":"error","msg":"Failed delete build pod","time":"2018-08-21T14:44:14+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T14:44:14+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T14:44:17+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T14:51:32+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T14:51:32+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T14:51:35+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T14:51:40+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T14:51:49+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T14:54:55+02:00"}
+{"error":"pods \"devspace-build-rbtlc\" not found","level":"error","msg":"Failed delete build pod","time":"2018-08-21T14:54:55+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T14:54:55+02:00"}
+{"error":"command terminated with exit code 137","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T14:55:27+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T14:55:34+02:00"}
+{"error":"command terminated with exit code 130","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T15:00:06+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T15:06:05+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T15:06:05+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T15:06:09+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T15:06:14+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T15:06:21+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T15:10:05+02:00"}
+{"error":"pods \"devspace-build-lw8br\" not found","level":"error","msg":"Failed delete build pod","time":"2018-08-21T15:10:05+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:10:05+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T15:10:09+02:00"}
+{"error":"command terminated with exit code 137","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T15:17:11+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:17:59+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:18:27+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T15:19:08+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T15:19:08+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T15:19:11+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T15:19:16+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T15:19:24+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T15:22:36+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:22:36+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-21T15:22:39+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T15:38:08+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T15:38:08+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T15:38:12+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T15:38:17+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T15:38:25+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T15:41:57+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:41:57+02:00"}
+{"error":"command terminated with exit code 137","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T15:42:29+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T15:42:37+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T15:42:37+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T15:42:41+02:00"}
+{"error":"command terminated with exit code 1","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T16:47:04+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T16:47:15+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T16:47:15+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T16:47:19+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T16:47:24+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-21T16:48:44+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-21T16:52:06+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-21T16:52:06+02:00"}
+{"error":"command terminated with exit code 137","level":"panic","msg":"Unable to start terminal session","time":"2018-08-21T16:52:38+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:20:25+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:20:26+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T18:20:31+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T18:20:36+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:22:38+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:22:38+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T18:22:45+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T18:22:50+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:23:07+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:23:07+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:23:41+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:23:41+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T18:23:45+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T18:23:50+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:27:11+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:27:11+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T18:27:16+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T18:27:21+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T18:28:07+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T18:28:08+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T18:28:13+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T18:28:18+02:00"}
+{"level":"panic","msg":"unknown shorthand flag: '#' in -#","time":"2018-08-21T19:00:43+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-21T19:00:47+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-21T19:00:47+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-21T19:00:53+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-21T19:00:58+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:50:27+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:50:27+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:50:30+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:50:35+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:53:00+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:53:01+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:53:04+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:53:09+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:54:11+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:54:11+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:54:15+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:54:20+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:55:12+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:55:13+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:55:16+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:55:21+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:56:08+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:56:08+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:56:14+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:56:15+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:56:20+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:56:25+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:57:01+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:57:01+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:57:19+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:57:19+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:57:25+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:57:30+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:59:02+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:59:02+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:59:11+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:59:11+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T09:59:16+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T09:59:21+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T09:59:56+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T09:59:56+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T10:00:00+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T10:00:05+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T10:04:23+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T10:04:23+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T10:04:27+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T10:04:32+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T10:05:48+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T10:05:49+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T10:05:53+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T10:05:58+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T10:18:20+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T10:18:20+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T10:18:26+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T10:18:31+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-22T10:18:32+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-22T10:18:32+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T10:18:32+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-22T10:18:35+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-22T10:18:45+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-22T10:18:55+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-22T10:32:11+02:00"}
+{"level":"info","msg":"Initalizing docker registry","time":"2018-08-22T10:32:11+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-22T10:32:15+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-22T10:32:20+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-22T10:32:25+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-22T10:35:46+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T10:35:46+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-22T10:35:50+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T11:41:34+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T20:25:05+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-22T20:25:26+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T20:36:01+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-22T20:36:22+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-22T20:51:08+02:00"}
+{"error":"command terminated with exit code 130","level":"panic","msg":"Unable to start terminal session","time":"2018-08-22T21:44:52+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:02:04+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:02:04+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:02:05+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:02:10+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:22:34+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:22:34+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-23T15:22:34+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-23T15:22:39+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-23T15:22:44+02:00"}
+{"error":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/kube-system/configmaps?labelSelector=NAME%3Ddevspace-docs%2COWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","level":"panic","msg":"Unable to deploy helm chart","time":"2018-08-23T15:23:19+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:25:26+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:25:26+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:25:26+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:25:31+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:25:36+02:00"}
+{"error":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/kube-system/configmaps?labelSelector=NAME%3Ddevspace-docs%2COWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","level":"panic","msg":"Unable to deploy helm chart","time":"2018-08-23T15:26:11+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:26:43+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:26:43+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:26:43+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:26:48+02:00"}
+{"error":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/kube-system/configmaps?labelSelector=NAME%3Ddevspace-docs%2COWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","level":"panic","msg":"Unable to deploy helm chart","time":"2018-08-23T15:27:23+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:28:05+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:28:05+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:28:05+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:31:01+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T15:31:01+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:31:01+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T15:31:06+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:31:41+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:32:11+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:19+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:20+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:25+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:30+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:35+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:40+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:46+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:51+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:43:56+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:01+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:06+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:11+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:16+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:21+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:26+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:31+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:36+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:41+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:46+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:51+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:44:56+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:45:01+02:00"}
+{"error":"context deadline exceeded","level":"panic","msg":"Unable to deploy helm chart","time":"2018-08-23T15:45:06+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:53:04+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:53:35+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:54:05+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:54:35+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:55:05+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:55:35+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:56:05+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:56:14+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T15:57:13+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:57:43+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:58:13+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:58:43+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:59:13+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T15:59:43+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T16:00:13+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T16:00:43+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T16:01:13+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T22:04:44+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T22:04:45+02:00"}
+{"error":"namespaces \"devspace-docs\" not found","level":"panic","msg":"Unable to initalize helm client","time":"2018-08-23T22:04:45+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T22:09:55+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T22:09:55+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-23T22:09:55+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-23T22:10:00+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T22:10:36+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T22:11:06+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T22:14:22+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T22:15:11+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-23T22:15:11+02:00"}
+{"level":"info","msg":"Waiting for Tiller server to start","time":"2018-08-23T22:15:11+02:00"}
+{"level":"info","msg":"\u003cnil\u003e","time":"2018-08-23T22:15:47+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T22:15:47+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-23T22:16:18+02:00"}
+{"level":"info","msg":"\u003cnil\u003e","time":"2018-08-23T22:16:49+02:00"}
+{"level":"info","msg":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/devspace-docs/configmaps?labelSelector=OWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","time":"2018-08-23T22:16:49+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T22:16:49+02:00"}
+{"level":"info","msg":"\u003cnil\u003e","time":"2018-08-23T22:17:19+02:00"}
+{"level":"info","msg":"rpc error: code = Unknown desc = Get https://10.96.0.1:443/api/v1/namespaces/devspace-docs/configmaps?labelSelector=OWNER%3DTILLER: dial tcp 10.96.0.1:443: i/o timeout","time":"2018-08-23T22:17:19+02:00"}
+{"level":"info","msg":"Waiting for helm client getting connection","time":"2018-08-23T22:17:19+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T11:26:50+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-24T11:26:50+02:00"}
+{"error":"namespaces \"devspace-docs\" not found","level":"panic","msg":"Unable to initalize helm client","time":"2018-08-24T11:26:50+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T11:27:11+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-24T11:27:11+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:12+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:17+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:22+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:27+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:32+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:37+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:42+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:47+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:52+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:27:57+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T11:39:07+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-24T11:39:07+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:39:08+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:39:13+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:39:27+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:39:37+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:39:47+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:39:57+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:40:07+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:40:17+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:40:27+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:40:37+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:40:47+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T11:42:07+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-24T11:42:07+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:42:07+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:42:12+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:42:19+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:42:29+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T11:44:34+02:00"}
+{"level":"info","msg":"Installing Tiller server","time":"2018-08-24T11:44:34+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:34+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:39+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:44+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:49+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:54+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:44:59+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:45:04+02:00"}
+{"level":"info","msg":"Waiting for port forwarding to start","time":"2018-08-24T11:45:09+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:45:17+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:45:27+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:45:37+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:45:47+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:45:57+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:07+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:17+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:27+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:37+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:47+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:46:57+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T11:47:07+02:00"}
+{"error":"unable to upgrade connection: container not found (\"devspace-docs\")","level":"panic","msg":"Unable to start terminal session","time":"2018-08-24T11:47:17+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T13:55:11+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T13:55:11+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T13:55:14+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T13:55:19+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T13:55:24+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T13:55:25+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-24T13:58:07+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T13:58:07+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T13:58:10+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T13:58:20+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T13:58:30+02:00"}
+{"level":"info","msg":"Waiting for DevSpace pod to become ready","time":"2018-08-24T13:58:40+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:00:34+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:00:34+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T14:00:38+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T14:00:44+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T14:00:44+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:02:22+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:02:23+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T14:02:27+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T14:02:32+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T14:02:32+02:00"}
+{"error":"command terminated with exit code 1","level":"panic","msg":"Failed building image","time":"2018-08-24T14:03:35+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:47:01+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:47:01+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T14:47:05+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T14:47:10+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T14:47:10+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:12Z\" level=info Unpacking layer: 7","time":"2018-08-24T14:47:12+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:12Z\" level=info Unpacking layer: 6","time":"2018-08-24T14:47:13+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:16Z\" level=info Unpacking layer: 5","time":"2018-08-24T14:47:16+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:16Z\" level=info Unpacking layer: 4","time":"2018-08-24T14:47:16+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:16Z\" level=info Unpacking layer: 3","time":"2018-08-24T14:47:16+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:38Z\" level=info Unpacking layer: 2","time":"2018-08-24T14:47:38+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:46Z\" level=info Unpacking layer: 1","time":"2018-08-24T14:47:46+02:00"}
+{"level":"info","msg":"time=\"2018-08-24T12:47:50Z\" level=info Unpacking layer: 0","time":"2018-08-24T14:47:50+02:00"}
+{"error":"command terminated with exit code 1","level":"panic","msg":"Failed building image","time":"2018-08-24T14:48:13+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:49:39+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:49:39+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T14:49:43+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T14:49:48+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T14:49:49+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 7","time":"2018-08-24T14:49:51+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 6","time":"2018-08-24T14:49:51+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 5","time":"2018-08-24T14:49:54+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 4","time":"2018-08-24T14:49:54+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 3","time":"2018-08-24T14:49:54+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 2","time":"2018-08-24T14:50:16+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 1","time":"2018-08-24T14:50:23+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 0","time":"2018-08-24T14:50:26+02:00"}
+{"level":"info","msg":"build \u003e RUNNING: command-not-found","time":"2018-08-24T14:50:49+02:00"}
+{"error":"command terminated with exit code 1","level":"panic","msg":"Failed building image","time":"2018-08-24T14:50:49+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:54:43+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:54:43+02:00"}
+{"level":"info","msg":"Initializing helm client","time":"2018-08-24T14:56:30+02:00"}
+{"level":"info","msg":"Initializing docker registry","time":"2018-08-24T14:56:30+02:00"}
+{"level":"info","msg":"Waiting for build pod to start","time":"2018-08-24T14:56:32+02:00"}
+{"level":"info","msg":"Uploading files to build container","time":"2018-08-24T14:56:37+02:00"}
+{"level":"info","msg":"Starting build process","time":"2018-08-24T14:56:38+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layers of base image","time":"2018-08-24T14:56:38+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 7","time":"2018-08-24T14:56:40+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 6","time":"2018-08-24T14:56:40+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 5","time":"2018-08-24T14:56:43+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 4","time":"2018-08-24T14:56:43+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 3","time":"2018-08-24T14:56:44+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 2","time":"2018-08-24T14:57:06+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 1","time":"2018-08-24T14:57:14+02:00"}
+{"level":"info","msg":"build \u003e Unpacking layer: 0","time":"2018-08-24T14:57:17+02:00"}
+{"level":"info","msg":"build \u003e RUN mkdir -p /app/website","time":"2018-08-24T14:57:41+02:00"}
+{"level":"info","msg":"build \u003e RUN npm install","time":"2018-08-24T14:57:41+02:00"}
+{"level":"info","msg":"Done building image","time":"2018-08-24T14:59:38+02:00"}
+{"level":"info","msg":"Deploying helm chart","time":"2018-08-24T14:59:38+02:00"}
+{"error":"command terminated with exit code 137","level":"panic","msg":"Unable to start terminal session","time":"2018-08-24T15:00:09+02:00"}

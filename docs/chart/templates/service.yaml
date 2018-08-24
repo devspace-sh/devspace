@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    release: "{{ .Release.Name }}"
+    chartName: "{{ .Chart.Name }}"
+    chartVersion: "{{ .Chart.Version }}"
+spec:
+  type: ClusterIP
+  ports:
+  - name: port-{{ .Values.external.port }}
+    port: {{ .Values.external.port }}
+    targetPort: {{ .Values.container.port }}
+    protocol: TCP
+  selector:
+    release: "{{ .Release.Name }}"

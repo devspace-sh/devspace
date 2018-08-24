@@ -1,0 +1,2 @@
+{"level":"error","msg":"Runtime error occurred: error copying from local connection to remote stream: read tcp4 127.0.0.1:52143-\u003e127.0.0.1:52145: wsarecv: Eine vorhandene Verbindung wurde vom Remotehost geschlossen.","time":"2018-08-24T14:54:43+02:00"}
+{"level":"error","msg":"Runtime error occurred: error copying from local connection to remote stream: read tcp4 127.0.0.1:52143-\u003e127.0.0.1:52147: wsarecv: Eine vorhandene Verbindung wurde vom Remotehost geschlossen.","time":"2018-08-24T14:54:44+02:00"}
