@@ -52,7 +52,7 @@ const tillerDeploymentName = "tiller-deploy"
 var privateConfig = &v1.PrivateConfig{}
 var log *logrus.Logger
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
-	k8sv1beta1.PolicyRule{
+	{
 		APIGroups: []string{
 			k8sv1beta1.APIGroupAll,
 			"extensions",
@@ -177,7 +177,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 			}
 		}
 		roleBindingErr := ensureRoleBinding(kubectlClient, "tiller-config-manager", privateConfig.Cluster.TillerNamespace, privateConfig.Cluster.TillerNamespace, []k8sv1beta1.PolicyRule{
-			k8sv1beta1.PolicyRule{
+			{
 				APIGroups: []string{
 					k8sv1beta1.APIGroupAll,
 					"extensions",
@@ -243,7 +243,7 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, name, namespace stri
 			Namespace: namespace,
 		},
 		Subjects: []k8sv1beta1.Subject{
-			k8sv1beta1.Subject{
+			{
 				Kind:      k8sv1beta1.ServiceAccountKind,
 				Name:      tillerServiceAccountName,
 				Namespace: tillerNamespace,
