@@ -7,39 +7,41 @@ import (
 
 func TestCreateDirInFileMap(t *testing.T) {
 	sync := SyncConfig{
-		fileMap: map[string]*FileInformation{},
+		fileIndex: newFileIndex(),
 	}
 
-	sync.createDirInFileMap("/TestDir1/TestDir2/TestDir3/TestDir4")
+	sync.fileIndex.CreateDirInFileMap("/TestDir1/TestDir2/TestDir3/TestDir4")
 
-	if len(sync.fileMap) != 4 {
+	if len(sync.fileIndex.fileMap) != 4 {
 		t.Error("Create dir in file map failed!")
 		t.Fail()
 	}
 }
 func TestRemoveDirInFileMap(t *testing.T) {
 	sync := SyncConfig{
-		fileMap: map[string]*FileInformation{
-			"/TestDir": &FileInformation{
-				Name:        "/TestDir",
-				IsDirectory: true,
-			},
-			"/TestDir/File1": &FileInformation{
-				Name:        "/TestDir/File1",
-				Size:        1234,
-				Mtime:       1234,
-				IsDirectory: false,
-			},
-			"/TestDir2": &FileInformation{
-				Name:        "/TestDir2",
-				IsDirectory: true,
-			},
+		fileIndex: newFileIndex(),
+	}
+
+	sync.fileIndex.fileMap = map[string]*fileInformation{
+		"/TestDir": &fileInformation{
+			Name:        "/TestDir",
+			IsDirectory: true,
+		},
+		"/TestDir/File1": &fileInformation{
+			Name:        "/TestDir/File1",
+			Size:        1234,
+			Mtime:       1234,
+			IsDirectory: false,
+		},
+		"/TestDir2": &fileInformation{
+			Name:        "/TestDir2",
+			IsDirectory: true,
 		},
 	}
 
-	sync.removeDirInFileMap("/TestDir")
+	sync.fileIndex.RemoveDirInFileMap("/TestDir")
 
-	if len(sync.fileMap) != 1 {
+	if len(sync.fileIndex.fileMap) != 1 {
 		t.Error("Remove dir in file map failed!")
 		t.Fail()
 	}

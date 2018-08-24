@@ -1,15 +1,14 @@
 package sync
 
 import (
-	"archive/tar"
-	"github.com/juju/errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/juju/errors"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/rjeczalik/notify"
@@ -38,70 +37,9 @@ func (u *upstream) start() error {
 	return nil
 }
 
-func (u *upstream) diffServerClient(filepath string, sendChanges *[]*FileInformation, downloadChanges map[string]*FileInformation) error {
-	relativePath := getRelativeFromFullPath(filepath, u.config.WatchPath)
-	stat, err := os.Lstat(filepath)
-
-	// We skip files that are suddenly not there anymore
-	if err != nil {
-		return nil
-	}
-
-	// We skip symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
-		return nil
-	}
-
-	// Exclude files on the exclude list
-	if u.config.ignoreMatcher != nil {
-		if u.config.ignoreMatcher.MatchesPath(relativePath) {
-			return nil
-		}
-	}
-
-	delete(downloadChanges, relativePath)
-
-	if stat.IsDir() {
-		files, err := ioutil.ReadDir(filepath)
-
-		if err != nil {
-			u.config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
-			return nil
-		}
-
-		if len(files) == 0 {
-			if u.config.fileMap[relativePath] == nil {
-				*sendChanges = append(*sendChanges, &FileInformation{
-					Name:        relativePath,
-					IsDirectory: true,
-				})
-			}
-		}
-
-		for _, f := range files {
-			if err := u.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		return nil
-	} else {
-		if u.config.fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > u.config.fileMap[relativePath].Mtime+1 {
-			*sendChanges = append(*sendChanges, &FileInformation{
-				Name:        relativePath,
-				Mtime:       ceilMtime(stat.ModTime()),
-				Size:        stat.Size(),
-				IsDirectory: false,
-			})
-		}
-
-		return nil
-	}
-}
-
 func (u *upstream) collectChanges() error {
 	for {
-		var changes []*FileInformation
+		var changes []*fileInformation
 
 		changeAmount := 0
 
@@ -125,7 +63,9 @@ func (u *upstream) collectChanges() error {
 					}
 				}
 
-				changes = append(changes, u.getFileInformationFromEvent(events)...)
+				u.config.fileIndex.ExecuteSafe(func(fileMap map[string]*fileInformation) {
+					changes = append(changes, u.getfileInformationFromEvent(fileMap, events)...)
+				})
 			case <-time.After(time.Millisecond * 600):
 				break
 			}
@@ -138,7 +78,7 @@ func (u *upstream) collectChanges() error {
 			changeAmount = len(changes)
 		}
 
-		var files []*FileInformation
+		var files []*fileInformation
 
 		lenChanges := len(changes)
 
@@ -162,7 +102,7 @@ func (u *upstream) collectChanges() error {
 
 					u.config.Logf("[Upstream] Successfully sent %d create changes\n", len(changes))
 
-					files = make([]*FileInformation, 0, 10)
+					files = make([]*fileInformation, 0, 10)
 				}
 			} else {
 				if lenChanges <= 10 {
@@ -173,7 +113,9 @@ func (u *upstream) collectChanges() error {
 
 				// Look ahead
 				if len(changes) <= index+1 || changes[index+1].Mtime > 0 {
-					err := u.applyRemoves(files)
+					err := u.config.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
+						return u.applyRemoves(fileMap, files)
+					})
 
 					if err != nil {
 						return errors.Trace(err)
@@ -181,18 +123,15 @@ func (u *upstream) collectChanges() error {
 
 					u.config.Logf("[Upstream] Successfully sent %d delete changes\n", len(changes))
 
-					files = make([]*FileInformation, 0, 10)
+					files = make([]*fileInformation, 0, 10)
 				}
 			}
 		}
 	}
 }
 
-func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) []*FileInformation {
-	u.config.fileMapMutex.Lock()
-	defer u.config.fileMapMutex.Unlock()
-
-	changes := make([]*FileInformation, 0, len(events))
+func (u *upstream) getfileInformationFromEvent(fileMap map[string]*fileInformation, events []notify.EventInfo) []*fileInformation {
+	changes := make([]*fileInformation, 0, len(events))
 
 OUTER:
 	for _, event := range events {
@@ -209,31 +148,31 @@ OUTER:
 		stat, err := os.Stat(fullpath)
 
 		if err == nil { // Does exist -> Create File or Folder
-			if u.config.fileMap[relativePath] != nil {
+			if fileMap[relativePath] != nil {
 				if stat.IsDir() {
 					continue // Folder already exists
 				} else {
-					if ceilMtime(stat.ModTime()) == u.config.fileMap[relativePath].Mtime &&
-						stat.Size() == u.config.fileMap[relativePath].Size {
+					if ceilMtime(stat.ModTime()) == fileMap[relativePath].Mtime &&
+						stat.Size() == fileMap[relativePath].Size {
 						continue // File did not change or was changed by downstream
 					}
 				}
 			}
 
 			// New Create Task
-			changes = append(changes, &FileInformation{
+			changes = append(changes, &fileInformation{
 				Name:        relativePath,
 				Mtime:       ceilMtime(stat.ModTime()),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			})
 		} else { // Does not exist -> Remove
-			if u.config.fileMap[relativePath] == nil {
+			if fileMap[relativePath] == nil {
 				continue // File / Folder was already deleted from map so event was already processed or should not be processed
 			}
 
 			// New Remove Task
-			changes = append(changes, &FileInformation{
+			changes = append(changes, &fileInformation{
 				Name: relativePath,
 			})
 		}
@@ -242,10 +181,7 @@ OUTER:
 	return changes
 }
 
-func (u *upstream) applyRemoves(files []*FileInformation) error {
-	u.config.fileMapMutex.Lock()
-	defer u.config.fileMapMutex.Unlock()
-
+func (u *upstream) applyRemoves(fileMap map[string]*fileInformation, files []*fileInformation) error {
 	u.config.Logf("[Upstream] Handling %d removes\n", len(files))
 
 	// Send rm commands with max 50 input args
@@ -256,15 +192,15 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 		for j := 0; j < 50 && i+j < len(files); j++ {
 			relativePath := files[i+j].Name
 
-			if u.config.fileMap[relativePath] != nil {
+			if fileMap[relativePath] != nil {
 				relativePath = strings.Replace(relativePath, "'", "\\'", -1)
 				rmCommand += "'" + u.config.DestPath + relativePath + "' "
 				removeArguments++
 
-				if u.config.fileMap[relativePath].IsDirectory {
-					u.config.removeDirInFileMap(relativePath)
+				if fileMap[relativePath].IsDirectory {
+					u.config.fileIndex.RemoveDirInFileMap(relativePath)
 				} else {
-					delete(u.config.fileMap, relativePath)
+					delete(fileMap, relativePath)
 				}
 			}
 		}
@@ -306,8 +242,8 @@ func (u *upstream) startShell() error {
 	return nil
 }
 
-func (u *upstream) sendFiles(files []*FileInformation) error {
-	filename, writtenFiles, err := u.writeTar(files)
+func (u *upstream) sendFiles(files []*fileInformation) error {
+	filename, writtenFiles, err := writeTar(files, u.config)
 
 	if err != nil {
 		return errors.Trace(err)
@@ -316,8 +252,6 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 	if len(writtenFiles) == 0 {
 		return nil
 	}
-
-	// u.config.Logf("[Upstream] Wrote changes to file %s\n", filename)
 
 	f, err := os.Open(filename)
 
@@ -336,11 +270,14 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 		return errors.New("[Upstream] Tar archive has wrong size (Not dividable by 512)")
 	}
 
-	u.config.fileMapMutex.Lock()
-	defer u.config.fileMapMutex.Unlock()
+	return u.config.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
+		return u.upload(f, strconv.Itoa(int(stat.Size())), fileMap, writtenFiles)
+	})
+}
 
+func (u *upstream) upload(file *os.File, fileSize string, fileMap map[string]*fileInformation, writtenFiles map[string]*fileInformation) error {
 	// TODO: Implement timeout to prevent endless loop
-	cmd := "fileSize=" + strconv.Itoa(int(stat.Size())) + `;
+	cmd := "fileSize=" + fileSize + `;
 					tmpFile="/tmp/devspace-upstream";
 					mkdir -p /tmp;
 					mkdir -p '` + u.config.DestPath + `';
@@ -385,7 +322,7 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 		buf := make([]byte, 512, 512)
 
 		for {
-			n, err = f.Read(buf)
+			n, err = file.Read(buf)
 
 			if n == 0 {
 				if err == nil {
@@ -416,8 +353,8 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 	}
 
 	// Delete file
-	f.Close()
-	err = os.Remove(f.Name())
+	file.Close()
+	err := os.Remove(file.Name())
 
 	if err != nil {
 		return errors.Trace(err)
@@ -432,139 +369,9 @@ func (u *upstream) sendFiles(files []*FileInformation) error {
 
 	// Update filemap
 	for _, element := range writtenFiles {
-		u.config.createDirInFileMap(path.Dir(element.Name))
-		u.config.fileMap[element.Name] = element
+		u.config.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
+		fileMap[element.Name] = element
 	}
 
 	return nil
-}
-
-func (u *upstream) writeTar(files []*FileInformation) (string, map[string]*FileInformation, error) {
-	f, err := ioutil.TempFile("", "")
-
-	if err != nil {
-		return "", nil, errors.Trace(err)
-	}
-
-	defer f.Close()
-
-	tarWriter := tar.NewWriter(f)
-	defer tarWriter.Close()
-
-	writtenFiles := make(map[string]*FileInformation)
-
-	for _, element := range files {
-		relativePath := element.Name
-
-		if writtenFiles[relativePath] == nil {
-			err := u.recursiveTar(u.config.WatchPath, relativePath, "", relativePath, writtenFiles, tarWriter)
-
-			if err != nil {
-				u.config.Logf("[Upstream] Tar failed: %s. Will retry in 4 seconds...\n", err.Error())
-				os.Remove(f.Name())
-
-				time.Sleep(time.Second * 4)
-
-				return u.writeTar(files)
-			}
-		}
-	}
-
-	return f.Name(), writtenFiles, nil
-}
-
-// TODO: Error handling if files are not there
-func (u *upstream) recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[string]*FileInformation, tw *tar.Writer) error {
-	filepath := path.Join(srcBase, srcFile)
-	relativePath := getRelativeFromFullPath(filepath, srcBase)
-
-	if writtenFiles[relativePath] != nil {
-		return nil
-	}
-
-	// Exclude files on the exclude list
-	if u.config.ignoreMatcher != nil {
-		if u.config.ignoreMatcher.MatchesPath(relativePath) {
-			return nil
-		}
-	}
-
-	stat, err := os.Lstat(filepath)
-
-	// We skip files that are suddenly not there anymore
-	if err != nil {
-		u.config.Logf("[Upstream] Couldn't stat file %s: %s\n", filepath, err.Error())
-
-		return nil
-	}
-
-	// We skip symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
-		return nil
-	}
-
-	fileInformation := &FileInformation{
-		Name:        relativePath,
-		Size:        stat.Size(),
-		Mtime:       ceilMtime(stat.ModTime()),
-		IsDirectory: stat.IsDir(),
-	}
-
-	if stat.IsDir() {
-		files, err := ioutil.ReadDir(filepath)
-
-		if err != nil {
-			u.config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
-			return nil
-		}
-
-		if len(files) == 0 {
-			//case empty directory
-			hdr, _ := tar.FileInfoHeader(stat, filepath)
-			hdr.Name = strings.Replace(destFile, "\\", "/", -1) // Need to replace \ with / for windows
-
-			if err := tw.WriteHeader(hdr); err != nil {
-				return errors.Trace(err)
-			}
-
-			writtenFiles[relativePath] = fileInformation
-		}
-
-		for _, f := range files {
-			if err := u.recursiveTar(srcBase, path.Join(srcFile, f.Name()), destBase, path.Join(destFile, f.Name()), writtenFiles, tw); err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		return nil
-	} else {
-		f, err := os.Open(filepath)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		defer f.Close()
-
-		//case regular file or other file type like pipe
-		hdr, err := tar.FileInfoHeader(stat, filepath)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		hdr.Name = strings.Replace(destFile, "\\", "/", -1)
-
-		if err := tw.WriteHeader(hdr); err != nil {
-			return errors.Trace(err)
-		}
-
-		if _, err := io.Copy(tw, f); err != nil {
-			return errors.Trace(err)
-		}
-
-		writtenFiles[relativePath] = fileInformation
-
-		return f.Close()
-	}
 }
