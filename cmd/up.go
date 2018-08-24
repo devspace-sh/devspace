@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/exec"
 )
 
 type UpCmd struct {
@@ -612,7 +613,9 @@ func (cmd *UpCmd) enterTerminal() {
 	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
-		log.WithError(terminalErr).Panic("Unable to start terminal session")
+		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
+			log.WithError(terminalErr).Panic("Unable to start terminal session")
+		}
 	}
 }
 
