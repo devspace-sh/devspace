@@ -9,10 +9,9 @@ import (
 )
 
 func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
-
 	params := GetFromStdin_params{
-		Question: "Is this a test?",
-		DefaultValue: "Yes",
+		Question:               "Is this a test?",
+		DefaultValue:           "Yes",
 		ValidationRegexPattern: "No|Yes",
 	}
 
@@ -32,8 +31,8 @@ func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
 func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 
 	params := GetFromStdin_params{
-		Question: "Is this a test?",
-		DefaultValue: "No",
+		Question:               "Is this a test?",
+		DefaultValue:           "No",
 		ValidationRegexPattern: "No|Yes",
 	}
 
@@ -53,8 +52,8 @@ func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 
 	params := GetFromStdin_params{
-		Question: "Hello?",
-		DefaultValue: "World",
+		Question:               "Hello?",
+		DefaultValue:           "World",
 		ValidationRegexPattern: "World|Universe",
 		InputTerminationString: " ",
 	}
@@ -75,8 +74,8 @@ func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
 
 	params := GetFromStdin_params{
-		Question: "Hello?",
-		DefaultValue: "World",
+		Question:               "Hello?",
+		DefaultValue:           "World",
 		ValidationRegexPattern: "World|Universe",
 		InputTerminationString: "!",
 	}
@@ -97,24 +96,24 @@ func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
 var tmpfile *os.File
 var oldStdin *os.File
 
-func mockStdin(inputString string) error{
+func mockStdin(inputString string) error {
 	//Code from https://stackoverflow.com/a/46365584 (modified)
 	input := []byte(inputString)
 	var err error
 	tmpfile, err = ioutil.TempFile("", "testGetFromStdin")
-    if err != nil {
-        return errors.Trace(err)
-    }
+	if err != nil {
+		return errors.Trace(err)
+	}
 
-    if _, err := tmpfile.Write(input); err != nil {
-        return errors.Trace(err)
-    }
+	if _, err := tmpfile.Write(input); err != nil {
+		return errors.Trace(err)
+	}
 
-    if _, err := tmpfile.Seek(0, 0); err != nil {
-        return errors.Trace(err)
-    }
+	if _, err := tmpfile.Seek(0, 0); err != nil {
+		return errors.Trace(err)
+	}
 
-    oldStdin = os.Stdin
+	oldStdin = os.Stdin
 	os.Stdin = tmpfile
 
 	return nil
