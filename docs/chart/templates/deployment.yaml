@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}
   labels:
     release: "{{ .Release.Name }}"
+    revision: "{{ .Release.Revision }}"
     chartName: "{{ .Chart.Name }}"
     chartVersion: "{{ .Chart.Version }}"
 spec:
@@ -12,6 +13,7 @@ spec:
     metadata:
       labels:
         release: "{{ .Release.Name }}"
+        revision: "{{ .Release.Revision }}"
         chartName: "{{ .Chart.Name }}"
         chartVersion: "{{ .Chart.Version }}"
     spec:

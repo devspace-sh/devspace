@@ -331,25 +331,67 @@ func (cmd *UpCmd) buildDockerfile() {
 	})
 }
 
+type KanikoOutputFormat struct {
+	Regex       *regexp.Regexp
+	Replacement string
+}
+
 func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) {
 	wg := &sync.WaitGroup{}
-	layerRegex := regexp.MustCompile(`.* msg="(Unpacking layer: \d+)"`)
-	commandRegex := regexp.MustCompile(`.* msg="args: \[-c (.*)\]"`)
-	buildPrefix := "build > "
+	outputFormats := []KanikoOutputFormat{
+		{
+			Regex:       regexp.MustCompile(`.* msg="Downloading base image (.*)"`),
+			Replacement: " FROM $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="(Unpacking layer: \d+)"`),
+			Replacement: ">> $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="cmd: Add \[(.*)\]"`),
+			Replacement: " ADD $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="cmd: copy \[(.*)\]"`),
+			Replacement: " COPY $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="dest: (.*)"`),
+			Replacement: ">> destination: $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="args: \[-c (.*)\]"`),
+			Replacement: " RUN $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="Replacing CMD in config with \[(.*)\]"`),
+			Replacement: " CMD $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="Changed working directory to (.*)"`),
+			Replacement: " WORKDIR $1",
+		},
+		{
+			Regex:       regexp.MustCompile(`.* msg="Taking snapshot of full filesystem..."`),
+			Replacement: " Packaging layers",
+		},
+	}
+	kanikoLogRegex := regexp.MustCompile(`^time="`)
+	buildPrefix := "build >"
 
 	printFormattedOutput := func(originalLine string) {
 		line := []byte(originalLine)
-		line = layerRegex.ReplaceAll(line, []byte("$1"))
-		line = commandRegex.ReplaceAll(line, []byte("RUN $1"))
+
+		for _, outputFormat := range outputFormats {
+			line = outputFormat.Regex.ReplaceAll(line, []byte(outputFormat.Replacement))
+		}
 
 		if len(line) != len(originalLine) {
 			log.Info(buildPrefix + string(line))
-		} else {
-			log.Debug(buildPrefix + string(line))
+		} else if kanikoLogRegex.Match(line) == false {
+			log.Info(buildPrefix + ">> " + string(line))
 		}
 	}
-	log.Info(buildPrefix + "Pulling layers of base image")
-
 	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
 	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
 
@@ -378,7 +420,7 @@ func (cmd *UpCmd) initRegistry() {
 		}
 		logutil.PrintDoneMessage("Initializing docker registry", os.Stdout)
 
-		deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
+		_, deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
 
 		if deploymentErr != nil {
 			log.WithError(deploymentErr).Panic("Unable to initialize docker registry")
@@ -528,11 +570,12 @@ func (cmd *UpCmd) deployChart() {
 	containerValues["command"] = []string{"sleep", "99999999"}
 	values["container"] = containerValues
 
-	deploymentErr := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
+	appRelease, deploymentErr := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
 
 	if deploymentErr != nil {
 		log.WithError(deploymentErr).Panic("Unable to deploy helm chart")
 	}
+	releaseRevision := int(appRelease.Version)
 
 	for true {
 		podList, podListErr := cmd.kubectl.Core().Pods(releaseNamespace).List(metav1.ListOptions{
@@ -544,11 +587,43 @@ func (cmd *UpCmd) deployChart() {
 		}
 
 		if len(podList.Items) > 0 {
-			cmd.pod = &podList.Items[0]
+			highestRevision := 0
+			var selectedPod k8sv1.Pod
 
-			waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 10*time.Second, "Waiting for DevSpace pod to become ready")
-			break
+			for i, pod := range podList.Items {
+				podRevision, podHasRevision := pod.Labels["revision"]
+				hasHigherRevision := (i == 0)
+
+				if !hasHigherRevision && podHasRevision {
+					podRevisionInt, _ := strconv.Atoi(podRevision)
+
+					if podRevisionInt > highestRevision {
+						hasHigherRevision = true
+					}
+				}
+
+				if hasHigherRevision {
+					selectedPod = pod
+					highestRevision, _ = strconv.Atoi(podRevision)
+				}
+			}
+			_, hasRevision := selectedPod.Labels["revision"]
+
+			if !hasRevision || highestRevision == releaseRevision {
+				if !hasRevision {
+					log.Warn("Found pod without revision. Use label 'revision' for your pods to avoid this warning.")
+				}
+				cmd.pod = &selectedPod
+
+				waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second, "Waiting for DevSpace pod to become ready")
+				break
+			} else {
+				log.Info("Waiting for release upgrade to complete.")
+			}
+		} else {
+			log.Info("Waiting for release to be deployed.")
 		}
+		time.Sleep(2 * time.Second)
 	}
 }
 

@@ -1,10 +1,11 @@
-{{- if .Values.external.domain -}}
+{{- if (.Values.external) and (.Values.external.domain) and .Values.external.port -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ .Release.Name }}
   labels:
     release: "{{ .Release.Name }}"
+    revision: "{{ .Release.Revision }}"
     chartName: "{{ .Chart.Name }}"
     chartVersion: "{{ .Chart.Version }}"
 spec:
