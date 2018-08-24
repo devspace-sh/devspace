@@ -66,7 +66,7 @@ func (s *SyncConfig) Start() {
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
-	s.ExcludePaths = append(s.ExcludePaths, "^/\\.devspace\\/logs\\/.*$")
+	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
 	if syncLog == nil {
 		syncLog = logutil.GetLogger("sync", false)
