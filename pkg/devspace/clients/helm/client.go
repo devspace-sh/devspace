@@ -87,35 +87,37 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	for tunnelWaitTime > 0 {
 		tunnel, tunnelErr = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
 
-		if tunnelErr == nil {
+		if tunnelErr == nil || tunnelWaitTime < 0 {
 			break
 		}
-		log.Info("Waiting for port forwarding to start")
+		log.Info("Waiting for tiller server to start")
 
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
+		time.Sleep(tunnelCheckInterval)
 	}
 
 	if tunnelErr != nil {
 		return nil, tunnelErr
 	}
-	helmOptions := []helm.Option{
-		helm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
-	}
-	var tillerError error
-
-	client := helm.NewClient(helmOptions...)
 	helmWaitTime := 2 * 60 * time.Second
 	helmCheckInterval := 5 * time.Second
 
-	for helmWaitTime > 0 {
-		_, tillerError := client.GetVersion()
+	helmOptions := []helm.Option{
+		helm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
+		helm.ConnectTimeout(int64(helmCheckInterval)),
+	}
+	client := helm.NewClient(helmOptions...)
+	var tillerError error
 
-		if tillerError == nil {
+	for helmWaitTime > 0 {
+		tillerResponse, tillerError := client.ListReleases(helm.ReleaseListLimit(1))
+
+		if tillerError == nil || helmWaitTime < 0 {
 			break
 		}
-		log.Info("Waiting for helm client getting connection")
-
-		helmWaitTime = helmWaitTime - helmCheckInterval
+		log.Info(tillerResponse)
+		log.Info(tillerError)
+		log.Info("Waiting for tiller server to become ready")
 	}
 
 	if tillerError != nil {
@@ -324,13 +326,13 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 			return chartReqError
 		}
 		chartDownloader := &helmdownloader.Manager{
-		/*		Out:        i.out,
-				ChartPath:  i.chartPath,
-				HelmHome:   settings.Home,
-				Keyring:    defaultKeyring(),
-				SkipUpdate: false,
-				Getters:    getter.All(settings),
-		*/
+			/*		Out:        i.out,
+					ChartPath:  i.chartPath,
+					HelmHome:   settings.Home,
+					Keyring:    defaultKeyring(),
+					SkipUpdate: false,
+					Getters:    getter.All(settings),
+			*/
 		}
 		chartDownloadErr := chartDownloader.Update()
 
