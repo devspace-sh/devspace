@@ -59,6 +59,14 @@ func untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string, con
 
 	if err == nil {
 		if ceilMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {
+			// Update filemap otherwise we download and download again
+			config.fileIndex.fileMap[relativePath] = &fileInformation{
+				Name:        relativePath,
+				Mtime:       ceilMtime(stat.ModTime()),
+				Size:        stat.Size(),
+				IsDirectory: stat.IsDir(),
+			}
+
 			config.Logf("[Downstream] Don't override %s because file has newer mTime timestamp\n", relativePath)
 			return true, nil
 		}

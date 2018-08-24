@@ -214,9 +214,9 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		}
 	}
 
-	delete(downloadChanges, relativePath)
-
 	if stat.IsDir() {
+		delete(downloadChanges, relativePath)
+
 		files, err := ioutil.ReadDir(filepath)
 
 		if err != nil {
@@ -241,6 +241,9 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 
 		return nil
 	} else {
+		delete(downloadChanges, relativePath)
+
+		// TODO: Handle the case when local files are older than in the container
 		if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {
 			*sendChanges = append(*sendChanges, &fileInformation{
 				Name:        relativePath,
