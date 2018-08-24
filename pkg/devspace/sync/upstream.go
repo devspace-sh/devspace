@@ -270,12 +270,13 @@ func (u *upstream) sendFiles(files []*fileInformation) error {
 		return errors.New("[Upstream] Tar archive has wrong size (Not dividable by 512)")
 	}
 
-	return u.config.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
-		return u.upload(f, strconv.Itoa(int(stat.Size())), fileMap, writtenFiles)
-	})
+	return u.upload(f, strconv.Itoa(int(stat.Size())), writtenFiles)
 }
 
-func (u *upstream) upload(file *os.File, fileSize string, fileMap map[string]*fileInformation, writtenFiles map[string]*fileInformation) error {
+func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[string]*fileInformation) error {
+	u.config.fileIndex.fileMapMutex.Lock()
+	defer u.config.fileIndex.fileMapMutex.Unlock()
+
 	// TODO: Implement timeout to prevent endless loop
 	cmd := "fileSize=" + fileSize + `;
 					tmpFile="/tmp/devspace-upstream";
@@ -370,7 +371,7 @@ func (u *upstream) upload(file *os.File, fileSize string, fileMap map[string]*fi
 	// Update filemap
 	for _, element := range writtenFiles {
 		u.config.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
-		fileMap[element.Name] = element
+		u.config.fileIndex.fileMap[element.Name] = element
 	}
 
 	return nil
