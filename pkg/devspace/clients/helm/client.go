@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
 	helmdownloader "k8s.io/helm/pkg/downloader"
-	"k8s.io/helm/pkg/helm"
+	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
@@ -40,7 +40,7 @@ import (
 )
 
 type HelmClientWrapper struct {
-	Client   *helm.Client
+	Client   *k8shelm.Client
 	Settings *helmenvironment.EnvSettings
 	kubectl  *kubernetes.Clientset
 }
@@ -102,15 +102,15 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	helmWaitTime := 2 * 60 * time.Second
 	helmCheckInterval := 5 * time.Second
 
-	helmOptions := []helm.Option{
-		helm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
-		helm.ConnectTimeout(int64(helmCheckInterval)),
+	helmOptions := []k8shelm.Option{
+		k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
+		k8shelm.ConnectTimeout(int64(helmCheckInterval)),
 	}
-	client := helm.NewClient(helmOptions...)
+	client := k8shelm.NewClient(helmOptions...)
 	var tillerError error
 
 	for helmWaitTime > 0 {
-		tillerResponse, tillerError := client.ListReleases(helm.ReleaseListLimit(1))
+		tillerResponse, tillerError := client.ListReleases(k8shelm.ReleaseListLimit(1))
 
 		if tillerError == nil || helmWaitTime < 0 {
 			break
@@ -300,7 +300,7 @@ func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 }
 
 func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (bool, error) {
-	_, releaseHistoryErr := helmClientWrapper.Client.ReleaseHistory(releaseName, helm.WithMaxHistory(1))
+	_, releaseHistoryErr := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
 
 	if releaseHistoryErr != nil {
 		if strings.Contains(releaseHistoryErr.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
@@ -366,10 +366,10 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		_, releaseUpgradeErr := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
-			helm.UpgradeTimeout(deploymentTimeout),
-			helm.UpdateValueOverrides(overwriteValues),
-			helm.ReuseValues(false),
-			helm.UpgradeWait(true),
+			k8shelm.UpgradeTimeout(deploymentTimeout),
+			k8shelm.UpdateValueOverrides(overwriteValues),
+			k8shelm.ReuseValues(false),
+			k8shelm.UpgradeWait(true),
 		)
 
 		if releaseUpgradeErr != nil {
@@ -379,11 +379,11 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		_, releaseInstallErr := helmClientWrapper.Client.InstallReleaseFromChart(
 			chart,
 			releaseNamespace,
-			helm.InstallTimeout(deploymentTimeout),
-			helm.ValueOverrides(overwriteValues),
-			helm.ReleaseName(releaseName),
-			helm.InstallReuseName(false),
-			helm.InstallWait(true),
+			k8shelm.InstallTimeout(deploymentTimeout),
+			k8shelm.ValueOverrides(overwriteValues),
+			k8shelm.ReleaseName(releaseName),
+			k8shelm.InstallReuseName(false),
+			k8shelm.InstallWait(true),
 		)
 
 		if releaseInstallErr != nil {
