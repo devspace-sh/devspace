@@ -157,9 +157,7 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 			stdoutWriter.Close()
 			stderrWriter.Close()
 
-			if errorChannel != nil {
-				errorChannel <- streamErr
-			}
+			errorChannel <- streamErr
 		}()
 		return stdinWriter, stdoutReader, stderrReader, nil
 	}
