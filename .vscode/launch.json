@@ -9,7 +9,7 @@
       "remotePath": "",
       "port": 2345,
       "host": "127.0.0.1",
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/examples/nodejs",
       "program": "${workspaceFolder}/main.go",
       "env": {},
       "args": [""],
