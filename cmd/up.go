@@ -262,6 +262,8 @@ func (cmd *UpCmd) buildDockerfile() {
 		readyCheckInterval := 5 * time.Second
 		buildPodReady := false
 
+		loadingText := logutil.NewLoadingText("Waiting for build pod to start", os.Stdout)
+
 		for readyWaitTime > 0 {
 			buildPod, _ = cmd.kubectl.Core().Pods(buildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 
@@ -269,12 +271,12 @@ func (cmd *UpCmd) buildDockerfile() {
 				buildPodReady = true
 				break
 			}
-			log.Info("Waiting for build pod to start")
 
 			time.Sleep(readyCheckInterval)
-
 			readyWaitTime = readyWaitTime - readyCheckInterval
 		}
+
+		loadingText.Done()
 
 		if !buildPodReady {
 			log.Panic("Unable to start build pod")
@@ -440,13 +442,14 @@ func (cmd *UpCmd) initRegistry() {
 		maxServiceWaiting := 60 * time.Second
 		serviceWaitingInterval := 3 * time.Second
 
+		loadingText := logutil.NewLoadingText("Waiting for registry service to start", os.Stdout)
 		for true {
 			registryService, _ = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
 
 			if len(registryService.Spec.ClusterIP) > 0 {
 				break
 			}
-			log.Info("Waiting for registry service to start")
+
 			time.Sleep(serviceWaitingInterval)
 			maxServiceWaiting = maxServiceWaiting - serviceWaitingInterval
 
@@ -454,6 +457,8 @@ func (cmd *UpCmd) initRegistry() {
 				log.Panic("Timeout waiting for registry service to start")
 			}
 		}
+		loadingText.Done()
+
 		registryPort := 5000
 		registryIP := registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort)
 		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
@@ -634,6 +639,9 @@ func (cmd *UpCmd) enterTerminal() {
 }
 
 func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration, waitingMessage string) error {
+	loadingText := logutil.NewLoadingText(waitingMessage, os.Stdout)
+	defer loadingText.Done()
+
 	for maxWaitTime > 0 {
 		pod, _ := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 
@@ -641,9 +649,10 @@ func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime 
 			return nil
 		}
 		log.Info(waitingMessage)
-		time.Sleep(checkInterval)
 
+		time.Sleep(checkInterval)
 		maxWaitTime = maxWaitTime - checkInterval
 	}
+
 	return errors.New("")
 }
