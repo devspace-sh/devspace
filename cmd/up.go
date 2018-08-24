@@ -314,17 +314,15 @@ func (cmd *UpCmd) buildDockerfile() {
 			}, false, exitChannel)
 			stdin.Close()
 
-			cmd.formatKanikoOutput(stdout, stderr)
-
 			if execErr != nil {
-				log.WithError(execErr).Panic("Failed building image")
+				log.WithError(execErr).Panic("Failed to start image building")
 			}
+			lastKanikoOutput, _ := cmd.formatKanikoOutput(stdout, stderr)
 			exitError := <-exitChannel
 
 			if exitError != nil {
-				log.WithError(exitError).Panic("Failed building image")
+				log.WithError(exitError).Panic("Image building failed with message: " + lastKanikoOutput)
 			}
-
 			logutil.PrintDoneMessage("Done building image", os.Stdout)
 		}
 		return nil
@@ -336,8 +334,9 @@ type KanikoOutputFormat struct {
 	Replacement string
 }
 
-func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) {
+func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) (string, *logutil.LoadingText) {
 	wg := &sync.WaitGroup{}
+	lastLine := ""
 	outputFormats := []KanikoOutputFormat{
 		{
 			Regex:       regexp.MustCompile(`.* msg="Downloading base image (.*)"`),
@@ -376,7 +375,8 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 			Replacement: " Packaging layers",
 		},
 	}
-	kanikoLogRegex := regexp.MustCompile(`^time="`)
+	var latestLoadingText *logutil.LoadingText
+	kanikoLogRegex := regexp.MustCompile(`^time="(.*)" level=(.*) msg="(.*)"`)
 	buildPrefix := "build >"
 
 	printFormattedOutput := func(originalLine string) {
@@ -385,26 +385,39 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 		for _, outputFormat := range outputFormats {
 			line = outputFormat.Regex.ReplaceAll(line, []byte(outputFormat.Replacement))
 		}
+		lineString := string(line)
 
 		if len(line) != len(originalLine) {
-			log.Info(buildPrefix + string(line))
+			if latestLoadingText != nil {
+				latestLoadingText.Done()
+			}
+			latestLoadingText = logutil.NewLoadingText(buildPrefix+lineString, os.Stdout)
 		} else if kanikoLogRegex.Match(line) == false {
-			log.Info(buildPrefix + ">> " + string(line))
+			if latestLoadingText != nil {
+				latestLoadingText.Done()
+			}
+			log.Info(buildPrefix + ">> " + lineString)
 		}
+		lastLine = string(kanikoLogRegex.ReplaceAll([]byte(originalLine), []byte("$3")))
 	}
 	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
 	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
 
 	wg.Wait()
+
+	return lastLine, latestLoadingText
 }
 
 func (cmd *UpCmd) initRegistry() {
-	logutil.PrintDoneMessage("Initializing helm client", os.Stdout)
+	loadingText := logutil.NewLoadingText("Initializing helm client", os.Stdout)
 	cmd.initHelm()
+	loadingText.Done()
 
 	installRegistry := cmd.flags.initRegistry
 
 	if installRegistry {
+		loadingText = logutil.NewLoadingText("Initializing docker registry", os.Stdout)
+
 		registryReleaseName := cmd.privateConfig.Registry.Release.Name
 		registryReleaseNamespace := cmd.privateConfig.Registry.Release.Namespace
 		registryConfig := cmd.dsConfig.Registry
@@ -418,8 +431,6 @@ func (cmd *UpCmd) initRegistry() {
 		if !secretIsMap {
 			//TODO
 		}
-		logutil.PrintDoneMessage("Initializing docker registry", os.Stdout)
-
 		_, deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
 
 		if deploymentErr != nil {
@@ -477,7 +488,9 @@ func (cmd *UpCmd) initRegistry() {
 		maxServiceWaiting := 60 * time.Second
 		serviceWaitingInterval := 3 * time.Second
 
-		loadingText := logutil.NewLoadingText("Waiting for registry service to start", os.Stdout)
+		loadingText.Done()
+		loadingText = logutil.NewLoadingText("Waiting for registry service to start", os.Stdout)
+
 		for true {
 			registryService, _ = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
 
