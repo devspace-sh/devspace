@@ -1,8 +1,4 @@
 container:
   image: ""
-  port: 3000
   pullSecrets:
   - devspace-image-pull
-external:
-  domain: bla.com
-  port: 80
