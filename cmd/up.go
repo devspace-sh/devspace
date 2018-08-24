@@ -3,10 +3,11 @@ package cmd
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
-	"io/ioutil"
+	"github.com/covexo/devspace/pkg/util/ignoreutil"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,8 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-
-	glob "github.com/bmatcuk/doublestar"
 	"github.com/foomo/htpasswd"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
@@ -281,50 +280,10 @@ func (cmd *UpCmd) buildDockerfile() {
 		} else {
 			log.Info("Uploading files to build container")
 
-			ignoreRules := []string{}
-			ignoreFiles, err := glob.Glob(cmd.workdir + "/**/.dockerignore")
+			ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
 
-			if err != nil {
-				return err
-			}
-
-			for _, ignoreFile := range ignoreFiles {
-				fmt.Println(ignoreFile)
-				ignoreBytes, err := ioutil.ReadFile(ignoreFile)
-
-				if err != nil {
-					return err
-				}
-				pathPrefix := strings.Replace(strings.TrimPrefix(filepath.Dir(ignoreFile), cmd.workdir), "\\", "/", -1)
-				ignoreLines := strings.Split(string(ignoreBytes), "\r\n")
-
-				for _, ignoreRule := range ignoreLines {
-					ignoreRule = strings.Trim(ignoreRule, " ")
-					initialOffset := 0
-
-					if len(ignoreRule) > 0 && ignoreRule[initialOffset] != '#' {
-						prefixedIgnoreRule := ""
-
-						if len(pathPrefix) > 0 {
-							if ignoreRule[initialOffset] == '!' {
-								prefixedIgnoreRule = prefixedIgnoreRule + "!"
-								initialOffset = 1
-							}
-
-							if ignoreRule[initialOffset] == '/' {
-								prefixedIgnoreRule = prefixedIgnoreRule + ignoreRule[initialOffset:]
-							} else {
-								prefixedIgnoreRule = prefixedIgnoreRule + pathPrefix + "/**/" + ignoreRule[initialOffset:]
-							}
-						} else {
-							prefixedIgnoreRule = ignoreRule
-						}
-
-						if prefixedIgnoreRule != "Dockerfile" && prefixedIgnoreRule != "/Dockerfile" {
-							ignoreRules = append(ignoreRules, prefixedIgnoreRule)
-						}
-					}
-				}
+			if ignoreRuleErr != nil {
+				log.WithError(ignoreRuleErr).Panic("Unable to parse .dockerignore files")
 			}
 			buildContainer := &buildPod.Spec.Containers[0]
 
@@ -334,6 +293,8 @@ func (cmd *UpCmd) buildDockerfile() {
 
 			containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
 
+			exitChannel := make(chan error)
+
 			stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
 				"/kaniko/executor",
 				"--dockerfile=" + containerBuildPath + "/Dockerfile",
@@ -341,24 +302,48 @@ func (cmd *UpCmd) buildDockerfile() {
 				"--destination=" + cmd.latestImageHostname,
 				"--insecure-skip-tls-verify",
 				"--single-snapshot",
-			}, false)
+			}, false, exitChannel)
 			stdin.Close()
 
-			wg := &sync.WaitGroup{}
-
-			//TODO: use logger?
-			processutil.Pipe(stdout, os.Stdout, 500, wg)
-			processutil.Pipe(stderr, os.Stderr, 500, wg)
-
-			wg.Wait()
+			cmd.formatKanikoOutput(stdout, stderr)
 
 			if execErr != nil {
 				log.WithError(execErr).Panic("Failed building image")
+			}
+			exitError := <-exitChannel
+
+			if exitError != nil {
+				log.WithError(exitError).Panic("Failed building image")
 			}
 			log.Info("Done building image")
 		}
 		return nil
 	})
+}
+
+func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) {
+	wg := &sync.WaitGroup{}
+	layerRegex := regexp.MustCompile(`.* msg="(Unpacking layer: \d+)"`)
+	commandRegex := regexp.MustCompile(`.* msg="args: \[-c (.*)\]"`)
+	buildPrefix := "build > "
+
+	printFormattedOutput := func(originalLine string) {
+		line := []byte(originalLine)
+		line = layerRegex.ReplaceAll(line, []byte("$1"))
+		line = commandRegex.ReplaceAll(line, []byte("RUN $1"))
+
+		if len(line) != len(originalLine) {
+			log.Info(buildPrefix + string(line))
+		} else {
+			log.Debug(buildPrefix + string(line))
+		}
+	}
+	log.Info(buildPrefix + "Pulling layers of base image")
+
+	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
+	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
+
+	wg.Wait()
 }
 
 func (cmd *UpCmd) initRegistry() {
@@ -525,6 +510,7 @@ func (cmd *UpCmd) deployChart() {
 
 	values := map[interface{}]interface{}{}
 	containerValues := map[interface{}]interface{}{}
+
 	containerValues["image"] = cmd.latestImageIP
 	containerValues["command"] = []string{"sleep", "99999999"}
 	values["container"] = containerValues
@@ -624,7 +610,7 @@ func (cmd *UpCmd) enterTerminal() {
 	} else {
 		shell = []string{cmd.flags.shell}
 	}
-	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true)
+	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
 		if _, ok := terminalErr.(exec.CodeExitError); ok == false {

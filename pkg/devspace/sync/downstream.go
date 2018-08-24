@@ -80,7 +80,7 @@ func (d *downstream) populateFileMap() error {
 }
 
 func (d *downstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false)
+	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, nil)
 
 	if err != nil {
 		return errors.Trace(err)
