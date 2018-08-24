@@ -1,25 +1,25 @@
 version: "2"
 checks:
   argument-count:
-    enabled: true
+    enabled: false
   complex-logic:
-    enabled: true
+    enabled: false
   file-lines:
-    enabled: true
+    enabled: false
   method-complexity:
-    enabled: true
+    enabled: false
   method-count:
-    enabled: true
+    enabled: false
   method-lines:
-    enabled: true
+    enabled: false
   nested-control-flow:
-    enabled: true
+    enabled: false
   return-statements:
-    enabled: true
+    enabled: false
   similar-code:
-    enabled: true
+    enabled: false
   identical-code:
-    enabled: true
+    enabled: false
 plugins:
   gofmt:
     enabled: true
