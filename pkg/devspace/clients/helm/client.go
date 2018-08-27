@@ -125,9 +125,9 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		return nil, tillerError
 	}
 	helmHomePath := os.ExpandEnv("$HOME/.devspace/helm")
-	_, helmHomeNotFoundErr := os.Stat(helmHomePath)
+	_, helmHomeRepoNotFoundErr := os.Stat(helmHomePath + "/repository/repositories.yaml")
 
-	if helmHomeNotFoundErr != nil {
+	if helmHomeRepoNotFoundErr != nil {
 		os.MkdirAll(helmHomePath, os.ModePerm)
 		helmHomeTemplates := filepath.Join(fsutil.GetCurrentGofileDir(), "assets")
 		copyErr := fsutil.Copy(helmHomeTemplates, helmHomePath)
@@ -144,7 +144,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		kubectl: kubectlClient,
 	}
 
-	if helmHomeNotFoundErr != nil {
+	if helmHomeRepoNotFoundErr != nil {
 		wrapper.updateRepos()
 	}
 	return wrapper, nil
