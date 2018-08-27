@@ -69,7 +69,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:          true,
 	sync:           true,
 	portforwarding: true,
-	noSleep:        true,
+	noSleep:        false,
 }
 
 func init() {
@@ -184,12 +184,15 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.deployChart()
 
 	if cmd.flags.sync {
+		log.Info("Starting sync")
 		cmd.startSync()
 	}
 
 	if cmd.flags.portforwarding {
-		cmd.startPortForwards()
+		log.Info("Starting port forwarding")
+		cmd.startPortForwarding()
 	}
+	log.Info("Starting terminal session")
 	cmd.enterTerminal()
 }
 
@@ -584,7 +587,8 @@ func (cmd *UpCmd) deployChart() {
 
 	containerValues["image"] = cmd.latestImageIP
 	if !cmd.flags.noSleep {
-		containerValues["command"] = []string{"sleep", "99999999"}
+		containerValues["command"] = []string{"sleep"}
+		containerValues["args"] = []string{"99999999"}
 	}
 	values["container"] = containerValues
 
@@ -664,7 +668,7 @@ func (cmd *UpCmd) startSync() {
 	}
 }
 
-func (cmd *UpCmd) startPortForwards() {
+func (cmd *UpCmd) startPortForwarding() {
 	for _, portForwarding := range cmd.dsConfig.PortForwarding {
 		if portForwarding.ResourceType == "pod" {
 			if len(portForwarding.LabelSelector) > 0 {
@@ -694,6 +698,8 @@ func (cmd *UpCmd) startPortForwards() {
 						// Wait till forwarding is ready
 						select {
 						case <-readyChan:
+						case <-time.After(5 * time.Second):
+							log.Error("Timeout waiting for port forwarding to start")
 						}
 					}
 				}
@@ -716,6 +722,8 @@ func (cmd *UpCmd) enterTerminal() {
 	} else {
 		shell = []string{cmd.flags.shell}
 	}
+	log.Info("Starting terminal session")
+
 	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
@@ -739,6 +747,5 @@ func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime 
 		time.Sleep(checkInterval)
 		maxWaitTime = maxWaitTime - checkInterval
 	}
-
 	return errors.New("")
 }

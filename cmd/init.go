@@ -244,7 +244,10 @@ func (cmd *InitCmd) determineAppConfig() {
 
 	for _, port := range portStrings {
 		portInt, _ := strconv.Atoi(port)
-		cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
+
+		if portInt > 0 {
+			cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
+		}
 	}
 
 	/* TODO
@@ -313,14 +316,15 @@ func (cmd *InitCmd) addSyncPath() {
 func (cmd *InitCmd) reconfigure() {
 	clusterConfig := cmd.privateConfig.Cluster
 
-	if len(clusterConfig.TillerNamespace) == 0 {
-		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
-	}
 	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
 		DefaultValue:           cmd.privateConfig.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
+
+	if len(clusterConfig.TillerNamespace) == 0 {
+		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
+	}
 	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your tiller server run in?",
 		DefaultValue:           clusterConfig.TillerNamespace,

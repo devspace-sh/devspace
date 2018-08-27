@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
+  name: "{{ .Release.Name }}-{{ .Release.Revision }}"
   labels:
     release: "{{ .Release.Name }}"
     revision: "{{ .Release.Revision }}"
@@ -18,5 +18,8 @@ spec:
     protocol: TCP
   selector:
     release: "{{ .Release.Name }}"
+    revision: "{{ .Release.Revision }}"
+    chartName: "{{ .Chart.Name }}"
+    chartVersion: "{{ .Chart.Version }}"
 {{- end -}}
 {{- end -}}

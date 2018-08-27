@@ -9,6 +9,12 @@ metadata:
     chartVersion: "{{ .Chart.Version }}"
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      release: "{{ .Release.Name }}"
+      revision: "{{ .Release.Revision }}"
+      chartName: "{{ .Chart.Name }}"
+      chartVersion: "{{ .Chart.Version }}"
   template:
     metadata:
       labels:
