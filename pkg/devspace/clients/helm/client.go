@@ -3,6 +3,7 @@ package helm
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,10 +50,11 @@ type HelmClientWrapper struct {
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
 const tillerDeploymentName = "tiller-deploy"
+const stableRepoCachePath = "repository/cache/stable-index.yaml"
 const defaultRepositories = `apiVersion: v1
 repositories:
 - caFile: ""
-  cache: repository/cache/stable-index.yaml
+  cache: ` + stableRepoCachePath + `
   certFile: ""
   keyFile: ""
   name: stable
@@ -139,15 +141,18 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		log.Panic(err)
 	}
 	helmHomePath := homeDir + "/.devspace/helm"
-	_, helmHomeRepoNotFoundErr := os.Stat(helmHomePath + "/repository/repositories.yaml")
+	repoPath := helmHomePath + "/repository"
+	repoFile := repoPath + "/repositories.yaml"
+	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
 
-	if helmHomeRepoNotFoundErr != nil {
-		repoPath := helmHomePath + "/respository"
+	os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
+	os.MkdirAll(repoPath, os.ModePerm)
+	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
 
-		os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
-		os.MkdirAll(repoPath, os.ModePerm)
+	_, repoFileNotFound := os.Stat(repoFile)
 
-		fsutil.WriteToFile([]byte(defaultRepositories), repoPath+"/repositories.yaml")
+	if repoFileNotFound != nil {
+		fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 	}
 	wrapper := &HelmClientWrapper{
 		Client: client,
@@ -156,8 +161,9 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		},
 		kubectl: kubectlClient,
 	}
+	_, stableRepoCacheNotFoundErr := os.Stat(stableRepoCachePathAbs)
 
-	if helmHomeRepoNotFoundErr != nil {
+	if stableRepoCacheNotFoundErr != nil {
 		wrapper.updateRepos()
 	}
 	return wrapper, nil
