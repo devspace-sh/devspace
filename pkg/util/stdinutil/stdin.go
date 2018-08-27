@@ -55,6 +55,7 @@ func GetFromStdin(params *GetFromStdinParams) string {
 			nextLine = strings.Trim(nextLine, "\r\n ")
 
 			if strings.Compare(params.InputTerminationString, "\n") == 0 {
+				// Assign the input value to input var
 				input = nextLine
 				break
 			}
@@ -69,7 +70,6 @@ func GetFromStdin(params *GetFromStdinParams) string {
 		if len(input) == 0 && len(params.DefaultValue) > 0 {
 			input = params.DefaultValue
 		}
-
 		if validationRegexp.MatchString(input) {
 			break
 		} else {
