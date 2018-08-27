@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,6 +38,7 @@ import (
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
 	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
+	rls "k8s.io/helm/pkg/proto/hapi/services"
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
 
@@ -226,6 +228,60 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 	return nil
 }
 
+// DeleteTiller clears the tiller server, the service account and role binding
+func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) error {
+	errs := make([]error, 0, 1)
+
+	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(tillerDeploymentName, &metav1.DeleteOptions{})
+
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = kubectlClient.CoreV1().ServiceAccounts(privateConfig.Cluster.TillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{})
+
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	deleteRoleNames := []string{
+		"tiller-config-manager",
+		tillerRoleName,
+	}
+
+	deleteRoleNamespaces := []string{
+		privateConfig.Cluster.TillerNamespace,
+		privateConfig.Release.Namespace,
+	}
+
+	for key, value := range deleteRoleNames {
+		err = kubectlClient.RbacV1beta1().Roles(deleteRoleNamespaces[key]).Delete(value, &metav1.DeleteOptions{})
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		err = kubectlClient.RbacV1beta1().RoleBindings(deleteRoleNamespaces[key]).Delete(value+"-binding", &metav1.DeleteOptions{})
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// Merge errors
+	errorText := ""
+
+	for _, value := range errs {
+		errorText += value.Error() + "\n"
+	}
+
+	if errorText == "" {
+		return nil
+	} else {
+		return errors.New(errorText)
+	}
+}
+
 func (helmClientWrapper *HelmClientWrapper) EnsureAuth(namespace string) error {
 	return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
 }
@@ -327,13 +383,13 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 			return nil, chartReqError
 		}
 		chartDownloader := &helmdownloader.Manager{
-			/*		Out:        i.out,
-					ChartPath:  i.chartPath,
-					HelmHome:   settings.Home,
-					Keyring:    defaultKeyring(),
-					SkipUpdate: false,
-					Getters:    getter.All(settings),
-			*/
+		/*		Out:        i.out,
+				ChartPath:  i.chartPath,
+				HelmHome:   settings.Home,
+				Keyring:    defaultKeyring(),
+				SkipUpdate: false,
+				Getters:    getter.All(settings),
+		*/
 		}
 		chartDownloadErr := chartDownloader.Update()
 
@@ -416,4 +472,9 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 		return nil, chartDownloadErr
 	}
 	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
+}
+
+// DeleteRelease deletes a helm release and optionally purges it
+func (helmClientWrapper *HelmClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
+	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
 }
