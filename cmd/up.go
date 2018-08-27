@@ -57,6 +57,7 @@ type UpCmdFlags struct {
 	shell          string
 	sync           bool
 	portforwarding bool
+	noSleep        bool
 }
 
 const pullSecretName = "devspace-pull-secret"
@@ -68,6 +69,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:          true,
 	sync:           true,
 	portforwarding: true,
+	noSleep:        true,
 }
 
 func init() {
@@ -100,6 +102,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
 }
 
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
@@ -580,7 +583,9 @@ func (cmd *UpCmd) deployChart() {
 	containerValues := map[interface{}]interface{}{}
 
 	containerValues["image"] = cmd.latestImageIP
-	containerValues["command"] = []string{"sleep", "99999999"}
+	if !cmd.flags.noSleep {
+		containerValues["command"] = []string{"sleep", "99999999"}
+	}
 	values["container"] = containerValues
 
 	appRelease, deploymentErr := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
