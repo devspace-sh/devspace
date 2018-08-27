@@ -14,6 +14,7 @@ type LoadingText struct {
 
 	loadingRune int
 	isShown     bool
+	isDone      bool
 	stopChan    chan bool
 }
 
@@ -92,8 +93,11 @@ func (l *LoadingText) render(isDone bool) {
 }
 
 func (l *LoadingText) Done() {
-	l.stopChan <- true
-	l.render(true)
+	if !l.isDone {
+		l.isDone = true
+		l.stopChan <- true
+		l.render(true)
+	}
 }
 
 func PrintDoneMessage(message string, log io.Writer) {

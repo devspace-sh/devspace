@@ -27,6 +27,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	homedir "github.com/mitchellh/go-homedir"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,16 @@ type HelmClientWrapper struct {
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
 const tillerDeploymentName = "tiller-deploy"
+const stableRepoCachePath = "repository/cache/stable-index.yaml"
+const defaultRepositories = `apiVersion: v1
+repositories:
+- caFile: ""
+  cache: ` + stableRepoCachePath + `
+  certFile: ""
+  keyFile: ""
+  name: stable
+  url: https://kubernetes-charts.storage.googleapis.com
+`
 
 var privateConfig = &v1.PrivateConfig{}
 var log *logrus.Logger
@@ -124,17 +135,24 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	if tillerError != nil {
 		return nil, tillerError
 	}
-	helmHomePath := os.ExpandEnv("$HOME/.devspace/helm")
-	_, helmHomeNotFoundErr := os.Stat(helmHomePath)
+	homeDir, err := homedir.Dir()
 
-	if helmHomeNotFoundErr != nil {
-		os.MkdirAll(helmHomePath, os.ModePerm)
-		helmHomeTemplates := filepath.Join(fsutil.GetCurrentGofileDir(), "assets")
-		copyErr := fsutil.Copy(helmHomeTemplates, helmHomePath)
+	if err != nil {
+		log.Panic(err)
+	}
+	helmHomePath := homeDir + "/.devspace/helm"
+	repoPath := helmHomePath + "/repository"
+	repoFile := repoPath + "/repositories.yaml"
+	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
 
-		if copyErr != nil {
-			return nil, copyErr
-		}
+	os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
+	os.MkdirAll(repoPath, os.ModePerm)
+	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
+
+	_, repoFileNotFound := os.Stat(repoFile)
+
+	if repoFileNotFound != nil {
+		fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 	}
 	wrapper := &HelmClientWrapper{
 		Client: client,
@@ -143,8 +161,9 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		},
 		kubectl: kubectlClient,
 	}
+	_, stableRepoCacheNotFoundErr := os.Stat(stableRepoCachePathAbs)
 
-	if helmHomeNotFoundErr != nil {
+	if stableRepoCacheNotFoundErr != nil {
 		wrapper.updateRepos()
 	}
 	return wrapper, nil

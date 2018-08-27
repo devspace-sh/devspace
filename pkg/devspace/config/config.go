@@ -17,6 +17,11 @@ import (
 
 type ConfigInterface interface{}
 
+const configGitignore = `logs/
+private.yaml
+cache.yaml
+`
+
 var workdir, _ = os.Getwd()
 var configFilesLoaded = map[string][]byte{}
 var configPaths = map[string]string{
@@ -173,9 +178,7 @@ func saveYamlToFile(configType string) error {
 	os.MkdirAll(filepath.Dir(configPaths[configType]), os.ModePerm)
 
 	if configType == "PrivateConfig" {
-		gitignoreTemplate := filepath.Join(fsutil.GetCurrentGofileDir(), "assets", ".gitignore")
-
-		fsutil.Copy(gitignoreTemplate, filepath.Join(filepath.Dir(configPaths[configType]), ".gitignore"))
+		fsutil.WriteToFile([]byte(configGitignore), filepath.Join(filepath.Dir(configPaths[configType]), ".gitignore"))
 	}
 	return ioutil.WriteFile(configPaths[configType], configFilesLoaded[configType], os.ModePerm)
 }
