@@ -3,7 +3,6 @@ package helm
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +26,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	homedir "github.com/mitchellh/go-homedir"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +49,15 @@ type HelmClientWrapper struct {
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
 const tillerDeploymentName = "tiller-deploy"
+const defaultRepositories = `apiVersion: v1
+repositories:
+- caFile: ""
+  cache: repository/cache/stable-index.yaml
+  certFile: ""
+  keyFile: ""
+  name: stable
+  url: https://kubernetes-charts.storage.googleapis.com
+`
 
 var privateConfig = &v1.PrivateConfig{}
 var log *logrus.Logger
@@ -124,17 +133,21 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	if tillerError != nil {
 		return nil, tillerError
 	}
-	helmHomePath := os.ExpandEnv("$HOME/.devspace/helm")
+	homeDir, err := homedir.Dir()
+
+	if err != nil {
+		log.Panic(err)
+	}
+	helmHomePath := homeDir + "/.devspace/helm"
 	_, helmHomeRepoNotFoundErr := os.Stat(helmHomePath + "/repository/repositories.yaml")
 
 	if helmHomeRepoNotFoundErr != nil {
-		os.MkdirAll(helmHomePath, os.ModePerm)
-		helmHomeTemplates := filepath.Join(fsutil.GetCurrentGofileDir(), "assets")
-		copyErr := fsutil.Copy(helmHomeTemplates, helmHomePath)
+		repoPath := helmHomePath + "/respository"
 
-		if copyErr != nil {
-			return nil, copyErr
-		}
+		os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
+		os.MkdirAll(repoPath, os.ModePerm)
+
+		fsutil.WriteToFile([]byte(defaultRepositories), repoPath+"/repositories.yaml")
 	}
 	wrapper := &HelmClientWrapper{
 		Client: client,
