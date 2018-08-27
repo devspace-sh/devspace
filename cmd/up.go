@@ -184,15 +184,16 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.deployChart()
 
 	if cmd.flags.sync {
-		log.Info("Starting sync")
+		loadingText := logutil.NewLoadingText("Starting real-time code sync", os.Stdout)
 		cmd.startSync()
+		loadingText.Done()
 	}
 
 	if cmd.flags.portforwarding {
-		log.Info("Starting port forwarding")
+		loadingText := logutil.NewLoadingText("Starting port forwarding", os.Stdout)
 		cmd.startPortForwarding()
+		loadingText.Done()
 	}
-	log.Info("Starting terminal session")
 	cmd.enterTerminal()
 }
 
