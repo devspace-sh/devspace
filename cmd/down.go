@@ -12,7 +12,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/spf13/cobra"
-	"k8s.io/helm/pkg/helm"
 )
 
 // DownCmd holds the required data for the down cmd
@@ -47,18 +46,8 @@ your project, use: devspace reset
 
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
-	var err error
-
-	log = logutil.GetLogger("default", true)
 	privateConfig := &v1.PrivateConfig{}
-	privateConfigExists, _ := config.ConfigExists(privateConfig)
-
-	if !privateConfigExists {
-		logutil.PrintFailMessage(fmt.Sprintf("Unable to load release name. Does the file .devspace/private.yaml exist?"), os.Stderr)
-		return
-	}
-
-	err = config.LoadConfig(privateConfig)
+	err := config.LoadConfig(privateConfig)
 
 	if err != nil {
 		logutil.PrintFailMessage(fmt.Sprintf("Unable to load release name: %s. Does the file .devspace/private.yaml exist?", err.Error()), os.Stderr)
@@ -81,7 +70,7 @@ func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	loadingText := logutil.NewLoadingText("Deleting release "+releaseName, os.Stdout)
-	res, err := client.Client.DeleteRelease(releaseName, helm.DeletePurge(true))
+	res, err := client.DeleteRelease(releaseName, true)
 
 	loadingText.Done()
 
