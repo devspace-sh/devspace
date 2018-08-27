@@ -236,7 +236,7 @@ func (cmd *InitCmd) determineAppConfig() {
 		portsToSliceStr = append(portsToSliceStr, strconv.Itoa(port))
 	}
 
-	portStrings := strings.Split(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	portStrings := strings.Split(stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which port(s) does your application listen on? (separated by spaces)",
 		DefaultValue:           strings.Join(portsToSliceStr, " "),
 		ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
