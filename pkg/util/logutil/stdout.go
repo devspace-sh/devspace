@@ -18,12 +18,16 @@ func (hook TerminalHook) Levels() []logrus.Level {
 
 func (hook TerminalHook) Fire(entry *logrus.Entry) error {
 	err, hasErr := entry.Data[logrus.ErrorKey]
-	message := "[" + strings.ToUpper(entry.Level.String()) + "] " + entry.Message + "\n"
+
+	level := "[" + strings.ToUpper(entry.Level.String()) + "]   "
+	message := entry.Message + "\n"
 
 	if entry.Level == logrus.DebugLevel {
-		ct.Foreground(ct.Yellow, false)
+		ct.Foreground(ct.Green, false)
 	} else if entry.Level == logrus.InfoLevel {
 		ct.Foreground(ct.Green, false)
+	} else if entry.Level == logrus.WarnLevel {
+		ct.Foreground(ct.Red, false)
 	} else {
 		ct.Foreground(ct.Red, false)
 	}
@@ -32,13 +36,18 @@ func (hook TerminalHook) Fire(entry *logrus.Entry) error {
 		errCasted := err.(error)
 		message = message + errCasted.Error() + "\n"
 	}
+
 	output := []byte(message)
 
 	if entry.Level == logrus.InfoLevel {
+		os.Stdout.Write([]byte(level))
+		ct.ResetColor()
 		os.Stdout.Write(output)
 	} else {
+		os.Stderr.Write([]byte(level))
+		ct.ResetColor()
 		os.Stderr.Write(output)
 	}
-	ct.ResetColor()
+
 	return nil
 }

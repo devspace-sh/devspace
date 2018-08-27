@@ -134,7 +134,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
 
 		if dockerfileNotFound == nil || chartDirNotFound == nil {
-			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to overwrite the Dockerfile and the existing files in /chart? (yes | no)",
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
@@ -218,7 +218,7 @@ func (cmd *InitCmd) determineAppConfig() {
 			}
 		}
 	}
-	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           cmd.appConfig.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
@@ -246,8 +246,9 @@ func (cmd *InitCmd) determineAppConfig() {
 		portInt, _ := strconv.Atoi(port)
 		cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
 	}
+
 	/* TODO
-	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which domain do you want to run your application on?",
 		DefaultValue:           cmd.appConfig.External.Domain,
 		ValidationRegexPattern: "^([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,}$",
@@ -315,12 +316,12 @@ func (cmd *InitCmd) reconfigure() {
 	if len(clusterConfig.TillerNamespace) == 0 {
 		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
 	}
-	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
 		DefaultValue:           cmd.privateConfig.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your tiller server run in?",
 		DefaultValue:           clusterConfig.TillerNamespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
@@ -333,7 +334,7 @@ func (cmd *InitCmd) reconfigure() {
 	config.LoadClusterConfig(kubeClusterConfig, false)
 
 	if len(kubeClusterConfig.ApiServer) != 0 && len(kubeClusterConfig.CaCert) != 0 && len(kubeClusterConfig.User.ClientCert) != 0 && len(kubeClusterConfig.User.ClientKey) != 0 {
-		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
@@ -344,27 +345,27 @@ func (cmd *InitCmd) reconfigure() {
 	if skipClusterConfig {
 		clusterConfig.UseKubeConfig = true
 	} else {
-		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
 			DefaultValue:           clusterConfig.ApiServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
-		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
 			DefaultValue:           clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes username?",
 			DefaultValue:           clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
-		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
 			DefaultValue:           clusterConfig.User.ClientCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client key? (RSA, PEM)",
 			DefaultValue:           clusterConfig.User.ClientKey,
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
@@ -387,7 +388,7 @@ func (cmd *InitCmd) reconfigure() {
 func (cmd *InitCmd) reconfigureRegistry() {
 	registryConfig := cmd.privateConfig.Registry
 
-	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
 		DefaultValue:           "yes",
 		ValidationRegexPattern: "^(yes)|(no)$",
@@ -467,7 +468,7 @@ func (cmd *InitCmd) determineLanguage() {
 		if langErr != nil {
 			log.WithError(langErr).Panic("Unable to get supported languages")
 		}
-		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
 			DefaultValue:           cmd.chartGenerator.Language,
 			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",

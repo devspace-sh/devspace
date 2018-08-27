@@ -11,6 +11,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/util/logutil"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -72,8 +73,9 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		return err
 	}
 
+	logger := logutil.GetLogger(pod.Namespace+"-"+pod.Name+"-portforwarding", false)
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, nil)
+	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, logger.Out)
 
 	if err != nil {
 		return err
@@ -82,7 +84,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 	return fw.ForwardPorts()
 }
 
-func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
+func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, errorChannel chan<- error) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
 	var t term.TTY
 
 	kubeconfig, err := GetClientConfig()
@@ -145,7 +147,7 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 		stderrReader, stderrWriter, _ := os.Pipe()
 
 		go func() {
-			exec.Stream(remotecommand.StreamOptions{
+			streamErr := exec.Stream(remotecommand.StreamOptions{
 				Stdin:  stdinReader,
 				Stdout: stdoutWriter,
 				Stderr: stderrWriter,
@@ -154,6 +156,8 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 			stdinWriter.Close()
 			stdoutWriter.Close()
 			stderrWriter.Close()
+
+			errorChannel <- streamErr
 		}()
 		return stdinWriter, stdoutReader, stderrReader, nil
 	}
@@ -188,7 +192,7 @@ func setupTTY() term.TTY {
 }
 
 func ExecBuffered(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
-	_, stdout, stderr, execErr := Exec(kubectlClient, pod, container, command, false)
+	_, stdout, stderr, execErr := Exec(kubectlClient, pod, container, command, false, nil)
 
 	if execErr != nil {
 		return nil, nil, execErr
