@@ -121,6 +121,8 @@ func SetLevel(level logrus.Level) {
 // StartFileLogging logs the output of the global logger to the file default.log
 func StartFileLogging() {
 	stdoutLog.fileLogger = GetFileLogger("default")
+
+	OverrideRuntimeErrorHandler()
 }
 
 // GetInstance returns the Logger instance
