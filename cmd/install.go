@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/covexo/devspace/pkg/util/envutil"
+	"github.com/covexo/devspace/pkg/util/log"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 
@@ -46,16 +47,18 @@ variable.
 	rootCmd.AddCommand(cobraCmd)
 }
 
+// Run executes the command logic
 func (cmd *InstallCmd) Run(cobraCmd *cobra.Command, args []string) {
 	executablePath, err := os.Executable()
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to get executable path: %s", err)
 	}
+
 	executableDir := filepath.Dir(executablePath)
 	err = envutil.AddToPath(executableDir)
 
 	if err != nil {
-		log.WithError(err).Panic("Unable to add devspace install dir to path.")
+		log.Fatalf("Unable to add devspace install dir to path: %s", err)
 	}
 }

@@ -3,15 +3,13 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
-
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
+	"github.com/covexo/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var log *logrus.Logger
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -67,6 +65,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Info("Using config file:", viper.ConfigFileUsed())
 	}
 }

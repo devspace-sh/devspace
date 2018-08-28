@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/generator"
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -88,13 +87,16 @@ YOUR_PROJECT_PATH/
 	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
 }
 
+// Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
-	log = logutil.GetLogger("default", true)
-	workdir, workdirErr := os.Getwd()
+	log.StartFileLogging()
 
-	if workdirErr != nil {
-		log.WithError(workdirErr).Panic("Unable to determine current workdir.")
+	workdir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
+
 	cmd.workdir = workdir
 	cmd.dsConfig = &v1.DevSpaceConfig{
 		Version: "v1",
@@ -377,15 +379,16 @@ func (cmd *InitCmd) reconfigure() {
 	}
 	cmd.reconfigureRegistry()
 
-	dsConfigErr := config.SaveConfig(cmd.dsConfig)
+	err := config.SaveConfig(cmd.dsConfig)
 
-	if dsConfigErr != nil {
-		log.WithError(dsConfigErr).Panic("Config error")
+	if err != nil {
+		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
-	privateConfigErr := config.SaveConfig(cmd.privateConfig)
 
-	if privateConfigErr != nil {
-		log.WithError(privateConfigErr).Panic("Config error")
+	err = config.SaveConfig(cmd.privateConfig)
+
+	if err != nil {
+		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
 }
 
@@ -414,20 +417,21 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		}
 
 		if len(registryConfig.User.Username) == 0 {
-			randomUserSuffix, randErr := randutil.GenerateRandomString(5)
+			randomUserSuffix, err := randutil.GenerateRandomString(5)
 
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random username")
+			if err != nil {
+				log.Fatalf("Error creating random username: %s", err.Error())
 			}
 			registryConfig.User.Username = "user-" + randomUserSuffix
 		}
 
 		if len(registryConfig.User.Password) == 0 {
-			randomPassword, randErr := randutil.GenerateRandomString(12)
+			randomPassword, err := randutil.GenerateRandomString(12)
 
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random password")
+			if err != nil {
+				log.Fatalf("Error creating random password: %s", err.Error())
 			}
+
 			registryConfig.User.Password = randomPassword
 		}
 
@@ -457,21 +461,22 @@ func (cmd *InitCmd) determineLanguage() {
 		if cmd.chartGenerator.IsSupportedLanguage(cmd.flags.language) {
 			cmd.chartGenerator.Language = cmd.flags.language
 		} else {
-			fmt.Println("Language '" + cmd.flags.language + "' not supported yet. Please open an issue here: https://github.com/covexo/devspace/issues/new?title=Feature%20Request:%20Language%20%22" + cmd.flags.language + "%22")
+			log.Info("Language '" + cmd.flags.language + "' not supported yet. Please open an issue here: https://github.com/covexo/devspace/issues/new?title=Feature%20Request:%20Language%20%22" + cmd.flags.language + "%22")
 		}
 	}
 
 	if len(cmd.chartGenerator.Language) == 0 {
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
-		supportedLanguages, langErr := cmd.chartGenerator.GetSupportedLanguages()
+		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
 
-		if langErr != nil {
-			log.WithError(langErr).Panic("Unable to get supported languages")
+		if err != nil {
+			log.Fatalf("Unable to get supported languages: %s", err.Error())
 		}
+
 		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
 			DefaultValue:           cmd.chartGenerator.Language,
@@ -484,8 +489,9 @@ func (cmd *InitCmd) createChart() {
 	err := cmd.chartGenerator.CreateChart()
 
 	if err != nil {
-		log.WithError(err).Panic("Error while creating Helm chart and Dockerfile:")
+		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
+
 	createdChartYaml := map[interface{}]interface{}{}
 	createdChartValuesYaml := map[interface{}]interface{}{}
 
@@ -501,12 +507,14 @@ func (cmd *InitCmd) createChart() {
 
 		createdChartValuesYaml["container"] = containerValues
 	}
+
 	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
 
 	if !chartHasExternalValues && externalValues != nil {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
+
 	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
 	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
 }
