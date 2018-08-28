@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/log"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
@@ -46,39 +43,37 @@ your project, use: devspace reset
 
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
+	log.StartFileLogging()
+
 	privateConfig := &v1.PrivateConfig{}
 	err := config.LoadConfig(privateConfig)
 
 	if err != nil {
-		logutil.PrintFailMessage(fmt.Sprintf("Unable to load release name: %s. Does the file .devspace/private.yaml exist?", err.Error()), os.Stderr)
-		return
+		log.Fatalf("Unable to load release name: %s. Does the file .devspace/private.yaml exist?", err.Error())
 	}
 
 	releaseName := privateConfig.Release.Name
 	kubectl, err := kubectl.NewClient()
 
 	if err != nil {
-		logutil.PrintFailMessage(fmt.Sprintf("Unable to create new kubectl client: %s", err.Error()), os.Stderr)
-		return
+		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
 	client, err := helmClient.NewClient(kubectl, false)
 
 	if err != nil {
-		logutil.PrintFailMessage(fmt.Sprintf("Unable to initialize helm client: %s", err.Error()), os.Stderr)
-		return
+		log.Fatalf("Unable to initialize helm client: %s", err.Error())
 	}
 
-	loadingText := logutil.NewLoadingText("Deleting release "+releaseName, os.Stdout)
+	log.StartWait("Deleting release " + releaseName)
 	res, err := client.DeleteRelease(releaseName, true)
-
-	loadingText.Done()
+	log.StopWait()
 
 	if res != nil && res.Info != "" {
-		logutil.PrintDoneMessage(fmt.Sprintf("Successfully deleted release %s: %s", releaseName, res.Info), os.Stdout)
+		log.Donef("Successfully deleted release %s: %s", releaseName, res.Info)
 	} else if err != nil {
-		logutil.PrintFailMessage(fmt.Sprintf("Error deleting release %s: %s", releaseName, err.Error()), os.Stdout)
+		log.Donef("Error deleting release %s: %s", releaseName, err.Error())
 	} else {
-		logutil.PrintDoneMessage(fmt.Sprintf("Successfully deleted release %s", releaseName), os.Stdout)
+		log.Donef("Successfully deleted release %s", releaseName)
 	}
 }

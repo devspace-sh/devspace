@@ -3,7 +3,6 @@ package kubectl
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -54,6 +53,7 @@ func GetClientConfig() (*rest.Config, error) {
 	}, nil
 }
 
+// ForwardPorts forwards the specified ports from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
 	config, err := GetClientConfig()
 
@@ -73,9 +73,9 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		return err
 	}
 
-	logger := logutil.GetLogger(pod.Namespace+"-"+pod.Name+"-portforwarding", false)
+	logFile := log.GetFileLogger(pod.Namespace + "-" + pod.Name + "-portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, logger.Out)
+	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, logFile.GetStream())
 
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func setupTTY() term.TTY {
 	t.In = os.Stdin
 
 	if !t.IsTerminalIn() {
-		fmt.Println("Unable to use a TTY - input is not a terminal or the right kind of file")
+		log.Info("Unable to use a TTY - input is not a terminal or the right kind of file")
 
 		return t
 	}

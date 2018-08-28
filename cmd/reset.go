@@ -8,7 +8,7 @@ import (
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -74,17 +74,16 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	err := cmd.loadConfig()
 
 	if err != nil {
-		logutil.PrintFailMessage(err.Error(), os.Stderr)
-		return
+		log.Fatalf("Couldn't load config: %s", err.Error())
 	}
 
 	if cmd.flags.deleteRelease {
 		err = cmd.deleteRelease()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting release: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting release: %s", err.Error())
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted release", os.Stdout)
+			log.Done("Successfully deleted release")
 		}
 	}
 
@@ -92,13 +91,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteRegistry()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting docker registry: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting docker registry: %s", err.Error())
 
 			if cmd.shouldContinue() == false {
 				return
 			}
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted docker registry", os.Stdout)
+			log.Done("Successfully deleted docker registry")
 		}
 	}
 
@@ -106,13 +105,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteTiller()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting tiller: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting tiller: %s", err.Error())
 
 			if cmd.shouldContinue() == false {
 				return
 			}
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted tiller server", os.Stdout)
+			log.Done("Successfully deleted tiller server")
 		}
 	}
 
@@ -120,13 +119,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteChart()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting chart: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting chart: %s", err.Error())
 
 			if cmd.shouldContinue() == false {
 				return
 			}
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted chart", os.Stdout)
+			log.Done("Successfully deleted chart")
 		}
 	}
 
@@ -134,13 +133,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteDockerfile()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting Dockerfile: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting Dockerfile: %s", err.Error())
 
 			if cmd.shouldContinue() == false {
 				return
 			}
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted Dockerfile", os.Stdout)
+			log.Done("Successfully deleted Dockerfile")
 		}
 	}
 
@@ -148,13 +147,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteDevspaceFolder()
 
 		if err != nil {
-			logutil.PrintFailMessage("Error deleting .devspace folder: "+err.Error(), os.Stderr)
+			log.Failf("Error deleting .devspace folder: ", err.Error())
 
 			if cmd.shouldContinue() == false {
 				return
 			}
 		} else {
-			logutil.PrintDoneMessage("Successfully deleted .devspace folder", os.Stdout)
+			log.Done("Successfully deleted .devspace folder")
 		}
 	}
 }

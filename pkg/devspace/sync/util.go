@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 	k8sv1 "k8s.io/api/core/v1"
@@ -29,14 +28,13 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		ExcludePaths: ExcludePaths,
 	}
 
-	syncLog = logrus.New()
-	syncLog.SetLevel(logrus.InfoLevel)
+	syncLog = log.GetInstance()
 
 	if s.ExcludePaths != nil {
 		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {
-			log.Fatal(err)
+			return errors.Trace(err)
 		}
 
 		s.ignoreMatcher = ignoreMatcher
@@ -71,6 +69,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	}
 
 	s.Stop()
+
 	syncLog = nil
 
 	return nil

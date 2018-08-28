@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,7 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/ignoreutil"
+	"github.com/covexo/devspace/pkg/util/log"
 
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
@@ -105,14 +104,16 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
 }
 
+// Run executes the command logic
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
-	log = logutil.GetLogger("default", true)
-	var err error
-	workdir, workdirErr := os.Getwd()
+	log.StartFileLogging()
 
-	if workdirErr != nil {
-		log.WithError(workdirErr).Panic("Unable to determine current workdir")
+	workdir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
+
 	cmd.workdir = workdir
 	cmd.privateConfig = &v1.PrivateConfig{}
 	cmd.dsConfig = &v1.DevSpaceConfig{}
@@ -124,17 +125,26 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		initCmd := &InitCmd{
 			flags: InitCmdFlagsDefault,
 		}
+
 		initCmd.Run(nil, []string{})
 	}
-	config.LoadConfig(cmd.privateConfig)
-	config.LoadConfig(cmd.dsConfig)
+
+	err = config.LoadConfig(cmd.privateConfig)
+
+	if err != nil {
+		log.Fatalf("Couldn't load private.yaml: %s", err.Error())
+	}
+
+	err = config.LoadConfig(cmd.dsConfig)
+
+	if err != nil {
+		log.Fatalf("Couldn't load config.yaml: %s", err.Error())
+	}
 
 	cmd.kubectl, err = kubectl.NewClient()
 
 	if err != nil {
-		logutil.PrintFailMessage(fmt.Sprintf("Unable to create new kubectl client: %s", err.Error()), os.Stdout)
-		log.WithError(err).Panic("Unable to create new kubectl client")
-		return
+		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
 	if cmd.flags.build {
@@ -144,9 +154,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		if statErr != nil {
 			if len(cmd.privateConfig.Release.LatestImage) == 0 {
-				logutil.PrintFailMessage(fmt.Sprintf("Unable to call stat on Dockerfile: %s", statErr.Error()), os.Stdout)
-				log.WithError(statErr).Panic("Unable to call stat on Dockerfile")
-				return
+				log.Fatalf("Dockerfile missing: %s", statErr.Error())
 			} else {
 				mustRebuild = false
 			}
@@ -170,30 +178,30 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			cmd.privateConfig.Release.LatestBuild = dockerfileModTime.Format(time.RFC3339Nano)
 			cmd.privateConfig.Release.LatestImage = cmd.latestImageIP
 
-			privateConfigErr := config.SaveConfig(cmd.privateConfig)
+			err = config.SaveConfig(cmd.privateConfig)
 
-			if privateConfigErr != nil {
-				logutil.PrintFailMessage(fmt.Sprintf("Config saving error: %s", privateConfigErr.Error()), os.Stdout)
-				log.WithError(privateConfigErr).Panic("Config saving error")
-				return
+			if err != nil {
+				log.Fatalf("Config saving error: %s", err.Error())
 			}
 		} else {
 			cmd.latestImageIP = cmd.privateConfig.Release.LatestImage
 		}
 	}
+
 	cmd.deployChart()
 
 	if cmd.flags.sync {
-		loadingText := logutil.NewLoadingText("Starting real-time code sync", os.Stdout)
+		log.StartWait("Starting real-time code sync")
 		cmd.startSync()
-		loadingText.Done()
+		log.StopWait()
 	}
 
 	if cmd.flags.portforwarding {
-		loadingText := logutil.NewLoadingText("Starting port forwarding", os.Stdout)
+		log.StartWait("Starting port forwarding")
 		cmd.startPortForwarding()
-		loadingText.Done()
+		log.StopWait()
 	}
+
 	cmd.enterTerminal()
 }
 
@@ -204,12 +212,12 @@ func (cmd *UpCmd) buildDockerfile() {
 	//registryHostname := cmd.privateConfig.Registry.Release.Name + "-docker-registry." + cmd.privateConfig.Registry.Release.Namespace + ".svc.cluster.local:5000"
 	buildNamespace := cmd.privateConfig.Release.Namespace
 	randString, _ := randutil.GenerateRandomString(12)
-	buildId := strings.ToLower(randString)
+	buildID := strings.ToLower(randString)
 	buildPod := &k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "devspace-build-",
 			Labels: map[string]string{
-				"devspace-build-id": buildId,
+				"devspace-build-id": buildID,
 			},
 		},
 		Spec: k8sv1.PodSpec{
@@ -251,6 +259,7 @@ func (cmd *UpCmd) buildDockerfile() {
 			RestartPolicy: k8sv1.RestartPolicyOnFailure,
 		},
 	}
+
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
 
@@ -259,23 +268,24 @@ func (cmd *UpCmd) buildDockerfile() {
 		})
 
 		if deleteErr != nil {
-			log.WithError(deleteErr).Error("Failed delete build pod")
+			log.With(deleteErr).Errorf("Failed to delete build pod: %s", deleteErr.Error())
 		}
 	}
+
 	intr := interrupt.New(nil, deleteBuildPod)
 
-	intr.Run(func() error {
+	err := intr.Run(func() error {
 		buildPodCreated, buildPodCreateErr := cmd.kubectl.Core().Pods(buildNamespace).Create(buildPod)
 
 		if buildPodCreateErr != nil {
-			log.WithError(buildPodCreateErr).Panic("Unable to create build pod")
+			return fmt.Errorf("Unable to create build pod: %s", buildPodCreateErr.Error())
 		}
 
 		readyWaitTime := 2 * 60 * time.Second
 		readyCheckInterval := 5 * time.Second
 		buildPodReady := false
 
-		loadingText := logutil.NewLoadingText("Waiting for build pod to start", os.Stdout)
+		log.StartWait("Waiting for build pod to start")
 
 		for readyWaitTime > 0 {
 			buildPod, _ = cmd.kubectl.Core().Pods(buildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
@@ -289,26 +299,32 @@ func (cmd *UpCmd) buildDockerfile() {
 			readyWaitTime = readyWaitTime - readyCheckInterval
 		}
 
-		loadingText.Done()
+		log.StopWait()
+		log.Done("Build pod started")
 
 		if !buildPodReady {
-			log.Panic("Unable to start build pod")
+			return fmt.Errorf("Unable to start build pod")
 		} else {
-			logutil.PrintDoneMessage("Uploading files to build container", os.Stdout)
-
 			ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
 
 			if ignoreRuleErr != nil {
-				log.WithError(ignoreRuleErr).Panic("Unable to parse .dockerignore files")
+				return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
 			}
+
 			buildContainer := &buildPod.Spec.Containers[0]
 
-			synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
+			log.StartWait("Uploading files to build container")
+			err := synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
+			log.StopWait()
 
-			logutil.PrintDoneMessage("Starting build process", os.Stdout)
+			if err != nil {
+				return fmt.Errorf("Error uploading files to container: %s", err.Error())
+			}
+
+			log.Done("Uploaded files to container")
+			log.StartWait("Building container image")
 
 			containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
-
 			exitChannel := make(chan error)
 
 			stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
@@ -319,21 +335,31 @@ func (cmd *UpCmd) buildDockerfile() {
 				"--insecure-skip-tls-verify",
 				"--single-snapshot",
 			}, false, exitChannel)
+
 			stdin.Close()
 
 			if execErr != nil {
-				log.WithError(execErr).Panic("Failed to start image building")
+				return fmt.Errorf("Failed to start image building: %s", execErr.Error())
 			}
-			lastKanikoOutput, _ := cmd.formatKanikoOutput(stdout, stderr)
+
+			lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
 			exitError := <-exitChannel
 
+			log.StopWait()
+
 			if exitError != nil {
-				log.WithError(exitError).Panic("Image building failed with message: " + lastKanikoOutput)
+				return fmt.Errorf("Error: %s, Last Kaniko Output: %s", exitError.Error(), lastKanikoOutput)
 			}
-			logutil.PrintDoneMessage("Done building image", os.Stdout)
+
+			log.Done("Done building image")
 		}
+
 		return nil
 	})
+
+	if err != nil {
+		log.Fatalf("Image building failed: %s", err.Error())
+	}
 }
 
 type KanikoOutputFormat struct {
@@ -341,7 +367,7 @@ type KanikoOutputFormat struct {
 	Replacement string
 }
 
-func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) (string, *logutil.LoadingText) {
+func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) string {
 	wg := &sync.WaitGroup{}
 	lastLine := ""
 	outputFormats := []KanikoOutputFormat{
@@ -382,7 +408,7 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 			Replacement: " Packaging layers",
 		},
 	}
-	var latestLoadingText *logutil.LoadingText
+
 	kanikoLogRegex := regexp.MustCompile(`^time="(.*)" level=(.*) msg="(.*)"`)
 	buildPrefix := "build >"
 
@@ -392,38 +418,42 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 		for _, outputFormat := range outputFormats {
 			line = outputFormat.Regex.ReplaceAll(line, []byte(outputFormat.Replacement))
 		}
+
 		lineString := string(line)
 
 		if len(line) != len(originalLine) {
-			if latestLoadingText != nil {
-				latestLoadingText.Done()
-			}
-			latestLoadingText = logutil.NewLoadingText(buildPrefix+lineString, os.Stdout)
+			log.Done(buildPrefix + lineString)
 		} else if kanikoLogRegex.Match(line) == false {
-			if latestLoadingText != nil {
-				latestLoadingText.Done()
-			}
 			log.Info(buildPrefix + ">> " + lineString)
 		}
+
 		lastLine = string(kanikoLogRegex.ReplaceAll([]byte(originalLine), []byte("$3")))
 	}
+
 	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
 	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
 
 	wg.Wait()
 
-	return lastLine, latestLoadingText
+	return lastLine
 }
 
 func (cmd *UpCmd) initRegistry() {
-	loadingText := logutil.NewLoadingText("Initializing helm client", os.Stdout)
-	cmd.initHelm()
-	loadingText.Done()
+	log.StartWait("Initializing helm client")
+	err := cmd.initHelm()
+	log.StopWait()
+
+	if err != nil {
+		log.Fatalf("Error initializing helm client: %s", err.Error())
+	}
+
+	log.Done("Initialized helm client")
 
 	installRegistry := cmd.flags.initRegistry
 
 	if installRegistry {
-		loadingText = logutil.NewLoadingText("Initializing docker registry", os.Stdout)
+		log.StartWait("Initializing docker registry")
+		defer log.StopWait()
 
 		registryReleaseName := cmd.privateConfig.Registry.Release.Name
 		registryReleaseNamespace := cmd.privateConfig.Registry.Release.Namespace
@@ -438,16 +468,17 @@ func (cmd *UpCmd) initRegistry() {
 		if !secretIsMap {
 			//TODO
 		}
-		_, deploymentErr := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
+		_, err := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
 
-		if deploymentErr != nil {
-			log.WithError(deploymentErr).Panic("Unable to initialize docker registry")
+		if err != nil {
+			log.Panicf("Unable to initialize docker registry: %s", err.Error())
 		}
-		htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
-		htpasswdSecret, secretGetErr := cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 
-		if secretGetErr != nil {
-			log.WithError(secretGetErr).Panic("Unable to retrieve secret for docker registry")
+		htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
+		htpasswdSecret, err := cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
+
+		if err != nil {
+			log.Panicf("Unable to retrieve secret for docker registry: %s", err.Error())
 		}
 
 		if htpasswdSecret == nil || htpasswdSecret.Data == nil {
@@ -458,6 +489,7 @@ func (cmd *UpCmd) initRegistry() {
 				Data: map[string][]byte{},
 			}
 		}
+
 		oldHtpasswdData := htpasswdSecret.Data["htpasswd"]
 		newHtpasswdData := htpasswd.HashedPasswords{}
 
@@ -465,41 +497,49 @@ func (cmd *UpCmd) initRegistry() {
 			oldHtpasswdDataBytes := []byte(oldHtpasswdData)
 			newHtpasswdData, _ = htpasswd.ParseHtpasswd(oldHtpasswdDataBytes)
 		}
-		registryUser := cmd.privateConfig.Registry.User
-		htpasswdErr := newHtpasswdData.SetPassword(registryUser.Username, registryUser.Password, htpasswd.HashBCrypt)
 
-		if htpasswdErr != nil {
-			log.WithError(htpasswdErr).Panic("Unable to set password in htpasswd")
+		registryUser := cmd.privateConfig.Registry.User
+		err = newHtpasswdData.SetPassword(registryUser.Username, registryUser.Password, htpasswd.HashBCrypt)
+
+		if err != nil {
+			log.Panicf("Unable to set password in htpasswd: %s", err.Error())
 		}
+
 		newHtpasswdDataBytes := newHtpasswdData.Bytes()
 
 		htpasswdSecret.Data["htpasswd"] = newHtpasswdDataBytes
 
-		_, getHtpasswdSecretErr := cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
+		_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 
-		var htpasswdUpdateErr error
-
-		if getHtpasswdSecretErr != nil {
-			_, htpasswdUpdateErr = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Create(htpasswdSecret)
+		if err != nil {
+			_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Create(htpasswdSecret)
 		} else {
-			_, htpasswdUpdateErr = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Update(htpasswdSecret)
+			_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Update(htpasswdSecret)
 		}
 
-		if htpasswdUpdateErr != nil {
-			log.WithError(htpasswdUpdateErr).Panic("Unable to update htpasswd secret")
+		if err != nil {
+			log.Panicf("Unable to update htpasswd secret: %s", err.Error())
 		}
+
 		registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(cmd.privateConfig.Registry.User.Username + ":" + cmd.privateConfig.Registry.User.Password))
-
 		registryServiceName := registryReleaseName + "-docker-registry"
+
 		var registryService *k8sv1.Service
+
 		maxServiceWaiting := 60 * time.Second
 		serviceWaitingInterval := 3 * time.Second
 
-		loadingText.Done()
-		loadingText = logutil.NewLoadingText("Waiting for registry service to start", os.Stdout)
+		log.StopWait()
+		log.Done("Initialized docker registry")
+
+		log.StartWait("Waiting for docker registry to start")
 
 		for true {
-			registryService, _ = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
+			registryService, err = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
+
+			if err != nil {
+				log.Panic(err)
+			}
 
 			if len(registryService.Spec.ClusterIP) > 0 {
 				break
@@ -512,7 +552,9 @@ func (cmd *UpCmd) initRegistry() {
 				log.Panic("Timeout waiting for registry service to start")
 			}
 		}
-		loadingText.Done()
+
+		log.StopWait()
+		log.Done("Docker registry started")
 
 		registryPort := 5000
 		registryIP := registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort)
@@ -548,36 +590,48 @@ func (cmd *UpCmd) initRegistry() {
 			Type: k8sv1.SecretTypeDockerConfigJson,
 		}
 
-		_, getImagePullSecretErr := cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Get(pullSecretName, metav1.GetOptions{})
+		_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Get(pullSecretName, metav1.GetOptions{})
 
-		var secretCreationErr error
-
-		if getImagePullSecretErr != nil {
-			_, secretCreationErr = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Create(registryPullSecret)
+		if err != nil {
+			_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Create(registryPullSecret)
 		} else {
-			_, secretCreationErr = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Update(registryPullSecret)
+			_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Update(registryPullSecret)
 		}
 
-		if secretCreationErr != nil {
-			log.WithError(secretCreationErr).Panic("Unable to update image pull secret")
+		if err != nil {
+			log.Panicf("Unable to update image pull secret: %s", err.Error())
 		}
 	}
 }
 
-func (cmd *UpCmd) initHelm() {
+func (cmd *UpCmd) initHelm() error {
 	if cmd.helm == nil {
-		client, helmErr := helmClient.NewClient(cmd.kubectl, false)
+		client, err := helmClient.NewClient(cmd.kubectl, false)
 
-		if helmErr != nil {
-			log.WithError(helmErr).Panic("Unable to initialize helm client")
+		if err != nil {
+			return err
 		}
+
 		cmd.helm = client
 	}
+
+	return nil
 }
 
 func (cmd *UpCmd) deployChart() {
-	logutil.PrintDoneMessage("Deploying helm chart", os.Stdout)
-	cmd.initHelm()
+	if cmd.helm == nil {
+		log.StartWait("Initializing helm client")
+		err := cmd.initHelm()
+		log.StopWait()
+
+		if err != nil {
+			log.Panic(err)
+		}
+
+		log.Done("Initialized helm client")
+	}
+
+	log.StartWait("Deploying helm chart")
 
 	releaseName := cmd.privateConfig.Release.Name
 	releaseNamespace := cmd.privateConfig.Release.Namespace
@@ -587,26 +641,34 @@ func (cmd *UpCmd) deployChart() {
 	containerValues := map[interface{}]interface{}{}
 
 	containerValues["image"] = cmd.latestImageIP
+
 	if !cmd.flags.noSleep {
 		containerValues["command"] = []string{"sleep"}
 		containerValues["args"] = []string{"99999999"}
 	}
+
 	values["container"] = containerValues
 
-	appRelease, deploymentErr := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
+	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
 
-	if deploymentErr != nil {
-		log.WithError(deploymentErr).Panic("Unable to deploy helm chart")
+	log.StopWait()
+
+	if err != nil {
+		log.Panicf("Unable to deploy helm chart: %s", err.Error())
 	}
+
 	releaseRevision := int(appRelease.Version)
+	log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
+	log.StartWait("Waiting for release pod to become ready")
+	defer log.StopWait()
 
 	for true {
-		podList, podListErr := cmd.kubectl.Core().Pods(releaseNamespace).List(metav1.ListOptions{
+		podList, err := cmd.kubectl.Core().Pods(releaseNamespace).List(metav1.ListOptions{
 			LabelSelector: "release=" + releaseName,
 		})
 
-		if podListErr != nil {
-			log.WithError(podListErr).Panic("Unable to list devspace pods")
+		if err != nil {
+			log.Panicf("Unable to list devspace pods: %s", err.Error())
 		}
 
 		if len(podList.Items) > 0 {
@@ -636,9 +698,14 @@ func (cmd *UpCmd) deployChart() {
 				if !hasRevision {
 					log.Warn("Found pod without revision. Use label 'revision' for your pods to avoid this warning.")
 				}
-				cmd.pod = &selectedPod
 
-				waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second, "Waiting for DevSpace pod to become ready")
+				cmd.pod = &selectedPod
+				err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
+
+				if err != nil {
+					log.Panicf("Error during waiting for pod: %s", err.Error())
+				}
+
 				break
 			} else {
 				log.Info("Waiting for release upgrade to complete.")
@@ -648,6 +715,8 @@ func (cmd *UpCmd) deployChart() {
 		}
 		time.Sleep(2 * time.Second)
 	}
+
+	log.StopWait()
 }
 
 func (cmd *UpCmd) startSync() {
@@ -655,7 +724,7 @@ func (cmd *UpCmd) startSync() {
 		absLocalPath, err := filepath.Abs(cmd.workdir + syncPath.LocalSubPath)
 
 		if err != nil {
-			log.WithError(err).Panic("Unable to resolve localSubPath: " + syncPath.LocalSubPath)
+			log.Panicf("Unable to resolve localSubPath %s: %s", syncPath.LocalSubPath, err.Error())
 		} else {
 			syncConfig := synctool.SyncConfig{
 				Kubectl:   cmd.kubectl,
@@ -664,6 +733,7 @@ func (cmd *UpCmd) startSync() {
 				WatchPath: absLocalPath,
 				DestPath:  syncPath.ContainerPath,
 			}
+
 			syncConfig.Start()
 		}
 	}
@@ -684,7 +754,7 @@ func (cmd *UpCmd) startPortForwarding() {
 				})
 
 				if podListErr != nil {
-					log.WithError(podListErr).Error("Unable to list devspace pods")
+					log.Errorf("Unable to list devspace pods: %s", podListErr.Error())
 				} else {
 					if len(podList.Items) > 0 {
 						ports := make([]string, len(portForwarding.PortMappings))
@@ -723,23 +793,23 @@ func (cmd *UpCmd) enterTerminal() {
 	} else {
 		shell = []string{cmd.flags.shell}
 	}
-	log.Info("Starting terminal session")
 
 	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
 		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
-			log.WithError(terminalErr).Panic("Unable to start terminal session")
+			log.Panicf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}
 }
 
-func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration, waitingMessage string) error {
-	loadingText := logutil.NewLoadingText(waitingMessage, os.Stdout)
-	defer loadingText.Done()
-
+func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
 	for maxWaitTime > 0 {
-		pod, _ := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+		pod, err := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+
+		if err != nil {
+			return err
+		}
 
 		if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].Ready {
 			return nil
@@ -748,5 +818,6 @@ func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime 
 		time.Sleep(checkInterval)
 		maxWaitTime = maxWaitTime - checkInterval
 	}
-	return errors.New("")
+
+	return fmt.Errorf("Max wait time expired")
 }

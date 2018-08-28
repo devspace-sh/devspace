@@ -2,13 +2,11 @@ package sync
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 
-	"github.com/covexo/devspace/pkg/util/logutil"
-
 	"github.com/Sirupsen/logrus"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -16,12 +14,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var syncLog *logrus.Logger
+var syncLog log.Logger
 
 const StartAck string = "START"
 const EndAck string = "DONE"
 const ErrorAck string = "ERROR"
 
+// SyncConfig holds the necessary information for the syncing process
 type SyncConfig struct {
 	Kubectl      *kubernetes.Clientset
 	Pod          *k8sv1.Pod
@@ -39,27 +38,17 @@ type SyncConfig struct {
 	downstream *downstream
 }
 
+// Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
-	syncLog.WithFields(logrus.Fields{
-		"PodName":      s.Pod.Name,
-		"PodNamespace": s.Pod.Namespace,
-		"WatchPath":    s.WatchPath,
-		"DestPath":     s.DestPath,
-		"ExcludePaths": s.ExcludePaths,
-	}).Infof(format, args)
+	syncLog.With(s.Pod.Name).With(s.Pod.Namespace).With(s.WatchPath).With(s.DestPath).With(s.ExcludePaths).Infof(format, args...)
 }
 
+// Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
-	syncLog.WithFields(logrus.Fields{
-		"PodName":      s.Pod.Name,
-		"PodNamespace": s.Pod.Namespace,
-		"WatchPath":    s.WatchPath,
-		"DestPath":     s.DestPath,
-		"ExcludePaths": s.ExcludePaths,
-	}).Infoln(line)
+	syncLog.With(s.Pod.Name).With(s.Pod.Namespace).With(s.WatchPath).With(s.DestPath).With(s.ExcludePaths).Info(line)
 }
 
-// Starts a new sync instance
+// Start starts a new sync instance
 func (s *SyncConfig) Start() {
 	if s.ExcludePaths == nil {
 		s.ExcludePaths = make([]string, 0, 2)
@@ -69,8 +58,7 @@ func (s *SyncConfig) Start() {
 	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
 	if syncLog == nil {
-		syncLog = logutil.GetLogger("sync", false)
-
+		syncLog = log.GetFileLogger("sync")
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
@@ -78,7 +66,7 @@ func (s *SyncConfig) Start() {
 		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		s.ignoreMatcher = ignoreMatcher
@@ -92,7 +80,7 @@ func (s *SyncConfig) Start() {
 	err := s.upstream.start()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	s.downstream = &downstream{
@@ -102,7 +90,7 @@ func (s *SyncConfig) Start() {
 	err = s.downstream.start()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	go s.mainLoop()
@@ -115,7 +103,7 @@ func (s *SyncConfig) mainLoop() {
 	err := s.initialSync()
 
 	if err != nil {
-		syncLog.Errorln(err)
+		syncLog.Error(err)
 		return
 	}
 
@@ -125,7 +113,7 @@ func (s *SyncConfig) mainLoop() {
 
 		// Set up a watchpoint listening for events within a directory tree rooted at specified directory.
 		if err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All); err != nil {
-			syncLog.Errorln(err)
+			syncLog.Error(err)
 			return
 		}
 
@@ -133,14 +121,14 @@ func (s *SyncConfig) mainLoop() {
 		err := s.upstream.collectChanges()
 
 		if err != nil {
-			syncLog.Errorln(err)
+			syncLog.Error(err)
 		}
 	}()
 
 	err = s.downstream.mainLoop()
 
 	if err != nil {
-		syncLog.Errorln(err)
+		syncLog.Error(err)
 	}
 }
 

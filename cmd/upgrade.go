@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,10 +32,12 @@ Upgrades the devspace cli to the newest version
 	rootCmd.AddCommand(cobraCmd)
 }
 
+// Run executes the command logic
 func (cmd *UpgradeCmd) Run(cobraCmd *cobra.Command, args []string) {
+	log.StartFileLogging()
 	err := upgrade.Upgrade()
 
 	if err != nil {
-		log.Fatalf("Couldn't upgrade: %s\n", err.Error())
+		log.Fatalf("Couldn't upgrade: %s", err.Error())
 	}
 }
