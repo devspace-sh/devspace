@@ -73,9 +73,9 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		return err
 	}
 
-	logger := logutil.GetLogger(pod.Namespace+"-"+pod.Name+"-portforwarding", false)
+	logger := logutil.GetLogger("portforwarding", false)
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, nil, logger.Out)
+	fw, err := portforward.New(dialer, ports, stopChan, readyChan, logger.Out, logger.Out)
 
 	if err != nil {
 		return err
