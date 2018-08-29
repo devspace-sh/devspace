@@ -18,7 +18,6 @@ type AddCmd struct {
 	portFlags     *addPortCmdFlags
 	dsConfig      *v1.DevSpaceConfig
 	privateConfig *v1.PrivateConfig
-	appConfig     *v1.AppConfig
 	workdir       string
 }
 
@@ -37,7 +36,6 @@ type addSyncCmdFlags struct {
 type addPortCmdFlags struct {
 	ResourceType string
 	Selector     string
-	PortMappings string
 }
 
 func init() {
@@ -100,18 +98,16 @@ func init() {
 	################ devspace add port ####################
 	#######################################################
 	Add a new port mapping that should be forwarded to
-	the devspace:
-	devspace add port --port 8080:80,3000
+	the devspace (format is local:remote comma separated):
+	devspace add port 8080:80,3000
 	#######################################################
 	`,
-		Run: cmd.RunAddPort,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddPort,
 	}
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
-	addPortCmd.Flags().StringVar(&cmd.portFlags.PortMappings, "port", "", "Comma separated list of ports to add (port or local:remote, e.g. 8080,3000:3001)")
-
-	addPortCmd.MarkFlagRequired("port")
 
 	addCmd.AddCommand(addPortCmd)
 }
@@ -169,7 +165,7 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
-	portMappings, err := parsePortMappings(cmd.portFlags.PortMappings)
+	portMappings, err := parsePortMappings(args[0])
 
 	if err != nil {
 		log.Fatalf("Error parsing port mappings: %s", err.Error())
@@ -260,6 +256,11 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 
 func parseSelectors(selector string) (map[string]string, error) {
 	selectorMap := make(map[string]string)
+
+	if selector == "" {
+		return selectorMap, nil
+	}
+
 	selectors := strings.Split(selector, ",")
 
 	for _, v := range selectors {
