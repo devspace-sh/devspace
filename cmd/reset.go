@@ -189,7 +189,7 @@ func (cmd *ResetCmd) determineResetExtent() {
 
 func (cmd *ResetCmd) shouldContinue() bool {
 	return stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "An error occured, should the reset command continue? (y/n)",
+		Question:               "An error occurred, should the reset command continue? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"

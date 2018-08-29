@@ -323,7 +323,7 @@ func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[strin
 		buf := make([]byte, 512, 512)
 
 		for {
-			n, err = file.Read(buf)
+			n, err := file.Read(buf)
 
 			if n == 0 {
 				if err == nil {

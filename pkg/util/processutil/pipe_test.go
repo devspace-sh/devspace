@@ -1,12 +1,12 @@
 package processutil
 
 import (
-	"time"
-	"testing"
-	"io"
 	"errors"
+	"io"
 	"strings"
 	"sync"
+	"testing"
+	"time"
 )
 
 func TestPipe(t *testing.T) {
@@ -19,7 +19,7 @@ func TestPipe(t *testing.T) {
 	Pipe(reader, writer, BufferLength, nil)
 
 	go func() {
-		errorMessage := <- ErrorOccurredChannel
+		errorMessage := <-ErrorOccurredChannel
 		t.Error(errorMessage)
 		t.Fail()
 	}()
@@ -34,7 +34,7 @@ func TestPipeWithWaitGroup(t *testing.T) {
 	readBeginner := make(chan bool)
 
 	reader := TestReader{
-		BeginSignal : readBeginner,
+		BeginSignal: readBeginner,
 	}
 	writer := TestWriter{}
 
@@ -49,7 +49,7 @@ func TestPipeWithWaitGroup(t *testing.T) {
 	readBeginner <- true
 
 	go func() {
-		errorMessage := <- ErrorOccurredChannel
+		errorMessage := <-ErrorOccurredChannel
 		t.Error(errorMessage)
 		t.Fail()
 	}()
@@ -64,29 +64,30 @@ var someVariable = strings.Fields("")
 
 var ErrorOccurredChannel = make(chan string)
 var NumberOfReadCalls = 0
+
 const BufferLength = 10
-const Message = "Hello World"//Must be longer than BufferLength
+const Message = "Hello World" //Must be longer than BufferLength
 
 type TestReader struct {
 	BeginSignal chan bool
 }
 
-func (reader TestReader) Read (buffer []byte) (n int, err error) {
+func (reader TestReader) Read(buffer []byte) (n int, err error) {
 
 	if len(buffer) != BufferLength {
-		go func(){
+		go func() {
 			ErrorOccurredChannel <- "Wrong bufferlength.\nExpected: " + string(BufferLength) + "\nActual: " + string(len(buffer))
 		}()
 	}
 
-	NumberOfReadCalls ++
+	NumberOfReadCalls++
 
 	if NumberOfReadCalls == 1 {
 
 		if reader.BeginSignal != nil {
 			<-reader.BeginSignal
 		}
-		
+
 		copy(buffer[0:], Message)
 
 		return BufferLength, nil
@@ -100,22 +101,22 @@ func (reader TestReader) Read (buffer []byte) (n int, err error) {
 		return 0, io.EOF
 
 	} else {
-		go func(){
+		go func() {
 			ErrorOccurredChannel <- "Read is called after EOF was returned"
 		}()
 		return 0, io.EOF
 	}
 }
 
-type TestWriter struct {}
+type TestWriter struct{}
 
-func (writer TestWriter) Write (data []byte) (n int, err error) {
-	
+func (writer TestWriter) Write(data []byte) (n int, err error) {
+
 	if !strings.HasPrefix(Message, string(data)) {
-		go func(){
-			ErrorOccurredChannel <- "Message was badly transfered." + 
-			"\nExpected were the first " + string(BufferLength) + " bytes of the message: " + Message + 
-			"\nBut actiual: " + string(data)
+		go func() {
+			ErrorOccurredChannel <- "Message was badly transferred." +
+				"\nExpected were the first " + string(BufferLength) + " bytes of the message: " + Message +
+				"\nBut actiual: " + string(data)
 		}()
 	}
 
