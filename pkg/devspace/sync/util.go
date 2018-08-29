@@ -298,7 +298,7 @@ func deleteSafe(path string, fileInformation *fileInformation) bool {
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(path)
 
-	// TODO: uncomment this line for more safety (However we have to change the intial sync functionality that older files locally are either uplaoded or the newer files on the server downloaded)
+	// TODO: uncomment this line for more safety (However we have to change the initial sync functionality that older files locally are either uplaoded or the newer files on the server downloaded)
 	// if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
 	if err == nil && ceilMtime(stat.ModTime()) <= fileInformation.Mtime {
 		err = os.Remove(path)

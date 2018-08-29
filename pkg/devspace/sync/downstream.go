@@ -160,7 +160,7 @@ func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles ma
 	createFolders := make([]*fileInformation, 0, int(len(createFiles)/2))
 	tempDownloadpath := ""
 
-	// Determine folder creates and file creates and seperate them
+	// Determine folder creates and file creates and separate them
 	for _, element := range createFiles {
 		if element.IsDirectory {
 			createFolders = append(createFolders, element)
