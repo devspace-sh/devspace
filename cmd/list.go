@@ -78,7 +78,7 @@ func init() {
 
 // RunListSync runs the list sync command logic
 func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
-	cmd.loadConfig()
+	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
 
 	if len(cmd.dsConfig.SyncPaths) == 0 {
 		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
@@ -131,7 +131,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 // RunListPort runs the list port command logic
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
-	cmd.loadConfig()
+	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
 
 	if len(cmd.dsConfig.PortForwarding) == 0 {
 		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
@@ -141,7 +141,7 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	headerColumnNames := []string{
 		"Type",
 		"Selector",
-		"Port Mappings",
+		"Ports (Local:Remote)",
 	}
 
 	portForwards := make([][]string, 0, len(cmd.dsConfig.PortForwarding))
@@ -178,24 +178,24 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	log.PrintTable(headerColumnNames, portForwards)
 }
 
-func (cmd *ListCmd) loadConfig() {
-	workdir, err := os.Getwd()
+func loadConfig(workdir *string, privateConfig **v1.PrivateConfig, dsConfig **v1.DevSpaceConfig) {
+	w, err := os.Getwd()
 
 	if err != nil {
 		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
 
-	cmd.workdir = workdir
-	cmd.privateConfig = &v1.PrivateConfig{}
-	cmd.dsConfig = &v1.DevSpaceConfig{}
+	workdir = &w
+	*privateConfig = &v1.PrivateConfig{}
+	*dsConfig = &v1.DevSpaceConfig{}
 
-	err = config.LoadConfig(cmd.privateConfig)
+	err = config.LoadConfig(privateConfig)
 
 	if err != nil {
 		log.Fatalf("Unable to load .devspace/private.yaml: %s. Did you run `devspace init`?", err.Error())
 	}
 
-	err = config.LoadConfig(cmd.dsConfig)
+	err = config.LoadConfig(dsConfig)
 
 	if err != nil {
 		log.Fatalf("Unable to load .devspace/config.yaml: %s. Did you run `devspace init`?", err.Error())
