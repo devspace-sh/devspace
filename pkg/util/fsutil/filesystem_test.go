@@ -1,46 +1,40 @@
 package fsutil
 
-//"time"
+import (
+	"io/ioutil"
+	"os"
+	"strings"
+	"testing"
 
-/*
+	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/juju/errors"
+	"github.com/stretchr/testify/assert"
+)
+
 func TestWriteToFileAndReadFile(t *testing.T) {
 
 	//Let's create a new file and check if the content is correct.
 
-	randomString := RandStringRunes(10)
+	randomString, e := randutil.GenerateRandomString(10)
+
+	assert.Nil(t, e)
 
 	writeData := []byte("Content " + randomString)
-	fileName := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
 
-	e := WriteToFile(writeData, fileName)
+	fileName := os.TempDir() + "/" + randomString
 
-	if e != nil {
-		t.Error("Write a new file failed with error: ")
-		t.Error(e)
-		t.Fail()
-	}
+	e = WriteToFile(writeData, fileName)
+
+	assert.Nilf(t, e, errors.Details(e))
 
 	//There should be 18 bytes in the file. We'll only read 17 to test out whether this method reads the correct amount of bytes.
 	readedData, e := ReadFile(fileName, 17)
 
-	if e != nil {
-		t.Error("Reading a file failed with error: ")
-		t.Error(e)
-		t.Fail()
-	}
+	assert.Nil(t, e)
+	assert.Len(t, readedData, 17)
 
 	for n, byte := range readedData {
-
-		if n >= 17 {
-			t.Error("Too many bytes readed. Expected 17 bytes but actual length is: " + string(len(readedData)))
-		}
-
-		if byte != writeData[n] {
-			t.Error("WriteData and ReadData don't match.\nWriteData: " + string(writeData) + "\nReadData: " + string(readedData))
-			t.Fail()
-			break
-		}
-
+		assert.Equal(t, byte, writeData[n])
 	}
 
 	//Now let's overwrite the content
@@ -52,35 +46,41 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	//Read everything
 	readedData, e = ReadFile(fileName, -1)
 
-	if e != nil {
-		t.Error("Reading a file failed with error: ")
-		t.Error(e)
-		t.Fail()
-	}
+	assert.Nil(t, e)
+	assert.Len(t, readedData, 22)
 
 	for n, byte := range readedData {
-
-		if byte != newData[n] {
-			t.Error("WriteData and ReadData don't match.\nWriteData: " + string(newData) + "\nReadData: " + string(readedData))
-			t.Fail()
-			break
-		}
-
+		assert.Equal(t, byte, newData[n])
 	}
 
 }
 
 func TestCopy(t *testing.T) {
 
-	randomString := RandStringRunes(10)
-	sourcePath := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
+	randomString, e := randutil.GenerateRandomString(10)
+	sourceFile, e := ioutil.TempFile("", randomString)
+	assert.Nil(t, e)
+	defer os.Remove(sourceFile.Name())
 
-	randomString = RandStringRunes(10)
-	destPath := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
+	randomString, e = randutil.GenerateRandomString(10)
+	assert.Nil(t, e)
+	destPath := os.TempDir() + "/" + randomString
 
-	WriteToFile([]byte{}, sourcePath)
+	randomString, e = randutil.GenerateRandomString(10)
+	WriteToFile([]byte(randomString), sourceFile.Name())
+	assert.Nil(t, e)
 
-	Copy(sourcePath, destPath)
+	Copy(sourceFile.Name(), destPath)
+	defer os.Remove(destPath)
+
+	sourceContent, e1 := ReadFile(sourceFile.Name(), -1)
+	destContent, e2 := ReadFile(destPath, -1)
+
+	assert.Nil(t, e1)
+	assert.Nil(t, e2)
+
+	assert.Equal(t, randomString, string(sourceContent))
+	assert.Equal(t, randomString, string(destContent))
 
 }
 
@@ -92,46 +92,27 @@ func TestGetHomeDir(t *testing.T) {
 		homeDirByOS = os.Getenv("USERPROFILE")
 	}
 
-	if homeDirByMethod != homeDirByOS {
-		t.Error("Given Home Dir is wrong.\nExpected: " + homeDirByOS + " Actual: " + homeDirByMethod)
-		t.Fail()
-	}
+	assert.Equal(t, homeDirByOS, homeDirByMethod)
 }
 
 func TestGetCurrentGofileDir(t *testing.T) {
 
 	currentGofileDirByMethod := GetCurrentGofileDir()
-	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil"
+	expectedPath := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil"
 
-	if currentGofileDirByMethod != expected && currentGofileDirByMethod != strings.Replace(expected, "\\", "/", -1){
-		t.Error("CurrentGoFileDir is not correct.\nMethod result: " + currentGofileDirByMethod +
-		"\nExpected: " + expected +
-		"\nExpected with /-separator: " + strings.Replace(expected, "\\", "/", -1))
-		t.Fail()
-	}
+	expectedPath = strings.Replace(expectedPath, "\\", "/", -1)
+	currentGofileDirByMethod = strings.Replace(currentGofileDirByMethod, "\\", "/", -1)
+
+	assert.Equal(t, expectedPath, currentGofileDirByMethod)
 }
 
 func TestGetCurrentGofile(t *testing.T) {
 
 	currentGofileByMethod := GetCurrentGofile()
-	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
+	expectedPath := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
 
-	if currentGofileByMethod != expected && currentGofileByMethod != strings.Replace(expected, "\\", "/", -1){
-		t.Error("CurrentGoFile is not correct.\nMethod result: " + currentGofileByMethod +
-		"\nExpected: " + expected +
-		"\nExpected with /-separator: " + strings.Replace(expected, "\\", "/", -1))
-		t.Fail()
-	}
+	expectedPath = strings.Replace(expectedPath, "\\", "/", -1)
+	currentGofileByMethod = strings.Replace(currentGofileByMethod, "\\", "/", -1)
+
+	assert.Equal(t, expectedPath, currentGofileByMethod)
 }
-
-//Method for random letter string
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func RandStringRunes(n int) string {
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letterRunes[rand.Intn(len(letterRunes))]
-    }
-    return string(b)
-}
-*/
