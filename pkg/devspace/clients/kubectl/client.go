@@ -25,6 +25,7 @@ import (
 
 var privateConfig = &v1.PrivateConfig{}
 
+//NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	config, err := GetClientConfig()
 
@@ -35,6 +36,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
+//GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
 	config.LoadConfig(privateConfig)
 
@@ -84,6 +86,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 	return fw.ForwardPorts()
 }
 
+//Exec executes a command for kubectl
 func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, errorChannel chan<- error) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
 	var t term.TTY
 
@@ -141,26 +144,25 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 		}
 
 		return nil, nil, nil, nil
-	} else {
-		stdinReader, stdinWriter, _ := os.Pipe()
-		stdoutReader, stdoutWriter, _ := os.Pipe()
-		stderrReader, stderrWriter, _ := os.Pipe()
-
-		go func() {
-			streamErr := exec.Stream(remotecommand.StreamOptions{
-				Stdin:  stdinReader,
-				Stdout: stdoutWriter,
-				Stderr: stderrWriter,
-				Tty:    tty,
-			})
-			stdinWriter.Close()
-			stdoutWriter.Close()
-			stderrWriter.Close()
-
-			errorChannel <- streamErr
-		}()
-		return stdinWriter, stdoutReader, stderrReader, nil
 	}
+	stdinReader, stdinWriter, _ := os.Pipe()
+	stdoutReader, stdoutWriter, _ := os.Pipe()
+	stderrReader, stderrWriter, _ := os.Pipe()
+
+	go func() {
+		streamErr := exec.Stream(remotecommand.StreamOptions{
+			Stdin:  stdinReader,
+			Stdout: stdoutWriter,
+			Stderr: stderrWriter,
+			Tty:    tty,
+		})
+		stdinWriter.Close()
+		stdoutWriter.Close()
+		stderrWriter.Close()
+
+		errorChannel <- streamErr
+	}()
+	return stdinWriter, stdoutReader, stderrReader, nil
 }
 
 func setupTTY() term.TTY {
@@ -191,6 +193,7 @@ func setupTTY() term.TTY {
 	return t
 }
 
+//ExecBuffered executes a command for kubernetes and returns the output and error buffers
 func ExecBuffered(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
 	_, stdout, stderr, execErr := Exec(kubectlClient, pod, container, command, false, nil)
 

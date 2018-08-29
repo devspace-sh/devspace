@@ -10,6 +10,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/paramutil"
 )
 
+//GetFromStdinParams defines a question and its answerpatterns
 type GetFromStdinParams struct {
 	Question               string
 	DefaultValue           string
@@ -26,6 +27,7 @@ var reader *bufio.Reader
 
 const changeQuestion = "Would you like to change it? (yes, no/ENTER))"
 
+//GetFromStdin asks the user a question and returns the answer
 func GetFromStdin(params *GetFromStdinParams) string {
 	paramutil.SetDefaults(params, defaultParams)
 
@@ -80,6 +82,7 @@ func GetFromStdin(params *GetFromStdinParams) string {
 	return input
 }
 
+//AskChangeQuestion asks two questions. Do you want to change this value? If yes, what's the new value?
 func AskChangeQuestion(params *GetFromStdinParams) string {
 	paramutil.SetDefaults(params, defaultParams)
 

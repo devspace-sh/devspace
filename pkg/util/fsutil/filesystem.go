@@ -13,6 +13,7 @@ import (
 	recursiveCopy "github.com/otiai10/copy"
 )
 
+//WriteToFile writes data to a file
 func WriteToFile(data []byte, filePath string) error {
 	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 
@@ -37,10 +38,12 @@ func WriteToFile(data []byte, filePath string) error {
 	return nil
 }
 
+//Copy copies a file to a destination path
 func Copy(sourcePath string, targetPath string) error {
 	return recursiveCopy.Copy(sourcePath, targetPath)
 }
 
+//ReadFile reads a file
 func ReadFile(path string, limit int64) ([]byte, error) {
 	if limit <= 0 {
 		return ioutil.ReadFile(path)
@@ -66,6 +69,7 @@ func ReadFile(path string, limit int64) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+//GetHomeDir returns the home variable
 func GetHomeDir() string {
 	homedir := os.Getenv("HOME")
 
@@ -75,12 +79,14 @@ func GetHomeDir() string {
 	return os.Getenv("USERPROFILE")
 }
 
+//GetCurrentGofileDir returns the parent dir of the file with the source code that called this method
 func GetCurrentGofileDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 
 	return path.Dir(filename)
 }
 
+//GetCurrentGofile returns the file with the source code that called this method
 func GetCurrentGofile() string {
 	_, filename, _, _ := runtime.Caller(1)
 

@@ -84,9 +84,9 @@ func untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string, con
 		config.fileIndex.CreateDirInFileMap(relativePath)
 
 		return true, nil
-	} else {
-		config.fileIndex.CreateDirInFileMap(getRelativeFromFullPath(baseName, destPath))
 	}
+
+	config.fileIndex.CreateDirInFileMap(getRelativeFromFullPath(baseName, destPath))
 
 	// handle coping remote file into local directory
 	if entrySeq == 0 && !header.FileInfo().IsDir() {
@@ -246,34 +246,34 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[
 		}
 
 		return nil
-	} else {
-		f, err := os.Open(filepath)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		defer f.Close()
-
-		//case regular file or other file type like pipe
-		hdr, err := tar.FileInfoHeader(stat, filepath)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		hdr.Name = strings.Replace(destFile, "\\", "/", -1)
-
-		if err := tw.WriteHeader(hdr); err != nil {
-			return errors.Trace(err)
-		}
-
-		if _, err := io.Copy(tw, f); err != nil {
-			return errors.Trace(err)
-		}
-
-		writtenFiles[relativePath] = fileInformation
-
-		return f.Close()
 	}
+
+	f, err := os.Open(filepath)
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	defer f.Close()
+
+	//case regular file or other file type like pipe
+	hdr, err := tar.FileInfoHeader(stat, filepath)
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	hdr.Name = strings.Replace(destFile, "\\", "/", -1)
+
+	if err := tw.WriteHeader(hdr); err != nil {
+		return errors.Trace(err)
+	}
+
+	if _, err := io.Copy(tw, f); err != nil {
+		return errors.Trace(err)
+	}
+
+	writtenFiles[relativePath] = fileInformation
+
+	return f.Close()
 }
