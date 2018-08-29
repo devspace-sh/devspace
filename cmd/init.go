@@ -279,7 +279,7 @@ OUTER:
 		for _, port := range cmd.appConfig.Container.Ports {
 			cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
 				PortMappings: []*v1.PortMapping{
-					&v1.PortMapping{
+					{
 						LocalPort:  port,
 						RemotePort: port,
 					},

@@ -58,7 +58,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	}
 
 	err = s.upstream.sendFiles([]*fileInformation{
-		&fileInformation{
+		{
 			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
 			IsDirectory: stat.IsDir(),
 		},

@@ -15,6 +15,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 )
 
+// ChartGenerator is a type of object that generates a Helm Chart
 type ChartGenerator struct {
 	Path               string
 	Language           string
@@ -27,6 +28,7 @@ type TemplateRepository struct {
 	LocalPath string
 }
 
+// GetLanguage gets the language from Chartgenerator either from its field "Language" or by detecting it
 func (cg *ChartGenerator) GetLanguage() (string, error) {
 	if len(cg.Language) == 0 {
 		detectionErr := cg.detectLanguage()
@@ -38,6 +40,7 @@ func (cg *ChartGenerator) GetLanguage() (string, error) {
 	return cg.Language, nil
 }
 
+// IsSupportedLanguage returns true if the given language is supported by the ChartGenerator
 func (cg *ChartGenerator) IsSupportedLanguage(language string) bool {
 	supportedLanguages, _ := cg.GetSupportedLanguages()
 
@@ -49,6 +52,7 @@ func (cg *ChartGenerator) IsSupportedLanguage(language string) bool {
 	return false
 }
 
+// GetSupportedLanguages returns all languages that are available in the local Template Rempository
 func (cg *ChartGenerator) GetSupportedLanguages() ([]string, error) {
 	chartCloneErr := cg.getChartTemplates()
 

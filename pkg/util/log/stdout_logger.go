@@ -27,49 +27,49 @@ type fnTypeInformation struct {
 }
 
 var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
-	debugFn: &fnTypeInformation{
+	debugFn: {
 		tag:      "[DEBUG]  ",
 		color:    ct.Green,
 		logLevel: logrus.DebugLevel,
 		stream:   os.Stdout,
 	},
-	infoFn: &fnTypeInformation{
+	infoFn: {
 		tag:      "[INFO]   ",
 		color:    ct.Green,
 		logLevel: logrus.InfoLevel,
 		stream:   os.Stdout,
 	},
-	warnFn: &fnTypeInformation{
+	warnFn: {
 		tag:      "[WARN]   ",
 		color:    ct.Red,
 		logLevel: logrus.WarnLevel,
 		stream:   os.Stdout,
 	},
-	errorFn: &fnTypeInformation{
+	errorFn: {
 		tag:      "[ERROR]  ",
 		color:    ct.Red,
 		logLevel: logrus.ErrorLevel,
 		stream:   os.Stderr,
 	},
-	fatalFn: &fnTypeInformation{
+	fatalFn: {
 		tag:      "[FATAL]  ",
 		color:    ct.Red,
 		logLevel: logrus.FatalLevel,
 		stream:   os.Stderr,
 	},
-	panicFn: &fnTypeInformation{
+	panicFn: {
 		tag:      "[PANIC]  ",
 		color:    ct.Red,
 		logLevel: logrus.PanicLevel,
 		stream:   os.Stderr,
 	},
-	doneFn: &fnTypeInformation{
+	doneFn: {
 		tag:      "[DONE] √ ",
 		color:    ct.Green,
 		logLevel: logrus.InfoLevel,
 		stream:   os.Stdout,
 	},
-	failFn: &fnTypeInformation{
+	failFn: {
 		tag:      "[FAIL] X ",
 		color:    ct.Red,
 		logLevel: logrus.ErrorLevel,

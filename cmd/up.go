@@ -233,7 +233,7 @@ func (cmd *UpCmd) buildDockerfile() {
 						"36000",
 					},
 					VolumeMounts: []k8sv1.VolumeMount{
-						k8sv1.VolumeMount{
+						{
 							Name:      pullSecretName,
 							MountPath: "/root/.docker",
 						},
@@ -241,13 +241,13 @@ func (cmd *UpCmd) buildDockerfile() {
 				},
 			},
 			Volumes: []k8sv1.Volume{
-				k8sv1.Volume{
+				{
 					Name: pullSecretName,
 					VolumeSource: k8sv1.VolumeSource{
 						Secret: &k8sv1.SecretVolumeSource{
 							SecretName: pullSecretName,
 							Items: []k8sv1.KeyToPath{
-								k8sv1.KeyToPath{
+								{
 									Key:  k8sv1.DockerConfigJsonKey,
 									Path: "config.json",
 								},

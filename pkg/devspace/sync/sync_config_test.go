@@ -23,17 +23,17 @@ func TestRemoveDirInFileMap(t *testing.T) {
 	}
 
 	sync.fileIndex.fileMap = map[string]*fileInformation{
-		"/TestDir": &fileInformation{
+		"/TestDir": {
 			Name:        "/TestDir",
 			IsDirectory: true,
 		},
-		"/TestDir/File1": &fileInformation{
+		"/TestDir/File1": {
 			Name:        "/TestDir/File1",
 			Size:        1234,
 			Mtime:       1234,
 			IsDirectory: false,
 		},
-		"/TestDir2": &fileInformation{
+		"/TestDir2": {
 			Name:        "/TestDir2",
 			IsDirectory: true,
 		},
