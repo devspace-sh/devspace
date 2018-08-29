@@ -49,14 +49,15 @@ type UpCmd struct {
 }
 
 type UpCmdFlags struct {
-	tiller         bool
-	open           string
-	initRegistry   bool
-	build          bool
-	shell          string
-	sync           bool
-	portforwarding bool
-	noSleep        bool
+	tiller           bool
+	open             string
+	initRegistry     bool
+	build            bool
+	shell            string
+	sync             bool
+	portforwarding   bool
+	noSleep          bool
+	imageDestination string
 }
 
 const pullSecretName = "devspace-pull-secret"
@@ -102,6 +103,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
+	cobraCmd.Flags().StringVarP(&cmd.flags.imageDestination, "image-destination", "", "", "Choose image destination")
 }
 
 // Run executes the command logic
