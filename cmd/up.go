@@ -63,7 +63,7 @@ type UpCmdFlags struct {
 
 const pullSecretName = "devspace-pull-secret"
 
-//UpCmdFlagsDefault are the default flags for UpCmdFlags
+//UpFlagsDefault are the default flags for UpCmdFlags
 var UpFlagsDefault = &UpCmdFlags{
 	tiller:         true,
 	open:           "cmd",
