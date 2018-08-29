@@ -51,14 +51,15 @@ type UpCmd struct {
 
 // UpCmdFlags are the flags available for the up-command
 type UpCmdFlags struct {
-	tiller         bool
-	open           string
-	initRegistry   bool
-	build          bool
-	shell          string
-	sync           bool
-	portforwarding bool
-	noSleep        bool
+	tiller           bool
+	open             string
+	initRegistry     bool
+	build            bool
+	shell            string
+	sync             bool
+	portforwarding   bool
+	noSleep          bool
+	imageDestination string
 }
 
 const pullSecretName = "devspace-pull-secret"
@@ -105,6 +106,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
+	cobraCmd.Flags().StringVar(&cmd.flags.imageDestination, "image-destination", "", "Choose image destination")
 }
 
 // Run executes the command logic
@@ -331,11 +333,16 @@ func (cmd *UpCmd) buildDockerfile() {
 		containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
 		exitChannel := make(chan error)
 
+		destination := cmd.latestImageHostname
+		if cmd.flags.imageDestination != "" {
+			destination = cmd.flags.imageDestination
+		}
+
 		stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
 			"/kaniko/executor",
 			"--dockerfile=" + containerBuildPath + "/Dockerfile",
 			"--context=dir://" + containerBuildPath,
-			"--destination=" + cmd.latestImageHostname,
+			"--destination=" + destination,
 			"--insecure-skip-tls-verify",
 			"--single-snapshot",
 		}, false, exitChannel)
@@ -443,6 +450,10 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 }
 
 func (cmd *UpCmd) initRegistry() {
+	if cmd.flags.imageDestination != "" {
+		return
+	}
+
 	log.StartWait("Initializing helm client")
 	err := cmd.initHelm()
 	log.StopWait()
@@ -569,18 +580,18 @@ func (cmd *UpCmd) initRegistry() {
 		cmd.latestImageIP = registryIP + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
 
 		pullSecretDataValue := []byte(`{
-			"auths": {
-				"` + registryHostname + `": {
-					"auth": "` + registryAuthEncoded + `",
-					"email": "noreply-devspace@covexo.com"
-				},
-				
-				"` + registryIP + `": {
-					"auth": "` + registryAuthEncoded + `",
-					"email": "noreply-devspace@covexo.com"
-				}
+		"auths": {
+			"` + registryHostname + `": {
+				"auth": "` + registryAuthEncoded + `",
+				"email": "noreply-devspace@covexo.com"
+			},
+			
+			"` + registryIP + `": {
+				"auth": "` + registryAuthEncoded + `",
+				"email": "noreply-devspace@covexo.com"
 			}
-		}`)
+		}
+	}`)
 
 		pullSecretData := map[string][]byte{}
 		pullSecretDataKey := k8sv1.DockerConfigJsonKey
@@ -606,6 +617,7 @@ func (cmd *UpCmd) initRegistry() {
 			log.Panicf("Unable to update image pull secret: %s", err.Error())
 		}
 	}
+
 }
 
 func (cmd *UpCmd) initHelm() error {
