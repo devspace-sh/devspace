@@ -333,7 +333,6 @@ func (cmd *UpCmd) buildDockerfile() {
 		containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
 		exitChannel := make(chan error)
 
-<<<<<<< HEAD
 		ndestination := cmd.latestImageHostname
 		if cmd.flags.imageDestination != "" {
 			ndestination = cmd.flags.imageDestination
@@ -357,26 +356,6 @@ func (cmd *UpCmd) buildDockerfile() {
 		lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
 		exitError := <-exitChannel
 
-=======
-		stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
-			"/kaniko/executor",
-			"--dockerfile=" + containerBuildPath + "/Dockerfile",
-			"--context=dir://" + containerBuildPath,
-			"--destination=" + cmd.latestImageHostname,
-			"--insecure-skip-tls-verify",
-			"--single-snapshot",
-		}, false, exitChannel)
-
-		stdin.Close()
-
-		if execErr != nil {
-			return fmt.Errorf("Failed to start image building: %s", execErr.Error())
-		}
-
-		lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
-		exitError := <-exitChannel
-
->>>>>>> master
 		log.StopWait()
 
 		if exitError != nil {
