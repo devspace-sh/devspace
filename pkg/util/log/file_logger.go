@@ -224,3 +224,7 @@ func (f *fileLogger) printWithContextf(fnType logFunctionType, context []interfa
 		f.logger.WithFields(contextFields).Fatalf(format, args...)
 	}
 }
+
+func (f *fileLogger) Write(message string) {
+	f.logger.Info(message)
+}
