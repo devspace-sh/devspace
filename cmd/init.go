@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
 	dsConfig       *v1.DevSpaceConfig
@@ -27,6 +28,7 @@ type InitCmd struct {
 	chartGenerator *generator.ChartGenerator
 }
 
+// InitCmdFlags are the flags available for the init-command
 type InitCmdFlags struct {
 	reconfigure      bool
 	overwrite        bool
@@ -35,6 +37,7 @@ type InitCmdFlags struct {
 	language         string
 }
 
+// InitCmdFlagsDefault are the default flags for InitCmdFlags
 var InitCmdFlagsDefault = &InitCmdFlags{
 	reconfigure:      false,
 	overwrite:        false,

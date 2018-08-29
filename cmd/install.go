@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// InstallCmd is a struct that defines a command call for "install"
 type InstallCmd struct {
 	flags         *InstallCmdFlags
 	helm          *helmClient.HelmClientWrapper
@@ -24,6 +25,7 @@ type InstallCmd struct {
 	workdir       string
 }
 
+// InstallCmdFlags are the flags available for the install-command
 type InstallCmdFlags struct {
 }
 

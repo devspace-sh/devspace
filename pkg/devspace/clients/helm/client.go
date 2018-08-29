@@ -322,9 +322,8 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.Private
 
 	if errorText == "" {
 		return nil
-	} else {
-		return errors.New(errorText)
 	}
+	return errors.New(errorText)
 }
 
 // func (helmClientWrapper *HelmClientWrapper) ensureAuth(namespace string) error {

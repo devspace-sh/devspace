@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/util/exec"
 )
 
+// UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
 	flags               *UpCmdFlags
 	helm                *helmClient.HelmClientWrapper
@@ -48,6 +49,7 @@ type UpCmd struct {
 	latestImageIP       string
 }
 
+// UpCmdFlags are the flags available for the up-command
 type UpCmdFlags struct {
 	tiller         bool
 	open           string
@@ -61,6 +63,7 @@ type UpCmdFlags struct {
 
 const pullSecretName = "devspace-pull-secret"
 
+// InitCmdFlagsDefault are the default flags for UpCmdFlags
 var UpFlagsDefault = &UpCmdFlags{
 	tiller:         true,
 	open:           "cmd",
@@ -304,55 +307,55 @@ func (cmd *UpCmd) buildDockerfile() {
 
 		if !buildPodReady {
 			return fmt.Errorf("Unable to start build pod")
-		} else {
-			ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
-
-			if ignoreRuleErr != nil {
-				return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
-			}
-
-			buildContainer := &buildPod.Spec.Containers[0]
-
-			log.StartWait("Uploading files to build container")
-			err := synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
-			log.StopWait()
-
-			if err != nil {
-				return fmt.Errorf("Error uploading files to container: %s", err.Error())
-			}
-
-			log.Done("Uploaded files to container")
-			log.StartWait("Building container image")
-
-			containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
-			exitChannel := make(chan error)
-
-			stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
-				"/kaniko/executor",
-				"--dockerfile=" + containerBuildPath + "/Dockerfile",
-				"--context=dir://" + containerBuildPath,
-				"--destination=" + cmd.latestImageHostname,
-				"--insecure-skip-tls-verify",
-				"--single-snapshot",
-			}, false, exitChannel)
-
-			stdin.Close()
-
-			if execErr != nil {
-				return fmt.Errorf("Failed to start image building: %s", execErr.Error())
-			}
-
-			lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
-			exitError := <-exitChannel
-
-			log.StopWait()
-
-			if exitError != nil {
-				return fmt.Errorf("Error: %s, Last Kaniko Output: %s", exitError.Error(), lastKanikoOutput)
-			}
-
-			log.Done("Done building image")
 		}
+
+		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
+
+		if ignoreRuleErr != nil {
+			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
+		}
+
+		buildContainer := &buildPod.Spec.Containers[0]
+
+		log.StartWait("Uploading files to build container")
+		err := synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
+		log.StopWait()
+
+		if err != nil {
+			return fmt.Errorf("Error uploading files to container: %s", err.Error())
+		}
+
+		log.Done("Uploaded files to container")
+		log.StartWait("Building container image")
+
+		containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
+		exitChannel := make(chan error)
+
+		stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
+			"/kaniko/executor",
+			"--dockerfile=" + containerBuildPath + "/Dockerfile",
+			"--context=dir://" + containerBuildPath,
+			"--destination=" + cmd.latestImageHostname,
+			"--insecure-skip-tls-verify",
+			"--single-snapshot",
+		}, false, exitChannel)
+
+		stdin.Close()
+
+		if execErr != nil {
+			return fmt.Errorf("Failed to start image building: %s", execErr.Error())
+		}
+
+		lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
+		exitError := <-exitChannel
+
+		log.StopWait()
+
+		if exitError != nil {
+			return fmt.Errorf("Error: %s, Last Kaniko Output: %s", exitError.Error(), lastKanikoOutput)
+		}
+
+		log.Done("Done building image")
 
 		return nil
 	})
@@ -362,6 +365,7 @@ func (cmd *UpCmd) buildDockerfile() {
 	}
 }
 
+// KanikoOutputFormat a regex and a replacement for outputs
 type KanikoOutputFormat struct {
 	Regex       *regexp.Regexp
 	Replacement string

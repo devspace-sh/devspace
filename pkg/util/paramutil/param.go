@@ -4,6 +4,7 @@ import (
 	"reflect"
 )
 
+//SetDefaults setts all non-overwritten params to their defaults
 func SetDefaults(params interface{}, defaultParams interface{}) {
 	defaultParamValues := reflect.ValueOf(defaultParams).Elem()
 	paramValues := reflect.ValueOf(params).Elem()

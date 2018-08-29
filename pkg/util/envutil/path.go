@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+//AddToPath adds a folder path to the environment variable "PATH"
 func AddToPath(path string) error {
 	envVarPath := "PATH"
 	pathSeparator := ":"
