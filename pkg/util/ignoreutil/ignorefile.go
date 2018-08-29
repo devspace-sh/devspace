@@ -1,12 +1,14 @@
 package ignoreutil
 
 import (
-	glob "github.com/bmatcuk/doublestar"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+
+	glob "github.com/bmatcuk/doublestar"
 )
 
+//GetIgnoreRules reads the ignoreRules from the .dockerignore
 func GetIgnoreRules(rootDirectory string) ([]string, error) {
 	ignoreRules := []string{}
 

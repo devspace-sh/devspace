@@ -15,6 +15,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+//ConfigInterface defines the pattern of every config
 type ConfigInterface interface{}
 
 const configGitignore = `logs/
@@ -29,6 +30,7 @@ var configPaths = map[string]string{
 	"DevSpaceConfig": workdir + "/.devspace/config.yaml",
 }
 
+//GetConfigPath returns the path to the config's yaml file
 func GetConfigPath(config ConfigInterface) (string, error) {
 	configType, _ := getConfigType(config)
 	configPath, _ := configPaths[configType]
@@ -36,6 +38,7 @@ func GetConfigPath(config ConfigInterface) (string, error) {
 	return configPath, nil
 }
 
+//ConfigExists chacks whether the yaml file for the config exists
 func ConfigExists(config ConfigInterface) (bool, error) {
 	configPath, _ := GetConfigPath(config)
 
@@ -44,6 +47,7 @@ func ConfigExists(config ConfigInterface) (bool, error) {
 	return (configNotFound == nil), nil
 }
 
+//LoadConfig loads a config from its yaml file
 func LoadConfig(config ConfigInterface) error {
 	configType, _ := getConfigType(config)
 	loadedFile, isLoaded := configFilesLoaded[configType]
@@ -69,6 +73,7 @@ func LoadConfig(config ConfigInterface) error {
 	return unmarshalErr
 }
 
+//LoadClusterConfig loads the config for a kubernetes cluster
 func LoadClusterConfig(config *v1.Cluster, overwriteExistingValues bool) {
 	kubeconfig, kubeconfigErr := clientcmd.BuildConfigFromFlags("", filepath.Join(fsutil.GetHomeDir(), ".kube", "config"))
 
@@ -125,6 +130,7 @@ func LoadClusterConfig(config *v1.Cluster, overwriteExistingValues bool) {
 	}
 }
 
+//SaveConfig writes the data of a config to its yaml file
 func SaveConfig(config ConfigInterface) error {
 	configType, _ := getConfigType(config)
 	var currentClusterConfig v1.Cluster

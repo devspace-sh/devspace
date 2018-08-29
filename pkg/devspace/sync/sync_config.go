@@ -16,8 +16,13 @@ import (
 
 var syncLog log.Logger
 
+//StartAck signals to the user that the sync process is starting
 const StartAck string = "START"
+
+//EndAck signals to the user that the sync process is done
 const EndAck string = "DONE"
+
+//ErrorAck signals to the user that an error occurred
 const ErrorAck string = "ERROR"
 
 // SyncConfig holds the necessary information for the syncing process
@@ -228,23 +233,23 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		}
 
 		return nil
-	} else {
-		delete(downloadChanges, relativePath)
-
-		// TODO: Handle the case when local files are older than in the container
-		if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {
-			*sendChanges = append(*sendChanges, &fileInformation{
-				Name:        relativePath,
-				Mtime:       ceilMtime(stat.ModTime()),
-				Size:        stat.Size(),
-				IsDirectory: false,
-			})
-		}
-
-		return nil
 	}
+	delete(downloadChanges, relativePath)
+
+	// TODO: Handle the case when local files are older than in the container
+	if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {
+		*sendChanges = append(*sendChanges, &fileInformation{
+			Name:        relativePath,
+			Mtime:       ceilMtime(stat.ModTime()),
+			Size:        stat.Size(),
+			IsDirectory: false,
+		})
+	}
+
+	return nil
 }
 
+//Stop stops the sync process
 func (s *SyncConfig) Stop() {
 	if s.upstream != nil {
 		select {

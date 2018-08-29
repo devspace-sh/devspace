@@ -23,6 +23,7 @@ type ChartGenerator struct {
 	supportedLanguages []string
 }
 
+//TemplateRepository contains the URL and local path to a repository for DevSpaceTemplates
 type TemplateRepository struct {
 	URL       string
 	LocalPath string
@@ -78,6 +79,7 @@ func (cg *ChartGenerator) GetSupportedLanguages() ([]string, error) {
 	return cg.supportedLanguages, nil
 }
 
+// CreateChart creates a chart of a project that works with Helm
 func (cg *ChartGenerator) CreateChart() error {
 	chartUpdateError := cg.getChartTemplates()
 
@@ -107,10 +109,12 @@ func (cg *ChartGenerator) CreateChart() error {
 	return nil
 }
 
+// AddPackage adds a package to the ChartGenerator
 func (cg *ChartGenerator) AddPackage(pkg string) {
 
 }
 
+// RemovePackage removes a package from the ChartGenerator
 func (cg *ChartGenerator) RemovePackage(pkg string) {
 
 }
@@ -126,12 +130,11 @@ func (cg *ChartGenerator) getChartTemplates() error {
 			RemoteName: "origin",
 		})
 		return nil
-	} else {
-		_, cloneErr := git.PlainClone(cg.TemplateRepo.LocalPath, false, &git.CloneOptions{
-			URL: cg.TemplateRepo.URL,
-		})
-		return cloneErr
 	}
+	_, cloneErr := git.PlainClone(cg.TemplateRepo.LocalPath, false, &git.CloneOptions{
+		URL: cg.TemplateRepo.URL,
+	})
+	return cloneErr
 }
 
 func (cg *ChartGenerator) detectLanguage() error {

@@ -15,8 +15,13 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 )
 
+// IsDirectory is a constant that can be used to determine whether a file is a folder
 const IsDirectory uint64 = 040000
+
+// IsRegularFile is a constant that can be used to determine whether a file is a regular file
 const IsRegularFile uint64 = 0100000
+
+// IsSymbolicLink is a constant that can be used to determine whether a file is a symbolic link
 const IsSymbolicLink uint64 = 0120000
 
 type downstream struct {

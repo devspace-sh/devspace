@@ -100,12 +100,11 @@ func (reader TestReader) Read(buffer []byte) (n int, err error) {
 
 		return 0, io.EOF
 
-	} else {
-		go func() {
-			ErrorOccurredChannel <- "Read is called after EOF was returned"
-		}()
-		return 0, io.EOF
 	}
+	go func() {
+		ErrorOccurredChannel <- "Read is called after EOF was returned"
+	}()
+	return 0, io.EOF
 }
 
 type TestWriter struct{}

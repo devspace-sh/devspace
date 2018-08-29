@@ -82,9 +82,9 @@ func ceilMtime(mtime time.Time) int64 {
 		ret, _ := strconv.Atoi(num[:len(num)-9])
 
 		return int64(ret) + 1
-	} else {
-		return mtime.Unix()
 	}
+
+	return mtime.Unix()
 }
 
 func getRelativeFromFullPath(fullpath string, prefix string) string {

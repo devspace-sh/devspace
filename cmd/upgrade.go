@@ -6,10 +6,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// UpgradeCmd is a struct that defines a command call for "upgrade"
 type UpgradeCmd struct {
 	flags *UpgradeCmdFlags
 }
 
+// UpgradeCmdFlags are the flags available for the upgrade-command
 type UpgradeCmdFlags struct {
 }
 
