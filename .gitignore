@@ -1,17 +1,17 @@
 # Dependencies
-vendor/
-.vendor-new/
+/vendor/
+/.vendor-new/
 
 # Created by devspace init
-.devspace/
-chart/
-Dockerfile
+/.devspace/
+/chart/
+/Dockerfile
 
 # Build files
 *.exe
 *.exe~
 
-# History from VSC
+# History Plugin for VS Code
 .history/
 
 debug

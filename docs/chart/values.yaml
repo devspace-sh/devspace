@@ -1,0 +1,4 @@
+container:
+  image: ""
+  pullSecrets:
+  - devspace-image-pull

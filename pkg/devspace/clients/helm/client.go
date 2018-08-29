@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -9,11 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/logutil"
-
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/covexo/devspace/pkg/util/fsutil"
+	"github.com/covexo/devspace/pkg/util/log"
 
 	helminstaller "k8s.io/helm/cmd/helm/installer"
 	"k8s.io/helm/pkg/downloader"
@@ -23,24 +22,27 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	homedir "github.com/mitchellh/go-homedir"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
 	helmdownloader "k8s.io/helm/pkg/downloader"
-	"k8s.io/helm/pkg/helm"
+	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
+	rls "k8s.io/helm/pkg/proto/hapi/services"
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
 
+// HelmClientWrapper holds the necessary information for helm
 type HelmClientWrapper struct {
-	Client   *helm.Client
+	Client   *k8shelm.Client
 	Settings *helmenvironment.EnvSettings
 	kubectl  *kubernetes.Clientset
 }
@@ -48,11 +50,20 @@ type HelmClientWrapper struct {
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
 const tillerDeploymentName = "tiller-deploy"
+const stableRepoCachePath = "repository/cache/stable-index.yaml"
+const defaultRepositories = `apiVersion: v1
+repositories:
+- caFile: ""
+  cache: ` + stableRepoCachePath + `
+  certFile: ""
+  keyFile: ""
+  name: stable
+  url: https://kubernetes-charts.storage.googleapis.com
+`
 
 var privateConfig = &v1.PrivateConfig{}
-var log *logrus.Logger
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
-	k8sv1beta1.PolicyRule{
+	{
 		APIGroups: []string{
 			k8sv1beta1.APIGroupAll,
 			"extensions",
@@ -63,8 +74,8 @@ var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 	},
 }
 
+// NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
-	log = logutil.GetLogger("default", true)
 	config.LoadConfig(privateConfig)
 
 	kubeconfig, err := kubectl.GetClientConfig()
@@ -78,61 +89,80 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	if tillerErr != nil {
 		return nil, tillerErr
 	}
+
 	var tunnelErr error
 	var tunnel *kube.Tunnel
 
 	tunnelWaitTime := 2 * 60 * time.Second
 	tunnelCheckInterval := 5 * time.Second
 
+	log.StartWait("Waiting for tiller portforwarding to become ready")
+
 	for tunnelWaitTime > 0 {
 		tunnel, tunnelErr = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
 
-		if tunnelErr == nil {
+		if tunnelErr == nil || tunnelWaitTime < 0 {
 			break
 		}
-		log.Info("Waiting for port forwarding to start")
 
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
+		time.Sleep(tunnelCheckInterval)
 	}
+
+	log.StopWait()
 
 	if tunnelErr != nil {
 		return nil, tunnelErr
 	}
-	helmOptions := []helm.Option{
-		helm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
-	}
-	var tillerError error
 
-	client := helm.NewClient(helmOptions...)
 	helmWaitTime := 2 * 60 * time.Second
 	helmCheckInterval := 5 * time.Second
 
-	for helmWaitTime > 0 {
-		_, tillerError := client.GetVersion()
+	helmOptions := []k8shelm.Option{
+		k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
+		k8shelm.ConnectTimeout(int64(helmCheckInterval)),
+	}
+	client := k8shelm.NewClient(helmOptions...)
+	var tillerError error
 
-		if tillerError == nil {
+	log.StartWait("Waiting for tiller server to become ready")
+
+	for helmWaitTime > 0 {
+		_, tillerError = client.ListReleases(k8shelm.ReleaseListLimit(1))
+
+		if tillerError == nil || helmWaitTime < 0 {
 			break
 		}
-		log.Info("Waiting for helm client getting connection")
-
-		helmWaitTime = helmWaitTime - helmCheckInterval
 	}
+
+	log.StopWait()
+	log.Done("Tiller server is ready")
 
 	if tillerError != nil {
 		return nil, tillerError
 	}
-	helmHomePath := os.ExpandEnv("$HOME/.devspace/helm")
-	_, helmHomeNotFoundErr := os.Stat(helmHomePath)
 
-	if helmHomeNotFoundErr != nil {
-		os.MkdirAll(helmHomePath, os.ModePerm)
-		helmHomeTemplates := filepath.Join(fsutil.GetCurrentGofileDir(), "assets")
-		copyErr := fsutil.Copy(helmHomeTemplates, helmHomePath)
+	homeDir, err := homedir.Dir()
 
-		if copyErr != nil {
-			return nil, copyErr
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	helmHomePath := homeDir + "/.devspace/helm"
+	repoPath := helmHomePath + "/repository"
+	repoFile := repoPath + "/repositories.yaml"
+	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
+
+	os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
+	os.MkdirAll(repoPath, os.ModePerm)
+	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
+
+	_, repoFileNotFound := os.Stat(repoFile)
+
+	if repoFileNotFound != nil {
+		fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
+	}
+
 	wrapper := &HelmClientWrapper{
 		Client: client,
 		Settings: &helmenvironment.EnvSettings{
@@ -140,10 +170,12 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		},
 		kubectl: kubectlClient,
 	}
+	_, stableRepoCacheNotFoundErr := os.Stat(stableRepoCachePathAbs)
 
-	if helmHomeNotFoundErr != nil {
+	if stableRepoCacheNotFoundErr != nil {
 		wrapper.updateRepos()
 	}
+
 	return wrapper, nil
 }
 
@@ -162,20 +194,23 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 	}
 	_, tillerCheckErr := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(tillerDeploymentName, metav1.GetOptions{})
 
+	// Tiller is not there
 	if tillerCheckErr != nil {
-		log.Info("Installing Tiller server")
+		log.StartWait("Installing Tiller server")
+		defer log.StopWait()
 
-		_, saNotFoundErr := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Get(tillerSA.Name, metav1.GetOptions{})
+		_, err := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Get(tillerSA.Name, metav1.GetOptions{})
 
-		if saNotFoundErr != nil {
-			_, saCreateErr := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Create(tillerSA)
+		if err != nil {
+			_, err := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Create(tillerSA)
 
-			if saCreateErr != nil {
-				return saCreateErr
+			if err != nil {
+				return err
 			}
 		}
-		roleBindingErr := ensureRoleBinding(kubectlClient, "tiller-config-manager", privateConfig.Cluster.TillerNamespace, privateConfig.Cluster.TillerNamespace, []k8sv1beta1.PolicyRule{
-			k8sv1beta1.PolicyRule{
+
+		err = ensureRoleBinding(kubectlClient, "tiller-config-manager", privateConfig.Cluster.TillerNamespace, privateConfig.Cluster.TillerNamespace, []k8sv1beta1.PolicyRule{
+			{
 				APIGroups: []string{
 					k8sv1beta1.APIGroupAll,
 					"extensions",
@@ -188,25 +223,38 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 			},
 		})
 
-		if roleBindingErr != nil {
-			return roleBindingErr
+		if err != nil {
+			return err
 		}
+
 		helminstaller.Install(kubectlClient, tillerOptions)
 
-		roleBindingErr = ensureRoleBinding(kubectlClient, tillerRoleName, privateConfig.Release.Namespace, privateConfig.Cluster.TillerNamespace, defaultPolicyRules)
+		err = ensureRoleBinding(kubectlClient, tillerRoleName, privateConfig.Release.Namespace, privateConfig.Cluster.TillerNamespace, defaultPolicyRules)
 
-		if roleBindingErr != nil {
-			return roleBindingErr
+		if err != nil {
+			return err
 		}
+
+		log.StopWait()
+
+		//Upgrade of tiller is necessary
 	} else if upgrade {
-		log.Info("Upgrading Tiller server")
+		log.StartWait("Upgrading Tiller server")
 
 		tillerOptions.ImageSpec = ""
+		err := helminstaller.Upgrade(kubectlClient, tillerOptions)
 
-		helminstaller.Upgrade(kubectlClient, tillerOptions)
+		log.StopWait()
+
+		if err != nil {
+			return err
+		}
 	}
+
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
+
+	log.StartWait("Waiting for Tiller server to start")
 
 	for tillerWaitingTime > 0 {
 		tillerDeployment, _ := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(tillerDeploymentName, metav1.GetOptions{})
@@ -214,18 +262,74 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 		if tillerDeployment.Status.ReadyReplicas == tillerDeployment.Status.Replicas {
 			break
 		}
-		log.Info("Waiting for Tiller server to start")
 
 		time.Sleep(tillerCheckInterval)
-
 		tillerWaitingTime = tillerWaitingTime - tillerCheckInterval
 	}
+
+	log.StopWait()
+	log.Done("Tiller server started")
+
 	return nil
 }
 
-func (helmClientWrapper *HelmClientWrapper) EnsureAuth(namespace string) error {
-	return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
+// DeleteTiller clears the tiller server, the service account and role binding
+func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) error {
+	errs := make([]error, 0, 1)
+
+	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(tillerDeploymentName, &metav1.DeleteOptions{})
+
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = kubectlClient.CoreV1().ServiceAccounts(privateConfig.Cluster.TillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{})
+
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	deleteRoleNames := []string{
+		"tiller-config-manager",
+		tillerRoleName,
+	}
+
+	deleteRoleNamespaces := []string{
+		privateConfig.Cluster.TillerNamespace,
+		privateConfig.Release.Namespace,
+	}
+
+	for key, value := range deleteRoleNames {
+		err = kubectlClient.RbacV1beta1().Roles(deleteRoleNamespaces[key]).Delete(value, &metav1.DeleteOptions{})
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		err = kubectlClient.RbacV1beta1().RoleBindings(deleteRoleNamespaces[key]).Delete(value+"-binding", &metav1.DeleteOptions{})
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// Merge errors
+	errorText := ""
+
+	for _, value := range errs {
+		errorText += value.Error() + "\n"
+	}
+
+	if errorText == "" {
+		return nil
+	} else {
+		return errors.New(errorText)
+	}
 }
+
+// func (helmClientWrapper *HelmClientWrapper) ensureAuth(namespace string) error {
+//	 return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
+// }
 
 func ensureRoleBinding(kubectlClient *kubernetes.Clientset, name, namespace string, tillerNamespace string, rules []k8sv1beta1.PolicyRule) error {
 	role := &k8sv1beta1.Role{
@@ -241,7 +345,7 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, name, namespace stri
 			Namespace: namespace,
 		},
 		Subjects: []k8sv1beta1.Subject{
-			k8sv1beta1.Subject{
+			{
 				Kind:      k8sv1beta1.ServiceAccountKind,
 				Name:      tillerServiceAccountName,
 				Namespace: tillerNamespace,
@@ -286,19 +390,21 @@ func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
 
 			if err != nil {
-				fmt.Println("upanble to download repo index")
-				fmt.Println(err)
+				log.With(err).Error("Unable to download repo index")
+
 				//TODO
 			}
 		}(re)
 	}
+
 	wg.Wait()
 
 	return nil
 }
 
+// ReleaseExists checks if the given release name exists
 func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (bool, error) {
-	_, releaseHistoryErr := helmClientWrapper.Client.ReleaseHistory(releaseName, helm.WithMaxHistory(1))
+	_, releaseHistoryErr := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
 
 	if releaseHistoryErr != nil {
 		if strings.Contains(releaseHistoryErr.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
@@ -309,19 +415,21 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 	return true, nil
 }
 
-func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) error {
+// InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
+func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, chartLoadingErr := helmchartutil.Load(chartPath)
 
 	if chartLoadingErr != nil {
-		return chartLoadingErr
+		return nil, chartLoadingErr
 	}
+
 	chartDependencies := chart.GetDependencies()
 
 	if len(chartDependencies) > 0 {
 		_, chartReqError := helmchartutil.LoadRequirements(chart)
 
 		if chartReqError != nil {
-			return chartReqError
+			return nil, chartReqError
 		}
 		chartDownloader := &helmdownloader.Manager{
 		/*		Out:        i.out,
@@ -335,18 +443,18 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		chartDownloadErr := chartDownloader.Update()
 
 		if chartDownloadErr != nil {
-			return chartDownloadErr
+			return nil, chartDownloadErr
 		}
 		chart, chartLoadingErr = helmchartutil.Load(chartPath)
 
 		if chartLoadingErr != nil {
-			return chartLoadingErr
+			return nil, chartLoadingErr
 		}
 	}
 	releaseExists, releaseExistsErr := helmClientWrapper.ReleaseExists(releaseName)
 
 	if releaseExistsErr != nil {
-		return releaseExistsErr
+		return nil, releaseExistsErr
 	}
 	deploymentTimeout := int64(10 * 60)
 	overwriteValues := []byte("")
@@ -355,43 +463,47 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		unmarshalledValues, yamlErr := yaml.Marshal(*values)
 
 		if yamlErr != nil {
-			return yamlErr
+			return nil, yamlErr
 		}
 		overwriteValues = unmarshalledValues
 	}
+	var release *hapi_release5.Release
 
 	if releaseExists {
-		_, releaseUpgradeErr := helmClientWrapper.Client.UpdateRelease(
+		upgradeResponse, releaseUpgradeErr := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
-			helm.UpgradeTimeout(deploymentTimeout),
-			helm.UpdateValueOverrides(overwriteValues),
-			helm.ReuseValues(false),
-			helm.UpgradeWait(true),
+			k8shelm.UpgradeTimeout(deploymentTimeout),
+			k8shelm.UpdateValueOverrides(overwriteValues),
+			k8shelm.ReuseValues(false),
+			k8shelm.UpgradeWait(true),
 		)
 
 		if releaseUpgradeErr != nil {
-			return releaseUpgradeErr
+			return nil, releaseUpgradeErr
 		}
+		release = upgradeResponse.GetRelease()
 	} else {
-		_, releaseInstallErr := helmClientWrapper.Client.InstallReleaseFromChart(
+		installResponse, releaseInstallErr := helmClientWrapper.Client.InstallReleaseFromChart(
 			chart,
 			releaseNamespace,
-			helm.InstallTimeout(deploymentTimeout),
-			helm.ValueOverrides(overwriteValues),
-			helm.ReleaseName(releaseName),
-			helm.InstallReuseName(false),
-			helm.InstallWait(true),
+			k8shelm.InstallTimeout(deploymentTimeout),
+			k8shelm.ValueOverrides(overwriteValues),
+			k8shelm.ReleaseName(releaseName),
+			k8shelm.InstallReuseName(false),
+			k8shelm.InstallWait(true),
 		)
 
 		if releaseInstallErr != nil {
-			return releaseInstallErr
+			return nil, releaseInstallErr
 		}
+		release = installResponse.GetRelease()
 	}
-	return nil
+	return release, nil
 }
 
-func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) error {
+// InstallChartByName installs the given chart by name under the releasename in the releasenamespace
+func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}
@@ -407,7 +519,12 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 	chartPath, _, chartDownloadErr := chartDownloader.DownloadTo(chartName, chartVersion, helmClientWrapper.Settings.Home.Archive())
 
 	if chartDownloadErr != nil {
-		return chartDownloadErr
+		return nil, chartDownloadErr
 	}
 	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
+}
+
+// DeleteRelease deletes a helm release and optionally purges it
+func (helmClientWrapper *HelmClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
+	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
 }

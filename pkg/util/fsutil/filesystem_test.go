@@ -3,17 +3,17 @@ package fsutil
 import (
 	"io/ioutil"
 	"os"
-	"testing"
 	"strings"
+	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/juju/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWriteToFileAndReadFile(t *testing.T) {
-	
-	//Let's create a new file and check if the content is correct. 
+
+	//Let's create a new file and check if the content is correct.
 
 	randomString, e := randutil.GenerateRandomString(10)
 
@@ -22,13 +22,13 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	writeData := []byte("Content " + randomString)
 
 	fileName := os.TempDir() + "/" + randomString
-	
+
 	e = WriteToFile(writeData, fileName)
 
 	assert.Nilf(t, e, errors.Details(e))
 
 	//There should be 18 bytes in the file. We'll only read 17 to test out whether this method reads the correct amount of bytes.
-	readedData, e := ReadFile(fileName, 17) 
+	readedData, e := ReadFile(fileName, 17)
 
 	assert.Nil(t, e)
 	assert.Len(t, readedData, 17)
@@ -85,7 +85,7 @@ func TestCopy(t *testing.T) {
 }
 
 func TestGetHomeDir(t *testing.T) {
-	
+
 	homeDirByMethod := GetHomeDir()
 	homeDirByOS := os.Getenv("HOME")
 	if homeDirByOS == "" {

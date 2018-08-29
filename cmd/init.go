@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/devspace/generator"
-	"github.com/covexo/devspace/pkg/util/logutil"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -88,13 +87,16 @@ YOUR_PROJECT_PATH/
 	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
 }
 
+// Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
-	log = logutil.GetLogger("default", true)
-	workdir, workdirErr := os.Getwd()
+	log.StartFileLogging()
 
-	if workdirErr != nil {
-		log.WithError(workdirErr).Panic("Unable to determine current workdir.")
+	workdir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
+
 	cmd.workdir = workdir
 	cmd.dsConfig = &v1.DevSpaceConfig{
 		Version: "v1",
@@ -112,7 +114,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.appConfig = &v1.AppConfig{
 		Name: filepath.Base(cmd.workdir),
 		Container: &v1.AppContainer{
-			Port: 8080,
+			Ports: []int{},
 		},
 		External: &v1.AppExternal{
 			Domain: "mydomain.com",
@@ -134,7 +136,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
 
 		if dockerfileNotFound == nil || chartDirNotFound == nil {
-			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to overwrite the Dockerfile and the existing files in /chart? (yes | no)",
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
@@ -206,7 +208,7 @@ func (cmd *InitCmd) determineAppConfig() {
 			value, isCorrect := applicationValues["port"].(int)
 
 			if isCorrect {
-				cmd.appConfig.Container.Port = value
+				cmd.appConfig.Container.Ports = []int{value}
 			}
 		}
 
@@ -218,18 +220,40 @@ func (cmd *InitCmd) determineAppConfig() {
 			}
 		}
 	}
-	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           cmd.appConfig.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-	cmd.appConfig.Container.Port, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which port does your application listen on?",
-		DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
-		ValidationRegexPattern: "^[1-9][0-9]{0,4}$",
-	}))
+
+	// cmd.appConfig.Container.Ports, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	// 	Question:               "Which port(s) does your application listen on? (separated by spaces)",
+	// 	DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
+	// 	ValidationRegexPattern: "^[1-9][0-9]{0,4}?(\\s[1-9][0-9]{0,4})?$",
+	// }))
+
+	portsToSliceStr := []string{}
+
+	for _, port := range cmd.appConfig.Container.Ports {
+		portsToSliceStr = append(portsToSliceStr, strconv.Itoa(port))
+	}
+
+	portStrings := strings.Split(stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which port(s) does your application listen on? (separated by spaces)",
+		DefaultValue:           strings.Join(portsToSliceStr, " "),
+		ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
+	}), " ")
+
+	for _, port := range portStrings {
+		portInt, _ := strconv.Atoi(port)
+
+		if portInt > 0 {
+			cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
+		}
+	}
+
 	/* TODO
-	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which domain do you want to run your application on?",
 		DefaultValue:           cmd.appConfig.External.Domain,
 		ValidationRegexPattern: "^([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,}$",
@@ -242,26 +266,30 @@ func (cmd *InitCmd) addPortForwarding() {
 OUTER:
 	for _, portForwarding := range cmd.dsConfig.PortForwarding {
 		for _, portMapping := range portForwarding.PortMappings {
-			if portMapping.RemotePort == cmd.appConfig.Container.Port {
-				portForwardingMissing = false
-				break OUTER
+			for _, port := range cmd.appConfig.Container.Ports {
+				if portMapping.RemotePort == port {
+					portForwardingMissing = false
+					break OUTER
+				}
 			}
 		}
 	}
 
 	if portForwardingMissing {
-		cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
-			PortMappings: []*v1.PortMapping{
-				&v1.PortMapping{
-					LocalPort:  cmd.appConfig.Container.Port,
-					RemotePort: cmd.appConfig.Container.Port,
+		for _, port := range cmd.appConfig.Container.Ports {
+			cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
+				PortMappings: []*v1.PortMapping{
+					&v1.PortMapping{
+						LocalPort:  port,
+						RemotePort: port,
+					},
 				},
-			},
-			ResourceType: "pod",
-			LabelSelector: map[string]string{
-				"release": cmd.privateConfig.Release.Name,
-			},
-		})
+				ResourceType: "pod",
+				LabelSelector: map[string]string{
+					"release": cmd.privateConfig.Release.Name,
+				},
+			})
+		}
 	}
 }
 
@@ -290,15 +318,16 @@ func (cmd *InitCmd) addSyncPath() {
 func (cmd *InitCmd) reconfigure() {
 	clusterConfig := cmd.privateConfig.Cluster
 
-	if len(clusterConfig.TillerNamespace) == 0 {
-		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
-	}
-	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
 		DefaultValue:           cmd.privateConfig.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+
+	if len(clusterConfig.TillerNamespace) == 0 {
+		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
+	}
+	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your tiller server run in?",
 		DefaultValue:           clusterConfig.TillerNamespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
@@ -311,7 +340,7 @@ func (cmd *InitCmd) reconfigure() {
 	config.LoadClusterConfig(kubeClusterConfig, false)
 
 	if len(kubeClusterConfig.ApiServer) != 0 && len(kubeClusterConfig.CaCert) != 0 && len(kubeClusterConfig.User.ClientCert) != 0 && len(kubeClusterConfig.User.ClientKey) != 0 {
-		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
@@ -322,27 +351,27 @@ func (cmd *InitCmd) reconfigure() {
 	if skipClusterConfig {
 		clusterConfig.UseKubeConfig = true
 	} else {
-		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
 			DefaultValue:           clusterConfig.ApiServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
-		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
 			DefaultValue:           clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes username?",
 			DefaultValue:           clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
-		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
 			DefaultValue:           clusterConfig.User.ClientCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client key? (RSA, PEM)",
 			DefaultValue:           clusterConfig.User.ClientKey,
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
@@ -350,22 +379,23 @@ func (cmd *InitCmd) reconfigure() {
 	}
 	cmd.reconfigureRegistry()
 
-	dsConfigErr := config.SaveConfig(cmd.dsConfig)
+	err := config.SaveConfig(cmd.dsConfig)
 
-	if dsConfigErr != nil {
-		log.WithError(dsConfigErr).Panic("Config error")
+	if err != nil {
+		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
-	privateConfigErr := config.SaveConfig(cmd.privateConfig)
 
-	if privateConfigErr != nil {
-		log.WithError(privateConfigErr).Panic("Config error")
+	err = config.SaveConfig(cmd.privateConfig)
+
+	if err != nil {
+		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
 }
 
 func (cmd *InitCmd) reconfigureRegistry() {
 	registryConfig := cmd.privateConfig.Registry
 
-	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
 		DefaultValue:           "yes",
 		ValidationRegexPattern: "^(yes)|(no)$",
@@ -387,20 +417,21 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		}
 
 		if len(registryConfig.User.Username) == 0 {
-			randomUserSuffix, randErr := randutil.GenerateRandomString(5)
+			randomUserSuffix, err := randutil.GenerateRandomString(5)
 
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random username")
+			if err != nil {
+				log.Fatalf("Error creating random username: %s", err.Error())
 			}
 			registryConfig.User.Username = "user-" + randomUserSuffix
 		}
 
 		if len(registryConfig.User.Password) == 0 {
-			randomPassword, randErr := randutil.GenerateRandomString(12)
+			randomPassword, err := randutil.GenerateRandomString(12)
 
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random password")
+			if err != nil {
+				log.Fatalf("Error creating random password: %s", err.Error())
 			}
+
 			registryConfig.User.Password = randomPassword
 		}
 
@@ -430,22 +461,23 @@ func (cmd *InitCmd) determineLanguage() {
 		if cmd.chartGenerator.IsSupportedLanguage(cmd.flags.language) {
 			cmd.chartGenerator.Language = cmd.flags.language
 		} else {
-			fmt.Println("Language '" + cmd.flags.language + "' not supported yet. Please open an issue here: https://github.com/covexo/devspace/issues/new?title=Feature%20Request:%20Language%20%22" + cmd.flags.language + "%22")
+			log.Info("Language '" + cmd.flags.language + "' not supported yet. Please open an issue here: https://github.com/covexo/devspace/issues/new?title=Feature%20Request:%20Language%20%22" + cmd.flags.language + "%22")
 		}
 	}
 
 	if len(cmd.chartGenerator.Language) == 0 {
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
-		supportedLanguages, langErr := cmd.chartGenerator.GetSupportedLanguages()
+		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
 
-		if langErr != nil {
-			log.WithError(langErr).Panic("Unable to get supported languages")
+		if err != nil {
+			log.Fatalf("Unable to get supported languages: %s", err.Error())
 		}
-		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
+
+		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
 			DefaultValue:           cmd.chartGenerator.Language,
 			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
@@ -457,8 +489,9 @@ func (cmd *InitCmd) createChart() {
 	err := cmd.chartGenerator.CreateChart()
 
 	if err != nil {
-		log.WithError(err).Panic("Error while creating Helm chart and Dockerfile:")
+		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
+
 	createdChartYaml := map[interface{}]interface{}{}
 	createdChartValuesYaml := map[interface{}]interface{}{}
 
@@ -470,15 +503,18 @@ func (cmd *InitCmd) createChart() {
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
 	if !chartHasContainerValues && containerValues != nil {
-		containerValues["port"] = cmd.appConfig.Container.Port
+		containerValues["port"] = cmd.appConfig.Container.Ports
+
 		createdChartValuesYaml["container"] = containerValues
 	}
+
 	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
 
 	if !chartHasExternalValues && externalValues != nil {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
+
 	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
 	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
 }

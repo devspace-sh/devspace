@@ -1,5 +1,6 @@
-package logutil
+package log
 
+/*
 import (
 	"encoding/json"
 	"os"
@@ -15,7 +16,7 @@ func TestGetLogger(t *testing.T) {
 
 	os.Remove("./.devspace/logs/TestLogger.log")
 
-	logger := GetLogger("TestLogger", true)
+	logger := GetFileLogger("TestLogger")
 
 	logger.Info("Some Info")
 	logger.Warn("Some Warning")
@@ -61,3 +62,4 @@ type Log struct {
 	Msg   string
 	Time  string
 }
+*/
