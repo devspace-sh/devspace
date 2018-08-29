@@ -452,6 +452,7 @@ func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser)
 func (cmd *UpCmd) initRegistry() {
 	if cmd.flags.imageDestination != "" {
 		return
+	}
 
 	log.StartWait("Initializing helm client")
 	err := cmd.initHelm()
