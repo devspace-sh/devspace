@@ -730,15 +730,30 @@ func (cmd *UpCmd) startSync() {
 		if err != nil {
 			log.Panicf("Unable to resolve localSubPath %s: %s", syncPath.LocalSubPath, err.Error())
 		} else {
-			syncConfig := synctool.SyncConfig{
-				Kubectl:   cmd.kubectl,
-				Pod:       cmd.pod,
-				Container: &cmd.pod.Spec.Containers[0],
-				WatchPath: absLocalPath,
-				DestPath:  syncPath.ContainerPath,
+			// Retrieve pod from label selector
+			labels := make([]string, 0, len(syncPath.LabelSelector))
+
+			for key, value := range syncPath.LabelSelector {
+				labels = append(labels, key+"="+value)
 			}
 
-			syncConfig.Start()
+			podList, podListErr := cmd.kubectl.Core().Pods(cmd.privateConfig.Registry.Release.Namespace).List(metav1.ListOptions{
+				LabelSelector: strings.Join(labels, ", "),
+			})
+
+			if podListErr != nil {
+				log.Panicf("Unable to list devspace pods: %s", podListErr.Error())
+			} else {
+				syncConfig := synctool.SyncConfig{
+					Kubectl:   cmd.kubectl,
+					Pod:       &podList.Items[0],
+					Container: &podList.Items[0].Spec.Containers[0],
+					WatchPath: absLocalPath,
+					DestPath:  syncPath.ContainerPath,
+				}
+
+				syncConfig.Start()
+			}
 		}
 	}
 }
