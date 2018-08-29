@@ -342,7 +342,7 @@ func (cmd *UpCmd) buildDockerfile() {
 			"/kaniko/executor",
 			"--dockerfile=" + containerBuildPath + "/Dockerfile",
 			"--context=dir://" + containerBuildPath,
-			"--destination=" + cmd.latestImageHostname,
+			"--destination=" + ndestination,
 			"--insecure-skip-tls-verify",
 			"--single-snapshot",
 		}, false, exitChannel)
