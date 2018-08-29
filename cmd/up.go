@@ -106,7 +106,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
-	cobraCmd.Flags().StringVarP(&cmd.flags.imageDestination, "image-destination", "", "", "Choose image destination")
+	cobraCmd.Flags().StringVar(&cmd.flags.imageDestination, "image-destination", "", "Choose image destination")
 }
 
 // Run executes the command logic
@@ -333,16 +333,16 @@ func (cmd *UpCmd) buildDockerfile() {
 		containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
 		exitChannel := make(chan error)
 
-		ndestination := cmd.latestImageHostname
+		destination := cmd.latestImageHostname
 		if cmd.flags.imageDestination != "" {
-			ndestination = cmd.flags.imageDestination
+			destination = cmd.flags.imageDestination
 		}
 
 		stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
 			"/kaniko/executor",
 			"--dockerfile=" + containerBuildPath + "/Dockerfile",
 			"--context=dir://" + containerBuildPath,
-			"--destination=" + ndestination,
+			"--destination=" + destination,
 			"--insecure-skip-tls-verify",
 			"--single-snapshot",
 		}, false, exitChannel)
