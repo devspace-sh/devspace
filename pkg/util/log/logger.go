@@ -37,6 +37,8 @@ type Logger interface {
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
+	Write(message string)
+
 	SetLevel(level logrus.Level)
 	GetStream() io.Writer
 

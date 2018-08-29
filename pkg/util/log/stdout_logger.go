@@ -396,3 +396,18 @@ func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context []inter
 		s.fileLogger.printWithContextf(fnType, context, format, args...)
 	}
 }
+
+func (s *stdoutLogger) Write(message string) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	if s.loadingText != nil {
+		s.loadingText.Stop()
+	}
+
+	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+
+	if s.loadingText != nil {
+		s.loadingText.Start()
+	}
+}

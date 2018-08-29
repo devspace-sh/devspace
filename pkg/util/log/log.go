@@ -1,7 +1,11 @@
 package log
 
 import (
+	"strings"
+
 	"github.com/Sirupsen/logrus"
+
+	"github.com/daviddengcn/go-colortext"
 )
 
 var stdoutLog = &stdoutLogger{
@@ -128,4 +132,62 @@ func StartFileLogging() {
 // GetInstance returns the Logger instance
 func GetInstance() Logger {
 	return stdoutLog
+}
+
+// WriteColored writes a message in color
+func WriteColored(message string, color ct.Color) {
+	ct.Foreground(color, false)
+	stdoutLog.Write(message)
+	ct.ResetColor()
+}
+
+// Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
+func Write(message string) {
+	stdoutLog.Write(message)
+}
+
+// PrintTable prints a table with header columns and string values
+func PrintTable(header []string, values [][]string) {
+	columnLengths := make([]int, len(header))
+
+	for k, v := range header {
+		columnLengths[k] = len(v)
+	}
+
+	// Get maximum column length
+	for _, v := range values {
+		for key, value := range v {
+			if len(value) > columnLengths[key] {
+				columnLengths[key] = len(value)
+			}
+		}
+	}
+
+	// Print Header
+	for key, value := range header {
+		WriteColored(" "+value+"  ", ct.Green)
+
+		padding := columnLengths[key] - len(value)
+
+		if padding > 0 {
+			Write(strings.Repeat(" ", padding))
+		}
+	}
+
+	Write("\n")
+
+	// Print Values
+	for _, v := range values {
+		for key, value := range v {
+			Write(" " + value + "  ")
+
+			padding := columnLengths[key] - len(value)
+
+			if padding > 0 {
+				Write(strings.Repeat(" ", padding))
+			}
+		}
+
+		Write("\n")
+	}
 }
