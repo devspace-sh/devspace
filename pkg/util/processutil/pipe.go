@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// Pipe pipes all data from reader to writer
 func Pipe(reader io.Reader, writer io.Writer, bufferSize int, wg *sync.WaitGroup) {
 	pipeFunction := func() {
 		for true {
@@ -38,8 +39,10 @@ func Pipe(reader io.Reader, writer io.Writer, bufferSize int, wg *sync.WaitGroup
 	}
 }
 
+// LineFunction is a type of function that handles a single line
 type LineFunction func(line string)
 
+// RunOnEveryLine runs a given function on every line that ca be read by reader
 func RunOnEveryLine(reader io.Reader, lineFunction LineFunction, bufferSize int, wg *sync.WaitGroup) {
 	pushLinesToFunction := func(lineBuffer string) string {
 		lines := strings.Split(lineBuffer, "\n")

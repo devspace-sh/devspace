@@ -5,7 +5,7 @@ import (
 )
 
 //This test struct is from stdinutil
-type GetFromStdin_params struct {
+type GetFromStdinParams struct {
 	Question               string
 	DefaultValue           string
 	ValidationRegexPattern string
@@ -14,12 +14,12 @@ type GetFromStdin_params struct {
 
 func TestSetDefaults(t *testing.T) {
 
-	defaultParams := &GetFromStdin_params{
+	defaultParams := &GetFromStdinParams{
 		ValidationRegexPattern: ".*",
 		InputTerminationString: "\n",
 	}
 
-	params := &GetFromStdin_params{
+	params := &GetFromStdinParams{
 		ValidationRegexPattern: "",
 		InputTerminationString: " ",
 	}
@@ -41,5 +41,4 @@ func TestSetDefaults(t *testing.T) {
 		t.Fail()
 	}
 
-	
 }

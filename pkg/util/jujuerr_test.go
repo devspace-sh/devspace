@@ -2,8 +2,8 @@ package util
 
 import (
 	"errors"
-	"testing"
 	jujuerr "github.com/juju/errors"
+	"testing"
 )
 
 func TestJuju(t *testing.T) {
@@ -19,7 +19,7 @@ func TestJuju(t *testing.T) {
 	}
 }
 
-func funcThatCallsFailingFunc() error{
+func funcThatCallsFailingFunc() error {
 	err := failingFunc()
 	return jujuerr.Trace(err)
 }
