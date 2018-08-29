@@ -6,6 +6,7 @@ import (
 	"regexp"
 )
 
+//GenerateRandomString returns a random strin containing only letters
 func GenerateRandomString(length int) (string, error) {
 	randBytes := make([]byte, length*2)
 
