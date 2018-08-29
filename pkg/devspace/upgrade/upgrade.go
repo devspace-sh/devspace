@@ -67,6 +67,10 @@ func CheckForNewerVersion() (string, error) {
 func Upgrade() error {
 	newerVersion, err := CheckForNewerVersion()
 
+	if err != nil {
+		return err
+	}
+
 	if newerVersion == "" {
 		log.Println("Current binary is the latest version: ", version)
 		return nil

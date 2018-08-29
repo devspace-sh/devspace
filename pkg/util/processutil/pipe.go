@@ -66,7 +66,7 @@ func RunOnEveryLine(reader io.Reader, lineFunction LineFunction, bufferSize int,
 			} else if readErr != nil {
 				if readErr == io.EOF {
 					if len(lineBuffer) > 0 {
-						lineBuffer = pushLinesToFunction(lineBuffer)
+						_ = pushLinesToFunction(lineBuffer)
 					}
 					break
 				} else {

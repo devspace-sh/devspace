@@ -305,7 +305,7 @@ func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[strin
 		` // We need that extra new line or otherwise the command is not sent
 
 	if u.stdinPipe != nil {
-		n, err := u.stdinPipe.Write([]byte(cmd))
+		_, err := u.stdinPipe.Write([]byte(cmd))
 
 		if err != nil {
 			u.config.Logf("[Upstream] Writing to u.stdinPipe failed: %s\n", err.Error())
