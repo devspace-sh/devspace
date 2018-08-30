@@ -1,5 +1,4 @@
-![DevSpace Logo](docs/website/static/img/devspace-logo.svg)
-![DevSpace Workflow](docs/website/static/img/devspace-cli-workflow.svg)
+![DevSpace Logo](docs/website/static/img/header-devspace-cli-readme.svg)
 
 # DevSpace CLI - Cloud-native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
