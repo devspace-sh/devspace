@@ -1,15 +1,16 @@
-# DevSpace - Cloud-native Development with Kubernetes
+![DevSpace Logo](docs/website/static/img/devspace-logo.svg)
+
+# DevSpace CLI - Cloud-native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace?ref=badge_shield)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 
-![DevSpace Logo](docs/website/static/img/devspace-logo.svg)
 ![DevSpace Workflow](docs/website/static/img/devspace-cli-workflow.svg)
 
-With the DevSpace CLI, developers can build cloud-native applications directly inside of a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or Baremetal) as well as with managed Kubernetes cluster provided by cloud platforms, e.g. Google Kubernetes Engine.
+With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes cluster provided by cloud platforms, e.g. Google Kubernetes Engine.
 
 ## Why using a DevSpace?
-Building, testing and running code with a DevSpace directly inside a Kubernetes cluster has many advantages because your DevSpace:
+Your DevSpace lets you build, test and run code directly inside a Kubernetes cluster and:
 - Allows you to access cluster-internal services and data with ease
 - Works perfectly with your favorite **hot reloading** tools (e.g. nodemon)
 - Lets you iterate quickly: no more re-building and pushing images on every change
@@ -18,7 +19,7 @@ Building, testing and running code with a DevSpace directly inside a Kubernetes 
 - Supports efficient debugging through port forwarding and terminal proxying
 - Provides **automatic image building** without the need to install Docker
 - Lets you migrate to Docker & Kubernetes within minutes
-- Works with any Kubernetes cluster (e.g. Minikube, self-hosted or cloud platform)
+- Works with any Kubernetes cluster (e.g. minikube, self-hosted or cloud platform)
 
 ## Quickstart
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
@@ -48,13 +49,13 @@ If you find a bug while working with the DevSpace CLI, please [open an issue on 
 ### Feedback & Feature Requests
 You are more than welcome to open issues in this project to:
 - [give feedback](https://github.com/covexo/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
-- [suggest new features](https://github.com/covexo/devspace/issues/new?labels=kind%2Ffeature&title=Feature Request:)
+- [suggest new features](https://github.com/covexo/devspace/issues/new?labels=kind%2Ffeature&title=Feature%20Request:)
 - [ask a question](https://github.com/covexo/devspace/issues/new?labels=kind%2Fquestion&title=Question:)
 
 ### Contributing Code
 This project is mainly written in Golang. To contribute code,
 1. Check-out the project: `git clone https://github.com/covexo/devspace && cd devspace`
-2. Install the dependencies: `dep ensure -v` (requires [Installing Dep]())
+2. Install the dependencies: `dep ensure -v` (requires [Installing Dep](https://golang.github.io/dep/docs/installation.html))
 3. Make changes to the code (add new dependencies to the Gopkg.toml)
 4. Build the project, e.g. via `go build -o devspace.exe`
 
