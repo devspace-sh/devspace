@@ -2,11 +2,18 @@
   "docs": {
     "Getting Started": [
       "getting-started/quickstart",
+      "getting-started/installation",
+      "getting-started/start",
+      "getting-started/coding",
+      "getting-started/cleanup",
       "getting-started/faq"
     ],
     "Commands": [
       "cli/init",
       "cli/up",
+      "cli/down",
+      "cli/reset",
+      "cli/install",
       "cli/upgrade"
     ],
     "Configuration": [

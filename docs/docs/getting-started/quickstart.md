@@ -1,37 +1,20 @@
 ---
-title: Quickstart - Getting Started with DevSpaces
-sidebar_label: Quickstart
+title: Quickstart
 ---
 
-You can easily setup a DevSpace for any existing project.
-1) Install the DevSpace client.
-2) Execute the following command inside your project: `devspace up`
-3) Start coding within your DevSpace.
-You need a Kubernetes cluster for your DevSpace. If you do not have one yet, check out our [installation guide](/docs/getting-started/kubernetes).
+You can easily setup a DevSpace for any existing project. This quickstart guide will walk you through the following steps to get started with the DevSpace CLI:
+1. [Installation of the the DevSpace client](/docs/getting-started/installation)
+2. [Starting your DevSpace](/docs/getting-started/start)
+3. [Coding with your DevSpace](/docs/getting-started/coding)
+4. [Cleanup](/docs/getting-started/cleanup) (optional)
 
-## 1) Installation
 
-### For Windows
-1. Open CMD with **admin rights**.
-2. Run this install script:
-```
-curl -s "https://raw.githubusercontent.com/covexo/devspace/master/scripts/installer-win.bat" >"%Temp%\install-devspace.bat"
-"%Temp%\install-devspace.bat" "%PROGRAMFILES%\devspace"
-del "%Temp%\install-devspace.bat"
-```
+## Prerequiste: A Kubernetes Cluster (e.g. Minikube)
+To get started, you need a Kubernetes cluster. If you do not have one yet, check out our **[Kubernetes Installation Guide](/docs/advanced/kubernetes)**.
 
-### For Mac
+If you already have a running Kubernetes cluster, continue with: **[1. Installation](/docs/getting-started/installation)**
 
-### For Linux
-
-## 2) Starting your DevSpace
-
-## 3) Coding within your DevSpace
-
-### Terminal Access
-
-### Port Forwarding
-
-### Code Synchronization & Hot Reloading
-
-### Image Building
+## Need Help?
+If you have any questions while using the DevSpace CLI, feel free to:
+- take a look at our **[Frequently Asked Questions (FAQ)](/docs/getting-started/faq)**
+- or open a **[new issue on GitHub](https://github.com/covexo/devspace/issues/new?labels=kind%2Fquestion&title=Question:)**.

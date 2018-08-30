@@ -2,4 +2,4 @@
 title: Architecture
 ---
 
-## Second Headline
+This page will be added soon.
