@@ -3,11 +3,10 @@
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace?ref=badge_shield)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 
-![DevSpace Logo](docs/website/static/img/devspace-cli-logo.svg)
+![DevSpace Logo](docs/website/static/img/devspace-logo.svg)
+![DevSpace Workflow](docs/website/static/img/devspace-cli-workflow.svg)
 
 With the DevSpace CLI, developers can build cloud-native applications directly inside of a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or Baremetal) as well as with managed Kubernetes cluster provided by cloud platforms, e.g. Google Kubernetes Engine.
-
-![DevSpace Workflow](docs/website/static/img/devspace-cli-workflow.svg)
 
 ## Why using a DevSpace?
 Building, testing and running code with a DevSpace directly inside a Kubernetes cluster has many advantages because your DevSpace:
