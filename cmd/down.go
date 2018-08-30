@@ -36,7 +36,8 @@ Stops your DevSpace by removing the release via helm.
 If you want to remove all DevSpace related data from
 your project, use: devspace reset
 #######################################################`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 }

@@ -44,7 +44,8 @@ func init() {
 Registers the devspace executable in your PATH
 variable.
 #######################################################`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 }

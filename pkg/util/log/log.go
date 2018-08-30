@@ -117,6 +117,11 @@ func With(obj interface{}) *LoggerEntry {
 	return stdoutLog.With(obj)
 }
 
+// WithKey adds context information to the entry
+func WithKey(key string, obj interface{}) *LoggerEntry {
+	return stdoutLog.WithKey(key, obj)
+}
+
 // SetLevel changes the log level of the global logger
 func SetLevel(level logrus.Level) {
 	stdoutLog.SetLevel(level)

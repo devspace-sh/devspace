@@ -29,7 +29,8 @@ func init() {
 #######################################################
 Upgrades the devspace cli to the newest version
 #######################################################`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 }

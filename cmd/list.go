@@ -41,6 +41,7 @@ func init() {
 	* Forwarded ports (port)
 	#######################################################
 	`,
+		Args: cobra.NoArgs,
 	}
 
 	rootCmd.AddCommand(listCmd)
@@ -55,7 +56,8 @@ func init() {
 	Lists the sync configuration
 	#######################################################
 	`,
-		Run: cmd.RunListSync,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunListSync,
 	}
 
 	listCmd.AddCommand(listSyncCmd)
@@ -70,7 +72,8 @@ func init() {
 	Lists the port forwarding configuration
 	#######################################################
 	`,
-		Run: cmd.RunListPort,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunListPort,
 	}
 
 	listCmd.AddCommand(listPortCmd)

@@ -33,6 +33,7 @@ type Logger interface {
 	Failf(format string, args ...interface{})
 
 	With(object interface{}) *LoggerEntry
+	WithKey(key string, object interface{}) *LoggerEntry
 
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
@@ -42,6 +43,6 @@ type Logger interface {
 	SetLevel(level logrus.Level)
 	GetStream() io.Writer
 
-	printWithContext(fnType logFunctionType, context []interface{}, args ...interface{})
-	printWithContextf(fnType logFunctionType, context []interface{}, format string, args ...interface{})
+	printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{})
+	printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{})
 }

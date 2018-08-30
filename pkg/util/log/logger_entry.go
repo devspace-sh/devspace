@@ -1,6 +1,8 @@
 package log
 
 import (
+	"strconv"
+
 	"github.com/Sirupsen/logrus"
 )
 
@@ -21,7 +23,7 @@ const (
 // LoggerEntry defines an entry to the logger
 type LoggerEntry struct {
 	logger  Logger
-	context []interface{}
+	context map[string]interface{}
 }
 
 // Debug prints debug information
@@ -142,7 +144,14 @@ func (l *LoggerEntry) Printf(level logrus.Level, format string, args ...interfac
 
 // With adds context information to the entry
 func (l *LoggerEntry) With(obj interface{}) *LoggerEntry {
-	l.context = append(l.context, obj)
+	l.context["context-"+strconv.Itoa(len(l.context))] = obj
+
+	return l
+}
+
+// WithKey adds context information to the entry
+func (l *LoggerEntry) WithKey(key string, obj interface{}) *LoggerEntry {
+	l.context[key] = obj
 
 	return l
 }

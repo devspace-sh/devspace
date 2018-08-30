@@ -94,7 +94,8 @@ Starts and connects your DevSpace:
 4. Starts the sync client
 5. Enters the container shell
 #######################################################`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 
@@ -196,15 +197,11 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.deployChart()
 
 	if cmd.flags.sync {
-		log.StartWait("Starting real-time code sync")
 		cmd.startSync()
-		log.StopWait()
 	}
 
 	if cmd.flags.portforwarding {
-		log.StartWait("Starting port forwarding")
 		cmd.startPortForwarding()
-		log.StopWait()
 	}
 
 	cmd.enterTerminal()
@@ -670,7 +667,7 @@ func (cmd *UpCmd) deployChart() {
 	log.StopWait()
 
 	if err != nil {
-		log.Panicf("Unable to deploy helm chart: %s", err.Error())
+		log.Fatalf("Unable to deploy helm chart: %s", err.Error())
 	}
 
 	releaseRevision := int(appRelease.Version)
@@ -764,7 +761,11 @@ func (cmd *UpCmd) startSync() {
 					DestPath:  syncPath.ContainerPath,
 				}
 
-				syncConfig.Start()
+				err = syncConfig.Start()
+
+				if err != nil {
+					log.Fatalf("Sync error: %s", err.Error())
+				}
 
 				log.Donef("Sync started on %s <-> %s", absLocalPath, syncPath.ContainerPath)
 			}
@@ -835,6 +836,8 @@ func (cmd *UpCmd) enterTerminal() {
 			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}
+
+	log.Info("Enter Terminal Done")
 }
 
 func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
