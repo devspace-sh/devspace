@@ -47,9 +47,10 @@ type HelmClientWrapper struct {
 	kubectl  *kubernetes.Clientset
 }
 
+// TillerDeploymentName is the string identifier for the tiller deployment
+const TillerDeploymentName = "tiller-deploy"
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
-const tillerDeploymentName = "tiller-deploy"
 const stableRepoCachePath = "repository/cache/stable-index.yaml"
 const defaultRepositories = `apiVersion: v1
 repositories:
@@ -136,7 +137,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	}
 
 	log.StopWait()
-	log.Done("Tiller server is ready")
 
 	if tillerError != nil {
 		return nil, tillerError
@@ -192,7 +192,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.9.1",
 		ServiceAccount: tillerSA.ObjectMeta.Name,
 	}
-	_, tillerCheckErr := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(tillerDeploymentName, metav1.GetOptions{})
+	_, tillerCheckErr := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 
 	// Tiller is not there
 	if tillerCheckErr != nil {
@@ -236,6 +236,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 		}
 
 		log.StopWait()
+		log.Done("Tiller server started")
 
 		//Upgrade of tiller is necessary
 	} else if upgrade {
@@ -257,7 +258,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 	log.StartWait("Waiting for Tiller server to start")
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, _ := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(tillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, _ := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 
 		if tillerDeployment.Status.ReadyReplicas == tillerDeployment.Status.Replicas {
 			break
@@ -268,7 +269,6 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 	}
 
 	log.StopWait()
-	log.Done("Tiller server started")
 
 	return nil
 }
@@ -277,7 +277,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) error {
 	errs := make([]error, 0, 1)
 
-	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(tillerDeploymentName, &metav1.DeleteOptions{})
+	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{})
 
 	if err != nil {
 		errs = append(errs, err)
