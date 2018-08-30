@@ -64,6 +64,12 @@ func TestFileLoggerBasic(t *testing.T) {
 
 	fileLogger.With("WithObject").Info("WithMessage")
 
+	writer := fileLogger.GetStream()
+	writer.Write([]byte("{\"level\":\"test\"}"))
+
+	fileLogger.SetLevel(logrus.DebugLevel)
+	fileLogger.Debug("This debug should appear")
+
 	//TODO: Test those method calls
 	//fileLogger.Print(logrus.FatalLevel, "TestFatal")
 	//fileLogger.Printf(logrus.FatalLevel, "TestFatalf")
@@ -91,6 +97,8 @@ func TestFileLoggerBasic(t *testing.T) {
 	assert.Equal(t, "error", logsAsStructs[15].Level)
 	assert.Equal(t, "info", logsAsStructs[16].Level)
 	assert.Equal(t, "info", logsAsStructs[17].Level)
+	assert.Equal(t, "test", logsAsStructs[18].Level)
+	assert.Equal(t, "debug", logsAsStructs[19].Level)
 
 	assert.Equal(t, "TestInfo", logsAsStructs[0].Msg)
 	assert.Equal(t, "TestWarn", logsAsStructs[1].Msg)
@@ -110,6 +118,7 @@ func TestFileLoggerBasic(t *testing.T) {
 	assert.Equal(t, "TestErrorf", logsAsStructs[15].Msg)
 	assert.Equal(t, "WrittenMessage", logsAsStructs[16].Msg)
 	assert.Equal(t, "WithMessage", logsAsStructs[17].Msg)
+	assert.Equal(t, "This debug should appear", logsAsStructs[19].Msg)
 
 	assert.Equal(t, "TestInfoContext", logsAsStructs[10].Context0)
 	assert.Equal(t, "TestWarnContext", logsAsStructs[11].Context0)
@@ -121,7 +130,7 @@ func TestFileLoggerBasic(t *testing.T) {
 
 }
 
-func TestPanic(t *testing.T) {
+func TestFileLoggerPanic(t *testing.T) {
 	os.Remove("./.devspace/logs/PanicLogger.log")
 
 	defer func() {
