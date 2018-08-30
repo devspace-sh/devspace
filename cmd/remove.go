@@ -28,7 +28,6 @@ type removeSyncCmdFlags struct {
 
 type removePortCmdFlags struct {
 	Selector  string
-	Ports     string
 	RemoveAll bool
 }
 
@@ -90,16 +89,16 @@ func init() {
 	############### devspace remove port ##################
 	#######################################################
 	Removes port mappings from the devspace configuration:
-	devspace remove port --ports 8080,3000
+	devspace remove port 8080,3000
 	devspace remove port --selector=release=test
 	devspace remove port --all
 	#######################################################
 	`,
-		Run: cmd.RunRemovePort,
+		Args: cobra.MaximumNArgs(1),
+		Run:  cmd.RunRemovePort,
 	}
 
 	removePortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
-	removePortCmd.Flags().StringVar(&cmd.portFlags.Ports, "ports", "", "Comma separated list of ports (local and remote) to remove (e.g. 8080,3000)")
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
@@ -154,14 +153,20 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
-	if len(labelSelectorMap) == 0 && cmd.portFlags.RemoveAll == false && cmd.portFlags.Ports == "" {
+	argPorts := ""
+
+	if len(args) == 1 {
+		argPorts = args[0]
+	}
+
+	if len(labelSelectorMap) == 0 && cmd.portFlags.RemoveAll == false && argPorts == "" {
 		log.Errorf("You have to specify at least one of the supported flags")
 		cobraCmd.Help()
 
 		return
 	}
 
-	ports := strings.Split(cmd.portFlags.Ports, ",")
+	ports := strings.Split(argPorts, ",")
 	newPortForwards := make([]*v1.PortForwarding, 0, len(cmd.dsConfig.PortForwarding)-1)
 
 OUTER:

@@ -765,6 +765,8 @@ func (cmd *UpCmd) startSync() {
 				}
 
 				syncConfig.Start()
+
+				log.Donef("Sync started on %s <-> %s", absLocalPath, syncPath.ContainerPath)
 			}
 		}
 	}
@@ -800,6 +802,7 @@ func (cmd *UpCmd) startPortForwarding() {
 						// Wait till forwarding is ready
 						select {
 						case <-readyChan:
+							log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
 						case <-time.After(5 * time.Second):
 							log.Error("Timeout waiting for port forwarding to start")
 						}
@@ -829,7 +832,7 @@ func (cmd *UpCmd) enterTerminal() {
 
 	if terminalErr != nil {
 		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
-			log.Panicf("Unable to start terminal session: %s", terminalErr.Error())
+			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}
 }

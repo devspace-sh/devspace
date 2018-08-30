@@ -97,7 +97,8 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	tunnelWaitTime := 2 * 60 * time.Second
 	tunnelCheckInterval := 5 * time.Second
 
-	log.StartWait("Waiting for tiller portforwarding to become ready")
+	log.StartWait("Waiting for tiller to become ready")
+	defer log.StopWait()
 
 	for tunnelWaitTime > 0 {
 		tunnel, tunnelErr = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
@@ -109,8 +110,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
 		time.Sleep(tunnelCheckInterval)
 	}
-
-	log.StopWait()
 
 	if tunnelErr != nil {
 		return nil, tunnelErr
@@ -125,8 +124,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	}
 	client := k8shelm.NewClient(helmOptions...)
 	var tillerError error
-
-	log.StartWait("Waiting for tiller server to become ready")
 
 	for helmWaitTime > 0 {
 		_, tillerError = client.ListReleases(k8shelm.ReleaseListLimit(1))
