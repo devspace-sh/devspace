@@ -836,8 +836,6 @@ func (cmd *UpCmd) enterTerminal() {
 			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}
-
-	log.Info("Enter Terminal Done")
 }
 
 func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
