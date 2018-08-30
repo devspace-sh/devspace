@@ -44,7 +44,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "reset",
-		Short: "Reset your project",
+		Short: "Remove devspace completely from your project",
 		Long: `
 #######################################################
 ################### devspace reset ####################

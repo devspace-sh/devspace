@@ -168,7 +168,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 	for _, release := range releases.Releases {
 		if release.GetName() == cmd.privateConfig.Registry.Release.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
-				return nil, fmt.Errorf("Registry release has wrong status code: %s", release.Info.Status.Code.String())
+				return nil, fmt.Errorf("Registry helm release has bad status: %s", release.Info.Status.Code.String())
 			}
 
 			registryPods, err := kubectl.GetPodsFromDeployment(cmd.kubectl, cmd.privateConfig.Registry.Release.Name+"-docker-registry", cmd.privateConfig.Registry.Release.Namespace)
@@ -197,7 +197,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Registry release %s not found", cmd.privateConfig.Registry.Release.Name)
+	return nil, fmt.Errorf("Registry helm release %s not found", cmd.privateConfig.Registry.Release.Name)
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
@@ -240,7 +240,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	for _, release := range releases.Releases {
 		if release.GetName() == cmd.privateConfig.Release.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
-				return nil, fmt.Errorf("Devspace release has wrong status code: %s", release.Info.Status.Code.String())
+				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", cmd.privateConfig.Release.Name, release.Info.Status.Code.String())
 			}
 
 			pods, err := cmd.kubectl.Core().Pods(cmd.privateConfig.Release.Namespace).List(metav1.ListOptions{
@@ -282,7 +282,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Devspace release %s not found", cmd.privateConfig.Registry.Release.Name)
+	return nil, fmt.Errorf("Devspace helm release %s not found", cmd.privateConfig.Release.Name)
 }
 
 // RunStatusSync executes the devspace status sync commad logic
