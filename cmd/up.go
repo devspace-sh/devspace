@@ -290,7 +290,7 @@ func (cmd *UpCmd) buildDockerfile() {
 		readyCheckInterval := 5 * time.Second
 		buildPodReady := false
 
-		log.StartWait("Waiting for build pod to start")
+		log.StartWait("Waiting for kaniko build pod to start")
 
 		for readyWaitTime > 0 {
 			buildPod, _ = cmd.kubectl.Core().Pods(buildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
@@ -305,7 +305,7 @@ func (cmd *UpCmd) buildDockerfile() {
 		}
 
 		log.StopWait()
-		log.Done("Build pod started")
+		log.Done("Kaniko build pod started")
 
 		if !buildPodReady {
 			return fmt.Errorf("Unable to start build pod")

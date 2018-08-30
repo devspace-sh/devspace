@@ -3,6 +3,7 @@ package kubectl
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -20,7 +22,11 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	k8sapi "k8s.io/kubernetes/pkg/apis/core"
+	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
+	"k8s.io/kubernetes/pkg/printers"
+	describe "k8s.io/kubernetes/pkg/printers/internalversion"
+	"k8s.io/kubernetes/pkg/util/node"
 )
 
 var privateConfig = &v1.PrivateConfig{}
@@ -34,6 +40,129 @@ func NewClient() (*kubernetes.Clientset, error) {
 	}
 
 	return kubernetes.NewForConfig(config)
+}
+
+// GetPodStatus returns the pod status as a string
+// Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
+func GetPodStatus(pod *k8sv1.Pod) string {
+	reason := string(pod.Status.Phase)
+
+	if pod.Status.Reason != "" {
+		reason = pod.Status.Reason
+	}
+
+	initializing := false
+
+	for i := range pod.Status.InitContainerStatuses {
+		container := pod.Status.InitContainerStatuses[i]
+
+		switch {
+		case container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
+			continue
+		case container.State.Terminated != nil:
+			// initialization is failed
+			if len(container.State.Terminated.Reason) == 0 {
+				if container.State.Terminated.Signal != 0 {
+					reason = fmt.Sprintf("Init:Signal:%d", container.State.Terminated.Signal)
+				} else {
+					reason = fmt.Sprintf("Init:ExitCode:%d", container.State.Terminated.ExitCode)
+				}
+			} else {
+				reason = "Init:" + container.State.Terminated.Reason
+			}
+			initializing = true
+		case container.State.Waiting != nil && len(container.State.Waiting.Reason) > 0 && container.State.Waiting.Reason != "PodInitializing":
+			reason = "Init:" + container.State.Waiting.Reason
+			initializing = true
+		default:
+			reason = fmt.Sprintf("Init:%d/%d", i, len(pod.Spec.InitContainers))
+			initializing = true
+		}
+		break
+	}
+	if !initializing {
+		hasRunning := false
+
+		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
+			container := pod.Status.ContainerStatuses[i]
+
+			if container.State.Waiting != nil && container.State.Waiting.Reason != "" {
+				reason = container.State.Waiting.Reason
+			} else if container.State.Terminated != nil && container.State.Terminated.Reason != "" {
+				reason = container.State.Terminated.Reason
+			} else if container.State.Terminated != nil && container.State.Terminated.Reason == "" {
+				if container.State.Terminated.Signal != 0 {
+					reason = fmt.Sprintf("Signal:%d", container.State.Terminated.Signal)
+				} else {
+					reason = fmt.Sprintf("ExitCode:%d", container.State.Terminated.ExitCode)
+				}
+			} else if container.Ready && container.State.Running != nil {
+				hasRunning = true
+			}
+		}
+
+		// change pod status back to "Running" if there is at least one container still reporting as "Running" status
+		if reason == "Completed" && hasRunning {
+			reason = "Running"
+		}
+	}
+
+	if pod.DeletionTimestamp != nil && pod.Status.Reason == node.NodeUnreachablePodReason {
+		reason = "Unknown"
+	} else if pod.DeletionTimestamp != nil {
+		reason = "Terminating"
+	}
+
+	return reason
+}
+
+// DescribePod returns a desription string of a pod (internally calls the kubectl describe function)
+func DescribePod(namespace, name string) (string, error) {
+	newConfig, err := GetClientConfig()
+
+	if err != nil {
+		return "", err
+	}
+
+	newKubectl, err := clientset.NewForConfig(newConfig)
+
+	if err != nil {
+		return "", err
+	}
+
+	podDescriber := &describe.PodDescriber{newKubectl}
+
+	return podDescriber.Describe(namespace, name, printers.DescriberSettings{ShowEvents: true})
+}
+
+// GetPodsFromDeployment retrieves all found pods from a deployment name
+func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace string) (*k8sv1.PodList, error) {
+	deploy, err := kubectl.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
+
+	// Deployment not there
+	if err != nil {
+		return nil, err
+	}
+
+	matchLabels := deploy.Spec.Selector.MatchLabels
+
+	if len(matchLabels) <= 0 {
+		return nil, errors.New("No matchLabels defined deployment")
+	}
+
+	matchLabelString := ""
+
+	for k, v := range matchLabels {
+		if len(matchLabelString) > 0 {
+			matchLabelString += ","
+		}
+
+		matchLabelString += k + "=" + v
+	}
+
+	return kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+		LabelSelector: matchLabelString,
+	})
 }
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
