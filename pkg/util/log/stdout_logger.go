@@ -358,8 +358,17 @@ func (s *stdoutLogger) Printf(level logrus.Level, format string, args ...interfa
 func (s *stdoutLogger) With(obj interface{}) *LoggerEntry {
 	return &LoggerEntry{
 		logger: s,
-		context: []interface{}{
-			obj,
+		context: map[string]interface{}{
+			"context-1": obj,
+		},
+	}
+}
+
+func (s *stdoutLogger) WithKey(key string, obj interface{}) *LoggerEntry {
+	return &LoggerEntry{
+		logger: s,
+		context: map[string]interface{}{
+			key: obj,
 		},
 	}
 }
@@ -375,7 +384,7 @@ func (s *stdoutLogger) GetStream() io.Writer {
 	return os.Stdout
 }
 
-func (s *stdoutLogger) printWithContext(fnType logFunctionType, context []interface{}, args ...interface{}) {
+func (s *stdoutLogger) printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
@@ -386,7 +395,7 @@ func (s *stdoutLogger) printWithContext(fnType logFunctionType, context []interf
 	}
 }
 
-func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context []interface{}, format string, args ...interface{}) {
+func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 

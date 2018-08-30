@@ -59,6 +59,7 @@ func init() {
 	* Forwarded ports (port)
 	#######################################################
 	`,
+		Args: cobra.NoArgs,
 	}
 
 	rootCmd.AddCommand(addCmd)
@@ -76,7 +77,8 @@ func init() {
 	devspace add sync --local=app --container=/app
 	#######################################################
 	`,
-		Run: cmd.RunAddSync,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunAddSync,
 	}
 
 	addCmd.AddCommand(addSyncCmd)

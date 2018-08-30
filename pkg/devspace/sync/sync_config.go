@@ -45,16 +45,21 @@ type SyncConfig struct {
 
 // Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
-	syncLog.With(s.Pod.Name).With(s.Pod.Namespace).With(s.WatchPath).With(s.DestPath).With(s.ExcludePaths).Infof(format, args...)
+	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
 }
 
 // Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
-	syncLog.With(s.Pod.Name).With(s.Pod.Namespace).With(s.WatchPath).With(s.DestPath).With(s.ExcludePaths).Info(line)
+	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+}
+
+// Error handles a sync error with context
+func (s *SyncConfig) Error(line interface{}) {
+	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Error(line)
 }
 
 // Start starts a new sync instance
-func (s *SyncConfig) Start() {
+func (s *SyncConfig) Start() error {
 	if s.ExcludePaths == nil {
 		s.ExcludePaths = make([]string, 0, 2)
 	}
@@ -71,7 +76,7 @@ func (s *SyncConfig) Start() {
 		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 
 		s.ignoreMatcher = ignoreMatcher
@@ -85,7 +90,7 @@ func (s *SyncConfig) Start() {
 	err := s.upstream.start()
 
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	s.downstream = &downstream{
@@ -95,20 +100,22 @@ func (s *SyncConfig) Start() {
 	err = s.downstream.start()
 
 	if err != nil {
-		log.Panic(err)
+		s.Stop()
+
+		return err
 	}
 
 	go s.mainLoop()
+
+	return nil
 }
 
 func (s *SyncConfig) mainLoop() {
-	defer s.Stop()
-
 	s.Logf("[Sync] Start syncing\n")
 	err := s.initialSync()
 
 	if err != nil {
-		syncLog.Error(err)
+		s.Error(err)
 		return
 	}
 
@@ -118,7 +125,7 @@ func (s *SyncConfig) mainLoop() {
 
 		// Set up a watchpoint listening for events within a directory tree rooted at specified directory.
 		if err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All); err != nil {
-			syncLog.Error(err)
+			s.Error(err)
 			return
 		}
 
@@ -126,15 +133,20 @@ func (s *SyncConfig) mainLoop() {
 		err := s.upstream.collectChanges()
 
 		if err != nil {
-			syncLog.Error(err)
+			s.Error(err)
 		}
 	}()
 
-	err = s.downstream.mainLoop()
+	// Run downstream in goroutine
+	go func() {
+		defer s.Stop()
 
-	if err != nil {
-		syncLog.Error(err)
-	}
+		err := s.downstream.mainLoop()
+
+		if err != nil {
+			s.Error(err)
+		}
+	}()
 }
 
 func (s *SyncConfig) initialSync() error {

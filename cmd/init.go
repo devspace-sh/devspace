@@ -79,7 +79,8 @@ YOUR_PROJECT_PATH/
 
 #######################################################
 	`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 

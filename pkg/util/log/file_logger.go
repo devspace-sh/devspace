@@ -3,7 +3,6 @@ package log
 import (
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -161,8 +160,17 @@ func (f *fileLogger) Printf(level logrus.Level, format string, args ...interface
 func (f *fileLogger) With(obj interface{}) *LoggerEntry {
 	return &LoggerEntry{
 		logger: f,
-		context: []interface{}{
-			obj,
+		context: map[string]interface{}{
+			"context-1": obj,
+		},
+	}
+}
+
+func (f *fileLogger) WithKey(key string, obj interface{}) *LoggerEntry {
+	return &LoggerEntry{
+		logger: f,
+		context: map[string]interface{}{
+			key: obj,
 		},
 	}
 }
@@ -175,13 +183,7 @@ func (f *fileLogger) GetStream() io.Writer {
 	return f.logger.Out
 }
 
-func (f *fileLogger) printWithContext(fnType logFunctionType, context []interface{}, args ...interface{}) {
-	contextFields := logrus.Fields{}
-
-	for key, value := range context {
-		contextFields["context-"+strconv.Itoa(key)] = value
-	}
-
+func (f *fileLogger) printWithContext(fnType logFunctionType, contextFields map[string]interface{}, args ...interface{}) {
 	switch fnType {
 	case doneFn:
 	case infoFn:
@@ -200,13 +202,7 @@ func (f *fileLogger) printWithContext(fnType logFunctionType, context []interfac
 	}
 }
 
-func (f *fileLogger) printWithContextf(fnType logFunctionType, context []interface{}, format string, args ...interface{}) {
-	contextFields := logrus.Fields{}
-
-	for key, value := range context {
-		contextFields["context-"+strconv.Itoa(key)] = value
-	}
-
+func (f *fileLogger) printWithContextf(fnType logFunctionType, contextFields map[string]interface{}, format string, args ...interface{}) {
 	switch fnType {
 	case doneFn:
 	case infoFn:

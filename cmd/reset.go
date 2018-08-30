@@ -62,7 +62,8 @@ Use the flag --all-data to also remove:
 If you simply want to shutdown your DevSpace, use the 
 command: devspace down
 #######################################################`,
-		Run: cmd.Run,
+		Args: cobra.NoArgs,
+		Run:  cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 }

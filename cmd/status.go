@@ -44,7 +44,8 @@ func init() {
 	Shows the devspace status
 	#######################################################
 	`,
-		Run: cmd.RunStatus,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunStatus,
 	}
 
 	rootCmd.AddCommand(statusCmd)
@@ -59,7 +60,8 @@ func init() {
 	Shows the devspace sync status
 	#######################################################
 	`,
-		Run: cmd.RunStatusSync,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunStatusSync,
 	}
 
 	statusCmd.AddCommand(statusSyncCmd)
@@ -188,7 +190,8 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 						"Running",
 						pod.GetName(),
 						pod.GetNamespace(),
-						fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
+						"",
+						//fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
 					}, nil
 				}
 			}
@@ -218,7 +221,8 @@ func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
 				"Running",
 				pod.GetName(),
 				pod.GetNamespace(),
-				fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
+				"",
+				//fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
 			}, nil
 		}
 	}
@@ -263,7 +267,8 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 						"Running",
 						pod.GetName(),
 						pod.GetNamespace(),
-						fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
+						"",
+						// fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),
 					}, nil
 				}
 			}
@@ -283,9 +288,4 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	}
 
 	return nil, fmt.Errorf("Devspace helm release %s not found", cmd.privateConfig.Release.Name)
-}
-
-// RunStatusSync executes the devspace status sync commad logic
-func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
-	log.Info("Run Status Sync")
 }

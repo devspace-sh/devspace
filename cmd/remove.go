@@ -51,6 +51,7 @@ func init() {
 	* Forwarded ports (port)
 	#######################################################
 	`,
+		Args: cobra.NoArgs,
 	}
 
 	rootCmd.AddCommand(removeCmd)
@@ -71,7 +72,8 @@ func init() {
 	devspace remove sync --all
 	#######################################################
 	`,
-		Run: cmd.RunRemoveSync,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunRemoveSync,
 	}
 
 	removeCmd.AddCommand(removeSyncCmd)
