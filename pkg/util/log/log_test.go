@@ -346,41 +346,41 @@ func TestWaitFeature(t *testing.T) {
 	r, w, err := os.Pipe()
 	assert.Nil(t, err)
 
+	oldStdout := os.Stdout
+	os.Stdout = w
+	defer func() {
+		os.Stdout = oldStdout
+	}()
 	StartWait("TestWait")
-	stdoutLog.loadingText.Stream = w
 
 	time.Sleep(waitInterval / 5)
 
-	go func() {
-		expectedWait := "[WAIT] | TestWait"
-		buf := make([]byte, len(expectedWait))
-		_, err = r.Read(buf)
-		assert.Nil(t, err)
-		assert.Equal(t, expectedWait, string(buf))
-	}()
+	expectedWait := "[WAIT] | TestWait"
+	buf := make([]byte, len(expectedWait))
+	_, err = r.Read(buf)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedWait, string(buf))
 
 	time.Sleep(waitInterval)
 
-	go func() {
-		expectedWait := "\r[WAIT] / TestWait"
-		buf := make([]byte, len(expectedWait))
-		_, err = r.Read(buf)
-		assert.Nil(t, err)
-		assert.Equal(t, expectedWait, string(buf))
-	}()
+	expectedWait = "\r[WAIT] / TestWait"
+	buf = make([]byte, len(expectedWait))
+	_, err = r.Read(buf)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedWait, string(buf))
 
 	readers, err := setOutputStreams()
 	assert.Nil(t, err)
 	Write("TestWriteBetweenWaits")
 	expectedWrite := "TestWriteBetweenWaits"
-	buf := make([]byte, len(expectedWrite))
+	buf = make([]byte, len(expectedWrite))
 	_, err = readers[1].Read(buf)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedWrite, string(buf))
 
 	time.Sleep(waitInterval / 5)
 
-	expectedWait := "\r                 \r[WAIT] - TestWait"
+	expectedWait = "\r                 \r[WAIT] - TestWait"
 	buf = make([]byte, len(expectedWait))
 	_, err = r.Read(buf)
 	assert.Nil(t, err)
@@ -402,7 +402,6 @@ func TestWaitFeature(t *testing.T) {
 	assert.Equal(t, expectedWait, string(buf))
 
 	StartWait("TestWait2")
-	stdoutLog.loadingText.Stream = w
 
 	time.Sleep(waitInterval / 5)
 
