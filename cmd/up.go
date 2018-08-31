@@ -1,34 +1,26 @@
 package cmd
 
 import (
-	"encoding/base64"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"k8s.io/kubernetes/pkg/util/interrupt"
-
+	"github.com/covexo/devspace/pkg/devspace/kaniko"
+	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
 	"github.com/covexo/devspace/pkg/devspace/config"
-	"github.com/covexo/devspace/pkg/util/processutil"
-	"github.com/covexo/devspace/pkg/util/randutil"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/foomo/htpasswd"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -57,12 +49,11 @@ type UpCmdFlags struct {
 	build            bool
 	shell            string
 	sync             bool
+	deploy           bool
 	portforwarding   bool
 	noSleep          bool
 	imageDestination string
 }
-
-const pullSecretName = "devspace-pull-secret"
 
 //UpFlagsDefault are the default flags for UpCmdFlags
 var UpFlagsDefault = &UpCmdFlags{
@@ -71,6 +62,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistry:   true,
 	build:          true,
 	sync:           true,
+	deploy:         true,
 	portforwarding: true,
 	noSleep:        false,
 }
@@ -106,6 +98,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
 	cobraCmd.Flags().StringVar(&cmd.flags.imageDestination, "image-destination", "", "Choose image destination")
 }
@@ -154,36 +147,13 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.build {
-		mustRebuild := true
-		dockerfileInfo, statErr := os.Stat(cmd.workdir + "/Dockerfile")
-		var dockerfileModTime time.Time
+		shouldRebuild := cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
 
-		if statErr != nil {
-			if len(cmd.privateConfig.Release.LatestImage) == 0 {
-				log.Fatalf("Dockerfile missing: %s", statErr.Error())
-			} else {
-				mustRebuild = false
-			}
-		} else {
-			dockerfileModTime = dockerfileInfo.ModTime()
+		if shouldRebuild {
+			cmd.buildImage()
 
-			// When user has not used -b or --build flags
-			if cobraCmd.Flags().Changed("build") == false {
-				if len(cmd.privateConfig.Release.LatestBuild) != 0 {
-					latestBuildTime, _ := time.Parse(time.RFC3339Nano, cmd.privateConfig.Release.LatestBuild)
-
-					// only rebuild Docker image when Dockerfile has changed since latest build
-					mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
-				}
-			}
-		}
-
-		if mustRebuild {
-			cmd.buildDockerfile()
-
-			cmd.privateConfig.Release.LatestBuild = dockerfileModTime.Format(time.RFC3339Nano)
+			// Save new image ip to config
 			cmd.privateConfig.Release.LatestImage = cmd.latestImageIP
-
 			err = config.SaveConfig(cmd.privateConfig)
 
 			if err != nil {
@@ -194,7 +164,20 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	cmd.deployChart()
+	if cmd.flags.deploy {
+		cmd.deployChart()
+	} else {
+		cmd.initHelm()
+
+		// Check if we find a running release pod
+		pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl, cmd.privateConfig)
+
+		if err != nil {
+			log.Fatalf("Couldn't find running devspace pod: %s", err.Error())
+		}
+
+		cmd.pod = pod
+	}
 
 	if cmd.flags.sync {
 		cmd.startSync()
@@ -207,443 +190,85 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.enterTerminal()
 }
 
-func (cmd *UpCmd) buildDockerfile() {
-	cmd.initRegistry()
+func (cmd *UpCmd) shouldRebuild(buildFlagChanged bool) bool {
+	mustRebuild := true
+	dockerfileInfo, statErr := os.Stat(cmd.workdir + "/Dockerfile")
+	var dockerfileModTime time.Time
 
-	//registrySecretName := cmd.privateConfig.Registry.Release.Name + "-docker-registry-secret"
-	//registryHostname := cmd.privateConfig.Registry.Release.Name + "-docker-registry." + cmd.privateConfig.Registry.Release.Namespace + ".svc.cluster.local:5000"
-	buildNamespace := cmd.privateConfig.Release.Namespace
-	randString, _ := randutil.GenerateRandomString(12)
-	buildID := strings.ToLower(randString)
-	buildPod := &k8sv1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "devspace-build-",
-			Labels: map[string]string{
-				"devspace-build-id": buildID,
-			},
-		},
-		Spec: k8sv1.PodSpec{
-			Containers: []k8sv1.Container{
-				{
-					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:debug-60bdda4c49b699f5a21545cc8a050a5f3953223f",
-					ImagePullPolicy: k8sv1.PullIfNotPresent,
-					Command: []string{
-						"/busybox/sleep",
-					},
-					Args: []string{
-						"36000",
-					},
-					VolumeMounts: []k8sv1.VolumeMount{
-						{
-							Name:      pullSecretName,
-							MountPath: "/root/.docker",
-						},
-					},
-				},
-			},
-			Volumes: []k8sv1.Volume{
-				{
-					Name: pullSecretName,
-					VolumeSource: k8sv1.VolumeSource{
-						Secret: &k8sv1.SecretVolumeSource{
-							SecretName: pullSecretName,
-							Items: []k8sv1.KeyToPath{
-								{
-									Key:  k8sv1.DockerConfigJsonKey,
-									Path: "config.json",
-								},
-							},
-						},
-					},
-				},
-			},
-			RestartPolicy: k8sv1.RestartPolicyOnFailure,
-		},
-	}
-
-	deleteBuildPod := func() {
-		gracePeriod := int64(3)
-
-		deleteErr := cmd.kubectl.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
-			GracePeriodSeconds: &gracePeriod,
-		})
-
-		if deleteErr != nil {
-			log.With(deleteErr).Errorf("Failed to delete build pod: %s", deleteErr.Error())
+	if statErr != nil {
+		if len(cmd.privateConfig.Release.LatestImage) == 0 {
+			log.Fatalf("Dockerfile missing: %s", statErr.Error())
+		} else {
+			mustRebuild = false
 		}
-	}
+	} else {
+		dockerfileModTime = dockerfileInfo.ModTime()
 
-	intr := interrupt.New(nil, deleteBuildPod)
+		// When user has not used -b or --build flags
+		if buildFlagChanged == false {
+			if len(cmd.privateConfig.Release.LatestBuild) != 0 {
+				latestBuildTime, _ := time.Parse(time.RFC3339Nano, cmd.privateConfig.Release.LatestBuild)
 
-	err := intr.Run(func() error {
-		buildPodCreated, buildPodCreateErr := cmd.kubectl.Core().Pods(buildNamespace).Create(buildPod)
-
-		if buildPodCreateErr != nil {
-			return fmt.Errorf("Unable to create build pod: %s", buildPodCreateErr.Error())
-		}
-
-		readyWaitTime := 2 * 60 * time.Second
-		readyCheckInterval := 5 * time.Second
-		buildPodReady := false
-
-		log.StartWait("Waiting for kaniko build pod to start")
-
-		for readyWaitTime > 0 {
-			buildPod, _ = cmd.kubectl.Core().Pods(buildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
-
-			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
-				buildPodReady = true
-				break
+				// only rebuild Docker image when Dockerfile has changed since latest build
+				mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
 			}
-
-			time.Sleep(readyCheckInterval)
-			readyWaitTime = readyWaitTime - readyCheckInterval
 		}
+	}
 
-		log.StopWait()
-		log.Done("Kaniko build pod started")
+	cmd.privateConfig.Release.LatestBuild = dockerfileModTime.Format(time.RFC3339Nano)
 
-		if !buildPodReady {
-			return fmt.Errorf("Unable to start build pod")
-		}
+	return mustRebuild
+}
 
-		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(cmd.workdir)
+func (cmd *UpCmd) buildImage() {
+	cmd.initHelm()
 
-		if ignoreRuleErr != nil {
-			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
-		}
-
-		buildContainer := &buildPod.Spec.Containers[0]
-
-		log.StartWait("Uploading files to build container")
-		err := synctool.CopyToContainer(cmd.kubectl, buildPod, buildContainer, cmd.workdir, "/src", ignoreRules)
+	if cmd.flags.initRegistry && cmd.flags.imageDestination == "" {
+		log.StartWait("Initializing docker registry")
+		latestImageHostname, latestImageIP, err := registry.InitDockerRegistry(cmd.kubectl, cmd.helm, cmd.privateConfig, cmd.dsConfig)
 		log.StopWait()
 
 		if err != nil {
-			return fmt.Errorf("Error uploading files to container: %s", err.Error())
+			log.Fatalf("Docker registry error: %s", err.Error())
 		}
 
-		log.Done("Uploaded files to container")
-		log.StartWait("Building container image")
+		cmd.latestImageHostname = latestImageHostname
+		cmd.latestImageIP = latestImageIP
 
-		containerBuildPath := "/src/" + filepath.Base(cmd.workdir)
-		exitChannel := make(chan error)
+		log.Done("Docker registry started")
+	}
 
-		destination := cmd.latestImageHostname
-		if cmd.flags.imageDestination != "" {
-			destination = cmd.flags.imageDestination
-		}
+	imageDestination := cmd.latestImageHostname
 
-		stdin, stdout, stderr, execErr := kubectl.Exec(cmd.kubectl, buildPod, buildContainer.Name, []string{
-			"/kaniko/executor",
-			"--dockerfile=" + containerBuildPath + "/Dockerfile",
-			"--context=dir://" + containerBuildPath,
-			"--destination=" + destination,
-			"--insecure-skip-tls-verify",
-			"--single-snapshot",
-		}, false, exitChannel)
+	if cmd.flags.imageDestination != "" {
+		imageDestination = cmd.flags.imageDestination
+	}
 
-		stdin.Close()
-
-		if execErr != nil {
-			return fmt.Errorf("Failed to start image building: %s", execErr.Error())
-		}
-
-		lastKanikoOutput := cmd.formatKanikoOutput(stdout, stderr)
-		exitError := <-exitChannel
-
-		log.StopWait()
-
-		if exitError != nil {
-			return fmt.Errorf("Error: %s, Last Kaniko Output: %s", exitError.Error(), lastKanikoOutput)
-		}
-
-		log.Done("Done building image")
-
-		return nil
-	})
+	err := kaniko.BuildDockerfile(cmd.kubectl, cmd.privateConfig.Release.Namespace, imageDestination, registry.PullSecretName)
 
 	if err != nil {
 		log.Fatalf("Image building failed: %s", err.Error())
 	}
 }
 
-// KanikoOutputFormat a regex and a replacement for outputs
-type KanikoOutputFormat struct {
-	Regex       *regexp.Regexp
-	Replacement string
-}
-
-func (cmd *UpCmd) formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) string {
-	wg := &sync.WaitGroup{}
-	lastLine := ""
-	outputFormats := []KanikoOutputFormat{
-		{
-			Regex:       regexp.MustCompile(`.* msg="Downloading base image (.*)"`),
-			Replacement: " FROM $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="(Unpacking layer: \d+)"`),
-			Replacement: ">> $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="cmd: Add \[(.*)\]"`),
-			Replacement: " ADD $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="cmd: copy \[(.*)\]"`),
-			Replacement: " COPY $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="dest: (.*)"`),
-			Replacement: ">> destination: $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="args: \[-c (.*)\]"`),
-			Replacement: " RUN $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Replacing CMD in config with \[(.*)\]"`),
-			Replacement: " CMD $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Changed working directory to (.*)"`),
-			Replacement: " WORKDIR $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Taking snapshot of full filesystem..."`),
-			Replacement: " Packaging layers",
-		},
-	}
-
-	kanikoLogRegex := regexp.MustCompile(`^time="(.*)" level=(.*) msg="(.*)"`)
-	buildPrefix := "build >"
-
-	printFormattedOutput := func(originalLine string) {
-		line := []byte(originalLine)
-
-		for _, outputFormat := range outputFormats {
-			line = outputFormat.Regex.ReplaceAll(line, []byte(outputFormat.Replacement))
-		}
-
-		lineString := string(line)
-
-		if len(line) != len(originalLine) {
-			log.Done(buildPrefix + lineString)
-		} else if kanikoLogRegex.Match(line) == false {
-			log.Info(buildPrefix + ">> " + lineString)
-		}
-
-		lastLine = string(kanikoLogRegex.ReplaceAll([]byte(originalLine), []byte("$3")))
-	}
-
-	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
-	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
-
-	wg.Wait()
-
-	return lastLine
-}
-
-func (cmd *UpCmd) initRegistry() {
-	if cmd.flags.imageDestination != "" {
-		return
-	}
-
-	log.StartWait("Initializing helm client")
-	err := cmd.initHelm()
-	log.StopWait()
-
-	if err != nil {
-		log.Fatalf("Error initializing helm client: %s", err.Error())
-	}
-
-	log.Done("Initialized helm client")
-
-	installRegistry := cmd.flags.initRegistry
-
-	if installRegistry {
-		log.StartWait("Initializing docker registry")
+func (cmd *UpCmd) initHelm() {
+	if cmd.helm == nil {
+		log.StartWait("Initializing helm client")
 		defer log.StopWait()
 
-		registryReleaseName := cmd.privateConfig.Registry.Release.Name
-		registryReleaseNamespace := cmd.privateConfig.Registry.Release.Namespace
-		registryConfig := cmd.dsConfig.Registry
-		registrySecrets, secretsExist := registryConfig["secrets"]
-
-		if !secretsExist {
-			//TODO
-		}
-		_, secretIsMap := registrySecrets.(map[interface{}]interface{})
-
-		if !secretIsMap {
-			//TODO
-		}
-		_, err := cmd.helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", &registryConfig)
-
-		if err != nil {
-			log.Panicf("Unable to initialize docker registry: %s", err.Error())
-		}
-
-		htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
-		htpasswdSecret, err := cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
-
-		if err != nil {
-			log.Panicf("Unable to retrieve secret for docker registry: %s", err.Error())
-		}
-
-		if htpasswdSecret == nil || htpasswdSecret.Data == nil {
-			htpasswdSecret = &k8sv1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: htpasswdSecretName,
-				},
-				Data: map[string][]byte{},
-			}
-		}
-
-		oldHtpasswdData := htpasswdSecret.Data["htpasswd"]
-		newHtpasswdData := htpasswd.HashedPasswords{}
-
-		if len(oldHtpasswdData) != 0 {
-			oldHtpasswdDataBytes := []byte(oldHtpasswdData)
-			newHtpasswdData, _ = htpasswd.ParseHtpasswd(oldHtpasswdDataBytes)
-		}
-
-		registryUser := cmd.privateConfig.Registry.User
-		err = newHtpasswdData.SetPassword(registryUser.Username, registryUser.Password, htpasswd.HashBCrypt)
-
-		if err != nil {
-			log.Panicf("Unable to set password in htpasswd: %s", err.Error())
-		}
-
-		newHtpasswdDataBytes := newHtpasswdData.Bytes()
-
-		htpasswdSecret.Data["htpasswd"] = newHtpasswdDataBytes
-
-		_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
-
-		if err != nil {
-			_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Create(htpasswdSecret)
-		} else {
-			_, err = cmd.kubectl.Core().Secrets(registryReleaseNamespace).Update(htpasswdSecret)
-		}
-
-		if err != nil {
-			log.Panicf("Unable to update htpasswd secret: %s", err.Error())
-		}
-
-		registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(cmd.privateConfig.Registry.User.Username + ":" + cmd.privateConfig.Registry.User.Password))
-		registryServiceName := registryReleaseName + "-docker-registry"
-
-		var registryService *k8sv1.Service
-
-		maxServiceWaiting := 60 * time.Second
-		serviceWaitingInterval := 3 * time.Second
-
-		log.StopWait()
-		log.Done("Initialized docker registry")
-
-		log.StartWait("Waiting for docker registry to start")
-
-		for true {
-			registryService, err = cmd.kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
-
-			if err != nil {
-				log.Panic(err)
-			}
-
-			if len(registryService.Spec.ClusterIP) > 0 {
-				break
-			}
-
-			time.Sleep(serviceWaitingInterval)
-			maxServiceWaiting = maxServiceWaiting - serviceWaitingInterval
-
-			if maxServiceWaiting <= 0 {
-				log.Panic("Timeout waiting for registry service to start")
-			}
-		}
-
-		log.StopWait()
-		log.Done("Docker registry started")
-
-		registryPort := 5000
-		registryIP := registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort)
-		registryHostname := registryServiceName + "." + registryReleaseNamespace + ".svc.cluster.local:" + strconv.Itoa(registryPort)
-		latestImageTag, _ := randutil.GenerateRandomString(10)
-
-		cmd.latestImageHostname = registryHostname + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
-		cmd.latestImageIP = registryIP + "/" + cmd.privateConfig.Release.Name + ":" + latestImageTag
-
-		pullSecretDataValue := []byte(`{
-		"auths": {
-			"` + registryHostname + `": {
-				"auth": "` + registryAuthEncoded + `",
-				"email": "noreply-devspace@covexo.com"
-			},
-			
-			"` + registryIP + `": {
-				"auth": "` + registryAuthEncoded + `",
-				"email": "noreply-devspace@covexo.com"
-			}
-		}
-	}`)
-
-		pullSecretData := map[string][]byte{}
-		pullSecretDataKey := k8sv1.DockerConfigJsonKey
-		pullSecretData[pullSecretDataKey] = pullSecretDataValue
-
-		registryPullSecret := &k8sv1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: pullSecretName,
-			},
-			Data: pullSecretData,
-			Type: k8sv1.SecretTypeDockerConfigJson,
-		}
-
-		_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Get(pullSecretName, metav1.GetOptions{})
-
-		if err != nil {
-			_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Create(registryPullSecret)
-		} else {
-			_, err = cmd.kubectl.Core().Secrets(cmd.privateConfig.Release.Namespace).Update(registryPullSecret)
-		}
-
-		if err != nil {
-			log.Panicf("Unable to update image pull secret: %s", err.Error())
-		}
-	}
-
-}
-
-func (cmd *UpCmd) initHelm() error {
-	if cmd.helm == nil {
 		client, err := helmClient.NewClient(cmd.kubectl, false)
 
 		if err != nil {
-			return err
+			log.Fatalf("Error initializing helm client: %s", err.Error())
 		}
 
 		cmd.helm = client
+		log.Done("Initialized helm client")
 	}
-
-	return nil
 }
 
 func (cmd *UpCmd) deployChart() {
-	if cmd.helm == nil {
-		log.StartWait("Initializing helm client")
-		err := cmd.initHelm()
-		log.StopWait()
-
-		if err != nil {
-			log.Panic(err)
-		}
-
-		log.Done("Initialized helm client")
-	}
-
+	cmd.initHelm()
 	log.StartWait("Deploying helm chart")
 
 	releaseName := cmd.privateConfig.Release.Name
@@ -726,6 +351,7 @@ func (cmd *UpCmd) deployChart() {
 		} else {
 			log.Info("Waiting for release to be deployed.")
 		}
+
 		time.Sleep(2 * time.Second)
 	}
 
