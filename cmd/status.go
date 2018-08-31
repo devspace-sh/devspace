@@ -10,6 +10,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/daviddengcn/go-colortext"
 	"github.com/spf13/cobra"
+	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -288,4 +289,47 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	}
 
 	return nil, fmt.Errorf("Devspace helm release %s not found", cmd.privateConfig.Release.Name)
+}
+
+func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset, privateConfig *v1.PrivateConfig) (*k8sv1.Pod, error) {
+	releases, err := helm.Client.ListReleases()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(releases.Releases) == 0 {
+		return nil, errors.New("No release found")
+	}
+
+	for _, release := range releases.Releases {
+		if release.GetName() == privateConfig.Release.Name {
+			if release.Info.Status.Code.String() != "DEPLOYED" {
+				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", privateConfig.Release.Name, release.Info.Status.Code.String())
+			}
+
+			pods, err := client.Core().Pods(privateConfig.Release.Namespace).List(metav1.ListOptions{
+				LabelSelector: "release=" + privateConfig.Release.Name,
+			})
+
+			if err != nil {
+				return nil, err
+			}
+
+			if len(pods.Items) == 0 {
+				return nil, errors.New("No devspace pod found")
+			}
+
+			for _, pod := range pods.Items {
+				// Print Describe on devspace error
+				if kubectl.GetPodStatus(&pod) == "Running" {
+					return &pod, nil
+				}
+			}
+
+			return nil, errors.New("No running devspace pod found")
+		}
+	}
+
+	return nil, fmt.Errorf("Devspace helm release %s not found", privateConfig.Release.Name)
 }

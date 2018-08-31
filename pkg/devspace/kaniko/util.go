@@ -9,8 +9,8 @@ import (
 	"github.com/covexo/devspace/pkg/util/processutil"
 )
 
-// KanikoOutputFormat a regex and a replacement for outputs
-type KanikoOutputFormat struct {
+// OutputFormat a regex and a replacement for outputs
+type OutputFormat struct {
 	Regex       *regexp.Regexp
 	Replacement string
 }
@@ -18,7 +18,7 @@ type KanikoOutputFormat struct {
 func formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) string {
 	wg := &sync.WaitGroup{}
 	lastLine := ""
-	outputFormats := []KanikoOutputFormat{
+	outputFormats := []OutputFormat{
 		{
 			Regex:       regexp.MustCompile(`.* msg="Downloading base image (.*)"`),
 			Replacement: " FROM $1",

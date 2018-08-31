@@ -49,6 +49,7 @@ type UpCmdFlags struct {
 	build            bool
 	shell            string
 	sync             bool
+	deploy           bool
 	portforwarding   bool
 	noSleep          bool
 	imageDestination string
@@ -61,6 +62,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistry:   true,
 	build:          true,
 	sync:           true,
+	deploy:         true,
 	portforwarding: true,
 	noSleep:        false,
 }
@@ -96,6 +98,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
 	cobraCmd.Flags().StringVar(&cmd.flags.imageDestination, "image-destination", "", "Choose image destination")
 }
@@ -161,7 +164,20 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	cmd.deployChart()
+	if cmd.flags.deploy {
+		cmd.deployChart()
+	} else {
+		cmd.initHelm()
+
+		// Check if we find a running release pod
+		pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl, cmd.privateConfig)
+
+		if err != nil {
+			log.Fatalf("Couldn't find running devspace pod: %s", err.Error())
+		}
+
+		cmd.pod = pod
+	}
 
 	if cmd.flags.sync {
 		cmd.startSync()
