@@ -91,7 +91,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		return nil, tillerErr
 	}
 
-	var tunnelErr error
 	var tunnel *kube.Tunnel
 
 	tunnelWaitTime := 2 * 60 * time.Second
@@ -100,21 +99,20 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	log.StartWait("Waiting for tiller to become ready")
 	defer log.StopWait()
 
+	// Next we wait till we can establish a tunnel to the running pod
 	for tunnelWaitTime > 0 {
-		tunnel, tunnelErr = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
+		tunnel, err = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
 
-		if tunnelErr == nil || tunnelWaitTime <= 0 {
+		if err == nil {
 			break
+		}
+
+		if tunnelWaitTime <= 0 {
+			return nil, err
 		}
 
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
 		time.Sleep(tunnelCheckInterval)
-	}
-
-	log.Done("Portforwarding to tiller successfully established")
-
-	if tunnelErr != nil {
-		return nil, tunnelErr
 	}
 
 	helmWaitTime := 2 * 60 * time.Second
@@ -124,6 +122,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
 		k8shelm.ConnectTimeout(int64(helmCheckInterval)),
 	}
+
 	client := k8shelm.NewClient(helmOptions...)
 	var tillerError error
 
@@ -133,6 +132,9 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		if tillerError == nil || helmWaitTime < 0 {
 			break
 		}
+
+		helmWaitTime = helmWaitTime - helmCheckInterval
+		time.Sleep(helmCheckInterval)
 	}
 
 	log.StopWait()
@@ -294,14 +296,17 @@ func IsTillerDeployed(kubectlClient *kubernetes.Clientset, privateConfig *v1.Pri
 // DeleteTiller clears the tiller server, the service account and role binding
 func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) error {
 	errs := make([]error, 0, 1)
+	propagationPolicy := metav1.DeletePropagationForeground
 
-	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{})
+	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
+		PropagationPolicy: &propagationPolicy,
+	})
 
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	err = kubectlClient.CoreV1().ServiceAccounts(privateConfig.Cluster.TillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{})
+	err = kubectlClient.CoreV1().ServiceAccounts(privateConfig.Cluster.TillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 	if err != nil {
 		errs = append(errs, err)
@@ -318,13 +323,13 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.Private
 	}
 
 	for key, value := range deleteRoleNames {
-		err = kubectlClient.RbacV1beta1().Roles(deleteRoleNamespaces[key]).Delete(value, &metav1.DeleteOptions{})
+		err = kubectlClient.RbacV1beta1().Roles(deleteRoleNamespaces[key]).Delete(value, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 		if err != nil {
 			errs = append(errs, err)
 		}
 
-		err = kubectlClient.RbacV1beta1().RoleBindings(deleteRoleNamespaces[key]).Delete(value+"-binding", &metav1.DeleteOptions{})
+		err = kubectlClient.RbacV1beta1().RoleBindings(deleteRoleNamespaces[key]).Delete(value+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 		if err != nil {
 			errs = append(errs, err)
