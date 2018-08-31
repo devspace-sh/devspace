@@ -94,9 +94,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Failf("Error deleting docker registry: %s", err.Error())
 
-			if cmd.shouldContinue() == false {
-				return
-			}
+			// if cmd.shouldContinue() == false {
+			// 	return
+			// }
 		} else {
 			log.Done("Successfully deleted docker registry")
 		}
