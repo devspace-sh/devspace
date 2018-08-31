@@ -326,7 +326,7 @@ func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
 }
 
 func cleanupSyncLogs() error {
-	deleteTreshold := 10 // 1 Week
+	deleteTreshold := 60 * 60 * 24 * 7 // 1 Week
 	currentTime := int(time.Now().Unix())
 	err := os.Rename(log.Logdir+"sync.log", log.Logdir+"sync.log."+strconv.Itoa(currentTime))
 
