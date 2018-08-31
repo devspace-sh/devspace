@@ -68,6 +68,17 @@ func (s *SyncConfig) Start() error {
 	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
 	if syncLog == nil {
+		// Check if syncLog already exists
+		stat, err := os.Stat(log.Logdir + "sync.log")
+
+		if err == nil || stat != nil {
+			err = cleanupSyncLogs()
+
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
+
 		syncLog = log.GetFileLogger("sync")
 		syncLog.SetLevel(logrus.InfoLevel)
 	}

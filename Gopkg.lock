@@ -1628,8 +1628,12 @@
     "k8s.io/helm/pkg/storage/driver",
     "k8s.io/kubernetes/pkg/api/legacyscheme",
     "k8s.io/kubernetes/pkg/apis/core",
+    "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset",
     "k8s.io/kubernetes/pkg/kubectl/util/term",
+    "k8s.io/kubernetes/pkg/printers",
+    "k8s.io/kubernetes/pkg/printers/internalversion",
     "k8s.io/kubernetes/pkg/util/interrupt",
+    "k8s.io/kubernetes/pkg/util/node",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -234,6 +234,12 @@ func (cmd *ResetCmd) deleteRelease() error {
 			return err
 		}
 
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, cmd.privateConfig)
+
+		if isDeployed == false {
+			return nil
+		}
+
 		cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)
 
 		if err != nil {
@@ -256,6 +262,12 @@ func (cmd *ResetCmd) deleteRegistry() error {
 
 		if err != nil {
 			return err
+		}
+
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, cmd.privateConfig)
+
+		if isDeployed == false {
+			return nil
 		}
 
 		cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)

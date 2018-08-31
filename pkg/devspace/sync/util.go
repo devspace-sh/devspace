@@ -324,3 +324,36 @@ func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
 
 	return nil, nil
 }
+
+func cleanupSyncLogs() error {
+	deleteTreshold := 10 // 1 Week
+	currentTime := int(time.Now().Unix())
+	err := os.Rename(log.Logdir+"sync.log", log.Logdir+"sync.log."+strconv.Itoa(currentTime))
+
+	if err != nil {
+		return err
+	}
+
+	// We delete everything older than a week
+	files, err := ioutil.ReadDir(log.Logdir)
+
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() == false && strings.Index(f.Name(), "sync.log.") == 0 {
+			splittedName := strings.Split(f.Name(), ".")
+
+			if len(splittedName) == 3 {
+				createdAt, err := strconv.Atoi(splittedName[2])
+
+				if err == nil && currentTime-createdAt > deleteTreshold {
+					os.Remove(log.Logdir + f.Name())
+				}
+			}
+		}
+	}
+
+	return nil
+}
