@@ -8,6 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
+// Logdir specifies the relative path to the devspace logs
+var Logdir = "./.devspace/logs/"
+
 var logs = map[string]Logger{}
 var runtimeErrorHandlersOverriden bool
 
@@ -25,11 +28,9 @@ func GetFileLogger(filename string) Logger {
 		}
 		newLogger.logger.Formatter = &logrus.JSONFormatter{}
 
-		logdir := "./.devspace/logs/"
+		os.MkdirAll(Logdir, os.ModePerm)
 
-		os.MkdirAll(logdir, os.ModePerm)
-
-		logFile, err := os.OpenFile(logdir+filename+".log", os.O_APPEND|os.O_CREATE|os.O_RDWR, os.ModePerm)
+		logFile, err := os.OpenFile(Logdir+filename+".log", os.O_APPEND|os.O_CREATE|os.O_RDWR, os.ModePerm)
 
 		if err != nil {
 			newLogger.Warnf("Unable to open " + filename + " log file. Will log to stdout.")

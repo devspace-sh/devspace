@@ -689,7 +689,7 @@ func (cmd *UpCmd) deployChart() {
 			var selectedPod k8sv1.Pod
 
 			for i, pod := range podList.Items {
-				podRevision, podHasRevision := pod.Labels["revision"]
+				podRevision, podHasRevision := pod.Annotations["revision"]
 				hasHigherRevision := (i == 0)
 
 				if !hasHigherRevision && podHasRevision {
@@ -705,11 +705,11 @@ func (cmd *UpCmd) deployChart() {
 					highestRevision, _ = strconv.Atoi(podRevision)
 				}
 			}
-			_, hasRevision := selectedPod.Labels["revision"]
+			_, hasRevision := selectedPod.Annotations["revision"]
 
 			if !hasRevision || highestRevision == releaseRevision {
 				if !hasRevision {
-					log.Warn("Found pod without revision. Use label 'revision' for your pods to avoid this warning.")
+					log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
 				}
 
 				cmd.pod = &selectedPod

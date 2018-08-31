@@ -16,7 +16,8 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "devspace",
 	Short: "Welcome to the DevSpace CLI!",
-	Long: `With a DevSpace you can program, build and execute cloud-native applications directly inside a Kubernetes cluster. Start your DevSpace now with:
+	Long: `With a DevSpace you can program, build and execute cloud-native applications
+	 directly inside a Kubernetes cluster. Start your DevSpace now with:
 
 	devspace up`,
 }
