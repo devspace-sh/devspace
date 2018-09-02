@@ -45,8 +45,8 @@ type PrivateConfig struct {
 type Release struct {
 	Name        string `yaml:"name"`
 	Namespace   string `yaml:"namespace"`
-	LatestBuild string `yaml:"latestBuild"`
-	LatestImage string `yaml:"latestImage"`
+	LatestBuild string `yaml:"latestBuild,omitempty"`
+	LatestImage string `yaml:"latestImage,omitempty"`
 }
 
 //RegistryAccess sets the access from a user to a release
