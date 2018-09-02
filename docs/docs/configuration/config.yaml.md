@@ -2,7 +2,7 @@
 title: /.devspace/config.yaml
 ---
 
-This is an example of a `.devspace/config.yaml`
+This is an example of a [.devspace/config.yaml](#)
 ```yaml
 version: v1
 portForwarding:
@@ -24,7 +24,7 @@ registry:
   secrets:
     htpasswd: ""
 ```
-A `.devspace/config.yaml` contains any public/shared configuration for running a DevSpace for the respective project. It is highly recommended to put this file under version control (e.g. git add).
+A [.devspace/config.yaml](#) contains any public/shared configuration for running a DevSpace for the respective project. It is highly recommended to put this file under version control (e.g. git add).
 
 ## Port Forwarding
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:

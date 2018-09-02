@@ -15,6 +15,10 @@
 @media only screen and (min-width: 1500px) {
 }
 
+body {
+    overflow-x: hidden;
+}
+
 .footer-logo {
     display: block;
     text-align: center;
@@ -28,15 +32,24 @@
     padding: 1px 0;
 }
 
-.docs-prevnext .button {
-    background: #233366;
-    color: #ffffff;
+.toc .toggleNav ul li.navListItemActive a {
     font-weight: 600;
-    border: none;
+    color: #ff8800;
+    border-left: 4px solid #ff8800;
+    margin-left: -8px;
+    padding-left: 4px;
+}
+
+.docs-prevnext .button {
+    font-weight: 600;
+    color: #ff8800;
+    border: 2px solid #ff8800;
 }
 
 .docs-prevnext .button:hover {
-    background-color: #4ac9f5;
+    background-color: #ff8800;
+    border-color: transparent;
+    color: #fff;
 }
 
 h1,
@@ -55,14 +68,14 @@ h3 {
     font-size: 18px;
 }
 
-.post a {
+.post a:not(.hash-link) {
     padding: 0 0.2em;
     font-weight: 600;
     color: #3F51B5;
     background: #4ac9f521;
 }
 
-.post a:hover {
+.post a:not(.hash-link):hover {
     color: #fff;
     background: #4ac9f5;
 }
@@ -71,10 +84,18 @@ h3 {
     margin-top: -0.5em;
 }
 
-.post .hljs {
+.post ul ul {
+    margin-top: 0.3em;
+}
+
+.post .hljs,
+.post code {
     color: #fff;
     background: #233366;
-    margin: 0 -20px;
+}
+
+.post .hljs {
+    margin: 0 -25px;
 }
 
 .post .hljs-string,

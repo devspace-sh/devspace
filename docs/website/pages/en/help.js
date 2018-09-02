@@ -22,19 +22,16 @@ class Help extends React.Component {
     let language = this.props.language || '';
     const supportLinks = [
       {
-        content: `Learn more using the [documentation on this site.](${docUrl(
-          'getting-started/quickstart.html',
-          language
-        )})`,
-        title: 'Browse Docs',
+        title: 'Quickstart Guide',
+        content: `See how to [get started with your DevSpace](${docUrl('getting-started/quickstart.html', language)}).`,
       },
       {
-        content: 'Ask questions about the documentation and project',
-        title: 'Join the community',
+        title: 'FAQ',
+        content: 'Check out the **[Frequently Asked Questions (FAQ)](/docs/getting-started/faq)**',
       },
       {
-        content: "Find out what's new with this project",
-        title: 'Stay up to date',
+        title: 'Further Questions?',
+        content: "Feel free to open a **[new issue on GitHub](https://github.com/covexo/devspace/issues/new?labels=kind%2Fquestion&title=Question:)**",
       },
     ];
 
@@ -43,10 +40,13 @@ class Help extends React.Component {
         <Container className="mainContainer documentContainer postContainer">
           <div className="post">
             <header className="postHeader">
-              <h1>Need help?</h1>
+              <h1>Need Help?</h1>
             </header>
-            <p>This project is maintained by a dedicated group of people.</p>
+            <p>Follow these links for community support:</p>
             <GridBlock contents={supportLinks} layout="threeColumn" />
+            <br />
+            <h2>Professional Support</h2>
+            <p>The DevSpace CLI is an open source project sponsored and maintained by the covexo GmbH. Our team offers DevSpace hosting as well as support and services around Kubernetes, Docker and DevSpaces. If you need professional support, get in touch with us: sales@covexo.com</p>
           </div>
         </Container>
       </div>
