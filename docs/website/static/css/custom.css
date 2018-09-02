@@ -14,3 +14,41 @@
 
 @media only screen and (min-width: 1500px) {
 }
+
+.footer-logo {
+    display: block;
+    text-align: center;
+}
+
+h1,
+h2,
+h3,
+h4,
+.postHeader {
+    margin-bottom: 6px !important;
+}
+
+h2 {
+    margin-top: 26px;
+}
+
+h3 {
+    font-size: 18px;
+}
+
+a {
+    font-weight: 600;
+    color: #3f51b5;
+}
+
+a:hover {
+    color: #4AC9F5;
+}
+
+.onPageNav ul ul li {
+    margin-top: 0em;
+}
+
+article ul {
+    margin-top: -0.5em;
+}

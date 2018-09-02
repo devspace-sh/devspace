@@ -1,6 +1,6 @@
 ![DevSpace Workflow](docs/website/static/img/header-readme.svg)
 
-# DevSpace CLI - Cloud-native Development with Kubernetes
+# DevSpace CLI - Cloud-Native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 
