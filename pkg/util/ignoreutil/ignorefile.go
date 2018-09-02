@@ -25,7 +25,7 @@ func GetIgnoreRules(rootDirectory string) ([]string, error) {
 			return nil, err
 		}
 		pathPrefix := strings.Replace(strings.TrimPrefix(filepath.Dir(ignoreFile), rootDirectory), "\\", "/", -1)
-		ignoreLines := strings.Split(string(ignoreBytes), "\r\n")
+		ignoreLines := strings.Split(string(ignoreBytes), "\n")
 
 		for _, ignoreRule := range ignoreLines {
 			ignoreRule = strings.Trim(ignoreRule, " ")
