@@ -20,6 +20,25 @@
     text-align: center;
 }
 
+.onPageNav ul ul li {
+    margin-top: 0em;
+}
+
+.toc .toggleNav ul li a {
+    padding: 1px 0;
+}
+
+.docs-prevnext .button {
+    background: #233366;
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+}
+
+.docs-prevnext .button:hover {
+    background-color: #4ac9f5;
+}
+
 h1,
 h2,
 h3,
@@ -36,19 +55,42 @@ h3 {
     font-size: 18px;
 }
 
-a {
+.post a {
+    padding: 0 0.2em;
     font-weight: 600;
-    color: #3f51b5;
+    color: #3F51B5;
+    background: #4ac9f521;
 }
 
-a:hover {
-    color: #4AC9F5;
+.post a:hover {
+    color: #fff;
+    background: #4ac9f5;
 }
 
-.onPageNav ul ul li {
-    margin-top: 0em;
-}
-
-article ul {
+.post ul {
     margin-top: -0.5em;
+}
+
+.post .hljs {
+    color: #fff;
+    background: #233366;
+    margin: 0 -20px;
+}
+
+.post .hljs-string,
+.post .hljs-literal,
+.post .hljs-number {
+    color: rgb(197, 217, 255);
+}
+
+.post .hljs-built_in {
+    color: #fff;
+}
+
+.post .hljs-comment {
+    color: #a9e4f8;
+}
+
+.post .hljs-variable {
+    color: #4ac9f5;
 }

@@ -58,7 +58,7 @@ const Logo = props => (
 
 const ProjectTitle = props => (
   <h2 className="projectTitle">
-    DevSpace Documentation
+    {siteConfig.title}
     <small>{siteConfig.tagline}</small>
   </h2>
 );
