@@ -10,4 +10,4 @@ Use `devspace reset` to reset your project to its original state. This will:
 1. shutdown your DevSpace (i.e. `devspace down`),
 2. remove the Docker registry from your Kubernetes cluster,
 3. remove the Tiller server from your Kubernetes cluster,
-4. and remove the `.devspace/` folder, the `chart/` folder and the `Dockerfile` from your project.
+4. and remove the [.devspace/](/docs/configuration/config.yaml.html) folder, the [chart/](/docs/configuration/chart.html) folder and the [/Dockerfile](/docs/configuration/dockerfile.html) from your project.

@@ -37,6 +37,15 @@ Here you can find some links to the most important pages of our documentation:
 - [Configuration Specification](https://devspace.covexo.com/docs/configuration/dockerfile.html)
 - [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html)
 
+## Architecture
+Architectually, the DevSpace CLI is a client-side software that interacts with services within your Kubernetes cluster. While the DevSpace CLI can deploy required services (e.g. image registry, Tiller server, Kaniko build pods) automatically, you can also configure it to use already deployed or externally hosted services.
+
+![DevSpace CLI Architecture](docs/website/static/img/devspace-architecture.svg)
+
+For a more detailed description of the internals of the DevSpace CLI, take a look at the [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html).
+
+**Note:** Any interaction between your local computer and your DevSpace is passed through your Kubernetes API server, so you should ensure that your API server is protected with a suitable configuration for using TLS.
+
 ## Contributing
 As any open source projects, we are looking forward to your contributions.
 

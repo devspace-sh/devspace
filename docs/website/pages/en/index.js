@@ -80,9 +80,8 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle />
           <PromoSection>
-            <Button href="#try">Try It Out</Button>
-            <Button href={docUrl('doc1.html', language)}>Example Link</Button>
-            <Button href={docUrl('doc2.html', language)}>Example Link 2</Button>
+            <Button href="https://github.com/covexo/devspace">Source Code</Button>
+            <Button href={docUrl('getting-started/quickstart.html', language)}>Quickstart</Button>
           </PromoSection>
         </div>
       </SplashContainer>
