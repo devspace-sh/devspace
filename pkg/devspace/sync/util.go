@@ -19,11 +19,13 @@ import (
 
 // CopyToContainer copies a local folder or file to a container path
 func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
+	localSubPath := path.Dir(strings.Replace(LocalPath, "\\", "/", -1))
+
 	s := &SyncConfig{
 		Kubectl:      Kubectl,
 		Pod:          Pod,
 		Container:    Container,
-		WatchPath:    path.Dir(strings.Replace(LocalPath, "\\", "/", -1)),
+		WatchPath:    localSubPath,
 		DestPath:     ContainerPath,
 		ExcludePaths: ExcludePaths,
 	}
@@ -31,6 +33,14 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	syncLog = log.GetInstance()
 
 	if s.ExcludePaths != nil {
+		for i, excludePath := range s.ExcludePaths {
+			prefixedExcludePath := excludePath
+
+			if excludePath[0] != '/' {
+				prefixedExcludePath = "../" + prefixedExcludePath
+			}
+			s.ExcludePaths[i] = "/" + localSubPath + "/" + prefixedExcludePath
+		}
 		ignoreMatcher, err := compilePaths(s.ExcludePaths)
 
 		if err != nil {

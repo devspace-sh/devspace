@@ -122,7 +122,6 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		if !buildPodReady {
 			return fmt.Errorf("Unable to start build pod")
 		}
-
 		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(workdir)
 
 		if ignoreRuleErr != nil {
