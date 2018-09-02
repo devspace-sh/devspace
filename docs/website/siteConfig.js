@@ -21,7 +21,7 @@ const users = [
 ];
 
 const siteConfig = {
-  title: 'Documentation' /* title for your website */,
+  title: 'DevSpace Documentation' /* title for your website */,
   tagline: 'Cloud-Native Development with Kubernetes',
   url: 'https://devspace.covexo.com' /* your website url */,
   baseUrl: '/' /* base url for your project */,
