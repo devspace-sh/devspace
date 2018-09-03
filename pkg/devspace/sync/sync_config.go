@@ -27,17 +27,22 @@ const ErrorAck string = "ERROR"
 
 // SyncConfig holds the necessary information for the syncing process
 type SyncConfig struct {
-	Kubectl      *kubernetes.Clientset
-	Pod          *k8sv1.Pod
-	Container    *k8sv1.Container
-	WatchPath    string
-	DestPath     string
-	ExcludePaths []string
+	Kubectl              *kubernetes.Clientset
+	Pod                  *k8sv1.Pod
+	Container            *k8sv1.Container
+	WatchPath            string
+	DestPath             string
+	ExcludePaths         []string
+	DownloadExcludePaths []string
+	UploadExcludePaths   []string
 
 	fileIndex *fileIndex
 
-	ignoreMatcher gitignore.IgnoreParser
-	log           *logrus.Logger
+	ignoreMatcher         gitignore.IgnoreParser
+	downloadIgnoreMatcher gitignore.IgnoreParser
+	uploadIgnoreMatcher   gitignore.IgnoreParser
+
+	log *logrus.Logger
 
 	upstream   *upstream
 	downstream *downstream
@@ -54,8 +59,8 @@ func (s *SyncConfig) Logln(line interface{}) {
 }
 
 // Error handles a sync error with context
-func (s *SyncConfig) Error(line interface{}) {
-	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Error(line)
+func (s *SyncConfig) Error(err error) {
+	syncLog.WithKey("stacktrace", errors.ErrorStack(err)).WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Error(err)
 }
 
 // Start starts a new sync instance
@@ -83,14 +88,10 @@ func (s *SyncConfig) Start() error {
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
-	if s.ExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.ExcludePaths)
+	err := s.initIgnoreParsers()
 
-		if err != nil {
-			return err
-		}
-
-		s.ignoreMatcher = ignoreMatcher
+	if err != nil {
+		return err
 	}
 
 	s.fileIndex = newFileIndex()
@@ -98,7 +99,7 @@ func (s *SyncConfig) Start() error {
 		config: s,
 	}
 
-	err := s.upstream.start()
+	err = s.upstream.start()
 
 	if err != nil {
 		return err
@@ -117,6 +118,40 @@ func (s *SyncConfig) Start() error {
 	}
 
 	go s.mainLoop()
+
+	return nil
+}
+
+func (s *SyncConfig) initIgnoreParsers() error {
+	if s.ExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.ExcludePaths)
+
+		if err != nil {
+			return err
+		}
+
+		s.ignoreMatcher = ignoreMatcher
+	}
+
+	if s.DownloadExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.DownloadExcludePaths)
+
+		if err != nil {
+			return err
+		}
+
+		s.downloadIgnoreMatcher = ignoreMatcher
+	}
+
+	if s.UploadExcludePaths != nil {
+		ignoreMatcher, err := compilePaths(s.UploadExcludePaths)
+
+		if err != nil {
+			return err
+		}
+
+		s.uploadIgnoreMatcher = ignoreMatcher
+	}
 
 	return nil
 }
@@ -171,6 +206,10 @@ func (s *SyncConfig) initialSync() error {
 	fileMapClone := make(map[string]*fileInformation)
 
 	for key, element := range s.fileIndex.fileMap {
+		if element.IsSymbolicLink {
+			continue
+		}
+
 		fileMapClone[key] = element
 	}
 
@@ -230,9 +269,21 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		}
 	}
 
-	if stat.IsDir() {
-		delete(downloadChanges, relativePath)
+	delete(downloadChanges, relativePath)
 
+	// Exclude files on the exclude list
+	if s.uploadIgnoreMatcher != nil {
+		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+			return nil
+		}
+	}
+
+	// Exclude remote symlinks
+	if fileMap[relativePath] != nil && fileMap[relativePath].IsSymbolicLink {
+		return nil
+	}
+
+	if stat.IsDir() {
 		files, err := ioutil.ReadDir(filepath)
 
 		if err != nil {
@@ -257,7 +308,6 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 
 		return nil
 	}
-	delete(downloadChanges, relativePath)
 
 	// TODO: Handle the case when local files are older than in the container
 	if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {

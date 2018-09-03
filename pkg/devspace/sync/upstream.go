@@ -145,6 +145,13 @@ OUTER:
 			}
 		}
 
+		// Exclude files on the uplaod exclude list
+		if u.config.uploadIgnoreMatcher != nil {
+			if u.config.uploadIgnoreMatcher.MatchesPath(relativePath) {
+				continue OUTER
+			}
+		}
+
 		stat, err := os.Stat(fullpath)
 
 		if err == nil { // Does exist -> Create File or Folder
@@ -155,6 +162,11 @@ OUTER:
 					if ceilMtime(stat.ModTime()) == fileMap[relativePath].Mtime &&
 						stat.Size() == fileMap[relativePath].Size {
 						continue // File did not change or was changed by downstream
+					}
+
+					// Exclude symbolic links
+					if fileMap[relativePath].IsSymbolicLink {
+						continue
 					}
 				}
 			}
@@ -169,6 +181,11 @@ OUTER:
 		} else { // Does not exist -> Remove
 			if fileMap[relativePath] == nil {
 				continue // File / Folder was already deleted from map so event was already processed or should not be processed
+			}
+
+			// Exclude symbolic links
+			if fileMap[relativePath].IsSymbolicLink {
+				continue
 			}
 
 			// New Remove Task
@@ -300,7 +317,7 @@ func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[strin
 							sleep 0.1;
 					done;
 
-					tar xf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/dev/null;
+					tar xpf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/dev/null;
 					echo "` + EndAck + `";
 		` // We need that extra new line or otherwise the command is not sent
 

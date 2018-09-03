@@ -372,17 +372,15 @@ func (cmd *UpCmd) startSync() {
 				labels = append(labels, key+"="+value)
 			}
 
-			podList, podListErr := cmd.kubectl.Core().Pods(cmd.privateConfig.Registry.Release.Namespace).List(metav1.ListOptions{
-				LabelSelector: strings.Join(labels, ", "),
-			})
+			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), cmd.privateConfig.Registry.Release.Namespace)
 
-			if podListErr != nil {
-				log.Panicf("Unable to list devspace pods: %s", podListErr.Error())
-			} else {
+			if err != nil {
+				log.Panicf("Unable to list devspace pods: %s", err.Error())
+			} else if pod != nil {
 				syncConfig := synctool.SyncConfig{
 					Kubectl:   cmd.kubectl,
-					Pod:       &podList.Items[0],
-					Container: &podList.Items[0].Spec.Containers[0],
+					Pod:       pod,
+					Container: &pod.Spec.Containers[0],
 					WatchPath: absLocalPath,
 					DestPath:  syncPath.ContainerPath,
 				}
@@ -409,30 +407,27 @@ func (cmd *UpCmd) startPortForwarding() {
 					labels = append(labels, key+"="+value)
 				}
 
-				podList, podListErr := cmd.kubectl.Core().Pods(cmd.privateConfig.Registry.Release.Namespace).List(metav1.ListOptions{
-					LabelSelector: strings.Join(labels, ", "),
-				})
+				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), cmd.privateConfig.Registry.Release.Namespace)
 
-				if podListErr != nil {
-					log.Errorf("Unable to list devspace pods: %s", podListErr.Error())
-				} else {
-					if len(podList.Items) > 0 {
-						ports := make([]string, len(portForwarding.PortMappings))
+				if err != nil {
+					log.Errorf("Unable to list devspace pods: %s", err.Error())
+				} else if pod != nil {
+					ports := make([]string, len(portForwarding.PortMappings))
 
-						for index, value := range portForwarding.PortMappings {
-							ports[index] = strconv.Itoa(value.LocalPort) + ":" + strconv.Itoa(value.RemotePort)
-						}
-						readyChan := make(chan struct{})
+					for index, value := range portForwarding.PortMappings {
+						ports[index] = strconv.Itoa(value.LocalPort) + ":" + strconv.Itoa(value.RemotePort)
+					}
 
-						go kubectl.ForwardPorts(cmd.kubectl, &podList.Items[0], ports, make(chan struct{}), readyChan)
+					readyChan := make(chan struct{})
 
-						// Wait till forwarding is ready
-						select {
-						case <-readyChan:
-							log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
-						case <-time.After(5 * time.Second):
-							log.Error("Timeout waiting for port forwarding to start")
-						}
+					go kubectl.ForwardPorts(cmd.kubectl, pod, ports, make(chan struct{}), readyChan)
+
+					// Wait till forwarding is ready
+					select {
+					case <-readyChan:
+						log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
+					case <-time.After(5 * time.Second):
+						log.Error("Timeout waiting for port forwarding to start")
 					}
 				}
 			}
