@@ -198,6 +198,13 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[
 		}
 	}
 
+	// Exclude files on the upload exclude list
+	if config.uploadIgnoreMatcher != nil {
+		if config.uploadIgnoreMatcher.MatchesPath(relativePath) {
+			return nil
+		}
+	}
+
 	stat, err := os.Lstat(filepath)
 
 	// We skip files that are suddenly not there anymore
@@ -219,6 +226,14 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[
 		IsDirectory: stat.IsDir(),
 	}
 
+	config.fileIndex.fileMapMutex.Lock()
+	if config.fileIndex.fileMap[relativePath] != nil {
+		fileInformation.RemoteMode = config.fileIndex.fileMap[relativePath].RemoteMode
+		fileInformation.RemoteGID = config.fileIndex.fileMap[relativePath].RemoteGID
+		fileInformation.RemoteUID = config.fileIndex.fileMap[relativePath].RemoteUID
+	}
+	config.fileIndex.fileMapMutex.Unlock()
+
 	if stat.IsDir() {
 		files, err := ioutil.ReadDir(filepath)
 
@@ -227,10 +242,18 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[
 			return nil
 		}
 
-		if len(files) == 0 {
+		if len(files) == 0 && relativePath != "" {
 			//case empty directory
 			hdr, _ := tar.FileInfoHeader(stat, filepath)
 			hdr.Name = strings.Replace(destFile, "\\", "/", -1) // Need to replace \ with / for windows
+
+			config.fileIndex.fileMapMutex.Lock()
+			if config.fileIndex.fileMap[relativePath] != nil {
+				hdr.Mode = fileInformation.RemoteMode
+				hdr.Uid = fileInformation.RemoteUID
+				hdr.Gid = fileInformation.RemoteGID
+			}
+			config.fileIndex.fileMapMutex.Unlock()
 
 			if err := tw.WriteHeader(hdr); err != nil {
 				return errors.Trace(err)
@@ -264,6 +287,14 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, writtenFiles map[
 	}
 
 	hdr.Name = strings.Replace(destFile, "\\", "/", -1)
+
+	config.fileIndex.fileMapMutex.Lock()
+	if config.fileIndex.fileMap[relativePath] != nil {
+		hdr.Mode = fileInformation.RemoteMode
+		hdr.Uid = fileInformation.RemoteUID
+		hdr.Gid = fileInformation.RemoteGID
+	}
+	config.fileIndex.fileMapMutex.Unlock()
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return errors.Trace(err)

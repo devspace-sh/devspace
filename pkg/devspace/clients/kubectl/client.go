@@ -42,6 +42,25 @@ func NewClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
+// GetFirstRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
+func GetFirstRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+	podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pod := range podList.Items {
+		if GetPodStatus(&pod) == "Running" {
+			return &pod, nil
+		}
+	}
+
+	return nil, nil
+}
+
 // GetPodStatus returns the pod status as a string
 // Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
 func GetPodStatus(pod *k8sv1.Pod) string {

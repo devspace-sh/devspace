@@ -2,6 +2,7 @@ package sync
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,15 +15,6 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 )
-
-// IsDirectory is a constant that can be used to determine whether a file is a folder
-const IsDirectory uint64 = 040000
-
-// IsRegularFile is a constant that can be used to determine whether a file is a regular file
-const IsRegularFile uint64 = 0100000
-
-// IsSymbolicLink is a constant that can be used to determine whether a file is a symbolic link
-const IsSymbolicLink uint64 = 0120000
 
 type downstream struct {
 	interrupt chan bool
@@ -56,7 +48,7 @@ func (d *downstream) start() error {
 func (d *downstream) populateFileMap() error {
 	createFiles := make([]*fileInformation, 0, 128)
 
-	cmd := "mkdir -p '" + d.config.DestPath + "' && find '" + d.config.DestPath + "' -exec stat -c \"%n///%s,%Y,%f\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
+	cmd := getFindCommand(d.config.DestPath)
 	_, err := d.stdinPipe.Write([]byte(cmd))
 
 	if err != nil {
@@ -107,6 +99,10 @@ func (d *downstream) mainLoop() error {
 
 		d.config.fileIndex.ExecuteSafe(func(fileMap map[string]*fileInformation) {
 			for key, value := range fileMap {
+				if value.IsSymbolicLink {
+					continue
+				}
+
 				removeFiles[key] = &fileInformation{
 					Name:        value.Name,
 					Size:        value.Size,
@@ -116,7 +112,7 @@ func (d *downstream) mainLoop() error {
 			}
 		})
 
-		cmd := "mkdir -p '" + d.config.DestPath + "' && find '" + d.config.DestPath + "' -exec stat -c \"%n///%s,%Y,%f\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
+		cmd := getFindCommand(d.config.DestPath)
 		_, err := d.stdinPipe.Write([]byte(cmd))
 
 		if err != nil {
@@ -346,7 +342,7 @@ func (d *downstream) removeFilesAndFolders(fileMap map[string]*fileInformation, 
 	numRemoveFiles := len(removeFiles)
 
 	if numRemoveFiles > 10 {
-		d.config.Logf("[Downstream] Remove %d files\n", numRemoveFiles)
+		d.config.Logf("[Downstream] Removed %d files\n", numRemoveFiles)
 	}
 
 	// A file is only deleted if the following conditions are met:
@@ -355,6 +351,15 @@ func (d *downstream) removeFilesAndFolders(fileMap map[string]*fileInformation, 
 	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 	for key, value := range removeFiles {
 		if value != nil && fileMap[key] != nil {
+			// Exclude files on the exclude list
+			if d.config.downloadIgnoreMatcher != nil {
+				if d.config.downloadIgnoreMatcher.MatchesPath(key) {
+					delete(fileMap, key)
+
+					continue
+				}
+			}
+
 			if numRemoveFiles <= 10 {
 				d.config.Logf("[Downstream] Remove %s\n", key)
 			}
@@ -412,8 +417,9 @@ func (d *downstream) collectChanges(createFiles *[]*fileInformation, removeFiles
 			if err == nil {
 				continue
 			}
+
 			if err == io.EOF {
-				break
+				return errors.Trace(fmt.Errorf("[Downstream] Stream closed unexpectedly"))
 			}
 
 			return errors.Trace(err)
@@ -456,8 +462,6 @@ func (d *downstream) collectChanges(createFiles *[]*fileInformation, removeFiles
 			}
 		}
 	}
-
-	return nil
 }
 
 func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) error {
@@ -465,7 +469,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 	defer d.config.fileIndex.fileMapMutex.Unlock()
 
 	fileMap := d.config.fileIndex.fileMap
-	fileInformation, err := parseFileInformation(fileline, d.config.DestPath, d.config.ignoreMatcher)
+	fileInformation, err := parseFileInformation(fileline, d.config.DestPath)
 
 	if err != nil {
 		return errors.Trace(err)
@@ -475,8 +479,37 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 		return nil
 	}
 
+	// Exclude files on the exclude list
+	if d.config.ignoreMatcher != nil {
+		if d.config.ignoreMatcher.MatchesPath(fileInformation.Name) {
+			return nil
+		}
+	}
+
 	if removeFiles[fileInformation.Name] != nil {
 		delete(removeFiles, fileInformation.Name)
+	}
+
+	// Update mode, gid & uid if exists
+	if fileMap[fileInformation.Name] != nil {
+		fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
+		fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
+		fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
+	}
+
+	// Exclude files on the exclude list
+	if d.config.downloadIgnoreMatcher != nil {
+		if d.config.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
+			return nil
+		}
+	}
+
+	// Exclude symlinks
+	if fileInformation.IsSymbolicLink {
+		// Add them to the fileMap though
+		fileMap[fileInformation.Name] = fileInformation
+
+		return nil
 	}
 
 	if fileMap[fileInformation.Name] != nil {
