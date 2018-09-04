@@ -8,7 +8,7 @@ import (
 
 	"github.com/daviddengcn/go-colortext"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type stdoutLogger struct {

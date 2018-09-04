@@ -5,11 +5,11 @@ import (
 	"os"
 	"path"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
+	"github.com/sirupsen/logrus"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )

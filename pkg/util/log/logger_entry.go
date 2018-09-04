@@ -3,7 +3,7 @@ package log
 import (
 	"strconv"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Level type
