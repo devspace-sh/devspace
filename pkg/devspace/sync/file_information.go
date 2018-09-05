@@ -29,6 +29,14 @@ type fileInformation struct {
 	RemoteGID  int   // %u
 }
 
+type parsingError struct {
+	msg string
+}
+
+func (p parsingError) Error() string {
+	return p.msg
+}
+
 func getFindCommand(destPath string) string {
 	return "mkdir -p '" + destPath + "' && find '" + destPath + "' -exec stat -c \"%n///%s,%Y,%f,%a,%u,%g\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
 }

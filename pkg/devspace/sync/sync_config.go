@@ -70,6 +70,7 @@ func (s *SyncConfig) Start() error {
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
+	s.fileIndex = newFileIndex()
 	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
 	if syncLog == nil {
@@ -89,31 +90,28 @@ func (s *SyncConfig) Start() error {
 	}
 
 	err := s.initIgnoreParsers()
-
 	if err != nil {
 		return err
 	}
 
-	s.fileIndex = newFileIndex()
+	// Init upstream
 	s.upstream = &upstream{
 		config: s,
 	}
 
 	err = s.upstream.start()
-
 	if err != nil {
 		return err
 	}
 
+	// Init downstream
 	s.downstream = &downstream{
 		config: s,
 	}
 
 	err = s.downstream.start()
-
 	if err != nil {
 		s.Stop()
-
 		return err
 	}
 
@@ -158,37 +156,38 @@ func (s *SyncConfig) initIgnoreParsers() error {
 
 func (s *SyncConfig) mainLoop() {
 	s.Logf("[Sync] Start syncing\n")
-	err := s.initialSync()
 
+	err := s.initialSync()
 	if err != nil {
 		s.Error(err)
 		return
 	}
 
-	// Run upstream in goroutine
+	// Start upstream
 	go func() {
 		defer s.Stop()
 
-		// Set up a watchpoint listening for events within a directory tree rooted at specified directory.
-		if err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All); err != nil {
+		// Set up a watchpoint listening for events within a directory tree rooted at specified directory
+		err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All)
+
+		if err != nil {
 			s.Error(err)
 			return
 		}
 
 		defer notify.Stop(s.upstream.events)
-		err := s.upstream.collectChanges()
 
+		err = s.upstream.mainLoop()
 		if err != nil {
 			s.Error(err)
 		}
 	}()
 
-	// Run downstream in goroutine
+	// Start downstream
 	go func() {
 		defer s.Stop()
 
 		err := s.downstream.mainLoop()
-
 		if err != nil {
 			s.Error(err)
 		}
@@ -197,12 +196,11 @@ func (s *SyncConfig) mainLoop() {
 
 func (s *SyncConfig) initialSync() error {
 	err := s.downstream.populateFileMap()
-
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	sendChanges := make([]*fileInformation, 0, 10)
+	remoteChanges := make([]*fileInformation, 0, 10)
 	fileMapClone := make(map[string]*fileInformation)
 
 	for key, element := range s.fileIndex.fileMap {
@@ -213,42 +211,35 @@ func (s *SyncConfig) initialSync() error {
 		fileMapClone[key] = element
 	}
 
-	err = s.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
-		return s.diffServerClient(s.WatchPath, fileMap, &sendChanges, fileMapClone)
-	})
-
+	err = s.diffServerClient(s.WatchPath, &remoteChanges, fileMapClone)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	if len(sendChanges) > 0 {
-		s.Logf("[Sync] Upload %d changes initially\n", len(sendChanges))
-		err = s.upstream.sendFiles(sendChanges)
-
+	if len(remoteChanges) > 0 {
+		err = s.upstream.applyCreates(remoteChanges)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
 
 	if len(fileMapClone) > 0 {
-		downloadChanges := make([]*fileInformation, 0, len(fileMapClone))
-
+		localChanges := make([]*fileInformation, 0, len(fileMapClone))
 		for _, element := range fileMapClone {
-			downloadChanges = append(downloadChanges, element)
+			localChanges = append(localChanges, element)
 		}
 
-		s.Logf("[Sync] Download %d changes initially\n", len(downloadChanges))
-		err = s.downstream.applyChanges(downloadChanges, nil)
-
+		err = s.downstream.applyChanges(localChanges, nil)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
 
+	s.Logf("[Sync] Initial sync completed. Processed %d changes", len(remoteChanges)+len(fileMapClone))
 	return nil
 }
 
-func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileInformation, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
 	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
 	stat, err := os.Lstat(filepath)
 
@@ -279,7 +270,7 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 	}
 
 	// Exclude remote symlinks
-	if fileMap[relativePath] != nil && fileMap[relativePath].IsSymbolicLink {
+	if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].IsSymbolicLink {
 		return nil
 	}
 
@@ -287,12 +278,12 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		files, err := ioutil.ReadDir(filepath)
 
 		if err != nil {
-			s.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
+			s.Logf("[Upstream] Couldn't read dir %s: %v", filepath, err)
 			return nil
 		}
 
 		if len(files) == 0 {
-			if fileMap[relativePath] == nil {
+			if s.fileIndex.fileMap[relativePath] == nil {
 				*sendChanges = append(*sendChanges, &fileInformation{
 					Name:        relativePath,
 					IsDirectory: true,
@@ -301,7 +292,7 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 		}
 
 		for _, f := range files {
-			if err := s.diffServerClient(path.Join(filepath, f.Name()), fileMap, sendChanges, downloadChanges); err != nil {
+			if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
 				return errors.Trace(err)
 			}
 		}
@@ -310,7 +301,7 @@ func (s *SyncConfig) diffServerClient(filepath string, fileMap map[string]*fileI
 	}
 
 	// TODO: Handle the case when local files are older than in the container
-	if fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > fileMap[relativePath].Mtime+1 {
+	if s.fileIndex.fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > s.fileIndex.fileMap[relativePath].Mtime+1 {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
 			Mtime:       ceilMtime(stat.ModTime()),

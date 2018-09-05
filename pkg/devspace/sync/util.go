@@ -56,7 +56,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		return errors.Trace(err)
 	}
 
-	err = s.upstream.sendFiles([]*fileInformation{
+	err = s.upstream.applyCreates([]*fileInformation{
 		{
 			Name:        "",
 			IsDirectory: true,
