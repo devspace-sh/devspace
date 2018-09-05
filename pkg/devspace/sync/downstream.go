@@ -250,14 +250,13 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 	}
 
 	// Parse tar size
-	tarSize := int64(0)
 	splitted := strings.Split(readString, "\n")
 
 	if splitted[len(splitted)-1] != EndAck {
 		return "", fmt.Errorf("[Downstream] Cannot find %s in %s", EndAck, readString)
 	}
 
-	tarSize, err = strconv.ParseInt(splitted[len(splitted)-2], 10, 64)
+	tarSize, err := strconv.ParseInt(splitted[len(splitted)-2], 10, 64)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -513,7 +512,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 
 			// Redownload file if size changed && file is not older than the one in the fileMap
 			// the mTime check is necessary, because otherwise we would override older local files that
-			// are not overridden intially
+			// are not overridden initially
 			if fileInformation.Mtime == fileMap[fileInformation.Name].Mtime && fileInformation.Size != fileMap[fileInformation.Name].Size {
 				*createFiles = append(*createFiles, fileInformation)
 			}

@@ -190,6 +190,8 @@ func (u *upstream) applyChanges(changes []*fileInformation) error {
 	var files []*fileInformation
 
 	for index, element := range changes {
+		// We determine if a change is a remove or create change by setting
+		// the mtime to 0 in the fileinformation for remove changes
 		if element.Mtime > 0 {
 			files = append(files, element)
 

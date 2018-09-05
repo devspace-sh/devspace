@@ -275,29 +275,7 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	}
 
 	if stat.IsDir() {
-		files, err := ioutil.ReadDir(filepath)
-
-		if err != nil {
-			s.Logf("[Upstream] Couldn't read dir %s: %v", filepath, err)
-			return nil
-		}
-
-		if len(files) == 0 {
-			if s.fileIndex.fileMap[relativePath] == nil {
-				*sendChanges = append(*sendChanges, &fileInformation{
-					Name:        relativePath,
-					IsDirectory: true,
-				})
-			}
-		}
-
-		for _, f := range files {
-			if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		return nil
+		return s.diffDir(filepath, sendChanges, downloadChanges)
 	}
 
 	// TODO: Handle the case when local files are older than in the container
@@ -308,6 +286,33 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 			Size:        stat.Size(),
 			IsDirectory: false,
 		})
+	}
+
+	return nil
+}
+
+func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
+	files, err := ioutil.ReadDir(filepath)
+
+	if err != nil {
+		s.Logf("[Upstream] Couldn't read dir %s: %v", filepath, err)
+		return nil
+	}
+
+	if len(files) == 0 {
+		if s.fileIndex.fileMap[relativePath] == nil {
+			*sendChanges = append(*sendChanges, &fileInformation{
+				Name:        relativePath,
+				IsDirectory: true,
+			})
+		}
+	}
+
+	for _, f := range files {
+		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	return nil
