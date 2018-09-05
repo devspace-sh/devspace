@@ -16,20 +16,6 @@ func newFileIndex() *fileIndex {
 	}
 }
 
-func (f *fileIndex) ExecuteSafeError(fn func(fileMap map[string]*fileInformation) error) error {
-	f.fileMapMutex.Lock()
-	defer f.fileMapMutex.Unlock()
-
-	return fn(f.fileMap)
-}
-
-func (f *fileIndex) ExecuteSafe(fn func(fileMap map[string]*fileInformation)) {
-	f.fileMapMutex.Lock()
-	defer f.fileMapMutex.Unlock()
-
-	fn(f.fileMap)
-}
-
 // Function assumes that fileMap is locked for access
 func (f *fileIndex) CreateDirInFileMap(dirpath string) {
 	if dirpath == "/" {

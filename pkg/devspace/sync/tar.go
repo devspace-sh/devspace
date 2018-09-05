@@ -2,11 +2,12 @@ package sync
 
 import (
 	"archive/tar"
+	"compress/gzip"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,13 +15,18 @@ import (
 )
 
 func untarAll(reader io.Reader, destPath, prefix string, config *SyncConfig) error {
-	entrySeq := 0
+	fileCounter := 0
+	gzr, err := gzip.NewReader(reader)
+	if err != nil {
+		return fmt.Errorf("Error decompressing: %v", err)
+	}
 
-	// TODO: use compression here?
-	tarReader := tar.NewReader(reader)
+	defer gzr.Close()
+
+	tarReader := tar.NewReader(gzr)
 
 	for {
-		shouldContinue, err := untarNext(tarReader, entrySeq, destPath, prefix, config)
+		shouldContinue, err := untarNext(tarReader, destPath, prefix, config)
 
 		if err != nil {
 			return errors.Trace(err)
@@ -28,15 +34,15 @@ func untarAll(reader io.Reader, destPath, prefix string, config *SyncConfig) err
 			return nil
 		}
 
-		entrySeq++
+		fileCounter++
 
-		if entrySeq%500 == 0 {
-			config.Logf("[Downstream] Untared %d files...\n", entrySeq)
+		if fileCounter%500 == 0 {
+			config.Logf("[Downstream] Untared %d files...\n", fileCounter)
 		}
 	}
 }
 
-func untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string, config *SyncConfig) (bool, error) {
+func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfig) (bool, error) {
 	config.fileIndex.fileMapMutex.Lock()
 	defer config.fileIndex.fileMapMutex.Unlock()
 
@@ -49,8 +55,7 @@ func untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string, con
 		return false, nil
 	}
 
-	mode := header.FileInfo().Mode()
-	relativePath := clean(header.Name[len(prefix):])
+	relativePath := getRelativeFromFullPath("/"+header.Name, prefix)
 	outFileName := path.Join(destPath, relativePath)
 	baseName := path.Dir(outFileName)
 
@@ -86,63 +91,54 @@ func untarNext(tarReader *tar.Reader, entrySeq int, destPath, prefix string, con
 		return true, nil
 	}
 
+	// Create base dir in file map if it not already exists
 	config.fileIndex.CreateDirInFileMap(getRelativeFromFullPath(baseName, destPath))
 
-	// handle coping remote file into local directory
-	if entrySeq == 0 && !header.FileInfo().IsDir() {
-		exists, err := dirExists(outFileName)
+	// Create / Override file
+	outFile, err := os.Create(outFileName)
+
+	if err != nil {
+		// Try again after 5 seconds
+		time.Sleep(time.Second * 5)
+		outFile, err = os.Create(outFileName)
+
 		if err != nil {
 			return false, errors.Trace(err)
-		}
-		if exists {
-			outFileName = filepath.Join(outFileName, path.Base(clean(header.Name)))
 		}
 	}
 
-	if mode&os.ModeSymlink != 0 {
-		// Skip the processing of symlinks for now, because windows has problems with them
-		// err := os.Symlink(header.Linkname, outFileName)
-		// if err != nil {
-		//	 return errors.Trace(err)
-		// }
-	} else {
-		outFile, err := os.Create(outFileName)
+	defer outFile.Close()
 
-		if err != nil {
-			// Try again after 5 seconds
-			time.Sleep(time.Second * 5)
-			outFile, err = os.Create(outFileName)
+	if _, err := io.Copy(outFile, tarReader); err != nil {
+		return false, errors.Trace(err)
+	}
 
-			if err != nil {
-				return false, errors.Trace(err)
-			}
-		}
+	if err := outFile.Close(); err != nil {
+		return false, errors.Trace(err)
+	}
 
-		defer outFile.Close()
+	if stat != nil {
+		// Set old permissions correctly
+		_ = os.Chmod(outFileName, stat.Mode())
 
-		if _, err := io.Copy(outFile, tarReader); err != nil {
-			return false, errors.Trace(err)
-		}
+		// Set owner & group correctly
+		// TODO: Enable this on supported platforms
+		// _ = os.Chown(outFileName, stat.Sys().(*syscall.Stat).Uid, stat.Sys().(*syscall.Stat_t).Gid)
+	}
 
-		if err := outFile.Close(); err != nil {
-			return false, errors.Trace(err)
-		}
+	// Set mod time correctly
+	err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
 
-		err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
+	if err != nil {
+		return false, errors.Trace(err)
+	}
 
-		if err != nil {
-			return false, errors.Trace(err)
-		}
-
-		relativePath = getRelativeFromFullPath(outFileName, destPath)
-
-		// Update fileMap so that upstream does not upload the file
-		config.fileIndex.fileMap[relativePath] = &fileInformation{
-			Name:        relativePath,
-			Mtime:       header.FileInfo().ModTime().Unix(),
-			Size:        header.FileInfo().Size(),
-			IsDirectory: false,
-		}
+	// Update fileMap so that upstream does not upload the file
+	config.fileIndex.fileMap[relativePath] = &fileInformation{
+		Name:        relativePath,
+		Mtime:       header.FileInfo().ModTime().Unix(),
+		Size:        header.FileInfo().Size(),
+		IsDirectory: false,
 	}
 
 	return true, nil
@@ -157,7 +153,11 @@ func writeTar(files []*fileInformation, config *SyncConfig) (string, map[string]
 
 	defer f.Close()
 
-	tarWriter := tar.NewWriter(f)
+	// Use compression
+	gw := gzip.NewWriter(f)
+	defer gw.Close()
+
+	tarWriter := tar.NewWriter(gw)
 	defer tarWriter.Close()
 
 	writtenFiles := make(map[string]*fileInformation)
