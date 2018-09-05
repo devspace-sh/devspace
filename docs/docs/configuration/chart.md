@@ -19,4 +19,4 @@ chart/
 
 During the deployment process, the values defined in the [values.yaml](#) are used to create Kubernetes resources based on the templates defined in [templates/](#). After filling the templates with the variables, the chart is deployed to the Kubernetes cluster.
 
-**Note: You don't need to install Helm or Tiller, to use the DevSpace CLI.**
+**Note: You do not need to install Helm or Tiller, to use the DevSpace CLI.**

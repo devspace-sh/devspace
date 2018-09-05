@@ -23,7 +23,7 @@ cluster:
   useKubeConfig: true
 ```
 
-The [.devspace/private.yaml](#) is defined for every developer that wants to use a DevSpace for working on the respective project. This file should **never** be checked into a version control system. Therefore, the DevSpace CLI will automatically create a [.gitignore](#) file within [.devspace/](#) that tells git not to version this file.
+The [.devspace/private.yaml](#) is defined for every developer who wants to use a DevSpace for working on the respective project. This file should **never** be checked into a version control system. Therefore, the DevSpace CLI will automatically create a [.gitignore](#) file within [.devspace/](#) that tells git not to version this file.
 
 **Note: You can easily re-configure your DevSpace by running `devspace init -r`. Therefore, changing this file manually is highly discouraged.**
 
@@ -44,7 +44,7 @@ The `cluster` field specifies:
 - `tillerNamespace` to run the Tiller server in
 - `useKubeConfig` (yes to use the credentials defined in $HOME/.kube/config)
 
-If `useKubeConfig: false` is used, the following fields needs to be specified:
+If `useKubeConfig: false` is used, the following fields need to be specified:
 - `apiServer` (Kubernetes API-Server URL)
 - `caCert` (CaCert for the Kubernetes API-Server in PEM format)
 - `user` specifying the following: 
