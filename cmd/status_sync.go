@@ -6,6 +6,5 @@ import (
 
 // RunStatusSync executes the devspace status sync commad logic
 func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
-
+	//TODO
 }

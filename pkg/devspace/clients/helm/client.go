@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	homedir "github.com/mitchellh/go-homedir"
 	k8sv1 "k8s.io/api/core/v1"
@@ -42,15 +42,17 @@ import (
 
 // HelmClientWrapper holds the necessary information for helm
 type HelmClientWrapper struct {
-	Client   *k8shelm.Client
-	Settings *helmenvironment.EnvSettings
-	kubectl  *kubernetes.Clientset
+	Client       *k8shelm.Client
+	Settings     *helmenvironment.EnvSettings
+	TillerConfig *v1.TillerConfig
+	kubectl      *kubernetes.Clientset
 }
 
 // TillerDeploymentName is the string identifier for the tiller deployment
 const TillerDeploymentName = "tiller-deploy"
 const tillerServiceAccountName = "devspace-tiller"
 const tillerRoleName = "devspace-tiller"
+const tillerRoleManagerName = "tiller-config-manager"
 const stableRepoCachePath = "repository/cache/stable-index.yaml"
 const defaultRepositories = `apiVersion: v1
 repositories:
@@ -62,7 +64,6 @@ repositories:
   url: https://kubernetes-charts.storage.googleapis.com
 `
 
-var privateConfig = &v1.PrivateConfig{}
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 	{
 		APIGroups: []string{
@@ -77,15 +78,16 @@ var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 
 // NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
-	config.LoadConfig(privateConfig)
+	config := configutil.GetConfig(false)
 
+	tillerConfig := config.Services.Tiller
 	kubeconfig, err := kubectl.GetClientConfig()
 
 	if err != nil {
 		return nil, err
 	}
 
-	tillerErr := ensureTiller(kubectlClient, upgradeTiller)
+	tillerErr := ensureTiller(kubectlClient, tillerConfig, upgradeTiller)
 
 	if tillerErr != nil {
 		return nil, tillerErr
@@ -101,7 +103,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 
 	// Next we wait till we can establish a tunnel to the running pod
 	for tunnelWaitTime > 0 {
-		tunnel, err = portforwarder.New(privateConfig.Cluster.TillerNamespace, kubectlClient, kubeconfig)
+		tunnel, err = portforwarder.New(*tillerConfig.Release.Namespace, kubectlClient, kubeconfig)
 
 		if err == nil {
 			break
@@ -169,7 +171,8 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		Settings: &helmenvironment.EnvSettings{
 			Home: helmpath.Home(helmHomePath),
 		},
-		kubectl: kubectlClient,
+		TillerConfig: tillerConfig,
+		kubectl:      kubectlClient,
 	}
 	_, stableRepoCacheNotFoundErr := os.Stat(stableRepoCachePathAbs)
 
@@ -180,20 +183,21 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	return wrapper, nil
 }
 
-func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
+func ensureTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, upgrade bool) error {
+	tillerNamespace := *tillerConfig.Release.Namespace
 	tillerSA := &k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tillerServiceAccountName,
-			Namespace: privateConfig.Cluster.TillerNamespace,
+			Namespace: tillerNamespace,
 		},
 	}
 	tillerOptions := &helminstaller.Options{
-		Namespace:      privateConfig.Cluster.TillerNamespace,
+		Namespace:      tillerNamespace,
 		MaxHistory:     10,
 		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.9.1",
 		ServiceAccount: tillerSA.ObjectMeta.Name,
 	}
-	_, tillerCheckErr := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	_, tillerCheckErr := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 
 	// Tiller is not there
 	if tillerCheckErr != nil {
@@ -210,7 +214,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 			}
 		}
 
-		err = ensureRoleBinding(kubectlClient, "tiller-config-manager", privateConfig.Cluster.TillerNamespace, privateConfig.Cluster.TillerNamespace, []k8sv1beta1.PolicyRule{
+		err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleManagerName, tillerNamespace, []k8sv1beta1.PolicyRule{
 			{
 				APIGroups: []string{
 					k8sv1beta1.APIGroupAll,
@@ -230,12 +234,13 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 
 		helminstaller.Install(kubectlClient, tillerOptions)
 
-		err = ensureRoleBinding(kubectlClient, tillerRoleName, privateConfig.Release.Namespace, privateConfig.Cluster.TillerNamespace, defaultPolicyRules)
+		for _, appNamespace := range tillerConfig.AppNamespaces {
+			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
 
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
-
 		log.StopWait()
 		log.Done("Tiller started")
 
@@ -259,7 +264,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 	log.StartWait("Waiting for tiller to start")
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 
 		if err != nil {
 			continue
@@ -279,8 +284,9 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, upgrade bool) error {
 }
 
 // IsTillerDeployed determines if we could connect to a tiller server
-func IsTillerDeployed(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) bool {
-	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+func IsTillerDeployed(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig) bool {
+	tillerNamespace := *tillerConfig.Release.Namespace
+	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 
 	if err != nil {
 		return false
@@ -294,11 +300,12 @@ func IsTillerDeployed(kubectlClient *kubernetes.Clientset, privateConfig *v1.Pri
 }
 
 // DeleteTiller clears the tiller server, the service account and role binding
-func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.PrivateConfig) error {
+func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig) error {
+	tillerNamespace := *tillerConfig.Release.Namespace
 	errs := make([]error, 0, 1)
 	propagationPolicy := metav1.DeletePropagationForeground
 
-	err := kubectlClient.ExtensionsV1beta1().Deployments(privateConfig.Cluster.TillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
+	err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 
@@ -306,30 +313,26 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.Private
 		errs = append(errs, err)
 	}
 
-	err = kubectlClient.CoreV1().ServiceAccounts(privateConfig.Cluster.TillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	err = kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 	if err != nil {
 		errs = append(errs, err)
 	}
+	roleNamespace := append(tillerConfig.AppNamespaces, &tillerNamespace)
 
-	deleteRoleNames := []string{
-		"tiller-config-manager",
-		tillerRoleName,
-	}
+	for _, appNamespace := range roleNamespace {
+		roleName := tillerRoleName
 
-	deleteRoleNamespaces := []string{
-		privateConfig.Cluster.TillerNamespace,
-		privateConfig.Release.Namespace,
-	}
-
-	for key, value := range deleteRoleNames {
-		err = kubectlClient.RbacV1beta1().Roles(deleteRoleNamespaces[key]).Delete(value, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		if *appNamespace == tillerNamespace {
+			roleName = tillerRoleManagerName
+		}
+		err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(roleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 		if err != nil {
 			errs = append(errs, err)
 		}
 
-		err = kubectlClient.RbacV1beta1().RoleBindings(deleteRoleNamespaces[key]).Delete(value+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(roleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 		if err != nil {
 			errs = append(errs, err)
@@ -353,7 +356,8 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, privateConfig *v1.Private
 //	 return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
 // }
 
-func ensureRoleBinding(kubectlClient *kubernetes.Clientset, name, namespace string, tillerNamespace string, rules []k8sv1beta1.PolicyRule) error {
+func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, name, namespace string, rules []k8sv1beta1.PolicyRule) error {
+	tillerNamespace := *tillerConfig.Release.Namespace
 	role := &k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -438,7 +442,7 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
 
 	if err != nil {
@@ -454,13 +458,13 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 			return nil, err
 		}
 		chartDownloader := &helmdownloader.Manager{
-		/*		Out:        i.out,
-				ChartPath:  i.chartPath,
-				HelmHome:   settings.Home,
-				Keyring:    defaultKeyring(),
-				SkipUpdate: false,
-				Getters:    getter.All(settings),
-		*/
+			/*		Out:        i.out,
+					ChartPath:  i.chartPath,
+					HelmHome:   settings.Home,
+					Keyring:    defaultKeyring(),
+					SkipUpdate: false,
+					Getters:    getter.All(settings),
+			*/
 		}
 		err = chartDownloader.Update()
 
@@ -483,7 +487,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 	overwriteValues := []byte("")
 
 	if values != nil {
-		unmarshalledValues, err := yaml.Marshal(*values)
+		unmarshalledValues, err := yaml.Marshal(values)
 
 		if err != nil {
 			return nil, err
@@ -529,7 +533,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}

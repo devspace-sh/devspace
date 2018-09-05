@@ -1,22 +1,17 @@
 package cmd
 
 import (
-	"os"
 	"strconv"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
 // ListCmd holds the information needed for the list command
 type ListCmd struct {
-	flags         *ListCmdFlags
-	dsConfig      *v1.DevSpaceConfig
-	privateConfig *v1.PrivateConfig
-	appConfig     *v1.AppConfig
-	workdir       string
+	flags   *ListCmdFlags
+	workdir string
 }
 
 // ListCmdFlags holds the possible flags for the list command
@@ -81,9 +76,9 @@ func init() {
 
 // RunListSync runs the list sync command logic
 func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
+	config := configutil.GetConfig(false)
 
-	if len(cmd.dsConfig.SyncPaths) == 0 {
+	if len(config.DevSpace.Sync) == 0 {
 		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return
 	}
@@ -96,10 +91,10 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		"Excluded Paths",
 	}
 
-	syncPaths := make([][]string, 0, len(cmd.dsConfig.SyncPaths))
+	syncPaths := make([][]string, 0, len(config.DevSpace.Sync))
 
 	// Transform values into string arrays
-	for _, value := range cmd.dsConfig.SyncPaths {
+	for _, value := range config.DevSpace.Sync {
 		selector := ""
 
 		for k, v := range value.LabelSelector {
@@ -107,7 +102,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 				selector += ", "
 			}
 
-			selector += k + "=" + v
+			selector += k + "=" + *v
 		}
 
 		excludedPaths := ""
@@ -117,14 +112,14 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 				excludedPaths += ", "
 			}
 
-			excludedPaths += v
+			excludedPaths += *v
 		}
 
 		syncPaths = append(syncPaths, []string{
-			value.ResourceType,
+			*value.ResourceType,
 			selector,
-			value.LocalSubPath,
-			value.ContainerPath,
+			*value.LocalSubPath,
+			*value.ContainerPath,
 			excludedPaths,
 		})
 	}
@@ -134,9 +129,9 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 // RunListPort runs the list port command logic
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
+	config := configutil.GetConfig(false)
 
-	if len(cmd.dsConfig.PortForwarding) == 0 {
+	if len(config.DevSpace.PortForwarding) == 0 {
 		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
@@ -147,10 +142,10 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(cmd.dsConfig.PortForwarding))
+	portForwards := make([][]string, 0, len(config.DevSpace.PortForwarding))
 
 	// Transform values into string arrays
-	for _, value := range cmd.dsConfig.PortForwarding {
+	for _, value := range config.DevSpace.PortForwarding {
 		selector := ""
 
 		for k, v := range value.LabelSelector {
@@ -158,7 +153,7 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 				selector += ", "
 			}
 
-			selector += k + "=" + v
+			selector += k + "=" + *v
 		}
 
 		portMappings := ""
@@ -168,39 +163,15 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 				portMappings += ", "
 			}
 
-			portMappings += strconv.Itoa(v.LocalPort) + ":" + strconv.Itoa(v.RemotePort)
+			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
 		}
 
 		portForwards = append(portForwards, []string{
-			value.ResourceType,
+			*value.ResourceType,
 			selector,
 			portMappings,
 		})
 	}
 
 	log.PrintTable(headerColumnNames, portForwards)
-}
-
-func loadConfig(workdir *string, privateConfig **v1.PrivateConfig, dsConfig **v1.DevSpaceConfig) {
-	w, err := os.Getwd()
-
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	workdir = &w
-	*privateConfig = &v1.PrivateConfig{}
-	*dsConfig = &v1.DevSpaceConfig{}
-
-	err = config.LoadConfig(privateConfig)
-
-	if err != nil {
-		log.Fatalf("Unable to load .devspace/private.yaml: %s. Did you run `devspace init`?", err.Error())
-	}
-
-	err = config.LoadConfig(dsConfig)
-
-	if err != nil {
-		log.Fatalf("Unable to load .devspace/config.yaml: %s. Did you run `devspace init`?", err.Error())
-	}
 }

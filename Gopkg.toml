@@ -105,3 +105,11 @@
 [[constraint]]
   name = "github.com/badgerodon/penv"
   revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
+
+[[constraint]]
+  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
+  name = "github.com/covexo/yamlq"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "v0.3.6"

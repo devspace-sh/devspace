@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -12,11 +12,9 @@ import (
 
 // RemoveCmd holds the information needed for the remove command
 type RemoveCmd struct {
-	syncFlags     *removeSyncCmdFlags
-	portFlags     *removePortCmdFlags
-	dsConfig      *v1.DevSpaceConfig
-	privateConfig *v1.PrivateConfig
-	workdir       string
+	syncFlags *removeSyncCmdFlags
+	portFlags *removePortCmdFlags
+	workdir   string
 }
 
 type removeSyncCmdFlags struct {
@@ -108,8 +106,7 @@ func init() {
 
 // RunRemoveSync executes the remove sync command logic
 func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
-
+	config := configutil.GetConfig(false)
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
 
 	if err != nil {
@@ -123,12 +120,12 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	newSyncPaths := make([]*v1.SyncPath, 0, len(cmd.dsConfig.SyncPaths)-1)
+	newSyncPaths := make([]*v1.SyncConfig, 0, len(config.DevSpace.Sync)-1)
 
-	for _, v := range cmd.dsConfig.SyncPaths {
+	for _, v := range config.DevSpace.Sync {
 		if cmd.syncFlags.RemoveAll ||
-			cmd.syncFlags.LocalPath == v.LocalSubPath ||
-			cmd.syncFlags.ContainerPath == v.ContainerPath ||
+			cmd.syncFlags.LocalPath == *v.LocalSubPath ||
+			cmd.syncFlags.ContainerPath == *v.ContainerPath ||
 			isMapEqual(labelSelectorMap, v.LabelSelector) {
 			continue
 		}
@@ -136,9 +133,9 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		newSyncPaths = append(newSyncPaths, v)
 	}
 
-	cmd.dsConfig.SyncPaths = newSyncPaths
+	config.DevSpace.Sync = newSyncPaths
 
-	err = config.SaveConfig(cmd.dsConfig)
+	err = configutil.SaveConfig()
 
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
@@ -147,7 +144,7 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 
 // RunRemovePort executes the remove port command logic
 func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
+	config := configutil.GetConfig(false)
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
 
@@ -169,17 +166,17 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwarding, 0, len(cmd.dsConfig.PortForwarding)-1)
+	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(config.DevSpace.PortForwarding)-1)
 
 OUTER:
-	for _, v := range cmd.dsConfig.PortForwarding {
+	for _, v := range config.DevSpace.PortForwarding {
 		if cmd.portFlags.RemoveAll ||
 			isMapEqual(labelSelectorMap, v.LabelSelector) {
 			continue
 		}
 
 		for _, pm := range v.PortMappings {
-			if containsPort(strconv.Itoa(pm.LocalPort), ports) || containsPort(strconv.Itoa(pm.RemotePort), ports) {
+			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
 				continue OUTER
 			}
 		}
@@ -187,9 +184,9 @@ OUTER:
 		newPortForwards = append(newPortForwards, v)
 	}
 
-	cmd.dsConfig.PortForwarding = newPortForwards
+	config.DevSpace.PortForwarding = newPortForwards
 
-	err = config.SaveConfig(cmd.dsConfig)
+	err = configutil.SaveConfig()
 
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())

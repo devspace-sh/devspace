@@ -3,10 +3,8 @@ package cmd
 import (
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
-
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -46,14 +44,9 @@ your project, use: devspace reset
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
-	privateConfig := &v1.PrivateConfig{}
-	err := config.LoadConfig(privateConfig)
+	config := configutil.GetConfig(false)
 
-	if err != nil {
-		log.Fatalf("Unable to load release name: %s. Does the file .devspace/private.yaml exist?", err.Error())
-	}
-
-	releaseName := privateConfig.Release.Name
+	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
 
 	if err != nil {

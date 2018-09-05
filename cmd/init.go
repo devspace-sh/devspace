@@ -3,15 +3,16 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
+	"github.com/imdario/mergo"
+	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -21,11 +22,9 @@ import (
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
-	dsConfig       *v1.DevSpaceConfig
-	privateConfig  *v1.PrivateConfig
-	appConfig      *v1.AppConfig
 	workdir        string
 	chartGenerator *generator.ChartGenerator
+	config         *v1.Config
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -102,35 +101,29 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	cmd.workdir = workdir
-	cmd.dsConfig = &v1.DevSpaceConfig{
-		Version: "v1",
+	configExists, _ := configutil.ConfigExists()
+
+	if configExists {
+		cmd.config = configutil.GetConfig(false)
+	} else {
+		cmd.config = configutil.GetConfigInstance()
 	}
-	cmd.privateConfig = &v1.PrivateConfig{
-		Version: "v1",
-		Release: &v1.Release{
-			Namespace: "default",
+	mergo.Merge(cmd.config, &v1.Config{
+		Version: configutil.String("v1"),
+		DevSpace: &v1.DevSpaceConfig{
+			Release: &v1.Release{
+				Name:      configutil.String("devspace"),
+				Namespace: configutil.String("default"),
+			},
+		},
+		Image: &v1.ImageConfig{
+			Name: configutil.String("devspace"),
 		},
 		Cluster: &v1.Cluster{
-			ApiServer: "https://192.168.99.100:8443",
+			ApiServer: configutil.String("https://192.168.99.100:8443"),
 			User:      &v1.User{},
 		},
-	}
-	cmd.appConfig = &v1.AppConfig{
-		Name: filepath.Base(cmd.workdir),
-		Container: &v1.AppContainer{
-			Ports: []int{},
-		},
-		External: &v1.AppExternal{
-			Domain: "mydomain.com",
-			Port:   80,
-		},
-	}
-	dsConfigExists, _ := config.ConfigExists(cmd.dsConfig)
-	privateConfigExists, _ := config.ConfigExists(cmd.privateConfig)
-
-	if dsConfigExists || privateConfigExists {
-		cmd.loadExistingConfig()
-	}
+	})
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
@@ -145,7 +138,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			})
-			createChart = (overwriteAnswer == "yes")
+			createChart = (*overwriteAnswer == "yes")
 		} else {
 			createChart = true
 		}
@@ -154,14 +147,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if createChart {
 		cmd.determineAppConfig()
 
-		if cmd.privateConfig.Release == nil || len(cmd.privateConfig.Release.Name) == 0 {
-			cmd.privateConfig.Release.Name = cmd.appConfig.Name
+		if cmd.config.DevSpace.Release == nil || cmd.config.DevSpace.Release.Name == nil {
+			cmd.config.DevSpace.Release.Name = configutil.String("my-app")
 		}
-		cmd.addPortForwarding()
-		cmd.addSyncPath()
 	}
 
-	if cmd.flags.reconfigure || !dsConfigExists || !privateConfigExists {
+	if cmd.flags.reconfigure || !configExists {
 		cmd.reconfigure()
 	}
 
@@ -169,11 +160,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.determineLanguage()
 		cmd.createChart()
 	}
-}
-
-func (cmd *InitCmd) loadExistingConfig() {
-	config.LoadConfig(cmd.dsConfig)
-	config.LoadConfig(cmd.privateConfig)
 }
 
 func (cmd *InitCmd) initChartGenerator() {
@@ -197,24 +183,17 @@ func (cmd *InitCmd) determineAppConfig() {
 	_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
 
 	if chartDirNotFound == nil {
+		/*TODO
 		existingChartYaml := map[interface{}]interface{}{}
 		existingChartValuesYaml := map[interface{}]interface{}{}
 
 		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", existingChartYaml)
 		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", existingChartValuesYaml)
 
-		cmd.appConfig.Name = existingChartYaml["name"].(string)
+		cmd.config.Release.Name = existingChartYaml["name"].(string)
 
 		applicationValues, applicationValuesCorrect := existingChartValuesYaml["container"].(map[interface{}]interface{})
 		externalValues, externalValuesCorrect := existingChartValuesYaml["external"].(map[interface{}]interface{})
-
-		if applicationValuesCorrect {
-			value, isCorrect := applicationValues["port"].(int)
-
-			if isCorrect {
-				cmd.appConfig.Container.Ports = []int{value}
-			}
-		}
 
 		if externalValuesCorrect {
 			value, isCorrect := externalValues["domain"].(string)
@@ -222,11 +201,11 @@ func (cmd *InitCmd) determineAppConfig() {
 			if isCorrect {
 				cmd.appConfig.External.Domain = value
 			}
-		}
+		}*/
 	}
-	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
-		DefaultValue:           cmd.appConfig.Name,
+		DefaultValue:           *cmd.config.DevSpace.Release.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
@@ -236,25 +215,20 @@ func (cmd *InitCmd) determineAppConfig() {
 	// 	ValidationRegexPattern: "^[1-9][0-9]{0,4}?(\\s[1-9][0-9]{0,4})?$",
 	// }))
 
-	portsToSliceStr := []string{}
-
-	for _, port := range cmd.appConfig.Container.Ports {
-		portsToSliceStr = append(portsToSliceStr, strconv.Itoa(port))
-	}
-
-	portStrings := strings.Split(stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	ports := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which port(s) does your application listen on? (separated by spaces)",
-		DefaultValue:           strings.Join(portsToSliceStr, " "),
+		DefaultValue:           "",
 		ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
 	}), " ")
 
-	for _, port := range portStrings {
+	for _, port := range ports {
 		portInt, _ := strconv.Atoi(port)
 
 		if portInt > 0 {
-			cmd.appConfig.Container.Ports = append(cmd.appConfig.Container.Ports, portInt)
+			cmd.addPortForwarding(portInt)
 		}
 	}
+	cmd.addSyncPath()
 
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -264,132 +238,114 @@ func (cmd *InitCmd) determineAppConfig() {
 	})*/
 }
 
-func (cmd *InitCmd) addPortForwarding() {
-	portForwardingMissing := true
-
+func (cmd *InitCmd) addPortForwarding(port int) {
 OUTER:
-	for _, portForwarding := range cmd.dsConfig.PortForwarding {
+	for _, portForwarding := range cmd.config.DevSpace.PortForwarding {
 		for _, portMapping := range portForwarding.PortMappings {
-			for _, port := range cmd.appConfig.Container.Ports {
-				if portMapping.RemotePort == port {
-					portForwardingMissing = false
-					break OUTER
-				}
-			}
-		}
-	}
-
-	if portForwardingMissing {
-		for _, port := range cmd.appConfig.Container.Ports {
-			cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
-				PortMappings: []*v1.PortMapping{
-					{
-						LocalPort:  port,
-						RemotePort: port,
+			if *portMapping.RemotePort == port {
+				cmd.config.DevSpace.PortForwarding = append(cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+					PortMappings: []*v1.PortMapping{
+						{
+							LocalPort:  &port,
+							RemotePort: &port,
+						},
 					},
-				},
-				ResourceType: "pod",
-				LabelSelector: map[string]string{
-					"release": cmd.privateConfig.Release.Name,
-				},
-			})
+					ResourceType: configutil.String("pod"),
+					LabelSelector: map[string]*string{
+						"release": cmd.config.DevSpace.Release.Name,
+					},
+				})
+				break OUTER
+			}
 		}
 	}
 }
 
 func (cmd *InitCmd) addSyncPath() {
-	syncPathMissing := true
-
-	for _, syncPath := range cmd.dsConfig.SyncPaths {
-		if syncPath.LocalSubPath == "./" || syncPath.ContainerPath == "/app" {
-			syncPathMissing = false
+	for _, syncPath := range cmd.config.DevSpace.Sync {
+		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
+			cmd.config.DevSpace.Sync = append(cmd.config.DevSpace.Sync, &v1.SyncConfig{
+				ContainerPath: configutil.String("/app"),
+				LocalSubPath:  configutil.String("./"),
+				ResourceType:  configutil.String("pod"),
+				LabelSelector: map[string]*string{
+					"release": cmd.config.DevSpace.Release.Name,
+				},
+			})
 			break
 		}
-	}
-
-	if syncPathMissing {
-		cmd.dsConfig.SyncPaths = append(cmd.dsConfig.SyncPaths, &v1.SyncPath{
-			ContainerPath: "/app",
-			LocalSubPath:  "./",
-			ResourceType:  "pod",
-			LabelSelector: map[string]string{
-				"release": cmd.privateConfig.Release.Name,
-			},
-		})
 	}
 }
 
 func (cmd *InitCmd) reconfigure() {
-	clusterConfig := cmd.privateConfig.Cluster
+	clusterConfig := cmd.config.Cluster
+	tillerConfig := cmd.config.Services.Tiller
+	tillerRelease := tillerConfig.Release
 
-	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           cmd.privateConfig.Release.Namespace,
+		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
-	if len(clusterConfig.TillerNamespace) == 0 {
-		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
+	if tillerRelease.Namespace == nil {
+		tillerRelease.Namespace = cmd.config.DevSpace.Release.Namespace
 	}
-	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	tillerRelease.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your tiller server run in?",
-		DefaultValue:           clusterConfig.TillerNamespace,
+		DefaultValue:           *tillerRelease.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-	kubeClusterConfig := &v1.Cluster{
-		User: &v1.User{},
+	useKubeConfig := false
+	homeDir, homeErr := homedir.Dir()
+
+	if homeErr != nil {
+		log.With(homeErr).Fatalf("Unable to determine home dir")
 	}
-	skipClusterConfig := false
+	kubeConfigPath := homeDir + "/.kube/config"
 
-	config.LoadClusterConfig(kubeClusterConfig, false)
+	_, kubeConfigNotFound := os.Stat(kubeConfigPath)
 
-	if len(kubeClusterConfig.ApiServer) != 0 && len(kubeClusterConfig.CaCert) != 0 && len(kubeClusterConfig.User.ClientCert) != 0 && len(kubeClusterConfig.User.ClientKey) != 0 {
+	if kubeConfigNotFound == nil {
 		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		})
-		skipClusterConfig = (skipAnswer == "yes")
+		useKubeConfig = (*skipAnswer == "yes")
 	}
+	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 
-	if skipClusterConfig {
-		clusterConfig.UseKubeConfig = true
-	} else {
+	if !useKubeConfig {
 		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-			DefaultValue:           clusterConfig.ApiServer,
+			DefaultValue:           *clusterConfig.ApiServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
 		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
-			DefaultValue:           clusterConfig.CaCert,
+			DefaultValue:           *clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
 		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes username?",
-			DefaultValue:           clusterConfig.User.Username,
+			DefaultValue:           *clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
 		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
-			DefaultValue:           clusterConfig.User.ClientCert,
+			DefaultValue:           *clusterConfig.User.ClientCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
 		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client key? (RSA, PEM)",
-			DefaultValue:           clusterConfig.User.ClientKey,
+			DefaultValue:           *clusterConfig.User.ClientKey,
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
 		})
 	}
 	cmd.reconfigureRegistry()
 
-	err := config.SaveConfig(cmd.dsConfig)
-
-	if err != nil {
-		log.With(err).Fatalf("Config error: %s", err.Error())
-	}
-
-	err = config.SaveConfig(cmd.privateConfig)
+	err := configutil.SaveConfig()
 
 	if err != nil {
 		log.With(err).Fatalf("Config error: %s", err.Error())
@@ -397,7 +353,8 @@ func (cmd *InitCmd) reconfigure() {
 }
 
 func (cmd *InitCmd) reconfigureRegistry() {
-	registryConfig := cmd.privateConfig.Registry
+	overwriteConfig := configutil.GetOverwriteConfig()
+	registryConfig := overwriteConfig.Services.Registry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
@@ -405,56 +362,70 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		ValidationRegexPattern: "^(yes)|(no)$",
 	})
 
-	if enableAutomaticBuilds == "yes" {
-		if registryConfig == nil {
-			registryConfig = &v1.RegistryAccess{}
-			cmd.privateConfig.Registry = registryConfig
+	if *enableAutomaticBuilds == "yes" {
+		internalRegistryKey := "internal registry"
+		defaultRegistryValue := internalRegistryKey
+
+		if registryConfig.External != nil {
+			defaultRegistryValue = *registryConfig.External
 		}
-		registryConfig.Release = &v1.Release{
-			Name:      "devspace-registry",
-			Namespace: cmd.privateConfig.Release.Namespace,
-		}
-		registryConfig.User = &v1.RegistryUser{}
+		registryUrl := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
+			DefaultValue:           defaultRegistryValue,
+			ValidationRegexPattern: "^.*$",
+		})
 
-		if cmd.privateConfig.Cluster.User != nil && len(cmd.privateConfig.Cluster.User.Username) != 0 {
-			registryConfig.User.Username = cmd.privateConfig.Cluster.User.Username
-		}
+		if *registryUrl != internalRegistryKey {
+			registryConfig.External = registryUrl
+			registryConfig.Internal = nil
+		} else {
+			registryConfig.External = nil
 
-		if len(registryConfig.User.Username) == 0 {
-			randomUserSuffix, err := randutil.GenerateRandomString(5)
-
-			if err != nil {
-				log.Fatalf("Error creating random username: %s", err.Error())
-			}
-			registryConfig.User.Username = "user-" + randomUserSuffix
-		}
-
-		if len(registryConfig.User.Password) == 0 {
-			randomPassword, err := randutil.GenerateRandomString(12)
-
-			if err != nil {
-				log.Fatalf("Error creating random password: %s", err.Error())
+			if registryConfig.Internal.Release.Name == nil {
+				registryConfig.Internal.Release.Name = configutil.String("devspace-registry")
 			}
 
-			registryConfig.User.Password = randomPassword
-		}
+			if registryConfig.Internal.Release.Namespace == nil {
+				registryConfig.Internal.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+			}
+			registryUser := overwriteConfig.Services.Registry.User
 
-		if cmd.dsConfig.Registry == nil {
-			cmd.dsConfig.Registry = map[interface{}]interface{}{}
-		}
-		secrets, registryHasSecrets := cmd.dsConfig.Registry["secrets"]
+			if registryUser.Username == nil {
+				randomUserSuffix, err := randutil.GenerateRandomString(5)
 
-		if !registryHasSecrets {
-			secrets = map[interface{}]interface{}{}
-			cmd.dsConfig.Registry["secrets"] = secrets
-		}
-		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
+				if err != nil {
+					log.Fatalf("Error creating random username: %s", err.Error())
+				}
+				registryUser.Username = configutil.String("user-" + randomUserSuffix)
+			}
 
-		if secretsIsMap {
-			_, registryHasSecretHtpasswd := secretMap["htpasswd"]
+			if registryUser.Password == nil {
+				randomPassword, err := randutil.GenerateRandomString(12)
 
-			if !registryHasSecretHtpasswd {
-				secretMap["htpasswd"] = ""
+				if err != nil {
+					log.Fatalf("Error creating random password: %s", err.Error())
+				}
+				registryUser.Password = &randomPassword
+			}
+			registryReleaseValues := registryConfig.Internal.Release.Values
+
+			if registryReleaseValues == nil {
+				registryReleaseValues = map[interface{}]interface{}{}
+			}
+			secrets, registryHasSecrets := registryReleaseValues["secrets"]
+
+			if !registryHasSecrets {
+				secrets = map[interface{}]interface{}{}
+				registryReleaseValues["secrets"] = secrets
+			}
+			secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
+
+			if secretsIsMap {
+				_, registryHasSecretHtpasswd := secretMap["htpasswd"]
+
+				if !registryHasSecretHtpasswd {
+					secretMap["htpasswd"] = ""
+				}
 			}
 		}
 	}
@@ -481,7 +452,7 @@ func (cmd *InitCmd) determineLanguage() {
 			log.Fatalf("Unable to get supported languages: %s", err.Error())
 		}
 
-		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
 			DefaultValue:           cmd.chartGenerator.Language,
 			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
@@ -502,8 +473,8 @@ func (cmd *InitCmd) createChart() {
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", &createdChartYaml)
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", &createdChartValuesYaml)
 
-	createdChartYaml["name"] = cmd.appConfig.Name
-
+	createdChartYaml["name"] = cmd.config.DevSpace.Release.Name
+	/*TODO
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
 	if !chartHasContainerValues && containerValues != nil {
@@ -518,7 +489,7 @@ func (cmd *InitCmd) createChart() {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
-
+	*/
 	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
 	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
 }

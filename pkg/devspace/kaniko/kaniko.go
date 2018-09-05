@@ -19,7 +19,7 @@ import (
 )
 
 // BuildDockerfile builds a dockerfile in a kaniko build pod
-func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestination, pullSecretName string) error {
+func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestination, pullSecretName string, allowInsecureRegistry bool) error {
 	//registrySecretName := cmd.privateConfig.Registry.Release.Name + "-docker-registry-secret"
 	//registryHostname := cmd.privateConfig.Registry.Release.Name + "-docker-registry." + cmd.privateConfig.Registry.Release.Namespace + ".svc.cluster.local:5000"
 	workdir, err := os.Getwd()
@@ -143,16 +143,19 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 
 		containerBuildPath := "/src/" + filepath.Base(workdir)
 		exitChannel := make(chan error)
-
-		stdin, stdout, stderr, execErr := kubectl.Exec(client, buildPod, buildContainer.Name, []string{
+		kanikoBuildCmd := []string{
 			"/kaniko/executor",
 			"--dockerfile=" + containerBuildPath + "/Dockerfile",
 			"--context=dir://" + containerBuildPath,
 			"--destination=" + imageDestination,
-			"--insecure-skip-tls-verify",
 			"--single-snapshot",
-		}, false, exitChannel)
+		}
 
+		if allowInsecureRegistry {
+			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure-skip-tls-verify")
+		}
+
+		stdin, stdout, stderr, execErr := kubectl.Exec(client, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
 		stdin.Close()
 
 		if execErr != nil {

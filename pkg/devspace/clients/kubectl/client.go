@@ -9,7 +9,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
@@ -167,19 +167,19 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
-	config.LoadConfig(privateConfig)
+	config := configutil.GetConfig(false)
 
-	if privateConfig.Cluster == nil {
+	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
 
 	return &rest.Config{
-		Host:     privateConfig.Cluster.ApiServer,
-		Username: privateConfig.Cluster.User.Username,
+		Host:     *config.Cluster.ApiServer,
+		Username: *config.Cluster.User.Username,
 		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(privateConfig.Cluster.CaCert),
-			CertData: []byte(privateConfig.Cluster.User.ClientCert),
-			KeyData:  []byte(privateConfig.Cluster.User.ClientKey),
+			CAData:   []byte(*config.Cluster.CaCert),
+			CertData: []byte(*config.Cluster.User.ClientCert),
+			KeyData:  []byte(*config.Cluster.User.ClientKey),
 		},
 	}, nil
 }

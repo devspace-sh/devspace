@@ -1,17 +1,15 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -19,12 +17,10 @@ import (
 
 // ResetCmd holds the needed command information
 type ResetCmd struct {
-	flags         *ResetCmdFlags
-	helm          *helmClient.HelmClientWrapper
-	kubectl       *kubernetes.Clientset
-	privateConfig *v1.PrivateConfig
-	dsConfig      *v1.DevSpaceConfig
-	workdir       string
+	flags   *ResetCmdFlags
+	helm    *helmClient.HelmClientWrapper
+	kubectl *kubernetes.Clientset
+	workdir string
 }
 
 // ResetCmdFlags holds the command flags
@@ -70,13 +66,8 @@ command: devspace down
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
+	var err error
 	cmd.determineResetExtent()
-
-	err := cmd.loadConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't load config: %s", err.Error())
-	}
 
 	if cmd.flags.deleteRelease {
 		err = cmd.deleteRelease()
@@ -163,25 +154,25 @@ func (cmd *ResetCmd) determineResetExtent() {
 	cmd.flags.deleteDevspaceFolder = true
 	cmd.flags.deleteRelease = true
 
-	cmd.flags.deleteDockerfile = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.flags.deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Dockerfile be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteChart = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.flags.deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Chart (chart/*) be removed ? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteRegistry = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.flags.deleteRegistry = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the docker registry be removed ? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteTiller = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	cmd.flags.deleteTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the tiller server be removed ? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
@@ -189,43 +180,18 @@ func (cmd *ResetCmd) determineResetExtent() {
 }
 
 func (cmd *ResetCmd) shouldContinue() bool {
-	return stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	return *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "An error occurred, should the reset command continue? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 }
 
-func (cmd *ResetCmd) loadConfig() error {
-	workdir, err := os.Getwd()
-
-	if err != nil {
-		return fmt.Errorf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	cmd.workdir = workdir
-	cmd.privateConfig = &v1.PrivateConfig{}
-	cmd.dsConfig = &v1.DevSpaceConfig{}
-
-	err = config.LoadConfig(cmd.privateConfig)
-
-	if err != nil {
-		return fmt.Errorf("Unable to load .devspace/private.yaml: %s", err.Error())
-	}
-
-	err = config.LoadConfig(cmd.dsConfig)
-
-	if err != nil {
-		return fmt.Errorf("Unable to load .devspace/config.yaml: %s", err.Error())
-	}
-
-	return nil
-}
-
 func (cmd *ResetCmd) deleteRelease() error {
 	var err error
+	config := configutil.GetConfig(false)
 
-	releaseName := cmd.privateConfig.Release.Name
+	releaseName := *config.DevSpace.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
 		cmd.kubectl, err = kubectl.NewClient()
@@ -234,7 +200,7 @@ func (cmd *ResetCmd) deleteRelease() error {
 			return err
 		}
 
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, cmd.privateConfig)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
 
 		if isDeployed == false {
 			return nil
@@ -254,8 +220,9 @@ func (cmd *ResetCmd) deleteRelease() error {
 
 func (cmd *ResetCmd) deleteRegistry() error {
 	var err error
+	config := configutil.GetConfig(false)
 
-	registryReleaseName := cmd.privateConfig.Registry.Release.Name
+	registryReleaseName := *config.Services.Registry.Internal.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
 		cmd.kubectl, err = kubectl.NewClient()
@@ -264,7 +231,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 			return err
 		}
 
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, cmd.privateConfig)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
 
 		if isDeployed == false {
 			return nil
@@ -284,6 +251,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 
 func (cmd *ResetCmd) deleteTiller() error {
 	var err error
+	config := configutil.GetConfig(false)
 
 	if cmd.kubectl == nil {
 		cmd.kubectl, err = kubectl.NewClient()
@@ -293,7 +261,7 @@ func (cmd *ResetCmd) deleteTiller() error {
 		}
 	}
 
-	return helmClient.DeleteTiller(cmd.kubectl, cmd.privateConfig)
+	return helmClient.DeleteTiller(cmd.kubectl, config.Services.Tiller)
 }
 
 func (cmd *ResetCmd) deleteDockerfile() error {
