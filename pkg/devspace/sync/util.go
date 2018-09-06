@@ -39,16 +39,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 	}
 
 	syncLog = log.GetInstance()
-	err = s.initIgnoreParsers()
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	s.fileIndex = newFileIndex()
-	s.upstream = &upstream{
-		config: s,
-	}
+	s.setup()
 
 	err = s.upstream.start()
 

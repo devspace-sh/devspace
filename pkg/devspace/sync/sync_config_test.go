@@ -1,109 +1,372 @@
 package sync
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
-var (
-	testRemotePath string
-	testLocalPath  string
-	syncClient     *SyncConfig
-)
+func initTestDirs(t *testing.T) (string, string) {
+	testRemotePath, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Couldn't create test dir: %v", err)
+	}
 
-func createTestSyncClient(t *testing.T) {
-	var err error
+	testLocalPath, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Couldn't create test dir: %v", err)
+	}
 
-	if syncClient == nil {
-		testRemotePath, err = ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatalf("Couldn't create test dir: %v", err)
-		}
+	return testRemotePath, testLocalPath
+}
 
-		testLocalPath, err = ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatalf("Couldn't create test dir: %v", err)
-		}
+func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
+	syncLog = log.GetInstance()
 
-		destPath := testRemotePath
+	return &SyncConfig{
+		WatchPath: testLocalPath,
+		DestPath:  testRemotePath,
 
-		if runtime.GOOS == "windows" {
-			destPath = strings.Replace(destPath, "\\", "/", -1)
-			destPath = "/mnt/" + strings.ToLower(string(destPath[0])) + destPath[2:]
-		}
-
-		// Log to stdout
-		syncLog = log.GetInstance()
-		syncClient = &SyncConfig{
-			WatchPath: strings.Replace(testLocalPath, "\\", "/", -1),
-			DestPath:  destPath,
-
-			testing: true,
-		}
-
-		// Start client
-		err = syncClient.Start()
-
-		if err != nil {
-			t.Fatalf("Couldn't init test sync client: %v", err)
-		}
+		testing: true,
 	}
 }
 
-func cleanupTestClient() {
-	if syncClient != nil {
-		syncClient.Stop()
+func removeFolderAndWait(from, to, postfix string, t *testing.T) error {
+	foldernameFrom := path.Join(from, "testFolder"+postfix)
+	foldernameTo := path.Join(to, "testFolder"+postfix)
 
-		os.RemoveAll(testLocalPath)
-		os.RemoveAll(testRemotePath)
+	os.RemoveAll(foldernameFrom)
 
-		syncClient = nil
-	}
-}
-
-func createFileLocal(t *testing.T) {
-	filename := path.Join(testLocalPath, "testFile1")
-	filenameRemote := path.Join(testRemotePath, "testFile1")
-	fileContents := "testFile1"
-
-	ioutil.WriteFile(filename, []byte(fileContents), 0666)
-
-	for i := 0; i < 100; i++ {
-		if _, err := os.Stat(filenameRemote); err == nil {
-			data, err := ioutil.ReadFile(filenameRemote)
-
-			if err != nil {
-				t.Fatalf("Created file %s could not be read: %v", filenameRemote, err)
-			}
-
-			if string(data) != fileContents {
-				t.Fatalf("Created file %s wrong contents: got %s, expected %s", filenameRemote, string(data), fileContents)
-			}
-
-			return
+	for i := 0; i < 50; i++ {
+		if _, err := os.Stat(foldernameTo); err != nil {
+			return nil
 		}
 
 		time.Sleep(time.Millisecond * 100)
 	}
 
-	t.Fatalf("Created file %s wasn't synced to %s", filename, filenameRemote)
+	return fmt.Errorf("Removing folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
 }
 
-func TestSyncEndToEnd(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test in short mode.")
+func removeFileAndWait(from, to, postfix string, t *testing.T) error {
+	filenameFrom := path.Join(from, "testFile"+postfix)
+	filenameTo := path.Join(to, "testFile"+postfix)
+
+	os.Remove(filenameFrom)
+
+	for i := 0; i < 50; i++ {
+		if _, err := os.Stat(filenameTo); err != nil {
+			return nil
+		}
+
+		time.Sleep(time.Millisecond * 100)
 	}
 
-	createTestSyncClient(t)
-	createFileLocal(t)
-	cleanupTestClient()
+	return fmt.Errorf("Removing file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
+}
+
+func createFolderAndWait(from, to, postfix string, t *testing.T) error {
+	foldernameFrom := path.Join(from, "testFolder"+postfix)
+	foldernameTo := path.Join(to, "testFolder"+postfix)
+
+	os.Mkdir(foldernameFrom, 0755)
+
+	for i := 0; i < 50; i++ {
+		if stat, err := os.Stat(foldernameTo); err == nil {
+			if stat.IsDir() == false {
+				return fmt.Errorf("Created folder %s from is a file in destination %s", foldernameFrom, foldernameTo)
+			}
+
+			return nil
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	return fmt.Errorf("Created folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
+}
+
+func createFileAndWait(from, to, postfix string, t *testing.T) error {
+	filenameFrom := path.Join(from, "testFile"+postfix)
+	filenameTo := path.Join(to, "testFile"+postfix)
+	fileContents := "testFile" + postfix
+
+	ioutil.WriteFile(filenameFrom, []byte(fileContents), 0666)
+
+	for i := 0; i < 50; i++ {
+		if _, err := os.Stat(filenameTo); err == nil {
+			data, err := ioutil.ReadFile(filenameTo)
+			if err != nil {
+				continue
+			}
+			if string(data) != fileContents {
+				continue
+			}
+
+			return nil
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	return fmt.Errorf("Created file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
+}
+
+func TestInitialSync(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on windows")
+	}
+
+	remote, local := initTestDirs(t)
+	defer os.RemoveAll(remote)
+	defer os.RemoveAll(local)
+
+	syncClient := createTestSyncClient(local, remote)
+	defer syncClient.Stop()
+
+	syncClient.errorChan = make(chan error)
+
+	// Start client
+	err := syncClient.setup()
+	if err != nil {
+		t.Errorf("Couldn't init test sync client: %v", err)
+		return
+	}
+
+	// Start upstream
+	err = syncClient.upstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start downstream
+	err = syncClient.downstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Create test files
+	fileContents := "TestContents"
+
+	// Write local files
+	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(local, "testFolder"), 0755)
+	os.Mkdir(path.Join(local, "testFolder2"), 0755)
+
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
+
+	// Write remote files
+	ioutil.WriteFile(path.Join(remote, "testFile3"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFile4"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(remote, "testFolder"), 0755)
+	os.Mkdir(path.Join(remote, "testFolder3"), 0755)
+
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
+
+	// Do initial sync
+	err = syncClient.initialSync()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Check outcome
+	filesToCheck := []string{
+		"testFile1",
+		"testFile2",
+		"testFile3",
+		"testFile4",
+		"testFolder/testFile1",
+		"testFolder/testFile2",
+		"testFolder/testFile3",
+		"testFolder/testFile4",
+	}
+
+	foldersToCheck := []string{
+		"testFolder",
+		"testFolder2",
+		"testFolder3",
+	}
+
+	// Check files
+	for _, v := range filesToCheck {
+		localFile := path.Join(local, v)
+		remoteFile := path.Join(remote, v)
+
+		_, err = os.Stat(localFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		_, err = os.Stat(remoteFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		data, err := ioutil.ReadFile(localFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if string(data) != fileContents {
+			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", localFile, string(data), fileContents)
+		}
+
+		data, err = ioutil.ReadFile(remoteFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if string(data) != fileContents {
+			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(data), fileContents)
+		}
+	}
+
+	// Check folders
+	for _, v := range foldersToCheck {
+		localFolder := path.Join(local, v)
+		remoteFolder := path.Join(remote, v)
+
+		stat, err := os.Stat(localFolder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if stat.IsDir() == false {
+			t.Errorf("Expected %s to be a dir", localFolder)
+			return
+		}
+
+		stat, err = os.Stat(remoteFolder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if stat.IsDir() == false {
+			t.Errorf("Expected %s to be a dir", remoteFolder)
+			return
+		}
+	}
+
+	// Check if there is an error in the error channel
+	select {
+	case err = <-syncClient.errorChan:
+		t.Error(err)
+		return
+	default:
+	}
+}
+
+func TestRunningSync(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on windows")
+	}
+
+	remote, local := initTestDirs(t)
+	defer os.RemoveAll(remote)
+	defer os.RemoveAll(local)
+
+	syncClient := createTestSyncClient(remote, local)
+	defer syncClient.Stop()
+
+	syncClient.errorChan = make(chan error)
+
+	// Start client
+	err := syncClient.setup()
+	if err != nil {
+		t.Errorf("Couldn't init test sync client: %v", err)
+		return
+	}
+
+	// Start upstream
+	err = syncClient.upstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start downstream
+	err = syncClient.downstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start sync and do inital sync
+	syncClient.mainLoop()
+
+	// Create
+	err = createFileAndWait(local, remote, "1", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFileAndWait(remote, local, "2", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFolderAndWait(local, remote, "1", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFolderAndWait(remote, local, "2", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Remove
+	err = removeFileAndWait(local, remote, "1", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFileAndWait(remote, local, "2", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFolderAndWait(local, remote, "1", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFolderAndWait(remote, local, "2", t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Check if there is an error in the error channel
+	select {
+	case err = <-syncClient.errorChan:
+		t.Error(err)
+		return
+	default:
+	}
 }
 
 func TestCreateDirInFileMap(t *testing.T) {

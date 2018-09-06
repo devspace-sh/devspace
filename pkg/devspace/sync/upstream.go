@@ -350,8 +350,6 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 		return errors.Trace(err)
 	}
 
-	u.config.Logf("[Upstream] Received EndAck file")
-
 	// Update sync filemap
 	for _, element := range writtenFiles {
 		u.config.fileIndex.CreateDirInFileMap(path.Dir(element.Name))

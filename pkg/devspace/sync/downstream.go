@@ -374,18 +374,19 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 	}
 
 	for _, element := range createFolders {
-		if fileMap[element.Name] == nil && element.IsDirectory {
+		if element.IsDirectory {
 			if numCreateFolders <= 3 {
 				d.config.Logln("[Downstream] Create folder: " + element.Name)
 			}
 
 			err := os.MkdirAll(path.Join(d.config.WatchPath, element.Name), 0755)
-
 			if err != nil {
-				d.config.Logln(err)
+				d.config.Error(err)
 			}
 
-			d.config.fileIndex.CreateDirInFileMap(element.Name)
+			if fileMap[element.Name] == nil {
+				d.config.fileIndex.CreateDirInFileMap(element.Name)
+			}
 		}
 	}
 }
