@@ -62,7 +62,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistry:   true,
 	build:          true,
 	sync:           true,
-	deploy:         true,
+	deploy:         false,
 	portforwarding: true,
 	noSleep:        false,
 }
@@ -146,8 +146,10 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
+	var shouldRebuild bool
+
 	if cmd.flags.build {
-		shouldRebuild := cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
+		shouldRebuild = cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
 
 		if shouldRebuild {
 			cmd.buildImage()
@@ -164,7 +166,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	if cmd.flags.deploy {
+	if cmd.flags.deploy || shouldRebuild {
 		cmd.deployChart()
 	} else {
 		cmd.initHelm()
