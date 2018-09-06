@@ -3,6 +3,7 @@ package sync
 import (
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -25,7 +26,7 @@ type upstream struct {
 }
 
 func (u *upstream) start() error {
-	u.events = make(chan notify.EventInfo, 10000) // High buffer size so we don't miss any fsevents if there are a lot of changes
+	u.events = make(chan notify.EventInfo, 6000) // High buffer size so we don't miss any fsevents if there are a lot of changes
 	u.interrupt = make(chan bool, 1)
 
 	err := u.startShell()
@@ -37,7 +38,55 @@ func (u *upstream) start() error {
 	return nil
 }
 
-func (u *upstream) collectChanges() error {
+func (u *upstream) startShell() error {
+	if u.config.testing == false {
+		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
+
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		u.stdinPipe = stdinPipe
+		u.stdoutPipe = stdoutPipe
+		u.stderrPipe = stderrPipe
+
+		go func() {
+			pipeStream(os.Stderr, u.stderrPipe)
+		}()
+	} else {
+		var err error
+
+		cmd := exec.Command("bash", "-c", "sh")
+
+		u.stdinPipe, err = cmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+
+		u.stdoutPipe, err = cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
+		u.stderrPipe, err = cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			pipeStream(os.Stderr, u.stderrPipe)
+		}()
+	}
+
+	return nil
+}
+
+func (u *upstream) mainLoop() error {
 	for {
 		var changes []*fileInformation
 
@@ -63,9 +112,7 @@ func (u *upstream) collectChanges() error {
 					}
 				}
 
-				u.config.fileIndex.ExecuteSafe(func(fileMap map[string]*fileInformation) {
-					changes = append(changes, u.getfileInformationFromEvent(fileMap, events)...)
-				})
+				changes = append(changes, u.getfileInformationFromEvent(events)...)
 			case <-time.After(time.Millisecond * 600):
 				break
 			}
@@ -78,204 +125,169 @@ func (u *upstream) collectChanges() error {
 			changeAmount = len(changes)
 		}
 
-		var files []*fileInformation
+		err := u.applyChanges(changes)
 
-		lenChanges := len(changes)
-
-		u.config.Logf("[Upstream] Processing %d changes\n", lenChanges)
-
-		for index, element := range changes {
-			if element.Mtime > 0 {
-				if lenChanges <= 10 {
-					u.config.Logf("[Upstream] Create %s\n", element.Name)
-				}
-
-				files = append(files, element)
-
-				// Look ahead
-				if len(changes) <= index+1 || changes[index+1].Mtime == 0 {
-					err := u.sendFiles(files)
-
-					if err != nil {
-						return errors.Trace(err)
-					}
-
-					u.config.Logf("[Upstream] Successfully sent %d create changes\n", len(changes))
-
-					files = make([]*fileInformation, 0, 10)
-				}
-			} else {
-				if lenChanges <= 10 {
-					u.config.Logf("[Upstream] Remove %s\n", element.Name)
-				}
-
-				files = append(files, element)
-
-				// Look ahead
-				if len(changes) <= index+1 || changes[index+1].Mtime > 0 {
-					err := u.config.fileIndex.ExecuteSafeError(func(fileMap map[string]*fileInformation) error {
-						return u.applyRemoves(fileMap, files)
-					})
-
-					if err != nil {
-						return errors.Trace(err)
-					}
-
-					u.config.Logf("[Upstream] Successfully sent %d delete changes\n", len(changes))
-
-					files = make([]*fileInformation, 0, 10)
-				}
-			}
+		if err != nil {
+			return err
 		}
 	}
 }
 
-func (u *upstream) getfileInformationFromEvent(fileMap map[string]*fileInformation, events []notify.EventInfo) []*fileInformation {
+func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fileInformation {
+	u.config.fileIndex.fileMapMutex.Lock()
+	defer u.config.fileIndex.fileMapMutex.Unlock()
+
+	fileMap := u.config.fileIndex.fileMap
 	changes := make([]*fileInformation, 0, len(events))
 
-OUTER:
 	for _, event := range events {
 		fullpath := event.Path()
 		relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
 
-		// Exclude files on the exclude list
+		// Exclude changes on the exclude list
 		if u.config.ignoreMatcher != nil {
 			if u.config.ignoreMatcher.MatchesPath(relativePath) {
-				continue OUTER // Path is excluded
+				continue
 			}
 		}
 
-		stat, err := os.Stat(fullpath)
-
-		if err == nil { // Does exist -> Create File or Folder
-			if fileMap[relativePath] != nil {
-				if stat.IsDir() {
-					continue // Folder already exists
-				} else {
-					if ceilMtime(stat.ModTime()) == fileMap[relativePath].Mtime &&
-						stat.Size() == fileMap[relativePath].Size {
-						continue // File did not change or was changed by downstream
-					}
-				}
+		// Exclude changes on the upload exclude list
+		if u.config.uploadIgnoreMatcher != nil {
+			if u.config.uploadIgnoreMatcher.MatchesPath(relativePath) {
+				continue
 			}
+		}
 
-			// New Create Task
-			changes = append(changes, &fileInformation{
-				Name:        relativePath,
-				Mtime:       ceilMtime(stat.ModTime()),
-				Size:        stat.Size(),
-				IsDirectory: stat.IsDir(),
-			})
-		} else { // Does not exist -> Remove
-			if fileMap[relativePath] == nil {
-				continue // File / Folder was already deleted from map so event was already processed or should not be processed
-			}
+		// Determine what kind of change we got (Create or Remove)
+		newChange := evaluateChange(fileMap, relativePath, fullpath)
 
-			// New Remove Task
-			changes = append(changes, &fileInformation{
-				Name: relativePath,
-			})
+		if newChange != nil {
+			changes = append(changes, newChange)
 		}
 	}
 
 	return changes
 }
 
-func (u *upstream) applyRemoves(fileMap map[string]*fileInformation, files []*fileInformation) error {
-	u.config.Logf("[Upstream] Handling %d removes\n", len(files))
+func evaluateChange(fileMap map[string]*fileInformation, relativePath, fullpath string) *fileInformation {
+	stat, err := os.Stat(fullpath)
 
-	// Send rm commands with max 50 input args
-	for i := 0; i < len(files); i = i + 50 {
-		rmCommand := "rm -R "
-		removeArguments := 0
+	// File / Folder exist -> Create File or Folder
+	// if File / Folder does not exist, we create a new remove change
+	if err == nil {
+		if fileMap[relativePath] != nil {
+			// Folder already exists
+			if stat.IsDir() {
+				return nil
+			}
 
-		for j := 0; j < 50 && i+j < len(files); j++ {
-			relativePath := files[i+j].Name
+			// File did not change or was changed by downstream
+			if ceilMtime(stat.ModTime()) == fileMap[relativePath].Mtime && stat.Size() == fileMap[relativePath].Size {
+				return nil
+			}
 
-			if fileMap[relativePath] != nil {
-				relativePath = strings.Replace(relativePath, "'", "\\'", -1)
-				rmCommand += "'" + u.config.DestPath + relativePath + "' "
-				removeArguments++
-
-				if fileMap[relativePath].IsDirectory {
-					u.config.fileIndex.RemoveDirInFileMap(relativePath)
-				} else {
-					delete(fileMap, relativePath)
-				}
+			// Exclude symbolic links
+			if fileMap[relativePath].IsSymbolicLink {
+				return nil
 			}
 		}
 
-		if removeArguments > 0 {
-			rmCommand += " >/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
-			// u.config.Logf("[Upstream] Handle command %s", rmCommand)
+		// New Create Task
+		return &fileInformation{
+			Name:        relativePath,
+			Mtime:       ceilMtime(stat.ModTime()),
+			Size:        stat.Size(),
+			IsDirectory: stat.IsDir(),
+		}
+	}
 
-			if u.stdinPipe != nil {
-				_, err := u.stdinPipe.Write([]byte(rmCommand))
+	// File / Folder was already deleted from map so event was already processed or should not be processed
+	if fileMap[relativePath] == nil {
+		return nil
+	}
+
+	// Exclude symbolic links
+	if fileMap[relativePath].IsSymbolicLink {
+		return nil
+	}
+
+	// New Remove Task
+	return &fileInformation{
+		Name: relativePath,
+	}
+}
+
+func (u *upstream) applyChanges(changes []*fileInformation) error {
+	var files []*fileInformation
+
+	for index, element := range changes {
+		// We determine if a change is a remove or create change by setting
+		// the mtime to 0 in the fileinformation for remove changes
+		if element.Mtime > 0 {
+			files = append(files, element)
+
+			// Look ahead
+			if len(changes) <= index+1 || changes[index+1].Mtime == 0 {
+				err := u.applyCreates(files)
 
 				if err != nil {
 					return errors.Trace(err)
 				}
 
-				waitTill(EndAck, u.stdoutPipe)
+				files = make([]*fileInformation, 0, 10)
+			}
+		} else {
+			files = append(files, element)
+
+			// Look ahead
+			if len(changes) <= index+1 || changes[index+1].Mtime > 0 {
+				err := u.applyRemoves(files)
+
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				files = make([]*fileInformation, 0, 10)
 			}
 		}
 	}
 
+	u.config.Logf("[Upstream] Successfully processed %d change(s)", len(changes))
 	return nil
 }
 
-func (u *upstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	u.stdinPipe = stdinPipe
-	u.stdoutPipe = stdoutPipe
-	u.stderrPipe = stderrPipe
-
-	go func() {
-		pipeStream(os.Stderr, u.stderrPipe)
-	}()
-
-	return nil
-}
-
-func (u *upstream) sendFiles(files []*fileInformation) error {
+func (u *upstream) applyCreates(files []*fileInformation) error {
 	filename, writtenFiles, err := writeTar(files, u.config)
-
 	if err != nil {
 		return errors.Trace(err)
 	}
 
+	// If we didn't write any files, we are done already
 	if len(writtenFiles) == 0 {
 		return nil
 	}
 
+	// Open the archive
 	f, err := os.Open(filename)
-
 	if err != nil {
 		return errors.Trace(err)
 	}
 
 	defer f.Close()
-	stat, err := f.Stat()
 
+	stat, err := f.Stat()
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	if stat.Size()%512 != 0 {
-		return errors.New("[Upstream] Tar archive has wrong size (Not dividable by 512)")
-	}
-
-	return u.upload(f, strconv.Itoa(int(stat.Size())), writtenFiles)
+	return u.uploadArchive(f, strconv.Itoa(int(stat.Size())), writtenFiles)
 }
 
-func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[string]*fileInformation) error {
+func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles map[string]*fileInformation) error {
 	u.config.fileIndex.fileMapMutex.Lock()
 	defer u.config.fileIndex.fileMapMutex.Unlock()
+
+	u.config.Logf("[Upstream] Upload %d create changes (size %s)", len(writtenFiles), fileSize)
 
 	// TODO: Implement timeout to prevent endless loop
 	cmd := "fileSize=" + fileSize + `;
@@ -300,78 +312,95 @@ func (u *upstream) upload(file *os.File, fileSize string, writtenFiles map[strin
 							sleep 0.1;
 					done;
 
-					tar xf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/dev/null;
+					tar xzpf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/dev/null;
 					echo "` + EndAck + `";
 		` // We need that extra new line or otherwise the command is not sent
 
 	if u.stdinPipe != nil {
+		// Write command
 		_, err := u.stdinPipe.Write([]byte(cmd))
-
 		if err != nil {
-			u.config.Logf("[Upstream] Writing to u.stdinPipe failed: %s\n", err.Error())
-
 			return errors.Trace(err)
 		}
 
 		// Wait till confirmation
 		err = waitTill(StartAck, u.stdoutPipe)
-
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		buf := make([]byte, 512, 512)
-
-		for {
-			n, err := file.Read(buf)
-
-			if n == 0 {
-				if err == nil {
-					continue
-				}
-				if err == io.EOF {
-					break
-				}
-
-				return errors.Trace(err)
-			}
-
-			// process buf
-			if err != nil && err != io.EOF {
-				return errors.Trace(err)
-			}
-
-			n, err = u.stdinPipe.Write(buf)
-
-			if err != nil {
-				return errors.Trace(err)
-			}
-
-			if n < 512 {
-				return errors.New("[Upstream] Only " + strconv.Itoa(n) + " Bytes written to stdin pipe (512 expected)")
-			}
+		// Send file through stdin to remote
+		_, err = io.Copy(u.stdinPipe, file)
+		if err != nil {
+			return errors.Trace(err)
 		}
 	}
 
-	// Delete file
 	file.Close()
+
+	// Delete local file
 	err := os.Remove(file.Name())
-
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	// Wait till confirmation
+	// Wait till receive confirmation
 	err = waitTill(EndAck, u.stdoutPipe)
-
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	// Update filemap
+	// Update sync filemap
 	for _, element := range writtenFiles {
 		u.config.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
 		u.config.fileIndex.fileMap[element.Name] = element
+	}
+
+	return nil
+}
+
+func (u *upstream) applyRemoves(files []*fileInformation) error {
+	u.config.fileIndex.fileMapMutex.Lock()
+	defer u.config.fileIndex.fileMapMutex.Unlock()
+
+	u.config.Logf("[Upstream] Handling %d removes", len(files))
+
+	fileMap := u.config.fileIndex.fileMap
+
+	// Send rm commands with max 50 input args
+	for i := 0; i < len(files); i = i + 50 {
+		rmCommand := "rm -R "
+		removeArguments := 0
+
+		for j := 0; j < 50 && i+j < len(files); j++ {
+			relativePath := files[i+j].Name
+
+			if fileMap[relativePath] != nil {
+				relativePath = strings.Replace(relativePath, "'", "\\'", -1)
+				rmCommand += "'" + u.config.DestPath + relativePath + "' "
+				removeArguments++
+
+				if fileMap[relativePath].IsDirectory {
+					u.config.fileIndex.RemoveDirInFileMap(relativePath)
+				} else {
+					delete(fileMap, relativePath)
+				}
+			}
+		}
+
+		if removeArguments > 0 {
+			rmCommand += " >/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
+
+			if u.stdinPipe != nil {
+				_, err := u.stdinPipe.Write([]byte(rmCommand))
+
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				waitTill(EndAck, u.stdoutPipe)
+			}
+		}
 	}
 
 	return nil

@@ -3,7 +3,6 @@ package kaniko
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -141,7 +140,7 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		log.Done("Uploaded files to container")
 		log.StartWait("Building container image")
 
-		containerBuildPath := "/src/" + filepath.Base(workdir)
+		containerBuildPath := "/src"
 		exitChannel := make(chan error)
 		kanikoBuildCmd := []string{
 			"/kaniko/executor",

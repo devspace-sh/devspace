@@ -2,7 +2,7 @@
 title: devspace init
 ---
 
-Run `devspace init` to get your project ready to start a DevSpaces.
+Run `devspace init` to get your project ready to start a DevSpace.
 
 ```bash
 Usage:

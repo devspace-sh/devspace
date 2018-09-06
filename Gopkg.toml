@@ -1,6 +1,15 @@
 [[constraint]]
   name = "github.com/juju/errors"
   branch = "master"
+  
+[[constraint]]
+  name = "github.com/docker/cli"
+  revision = "37eebe5cb6eff08bde94d17111caa8fc099d7a94"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  source = "https://github.com/moby/moby"
+  revision = "ae7016427f8cba4e4d8fcb979d6ba313ee2c0702"
 
 [[constraint]]
   name = "github.com/rhysd/go-github-selfupdate"
@@ -50,6 +59,18 @@
   name = "k8s.io/helm"
   version = "~v2.9.0"
 
+[[constraint]]
+  name = "github.com/foomo/htpasswd"
+  revision = "cb63c4ac0e5029b961b3ac7dcc281ed2a9232e4e"
+
+[[constraint]]
+  name = "github.com/bmatcuk/doublestar"
+  version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/badgerodon/penv"
+  revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
+
 [[override]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.10.0"
@@ -80,31 +101,15 @@
 
 [[override]]
   name = "github.com/docker/distribution"
-  revision = "245ca4659e09e9745f3cc1217bf56e946509220c"
+  revision = "a97d7c0c155be14d1380c075d3197a5d89c2abc2"
 
+[[override]]
+  name = "github.com/sirupsen/logrus"
+  version = "v1.0.6"
+  
 [prune]
   go-tests = true
   unused-packages = true
-
-[[override]]
-  name = "github.com/Sirupsen/logrus"
-  version = "v1.0.6"
-
-[[override]]
-  name = "github.com/docker/docker"
-  revision = "v1.13.1"
-
-[[constraint]]
-  name = "github.com/foomo/htpasswd"
-  revision = "cb63c4ac0e5029b961b3ac7dcc281ed2a9232e4e"
-
-[[constraint]]
-  name = "github.com/bmatcuk/doublestar"
-  version = "1.1.1"
-
-[[constraint]]
-  name = "github.com/badgerodon/penv"
-  revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
 
 [[constraint]]
   revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"

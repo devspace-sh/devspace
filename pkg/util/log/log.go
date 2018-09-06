@@ -3,7 +3,7 @@ package log
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/daviddengcn/go-colortext"
 )

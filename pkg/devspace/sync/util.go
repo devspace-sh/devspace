@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,52 +17,40 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// CopyToContainer copies a local folder or file to a container path
+// CopyToContainer copies a local folder to a container path
 func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
-	absParentPath := filepath.Dir(LocalPath)
-
-	s := &SyncConfig{
-		Kubectl:      Kubectl,
-		Pod:          Pod,
-		Container:    Container,
-		WatchPath:    absParentPath,
-		DestPath:     ContainerPath,
-		ExcludePaths: ExcludePaths,
-	}
-
-	syncLog = log.GetInstance()
-
-	if s.ExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.ExcludePaths)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		s.ignoreMatcher = ignoreMatcher
-	}
-
-	s.fileIndex = newFileIndex()
-	s.upstream = &upstream{
-		config: s,
-	}
-
-	err := s.upstream.start()
-
-	if err != nil {
-		return errors.Trace(err)
-	}
-
 	stat, err := os.Stat(LocalPath)
 
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	err = s.upstream.sendFiles([]*fileInformation{
+	if stat.IsDir() == false {
+		return errors.New("Only directories can be copied by this function")
+	}
+
+	s := &SyncConfig{
+		Kubectl:      Kubectl,
+		Pod:          Pod,
+		Container:    Container,
+		WatchPath:    getRelativeFromFullPath(LocalPath, ""),
+		DestPath:     ContainerPath,
+		ExcludePaths: ExcludePaths,
+	}
+
+	syncLog = log.GetInstance()
+	s.setup()
+
+	err = s.upstream.start()
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = s.upstream.applyCreates([]*fileInformation{
 		{
-			Name:        getRelativeFromFullPath(LocalPath, s.WatchPath),
-			IsDirectory: stat.IsDir(),
+			Name:        "",
+			IsDirectory: true,
 		},
 	})
 
@@ -329,33 +316,37 @@ func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
 }
 
 func cleanupSyncLogs() error {
-	deleteTreshold := 60 * 60 * 24 * 7 // 1 Week
-	currentTime := int(time.Now().Unix())
-	err := os.Rename(log.Logdir+"sync.log", log.Logdir+"sync.log."+strconv.Itoa(currentTime))
+	syncLogName := log.Logdir + "sync.log"
+	_, err := os.Stat(syncLogName)
+
+	if err != nil {
+		return nil
+	}
+
+	// We read the log file and append it to the old log
+	data, err := ioutil.ReadFile(syncLogName)
 
 	if err != nil {
 		return err
 	}
 
-	// We delete everything older than a week
-	files, err := ioutil.ReadDir(log.Logdir)
+	// Append to syncLog.log.old
+	f, err := os.OpenFile(syncLogName+".old", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 
 	if err != nil {
 		return err
 	}
 
-	for _, f := range files {
-		if f.IsDir() == false && strings.Index(f.Name(), "sync.log.") == 0 {
-			splittedName := strings.Split(f.Name(), ".")
+	defer f.Close()
 
-			if len(splittedName) == 3 {
-				createdAt, err := strconv.Atoi(splittedName[2])
+	if _, err = f.Write(data); err != nil {
+		return err
+	}
 
-				if err == nil && currentTime-createdAt > deleteTreshold {
-					os.Remove(log.Logdir + f.Name())
-				}
-			}
-		}
+	err = os.Remove(syncLogName)
+
+	if err != nil {
+		return err
 	}
 
 	return nil

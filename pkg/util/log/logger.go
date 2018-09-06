@@ -3,7 +3,7 @@ package log
 import (
 	"io"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Logger defines the common logging interface

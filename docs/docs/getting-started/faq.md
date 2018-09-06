@@ -8,8 +8,8 @@ sidebar_label: FAQ
 ### What is a DevSpace?
 A DevSpace is a remote workspace that enables cloud-native development directly inside a Kubernetes cluster. You can setup a DevSpace for each of your projects and directly connect it with your local workspace through the DevSpace CLI. 
 
-### What is a the DevSpace CLI?
-The DevSpace CLI lets you connect your local workspace to a DevSpace. It is an open-source client-only software that provides real-time code sync, port forwarding, terminal tunneling and more, so programming with your DevSpace feels like working just like with a local development runtime.
+### What is the DevSpace CLI?
+The DevSpace CLI lets you connect your local workspace to a DevSpace. It is an open-source, client-only software that provides real-time code sync, port forwarding, terminal tunneling and more, so programming with your DevSpace feels just like working with a local development runtime.
 
 ### Is it free and open source?
 Yes. The DevSpace CLI is completely free and open source (Apache-2.0 license). You can use it for private and for commercial projects.
@@ -20,7 +20,7 @@ There are many use cases where a DevSpace has advantages over regular developmen
 - you need access to Kubernetes-internal services (e.g. Cluster DNS)
 - you want to run algorithms on large amounts of data that change frequently
 - you want to share central dev systems without having to deal with authentication etc.
-- you are annoyed of the increasing heat and the loud oise your fan makes when running computing-intense processes
+- you are annoyed of the increasing heat and the loud noise your fan makes when running computing-intense processes
 
 ### Which programming languages are supported?
 You can use any programming languages with your DevSpace. Just use a Docker image that provides the right tooling to build, run and debug applications with the programming language you want to work with.
@@ -46,13 +46,13 @@ Port forwarding allows you to access a DevSpace port via localhost, e.g. you can
 ## Containers & Images
 
 ### What is a container?
-Containers are isolated process spaces, i.e. each container has their own group of processes that are separated from and not visible for other containers.
+Containers are isolated process spaces, i.e. each container has its own group of processes that are separated from and not visible for other containers.
 
 ### What is a pod?
 A pod is a set of containers that share the same network stack and IP address in the pod network of a Kubernetes cluster.
 
 ### What is an image?
-An image is the blueprint for creating a container, i.e. a container is an instatiation or running version of an image. Docker images are build from Dockerfiles.
+An image is the blueprint for creating a container, i.e. a container is an instantiation or running version of an image. Docker images are build from Dockerfiles.
 
 ### What is an image registry?
 An image registry stores a set of container images. Users can push and pull images from an image registry. Images are usually versioned within a registry by using tags.

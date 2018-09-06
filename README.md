@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 
-With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes cluster provided by cloud platforms, e.g. Google Kubernetes Engine.
+With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes clusters provided by cloud platforms, e.g. Google Kubernetes Engine.
 
 ## Why using a DevSpace?
 Your DevSpace lets you build, test and run code directly inside a Kubernetes cluster and:
@@ -38,7 +38,7 @@ Here you can find some links to the most important pages of our documentation:
 - [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html)
 
 ## Architecture
-Architectually, the DevSpace CLI is a client-side software that interacts with services within your Kubernetes cluster. While the DevSpace CLI can deploy required services (e.g. image registry, Tiller server, Kaniko build pods) automatically, you can also configure it to use already deployed or externally hosted services.
+Architecturally, the DevSpace CLI is a client-side software that interacts with services within your Kubernetes cluster. While the DevSpace CLI can deploy required services (e.g. image registry, Tiller server, Kaniko build pods) automatically, you can also configure it to use already deployed or externally hosted services.
 
 ![DevSpace CLI Architecture](docs/website/static/img/devspace-architecture.svg)
 
