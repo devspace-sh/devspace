@@ -58,7 +58,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistry:   true,
 	build:          true,
 	sync:           true,
-	deploy:         true,
+	deploy:         false,
 	portforwarding: true,
 	noSleep:        false,
 }
@@ -140,8 +140,10 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	var shouldRebuild bool
+
 	if cmd.flags.build {
-		shouldRebuild := cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
+		shouldRebuild = cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
 
 		if shouldRebuild {
 			cmd.buildImage()
@@ -154,7 +156,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	if cmd.flags.deploy {
+	if cmd.flags.deploy || shouldRebuild {
 		cmd.deployChart()
 	} else {
 		// Check if we find a running release pod
@@ -167,12 +169,17 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.pod = pod
 	}
 
-	if cmd.flags.sync {
-		cmd.startSync()
-	}
-
 	if cmd.flags.portforwarding {
 		cmd.startPortForwarding()
+	}
+
+	if cmd.flags.sync {
+		syncConfigs := cmd.startSync()
+		defer func() {
+			for _, v := range syncConfigs {
+				v.Stop()
+			}
+		}()
 	}
 
 	cmd.enterTerminal()
@@ -338,14 +345,15 @@ func (cmd *UpCmd) deployChart() {
 	log.StopWait()
 }
 
-func (cmd *UpCmd) startSync() {
+func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 	config := configutil.GetConfig(false)
+	syncConfigs := make([]*synctool.SyncConfig, 0, len(config.DevSpace.Sync))
 
 	for _, syncPath := range config.DevSpace.Sync {
 		absLocalPath, err := filepath.Abs(cmd.workdir + *syncPath.LocalSubPath)
 
 		if err != nil {
-			log.Panicf("Unable to resolve localSubPath %s: %s", syncPath.LocalSubPath, err.Error())
+			log.Panicf("Unable to resolve localSubPath %s: %s", *syncPath.LocalSubPath, err.Error())
 		} else {
 			// Retrieve pod from label selector
 			labels := make([]string, 0, len(syncPath.LabelSelector))
@@ -359,7 +367,7 @@ func (cmd *UpCmd) startSync() {
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
-				syncConfig := synctool.SyncConfig{
+				syncConfig := &synctool.SyncConfig{
 					Kubectl:   cmd.kubectl,
 					Pod:       pod,
 					Container: &pod.Spec.Containers[0],
@@ -368,15 +376,17 @@ func (cmd *UpCmd) startSync() {
 				}
 
 				err = syncConfig.Start()
-
 				if err != nil {
 					log.Fatalf("Sync error: %s", err.Error())
 				}
 
 				log.Donef("Sync started on %s <-> %s", absLocalPath, syncPath.ContainerPath)
+				syncConfigs = append(syncConfigs, syncConfig)
 			}
 		}
 	}
+
+	return syncConfigs
 }
 
 func (cmd *UpCmd) startPortForwarding() {
