@@ -21,7 +21,7 @@ func TestGetFromStdin_NoChangeQuestion_Default(t *testing.T) {
 	}
 	defer cleanUpMockedStdin()
 
-	answer := GetFromStdin(&params)
+	answer := *GetFromStdin(&params)
 
 	if answer != params.DefaultValue {
 		t.Error("Wrong Answer.\nExpected default answer: " + params.DefaultValue + "\nBut Got: " + answer)
@@ -42,7 +42,7 @@ func TestGetFromStdin_NoChangeQuestion_NonDefault(t *testing.T) {
 	}
 	defer cleanUpMockedStdin()
 
-	answer := GetFromStdin(&params)
+	answer := *GetFromStdin(&params)
 
 	if answer != "Yes" {
 		t.Error("Wrong Answer.\nExpected: Yes\nBut Got: " + answer)
@@ -64,7 +64,7 @@ func TestGetFromStdin_ChangeQuestion_DontChange(t *testing.T) {
 	}
 	defer cleanUpMockedStdin()
 
-	answer := AskChangeQuestion(&params)
+	answer := *AskChangeQuestion(&params)
 
 	if answer != "World" {
 		t.Error("Wrong Answer.\nExpected default: World\nBut Got: " + answer)
@@ -86,7 +86,7 @@ func TestGetFromStdin_ChangeQuestion_DoChange(t *testing.T) {
 	}
 	defer cleanUpMockedStdin()
 
-	answer := AskChangeQuestion(&params)
+	answer := *AskChangeQuestion(&params)
 
 	if answer != "Universe" {
 		t.Error("Wrong Answer.\nExpected default: Universe\nBut Got: " + answer)
