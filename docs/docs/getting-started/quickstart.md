@@ -2,7 +2,7 @@
 title: Quickstart
 ---
 
-You can easily setup a DevSpace for any existing project. This quickstart guide will walk you through the following steps to get started with the DevSpace CLI:
+You can easily setup a DevSpace for any existing project. This quickstart guide will walk you through the steps to get started with the DevSpace CLI:
 1. [Installation of the the DevSpace client](/docs/getting-started/installation)
 2. [Starting your DevSpace](/docs/getting-started/start)
 3. [Coding with your DevSpace](/docs/getting-started/coding)

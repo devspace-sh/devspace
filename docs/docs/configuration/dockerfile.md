@@ -8,4 +8,4 @@ When you run `devspace init` or `devspace up`, the DevSpace CLI will add an exem
 
 See the official Docker documentation for **"[Best practices for writing Dockerfiles](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)"**
 
-**Note: You don't need to install Docker, to use the DevSpace CLI.**
+**Note: You do not need to install Docker, to use the DevSpace CLI.**
