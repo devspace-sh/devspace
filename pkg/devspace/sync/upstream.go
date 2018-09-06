@@ -3,6 +3,7 @@ package sync
 import (
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -38,19 +39,49 @@ func (u *upstream) start() error {
 }
 
 func (u *upstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
+	if u.config.testing == false {
+		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
 
-	if err != nil {
-		return errors.Trace(err)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		u.stdinPipe = stdinPipe
+		u.stdoutPipe = stdoutPipe
+		u.stderrPipe = stderrPipe
+
+		go func() {
+			pipeStream(os.Stderr, u.stderrPipe)
+		}()
+	} else {
+		var err error
+
+		cmd := exec.Command("bash", "-c", "sh")
+
+		u.stdinPipe, err = cmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+
+		u.stdoutPipe, err = cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
+		u.stderrPipe, err = cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			pipeStream(os.Stderr, u.stderrPipe)
+		}()
 	}
-
-	u.stdinPipe = stdinPipe
-	u.stdoutPipe = stdoutPipe
-	u.stderrPipe = stderrPipe
-
-	go func() {
-		pipeStream(os.Stderr, u.stderrPipe)
-	}()
 
 	return nil
 }
@@ -318,6 +349,8 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	u.config.Logf("[Upstream] Received EndAck file")
 
 	// Update sync filemap
 	for _, element := range writtenFiles {

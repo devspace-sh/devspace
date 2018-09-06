@@ -1,9 +1,110 @@
 package sync
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/log"
 )
+
+var (
+	testRemotePath string
+	testLocalPath  string
+	syncClient     *SyncConfig
+)
+
+func createTestSyncClient(t *testing.T) {
+	var err error
+
+	if syncClient == nil {
+		testRemotePath, err = ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("Couldn't create test dir: %v", err)
+		}
+
+		testLocalPath, err = ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("Couldn't create test dir: %v", err)
+		}
+
+		destPath := testRemotePath
+
+		if runtime.GOOS == "windows" {
+			destPath = strings.Replace(destPath, "\\", "/", -1)
+			destPath = "/mnt/" + strings.ToLower(string(destPath[0])) + destPath[2:]
+		}
+
+		// Log to stdout
+		syncLog = log.GetInstance()
+		syncClient = &SyncConfig{
+			WatchPath: strings.Replace(testLocalPath, "\\", "/", -1),
+			DestPath:  destPath,
+
+			testing: true,
+		}
+
+		// Start client
+		err = syncClient.Start()
+
+		if err != nil {
+			t.Fatalf("Couldn't init test sync client: %v", err)
+		}
+	}
+}
+
+func cleanupTestClient() {
+	if syncClient != nil {
+		syncClient.Stop()
+
+		os.RemoveAll(testLocalPath)
+		os.RemoveAll(testRemotePath)
+
+		syncClient = nil
+	}
+}
+
+func createFileLocal(t *testing.T) {
+	filename := path.Join(testLocalPath, "testFile1")
+	filenameRemote := path.Join(testRemotePath, "testFile1")
+	fileContents := "testFile1"
+
+	ioutil.WriteFile(filename, []byte(fileContents), 0666)
+
+	for i := 0; i < 100; i++ {
+		if _, err := os.Stat(filenameRemote); err == nil {
+			data, err := ioutil.ReadFile(filenameRemote)
+
+			if err != nil {
+				t.Fatalf("Created file %s could not be read: %v", filenameRemote, err)
+			}
+
+			if string(data) != fileContents {
+				t.Fatalf("Created file %s wrong contents: got %s, expected %s", filenameRemote, string(data), fileContents)
+			}
+
+			return
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	t.Fatalf("Created file %s wasn't synced to %s", filename, filenameRemote)
+}
+
+func TestSyncEndToEnd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test in short mode.")
+	}
+
+	createTestSyncClient(t)
+	createFileLocal(t)
+	cleanupTestClient()
+}
 
 func TestCreateDirInFileMap(t *testing.T) {
 	sync := SyncConfig{
@@ -64,26 +165,3 @@ func TestCeilMtime(t *testing.T) {
 		t.Fail()
 	}
 }
-
-/* func TestSync(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	if testing.Short() {
-		t.Skip("Skipping test in short mode.")
-	}
-
-	done := make(chan bool)
-
-	sync := SyncConfig{
-		//PodName:   "node-75c5b7bbbd-8gcpz",
-		WatchPath: "D:\\Programmieren\\go-workspace\\src\\git.covexo.com\\covexo\\devspace\\.test",
-		DestPath:  "/home",
-		ExcludeRegEx: []string{
-			"Test.txt",
-		},
-	}
-
-	sync.Start()
-
-	<-done
-} */

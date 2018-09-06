@@ -46,21 +46,24 @@ type SyncConfig struct {
 
 	upstream   *upstream
 	downstream *downstream
+
+	// Used for testing
+	testing bool
 }
 
 // Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
-	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
 }
 
 // Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
-	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
 }
 
 // Error handles a sync error with context
 func (s *SyncConfig) Error(err error) {
-	syncLog.WithKey("stacktrace", errors.ErrorStack(err)).WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Error(err)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 }
 
 // Start starts a new sync instance
