@@ -100,6 +100,8 @@ func createFileAndWait(from, to, postfix string) error {
 	ioutil.WriteFile(filenameFrom, []byte(fileContents), 0666)
 
 	for i := 0; i < 50; i++ {
+		time.Sleep(time.Millisecond * 100)
+
 		if _, err := os.Stat(filenameTo); err == nil {
 			data, err := ioutil.ReadFile(filenameTo)
 			if err != nil {
@@ -111,8 +113,6 @@ func createFileAndWait(from, to, postfix string) error {
 
 			return nil
 		}
-
-		time.Sleep(time.Millisecond * 100)
 	}
 
 	return fmt.Errorf("Created file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
