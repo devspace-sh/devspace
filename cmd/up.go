@@ -181,12 +181,17 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.pod = pod
 	}
 
-	if cmd.flags.sync {
-		cmd.startSync()
-	}
-
 	if cmd.flags.portforwarding {
 		cmd.startPortForwarding()
+	}
+
+	if cmd.flags.sync {
+		syncConfigs := cmd.startSync()
+		defer func() {
+			for _, v := range syncConfigs {
+				v.Stop()
+			}
+		}()
 	}
 
 	cmd.enterTerminal()
@@ -360,7 +365,9 @@ func (cmd *UpCmd) deployChart() {
 	log.StopWait()
 }
 
-func (cmd *UpCmd) startSync() {
+func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
+	syncConfigs := make([]*synctool.SyncConfig, 0, len(cmd.dsConfig.SyncPaths))
+
 	for _, syncPath := range cmd.dsConfig.SyncPaths {
 		absLocalPath, err := filepath.Abs(cmd.workdir + syncPath.LocalSubPath)
 
@@ -379,7 +386,7 @@ func (cmd *UpCmd) startSync() {
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
-				syncConfig := synctool.SyncConfig{
+				syncConfig := &synctool.SyncConfig{
 					Kubectl:   cmd.kubectl,
 					Pod:       pod,
 					Container: &pod.Spec.Containers[0],
@@ -388,15 +395,17 @@ func (cmd *UpCmd) startSync() {
 				}
 
 				err = syncConfig.Start()
-
 				if err != nil {
 					log.Fatalf("Sync error: %s", err.Error())
 				}
 
 				log.Donef("Sync started on %s <-> %s", absLocalPath, syncPath.ContainerPath)
+				syncConfigs = append(syncConfigs, syncConfig)
 			}
 		}
 	}
+
+	return syncConfigs
 }
 
 func (cmd *UpCmd) startPortForwarding() {
