@@ -3,7 +3,7 @@ package v1
 // Version is the current api version
 const Version string = "v1"
 
-//DevSpaceConfig defines the config for a DevSpace
+//Config defines the configuration
 type Config struct {
 	Version  *string         `yaml:"version"`
 	DevSpace *DevSpaceConfig `yaml:"devSpace,omitempty"`
@@ -12,28 +12,33 @@ type Config struct {
 	Services *ServiceConfig  `yaml:"services,omitempty"`
 }
 
-type ServiceConfig struct {
-	Tiller   *TillerConfig   `yaml:"tiller,omitempty"`
-	Registry *RegistryConfig `yaml:"registry,omitempty"`
-}
-
+//ImageConfig defines the image specification
 type ImageConfig struct {
 	Name      *string `yaml:"name"`
 	Tag       *string `yaml:"tag"`
 	BuildTime *string `yaml:"buildTime"`
 }
 
-type TillerConfig struct {
-	Release       *Release  `yaml:"release"`
-	AppNamespaces []*string `yaml:"appNamespaces"`
-}
-
+//DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
 	Release        *Release                `yaml:"release"`
 	PortForwarding []*PortForwardingConfig `yaml:"portForwarding"`
 	Sync           []*SyncConfig           `yaml:"sync"`
 }
 
+//ServiceConfig defines additional services
+type ServiceConfig struct {
+	Tiller   *TillerConfig   `yaml:"tiller,omitempty"`
+	Registry *RegistryConfig `yaml:"registry,omitempty"`
+}
+
+//TillerConfig defines the tiller service
+type TillerConfig struct {
+	Release       *Release  `yaml:"release"`
+	AppNamespaces []*string `yaml:"appNamespaces"`
+}
+
+//RegistryConfig defines the registry service
 type RegistryConfig struct {
 	External *string           `yaml:"external,omitempty"`
 	Internal *InternalRegistry `yaml:"internal,omitempty"`
@@ -41,6 +46,7 @@ type RegistryConfig struct {
 	Insecure *bool             `yaml:"insecure,omitempty"`
 }
 
+//InternalRegistry defines the deployment of an internal registry
 type InternalRegistry struct {
 	Release *Release `yaml:"release,omitempty"`
 	Host    *string  `yaml:"host,omitempty"`
@@ -52,7 +58,7 @@ type RegistryUser struct {
 	Password *string `yaml:"password"`
 }
 
-//PortForwarding defines the ports for a port forwarding to a DevSpace
+//PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
 	ResourceType  *string            `yaml:"resourceType"`
 	LabelSelector map[string]*string `yaml:"labelSelector"`
@@ -65,7 +71,7 @@ type PortMapping struct {
 	RemotePort *int `yaml:"remotePort"`
 }
 
-//SyncPath defines the paths for a SyncFolder
+//SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
 	ResourceType  *string            `yaml:"resourceType"`
 	LabelSelector map[string]*string `yaml:"labelSelector"`
@@ -92,7 +98,7 @@ type Release struct {
 //Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
 	UseKubeConfig *bool   `yaml:"useKubeConfig,omitempty"`
-	ApiServer     *string `yaml:"apiServer,omitempty"`
+	APIServer     *string `yaml:"apiServer,omitempty"`
 	CaCert        *string `yaml:"caCert,omitempty"`
 	User          *User   `yaml:"user,omitempty"`
 }

@@ -197,7 +197,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Registry helm release %s not found", registry.Release.Name)
+	return nil, fmt.Errorf("Registry helm release %s not found", *registry.Release.Name)
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
@@ -286,7 +286,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Devspace helm release %s not found", config.DevSpace.Release.Name)
+	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }
 
 func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
@@ -330,5 +330,5 @@ func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernete
 		}
 	}
 
-	return nil, fmt.Errorf("Devspace helm release %s not found", config.DevSpace.Release.Name)
+	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }

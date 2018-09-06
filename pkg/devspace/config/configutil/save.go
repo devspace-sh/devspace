@@ -115,9 +115,8 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 			return returnSlice, nil, nil
 		} else if len(returnOverwriteSlice) > 0 {
 			return nil, returnOverwriteSlice, nil
-		} else {
-			return nil, nil, nil
 		}
+		return nil, nil, nil
 	case reflect.Map:
 		valueMap := objectValue.(map[interface{}]interface{})
 		returnMap := map[interface{}]interface{}{}
@@ -153,9 +152,8 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 			return returnMap, nil, nil
 		} else if len(returnOverwriteMap) > 0 {
 			return nil, returnOverwriteMap, nil
-		} else {
-			return nil, nil, nil
 		}
+		return nil, nil, nil
 	case reflect.Struct:
 		returnMap := map[interface{}]interface{}{}
 		returnOverwriteMap := map[interface{}]interface{}{}
@@ -194,9 +192,8 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 			return returnMap, nil, nil
 		} else if len(returnOverwriteMap) > 0 {
 			return nil, returnOverwriteMap, nil
-		} else {
-			return nil, nil, nil
 		}
+		return nil, nil, nil
 	default:
 		saveOverwriteValue := !isOverwriteObjectNil
 		saveValue := ((!isObjectNil && !saveOverwriteValue) || !isObjectRawNil)
@@ -209,9 +206,8 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 			return nil, overwriteValue, nil
 		} else if saveValue {
 			return objectValue, nil, nil
-		} else {
-			return nil, nil, nil
 		}
+		return nil, nil, nil
 	}
 }
 
@@ -241,9 +237,8 @@ func getPointerValue(object interface{}) (interface{}, bool) {
 				zeroValue := reflect.Zero(objectValueRef.Type()).Interface()
 
 				return zeroValue, true
-			} else {
-				return objectValueRef.Elem().Interface(), false
 			}
+			return objectValueRef.Elem().Interface(), false
 		}
 	}
 	return object, false

@@ -29,13 +29,14 @@ func init() {
 	workdir, _ = os.Getwd()
 }
 
-//ConfigExists chacks whether the yaml file for the config exists
+//ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
 	_, configNotFound := os.Stat(workdir + configPath)
 
 	return (configNotFound == nil), nil
 }
 
+//GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig(reload bool) *v1.Config {
 	isLoaded := (config.Version != nil)
 
@@ -57,6 +58,7 @@ func GetConfig(reload bool) *v1.Config {
 	return config
 }
 
+//GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
 func GetOverwriteConfig() *v1.Config {
 	isLoaded := (overwriteConfig.Version != nil)
 
@@ -69,6 +71,7 @@ func GetOverwriteConfig() *v1.Config {
 	return overwriteConfig
 }
 
+//GetConfigInstance returns the reference to the config (in most cases it is recommended to use GetConfig instaed)
 func GetConfigInstance() *v1.Config {
 	return config
 }

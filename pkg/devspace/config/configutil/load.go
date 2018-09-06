@@ -24,9 +24,9 @@ func loadClusterConfig(config *v1.Cluster, overwriteExistingValues bool) {
 	kubeconfig, kubeconfigErr := clientcmd.BuildConfigFromFlags("", filepath.Join(fsutil.GetHomeDir(), ".kube", "config"))
 
 	if kubeconfigErr == nil {
-		if config.ApiServer == nil {
+		if config.APIServer == nil {
 			if len(kubeconfig.Host) != 0 {
-				config.ApiServer = String(kubeconfig.Host)
+				config.APIServer = String(kubeconfig.Host)
 			}
 		}
 

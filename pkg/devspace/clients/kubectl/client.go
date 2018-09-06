@@ -193,7 +193,7 @@ func GetClientConfig() (*rest.Config, error) {
 	}
 
 	return &rest.Config{
-		Host:     *config.Cluster.ApiServer,
+		Host:     *config.Cluster.APIServer,
 		Username: *config.Cluster.User.Username,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData:   []byte(*config.Cluster.CaCert),

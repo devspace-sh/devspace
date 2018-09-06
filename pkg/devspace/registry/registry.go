@@ -149,6 +149,7 @@ func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) e
 	return nil
 }
 
+//GetImageUrl returns the image (optional with tag)
 func GetImageUrl(includingLatestTag bool) string {
 	config := configutil.GetConfig(false)
 	image := *config.Image.Name
@@ -161,32 +162,32 @@ func GetImageUrl(includingLatestTag bool) string {
 	return image
 }
 
+//GetRegistryHostname returns the hostname of the registry including the port
 func GetRegistryHostname() string {
 	config := configutil.GetConfig(false)
 	registryConfig := config.Services.Registry
 
 	if registryConfig.External != nil {
 		return *registryConfig.External
-	} else {
-		registryHostname := ""
-		
-		registryValues := yamlq.NewQuery(registryConfig.Internal.Release.Values)
-		isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
-
-		if isIngressEnabled {
-			firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
-
-			if len(firstIngressHostname) > 0 {
-				registryHostname = firstIngressHostname
-			}
-		}
-
-		if len(registryHostname) == 0 {
-			registryConfig.Insecure = configutil.Bool(true)
-			registryHostname = *registryConfig.Internal.Host
-		} else {
-			registryConfig.Insecure = configutil.Bool(false)
-		}
-		return registryHostname
 	}
+	registryHostname := ""
+
+	registryValues := yamlq.NewQuery(registryConfig.Internal.Release.Values)
+	isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
+
+	if isIngressEnabled {
+		firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
+
+		if len(firstIngressHostname) > 0 {
+			registryHostname = firstIngressHostname
+		}
+	}
+
+	if len(registryHostname) == 0 {
+		registryConfig.Insecure = configutil.Bool(true)
+		registryHostname = *registryConfig.Internal.Host
+	} else {
+		registryConfig.Insecure = configutil.Bool(false)
+	}
+	return registryHostname
 }

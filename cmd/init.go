@@ -120,7 +120,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			Name: configutil.String("devspace"),
 		},
 		Cluster: &v1.Cluster{
-			ApiServer: configutil.String("https://192.168.99.100:8443"),
+			APIServer: configutil.String("https://192.168.99.100:8443"),
 			User:      &v1.User{},
 		},
 	})
@@ -315,9 +315,9 @@ func (cmd *InitCmd) reconfigure() {
 	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 
 	if !useKubeConfig {
-		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-			DefaultValue:           *clusterConfig.ApiServer,
+			DefaultValue:           *clusterConfig.APIServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
 		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
