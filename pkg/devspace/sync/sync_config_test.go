@@ -37,7 +37,7 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 	}
 }
 
-func removeFolderAndWait(from, to, postfix string, t *testing.T) error {
+func removeFolderAndWait(from, to, postfix string) error {
 	foldernameFrom := path.Join(from, "testFolder"+postfix)
 	foldernameTo := path.Join(to, "testFolder"+postfix)
 
@@ -54,7 +54,7 @@ func removeFolderAndWait(from, to, postfix string, t *testing.T) error {
 	return fmt.Errorf("Removing folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
 }
 
-func removeFileAndWait(from, to, postfix string, t *testing.T) error {
+func removeFileAndWait(from, to, postfix string) error {
 	filenameFrom := path.Join(from, "testFile"+postfix)
 	filenameTo := path.Join(to, "testFile"+postfix)
 
@@ -71,7 +71,7 @@ func removeFileAndWait(from, to, postfix string, t *testing.T) error {
 	return fmt.Errorf("Removing file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
 }
 
-func createFolderAndWait(from, to, postfix string, t *testing.T) error {
+func createFolderAndWait(from, to, postfix string) error {
 	foldernameFrom := path.Join(from, "testFolder"+postfix)
 	foldernameTo := path.Join(to, "testFolder"+postfix)
 
@@ -92,7 +92,7 @@ func createFolderAndWait(from, to, postfix string, t *testing.T) error {
 	return fmt.Errorf("Created folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
 }
 
-func createFileAndWait(from, to, postfix string, t *testing.T) error {
+func createFileAndWait(from, to, postfix string) error {
 	filenameFrom := path.Join(from, "testFile"+postfix)
 	filenameTo := path.Join(to, "testFile"+postfix)
 	fileContents := "testFile" + postfix
@@ -225,6 +225,7 @@ func TestInitialSync(t *testing.T) {
 		}
 		if string(data) != fileContents {
 			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", localFile, string(data), fileContents)
+			return
 		}
 
 		data, err = ioutil.ReadFile(remoteFile)
@@ -234,6 +235,7 @@ func TestInitialSync(t *testing.T) {
 		}
 		if string(data) != fileContents {
 			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(data), fileContents)
+			return
 		}
 	}
 
@@ -281,7 +283,7 @@ func TestRunningSync(t *testing.T) {
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
 
-	syncClient := createTestSyncClient(remote, local)
+	syncClient := createTestSyncClient(local, remote)
 	defer syncClient.Stop()
 
 	syncClient.errorChan = make(chan error)
@@ -307,54 +309,54 @@ func TestRunningSync(t *testing.T) {
 		return
 	}
 
-	// Start sync and do inital sync
+	// Start sync and do initial sync
 	syncClient.mainLoop()
 
 	// Create
-	err = createFileAndWait(local, remote, "1", t)
+	err = createFileAndWait(local, remote, "1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = createFileAndWait(remote, local, "2", t)
+	err = createFileAndWait(remote, local, "2")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = createFolderAndWait(local, remote, "1", t)
+	err = createFolderAndWait(local, remote, "1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = createFolderAndWait(remote, local, "2", t)
+	err = createFolderAndWait(remote, local, "2")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	// Remove
-	err = removeFileAndWait(local, remote, "1", t)
+	err = removeFileAndWait(local, remote, "1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = removeFileAndWait(remote, local, "2", t)
+	err = removeFileAndWait(remote, local, "2")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = removeFolderAndWait(local, remote, "1", t)
+	err = removeFolderAndWait(local, remote, "1")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = removeFolderAndWait(remote, local, "2", t)
+	err = removeFolderAndWait(remote, local, "2")
 	if err != nil {
 		t.Error(err)
 		return
