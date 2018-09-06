@@ -44,6 +44,8 @@ cluster:
 ```
 A [.devspace/config.yaml](#) contains any public/shared configuration for running a DevSpace for the respective project. It is highly recommended to put this file under version control (e.g. git add).
 
+**Note: You can easily re-configure your DevSpace by running `devspace init -r`.**
+
 ## devspace
 Defines your DevSpace including everything related to portForwarding, sync, and the release config.
 
