@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
@@ -28,8 +27,6 @@ import (
 	describe "k8s.io/kubernetes/pkg/printers/internalversion"
 	"k8s.io/kubernetes/pkg/util/node"
 )
-
-var privateConfig = &v1.PrivateConfig{}
 
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {

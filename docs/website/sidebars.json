@@ -20,7 +20,7 @@
       "configuration/dockerfile",
       "configuration/chart",
       "configuration/config.yaml",
-      "configuration/private.yaml"
+      "configuration/overwrite.yaml"
     ],
     "Advanced": [
       "advanced/logs",

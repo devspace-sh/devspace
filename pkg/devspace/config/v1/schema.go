@@ -73,19 +73,13 @@ type PortMapping struct {
 
 //SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	ResourceType  *string            `yaml:"resourceType"`
-	LabelSelector map[string]*string `yaml:"labelSelector"`
-	LocalSubPath  *string            `yaml:"localSubPath"`
-	ContainerPath *string            `yaml:"containerPath"`
-	ExcludeRegex  []*string          `yaml:"excludeRegex"`
-}
-
-//PrivateConfig defines the private config of the users' computer
-type PrivateConfig struct {
-	Version  *string         `yaml:"version"`
-	Release  *Release        `yaml:"release"`
-	Tiller   *TillerConfig   `yaml:"tiller,omitempty"`
-	Registry *RegistryConfig `yaml:"registry"`
+	ResourceType         *string            `yaml:"resourceType"`
+	LabelSelector        map[string]*string `yaml:"labelSelector"`
+	LocalSubPath         *string            `yaml:"localSubPath"`
+	ContainerPath        *string            `yaml:"containerPath"`
+	ExcludePaths         []string           `yaml:"excludePaths"`
+	DownloadExcludePaths []string           `yaml:"downloadExcludePaths"`
+	UploadExcludePaths   []string           `yaml:"uploadExcludePaths"`
 }
 
 //Release defines running version of a project

@@ -17,12 +17,11 @@ import (
 
 // InstallCmd is a struct that defines a command call for "install"
 type InstallCmd struct {
-	flags         *InstallCmdFlags
-	helm          *helmClient.HelmClientWrapper
-	kubectl       *kubernetes.Clientset
-	privateConfig *v1.PrivateConfig
-	dsConfig      *v1.DevSpaceConfig
-	workdir       string
+	flags    *InstallCmdFlags
+	helm     *helmClient.HelmClientWrapper
+	kubectl  *kubernetes.Clientset
+	dsConfig *v1.DevSpaceConfig
+	workdir  string
 }
 
 // InstallCmdFlags are the flags available for the install-command

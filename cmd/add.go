@@ -13,12 +13,11 @@ import (
 
 // AddCmd holds the information needed for the add command
 type AddCmd struct {
-	flags         *AddCmdFlags
-	syncFlags     *addSyncCmdFlags
-	portFlags     *addPortCmdFlags
-	dsConfig      *v1.DevSpaceConfig
-	privateConfig *v1.PrivateConfig
-	workdir       string
+	flags     *AddCmdFlags
+	syncFlags *addSyncCmdFlags
+	portFlags *addPortCmdFlags
+	dsConfig  *v1.DevSpaceConfig
+	workdir   string
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -128,14 +127,14 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
-	excludedPaths := make([]*string, 0, 0)
+	excludedPaths := make([]string, 0, 0)
 
 	if cmd.syncFlags.ExcludedPaths != "" {
 		excludedPathStrings := strings.Split(cmd.syncFlags.ExcludedPaths, ",")
 
 		for _, v := range excludedPathStrings {
 			excludedPath := strings.TrimSpace(v)
-			excludedPaths = append(excludedPaths, &excludedPath)
+			excludedPaths = append(excludedPaths, excludedPath)
 		}
 	}
 
@@ -144,7 +143,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		LabelSelector: labelSelectorMap,
 		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
 		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
-		ExcludeRegex:  excludedPaths,
+		ExcludePaths:  excludedPaths,
 	})
 
 	err = configutil.SaveConfig()

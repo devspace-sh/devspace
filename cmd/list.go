@@ -107,12 +107,12 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 		excludedPaths := ""
 
-		for _, v := range value.ExcludeRegex {
+		for _, v := range value.ExcludePaths {
 			if len(excludedPaths) > 0 {
 				excludedPaths += ", "
 			}
 
-			excludedPaths += *v
+			excludedPaths += v
 		}
 
 		syncPaths = append(syncPaths, []string{
