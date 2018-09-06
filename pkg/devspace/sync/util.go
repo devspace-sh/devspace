@@ -36,6 +36,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		WatchPath:    getRelativeFromFullPath(LocalPath, ""),
 		DestPath:     ContainerPath,
 		ExcludePaths: ExcludePaths,
+		silent:       true,
 	}
 
 	syncLog = log.GetInstance()

@@ -76,12 +76,19 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:2aaf2cc045d0219bba79655e4df795b973168c310574669cb75786684f7287d3"
+  digest = "1:9453458ba06a7b4b5a6cb522b479f449b4d9387bcf33f9a7e3fdb834569d7a40"
   name = "github.com/bmatcuk/doublestar"
   packages = ["."]
   pruneopts = "UT"
   revision = "85a78806aa1b4707d1dbace9be592cf1ece91ab3"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:46dc582e7aebd8aa4976253b0ea66e49bc439dab54541831562bbd13312ed02c"
+  name = "github.com/covexo/yamlq"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1372,7 +1379,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:0e624fac3318e17179da766a11bb68a8644edf0efb64cbef526282491e2301ea"
+  digest = "1:71a6663e87278aaabcbe47b8be5b04cc31299f77ad65598dc033144b55e7860e"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1609,6 +1616,7 @@
     "github.com/badgerodon/penv",
     "github.com/blang/semver",
     "github.com/bmatcuk/doublestar",
+    "github.com/covexo/yamlq",
     "github.com/daviddengcn/go-colortext",
     "github.com/docker/docker/pkg/term",
     "github.com/foomo/htpasswd",

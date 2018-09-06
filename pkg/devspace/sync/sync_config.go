@@ -47,6 +47,8 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
+	silent bool
+
 	// Used for testing
 	testing   bool
 	errorChan chan error
@@ -54,12 +56,16 @@ type SyncConfig struct {
 
 // Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
-	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
+	if s.silent == false {
+		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
+	}
 }
 
 // Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
-	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+	if s.silent == false {
+		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+	}
 }
 
 // Error handles a sync error with context
@@ -334,7 +340,7 @@ func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, d
 
 //Stop stops the sync process
 func (s *SyncConfig) Stop() {
-	if s.upstream != nil {
+	if s.upstream != nil && s.upstream.interrupt != nil {
 		select {
 		case <-s.upstream.interrupt:
 		default:
@@ -355,7 +361,7 @@ func (s *SyncConfig) Stop() {
 		}
 	}
 
-	if s.downstream != nil {
+	if s.downstream != nil && s.downstream.interrupt != nil {
 		select {
 		case <-s.downstream.interrupt:
 		default:
