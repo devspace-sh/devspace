@@ -46,25 +46,32 @@ type SyncConfig struct {
 
 	upstream   *upstream
 	downstream *downstream
+
+	// Used for testing
+	testing   bool
+	errorChan chan error
 }
 
 // Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
-	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
 }
 
 // Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
-	syncLog.WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
 }
 
 // Error handles a sync error with context
 func (s *SyncConfig) Error(err error) {
-	syncLog.WithKey("stacktrace", errors.ErrorStack(err)).WithKey("pod", s.Pod.Name).WithKey("namespace", s.Pod.Namespace).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Error(err)
+	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+
+	if s.errorChan != nil {
+		s.errorChan <- err
+	}
 }
 
-// Start starts a new sync instance
-func (s *SyncConfig) Start() error {
+func (s *SyncConfig) setup() error {
 	if s.ExcludePaths == nil {
 		s.ExcludePaths = make([]string, 0, 2)
 	}
@@ -91,7 +98,7 @@ func (s *SyncConfig) Start() error {
 
 	err := s.initIgnoreParsers()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// Init upstream
@@ -99,20 +106,30 @@ func (s *SyncConfig) Start() error {
 		config: s,
 	}
 
-	err = s.upstream.start()
-	if err != nil {
-		return err
-	}
-
 	// Init downstream
 	s.downstream = &downstream{
 		config: s,
 	}
 
+	return nil
+}
+
+// Start starts a new sync instance
+func (s *SyncConfig) Start() error {
+	err := s.setup()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = s.upstream.start()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	err = s.downstream.start()
 	if err != nil {
 		s.Stop()
-		return err
+		return errors.Trace(err)
 	}
 
 	go s.mainLoop()
@@ -123,9 +140,8 @@ func (s *SyncConfig) Start() error {
 func (s *SyncConfig) initIgnoreParsers() error {
 	if s.ExcludePaths != nil {
 		ignoreMatcher, err := compilePaths(s.ExcludePaths)
-
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		s.ignoreMatcher = ignoreMatcher
@@ -133,9 +149,8 @@ func (s *SyncConfig) initIgnoreParsers() error {
 
 	if s.DownloadExcludePaths != nil {
 		ignoreMatcher, err := compilePaths(s.DownloadExcludePaths)
-
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		s.downloadIgnoreMatcher = ignoreMatcher
@@ -143,9 +158,8 @@ func (s *SyncConfig) initIgnoreParsers() error {
 
 	if s.UploadExcludePaths != nil {
 		ignoreMatcher, err := compilePaths(s.UploadExcludePaths)
-
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		s.uploadIgnoreMatcher = ignoreMatcher

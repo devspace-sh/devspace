@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -37,15 +38,41 @@ func (d *downstream) start() error {
 }
 
 func (d *downstream) startShell() error {
-	stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, nil)
+	if d.config.testing == false {
+		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, nil)
 
-	if err != nil {
-		return errors.Trace(err)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		d.stdinPipe = stdinPipe
+		d.stdoutPipe = stdoutPipe
+		d.stderrPipe = stderrPipe
+	} else {
+		var err error
+
+		cmd := exec.Command("bash", "-c", "sh")
+
+		d.stdinPipe, err = cmd.StdinPipe()
+		if err != nil {
+			return err
+		}
+
+		d.stdoutPipe, err = cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
+		d.stderrPipe, err = cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
 	}
-
-	d.stdinPipe = stdinPipe
-	d.stdoutPipe = stdoutPipe
-	d.stderrPipe = stderrPipe
 
 	return nil
 }
@@ -347,18 +374,19 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 	}
 
 	for _, element := range createFolders {
-		if fileMap[element.Name] == nil && element.IsDirectory {
+		if element.IsDirectory {
 			if numCreateFolders <= 3 {
 				d.config.Logln("[Downstream] Create folder: " + element.Name)
 			}
 
 			err := os.MkdirAll(path.Join(d.config.WatchPath, element.Name), 0755)
-
 			if err != nil {
-				d.config.Logln(err)
+				d.config.Error(err)
 			}
 
-			d.config.fileIndex.CreateDirInFileMap(element.Name)
+			if fileMap[element.Name] == nil {
+				d.config.fileIndex.CreateDirInFileMap(element.Name)
+			}
 		}
 	}
 }

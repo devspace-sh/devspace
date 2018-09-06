@@ -390,7 +390,7 @@ func (s *stdoutLogger) printWithContext(fnType logFunctionType, context map[stri
 
 	s.writeMessage(fnType, fmt.Sprintln(args...))
 
-	if s.level >= fnTypeInformationMap[fnType].logLevel {
+	if s.fileLogger != nil && s.level >= fnTypeInformationMap[fnType].logLevel {
 		s.fileLogger.printWithContext(fnType, context, args...)
 	}
 }
@@ -401,7 +401,7 @@ func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context map[str
 
 	s.writeMessage(fnType, fmt.Sprintf(format, args...)+"\n")
 
-	if s.level >= fnTypeInformationMap[fnType].logLevel {
+	if s.fileLogger != nil && s.level >= fnTypeInformationMap[fnType].logLevel {
 		s.fileLogger.printWithContextf(fnType, context, format, args...)
 	}
 }
