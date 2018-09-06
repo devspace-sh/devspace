@@ -355,7 +355,7 @@ func (cmd *UpCmd) startSync() {
 				labels = append(labels, key+"="+*value)
 			}
 
-			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), config.DevSpace.Release.Namespace)
+			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), *config.DevSpace.Release.Namespace)
 
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
@@ -392,7 +392,7 @@ func (cmd *UpCmd) startPortForwarding() {
 					labels = append(labels, key+"="+*value)
 				}
 
-				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), config.Devspace.Release.Namespace)
+				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), *config.DevSpace.Release.Namespace)
 
 				if err != nil {
 					log.Errorf("Unable to list devspace pods: %s", err.Error())
@@ -400,7 +400,7 @@ func (cmd *UpCmd) startPortForwarding() {
 					ports := make([]string, len(portForwarding.PortMappings))
 
 					for index, value := range portForwarding.PortMappings {
-						ports[index] = strconv.Itoa(value.LocalPort) + ":" + strconv.Itoa(value.RemotePort)
+						ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
 					}
 
 					readyChan := make(chan struct{})

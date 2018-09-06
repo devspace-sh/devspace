@@ -1,10 +1,6 @@
 [[constraint]]
   name = "github.com/juju/errors"
   branch = "master"
-  
-[[constraint]]
-  name = "github.com/docker/cli"
-  revision = "37eebe5cb6eff08bde94d17111caa8fc099d7a94"
 
 [[constraint]]
   name = "github.com/docker/docker"
