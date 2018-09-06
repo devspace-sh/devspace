@@ -76,7 +76,7 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:9453458ba06a7b4b5a6cb522b479f449b4d9387bcf33f9a7e3fdb834569d7a40"
+  digest = "1:2aaf2cc045d0219bba79655e4df795b973168c310574669cb75786684f7287d3"
   name = "github.com/bmatcuk/doublestar"
   packages = ["."]
   pruneopts = "UT"
@@ -1372,7 +1372,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:71a6663e87278aaabcbe47b8be5b04cc31299f77ad65598dc033144b55e7860e"
+  digest = "1:0e624fac3318e17179da766a11bb68a8644edf0efb64cbef526282491e2301ea"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1612,6 +1612,7 @@
     "github.com/daviddengcn/go-colortext",
     "github.com/docker/docker/pkg/term",
     "github.com/foomo/htpasswd",
+    "github.com/imdario/mergo",
     "github.com/juju/errors",
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",

@@ -45,7 +45,7 @@ The `cluster` field specifies:
 - `useKubeConfig` (yes to use the credentials defined in $HOME/.kube/config)
 
 If `useKubeConfig: false` is used, the following fields need to be specified:
-- `apiServer` (Kubernetes API-Server URL)
+- `APIServer` (Kubernetes API-Server URL)
 - `caCert` (CaCert for the Kubernetes API-Server in PEM format)
 - `user` specifying the following: 
   - `username`

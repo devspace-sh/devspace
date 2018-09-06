@@ -6,7 +6,7 @@ import (
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/daviddengcn/go-colortext"
 	"github.com/spf13/cobra"
@@ -17,13 +17,10 @@ import (
 
 // StatusCmd holds the information needed for the status command
 type StatusCmd struct {
-	flags         *StatusCmdFlags
-	helm          *helmClient.HelmClientWrapper
-	kubectl       *kubernetes.Clientset
-	dsConfig      *v1.DevSpaceConfig
-	privateConfig *v1.PrivateConfig
-	appConfig     *v1.AppConfig
-	workdir       string
+	flags   *StatusCmdFlags
+	helm    *helmClient.HelmClientWrapper
+	kubectl *kubernetes.Clientset
+	workdir string
 }
 
 // StatusCmdFlags holds the possible flags for the list command
@@ -79,9 +76,6 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 		"NAMESPACE",
 		"INFO",
 	}
-
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
-
 	cmd.kubectl, err = kubectl.NewClient()
 
 	if err != nil {
@@ -158,6 +152,8 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
+	config := configutil.GetConfig(false)
+	registry := config.Services.Registry.Internal
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
@@ -169,12 +165,12 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 	}
 
 	for _, release := range releases.Releases {
-		if release.GetName() == cmd.privateConfig.Registry.Release.Name {
+		if release.GetName() == *registry.Release.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
 				return nil, fmt.Errorf("Registry helm release has bad status: %s", release.Info.Status.Code.String())
 			}
 
-			registryPods, err := kubectl.GetPodsFromDeployment(cmd.kubectl, cmd.privateConfig.Registry.Release.Name+"-docker-registry", cmd.privateConfig.Registry.Release.Namespace)
+			registryPods, err := kubectl.GetPodsFromDeployment(cmd.kubectl, *registry.Release.Name+"-docker-registry", *registry.Release.Namespace)
 
 			if err != nil {
 				return nil, err
@@ -201,11 +197,12 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Registry helm release %s not found", cmd.privateConfig.Registry.Release.Name)
+	return nil, fmt.Errorf("Registry helm release %s not found", *registry.Release.Name)
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
-	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, cmd.privateConfig.Cluster.TillerNamespace)
+	config := configutil.GetConfig(false)
+	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, *config.Services.Tiller.Release.Namespace)
 
 	if err != nil {
 		return nil, err
@@ -232,6 +229,7 @@ func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
+	config := configutil.GetConfig(false)
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
@@ -243,13 +241,13 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	}
 
 	for _, release := range releases.Releases {
-		if release.GetName() == cmd.privateConfig.Release.Name {
+		if release.GetName() == *config.DevSpace.Release.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
-				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", cmd.privateConfig.Release.Name, release.Info.Status.Code.String())
+				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", *config.DevSpace.Release.Name, release.Info.Status.Code.String())
 			}
 
-			pods, err := cmd.kubectl.Core().Pods(cmd.privateConfig.Release.Namespace).List(metav1.ListOptions{
-				LabelSelector: "release=" + cmd.privateConfig.Release.Name,
+			pods, err := cmd.kubectl.Core().Pods(*config.DevSpace.Release.Namespace).List(metav1.ListOptions{
+				LabelSelector: "release=" + *config.DevSpace.Release.Name,
 			})
 
 			if err != nil {
@@ -288,10 +286,11 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Devspace helm release %s not found", cmd.privateConfig.Release.Name)
+	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }
 
-func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset, privateConfig *v1.PrivateConfig) (*k8sv1.Pod, error) {
+func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
+	config := configutil.GetConfig(false)
 	releases, err := helm.Client.ListReleases()
 
 	if err != nil {
@@ -303,13 +302,13 @@ func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernete
 	}
 
 	for _, release := range releases.Releases {
-		if release.GetName() == privateConfig.Release.Name {
+		if release.GetName() == *config.DevSpace.Release.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
-				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", privateConfig.Release.Name, release.Info.Status.Code.String())
+				return nil, fmt.Errorf("Devspace helm release %s has bad status: %s", *config.DevSpace.Release.Name, release.Info.Status.Code.String())
 			}
 
-			pods, err := client.Core().Pods(privateConfig.Release.Namespace).List(metav1.ListOptions{
-				LabelSelector: "release=" + privateConfig.Release.Name,
+			pods, err := client.Core().Pods(*config.DevSpace.Release.Namespace).List(metav1.ListOptions{
+				LabelSelector: "release=" + *config.DevSpace.Release.Name,
 			})
 
 			if err != nil {
@@ -331,5 +330,5 @@ func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernete
 		}
 	}
 
-	return nil, fmt.Errorf("Devspace helm release %s not found", privateConfig.Release.Name)
+	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }

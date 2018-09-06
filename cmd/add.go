@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -116,10 +116,10 @@ func init() {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
+	config := configutil.GetConfig(false)
 
 	if cmd.syncFlags.Selector == "" {
-		cmd.syncFlags.Selector = "release=" + cmd.privateConfig.Release.Name
+		cmd.syncFlags.Selector = "release=" + *config.DevSpace.Release.Name
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
@@ -128,25 +128,26 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
-	excludedPaths := make([]string, 0, 0)
+	excludedPaths := make([]*string, 0, 0)
 
 	if cmd.syncFlags.ExcludedPaths != "" {
-		excludedPaths = strings.Split(cmd.syncFlags.ExcludedPaths, ",")
+		excludedPathStrings := strings.Split(cmd.syncFlags.ExcludedPaths, ",")
 
-		for k, v := range excludedPaths {
-			excludedPaths[k] = strings.TrimSpace(v)
+		for _, v := range excludedPathStrings {
+			excludedPath := strings.TrimSpace(v)
+			excludedPaths = append(excludedPaths, &excludedPath)
 		}
 	}
 
-	cmd.dsConfig.SyncPaths = append(cmd.dsConfig.SyncPaths, &v1.SyncPath{
-		ResourceType:  cmd.syncFlags.ResourceType,
+	config.DevSpace.Sync = append(config.DevSpace.Sync, &v1.SyncConfig{
+		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
 		LabelSelector: labelSelectorMap,
-		ContainerPath: cmd.syncFlags.ContainerPath,
-		LocalSubPath:  cmd.syncFlags.LocalPath,
+		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
+		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
 		ExcludeRegex:  excludedPaths,
 	})
 
-	err = config.SaveConfig(cmd.dsConfig)
+	err = configutil.SaveConfig()
 
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
@@ -155,10 +156,10 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	loadConfig(&cmd.workdir, &cmd.privateConfig, &cmd.dsConfig)
+	config := configutil.GetConfig(false)
 
 	if cmd.portFlags.Selector == "" {
-		cmd.portFlags.Selector = "release=" + cmd.privateConfig.Release.Name
+		cmd.portFlags.Selector = "release=" + *config.DevSpace.Release.Name
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
@@ -175,37 +176,39 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 
 	cmd.insertOrReplacePortMapping(labelSelectorMap, portMappings)
 
-	err = config.SaveConfig(cmd.dsConfig)
+	err = configutil.SaveConfig()
 
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}
 }
 
-func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]string, portMappings []*v1.PortMapping) {
+func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
+	config := configutil.GetConfig(false)
+
 	// Check if we should add to existing port mapping
-	for _, v := range cmd.dsConfig.PortForwarding {
-		if v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(v.LabelSelector, labelSelectorMap) {
+	for _, v := range config.DevSpace.PortForwarding {
+		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(v.LabelSelector, labelSelectorMap) {
 			v.PortMappings = append(v.PortMappings, portMappings...)
 
 			return
 		}
 	}
 
-	cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
-		ResourceType:  cmd.portFlags.ResourceType,
+	config.DevSpace.PortForwarding = append(config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+		ResourceType:  configutil.String(cmd.portFlags.ResourceType),
 		LabelSelector: labelSelectorMap,
 		PortMappings:  portMappings,
 	})
 }
 
-func isMapEqual(map1 map[string]string, map2 map[string]string) bool {
+func isMapEqual(map1 map[string]*string, map2 map[string]*string) bool {
 	if len(map1) != len(map2) {
 		return false
 	}
 
 	for k, v := range map1 {
-		if map2[k] != v {
+		if *map2[k] != *v {
 			return false
 		}
 	}
@@ -214,8 +217,6 @@ func isMapEqual(map1 map[string]string, map2 map[string]string) bool {
 }
 
 func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
-	var err error
-
 	portMappings := make([]*v1.PortMapping, 0, 1)
 	portMappingsSplitted := strings.Split(portMappingsString, ",")
 
@@ -227,27 +228,25 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 		}
 
 		portMappingStruct := &v1.PortMapping{}
+		firstPort, err := strconv.Atoi(portMapping[0])
+
+		if err != nil {
+			return nil, err
+		}
 
 		if len(portMapping) == 1 {
-			portMappingStruct.LocalPort, err = strconv.Atoi(portMapping[0])
-
-			if err != nil {
-				return nil, err
-			}
+			portMappingStruct.LocalPort = &firstPort
 
 			portMappingStruct.RemotePort = portMappingStruct.LocalPort
 		} else {
-			portMappingStruct.LocalPort, err = strconv.Atoi(portMapping[0])
+			portMappingStruct.LocalPort = &firstPort
+
+			secondPort, err := strconv.Atoi(portMapping[1])
 
 			if err != nil {
 				return nil, err
 			}
-
-			portMappingStruct.RemotePort, err = strconv.Atoi(portMapping[1])
-
-			if err != nil {
-				return nil, err
-			}
+			portMappingStruct.RemotePort = &secondPort
 		}
 
 		portMappings = append(portMappings, portMappingStruct)
@@ -256,23 +255,23 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 	return portMappings, nil
 }
 
-func parseSelectors(selector string) (map[string]string, error) {
-	selectorMap := make(map[string]string)
+func parseSelectors(selectorString string) (map[string]*string, error) {
+	selectorMap := make(map[string]*string)
 
-	if selector == "" {
+	if selectorString == "" {
 		return selectorMap, nil
 	}
 
-	selectors := strings.Split(selector, ",")
+	selectors := strings.Split(selectorString, ",")
 
 	for _, v := range selectors {
 		keyValue := strings.Split(v, "=")
 
 		if len(keyValue) != 2 {
-			return nil, fmt.Errorf("Wrong selector format: %s", selector)
+			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
 		}
-
-		selectorMap[strings.TrimSpace(keyValue[0])] = strings.TrimSpace(keyValue[1])
+		selector := strings.TrimSpace(keyValue[1])
+		selectorMap[strings.TrimSpace(keyValue[0])] = &selector
 	}
 
 	return selectorMap, nil

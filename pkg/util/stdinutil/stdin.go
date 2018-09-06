@@ -28,7 +28,7 @@ var reader *bufio.Reader
 const changeQuestion = "Would you like to change it? (yes, no/ENTER))"
 
 //GetFromStdin asks the user a question and returns the answer
-func GetFromStdin(params *GetFromStdinParams) string {
+func GetFromStdin(params *GetFromStdinParams) *string {
 	paramutil.SetDefaults(params, defaultParams)
 
 	validationRegexp, _ := regexp.Compile(params.ValidationRegexPattern)
@@ -79,11 +79,11 @@ func GetFromStdin(params *GetFromStdinParams) string {
 			input = ""
 		}
 	}
-	return input
+	return &input
 }
 
 //AskChangeQuestion asks two questions. Do you want to change this value? If yes, what's the new value?
-func AskChangeQuestion(params *GetFromStdinParams) string {
+func AskChangeQuestion(params *GetFromStdinParams) *string {
 	paramutil.SetDefaults(params, defaultParams)
 
 	if reader == nil {
@@ -102,8 +102,8 @@ func AskChangeQuestion(params *GetFromStdinParams) string {
 
 	shouldChangeAnswer := GetFromStdin(&shouldValueChangeQuestion)
 
-	if shouldChangeAnswer == "no" {
-		return params.DefaultValue
+	if *shouldChangeAnswer == "no" {
+		return &params.DefaultValue
 	}
 
 	newValueQuestion := GetFromStdinParams{
