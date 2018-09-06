@@ -368,11 +368,14 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
 				syncConfig := &synctool.SyncConfig{
-					Kubectl:   cmd.kubectl,
-					Pod:       pod,
-					Container: &pod.Spec.Containers[0],
-					WatchPath: absLocalPath,
-					DestPath:  *syncPath.ContainerPath,
+					Kubectl:              cmd.kubectl,
+					Pod:                  pod,
+					Container:            &pod.Spec.Containers[0],
+					WatchPath:            absLocalPath,
+					DestPath:             *syncPath.ContainerPath,
+					ExcludePaths:         syncPath.ExcludePaths,
+					DownloadExcludePaths: syncPath.DownloadExcludePaths,
+					UploadExcludePaths:   syncPath.UploadExcludePaths,
 				}
 
 				err = syncConfig.Start()

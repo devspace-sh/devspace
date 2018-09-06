@@ -19,8 +19,6 @@ import (
 
 // BuildDockerfile builds a dockerfile in a kaniko build pod
 func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestination, pullSecretName string, allowInsecureRegistry bool) error {
-	//registrySecretName := cmd.privateConfig.Registry.Release.Name + "-docker-registry-secret"
-	//registryHostname := cmd.privateConfig.Registry.Release.Name + "-docker-registry." + cmd.privateConfig.Registry.Release.Namespace + ".svc.cluster.local:5000"
 	workdir, err := os.Getwd()
 
 	if err != nil {
