@@ -86,7 +86,7 @@ type PrivateConfig struct {
 type Release struct {
 	Name      *string                     `yaml:"name"`
 	Namespace *string                     `yaml:"namespace"`
-	Values    map[interface{}]interface{} `yaml:"internal,omitempty"`
+	Values    map[interface{}]interface{} `yaml:"values,omitempty"`
 }
 
 //Cluster is a struct that contains data for a Kubernetes-Cluster

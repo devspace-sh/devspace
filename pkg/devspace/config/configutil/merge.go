@@ -18,6 +18,7 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 
 		switch overwriteObjectKind {
 		case reflect.Slice:
+		case reflect.Map:
 		case reflect.Struct:
 			objectValues := reflect.ValueOf(objectPointer).Elem()
 			overwriteObjectValues := reflect.ValueOf(overwriteObjectPointer).Elem()
