@@ -367,14 +367,14 @@ func (cmd *InitCmd) reconfigureRegistry() {
 		if registryConfig.External != nil {
 			defaultRegistryValue = *registryConfig.External
 		}
-		registryUrl := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
 			DefaultValue:           defaultRegistryValue,
 			ValidationRegexPattern: "^.*$",
 		})
 
-		if *registryUrl != internalRegistryKey {
-			registryConfig.External = registryUrl
+		if *registryURL != internalRegistryKey {
+			registryConfig.External = registryURL
 			registryConfig.Internal = nil
 		} else {
 			registryConfig.External = nil

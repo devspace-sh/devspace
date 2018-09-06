@@ -216,7 +216,7 @@ func (cmd *UpCmd) buildImage() {
 	if randErr != nil {
 		log.Fatalf("Image building failed: %s", randErr.Error())
 	}
-	imageDestination := registry.GetImageUrl(false) + ":" + imageTag
+	imageDestination := registry.GetImageURL(false) + ":" + imageTag
 
 	if cmd.flags.imageDestination != "" {
 		imageDestination = cmd.flags.imageDestination
@@ -258,7 +258,7 @@ func (cmd *UpCmd) deployChart() {
 	values := map[interface{}]interface{}{}
 	containerValues := map[interface{}]interface{}{}
 
-	containerValues["image"] = registry.GetImageUrl(true)
+	containerValues["image"] = registry.GetImageURL(true)
 
 	if !cmd.flags.noSleep {
 		containerValues["command"] = []string{"sleep"}

@@ -149,8 +149,8 @@ func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) e
 	return nil
 }
 
-//GetImageUrl returns the image (optional with tag)
-func GetImageUrl(includingLatestTag bool) string {
+//GetImageURL returns the image (optional with tag)
+func GetImageURL(includingLatestTag bool) string {
 	config := configutil.GetConfig(false)
 	image := *config.Image.Name
 
