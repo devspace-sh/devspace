@@ -313,13 +313,13 @@ func TestRunningSync(t *testing.T) {
 	syncClient.mainLoop()
 
 	// Create
-	err = createFileAndWait(local, remote, "1")
+	err = createFileAndWait(remote, local, "2")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = createFileAndWait(remote, local, "2")
+	err = createFileAndWait(local, remote, "1")
 	if err != nil {
 		t.Error(err)
 		return
