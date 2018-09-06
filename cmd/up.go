@@ -88,7 +88,6 @@ Starts and connects your DevSpace:
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
-	cobraCmd.Flags().StringVarP(&cmd.flags.open, "open", "o", cmd.flags.open, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistry, "init-registry", cmd.flags.initRegistry, "Install or upgrade Docker registry")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")

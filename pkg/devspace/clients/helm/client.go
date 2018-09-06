@@ -87,7 +87,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		return nil, err
 	}
 
-	tillerErr := ensureTiller(kubectlClient, tillerConfig, upgradeTiller)
+	tillerErr := ensureTiller(kubectlClient, config, upgradeTiller)
 
 	if tillerErr != nil {
 		return nil, tillerErr
@@ -183,7 +183,8 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	return wrapper, nil
 }
 
-func ensureTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, upgrade bool) error {
+func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrade bool) error {
+	tillerConfig := config.Services.Tiller
 	tillerNamespace := *tillerConfig.Release.Namespace
 	tillerSA := &k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -234,6 +235,15 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 
 		helminstaller.Install(kubectlClient, tillerOptions)
 
+		appNamespaces := []*string{
+			config.DevSpace.Release.Namespace,
+		}
+
+		if config.Services.Registry.Internal.Release.Namespace != nil {
+			appNamespaces = append(appNamespaces, config.Services.Registry.Internal.Release.Namespace)
+		}
+		tillerConfig.AppNamespaces = appNamespaces
+
 		for _, appNamespace := range tillerConfig.AppNamespaces {
 			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
 
@@ -281,6 +291,26 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 	log.StopWait()
 
 	return nil
+}
+
+func addAppNamespaces(appNamespaces *[]*string, namespaces []*string) {
+	newAppNamespaces := *appNamespaces
+
+	for _, ns := range namespaces {
+		isExisting := false
+
+		for _, existingNS := range newAppNamespaces {
+			if ns == existingNS {
+				isExisting = true
+				break
+			}
+		}
+
+		if !isExisting {
+			newAppNamespaces = append(newAppNamespaces, ns)
+		}
+	}
+	appNamespaces = &newAppNamespaces
 }
 
 // IsTillerDeployed determines if we could connect to a tiller server

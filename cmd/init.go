@@ -147,9 +147,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if createChart {
 		cmd.determineAppConfig()
 
-		if cmd.config.DevSpace.Release == nil || cmd.config.DevSpace.Release.Name == nil {
-			cmd.config.DevSpace.Release.Name = configutil.String("my-app")
-		}
+		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
 	}
 
 	if cmd.flags.reconfigure || !configExists {
