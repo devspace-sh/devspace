@@ -354,9 +354,8 @@ func (cmd *InitCmd) reconfigure() {
 }
 
 func (cmd *InitCmd) reconfigureRegistry() {
-	config := configutil.GetConfig(false)
 	overwriteConfig := configutil.GetOverwriteConfig()
-	registryConfig := config.Services.Registry
+	registryConfig := cmd.config.Services.Registry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
