@@ -23,6 +23,8 @@ var config = makeConfig()
 var configRaw = makeConfig()
 var overwriteConfig = makeConfig()
 var overwriteConfigRaw = makeConfig()
+var configLoaded = false
+var overwriteConfigLoaded = false
 var workdir string
 
 func init() {
@@ -43,9 +45,9 @@ func ConfigExists() (bool, error) {
 
 //GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig(reload bool) *v1.Config {
-	isLoaded := (config.Version != nil)
+	if !configLoaded || reload {
+		configLoaded = true
 
-	if !isLoaded || reload {
 		err := loadConfig(configRaw, configPath)
 
 		if err != nil {
@@ -65,9 +67,9 @@ func GetConfig(reload bool) *v1.Config {
 
 //GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
 func GetOverwriteConfig() *v1.Config {
-	isLoaded := (overwriteConfig.Version != nil)
+	if !overwriteConfigLoaded {
+		overwriteConfigLoaded = true
 
-	if !isLoaded {
 		//ignore error as overwrite.yaml is optional
 		loadConfig(overwriteConfigRaw, overwriteConfigPath)
 

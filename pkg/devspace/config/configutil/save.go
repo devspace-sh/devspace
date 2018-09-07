@@ -16,9 +16,9 @@ import (
 //SaveConfig writes the data of a config to its yaml file
 func SaveConfig() error {
 	configExists, _ := ConfigExists()
+	baseConfig := makeConfig()
 
 	// just in case someone has set a pointer to one of the structs to nil, merge empty an empty config object into all configs
-	baseConfig := makeConfig()
 	merge(config, baseConfig, unsafe.Pointer(&config), unsafe.Pointer(baseConfig))
 	merge(configRaw, baseConfig, unsafe.Pointer(&configRaw), unsafe.Pointer(baseConfig))
 	merge(overwriteConfig, baseConfig, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(baseConfig))
@@ -102,11 +102,42 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 	case reflect.Slice:
 		returnSlice := []interface{}{}
 		returnOverwriteSlice := []interface{}{}
+		var err error
 
+	OUTER:
 		for i := 0; i < objectValueRef.Len(); i++ {
-			val := objectValueRef.Index(i)
-			//TODO: remove overwriteValues and write them into returnOverwriteSlice
-			returnSlice = append(returnSlice, val)
+			val := objectValueRef.Index(i).Interface()
+
+			for ii := 0; ii < overwriteValueRef.Len(); ii++ {
+				if val == overwriteValueRef.Index(ii).Interface() {
+					continue OUTER
+				}
+			}
+
+			if val != nil {
+				//to remove nil values
+				_, val, err = getConfigAndOverwriteMaps(val, val, val, val)
+
+				if err != nil {
+					return nil, nil, err
+				}
+				returnSlice = append(returnSlice, val)
+			}
+		}
+
+		for i := 0; i < overwriteValueRef.Len(); i++ {
+			val := overwriteValueRef.Index(i).Interface()
+
+			if val != nil {
+				//to remove nil values
+				_, val, err = getConfigAndOverwriteMaps(val, val, val, val)
+
+				if err != nil {
+					return nil, nil, err
+				}
+
+				returnOverwriteSlice = append(returnOverwriteSlice, val)
+			}
 		}
 
 		if len(returnSlice) > 0 && len(returnOverwriteSlice) > 0 {

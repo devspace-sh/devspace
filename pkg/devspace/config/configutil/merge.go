@@ -25,13 +25,13 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		switch overwriteObjectKind {
 		case reflect.Slice:
 			if objectPointerRef.IsNil() {
-				objectRef.Set(overwriteObjectRef)
-			} else {
-				for i := 0; i < overwriteObjectRef.Len(); i++ {
-					overwriteValue := overwriteObjectRef.Index(i)
+				objectRef.Set(reflect.New(overwriteObjectType))
+			}
 
-					objectRef.Set(reflect.Append(objectRef, overwriteValue))
-				}
+			for i := 0; i < overwriteObjectRef.Len(); i++ {
+				overwriteValue := overwriteObjectRef.Index(i)
+
+				objectRef.Set(reflect.Append(objectRef, overwriteValue))
 			}
 		case reflect.Map:
 			var mergedMap map[interface{}]interface{}

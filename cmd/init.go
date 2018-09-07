@@ -226,7 +226,7 @@ func (cmd *InitCmd) determineAppConfig() {
 			cmd.addPortForwarding(portInt)
 		}
 	}
-	cmd.addSyncPath()
+	cmd.addDefaultSyncConfig()
 
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -237,44 +237,45 @@ func (cmd *InitCmd) determineAppConfig() {
 }
 
 func (cmd *InitCmd) addPortForwarding(port int) {
-OUTER:
 	for _, portForwarding := range *cmd.config.DevSpace.PortForwarding {
 		for _, portMapping := range *portForwarding.PortMappings {
 			if *portMapping.RemotePort == port {
-				portForwarding := append(*cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-					PortMappings: &[]*v1.PortMapping{
-						{
-							LocalPort:  &port,
-							RemotePort: &port,
-						},
-					},
-					ResourceType: configutil.String("pod"),
-					LabelSelector: &map[string]*string{
-						"release": cmd.config.DevSpace.Release.Name,
-					},
-				})
-				cmd.config.DevSpace.PortForwarding = &portForwarding
-				break OUTER
+				return
 			}
 		}
 	}
+
+	portForwarding := append(*cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+		PortMappings: &[]*v1.PortMapping{
+			{
+				LocalPort:  &port,
+				RemotePort: &port,
+			},
+		},
+		ResourceType: configutil.String("pod"),
+		LabelSelector: &map[string]*string{
+			"release": cmd.config.DevSpace.Release.Name,
+		},
+	})
+	cmd.config.DevSpace.PortForwarding = &portForwarding
 }
 
-func (cmd *InitCmd) addSyncPath() {
+func (cmd *InitCmd) addDefaultSyncConfig() {
 	for _, syncPath := range *cmd.config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
-				ContainerPath: configutil.String("/app"),
-				LocalSubPath:  configutil.String("./"),
-				ResourceType:  configutil.String("pod"),
-				LabelSelector: &map[string]*string{
-					"release": cmd.config.DevSpace.Release.Name,
-				},
-			})
-			cmd.config.DevSpace.Sync = &syncConfig
-			break
+			return
 		}
 	}
+
+	syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
+		ContainerPath: configutil.String("/app"),
+		LocalSubPath:  configutil.String("./"),
+		ResourceType:  configutil.String("pod"),
+		LabelSelector: &map[string]*string{
+			"release": cmd.config.DevSpace.Release.Name,
+		},
+	})
+	cmd.config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) reconfigure() {
