@@ -57,20 +57,32 @@ type SyncConfig struct {
 // Logf prints the given information to the synclog with context data
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
 	if s.silent == false {
-		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Infof(format, args...)
+		if s.Pod != nil {
+			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+		} else {
+			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+		}
 	}
 }
 
 // Logln prints the given information to the synclog with context data
 func (s *SyncConfig) Logln(line interface{}) {
 	if s.silent == false {
-		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Info(line)
+		if s.Pod != nil {
+			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+		} else {
+			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+		}
 	}
 }
 
 // Error handles a sync error with context
 func (s *SyncConfig) Error(err error) {
-	syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).WithKey("excluded", s.ExcludePaths).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+	if s.Pod != nil {
+		syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+	} else {
+		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+	}
 
 	if s.errorChan != nil {
 		s.errorChan <- err
@@ -175,7 +187,7 @@ func (s *SyncConfig) initIgnoreParsers() error {
 }
 
 func (s *SyncConfig) mainLoop() {
-	s.Logf("[Sync] Start syncing\n")
+	s.Logf("[Sync] Start syncing")
 
 	err := s.initialSync()
 	if err != nil {

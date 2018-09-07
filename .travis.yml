@@ -12,6 +12,9 @@ jobs:
       - npm install -g codeclimate-test-reporter
     os: linux
     go: 1.10.3
+    cache:
+      directories:
+        - $HOME/gopath/src/github.com/$TRAVIS_REPO_SLUG/vendor
     script:
       - ./scripts/coverage.bash
     after_success:
