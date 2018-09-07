@@ -15,7 +15,7 @@ func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	// config := configutil.GetConfig(false)
 
 	// Read syncLog
-	cwd, err := os.Getwd()
+	/*cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,5 +26,5 @@ func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Couldn't read %s. Do you have a sync path configured?", syncLogPath)
 	}
 
-	_ = strings.Split(string(data), "\n")
+	_ = strings.Split(string(data), "\n")*/
 }
