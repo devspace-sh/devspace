@@ -16,9 +16,9 @@ import (
 //SaveConfig writes the data of a config to its yaml file
 func SaveConfig() error {
 	configExists, _ := ConfigExists()
+	baseConfig := makeConfig()
 
 	// just in case someone has set a pointer to one of the structs to nil, merge empty an empty config object into all configs
-	baseConfig := makeConfig()
 	merge(config, baseConfig, unsafe.Pointer(&config), unsafe.Pointer(baseConfig))
 	merge(configRaw, baseConfig, unsafe.Pointer(&configRaw), unsafe.Pointer(baseConfig))
 	merge(overwriteConfig, baseConfig, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(baseConfig))
@@ -78,7 +78,9 @@ func SaveConfig() error {
 }
 
 func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwriteConfig interface{}, overwriteConfigRaw interface{}) (interface{}, interface{}, error) {
+
 	object, isObjectNil := getPointerValue(config)
+
 	objectType := reflect.TypeOf(object)
 	objectKind := objectType.Kind()
 	overwriteObject, isOverwriteObjectNil := getPointerValue(overwriteConfig)
@@ -102,11 +104,42 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 	case reflect.Slice:
 		returnSlice := []interface{}{}
 		returnOverwriteSlice := []interface{}{}
+		var err error
 
+	OUTER:
 		for i := 0; i < objectValueRef.Len(); i++ {
-			val := objectValueRef.Index(i)
-			//TODO: remove overwriteValues and write them into returnOverwriteSlice
-			returnSlice = append(returnSlice, val)
+			val := objectValueRef.Index(i).Interface()
+
+			for ii := 0; ii < overwriteValueRef.Len(); ii++ {
+				if val == overwriteValueRef.Index(ii).Interface() {
+					continue OUTER
+				}
+			}
+
+			if val != nil {
+				//to remove nil values
+				_, val, err = getConfigAndOverwriteMaps(val, val, val, val)
+
+				if err != nil {
+					return nil, nil, err
+				}
+				returnSlice = append(returnSlice, val)
+			}
+		}
+
+		for i := 0; i < overwriteValueRef.Len(); i++ {
+			val := overwriteValueRef.Index(i).Interface()
+
+			if val != nil {
+				//to remove nil values
+				_, val, err = getConfigAndOverwriteMaps(val, val, val, val)
+
+				if err != nil {
+					return nil, nil, err
+				}
+
+				returnOverwriteSlice = append(returnOverwriteSlice, val)
+			}
 		}
 
 		if len(returnSlice) > 0 && len(returnOverwriteSlice) > 0 {
@@ -118,31 +151,44 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 		}
 		return nil, nil, nil
 	case reflect.Map:
-		valueMap := objectValue.(map[interface{}]interface{})
 		returnMap := map[interface{}]interface{}{}
 		returnOverwriteMap := map[interface{}]interface{}{}
+		genericPointerType := reflect.TypeOf(&returnMap)
 
-		for key, val := range valueMap {
-			key = getYamlKey(key.(string))
+		for _, keyRef := range objectValueRef.MapKeys() {
+			key := keyRef.Interface()
+			val := getMapValue(objectValue, key, genericPointerType)
+			yamlKey := getYamlKey(key.(string))
 			valType := reflect.TypeOf(val)
+			overwriteVal := getMapValue(overwriteValue, key, valType)
 
-			cleanVal, cleanOverwriteVal, err := getConfigAndOverwriteMaps(
-				val,
-				getValueOrZero(objectRawValue, key, valType),
-				getValueOrZero(overwriteValue, key, valType),
-				getValueOrZero(overwriteRawValue, key, valType),
-			)
+			if val != nil && overwriteVal != nil {
+				valRaw := getMapValue(objectRawValue, key, valType)
+				overwriteValRaw := getMapValue(overwriteRawValue, key, valType)
+				var err error
 
-			if err != nil {
-				return nil, nil, err
+				val, overwriteVal, err = getConfigAndOverwriteMaps(
+					val,
+					valRaw,
+					overwriteVal,
+					overwriteValRaw,
+				)
+
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 
-			if cleanVal != nil {
-				returnMap[key] = cleanVal
+			valRef := reflect.ValueOf(val)
+
+			if !isZero(valRef) {
+				returnMap[yamlKey] = val
 			}
 
-			if cleanOverwriteVal != nil {
-				returnOverwriteMap[key] = cleanOverwriteVal
+			overwriteValRef := reflect.ValueOf(overwriteVal)
+
+			if !isZero(overwriteValRef) {
+				returnOverwriteMap[yamlKey] = overwriteVal
 			}
 		}
 
@@ -159,30 +205,33 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 		returnOverwriteMap := map[interface{}]interface{}{}
 
 		for i := 0; i < objectValueRef.NumField(); i++ {
-			fieldName := getYamlKey(objectValueRef.Type().Field(i).Name)
+			field := objectValueRef.Field(i)
+			yamlKey := getYamlKey(objectValueRef.Type().Field(i).Name)
 
-			fieldValue := objectValueRef.Field(i).Interface()
-			fieldRawValue := objectRawValueRef.Field(i).Interface()
-			overwriteFieldValue := overwriteValueRef.Field(i).Interface()
-			overwriteRawFieldValue := overwriteRawValueRef.Field(i).Interface()
+			if field.CanInterface() {
+				fieldValue := field.Interface()
+				fieldRawValue := objectRawValueRef.Field(i).Interface()
+				overwriteFieldValue := overwriteValueRef.Field(i).Interface()
+				overwriteRawFieldValue := overwriteRawValueRef.Field(i).Interface()
 
-			fieldValueClean, overwriteFieldValueClean, err := getConfigAndOverwriteMaps(
-				fieldValue,
-				fieldRawValue,
-				overwriteFieldValue,
-				overwriteRawFieldValue,
-			)
+				fieldValueClean, overwriteFieldValueClean, err := getConfigAndOverwriteMaps(
+					fieldValue,
+					fieldRawValue,
+					overwriteFieldValue,
+					overwriteRawFieldValue,
+				)
 
-			if err != nil {
-				return nil, nil, err
-			}
+				if err != nil {
+					return nil, nil, err
+				}
 
-			if fieldValueClean != nil {
-				returnMap[fieldName] = fieldValueClean
-			}
+				if fieldValueClean != nil {
+					returnMap[yamlKey] = fieldValueClean
+				}
 
-			if overwriteFieldValueClean != nil {
-				returnOverwriteMap[fieldName] = overwriteFieldValueClean
+				if overwriteFieldValueClean != nil {
+					returnOverwriteMap[yamlKey] = overwriteFieldValueClean
+				}
 			}
 		}
 
@@ -211,14 +260,38 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 	}
 }
 
-func getValueOrZero(valueMap interface{}, key interface{}, refType reflect.Type) interface{} {
-	valueMapValidated := valueMap.(map[interface{}]interface{})
-	value, valueExists := valueMapValidated[key]
+func getMapValue(valueMap interface{}, key interface{}, refType reflect.Type) interface{} {
+	valueMapValue, _ := getPointerValue(valueMap)
+	mapRef := reflect.ValueOf(valueMapValue)
+	keyRef := reflect.ValueOf(key)
+	mapValue := mapRef.MapIndex(keyRef)
 
-	if !valueExists {
-		value = reflect.Zero(refType).Interface()
+	if isZero(mapValue) {
+		mapValue = reflect.New(refType)
 	}
-	return value
+	return mapValue.Interface()
+}
+
+//isZero is a reflect function from: https://github.com/golang/go/issues/7501
+func isZero(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+	switch v.Kind() {
+	case reflect.Array, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
 }
 
 func getYamlKey(key string) string {
@@ -234,9 +307,10 @@ func getPointerValue(object interface{}) (interface{}, bool) {
 			objectValueRef := reflect.ValueOf(object)
 
 			if objectValueRef.IsNil() {
-				zeroValue := reflect.Zero(objectValueRef.Type()).Interface()
+				pointerValueType := objectValueRef.Type().Elem()
+				newInstance := reflect.New(pointerValueType).Interface()
 
-				return zeroValue, true
+				return newInstance, true
 			}
 			return objectValueRef.Elem().Interface(), false
 		}

@@ -242,9 +242,9 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		if config.Services.Registry.Internal.Release.Namespace != nil {
 			appNamespaces = append(appNamespaces, config.Services.Registry.Internal.Release.Namespace)
 		}
-		tillerConfig.AppNamespaces = appNamespaces
+		tillerConfig.AppNamespaces = &appNamespaces
 
-		for _, appNamespace := range tillerConfig.AppNamespaces {
+		for _, appNamespace := range *tillerConfig.AppNamespaces {
 			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
 
 			if err != nil {
@@ -348,7 +348,7 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 	if err != nil {
 		errs = append(errs, err)
 	}
-	roleNamespace := append(tillerConfig.AppNamespaces, &tillerNamespace)
+	roleNamespace := append(*tillerConfig.AppNamespaces, &tillerNamespace)
 
 	for _, appNamespace := range roleNamespace {
 		roleName := tillerRoleName
@@ -472,7 +472,7 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
 
 	if err != nil {
@@ -563,7 +563,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}

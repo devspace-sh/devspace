@@ -120,20 +120,20 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	newSyncPaths := make([]*v1.SyncConfig, 0, len(config.DevSpace.Sync)-1)
+	newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
 
-	for _, v := range config.DevSpace.Sync {
+	for _, v := range *config.DevSpace.Sync {
 		if cmd.syncFlags.RemoveAll ||
 			cmd.syncFlags.LocalPath == *v.LocalSubPath ||
 			cmd.syncFlags.ContainerPath == *v.ContainerPath ||
-			isMapEqual(labelSelectorMap, v.LabelSelector) {
+			isMapEqual(labelSelectorMap, *v.LabelSelector) {
 			continue
 		}
 
 		newSyncPaths = append(newSyncPaths, v)
 	}
 
-	config.DevSpace.Sync = newSyncPaths
+	config.DevSpace.Sync = &newSyncPaths
 
 	err = configutil.SaveConfig()
 
@@ -166,16 +166,16 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(config.DevSpace.PortForwarding)-1)
+	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.PortForwarding)-1)
 
 OUTER:
-	for _, v := range config.DevSpace.PortForwarding {
+	for _, v := range *config.DevSpace.PortForwarding {
 		if cmd.portFlags.RemoveAll ||
-			isMapEqual(labelSelectorMap, v.LabelSelector) {
+			isMapEqual(labelSelectorMap, *v.LabelSelector) {
 			continue
 		}
 
-		for _, pm := range v.PortMappings {
+		for _, pm := range *v.PortMappings {
 			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
 				continue OUTER
 			}
@@ -184,7 +184,7 @@ OUTER:
 		newPortForwards = append(newPortForwards, v)
 	}
 
-	config.DevSpace.PortForwarding = newPortForwards
+	config.DevSpace.PortForwarding = &newPortForwards
 
 	err = configutil.SaveConfig()
 

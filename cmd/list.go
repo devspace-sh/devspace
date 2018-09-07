@@ -78,7 +78,7 @@ func init() {
 func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig(false)
 
-	if len(config.DevSpace.Sync) == 0 {
+	if len(*config.DevSpace.Sync) == 0 {
 		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return
 	}
@@ -91,13 +91,13 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		"Excluded Paths",
 	}
 
-	syncPaths := make([][]string, 0, len(config.DevSpace.Sync))
+	syncPaths := make([][]string, 0, len(*config.DevSpace.Sync))
 
 	// Transform values into string arrays
-	for _, value := range config.DevSpace.Sync {
+	for _, value := range *config.DevSpace.Sync {
 		selector := ""
 
-		for k, v := range value.LabelSelector {
+		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
 			}
@@ -107,7 +107,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 		excludedPaths := ""
 
-		for _, v := range value.ExcludePaths {
+		for _, v := range *value.ExcludePaths {
 			if len(excludedPaths) > 0 {
 				excludedPaths += ", "
 			}
@@ -131,7 +131,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig(false)
 
-	if len(config.DevSpace.PortForwarding) == 0 {
+	if len(*config.DevSpace.PortForwarding) == 0 {
 		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
@@ -142,13 +142,13 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(config.DevSpace.PortForwarding))
+	portForwards := make([][]string, 0, len(*config.DevSpace.PortForwarding))
 
 	// Transform values into string arrays
-	for _, value := range config.DevSpace.PortForwarding {
+	for _, value := range *config.DevSpace.PortForwarding {
 		selector := ""
 
-		for k, v := range value.LabelSelector {
+		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
 			}
@@ -158,7 +158,7 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 
 		portMappings := ""
 
-		for _, v := range value.PortMappings {
+		for _, v := range *value.PortMappings {
 			if len(portMappings) > 0 {
 				portMappings += ", "
 			}

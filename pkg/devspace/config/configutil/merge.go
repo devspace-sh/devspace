@@ -15,27 +15,63 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		overwriteObject := overwriteObjectRef.Interface()
 		overwriteObjectType := reflect.TypeOf(overwriteObject)
 		overwriteObjectKind := overwriteObjectType.Kind()
+		objectPointerRef := reflect.ValueOf(objectPointer)
+		var objectRef reflect.Value
+
+		if !objectPointerRef.IsNil() {
+			objectRef = reflect.ValueOf(objectPointer).Elem()
+		}
 
 		switch overwriteObjectKind {
 		case reflect.Slice:
-		case reflect.Map:
-		case reflect.Struct:
-			objectValues := reflect.ValueOf(objectPointer).Elem()
-			overwriteObjectValues := reflect.ValueOf(overwriteObjectPointer).Elem()
+			if objectPointerRef.IsNil() {
+				objectRef.Set(reflect.New(overwriteObjectType))
+			}
 
-			for i := 0; i < overwriteObjectValues.NumField(); i++ {
-				//fieldName := objectValues.Type().Field(i).Name
-				overwriteValueRef := overwriteObjectValues.Field(i)
+			for i := 0; i < overwriteObjectRef.Len(); i++ {
+				overwriteValue := overwriteObjectRef.Index(i)
+
+				objectRef.Set(reflect.Append(objectRef, overwriteValue))
+			}
+		case reflect.Map:
+			var mergedMap map[interface{}]interface{}
+
+			if !objectPointerRef.IsNil() {
+				objectRef.Set(overwriteObjectRef)
+			} else {
+				mergedMap = map[interface{}]interface{}{}
+
+				overwriteMap := overwriteObject.(map[interface{}]interface{})
+
+				for key, overwriteValue := range overwriteMap {
+					valuePointer, keyExists := mergedMap[key]
+
+					valuePointerRef := reflect.ValueOf(valuePointer)
+
+					if keyExists && !valuePointerRef.IsNil() {
+						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
+					} else {
+						keyRef := reflect.ValueOf(key)
+						overwriteValueRef := reflect.ValueOf(overwriteValue)
+
+						objectRef.SetMapIndex(keyRef, overwriteValueRef)
+					}
+				}
+			}
+		case reflect.Struct:
+			for i := 0; i < overwriteObjectRef.NumField(); i++ {
+				//fieldName := objectRef.Type().Field(i).Name
+				overwriteValueRef := overwriteObjectRef.Field(i)
 				overwriteValuePointerRef := reflect.ValueOf(overwriteValueRef.Interface())
 
 				if !overwriteValuePointerRef.IsNil() {
 					overwriteValue := overwriteValueRef.Interface()
-					valuePointerRef := objectValues.Field(i)
+					valuePointerRef := objectRef.Field(i)
 
 					if valuePointerRef.IsNil() {
-						objectValues.Field(i).Set(reflect.ValueOf(overwriteValue))
+						objectRef.Field(i).Set(reflect.ValueOf(overwriteValue))
 					} else {
-						valuePointer := objectValues.Field(i).Interface()
+						valuePointer := objectRef.Field(i).Interface()
 
 						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
 					}

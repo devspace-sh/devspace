@@ -226,7 +226,7 @@ func (cmd *InitCmd) determineAppConfig() {
 			cmd.addPortForwarding(portInt)
 		}
 	}
-	cmd.addSyncPath()
+	cmd.addDefaultSyncConfig()
 
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -237,42 +237,45 @@ func (cmd *InitCmd) determineAppConfig() {
 }
 
 func (cmd *InitCmd) addPortForwarding(port int) {
-OUTER:
-	for _, portForwarding := range cmd.config.DevSpace.PortForwarding {
-		for _, portMapping := range portForwarding.PortMappings {
+	for _, portForwarding := range *cmd.config.DevSpace.PortForwarding {
+		for _, portMapping := range *portForwarding.PortMappings {
 			if *portMapping.RemotePort == port {
-				cmd.config.DevSpace.PortForwarding = append(cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-					PortMappings: []*v1.PortMapping{
-						{
-							LocalPort:  &port,
-							RemotePort: &port,
-						},
-					},
-					ResourceType: configutil.String("pod"),
-					LabelSelector: map[string]*string{
-						"release": cmd.config.DevSpace.Release.Name,
-					},
-				})
-				break OUTER
+				return
 			}
 		}
 	}
+
+	portForwarding := append(*cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+		PortMappings: &[]*v1.PortMapping{
+			{
+				LocalPort:  &port,
+				RemotePort: &port,
+			},
+		},
+		ResourceType: configutil.String("pod"),
+		LabelSelector: &map[string]*string{
+			"release": cmd.config.DevSpace.Release.Name,
+		},
+	})
+	cmd.config.DevSpace.PortForwarding = &portForwarding
 }
 
-func (cmd *InitCmd) addSyncPath() {
-	for _, syncPath := range cmd.config.DevSpace.Sync {
+func (cmd *InitCmd) addDefaultSyncConfig() {
+	for _, syncPath := range *cmd.config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			cmd.config.DevSpace.Sync = append(cmd.config.DevSpace.Sync, &v1.SyncConfig{
-				ContainerPath: configutil.String("/app"),
-				LocalSubPath:  configutil.String("./"),
-				ResourceType:  configutil.String("pod"),
-				LabelSelector: map[string]*string{
-					"release": cmd.config.DevSpace.Release.Name,
-				},
-			})
-			break
+			return
 		}
 	}
+
+	syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
+		ContainerPath: configutil.String("/app"),
+		LocalSubPath:  configutil.String("./"),
+		ResourceType:  configutil.String("pod"),
+		LabelSelector: &map[string]*string{
+			"release": cmd.config.DevSpace.Release.Name,
+		},
+	})
+	cmd.config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) reconfigure() {
@@ -352,7 +355,7 @@ func (cmd *InitCmd) reconfigure() {
 
 func (cmd *InitCmd) reconfigureRegistry() {
 	overwriteConfig := configutil.GetOverwriteConfig()
-	registryConfig := overwriteConfig.Services.Registry
+	registryConfig := cmd.config.Services.Registry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
@@ -405,10 +408,39 @@ func (cmd *InitCmd) reconfigureRegistry() {
 				}
 				registryUser.Password = &randomPassword
 			}
-			registryReleaseValues := registryConfig.Internal.Release.Values
+			var registryReleaseValues map[interface{}]interface{}
 
-			if registryReleaseValues == nil {
+			if registryConfig.Internal.Release.Values != nil {
+				registryReleaseValues = *registryConfig.Internal.Release.Values
+			} else {
 				registryReleaseValues = map[interface{}]interface{}{}
+
+				registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
+					ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
+				})
+
+				if *registryDomain != "" {
+					registryReleaseValues = map[interface{}]interface{}{
+						"Ingress": map[string]interface{}{
+							"Enabled": true,
+							"Hosts": []string{
+								*registryDomain,
+							},
+							"Annotations": map[string]string{
+								"Kubernetes.io/tls-acme": "true",
+							},
+							"Tls": []map[string]interface{}{
+								map[string]interface{}{
+									"SecretName": "tls-devspace-registry",
+									"Hosts": []string{
+										*registryDomain,
+									},
+								},
+							},
+						},
+					}
+				}
 			}
 			secrets, registryHasSecrets := registryReleaseValues["secrets"]
 
@@ -425,6 +457,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 					secretMap["htpasswd"] = ""
 				}
 			}
+			registryConfig.Internal.Release.Values = &registryReleaseValues
 		}
 	}
 }
@@ -439,12 +472,15 @@ func (cmd *InitCmd) determineLanguage() {
 	}
 
 	if len(cmd.chartGenerator.Language) == 0 {
+		log.StartWait("Detecting programming language")
+
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
+		log.StopWait()
 
 		if err != nil {
 			log.Fatalf("Unable to get supported languages: %s", err.Error())

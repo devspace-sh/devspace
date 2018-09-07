@@ -8,9 +8,9 @@ func makeConfig() *v1.Config {
 			User: &v1.User{},
 		},
 		DevSpace: &v1.DevSpaceConfig{
-			PortForwarding: []*v1.PortForwardingConfig{},
+			PortForwarding: &[]*v1.PortForwardingConfig{},
 			Release:        &v1.Release{},
-			Sync:           []*v1.SyncConfig{},
+			Sync:           &[]*v1.SyncConfig{},
 		},
 		Image: &v1.ImageConfig{},
 		Services: &v1.ServiceConfig{
@@ -21,7 +21,7 @@ func makeConfig() *v1.Config {
 				User: &v1.RegistryUser{},
 			},
 			Tiller: &v1.TillerConfig{
-				AppNamespaces: []*string{},
+				AppNamespaces: &[]*string{},
 				Release:       &v1.Release{},
 			},
 		},

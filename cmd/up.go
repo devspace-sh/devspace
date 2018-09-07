@@ -274,7 +274,7 @@ func (cmd *UpCmd) deployChart() {
 
 	values["container"] = containerValues
 
-	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
+	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
 
 	log.StopWait()
 
@@ -347,18 +347,18 @@ func (cmd *UpCmd) deployChart() {
 
 func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 	config := configutil.GetConfig(false)
-	syncConfigs := make([]*synctool.SyncConfig, 0, len(config.DevSpace.Sync))
+	syncConfigs := make([]*synctool.SyncConfig, 0, len(*config.DevSpace.Sync))
 
-	for _, syncPath := range config.DevSpace.Sync {
+	for _, syncPath := range *config.DevSpace.Sync {
 		absLocalPath, err := filepath.Abs(cmd.workdir + *syncPath.LocalSubPath)
 
 		if err != nil {
 			log.Panicf("Unable to resolve localSubPath %s: %s", *syncPath.LocalSubPath, err.Error())
 		} else {
 			// Retrieve pod from label selector
-			labels := make([]string, 0, len(syncPath.LabelSelector))
+			labels := make([]string, 0, len(*syncPath.LabelSelector))
 
-			for key, value := range syncPath.LabelSelector {
+			for key, value := range *syncPath.LabelSelector {
 				labels = append(labels, key+"="+*value)
 			}
 
@@ -368,14 +368,23 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
 				syncConfig := &synctool.SyncConfig{
-					Kubectl:              cmd.kubectl,
-					Pod:                  pod,
-					Container:            &pod.Spec.Containers[0],
-					WatchPath:            absLocalPath,
-					DestPath:             *syncPath.ContainerPath,
-					ExcludePaths:         syncPath.ExcludePaths,
-					DownloadExcludePaths: syncPath.DownloadExcludePaths,
-					UploadExcludePaths:   syncPath.UploadExcludePaths,
+					Kubectl:   cmd.kubectl,
+					Pod:       pod,
+					Container: &pod.Spec.Containers[0],
+					WatchPath: absLocalPath,
+					DestPath:  *syncPath.ContainerPath,
+				}
+
+				if syncPath.ExcludePaths != nil {
+					syncConfig.ExcludePaths = *syncPath.ExcludePaths
+				}
+
+				if syncPath.DownloadExcludePaths != nil {
+					syncConfig.DownloadExcludePaths = *syncPath.DownloadExcludePaths
+				}
+
+				if syncPath.UploadExcludePaths != nil {
+					syncConfig.UploadExcludePaths = *syncPath.UploadExcludePaths
 				}
 
 				err = syncConfig.Start()
@@ -395,12 +404,12 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 func (cmd *UpCmd) startPortForwarding() {
 	config := configutil.GetConfig(false)
 
-	for _, portForwarding := range config.DevSpace.PortForwarding {
+	for _, portForwarding := range *config.DevSpace.PortForwarding {
 		if *portForwarding.ResourceType == "pod" {
-			if len(portForwarding.LabelSelector) > 0 {
-				labels := make([]string, 0, len(portForwarding.LabelSelector))
+			if len(*portForwarding.LabelSelector) > 0 {
+				labels := make([]string, 0, len(*portForwarding.LabelSelector))
 
-				for key, value := range portForwarding.LabelSelector {
+				for key, value := range *portForwarding.LabelSelector {
 					labels = append(labels, key+"="+*value)
 				}
 
@@ -409,9 +418,9 @@ func (cmd *UpCmd) startPortForwarding() {
 				if err != nil {
 					log.Errorf("Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {
-					ports := make([]string, len(portForwarding.PortMappings))
+					ports := make([]string, len(*portForwarding.PortMappings))
 
-					for index, value := range portForwarding.PortMappings {
+					for index, value := range *portForwarding.PortMappings {
 						ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
 					}
 
