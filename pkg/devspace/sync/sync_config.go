@@ -359,7 +359,9 @@ func (s *SyncConfig) Stop() {
 		select {
 		case <-s.downstream.interrupt:
 		default:
-			close(s.downstream.interrupt)
+			if s.downstream.interrupt != nil {
+				close(s.downstream.interrupt)
+			}
 
 			if s.downstream.stdinPipe != nil {
 				s.downstream.stdinPipe.Write([]byte("exit\n"))
