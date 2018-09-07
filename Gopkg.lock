@@ -99,7 +99,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:e921c3d4324ffdcb4fd39d5f47a832f2112d44731a5f21d8ae0ccfe82e608711"
   name = "github.com/daviddengcn/go-colortext"
   packages = ["."]
@@ -350,6 +349,14 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:65c4414eeb350c47b8de71110150d0ea8a281835b1f386eacaa3ad7325929c21"
   name = "github.com/googleapis/gnostic"
   packages = [
@@ -455,7 +462,6 @@
   version = "v1.1.5"
 
 [[projects]]
-  branch = "master"
   digest = "1:1261ccace00babbf02bb702e71c85c8e81f65bad7bdb98c12c7a409c14de1d86"
   name = "github.com/juju/errors"
   packages = ["."]
@@ -507,12 +513,12 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:78bbb1ba5b7c3f2ed0ea1eab57bdd3859aec7e177811563edc41198a760b06af"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
   pruneopts = "UT"
   revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -582,7 +588,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:c1072f27d5b8be1032af14ed7776f475bc58d35723a753c4b92c953d92e3eb33"
   name = "github.com/otiai10/copy"
   packages = ["."]
@@ -590,12 +595,12 @@
   revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
 
 [[projects]]
-  digest = "1:361de06aa7ae272616cbe71c3994a654cc6316324e30998e650f7765b20c5b33"
+  digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
   name = "github.com/pborman/uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
-  version = "v1.1"
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
 
 [[projects]]
   digest = "1:b2ee62e09bec113cf086d2ce0769efcc7bf79481aba8373fd8f7884e94df3462"
@@ -671,7 +676,6 @@
   revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
-  branch = "master"
   digest = "1:16e6fde687529deaefbeff14841b694cb6d67dfc31884bac6214313e96e107bc"
   name = "github.com/rhysd/go-github-selfupdate"
   packages = ["selfupdate"]
@@ -695,12 +699,12 @@
   version = "v1.5.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:7d9e2efc92185089bb2e3fe50459624b7f9914165c01cc1e8497fd4c5f77e325"
   name = "github.com/sabhiram/go-gitignore"
   packages = ["."]
   pruneopts = "UT"
   revision = "d3107576ba9425fc1c85f4b3569c4631b805a02e"
+  version = "1.0.2"
 
 [[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
@@ -821,7 +825,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0a07445b15a3c2d313bfedd00ba73168e0961ba2ab577b9be717d105b88e6649"
+  digest = "1:6837b1b3f95bc64af7eb0cd1efa4d2c004e0974537b80f550994d1818db622fa"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -847,7 +851,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "182538f80094b6a8efaade63a8fd8e0d9d5843dd"
+  revision = "0709b304e793a5edb4a2c0145f281ecdc20838a4"
 
 [[projects]]
   branch = "master"
@@ -864,7 +868,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "8a410e7b638dca158bf9e766925842f6651ff828"
+  revision = "161cd47e91fd58ac17490ef4d742dc98bb4cf60e"
 
 [[projects]]
   branch = "master"
@@ -879,7 +883,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:682170f2fb1b37fd9a04c88a2adfeeda767e3b2af60a7e0b96e663ec1886500e"
+  digest = "1:176d0fe4b5f9c58705c3781e6aa8555fa14fe6ff4383db75d0cbc476bd7c90fd"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -887,7 +891,7 @@
     "windows/registry",
   ]
   pruneopts = "UT"
-  revision = "2b024373dcd9800f0cae693839fac6ede8d64a8c"
+  revision = "8cf3aee429924738c56c34bb819c4ea8273fc434"
 
 [[projects]]
   digest = "1:28756bf526c1af662d24519f2fa7abca7237bebb06e3e02941b2b6e5b6ceb7b9"
@@ -1036,7 +1040,7 @@
   version = "v4.2.1"
 
 [[projects]]
-  digest = "1:d4e888e99d4b99e8e6432dd2deb3ec83e10b866fddc35e853eb5ad7b9d928029"
+  digest = "1:336779a462e14e1802fef62517172dee311db2224f62391167f969cea6637a7d"
   name = "gopkg.in/src-d/go-git.v4"
   packages = [
     ".",
@@ -1081,8 +1085,8 @@
     "utils/merkletrie/noder",
   ]
   pruneopts = "UT"
-  revision = "7b6c1266556f59ac436fada3fa6106d4a84f9b56"
-  version = "v4.6.0"
+  revision = "d3cec13ac0b195bfb897ed038a08b5130ab9969e"
+  version = "v4.7.0"
 
 [[projects]]
   digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"
@@ -1109,7 +1113,6 @@
   version = "v2.2.1"
 
 [[projects]]
-  branch = "release-1.10"
   digest = "1:ca518bd58ed357c00d753fef7e945ef672b9f75c66cbf7db23f3baa8ba5daa92"
   name = "k8s.io/api"
   packages = [
@@ -1148,7 +1151,6 @@
   revision = "12444147eb1150aa5c80d2aae532cbc5b7be73d0"
 
 [[projects]]
-  branch = "release-1.10"
   digest = "1:b46a162d7c7e9117ae2dd9a73ee4dc2181ad9ea9d505fd7c5eb63c96211dc9dd"
   name = "k8s.io/apiextensions-apiserver"
   packages = ["pkg/features"]
@@ -1156,7 +1158,6 @@
   revision = "f584b16eb23bd2a3fd292a027d698d95db427c5d"
 
 [[projects]]
-  branch = "release-1.10"
   digest = "1:cb45c67c3a3f178d8323d3ffce14cddf39b8806f070af47380450d2aed06ae03"
   name = "k8s.io/apimachinery"
   packages = [
@@ -1219,7 +1220,6 @@
   revision = "e386b2658ed20923da8cc9250e552f082899a1ee"
 
 [[projects]]
-  branch = "release-1.10"
   digest = "1:cc8a650c845795c9ab43c314a2ecb6a15c918b67456fcc130343950e234059d0"
   name = "k8s.io/apiserver"
   packages = [
@@ -1379,7 +1379,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:71a6663e87278aaabcbe47b8be5b04cc31299f77ad65598dc033144b55e7860e"
+  digest = "1:7ae7497bb0f95b9f0d3d5876cb4140645773697c4f7ec12621da7ddc369d784f"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1408,8 +1408,8 @@
     "pkg/version",
   ]
   pruneopts = "UT"
-  revision = "20adb27c7c5868466912eebdf6664e7390ebe710"
-  version = "v2.9.1"
+  revision = "9ad53aac42165a5fadc6c87be0dea6b115f93090"
+  version = "v2.10.0"
 
 [[projects]]
   branch = "master"
@@ -1423,7 +1423,6 @@
   revision = "e3762e86a74c878ffed47484592986685639c2cd"
 
 [[projects]]
-  branch = "release-1.10"
   digest = "1:a93d65b059d465cd84ba089b8daf6fbacf3beeb0e78fa1a4cf0585398795b37c"
   name = "k8s.io/kubernetes"
   packages = [
