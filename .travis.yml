@@ -15,6 +15,7 @@ jobs:
     cache:
       directories:
         - ./vendor
+        - /home/travis/.cache/go-build
     script:
       - ./scripts/coverage.bash
     after_success:
