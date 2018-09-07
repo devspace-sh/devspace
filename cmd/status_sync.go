@@ -44,7 +44,7 @@ func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	syncLogPath := filepath.Join(cwd, ".devspace", "logs", "sync.log")
 	data, err := ioutil.ReadFile(syncLogPath)
 	if err != nil {
-		log.Fatalf("Couldn't read %s. Do you have a sync path configured? (check `devspace list sync`)", syncLogPath, err)
+		log.Fatalf("Couldn't read %s. Do you have a sync path configured? (check `devspace list sync`)", syncLogPath)
 	}
 
 	syncMap := make(map[string]*syncStatus)
