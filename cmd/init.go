@@ -428,9 +428,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 								*registryDomain,
 							},
 							"Annotations": map[string]string{
-								map[string]string{
-									"Kubernetes.io/tls-acme": "true",
-								},
+								"Kubernetes.io/tls-acme": "true",
 							},
 							"Tls": []map[string]interface{}{
 								map[string]interface{}{
