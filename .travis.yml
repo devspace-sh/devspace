@@ -12,6 +12,10 @@ jobs:
       - npm install -g codeclimate-test-reporter
     os: linux
     go: 1.10.3
+    cache:
+      directories:
+        - ./vendor
+        - $HOME/.cache/go-build
     script:
       - ./scripts/coverage.bash
     after_success:

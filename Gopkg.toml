@@ -1,6 +1,14 @@
 [[constraint]]
+  name = "github.com/covexo/yamlq"
+  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "v0.3.6"
+
+[[constraint]]
   name = "github.com/juju/errors"
-  branch = "master"
+  revision = "22422dad46e14561a0854ad42497a75af9b61909"
 
 [[constraint]]
   name = "github.com/docker/docker"
@@ -9,23 +17,23 @@
 
 [[constraint]]
   name = "github.com/rhysd/go-github-selfupdate"
-  branch = "master"
+  revision = "41c1bbb0804a2994dae69502a8c76e7c456ad45e"
 
 [[constraint]]
   name = "github.com/sabhiram/go-gitignore"
-  branch = "master"
+  version = "1.0.2"
 
 [[constraint]]
   name = "github.com/daviddengcn/go-colortext"
-  branch = "master"
+  revision = "186a3d44e9200d7eb331356ca4864f52708e1399"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/mitchellh/go-homedir"
+  version = "v1.0.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/otiai10/copy"
+  revision = "7e9a647135a142c2669943d4a4d29be015ce9392"
 
 [[constraint]]
   name = "github.com/rjeczalik/notify"
@@ -53,7 +61,7 @@
 
 [[constraint]]
   name = "k8s.io/helm"
-  version = "~v2.9.0"
+  version = "v2.9.1"
 
 [[constraint]]
   name = "github.com/foomo/htpasswd"
@@ -73,23 +81,23 @@
 
 [[override]]
   name = "k8s.io/kubernetes"
-  branch = "release-1.10"
+  revision = "ba92f7aebfda56086efd08a6b231c6b60a297d2d"
 
 [[override]]
   name = "k8s.io/api"
-  branch = "release-1.10"
+  revision = "12444147eb1150aa5c80d2aae532cbc5b7be73d0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  branch = "release-1.10"
+  revision = "e386b2658ed20923da8cc9250e552f082899a1ee"
 
 [[override]]
   name = "k8s.io/apiserver"
-  branch = "release-1.10"
+  revision = "2a84596e9aad63b1c1d47491d506a64465b5e2fc"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  branch = "release-1.10"
+  revision = "f584b16eb23bd2a3fd292a027d698d95db427c5d"
 
 [[override]]
   name = "github.com/russross/blackfriday"
@@ -106,11 +114,3 @@
 [prune]
   go-tests = true
   unused-packages = true
-
-[[constraint]]
-  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
-  name = "github.com/covexo/yamlq"
-
-[[constraint]]
-  name = "github.com/imdario/mergo"
-  version = "v0.3.6"

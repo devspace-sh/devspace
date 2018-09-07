@@ -6,5 +6,19 @@ import (
 
 // RunStatusSync executes the devspace status sync commad logic
 func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
-	//TODO
+	// config := configutil.GetConfig(false)
+
+	// Read syncLog
+	/*cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	syncLogPath := path.Join(cwd, ".devspace", "logs", "syncLog.log")
+	data, err := ioutil.ReadFile(syncLogPath)
+	if err != nil {
+		log.Fatalf("Couldn't read %s. Do you have a sync path configured?", syncLogPath)
+	}
+
+	_ = strings.Split(string(data), "\n")*/
 }
