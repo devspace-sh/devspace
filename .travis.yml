@@ -14,7 +14,7 @@ jobs:
     go: 1.10.3
     cache:
       directories:
-        - $HOME/gopath/src/github.com/$TRAVIS_REPO_SLUG/vendor
+        - ./vendor
     script:
       - ./scripts/coverage.bash
     after_success:
