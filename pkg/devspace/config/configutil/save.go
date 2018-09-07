@@ -78,7 +78,9 @@ func SaveConfig() error {
 }
 
 func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwriteConfig interface{}, overwriteConfigRaw interface{}) (interface{}, interface{}, error) {
+
 	object, isObjectNil := getPointerValue(config)
+
 	objectType := reflect.TypeOf(object)
 	objectKind := objectType.Kind()
 	overwriteObject, isOverwriteObjectNil := getPointerValue(overwriteConfig)
@@ -177,20 +179,16 @@ func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwr
 				}
 			}
 
-			if val != nil {
-				valRef := reflect.ValueOf(val)
+			valRef := reflect.ValueOf(val)
 
-				if !valRef.IsNil() {
-					returnMap[yamlKey] = val
-				}
+			if !isZero(valRef) {
+				returnMap[yamlKey] = val
 			}
 
-			if overwriteVal != nil {
-				overwriteValRef := reflect.ValueOf(overwriteVal)
+			overwriteValRef := reflect.ValueOf(overwriteVal)
 
-				if !overwriteValRef.IsNil() {
-					returnOverwriteMap[yamlKey] = overwriteVal
-				}
+			if !isZero(overwriteValRef) {
+				returnOverwriteMap[yamlKey] = overwriteVal
 			}
 		}
 
@@ -268,14 +266,17 @@ func getMapValue(valueMap interface{}, key interface{}, refType reflect.Type) in
 	keyRef := reflect.ValueOf(key)
 	mapValue := mapRef.MapIndex(keyRef)
 
-	if !isZero(mapValue) {
+	if isZero(mapValue) {
 		mapValue = reflect.New(refType)
 	}
 	return mapValue.Interface()
 }
 
-//isZero is a reflect feature from: https://github.com/golang/go/issues/7501
+//isZero is a reflect function from: https://github.com/golang/go/issues/7501
 func isZero(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
 	switch v.Kind() {
 	case reflect.Array, reflect.String:
 		return v.Len() == 0
@@ -287,7 +288,7 @@ func isZero(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	}
 	return false
