@@ -353,8 +353,9 @@ func (cmd *InitCmd) reconfigure() {
 }
 
 func (cmd *InitCmd) reconfigureRegistry() {
+	config := configutil.GetConfig(false)
 	overwriteConfig := configutil.GetOverwriteConfig()
-	registryConfig := overwriteConfig.Services.Registry
+	registryConfig := config.Services.Registry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
@@ -407,9 +408,13 @@ func (cmd *InitCmd) reconfigureRegistry() {
 				}
 				registryUser.Password = &randomPassword
 			}
-			registryReleaseValues := *registryConfig.Internal.Release.Values
+			var registryReleaseValues map[interface{}]interface{}
 
-			if registryReleaseValues == nil {
+			if registryConfig.Internal.Release.Values != nil {
+				registryReleaseValues = *registryConfig.Internal.Release.Values
+			} else {
+				registryReleaseValues = map[interface{}]interface{}{}
+
 				registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 					Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
 					ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
@@ -438,10 +443,6 @@ func (cmd *InitCmd) reconfigureRegistry() {
 						},
 					}
 				}
-			}
-
-			if registryReleaseValues == nil {
-				registryReleaseValues = map[interface{}]interface{}{}
 			}
 			secrets, registryHasSecrets := registryReleaseValues["secrets"]
 
@@ -473,12 +474,15 @@ func (cmd *InitCmd) determineLanguage() {
 	}
 
 	if len(cmd.chartGenerator.Language) == 0 {
+		log.StartWait("Detecting programming language")
+
 		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
+		log.StopWait()
 
 		if err != nil {
 			log.Fatalf("Unable to get supported languages: %s", err.Error())

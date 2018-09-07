@@ -33,7 +33,12 @@ func init() {
 func ConfigExists() (bool, error) {
 	_, configNotFound := os.Stat(workdir + configPath)
 
-	return (configNotFound == nil), nil
+	if configNotFound != nil {
+		return false, nil
+	}
+	config := GetConfig(false)
+
+	return (config.Version != nil), nil
 }
 
 //GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
