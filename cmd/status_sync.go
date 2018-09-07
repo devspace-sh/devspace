@@ -1,12 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
-	"os"
-	"path"
-	"strings"
-
-	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
