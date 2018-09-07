@@ -107,14 +107,15 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 		excludedPaths := ""
 
-		for _, v := range *value.ExcludePaths {
-			if len(excludedPaths) > 0 {
-				excludedPaths += ", "
+		if value.ExcludePaths != nil {
+			for _, v := range *value.ExcludePaths {
+				if len(excludedPaths) > 0 {
+					excludedPaths += ", "
+				}
+
+				excludedPaths += v
 			}
-
-			excludedPaths += v
 		}
-
 		syncPaths = append(syncPaths, []string{
 			*value.ResourceType,
 			selector,
