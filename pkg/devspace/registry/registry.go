@@ -171,15 +171,18 @@ func GetRegistryHostname() string {
 		return *registryConfig.External
 	}
 	registryHostname := ""
+	registryReleaseValues := registryConfig.Internal.Release.Values
 
-	registryValues := yamlq.NewQuery(registryConfig.Internal.Release.Values)
-	isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
+	if registryReleaseValues != nil {
+		registryValues := yamlq.NewQuery(*registryReleaseValues)
+		isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
 
-	if isIngressEnabled {
-		firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
+		if isIngressEnabled {
+			firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
 
-		if len(firstIngressHostname) > 0 {
-			registryHostname = firstIngressHostname
+			if len(firstIngressHostname) > 0 {
+				registryHostname = firstIngressHostname
+			}
 		}
 	}
 

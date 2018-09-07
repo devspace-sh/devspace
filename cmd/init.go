@@ -238,21 +238,22 @@ func (cmd *InitCmd) determineAppConfig() {
 
 func (cmd *InitCmd) addPortForwarding(port int) {
 OUTER:
-	for _, portForwarding := range cmd.config.DevSpace.PortForwarding {
-		for _, portMapping := range portForwarding.PortMappings {
+	for _, portForwarding := range *cmd.config.DevSpace.PortForwarding {
+		for _, portMapping := range *portForwarding.PortMappings {
 			if *portMapping.RemotePort == port {
-				cmd.config.DevSpace.PortForwarding = append(cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-					PortMappings: []*v1.PortMapping{
+				portForwarding := append(*cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+					PortMappings: &[]*v1.PortMapping{
 						{
 							LocalPort:  &port,
 							RemotePort: &port,
 						},
 					},
 					ResourceType: configutil.String("pod"),
-					LabelSelector: map[string]*string{
+					LabelSelector: &map[string]*string{
 						"release": cmd.config.DevSpace.Release.Name,
 					},
 				})
+				cmd.config.DevSpace.PortForwarding = &portForwarding
 				break OUTER
 			}
 		}
@@ -260,16 +261,17 @@ OUTER:
 }
 
 func (cmd *InitCmd) addSyncPath() {
-	for _, syncPath := range cmd.config.DevSpace.Sync {
+	for _, syncPath := range *cmd.config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			cmd.config.DevSpace.Sync = append(cmd.config.DevSpace.Sync, &v1.SyncConfig{
+			syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
 				ContainerPath: configutil.String("/app"),
 				LocalSubPath:  configutil.String("./"),
 				ResourceType:  configutil.String("pod"),
-				LabelSelector: map[string]*string{
+				LabelSelector: &map[string]*string{
 					"release": cmd.config.DevSpace.Release.Name,
 				},
 			})
+			cmd.config.DevSpace.Sync = &syncConfig
 			break
 		}
 	}
@@ -405,7 +407,38 @@ func (cmd *InitCmd) reconfigureRegistry() {
 				}
 				registryUser.Password = &randomPassword
 			}
-			registryReleaseValues := registryConfig.Internal.Release.Values
+			registryReleaseValues := *registryConfig.Internal.Release.Values
+
+			if registryReleaseValues == nil {
+				registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
+					ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
+				})
+
+				if *registryDomain != "" {
+					registryReleaseValues = map[interface{}]interface{}{
+						"Ingress": map[string]interface{}{
+							"Enabled": true,
+							"Hosts": []string{
+								*registryDomain,
+							},
+							"Annotations": []map[string]string{
+								map[string]string{
+									"Kubernetes.io/tls-acme": "true",
+								},
+							},
+							"Tls": []map[string]interface{}{
+								map[string]interface{}{
+									"SecretName": "tls-devspace-registry",
+									"Hosts": []string{
+										*registryDomain,
+									},
+								},
+							},
+						},
+					}
+				}
+			}
 
 			if registryReleaseValues == nil {
 				registryReleaseValues = map[interface{}]interface{}{}
@@ -425,6 +458,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 					secretMap["htpasswd"] = ""
 				}
 			}
+			registryConfig.Internal.Release.Values = &registryReleaseValues
 		}
 	}
 }

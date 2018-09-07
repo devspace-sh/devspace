@@ -137,14 +137,15 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 			excludedPaths = append(excludedPaths, excludedPath)
 		}
 	}
-
-	config.DevSpace.Sync = append(config.DevSpace.Sync, &v1.SyncConfig{
+	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
-		LabelSelector: labelSelectorMap,
+		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
 		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
-		ExcludePaths:  excludedPaths,
+		ExcludePaths:  &excludedPaths,
 	})
+
+	config.DevSpace.Sync = &syncConfig
 
 	err = configutil.SaveConfig()
 
@@ -186,19 +187,22 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 	config := configutil.GetConfig(false)
 
 	// Check if we should add to existing port mapping
-	for _, v := range config.DevSpace.PortForwarding {
-		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(v.LabelSelector, labelSelectorMap) {
-			v.PortMappings = append(v.PortMappings, portMappings...)
+	for _, v := range *config.DevSpace.PortForwarding {
+		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(*v.LabelSelector, labelSelectorMap) {
+			portMap := append(*v.PortMappings, portMappings...)
+
+			v.PortMappings = &portMap
 
 			return
 		}
 	}
-
-	config.DevSpace.PortForwarding = append(config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+	portMap := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
 		ResourceType:  configutil.String(cmd.portFlags.ResourceType),
-		LabelSelector: labelSelectorMap,
-		PortMappings:  portMappings,
+		LabelSelector: &labelSelectorMap,
+		PortMappings:  &portMappings,
 	})
+
+	config.DevSpace.PortForwarding = &portMap
 }
 
 func isMapEqual(map1 map[string]*string, map2 map[string]*string) bool {

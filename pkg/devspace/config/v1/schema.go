@@ -21,9 +21,9 @@ type ImageConfig struct {
 
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
-	Release        *Release                `yaml:"release"`
-	PortForwarding []*PortForwardingConfig `yaml:"portForwarding"`
-	Sync           []*SyncConfig           `yaml:"sync"`
+	Release        *Release                 `yaml:"release"`
+	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
+	Sync           *[]*SyncConfig           `yaml:"sync"`
 }
 
 //ServiceConfig defines additional services
@@ -34,8 +34,8 @@ type ServiceConfig struct {
 
 //TillerConfig defines the tiller service
 type TillerConfig struct {
-	Release       *Release  `yaml:"release"`
-	AppNamespaces []*string `yaml:"appNamespaces"`
+	Release       *Release   `yaml:"release"`
+	AppNamespaces *[]*string `yaml:"appNamespaces"`
 }
 
 //RegistryConfig defines the registry service
@@ -60,9 +60,9 @@ type RegistryUser struct {
 
 //PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	ResourceType  *string            `yaml:"resourceType"`
-	LabelSelector map[string]*string `yaml:"labelSelector"`
-	PortMappings  []*PortMapping     `yaml:"portMappings"`
+	ResourceType  *string             `yaml:"resourceType"`
+	LabelSelector *map[string]*string `yaml:"labelSelector"`
+	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
 
 //PortMapping defines the ports for a PortMapping
@@ -73,20 +73,20 @@ type PortMapping struct {
 
 //SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	ResourceType         *string            `yaml:"resourceType"`
-	LabelSelector        map[string]*string `yaml:"labelSelector"`
-	LocalSubPath         *string            `yaml:"localSubPath"`
-	ContainerPath        *string            `yaml:"containerPath"`
-	ExcludePaths         []string           `yaml:"excludePaths"`
-	DownloadExcludePaths []string           `yaml:"downloadExcludePaths"`
-	UploadExcludePaths   []string           `yaml:"uploadExcludePaths"`
+	ResourceType         *string             `yaml:"resourceType"`
+	LabelSelector        *map[string]*string `yaml:"labelSelector"`
+	LocalSubPath         *string             `yaml:"localSubPath"`
+	ContainerPath        *string             `yaml:"containerPath"`
+	ExcludePaths         *[]string           `yaml:"excludePaths"`
+	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
+	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`
 }
 
 //Release defines running version of a project
 type Release struct {
-	Name      *string                     `yaml:"name"`
-	Namespace *string                     `yaml:"namespace"`
-	Values    map[interface{}]interface{} `yaml:"values,omitempty"`
+	Name      *string                      `yaml:"name"`
+	Namespace *string                      `yaml:"namespace"`
+	Values    *map[interface{}]interface{} `yaml:"values,omitempty"`
 }
 
 //Cluster is a struct that contains data for a Kubernetes-Cluster
