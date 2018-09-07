@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -17,7 +18,6 @@ type AddCmd struct {
 	syncFlags *addSyncCmdFlags
 	portFlags *addPortCmdFlags
 	dsConfig  *v1.DevSpaceConfig
-	workdir   string
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -137,6 +137,19 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 			excludedPaths = append(excludedPaths, excludedPath)
 		}
 	}
+
+	workdir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalf("Unable to determine current workdir: %s", err.Error())
+	}
+	cmd.syncFlags.LocalPath = strings.TrimPrefix(cmd.syncFlags.LocalPath, workdir)
+	cmd.syncFlags.LocalPath = "./" + strings.TrimPrefix(cmd.syncFlags.LocalPath, "./")
+
+	if cmd.syncFlags.ContainerPath[0] != '/' {
+		log.Fatal("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash.")
+	}
+
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
 		LabelSelector: &labelSelectorMap,
@@ -188,7 +201,15 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 
 	// Check if we should add to existing port mapping
 	for _, v := range *config.DevSpace.PortForwarding {
-		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(*v.LabelSelector, labelSelectorMap) {
+		var selectors map[string]*string
+
+		if v.LabelSelector != nil {
+			selectors = *v.LabelSelector
+		} else {
+			selectors = map[string]*string{}
+		}
+
+		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(selectors, labelSelectorMap) {
 			portMap := append(*v.PortMappings, portMappings...)
 
 			v.PortMappings = &portMap
