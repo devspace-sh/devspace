@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/imdario/mergo"
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -124,13 +124,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			User:      &v1.User{},
 		},
 	})
-	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
 
 	if !cmd.flags.overwrite {
-		_, dockerfileNotFound := os.Stat(cmd.chartGenerator.Path + "/Dockerfile")
-		_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
+		_, dockerfileNotFound := os.Stat(cmd.workdir + "/Dockerfile")
+		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
 
 		if dockerfileNotFound == nil || chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -145,18 +144,25 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if createChart {
-		cmd.determineAppConfig()
-
-		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
+		cmd.initChartGenerator()
+		cmd.determineLanguage()
+		cmd.createChart()
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		cmd.reconfigure()
-	}
+		cmd.configureKubernetes()
+		cmd.configureDevSpace()
 
-	if createChart {
-		cmd.determineLanguage()
-		cmd.createChart()
+		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
+
+		cmd.configureTiller()
+		cmd.configureRegistry()
+
+		err := configutil.SaveConfig()
+
+		if err != nil {
+			log.With(err).Fatalf("Config error: %s", err.Error())
+		}
 	}
 }
 
@@ -177,16 +183,16 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 }
 
-func (cmd *InitCmd) determineAppConfig() {
-	_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
+func (cmd *InitCmd) configureDevSpace() {
+	_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
 
 	if chartDirNotFound == nil {
 		/*TODO
 		existingChartYaml := map[interface{}]interface{}{}
 		existingChartValuesYaml := map[interface{}]interface{}{}
 
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", existingChartYaml)
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", existingChartValuesYaml)
+		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/Chart.yaml", existingChartYaml)
+		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/values.yaml", existingChartValuesYaml)
 
 		cmd.config.Release.Name = existingChartYaml["name"].(string)
 
@@ -204,6 +210,12 @@ func (cmd *InitCmd) determineAppConfig() {
 	cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           *cmd.config.DevSpace.Release.Name,
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
+
+	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
@@ -266,6 +278,19 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 			return
 		}
 	}
+	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
+	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+	uploadExcludePaths := []string{}
+
+	if err == nil {
+		dockerignoreRules := strings.Split(string(dockerignore), "\n")
+
+		for _, ignoreRule := range dockerignoreRules {
+			if len(ignoreRule) > 0 {
+				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+			}
+		}
+	}
 
 	syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
 		ContainerPath: configutil.String("/app"),
@@ -274,20 +299,14 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		LabelSelector: &map[string]*string{
 			"release": cmd.config.DevSpace.Release.Name,
 		},
+		UploadExcludePaths: &uploadExcludePaths,
 	})
 	cmd.config.DevSpace.Sync = &syncConfig
 }
 
-func (cmd *InitCmd) reconfigure() {
-	clusterConfig := cmd.config.Cluster
+func (cmd *InitCmd) configureTiller() {
 	tillerConfig := cmd.config.Services.Tiller
 	tillerRelease := tillerConfig.Release
-
-	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
 
 	if tillerRelease.Namespace == nil {
 		tillerRelease.Namespace = cmd.config.DevSpace.Release.Namespace
@@ -297,6 +316,10 @@ func (cmd *InitCmd) reconfigure() {
 		DefaultValue:           *tillerRelease.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
+}
+
+func (cmd *InitCmd) configureKubernetes() {
+	clusterConfig := cmd.config.Cluster
 	useKubeConfig := false
 	homeDir, homeErr := homedir.Dir()
 
@@ -344,16 +367,9 @@ func (cmd *InitCmd) reconfigure() {
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
 		})
 	}
-	cmd.reconfigureRegistry()
-
-	err := configutil.SaveConfig()
-
-	if err != nil {
-		log.With(err).Fatalf("Config error: %s", err.Error())
-	}
 }
 
-func (cmd *InitCmd) reconfigureRegistry() {
+func (cmd *InitCmd) configureRegistry() {
 	overwriteConfig := configutil.GetOverwriteConfig()
 	registryConfig := cmd.config.Services.Registry
 
@@ -474,17 +490,17 @@ func (cmd *InitCmd) determineLanguage() {
 	if len(cmd.chartGenerator.Language) == 0 {
 		log.StartWait("Detecting programming language")
 
-		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
+
+		if err != nil {
+			log.Fatalf("Unable to get supported languages: %s", err.Error())
+		}
+		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
 		log.StopWait()
-
-		if err != nil {
-			log.Fatalf("Unable to get supported languages: %s", err.Error())
-		}
 
 		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
@@ -501,14 +517,13 @@ func (cmd *InitCmd) createChart() {
 		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
 
+	/*TODO
 	createdChartYaml := map[interface{}]interface{}{}
 	createdChartValuesYaml := map[interface{}]interface{}{}
 
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", &createdChartYaml)
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", &createdChartValuesYaml)
 
-	createdChartYaml["name"] = cmd.config.DevSpace.Release.Name
-	/*TODO
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
 	if !chartHasContainerValues && containerValues != nil {
@@ -523,7 +538,7 @@ func (cmd *InitCmd) createChart() {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
-	*/
 	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
 	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
+	*/
 }
