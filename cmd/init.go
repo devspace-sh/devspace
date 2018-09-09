@@ -127,8 +127,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	createChart := cmd.flags.overwrite
 
 	if !cmd.flags.overwrite {
-		_, dockerfileNotFound := os.Stat(cmd.chartGenerator.Path + "/Dockerfile")
-		_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
+		_, dockerfileNotFound := os.Stat(cmd.workdir + "/Dockerfile")
+		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
 
 		if dockerfileNotFound == nil || chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -266,6 +266,17 @@ func (cmd *InitCmd) addPortForwarding(port int) {
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
+	dockerignore, err := ioutil.ReadFile(cmd.workdir + "/.dockerignore")
+	uploadExcludePaths := []string{}
+
+	if err != nil {
+		dockerignoreRules := strings.Split(string(dockerignore), "\n")
+
+		for _, ignoreRule := range dockerignoreRules {
+			uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+		}
+	}
+
 	for _, syncPath := range *cmd.config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
 			return
@@ -279,6 +290,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		LabelSelector: &map[string]*string{
 			"release": cmd.config.DevSpace.Release.Name,
 		},
+		UploadExcludePaths: &uploadExcludePaths,
 	})
 	cmd.config.DevSpace.Sync = &syncConfig
 }
@@ -477,17 +489,17 @@ func (cmd *InitCmd) determineLanguage() {
 	if len(cmd.chartGenerator.Language) == 0 {
 		log.StartWait("Detecting programming language")
 
-		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
+
+		if err != nil {
+			log.Fatalf("Unable to get supported languages: %s", err.Error())
+		}
+		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
 
 		if cmd.chartGenerator.Language == "" {
 			cmd.chartGenerator.Language = "none"
 		}
 		log.StopWait()
-
-		if err != nil {
-			log.Fatalf("Unable to get supported languages: %s", err.Error())
-		}
 
 		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
