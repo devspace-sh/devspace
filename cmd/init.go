@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -146,14 +147,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.initChartGenerator()
 		cmd.determineLanguage()
 		cmd.createChart()
-		cmd.configureDevSpace()
-
-		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
 	}
 
 	if cmd.flags.reconfigure || !configExists {
 		cmd.configureKubernetes()
-		cmd.configureDevSpaceRelease()
+		cmd.configureDevSpace()
+
+		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
+
 		cmd.configureTiller()
 		cmd.configureRegistry()
 
@@ -183,15 +184,15 @@ func (cmd *InitCmd) initChartGenerator() {
 }
 
 func (cmd *InitCmd) configureDevSpace() {
-	_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
+	_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
 
 	if chartDirNotFound == nil {
 		/*TODO
 		existingChartYaml := map[interface{}]interface{}{}
 		existingChartValuesYaml := map[interface{}]interface{}{}
 
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", existingChartYaml)
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", existingChartValuesYaml)
+		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/Chart.yaml", existingChartYaml)
+		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/values.yaml", existingChartValuesYaml)
 
 		cmd.config.Release.Name = existingChartYaml["name"].(string)
 
@@ -209,6 +210,12 @@ func (cmd *InitCmd) configureDevSpace() {
 	cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           *cmd.config.DevSpace.Release.Name,
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
+
+	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
@@ -266,10 +273,11 @@ func (cmd *InitCmd) addPortForwarding(port int) {
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
-	dockerignore, err := ioutil.ReadFile(cmd.workdir + "/.dockerignore")
+	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
+	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
 	uploadExcludePaths := []string{}
 
-	if err != nil {
+	if err == nil {
 		dockerignoreRules := strings.Split(string(dockerignore), "\n")
 
 		for _, ignoreRule := range dockerignoreRules {
@@ -293,14 +301,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		UploadExcludePaths: &uploadExcludePaths,
 	})
 	cmd.config.DevSpace.Sync = &syncConfig
-}
-
-func (cmd *InitCmd) configureDevSpaceRelease() {
-	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
 }
 
 func (cmd *InitCmd) configureTiller() {
