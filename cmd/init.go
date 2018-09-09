@@ -286,7 +286,9 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		dockerignoreRules := strings.Split(string(dockerignore), "\n")
 
 		for _, ignoreRule := range dockerignoreRules {
-			uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+			if len(ignoreRule) > 0 {
+				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+			}
 		}
 	}
 
