@@ -10,7 +10,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/imdario/mergo"
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -124,7 +123,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			User:      &v1.User{},
 		},
 	})
-	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
 
@@ -145,18 +143,25 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if createChart {
-		cmd.determineAppConfig()
+		cmd.initChartGenerator()
+		cmd.determineLanguage()
+		cmd.createChart()
+		cmd.configureDevSpace()
 
 		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		cmd.reconfigure()
-	}
+		cmd.configureKubernetes()
+		cmd.configureDevSpaceRelease()
+		cmd.configureTiller()
+		cmd.configureRegistry()
 
-	if createChart {
-		cmd.determineLanguage()
-		cmd.createChart()
+		err := configutil.SaveConfig()
+
+		if err != nil {
+			log.With(err).Fatalf("Config error: %s", err.Error())
+		}
 	}
 }
 
@@ -177,7 +182,7 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 }
 
-func (cmd *InitCmd) determineAppConfig() {
+func (cmd *InitCmd) configureDevSpace() {
 	_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
 
 	if chartDirNotFound == nil {
@@ -278,16 +283,17 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	cmd.config.DevSpace.Sync = &syncConfig
 }
 
-func (cmd *InitCmd) reconfigure() {
-	clusterConfig := cmd.config.Cluster
-	tillerConfig := cmd.config.Services.Tiller
-	tillerRelease := tillerConfig.Release
-
+func (cmd *InitCmd) configureDevSpaceRelease() {
 	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
 		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
+}
+
+func (cmd *InitCmd) configureTiller() {
+	tillerConfig := cmd.config.Services.Tiller
+	tillerRelease := tillerConfig.Release
 
 	if tillerRelease.Namespace == nil {
 		tillerRelease.Namespace = cmd.config.DevSpace.Release.Namespace
@@ -297,6 +303,10 @@ func (cmd *InitCmd) reconfigure() {
 		DefaultValue:           *tillerRelease.Namespace,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
+}
+
+func (cmd *InitCmd) configureKubernetes() {
+	clusterConfig := cmd.config.Cluster
 	useKubeConfig := false
 	homeDir, homeErr := homedir.Dir()
 
@@ -344,16 +354,9 @@ func (cmd *InitCmd) reconfigure() {
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
 		})
 	}
-	cmd.reconfigureRegistry()
-
-	err := configutil.SaveConfig()
-
-	if err != nil {
-		log.With(err).Fatalf("Config error: %s", err.Error())
-	}
 }
 
-func (cmd *InitCmd) reconfigureRegistry() {
+func (cmd *InitCmd) configureRegistry() {
 	overwriteConfig := configutil.GetOverwriteConfig()
 	registryConfig := cmd.config.Services.Registry
 
@@ -501,14 +504,13 @@ func (cmd *InitCmd) createChart() {
 		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
 
+	/*TODO
 	createdChartYaml := map[interface{}]interface{}{}
 	createdChartValuesYaml := map[interface{}]interface{}{}
 
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", &createdChartYaml)
 	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", &createdChartValuesYaml)
 
-	createdChartYaml["name"] = cmd.config.DevSpace.Release.Name
-	/*TODO
 	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
 
 	if !chartHasContainerValues && containerValues != nil {
@@ -523,7 +525,7 @@ func (cmd *InitCmd) createChart() {
 		externalValues["domain"] = cmd.appConfig.External.Domain
 		createdChartValuesYaml["external"] = externalValues
 	}
-	*/
 	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
 	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
+	*/
 }
