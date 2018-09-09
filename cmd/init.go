@@ -273,6 +273,11 @@ func (cmd *InitCmd) addPortForwarding(port int) {
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
+	for _, syncPath := range *cmd.config.DevSpace.Sync {
+		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
+			return
+		}
+	}
 	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
 	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
 	uploadExcludePaths := []string{}
@@ -282,12 +287,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 
 		for _, ignoreRule := range dockerignoreRules {
 			uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
-		}
-	}
-
-	for _, syncPath := range *cmd.config.DevSpace.Sync {
-		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			return
 		}
 	}
 
