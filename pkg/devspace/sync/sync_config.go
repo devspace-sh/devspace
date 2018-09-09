@@ -393,4 +393,6 @@ func (s *SyncConfig) Stop() {
 			}
 		}
 	}
+
+	s.Logln("[Sync] Sync stopped")
 }

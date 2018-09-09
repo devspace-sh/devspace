@@ -392,7 +392,7 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 					log.Fatalf("Sync error: %s", err.Error())
 				}
 
-				log.Donef("Sync started on %s <-> %s", absLocalPath, syncPath.ContainerPath)
+				log.Donef("Sync started on %s <-> %s", absLocalPath, *syncPath.ContainerPath)
 				syncConfigs = append(syncConfigs, syncConfig)
 			}
 		}
