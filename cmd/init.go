@@ -21,10 +21,11 @@ import (
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
-	flags          *InitCmdFlags
-	workdir        string
-	chartGenerator *generator.ChartGenerator
-	config         *v1.Config
+	flags           *InitCmdFlags
+	workdir         string
+	chartGenerator  *generator.ChartGenerator
+	config          *v1.Config
+	overwriteConfig *v1.Config
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -119,11 +120,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		Image: &v1.ImageConfig{
 			Name: configutil.String("devspace"),
 		},
-		Cluster: &v1.Cluster{
-			APIServer: configutil.String("https://192.168.99.100:8443"),
-			User:      &v1.User{},
-		},
 	})
+	cmd.overwriteConfig = configutil.GetOverwriteConfig()
+
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
@@ -279,7 +278,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 }
 
 func (cmd *InitCmd) reconfigure() {
-	clusterConfig := cmd.config.Cluster
+	clusterConfig := cmd.overwriteConfig.Cluster
 	tillerConfig := cmd.config.Services.Tiller
 	tillerRelease := tillerConfig.Release
 
@@ -318,6 +317,9 @@ func (cmd *InitCmd) reconfigure() {
 	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 
 	if !useKubeConfig {
+		if clusterConfig.APIServer == nil {
+			clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
+		}
 		clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
 			DefaultValue:           *clusterConfig.APIServer,
@@ -354,7 +356,6 @@ func (cmd *InitCmd) reconfigure() {
 }
 
 func (cmd *InitCmd) reconfigureRegistry() {
-	overwriteConfig := configutil.GetOverwriteConfig()
 	registryConfig := cmd.config.Services.Registry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -389,7 +390,7 @@ func (cmd *InitCmd) reconfigureRegistry() {
 			if registryConfig.Internal.Release.Namespace == nil {
 				registryConfig.Internal.Release.Namespace = cmd.config.DevSpace.Release.Namespace
 			}
-			registryUser := overwriteConfig.Services.Registry.User
+			registryUser := cmd.overwriteConfig.Services.Registry.User
 
 			if registryUser.Username == nil {
 				randomUserSuffix, err := randutil.GenerateRandomString(5)
