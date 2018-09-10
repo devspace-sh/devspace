@@ -269,7 +269,7 @@ func (s *SyncConfig) initialSync() error {
 	if len(fileMapClone) > 0 {
 		remoteChanges := make([]*fileInformation, 0, len(fileMapClone))
 		for _, element := range fileMapClone {
-			remoteChanges = append(localChanges, element)
+			remoteChanges = append(remoteChanges, element)
 		}
 
 		err = s.downstream.applyChanges(remoteChanges, nil)
