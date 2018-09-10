@@ -76,7 +76,9 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 	if s.fileIndex.fileMap[relativePath] != nil {
 		// Folder already exists
 		if stat.IsDir() {
-			return false
+			// We want to initially walk over all files therefore we return true for a directory
+			// Later on a created directory locally that already exists in the fileMap should be ignored
+			return isInitial
 		}
 
 		// Exclude symlinks
