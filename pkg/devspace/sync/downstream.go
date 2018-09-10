@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -87,7 +88,9 @@ func (d *downstream) populateFileMap() error {
 	defer d.config.fileIndex.fileMapMutex.Unlock()
 
 	for _, element := range createFiles {
-		d.config.fileIndex.fileMap[element.Name] = element
+		if d.config.fileIndex.fileMap[element.Name] == nil {
+			d.config.fileIndex.fileMap[element.Name] = element
+		}
 	}
 
 	return nil
@@ -328,36 +331,28 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 		d.config.Logf("[Downstream] Remove %d files", numRemoveFiles)
 	}
 
-	// A file is only deleted if the following conditions are met:
-	// - The file name is present in the d.config.fileMap map
-	// - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
-	// - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 	for key, value := range removeFiles {
-		if value != nil && fileMap[key] != nil {
-			// Exclude files on the exclude list
-			if d.config.downloadIgnoreMatcher != nil {
-				if d.config.downloadIgnoreMatcher.MatchesPath(key) {
-					delete(fileMap, key)
-					continue
-				}
-			}
+		absFilepath := filepath.Join(d.config.WatchPath, key)
 
+		if shouldRemoveLocal(absFilepath, value, d.config) {
 			if numRemoveFiles <= 3 {
 				d.config.Logf("[Downstream] Remove %s", key)
 			}
 
-			if fileMap[key].IsDirectory {
+			if value.IsDirectory {
 				deleteSafeRecursive(d.config.WatchPath, key, fileMap, removeFiles, d.config)
 			} else {
-				if value.Mtime == fileMap[key].Mtime && value.Size == fileMap[key].Size {
-					if deleteSafe(path.Join(d.config.WatchPath, key), fileMap[key]) == false {
-						d.config.Logf("[Downstream] Skip file delete %s", key)
-					}
+				err := os.Remove(absFilepath)
+				if err != nil {
+					d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+					continue
 				}
-
-				delete(fileMap, key)
 			}
+		} else {
+			d.config.Logf("[Downstream] Skip delete %s", key)
 		}
+
+		delete(fileMap, key)
 	}
 }
 
@@ -481,7 +476,6 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 	d.config.fileIndex.fileMapMutex.Lock()
 	defer d.config.fileIndex.fileMapMutex.Unlock()
 
-	fileMap := d.config.fileIndex.fileMap
 	fileInformation, err := parseFileInformation(fileline, d.config.DestPath)
 
 	// Error parsing line
@@ -494,59 +488,11 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 		return nil
 	}
 
-	// Exclude files on the exclude list
-	if d.config.ignoreMatcher != nil {
-		if d.config.ignoreMatcher.MatchesPath(fileInformation.Name) {
-			return nil
-		}
-	}
+	// File found don't delete it
+	delete(removeFiles, fileInformation.Name)
 
-	// File found, don't delete it
-	if removeFiles[fileInformation.Name] != nil {
-		delete(removeFiles, fileInformation.Name)
-	}
-
-	// Update mode, gid & uid if exists
-	if fileMap[fileInformation.Name] != nil {
-		fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
-		fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
-		fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
-	}
-
-	// Exclude files on the exclude list
-	if d.config.downloadIgnoreMatcher != nil {
-		if d.config.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-			return nil
-		}
-	}
-
-	// Exclude symlinks
-	if fileInformation.IsSymbolicLink {
-		// Add them to the fileMap though
-		fileMap[fileInformation.Name] = fileInformation
-		return nil
-	}
-
-	// Does file already exist in the filemap?
-	if fileMap[fileInformation.Name] != nil {
-		// Don't override folders that exist in the filemap
-		if fileInformation.IsDirectory == false {
-			// Redownload file if mtime is newer than saved one
-			if fileInformation.Mtime > fileMap[fileInformation.Name].Mtime {
-				*createFiles = append(*createFiles, fileInformation)
-
-				return nil
-			}
-
-			// Redownload file if size changed && file is not older than the one in the fileMap
-			// the mTime check is necessary, because otherwise we would override older local files that
-			// are not overridden initially
-			if fileInformation.Mtime == fileMap[fileInformation.Name].Mtime && fileInformation.Size != fileMap[fileInformation.Name].Size {
-				*createFiles = append(*createFiles, fileInformation)
-			}
-		}
-	} else {
-		// We create the file if it doesn't exist in the fileMap
+	// Should we download the file / folder?
+	if shouldDownload(fileInformation, d.config) {
 		*createFiles = append(*createFiles, fileInformation)
 	}
 

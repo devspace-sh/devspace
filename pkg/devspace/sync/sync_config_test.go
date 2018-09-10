@@ -176,12 +176,17 @@ func TestInitialSync(t *testing.T) {
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
 
+	go syncClient.startUpstream()
+
 	// Do initial sync
 	err = syncClient.initialSync()
 	if err != nil {
 		t.Error(err)
 		return
 	}
+
+	// TODO: Remove sleep and instead wait for upstream changes
+	time.Sleep(5 * time.Second)
 
 	// Check outcome
 	filesToCheck := []string{
@@ -310,7 +315,8 @@ func TestRunningSync(t *testing.T) {
 	}
 
 	// Start sync and do initial sync
-	syncClient.mainLoop()
+	go syncClient.startUpstream()
+	go syncClient.startDownstream()
 
 	// Create
 	err = createFileAndWait(remote, local, "2")

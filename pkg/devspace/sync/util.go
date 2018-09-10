@@ -241,65 +241,42 @@ func deleteSafeRecursive(basepath, relativePath string, fileMap map[string]*file
 	// We don't delete the folder or the contents if we haven't tracked it
 	if fileMap[relativePath] == nil || removeFiles[relativePath] == nil {
 		config.Logf("[Downstream] Skip delete directory %s\n", relativePath)
-
 		return
 	}
 
 	// Delete directory from fileMap
 	defer delete(fileMap, relativePath)
 	files, err := ioutil.ReadDir(absolutePath)
-
 	if err != nil {
 		return
 	}
 
 	for _, f := range files {
-		if f.IsDir() {
-			deleteSafeRecursive(basepath, path.Join(relativePath, f.Name()), fileMap, removeFiles, config)
-		} else {
-			filepath := path.Join(relativePath, f.Name())
-			fileDeleted := false
+		filepath := path.Join(relativePath, f.Name())
+		absFilepath := path.Join(basepath, filepath)
 
-			// We don't delete the file if we haven't tracked it
-			if fileMap[filepath] != nil && removeFiles[filepath] != nil {
-				// We don't delete the file if it has changed in the map since we collected changes
-				if removeFiles[filepath].Mtime == fileMap[filepath].Mtime && removeFiles[filepath].Size == fileMap[filepath].Size {
-					// We don't delete the file if it has changed on the filesystem meanwhile
-					fileDeleted = deleteSafe(path.Join(basepath, filepath), fileMap[filepath])
+		if shouldRemoveLocal(absFilepath, fileMap[filepath], config) {
+			if f.IsDir() {
+				deleteSafeRecursive(basepath, filepath, fileMap, removeFiles, config)
+			} else {
+				err = os.Remove(absFilepath)
+				if err != nil {
+					config.Logf("[Downstream] Skip file delete %s: %v", relativePath, err)
+					continue
 				}
 			}
-
-			if fileDeleted == false {
-				config.Logf("[Downstream] Skip file delete %s\n", relativePath)
-			} else {
-				delete(fileMap, filepath)
-			}
+		} else {
+			config.Logf("[Downstream] Skip delete %s", relativePath)
 		}
+
+		delete(fileMap, filepath)
 	}
 
 	// This will not remove the directory if there is still a file or directory in it
 	err = os.Remove(absolutePath)
-
 	if err != nil {
 		config.Logf("[Downstream] Skip delete directory %s, because %s\n", relativePath, err.Error())
 	}
-}
-
-func deleteSafe(path string, fileInformation *fileInformation) bool {
-	// Only delete if mtime and size did not change
-	stat, err := os.Stat(path)
-
-	// TODO: uncomment this line for more safety (However we have to change the initial sync functionality that older files locally are either uplaoded or the newer files on the server downloaded)
-	// if err == nil && stat.Size() == fileInformation.Size && ceilMtime(stat.ModTime()) == fileInformation.Mtime {
-	if err == nil && ceilMtime(stat.ModTime()) <= fileInformation.Mtime {
-		err = os.Remove(path)
-
-		if err == nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {

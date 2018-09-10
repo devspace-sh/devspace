@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initialSyncCompleted = regexp.MustCompile(`^\[Sync\] Initial sync completed\. Processed (\d+) changes$`)
 var syncStopped = regexp.MustCompile(`^\[Sync\] Sync stopped$`)
 var downstreamChanges = regexp.MustCompile(`^\[Downstream\] Successfully processed (\d+) change\(s\)$`)
 var upstreamChanges = regexp.MustCompile(`^\[Upstream\] Successfully processed (\d+) change\(s\)$`)
@@ -180,12 +179,6 @@ func updateSyncMap(syncMap map[string]*syncStatus, jsonMap map[string]string) er
 		syncMap[identifier].Status = "Error"
 		syncMap[identifier].Error = message
 		syncMap[identifier].LastActivityTime = time
-	} else if matches := initialSyncCompleted.FindStringSubmatch(message); len(matches) == 2 {
-		syncMap[identifier].LastActivity = "Initially transferred " + matches[1] + " changes"
-		syncMap[identifier].LastActivityTime = time
-
-		changes, _ := strconv.Atoi(matches[1])
-		syncMap[identifier].TotalChanges += changes
 	} else if matches := downstreamChanges.FindStringSubmatch(message); len(matches) == 2 {
 		syncMap[identifier].LastActivity = "Downloaded " + matches[1] + " changes"
 		syncMap[identifier].LastActivityTime = time

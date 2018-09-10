@@ -141,80 +141,51 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fil
 	changes := make([]*fileInformation, 0, len(events))
 
 	for _, event := range events {
-		fullpath := event.Path()
-		relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
+		fileInfo, ok := event.(*fileInformation)
 
-		// Exclude changes on the exclude list
-		if u.config.ignoreMatcher != nil {
-			if u.config.ignoreMatcher.MatchesPath(relativePath) {
-				continue
+		if ok {
+			changes = append(changes, fileInfo)
+		} else {
+			fullpath := event.Path()
+			relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
+
+			// Determine what kind of change we got (Create or Remove)
+			newChange := evaluateChange(u.config, fileMap, relativePath, fullpath)
+
+			if newChange != nil {
+				changes = append(changes, newChange)
 			}
-		}
-
-		// Exclude changes on the upload exclude list
-		if u.config.uploadIgnoreMatcher != nil {
-			if u.config.uploadIgnoreMatcher.MatchesPath(relativePath) {
-				continue
-			}
-		}
-
-		// Determine what kind of change we got (Create or Remove)
-		newChange := evaluateChange(fileMap, relativePath, fullpath)
-
-		if newChange != nil {
-			changes = append(changes, newChange)
 		}
 	}
 
 	return changes
 }
 
-func evaluateChange(fileMap map[string]*fileInformation, relativePath, fullpath string) *fileInformation {
+func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relativePath, fullpath string) *fileInformation {
 	stat, err := os.Stat(fullpath)
 
 	// File / Folder exist -> Create File or Folder
 	// if File / Folder does not exist, we create a new remove change
 	if err == nil {
-		if fileMap[relativePath] != nil {
-			// Folder already exists
-			if stat.IsDir() {
-				return nil
-			}
-
-			// File did not change or was changed by downstream
-			if ceilMtime(stat.ModTime()) == fileMap[relativePath].Mtime && stat.Size() == fileMap[relativePath].Size {
-				return nil
-			}
-
-			// Exclude symbolic links
-			if fileMap[relativePath].IsSymbolicLink {
-				return nil
+		if shouldUpload(relativePath, stat, s, false) {
+			// New Create Task
+			return &fileInformation{
+				Name:        relativePath,
+				Mtime:       ceilMtime(stat.ModTime()),
+				Size:        stat.Size(),
+				IsDirectory: stat.IsDir(),
 			}
 		}
-
-		// New Create Task
-		return &fileInformation{
-			Name:        relativePath,
-			Mtime:       ceilMtime(stat.ModTime()),
-			Size:        stat.Size(),
-			IsDirectory: stat.IsDir(),
+	} else {
+		if shouldRemoveRemote(relativePath, s) {
+			// New Remove Task
+			return &fileInformation{
+				Name: relativePath,
+			}
 		}
 	}
 
-	// File / Folder was already deleted from map so event was already processed or should not be processed
-	if fileMap[relativePath] == nil {
-		return nil
-	}
-
-	// Exclude symbolic links
-	if fileMap[relativePath].IsSymbolicLink {
-		return nil
-	}
-
-	// New Remove Task
-	return &fileInformation{
-		Name: relativePath,
-	}
+	return nil
 }
 
 func (u *upstream) applyChanges(changes []*fileInformation) error {
