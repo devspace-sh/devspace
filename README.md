@@ -3,6 +3,7 @@
 # DevSpace CLI - Cloud-Native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
+[![Join the community on Spectrum Chart](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/devspace)
 
 With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes clusters provided by cloud platforms, e.g. Google Kubernetes Engine.
 
