@@ -1,13 +1,15 @@
 {
-    "name": "my-nodejs-application",
-    "scripts": {
-        "start": "node index.js",
-        "dev": "nodemon index.js"
-    },
-    "devDependencies": {
-        "nodemon": "^1.18.3"
-    },
-    "dependencies": {
-        "express": "^4.16.3"
-    }
+  "name": "my-app",
+  "version": "0.0.1",
+  "description": "my js app",
+  "author": "YOUR NAME <you@company>",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js",
+    "develop": "nodemon index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "1.18.4"
+  }
 }

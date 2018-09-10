@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	recursiveCopy "github.com/otiai10/copy"
 )
@@ -39,8 +40,37 @@ func WriteToFile(data []byte, filePath string) error {
 }
 
 //Copy copies a file to a destination path
-func Copy(sourcePath string, targetPath string) error {
-	return recursiveCopy.Copy(sourcePath, targetPath)
+func Copy(sourcePath string, targetPath string, overwrite bool) error {
+	if overwrite {
+		return recursiveCopy.Copy(sourcePath, targetPath)
+	}
+	pathSeparator := string(os.PathSeparator)
+
+	if pathSeparator == "/" {
+		sourcePath = strings.Replace(sourcePath, "\\", pathSeparator, -1)
+	} else {
+		sourcePath = strings.Replace(sourcePath, "/", pathSeparator, -1)
+	}
+
+	return filepath.Walk(sourcePath, func(nextSourcePath string, fileInfo os.FileInfo, err error) error {
+		nextTargetPath := filepath.Join(targetPath, strings.TrimPrefix(nextSourcePath, sourcePath))
+
+		if !fileInfo.Mode().IsRegular() {
+			return nil
+		}
+
+		if fileInfo.IsDir() {
+			os.MkdirAll(nextTargetPath, os.ModePerm)
+
+			return Copy(nextSourcePath, nextTargetPath, overwrite)
+		}
+		_, statErr := os.Stat(nextTargetPath)
+
+		if statErr != nil {
+			return recursiveCopy.Copy(nextSourcePath, nextTargetPath)
+		}
+		return nil
+	})
 }
 
 //ReadFile reads a file

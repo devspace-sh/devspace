@@ -497,16 +497,20 @@ func (cmd *InitCmd) determineLanguage() {
 		if err != nil {
 			log.Fatalf("Unable to get supported languages: %s", err.Error())
 		}
-		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
+		detectedLang, langDetectionErr := cmd.chartGenerator.GetLanguage()
 
-		if cmd.chartGenerator.Language == "" {
-			cmd.chartGenerator.Language = "none"
+		if langDetectionErr != nil {
+			//log.Error(langDetectionErr)
+		}
+
+		if detectedLang == "" {
+			detectedLang = "none"
 		}
 		log.StopWait()
 
 		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
-			DefaultValue:           cmd.chartGenerator.Language,
+			DefaultValue:           detectedLang,
 			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
 		})
 	}
