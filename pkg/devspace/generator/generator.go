@@ -109,12 +109,12 @@ func (cg *ChartGenerator) CreateChart() error {
 	return nil
 }
 
-// AddPackage adds a package to the ChartGenerator
+// AddPackage adds a package to the project's helm chart
 func (cg *ChartGenerator) AddPackage(pkg string) {
 
 }
 
-// RemovePackage removes a package from the ChartGenerator
+// RemovePackage removes a package to the project's helm chart
 func (cg *ChartGenerator) RemovePackage(pkg string) {
 
 }
