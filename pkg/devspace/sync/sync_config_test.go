@@ -176,6 +176,8 @@ func TestInitialSync(t *testing.T) {
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
 
+	go syncClient.startUpstream()
+
 	// Do initial sync
 	err = syncClient.initialSync()
 	if err != nil {
