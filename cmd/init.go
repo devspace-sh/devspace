@@ -213,12 +213,6 @@ func (cmd *InitCmd) configureDevSpace() {
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
-	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
-
 	// cmd.appConfig.Container.Ports, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
 	// 	Question:               "Which port(s) does your application listen on? (separated by spaces)",
 	// 	DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
@@ -239,6 +233,12 @@ func (cmd *InitCmd) configureDevSpace() {
 		}
 	}
 	cmd.addDefaultSyncConfig()
+
+	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
 
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
