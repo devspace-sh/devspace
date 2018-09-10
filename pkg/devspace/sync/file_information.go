@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rjeczalik/notify"
+
 	"github.com/juju/errors"
 )
 
@@ -27,6 +29,22 @@ type fileInformation struct {
 	RemoteMode int64 // %a
 	RemoteUID  int   // %g
 	RemoteGID  int   // %u
+}
+
+func (f *fileInformation) Sys() interface{} {
+	return f
+}
+
+func (f *fileInformation) Path() string {
+	return f.Name
+}
+
+func (f *fileInformation) Event() notify.Event {
+	if f.Mtime == 0 {
+		return notify.Remove
+	}
+
+	return notify.Create
 }
 
 type parsingError struct {

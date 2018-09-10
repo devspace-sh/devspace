@@ -141,28 +141,34 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fil
 	changes := make([]*fileInformation, 0, len(events))
 
 	for _, event := range events {
-		fullpath := event.Path()
-		relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
+		fileInfo, ok := event.(*fileInformation)
 
-		// Exclude changes on the exclude list
-		if u.config.ignoreMatcher != nil {
-			if u.config.ignoreMatcher.MatchesPath(relativePath) {
-				continue
+		if ok {
+			changes = append(changes, fileInfo)
+		} else {
+			fullpath := event.Path()
+			relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
+
+			// Exclude changes on the exclude list
+			if u.config.ignoreMatcher != nil {
+				if u.config.ignoreMatcher.MatchesPath(relativePath) {
+					continue
+				}
 			}
-		}
 
-		// Exclude changes on the upload exclude list
-		if u.config.uploadIgnoreMatcher != nil {
-			if u.config.uploadIgnoreMatcher.MatchesPath(relativePath) {
-				continue
+			// Exclude changes on the upload exclude list
+			if u.config.uploadIgnoreMatcher != nil {
+				if u.config.uploadIgnoreMatcher.MatchesPath(relativePath) {
+					continue
+				}
 			}
-		}
 
-		// Determine what kind of change we got (Create or Remove)
-		newChange := evaluateChange(fileMap, relativePath, fullpath)
+			// Determine what kind of change we got (Create or Remove)
+			newChange := evaluateChange(fileMap, relativePath, fullpath)
 
-		if newChange != nil {
-			changes = append(changes, newChange)
+			if newChange != nil {
+				changes = append(changes, newChange)
+			}
 		}
 	}
 

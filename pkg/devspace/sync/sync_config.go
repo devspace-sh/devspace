@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
+	"time"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
@@ -14,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+var initialUpstreamBatchSize = 1000
 var syncLog log.Logger
 
 //StartAck signals to the user that the sync process is starting
@@ -47,7 +50,8 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent bool
+	silent   bool
+	stopOnce sync.Once
 
 	// Used for testing
 	testing   bool
@@ -189,41 +193,48 @@ func (s *SyncConfig) initIgnoreParsers() error {
 func (s *SyncConfig) mainLoop() {
 	s.Logf("[Sync] Start syncing")
 
-	err := s.initialSync()
-	if err != nil {
-		s.Error(err)
-		return
-	}
+	// Start upstream as early as possible
+	go s.startUpstream()
 
-	// Start upstream
+	// Start downstream and do initial sync
 	go func() {
 		defer s.Stop()
 
-		// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-		err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All)
-
+		err := s.initialSync()
 		if err != nil {
 			s.Error(err)
 			return
 		}
 
-		defer notify.Stop(s.upstream.events)
-
-		err = s.upstream.mainLoop()
-		if err != nil {
-			s.Error(err)
-		}
+		s.startDownstream()
 	}()
+}
 
-	// Start downstream
-	go func() {
-		defer s.Stop()
+func (s *SyncConfig) startUpstream() {
+	defer s.Stop()
 
-		err := s.downstream.mainLoop()
-		if err != nil {
-			s.Error(err)
-		}
-	}()
+	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
+	err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All)
+	if err != nil {
+		s.Error(err)
+		return
+	}
+
+	defer notify.Stop(s.upstream.events)
+
+	err = s.upstream.mainLoop()
+	if err != nil {
+		s.Error(err)
+	}
+}
+
+func (s *SyncConfig) startDownstream() {
+	defer s.Stop()
+
+	err := s.downstream.mainLoop()
+	if err != nil {
+		s.Error(err)
+	}
 }
 
 func (s *SyncConfig) initialSync() error {
@@ -232,9 +243,10 @@ func (s *SyncConfig) initialSync() error {
 		return errors.Trace(err)
 	}
 
-	remoteChanges := make([]*fileInformation, 0, 10)
+	localChanges := make([]*fileInformation, 0, 10)
 	fileMapClone := make(map[string]*fileInformation)
 
+	s.fileIndex.fileMapMutex.Lock()
 	for key, element := range s.fileIndex.fileMap {
 		if element.IsSymbolicLink {
 			continue
@@ -242,32 +254,29 @@ func (s *SyncConfig) initialSync() error {
 
 		fileMapClone[key] = element
 	}
+	s.fileIndex.fileMapMutex.Unlock()
 
-	err = s.diffServerClient(s.WatchPath, &remoteChanges, fileMapClone)
+	err = s.diffServerClient(s.WatchPath, &localChanges, fileMapClone)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	if len(remoteChanges) > 0 {
-		err = s.upstream.applyCreates(remoteChanges)
-		if err != nil {
-			return errors.Trace(err)
-		}
+	if len(localChanges) > 0 {
+		go s.sendChangesToUpstream(localChanges)
 	}
 
 	if len(fileMapClone) > 0 {
-		localChanges := make([]*fileInformation, 0, len(fileMapClone))
+		remoteChanges := make([]*fileInformation, 0, len(fileMapClone))
 		for _, element := range fileMapClone {
-			localChanges = append(localChanges, element)
+			remoteChanges = append(localChanges, element)
 		}
 
-		err = s.downstream.applyChanges(localChanges, nil)
+		err = s.downstream.applyChanges(remoteChanges, nil)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
 
-	s.Logf("[Sync] Initial sync completed. Processed %d changes", len(remoteChanges)+len(fileMapClone))
 	return nil
 }
 
@@ -301,8 +310,14 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 		}
 	}
 
+	// Access fileMap safely
+	s.fileIndex.fileMapMutex.Lock()
+	isSymbolicLink := s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].IsSymbolicLink
+	isLocalFileNewer := s.fileIndex.fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > s.fileIndex.fileMap[relativePath].Mtime+1
+	s.fileIndex.fileMapMutex.Unlock()
+
 	// Exclude remote symlinks
-	if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].IsSymbolicLink {
+	if isSymbolicLink {
 		return nil
 	}
 
@@ -311,7 +326,7 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	}
 
 	// TODO: Handle the case when local files are older than in the container
-	if s.fileIndex.fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > s.fileIndex.fileMap[relativePath].Mtime+1 {
+	if isLocalFileNewer {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
 			Mtime:       ceilMtime(stat.ModTime()),
@@ -321,6 +336,33 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	}
 
 	return nil
+}
+
+func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
+	for j := 0; j < len(changes); j += initialUpstreamBatchSize {
+		// Wait till upstream channel is empty
+		for len(s.upstream.events) > 0 {
+			time.Sleep(time.Second)
+		}
+
+		// Now we send them to upstream
+		sendBatch := make([]*fileInformation, 0, initialUpstreamBatchSize)
+		s.fileIndex.fileMapMutex.Lock()
+
+		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
+			if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
+				sendBatch = append(sendBatch, changes[i])
+			}
+		}
+
+		s.fileIndex.fileMapMutex.Unlock()
+
+		// We do this out of the fileIndex lock, because otherwise this could cause a deadlock
+		// (Upstream waits in getfileInformationFromEvent and upstream.events buffer is full)
+		for i := 0; i < len(sendBatch); i++ {
+			s.upstream.events <- sendBatch[i]
+		}
+	}
 }
 
 func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
@@ -333,12 +375,16 @@ func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, d
 	}
 
 	if len(files) == 0 {
+		s.fileIndex.fileMapMutex.Lock()
+
 		if s.fileIndex.fileMap[relativePath] == nil {
 			*sendChanges = append(*sendChanges, &fileInformation{
 				Name:        relativePath,
 				IsDirectory: true,
 			})
 		}
+
+		s.fileIndex.fileMapMutex.Unlock()
 	}
 
 	for _, f := range files {
@@ -350,12 +396,10 @@ func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, d
 	return nil
 }
 
-//Stop stops the sync process
+// Stop stops the sync process
 func (s *SyncConfig) Stop() {
-	if s.upstream != nil && s.upstream.interrupt != nil {
-		select {
-		case <-s.upstream.interrupt:
-		default:
+	s.stopOnce.Do(func() {
+		if s.upstream != nil && s.upstream.interrupt != nil {
 			close(s.upstream.interrupt)
 
 			if s.upstream.stdinPipe != nil {
@@ -371,12 +415,8 @@ func (s *SyncConfig) Stop() {
 				s.upstream.stderrPipe.Close()
 			}
 		}
-	}
 
-	if s.downstream != nil && s.downstream.interrupt != nil {
-		select {
-		case <-s.downstream.interrupt:
-		default:
+		if s.downstream != nil && s.downstream.interrupt != nil {
 			close(s.downstream.interrupt)
 
 			if s.downstream.stdinPipe != nil {
@@ -392,7 +432,7 @@ func (s *SyncConfig) Stop() {
 				s.downstream.stderrPipe.Close()
 			}
 		}
-	}
 
-	s.Logln("[Sync] Sync stopped")
+		s.Logln("[Sync] Sync stopped")
+	})
 }

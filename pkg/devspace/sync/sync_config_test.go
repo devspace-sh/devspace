@@ -183,6 +183,9 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
+	// TODO: Remove sleep and instead wait for upstream changes
+	time.Sleep(5 * time.Second)
+
 	// Check outcome
 	filesToCheck := []string{
 		"testFile1",
@@ -310,7 +313,8 @@ func TestRunningSync(t *testing.T) {
 	}
 
 	// Start sync and do initial sync
-	syncClient.mainLoop()
+	go syncClient.startUpstream()
+	go syncClient.startDownstream()
 
 	// Create
 	err = createFileAndWait(remote, local, "2")

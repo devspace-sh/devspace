@@ -87,7 +87,9 @@ func (d *downstream) populateFileMap() error {
 	defer d.config.fileIndex.fileMapMutex.Unlock()
 
 	for _, element := range createFiles {
-		d.config.fileIndex.fileMap[element.Name] = element
+		if d.config.fileIndex.fileMap[element.Name] == nil {
+			d.config.fileIndex.fileMap[element.Name] = element
+		}
 	}
 
 	return nil

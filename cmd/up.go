@@ -156,16 +156,12 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	if cmd.flags.deploy || shouldRebuild {
+	// Check if we find a running release pod
+	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+
+	if err != nil || cmd.flags.deploy || shouldRebuild {
 		cmd.deployChart()
 	} else {
-		// Check if we find a running release pod
-		pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-
-		if err != nil {
-			log.Fatalf("Couldn't find running devspace pod: %s", err.Error())
-		}
-
 		cmd.pod = pod
 	}
 
