@@ -1,6 +1,8 @@
 package configutil
 
-import "github.com/covexo/devspace/pkg/devspace/config/v1"
+import (
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+)
 
 func makeConfig() *v1.Config {
 	return &v1.Config{
