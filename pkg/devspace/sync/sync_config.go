@@ -352,6 +352,7 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 		s.fileIndex.fileMapMutex.Lock()
 
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
+			s.Logf("Change %v", changes[i])
 			if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
 				s.Logf("Send change %v to upstream", changes[i])
 				sendBatch = append(sendBatch, changes[i])
