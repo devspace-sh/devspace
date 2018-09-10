@@ -206,6 +206,7 @@ func (s *SyncConfig) mainLoop() {
 			return
 		}
 
+		s.Logf("[Sync] Initial sync completed")
 		s.startDownstream()
 	}()
 }
@@ -289,35 +290,13 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 		return nil
 	}
 
-	// We skip symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
-		return nil
-	}
-
-	// Exclude files on the exclude list
-	if s.ignoreMatcher != nil {
-		if s.ignoreMatcher.MatchesPath(relativePath) {
-			return nil
-		}
-	}
-
 	delete(downloadChanges, relativePath)
 
-	// Exclude files on the exclude list
-	if s.uploadIgnoreMatcher != nil {
-		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
-			return nil
-		}
-	}
-
-	// Access fileMap safely
 	s.fileIndex.fileMapMutex.Lock()
-	isSymbolicLink := s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].IsSymbolicLink
-	isLocalFileNewer := s.fileIndex.fileMap[relativePath] == nil || ceilMtime(stat.ModTime()) > s.fileIndex.fileMap[relativePath].Mtime+1
+	shouldUpload := shouldUpload(relativePath, stat, s, true)
 	s.fileIndex.fileMapMutex.Unlock()
 
-	// Exclude remote symlinks
-	if isSymbolicLink {
+	if shouldUpload == false {
 		return nil
 	}
 
@@ -325,14 +304,37 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 		return s.diffDir(filepath, sendChanges, downloadChanges)
 	}
 
-	// TODO: Handle the case when local files are older than in the container
-	if isLocalFileNewer {
+	// Add file to upload
+	*sendChanges = append(*sendChanges, &fileInformation{
+		Name:        relativePath,
+		Mtime:       ceilMtime(stat.ModTime()),
+		Size:        stat.Size(),
+		IsDirectory: false,
+	})
+
+	return nil
+}
+
+func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
+	files, err := ioutil.ReadDir(filepath)
+
+	if err != nil {
+		s.Logf("[Upstream] Couldn't read dir %s: %v", filepath, err)
+		return nil
+	}
+
+	if len(files) == 0 {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
-			Mtime:       ceilMtime(stat.ModTime()),
-			Size:        stat.Size(),
-			IsDirectory: false,
+			IsDirectory: true,
 		})
+	}
+
+	for _, f := range files {
+		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	return nil
@@ -363,37 +365,6 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 			s.upstream.events <- sendBatch[i]
 		}
 	}
-}
-
-func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
-	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
-	files, err := ioutil.ReadDir(filepath)
-
-	if err != nil {
-		s.Logf("[Upstream] Couldn't read dir %s: %v", filepath, err)
-		return nil
-	}
-
-	if len(files) == 0 {
-		s.fileIndex.fileMapMutex.Lock()
-
-		if s.fileIndex.fileMap[relativePath] == nil {
-			*sendChanges = append(*sendChanges, &fileInformation{
-				Name:        relativePath,
-				IsDirectory: true,
-			})
-		}
-
-		s.fileIndex.fileMapMutex.Unlock()
-	}
-
-	for _, f := range files {
-		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
-			return errors.Trace(err)
-		}
-	}
-
-	return nil
 }
 
 // Stop stops the sync process

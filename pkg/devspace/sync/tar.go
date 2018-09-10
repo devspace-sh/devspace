@@ -71,7 +71,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 				IsDirectory: stat.IsDir(),
 			}
 
-			config.Logf("[Downstream] Don't override %s because file has newer mTime timestamp\n", relativePath)
+			config.Logf("[Downstream] Don't override %s because file has newer mTime timestamp", relativePath)
 			return true, nil
 		}
 	}
