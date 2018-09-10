@@ -296,21 +296,21 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	shouldUpload := shouldUpload(relativePath, stat, s, true)
 	s.fileIndex.fileMapMutex.Unlock()
 
-	s.Logf("shouldUpload %s %v", relativePath, relativePath)
+	if shouldUpload == false {
+		return nil
+	}
 
 	if stat.IsDir() {
 		return s.diffDir(filepath, sendChanges, downloadChanges)
 	}
 
-	if shouldUpload == false {
-		// Add file to upload
-		*sendChanges = append(*sendChanges, &fileInformation{
-			Name:        relativePath,
-			Mtime:       ceilMtime(stat.ModTime()),
-			Size:        stat.Size(),
-			IsDirectory: false,
-		})
-	}
+	// Add file to upload
+	*sendChanges = append(*sendChanges, &fileInformation{
+		Name:        relativePath,
+		Mtime:       ceilMtime(stat.ModTime()),
+		Size:        stat.Size(),
+		IsDirectory: false,
+	})
 
 	return nil
 }
@@ -352,12 +352,8 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 		s.fileIndex.fileMapMutex.Lock()
 
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
-			s.Logf("Change ", changes[i])
-
 			if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
 				sendBatch = append(sendBatch, changes[i])
-
-				s.Logf("Send Change ", changes[i])
 			}
 		}
 
