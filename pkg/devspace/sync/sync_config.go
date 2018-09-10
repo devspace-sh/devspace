@@ -301,7 +301,7 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	}
 
 	if stat.IsDir() {
-		return s.diffDir(filepath, sendChanges, downloadChanges)
+		return s.diffDir(filepath, stat, sendChanges, downloadChanges)
 	}
 
 	// Add file to upload
@@ -315,7 +315,7 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	return nil
 }
 
-func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
 	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
 	files, err := ioutil.ReadDir(filepath)
 
@@ -327,6 +327,8 @@ func (s *SyncConfig) diffDir(filepath string, sendChanges *[]*fileInformation, d
 	if len(files) == 0 {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
+			Mtime:       ceilMtime(stat.ModTime()),
+			Size:        stat.Size(),
 			IsDirectory: true,
 		})
 	}
