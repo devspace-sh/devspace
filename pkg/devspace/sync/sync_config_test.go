@@ -153,64 +153,7 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	// Create test files
-	fileContents := "TestContents"
-
-	// Write local files
-	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "ignoreFileLocal"), []byte(fileContents), 0666)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileLocal")
-	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal"), []byte(fileContents), 0666)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileLocal")
-	ioutil.WriteFile(path.Join(local, "noUploadFileLocal"), []byte(fileContents), 0666)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileLocal")
-
-	os.Mkdir(path.Join(local, "testFolder"), 0755)
-	os.Mkdir(path.Join(local, "testFolder2"), 0755)
-	os.Mkdir(path.Join(local, "ignoreFolderLocal"), 0755)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFolderLocal")
-	os.Mkdir(path.Join(local, "noDownloadFolderLocal"), 0755)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFolderLocal")
-	os.Mkdir(path.Join(local, "noUploadFolderLocal"), 0755)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFolderLocal")
-
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal"), []byte(fileContents), 0666)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "testFolder/ignoreFileLocal")
-	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal"), []byte(fileContents), 0666)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "testFolder/noDownloadFileLocal")
-	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal"), []byte(fileContents), 0666)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "testFolder/noUploadFileLocal")
-
-	// Write remote files
-	ioutil.WriteFile(path.Join(remote, "testFile3"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFile4"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileRemote")
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileRemote")
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileRemote")
-
-	os.Mkdir(path.Join(remote, "testFolder"), 0755)
-	os.Mkdir(path.Join(remote, "testFolder3"), 0755)
-	os.Mkdir(path.Join(remote, "ignoreFolderRemote"), 0755)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFolderRemote")
-	os.Mkdir(path.Join(remote, "noDownloadFolderRemote"), 0755)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFolderRemote")
-	os.Mkdir(path.Join(remote, "noUploadFolderRemote"), 0755)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFolderRemote")
-
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
-	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileRemote")
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
-	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileRemote")
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
-	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileRemote")
+	filesToCheck, foldersToCheck := createTestFolders(local, remote, syncClient)
 
 	go syncClient.startUpstream()
 
@@ -221,7 +164,225 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	// Check outcome
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
+}
+func TestNormalSync(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on windows")
+	}
+
+	remote, local := initTestDirs(t)
+	defer os.RemoveAll(remote)
+	defer os.RemoveAll(local)
+
+	syncClient := createTestSyncClient(local, remote)
+	defer syncClient.Stop()
+
+	syncClient.errorChan = make(chan error)
+
+	// Start client
+	err := syncClient.setup()
+	if err != nil {
+		t.Errorf("Couldn't init test sync client: %v", err)
+		return
+	}
+
+	// Start upstream
+	err = syncClient.upstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start downstream
+	err = syncClient.downstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	go syncClient.startUpstream()
+	go syncClient.startDownstream()
+
+	// Do initial sync
+	err = syncClient.initialSync()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	filesToCheck, foldersToCheck := createTestFolders(local, remote, syncClient)
+
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
+}
+
+func TestRunningSync(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on windows")
+	}
+
+	remote, local := initTestDirs(t)
+	defer os.RemoveAll(remote)
+	defer os.RemoveAll(local)
+
+	syncClient := createTestSyncClient(local, remote)
+	defer syncClient.Stop()
+
+	syncClient.errorChan = make(chan error)
+
+	// Start client
+	err := syncClient.setup()
+	if err != nil {
+		t.Errorf("Couldn't init test sync client: %v", err)
+		return
+	}
+
+	// Start upstream
+	err = syncClient.upstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start downstream
+	err = syncClient.downstream.start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Start sync and do initial sync
+	go syncClient.startUpstream()
+	go syncClient.startDownstream()
+
+	// Create
+	err = createFileAndWait(remote, local, "2")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFileAndWait(local, remote, "1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFolderAndWait(local, remote, "1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = createFolderAndWait(remote, local, "2")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Remove
+	err = removeFileAndWait(local, remote, "1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFileAndWait(remote, local, "2")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFolderAndWait(local, remote, "1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = removeFolderAndWait(remote, local, "2")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Check if there is an error in the error channel
+	select {
+	case err = <-syncClient.errorChan:
+		t.Error(err)
+		return
+	default:
+	}
+}
+
+func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]checkedFileOrFolder, []checkedFileOrFolder) {
+
+	syncClient.ExcludePaths = []string{
+		"ignoreFileLocal",
+		"ignoreFolderLocal",
+		"testFolder/ignoreFileLocal",
+		"ignoreFileRemote",
+		"ignoreFolderRemote",
+		"testFolder/ignoreFileRemote",
+	}
+
+	syncClient.DownloadExcludePaths = []string{
+		"noDownloadFileLocal",
+		"noDownloadFolderLocal",
+		"testFolder/noDownloadFileLocal",
+		"noDownloadFileRemote",
+		"noDownloadFolderRemote",
+		"testFolder/noDownloadFileRemote",
+	}
+
+	syncClient.UploadExcludePaths = []string{
+		"noUploadFileLocal",
+		"noUploadFolderLocal",
+		"testFolder/noUploadFileLocal",
+		"noUploadFileRemote",
+		"noUploadFolderRemote",
+		"testFolder/noUploadFileRemote",
+	}
+
+	syncClient.initIgnoreParsers()
+
+	//Write local files
+	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "ignoreFileLocal"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "noUploadFileLocal"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(local, "testFolder"), 0755)
+	os.Mkdir(path.Join(local, "testFolder2"), 0755)
+	os.Mkdir(path.Join(local, "ignoreFolderLocal"), 0755)
+	os.Mkdir(path.Join(local, "noDownloadFolderLocal"), 0755)
+	os.Mkdir(path.Join(local, "noUploadFolderLocal"), 0755)
+
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal"), []byte(fileContents), 0666)
+
+	// Write remote files
+	ioutil.WriteFile(path.Join(remote, "testFile3"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFile4"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(remote, "testFolder"), 0755)
+	os.Mkdir(path.Join(remote, "testFolder3"), 0755)
+	os.Mkdir(path.Join(remote, "ignoreFolderRemote"), 0755)
+	os.Mkdir(path.Join(remote, "noDownloadFolderRemote"), 0755)
+	os.Mkdir(path.Join(remote, "noUploadFolderRemote"), 0755)
+
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
 			path:                "testFile1",
@@ -375,105 +536,7 @@ func TestInitialSync(t *testing.T) {
 		},
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote)
-}
-
-func TestRunningSync(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on windows")
-	}
-
-	remote, local := initTestDirs(t)
-	defer os.RemoveAll(remote)
-	defer os.RemoveAll(local)
-
-	syncClient := createTestSyncClient(local, remote)
-	defer syncClient.Stop()
-
-	syncClient.errorChan = make(chan error)
-
-	// Start client
-	err := syncClient.setup()
-	if err != nil {
-		t.Errorf("Couldn't init test sync client: %v", err)
-		return
-	}
-
-	// Start upstream
-	err = syncClient.upstream.start()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Start downstream
-	err = syncClient.downstream.start()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Start sync and do initial sync
-	go syncClient.startUpstream()
-	go syncClient.startDownstream()
-
-	// Create
-	err = createFileAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFileAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFolderAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFolderAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Remove
-	err = removeFileAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFileAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFolderAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFolderAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Check if there is an error in the error channel
-	select {
-	case err = <-syncClient.errorChan:
-		t.Error(err)
-		return
-	default:
-	}
+	return filesToCheck, foldersToCheck
 }
 
 func TestCreateDirInFileMap(t *testing.T) {

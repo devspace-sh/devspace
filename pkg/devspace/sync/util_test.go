@@ -106,7 +106,7 @@ func TestCopyToContainerTestable(t *testing.T) {
 		},
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
 	// Check if there is an error in the error channel
 	select {
@@ -126,9 +126,8 @@ type checkedFileOrFolder struct {
 
 const fileContents = "TestContents"
 
-func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []checkedFileOrFolder, local string, remote string) {
+func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []checkedFileOrFolder, local string, remote string, timeout time.Duration) {
 
-	timeout := 10 * time.Second
 	beginTimeStamp := time.Now()
 
 	var missingFileOrFolder checkedFileOrFolder
@@ -136,65 +135,65 @@ func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []c
 Outer:
 	for time.Since(beginTimeStamp) < timeout {
 
+		/*If something is expected to be there but it isn't, we expect that the sync-job isn't finished yet.
+		Therefore we continue the outer Loop until everything is there or the time runs up.
+
+		If something unexpected happens like an unxpected error or wrong file content or a wrong file type
+		or the existance of a file or folder that shouldn't be there, we let the test fail and return*/
 		// Check files
+	FileCheck:
 		for _, v := range files {
 			localFile := path.Join(local, v.path)
 			remoteFile := path.Join(remote, v.path)
 
-			_, err := os.Stat(localFile)
+			localData, err := ioutil.ReadFile(localFile)
 			if v.shouldExistInLocal && os.IsNotExist(err) {
 				missingFileOrFolder = v
 				continue Outer
-			}
-			if err != nil && !os.IsNotExist(err) {
-				t.Error(err)
-				return
 			}
 			if !v.shouldExistInLocal && !os.IsNotExist(err) {
 				t.Error("Local File " + localFile + " shouldn't exist but it does")
 				return
 			}
-
-			_, err = os.Stat(remoteFile)
-			if v.shouldExistInRemote && os.IsNotExist(err) {
-				missingFileOrFolder = v
-				continue Outer
-			}
 			if err != nil && !os.IsNotExist(err) {
 				t.Error(err)
 				return
+			}
+
+			remoteData, err := ioutil.ReadFile(remoteFile)
+			if v.shouldExistInRemote && os.IsNotExist(err) {
+				missingFileOrFolder = v
+				continue Outer
 			}
 			if !v.shouldExistInRemote && !os.IsNotExist(err) {
 				t.Error("Remote File " + remoteFile + " shouldn't exist but it does")
 				return
 			}
+			if !v.shouldExistInRemote && os.IsNotExist(err) {
+				continue FileCheck
+			}
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
 			if v.shouldExistInLocal {
-				data, err := ioutil.ReadFile(localFile)
-				if err != nil {
-					t.Error(err)
-					return
-				}
-				if string(data) != fileContents {
-					t.Errorf("Wrong file contents in file %s, got %s, expected %s", localFile, string(data), fileContents)
+				if string(localData) != fileContents {
+					t.Errorf("Wrong file contents in file %s, got %s, expected %s", localFile, string(localData), fileContents)
 					return
 				}
 			}
 
 			if v.shouldExistInRemote {
-				data, err := ioutil.ReadFile(remoteFile)
-				if err != nil {
-					t.Error(err)
-					return
-				}
-				if string(data) != fileContents {
-					t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(data), fileContents)
+				if string(remoteData) != fileContents {
+					t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(remoteData), fileContents)
 					return
 				}
 			}
 		}
 
 		// Check folders
+	FolderCheck:
 		for _, v := range folders {
 			localFolder := path.Join(local, v.path)
 			remoteFolder := path.Join(remote, v.path)
@@ -222,12 +221,11 @@ Outer:
 				missingFileOrFolder = v
 				continue Outer
 			}
-			if err != nil && !os.IsNotExist(err) {
-				t.Error(err)
-				return
+			if !v.shouldExistInRemote && os.IsNotExist(err) {
+				continue FolderCheck
 			}
-			if !v.shouldExistInRemote && !os.IsNotExist(err) {
-				t.Error("Remote Directory " + remoteFolder + " shouldn't exist but it does")
+			if err != nil {
+				t.Error(err)
 				return
 			}
 			if err == nil && stat.IsDir() == false {
