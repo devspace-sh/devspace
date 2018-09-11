@@ -204,13 +204,6 @@ func TestNormalSync(t *testing.T) {
 	go syncClient.startUpstream()
 	go syncClient.startDownstream()
 
-	// Do initial sync
-	err = syncClient.initialSync()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	filesToCheck, foldersToCheck := createTestFolders(local, remote, syncClient)
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
@@ -379,9 +372,9 @@ func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]c
 
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote"), []byte(fileContents), 0666)
 
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
