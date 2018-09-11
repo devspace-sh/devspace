@@ -257,6 +257,7 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles map[string]*fileInformation) error {
 	u.config.fileIndex.fileMapMutex.Lock()
 	defer u.config.fileIndex.fileMapMutex.Unlock()
+	defer file.Close()
 
 	u.config.Logf("[Upstream] Upload %d create changes (size %s)", len(writtenFiles), fileSize)
 
@@ -287,30 +288,29 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 					echo "` + EndAck + `";
 		` // We need that extra new line or otherwise the command is not sent
 
-	if u.stdinPipe != nil {
-		// Write command
-		_, err := u.stdinPipe.Write([]byte(cmd))
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Wait till confirmation
-		err = waitTill(StartAck, u.stdoutPipe)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Send file through stdin to remote
-		_, err = io.Copy(u.stdinPipe, file)
-		if err != nil {
-			return errors.Trace(err)
-		}
+	// Write command
+	_, err := u.stdinPipe.Write([]byte(cmd))
+	if err != nil {
+		return errors.Trace(err)
 	}
 
+	// Wait till confirmation
+	err = waitTill(StartAck, u.stdoutPipe)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Send file through stdin to remote
+	_, err = io.Copy(u.stdinPipe, file)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Do not remove this line otherwise the delete will fail
 	file.Close()
 
 	// Delete local file
-	err := os.Remove(file.Name())
+	err = os.Remove(file.Name())
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -360,7 +360,7 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 		}
 
 		if removeArguments > 0 {
-			rmCommand += " >/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
+			rmCommand += " >/dev/null 2>/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
 
 			if u.stdinPipe != nil {
 				_, err := u.stdinPipe.Write([]byte(rmCommand))

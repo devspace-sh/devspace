@@ -28,6 +28,7 @@ func GetIgnoreRules(rootDirectory string) ([]string, error) {
 		ignoreLines := strings.Split(string(ignoreBytes), "\n")
 
 		for _, ignoreRule := range ignoreLines {
+			ignoreRule = strings.Trim(ignoreRule, "\r")
 			ignoreRule = strings.Trim(ignoreRule, " ")
 			initialOffset := 0
 

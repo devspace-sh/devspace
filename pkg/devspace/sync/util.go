@@ -267,7 +267,6 @@ func deleteSafeRecursive(basepath, relativePath string, fileMap map[string]*file
 				err = os.Remove(absFilepath)
 				if err != nil {
 					config.Logf("[Downstream] Skip file delete %s: %v", relativePath, err)
-					continue
 				}
 			}
 		} else {

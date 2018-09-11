@@ -189,18 +189,26 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileIn
 		return nil
 	}
 
+	config.fileIndex.fileMapMutex.Lock()
+	isExcluded := false
+
 	// Exclude files on the exclude list
 	if config.ignoreMatcher != nil {
 		if config.ignoreMatcher.MatchesPath(relativePath) {
-			return nil
+			isExcluded = true
 		}
 	}
 
 	// Exclude files on the upload exclude list
 	if config.uploadIgnoreMatcher != nil {
 		if config.uploadIgnoreMatcher.MatchesPath(relativePath) {
-			return nil
+			isExcluded = true
 		}
+	}
+	config.fileIndex.fileMapMutex.Unlock()
+
+	if isExcluded {
+		return nil
 	}
 
 	stat, err := os.Lstat(filepath)

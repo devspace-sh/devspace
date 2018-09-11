@@ -52,15 +52,13 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
 			// Add to file map and prevent download if local file is newer than the remote one
 			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < ceilMtime(stat.ModTime()) {
-				fileInformation := &fileInformation{
+				// Add it to the fileMap
+				s.fileIndex.fileMap[relativePath] = &fileInformation{
 					Name:        relativePath,
 					Mtime:       ceilMtime(stat.ModTime()),
 					Size:        stat.Size(),
 					IsDirectory: stat.IsDir(),
 				}
-
-				// Add it to the fileMap
-				s.fileIndex.fileMap[relativePath] = fileInformation
 			}
 
 			return false
