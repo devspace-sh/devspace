@@ -345,7 +345,6 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 				err := os.Remove(absFilepath)
 				if err != nil {
 					d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
-					continue
 				}
 			}
 		} else {

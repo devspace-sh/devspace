@@ -360,7 +360,7 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 		}
 
 		if removeArguments > 0 {
-			rmCommand += " >/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
+			rmCommand += " >/dev/null 2>/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
 
 			if u.stdinPipe != nil {
 				_, err := u.stdinPipe.Write([]byte(rmCommand))
