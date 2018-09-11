@@ -306,6 +306,9 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 		return errors.Trace(err)
 	}
 
+	// Do not remove this line otherwise the delete will fail
+	file.Close()
+
 	// Delete local file
 	err = os.Remove(file.Name())
 	if err != nil {
