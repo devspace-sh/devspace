@@ -7,7 +7,7 @@
 
 With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes clusters provided by cloud platforms, e.g. Google Kubernetes Engine.
 
-## Why using a DevSpace?
+## Why use a DevSpace?
 Your DevSpace lets you build, test and run code directly inside a Kubernetes cluster and:
 - Allows you to access cluster-internal services and data with ease
 - Works perfectly with your favorite **hot reloading** tools (e.g. nodemon)
