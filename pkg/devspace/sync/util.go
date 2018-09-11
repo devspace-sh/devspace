@@ -19,6 +19,10 @@ import (
 
 // CopyToContainer copies a local folder to a container path
 func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
+	return copyToContainerTestable(Kubectl, Pod, Container, LocalPath, ContainerPath, ExcludePaths, false)
+}
+
+func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string, testing bool) error {
 	stat, err := os.Stat(LocalPath)
 
 	if err != nil {
@@ -37,6 +41,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 		DestPath:     ContainerPath,
 		ExcludePaths: ExcludePaths,
 		silent:       true,
+		testing:      testing,
 	}
 
 	syncLog = log.GetInstance()

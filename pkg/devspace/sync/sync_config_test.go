@@ -159,22 +159,58 @@ func TestInitialSync(t *testing.T) {
 	// Write local files
 	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "ignoreFileLocal"), []byte(fileContents), 0666)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileLocal")
+	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal"), []byte(fileContents), 0666)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileLocal")
+	ioutil.WriteFile(path.Join(local, "noUploadFileLocal"), []byte(fileContents), 0666)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileLocal")
 
 	os.Mkdir(path.Join(local, "testFolder"), 0755)
 	os.Mkdir(path.Join(local, "testFolder2"), 0755)
+	os.Mkdir(path.Join(local, "ignoreFolderLocal"), 0755)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFolderLocal")
+	os.Mkdir(path.Join(local, "noDownloadFolderLocal"), 0755)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFolderLocal")
+	os.Mkdir(path.Join(local, "noUploadFolderLocal"), 0755)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFolderLocal")
 
 	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal"), []byte(fileContents), 0666)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "testFolder/ignoreFileLocal")
+	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal"), []byte(fileContents), 0666)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "testFolder/noDownloadFileLocal")
+	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal"), []byte(fileContents), 0666)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "testFolder/noUploadFileLocal")
 
 	// Write remote files
 	ioutil.WriteFile(path.Join(remote, "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFile4"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileRemote")
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileRemote")
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileRemote")
 
 	os.Mkdir(path.Join(remote, "testFolder"), 0755)
 	os.Mkdir(path.Join(remote, "testFolder3"), 0755)
+	os.Mkdir(path.Join(remote, "ignoreFolderRemote"), 0755)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFolderRemote")
+	os.Mkdir(path.Join(remote, "noDownloadFolderRemote"), 0755)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFolderRemote")
+	os.Mkdir(path.Join(remote, "noUploadFolderRemote"), 0755)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFolderRemote")
 
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
+	syncClient.ExcludePaths = append(syncClient.ExcludePaths, "ignoreFileRemote")
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
+	syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, "noDownloadFileRemote")
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+	syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, "noUploadFileRemote")
 
 	go syncClient.startUpstream()
 
@@ -185,98 +221,161 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	// TODO: Remove sleep and instead wait for upstream changes
-	time.Sleep(5 * time.Second)
-
 	// Check outcome
-	filesToCheck := []string{
-		"testFile1",
-		"testFile2",
-		"testFile3",
-		"testFile4",
-		"testFolder/testFile1",
-		"testFolder/testFile2",
-		"testFolder/testFile3",
-		"testFolder/testFile4",
+	filesToCheck := []checkedFileOrFolder{
+		checkedFileOrFolder{
+			path:                "testFile1",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFile2",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "ignoreFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+		checkedFileOrFolder{
+			path:                "noDownloadFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "noUploadFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/testFile1",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/testFile2",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/ignoreFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/noDownloadFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/noUploadFileLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+
+		checkedFileOrFolder{
+			path:                "testFile3",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFile4",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "ignoreFileRemote",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "noDownloadFileRemote",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "noUploadFileRemote",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/testFile3",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/testFile4",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/ignoreFileRemote",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/noDownloadFileRemote",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder/noUploadFileRemote",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
 	}
 
-	foldersToCheck := []string{
-		"testFolder",
-		"testFolder2",
-		"testFolder3",
+	foldersToCheck := []checkedFileOrFolder{
+		checkedFileOrFolder{
+			path:                "testFolder",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder2",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "ignoreFolderLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+		checkedFileOrFolder{
+			path:                "noDownloadFolderLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "noUploadFolderLocal",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+
+		checkedFileOrFolder{
+			path:                "testFolder3",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "ignoreFolderRemote",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
+		checkedFileOrFolder{
+			path:                "noDownloadFolderRemote",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+		},
+		checkedFileOrFolder{
+			path:                "noUploadFolderRemote",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: false,
+		},
 	}
 
-	// Check files
-	for _, v := range filesToCheck {
-		localFile := path.Join(local, v)
-		remoteFile := path.Join(remote, v)
-
-		_, err = os.Stat(localFile)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		_, err = os.Stat(remoteFile)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		data, err := ioutil.ReadFile(localFile)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if string(data) != fileContents {
-			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", localFile, string(data), fileContents)
-			return
-		}
-
-		data, err = ioutil.ReadFile(remoteFile)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if string(data) != fileContents {
-			t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(data), fileContents)
-			return
-		}
-	}
-
-	// Check folders
-	for _, v := range foldersToCheck {
-		localFolder := path.Join(local, v)
-		remoteFolder := path.Join(remote, v)
-
-		stat, err := os.Stat(localFolder)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if stat.IsDir() == false {
-			t.Errorf("Expected %s to be a dir", localFolder)
-			return
-		}
-
-		stat, err = os.Stat(remoteFolder)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if stat.IsDir() == false {
-			t.Errorf("Expected %s to be a dir", remoteFolder)
-			return
-		}
-	}
-
-	// Check if there is an error in the error channel
-	select {
-	case err = <-syncClient.errorChan:
-		t.Error(err)
-		return
-	default:
-	}
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote)
 }
 
 func TestRunningSync(t *testing.T) {
@@ -389,6 +488,7 @@ func TestCreateDirInFileMap(t *testing.T) {
 		t.Fail()
 	}
 }
+
 func TestRemoveDirInFileMap(t *testing.T) {
 	sync := SyncConfig{
 		fileIndex: newFileIndex(),

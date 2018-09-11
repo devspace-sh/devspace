@@ -75,7 +75,11 @@ func (s *SyncConfig) Logln(line interface{}) {
 		if s.Pod != nil {
 			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
 		} else {
-			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+			syncLog.
+				WithKey("local",
+					s.WatchPath).
+				WithKey("container", s.DestPath).
+				Info(line)
 		}
 	}
 }
