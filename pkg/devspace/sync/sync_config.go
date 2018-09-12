@@ -59,6 +59,7 @@ type SyncConfig struct {
 	// Used for testing
 	testing   bool
 	errorChan chan error
+	readyChan chan bool
 }
 
 // Logf prints the given information to the synclog with context data
@@ -229,6 +230,10 @@ func (s *SyncConfig) startUpstream() {
 	}
 
 	defer notify.Stop(s.upstream.events)
+
+	if s.readyChan != nil {
+		s.readyChan <- true
+	}
 
 	err = s.upstream.mainLoop()
 	if err != nil {

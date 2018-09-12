@@ -203,12 +203,18 @@ func TestNormalSync(t *testing.T) {
 		return
 	}
 
+	syncClient.readyChan = make(chan bool)
+
 	go syncClient.startUpstream()
 	go syncClient.startDownstream()
 
+	<-syncClient.readyChan
+
 	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote, syncClient)
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+
+	return
 }
 
 func TestRunningSync(t *testing.T) {
@@ -345,51 +351,51 @@ func setExcludePaths(syncClient *SyncConfig) {
 func createTestFilesAndFolders(local string, remote string, syncClient *SyncConfig) ([]checkedFileOrFolder, []checkedFileOrFolder) {
 
 	//Write local files
-	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFileLocal1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFileLocal2"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "ignoreFileLocal"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "noUploadFileLocal"), []byte(fileContents), 0666)
 
 	os.Mkdir(path.Join(local, "testFolder"), 0755)
-	os.Mkdir(path.Join(local, "testFolder2"), 0755)
+	os.Mkdir(path.Join(local, "testFolderLocal"), 0755)
 	os.Mkdir(path.Join(local, "ignoreFolderLocal"), 0755)
 	os.Mkdir(path.Join(local, "noDownloadFolderLocal"), 0755)
 	os.Mkdir(path.Join(local, "noUploadFolderLocal"), 0755)
 
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal2"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal"), []byte(fileContents), 0666)
 
 	// Write remote files
-	ioutil.WriteFile(path.Join(remote, "testFile3"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFile4"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFileRemote1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFileRemote2"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
 
 	os.Mkdir(path.Join(remote, "testFolder"), 0755)
-	os.Mkdir(path.Join(remote, "testFolder3"), 0755)
+	os.Mkdir(path.Join(remote, "testFolderRemote"), 0755)
 	os.Mkdir(path.Join(remote, "ignoreFolderRemote"), 0755)
 	os.Mkdir(path.Join(remote, "noDownloadFolderRemote"), 0755)
 	os.Mkdir(path.Join(remote, "noUploadFolderRemote"), 0755)
 
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote1"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote2"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote"), []byte(fileContents), 0666)
 
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
-			path:                "testFile1",
+			path:                "testFileLocal1",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFile2",
+			path:                "testFileLocal2",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
@@ -409,12 +415,12 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 			shouldExistInRemote: false,
 		},
 		checkedFileOrFolder{
-			path:                "testFolder/testFile1",
+			path:                "testFolder/testFileLocal1",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFolder/testFile2",
+			path:                "testFolder/testFileLocal2",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
@@ -435,12 +441,12 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 		},
 
 		checkedFileOrFolder{
-			path:                "testFile3",
+			path:                "testFileRemote1",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFile4",
+			path:                "testFileRemote2",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
@@ -460,12 +466,12 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFolder/testFile3",
+			path:                "testFolder/testFileRemote1",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFolder/testFile4",
+			path:                "testFolder/testFileRemote2",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
@@ -493,7 +499,7 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
-			path:                "testFolder2",
+			path:                "testFolderLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
@@ -514,24 +520,24 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 		},
 
 		checkedFileOrFolder{
-			path:                "testFolder3",
+			path:                "testFolderRemote",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
 			path:                "ignoreFolderRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
+			shouldExistInLocal:  false,
+			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
 			path:                "noDownloadFolderRemote",
-			shouldExistInLocal:  true,
+			shouldExistInLocal:  false,
 			shouldExistInRemote: true,
 		},
 		checkedFileOrFolder{
 			path:                "noUploadFolderRemote",
 			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
+			shouldExistInRemote: true,
 		},
 	}
 
