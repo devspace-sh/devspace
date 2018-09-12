@@ -336,8 +336,6 @@ func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]c
 		"testFolder/noUploadFileRemote",
 	}
 
-	syncClient.initIgnoreParsers()
-
 	//Write local files
 	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
