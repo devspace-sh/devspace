@@ -38,9 +38,8 @@ func BuildImage(dockerfilePath, buildtag string, buildArgs []string) error {
 
 	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	// TODO: Change output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = log.GetInstance()
+	cmd.Stderr = log.GetInstance()
 
 	err = cmd.Run()
 
@@ -68,9 +67,8 @@ func PushImage(buildtag string) error {
 
 	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	// TODO: Change output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = log.GetInstance()
+	cmd.Stderr = log.GetInstance()
 
 	err := cmd.Run()
 
@@ -93,9 +91,8 @@ func pushImageMinikube(buildtag string) error {
 
 	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	// TODO: Change output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = log.GetInstance()
+	cmd.Stderr = log.GetInstance()
 
 	err = cmd.Run()
 
@@ -114,7 +111,6 @@ func builImageMinikube(dockerfilePath, buildtag string, buildArgs []string) erro
 	}
 
 	dockerArgs, err := getMinikubeCliArgs()
-
 	if err != nil {
 		return err
 	}
@@ -126,9 +122,8 @@ func builImageMinikube(dockerfilePath, buildtag string, buildArgs []string) erro
 
 	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	// TODO: Change output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = log.GetInstance()
+	cmd.Stderr = log.GetInstance()
 
 	err = cmd.Run()
 
