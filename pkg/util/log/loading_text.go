@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -13,13 +14,15 @@ type loadingText struct {
 	Stream  io.Writer
 	Message string
 
-	loadingRune int
-	isShown     bool
-	stopChan    chan bool
+	startTimestamp int64
+	loadingRune    int
+	isShown        bool
+	stopChan       chan bool
 }
 
 func (l *loadingText) Start() {
 	l.isShown = false
+	l.startTimestamp = time.Now().UnixNano()
 
 	if l.stopChan == nil {
 		l.stopChan = make(chan bool)
@@ -73,14 +76,15 @@ func (l *loadingText) render() {
 	l.Stream.Write([]byte("[WAIT] "))
 	ct.ResetColor()
 
-	l.Stream.Write([]byte(l.getLoadingChar() + " " + l.Message))
+	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.startTimestamp)/int64(time.Second))
+	l.Stream.Write([]byte(l.getLoadingChar() + " " + l.Message + " (" + timeElapsed + "s)"))
 }
 
 func (l *loadingText) Stop() {
 	l.stopChan <- true
 	l.Stream.Write([]byte("\r"))
 
-	messageLength := len(l.Message) + 9
+	messageLength := len(l.Message) + 20
 
 	for i := 0; i < messageLength; i++ {
 		l.Stream.Write([]byte(" "))
