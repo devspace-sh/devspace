@@ -50,7 +50,9 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent   bool
+	silent  bool
+	verbose bool
+
 	stopOnce sync.Once
 	stopped  bool
 

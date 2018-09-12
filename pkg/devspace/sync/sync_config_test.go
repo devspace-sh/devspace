@@ -34,6 +34,7 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 		DestPath:  testRemotePath,
 
 		testing: true,
+		verbose: true,
 	}
 }
 

@@ -251,6 +251,17 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 		return errors.Trace(err)
 	}
 
+	// Print changes
+	if u.config.verbose {
+		for _, c := range writtenFiles {
+			if c.IsDirectory {
+				u.config.Logf("[Upstream] Create Folder %s", c.Name)
+			} else {
+				u.config.Logf("[Upstream] Create File %s", c.Name)
+			}
+		}
+	}
+
 	return u.uploadArchive(f, strconv.Itoa(int(stat.Size())), writtenFiles)
 }
 
@@ -355,6 +366,11 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 					u.config.fileIndex.RemoveDirInFileMap(relativePath)
 				} else {
 					delete(fileMap, relativePath)
+				}
+
+				// Print changes
+				if u.config.verbose {
+					u.config.Logf("[Upstream] Remove %s", relativePath)
 				}
 			}
 		}
