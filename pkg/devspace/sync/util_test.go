@@ -120,11 +120,13 @@ func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []c
 Outer:
 	for time.Since(beginTimeStamp) < timeout {
 
-		/*If something is expected to be there but it isn't, we expect that the sync-job isn't finished yet.
-		Therefore we continue the outer Loop until everything is there or the time runs up.
+		/*
+			If something is expected to be there but it isn't, we expect that the sync-job isn't finished yet.
+			The same applies if a file has missing content.
+			Therefore we continue the outer Loop until everything is there or the time runs up.
 
-		If something unexpected happens like an unxpected error or wrong file content or a wrong file type
-		or the existance of a file or folder that shouldn't be there, we let the test fail and return*/
+			If something unexpected happens like an unxpected error or wrong file content or a wrong file type
+			or the existance of a file or folder that shouldn't be there, we let the test fail and return*/
 		// Check files
 	FileCheck:
 		for _, v := range files {
@@ -164,15 +166,15 @@ Outer:
 
 			if v.shouldExistInLocal {
 				if string(localData) != fileContents {
-					t.Errorf("Wrong file contents in file %s, got %s, expected %s", localFile, string(localData), fileContents)
-					return
+					missingFileOrFolder = v
+					continue Outer
 				}
 			}
 
 			if v.shouldExistInRemote {
 				if string(remoteData) != fileContents {
-					t.Errorf("Wrong file contents in file %s, got %s, expected %s", remoteFile, string(remoteData), fileContents)
-					return
+					missingFileOrFolder = v
+					continue Outer
 				}
 			}
 		}
