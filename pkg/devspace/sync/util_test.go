@@ -17,13 +17,6 @@ func TestCopyToContainerTestable(t *testing.T) {
 	}
 
 	remote, local := initTestDirs(t)
-	defer os.RemoveAll(remote)
-	defer os.RemoveAll(local)
-	containerPath := "/testDir"
-
-	syncClient := createTestSyncClient(local, remote)
-
-	syncClient.errorChan = make(chan error)
 
 	excludePaths := []string{}
 
@@ -45,7 +38,7 @@ func TestCopyToContainerTestable(t *testing.T) {
 
 	ioutil.WriteFile(path.Join(local, "ignoredFolder", "testFile1"), []byte(fileContents), 0666)
 
-	err := copyToContainerTestable(syncClient.Kubectl, syncClient.Pod, syncClient.Container, local, containerPath, excludePaths, true)
+	err := copyToContainerTestable(nil, nil, nil, local, remote, excludePaths, true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -107,14 +100,6 @@ func TestCopyToContainerTestable(t *testing.T) {
 	}
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
-
-	// Check if there is an error in the error channel
-	select {
-	case err = <-syncClient.errorChan:
-		t.Error(err)
-		return
-	default:
-	}
 
 }
 
