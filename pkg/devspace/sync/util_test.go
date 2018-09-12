@@ -16,7 +16,7 @@ func TestCopyToContainerTestable(t *testing.T) {
 		t.Skip("Skipping test on windows")
 	}
 
-	remote, local := initTestDirs(t)
+	remote, local, _ := initTestDirs(t)
 
 	excludePaths := []string{}
 
@@ -103,10 +103,17 @@ func TestCopyToContainerTestable(t *testing.T) {
 
 }
 
+const (
+	editInRemote = 0
+	editInLocal  = 1
+	editOutside  = 2
+)
+
 type checkedFileOrFolder struct {
 	path                string
 	shouldExistInRemote bool
 	shouldExistInLocal  bool
+	editLocation        int
 }
 
 const fileContents = "TestContents"
@@ -115,14 +122,14 @@ func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []c
 
 	beginTimeStamp := time.Now()
 
-	var missingFileOrFolder checkedFileOrFolder
-	var unexpectedFileOrFolder checkedFileOrFolder
+	var missingFileOrFolder string
+	var unexpectedFileOrFolder string
 
 Outer:
 	for time.Since(beginTimeStamp) < timeout {
 
-		missingFileOrFolder = checkedFileOrFolder{}
-		unexpectedFileOrFolder = checkedFileOrFolder{}
+		missingFileOrFolder = ""
+		unexpectedFileOrFolder = ""
 
 		/*
 			If something is expected to be there but it isn't, we expect that the sync-job isn't finished yet.
@@ -139,11 +146,11 @@ Outer:
 
 			localData, err := ioutil.ReadFile(localFile)
 			if v.shouldExistInLocal && os.IsNotExist(err) {
-				missingFileOrFolder = v
+				missingFileOrFolder = localFile
 				continue Outer
 			}
 			if !v.shouldExistInLocal && !os.IsNotExist(err) {
-				unexpectedFileOrFolder = v
+				unexpectedFileOrFolder = localFile
 				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
@@ -153,11 +160,11 @@ Outer:
 
 			remoteData, err := ioutil.ReadFile(remoteFile)
 			if v.shouldExistInRemote && os.IsNotExist(err) {
-				missingFileOrFolder = v
+				missingFileOrFolder = remoteFile
 				continue Outer
 			}
 			if !v.shouldExistInRemote && !os.IsNotExist(err) {
-				unexpectedFileOrFolder = v
+				unexpectedFileOrFolder = remoteFile
 				continue Outer
 			}
 			if !v.shouldExistInRemote && os.IsNotExist(err) {
@@ -170,14 +177,14 @@ Outer:
 
 			if v.shouldExistInLocal {
 				if string(localData) != fileContents {
-					missingFileOrFolder = v
+					missingFileOrFolder = localFile
 					continue Outer
 				}
 			}
 
 			if v.shouldExistInRemote {
 				if string(remoteData) != fileContents {
-					missingFileOrFolder = v
+					missingFileOrFolder = remoteFile
 					continue Outer
 				}
 			}
@@ -190,11 +197,11 @@ Outer:
 
 			stat, err := os.Stat(localFolder)
 			if v.shouldExistInLocal && os.IsNotExist(err) {
-				missingFileOrFolder = v
+				missingFileOrFolder = localFolder
 				continue Outer
 			}
 			if !v.shouldExistInLocal && !os.IsNotExist(err) {
-				unexpectedFileOrFolder = v
+				unexpectedFileOrFolder = localFolder
 				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
@@ -208,11 +215,11 @@ Outer:
 
 			stat, err = os.Stat(remoteFolder)
 			if v.shouldExistInRemote && os.IsNotExist(err) {
-				missingFileOrFolder = v
+				missingFileOrFolder = remoteFolder
 				continue Outer
 			}
 			if !v.shouldExistInRemote && !os.IsNotExist(err) {
-				unexpectedFileOrFolder = v
+				unexpectedFileOrFolder = remoteFolder
 				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
@@ -249,10 +256,10 @@ Outer:
 		return
 	}
 
-	if missingFileOrFolder.path != "" {
-		t.Error("Sync Failed. Missing: " + path.Join(remote, missingFileOrFolder.path))
-	} else if unexpectedFileOrFolder.path != "" {
-		t.Error("Sync Failed. Shouldn't be there: " + path.Join(remote, unexpectedFileOrFolder.path))
+	if missingFileOrFolder != "" {
+		t.Error("Sync Failed. Missing: " + missingFileOrFolder)
+	} else if unexpectedFileOrFolder != "" {
+		t.Error("Sync Failed. Shouldn't be there: " + unexpectedFileOrFolder)
 	} else {
 		t.Error("unexpected")
 	}

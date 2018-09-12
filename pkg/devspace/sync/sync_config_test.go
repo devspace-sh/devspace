@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/juju/errors"
 )
 
-func initTestDirs(t *testing.T) (string, string) {
+func initTestDirs(t *testing.T) (string, string, string) {
 	testRemotePath, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("Couldn't create test dir: %v", err)
@@ -24,7 +25,12 @@ func initTestDirs(t *testing.T) (string, string) {
 		t.Fatalf("Couldn't create test dir: %v", err)
 	}
 
-	return testRemotePath, testLocalPath
+	outside, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Couldn't create test dir: %v", err)
+	}
+
+	return testRemotePath, testLocalPath, outside
 }
 
 func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
@@ -35,6 +41,7 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 		DestPath:  testRemotePath,
 
 		testing: true,
+		verbose: true,
 	}
 }
 
@@ -43,7 +50,7 @@ func TestInitialSync(t *testing.T) {
 		t.Skip("Skipping test on windows")
 	}
 
-	remote, local := initTestDirs(t)
+	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
 
@@ -74,7 +81,13 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote)
+	filesToCheck, foldersToCheck := makeBasicTestCases()
+
+	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	go syncClient.startUpstream()
 
@@ -85,16 +98,17 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 }
 func TestNormalSync(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on windows")
 	}
 
-	remote, local := initTestDirs(t)
+	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
+	defer os.RemoveAll(outside)
 
 	syncClient := createTestSyncClient(local, remote)
 	defer syncClient.Stop()
@@ -130,9 +144,12 @@ func TestNormalSync(t *testing.T) {
 
 	<-syncClient.readyChan
 
-	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote)
+	filesToCheck, foldersToCheck := makeBasicTestCases()
+
+	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
@@ -153,12 +170,6 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"ignoreFileRemote",
 		"ignoreFolderRemote",
 		"testFolder/ignoreFileRemote",
-		"ignoreFileLocal_Remove",
-		"ignoreFolderLocal_Remove",
-		"testFolder/ignoreFileLocal_Remove",
-		"ignoreFileRemote_Remove",
-		"ignoreFolderRemote_Remove",
-		"testFolder/ignoreFileRemote_Remove",
 	}
 
 	syncClient.DownloadExcludePaths = []string{
@@ -168,12 +179,6 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"noDownloadFileRemote",
 		"noDownloadFolderRemote",
 		"testFolder/noDownloadFileRemote",
-		"noDownloadFileLocal_Remove",
-		"noDownloadFolderLocal_Remove",
-		"testFolder/noDownloadFileLocal_Remove",
-		"noDownloadFileRemote_Remove",
-		"noDownloadFolderRemote_Remove",
-		"testFolder/noDownloadFileRemote_Remove",
 	}
 
 	syncClient.UploadExcludePaths = []string{
@@ -183,169 +188,44 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"noUploadFileRemote",
 		"noUploadFolderRemote",
 		"testFolder/noUploadFileRemote",
-		"noUploadFileLocal_Remove",
-		"noUploadFolderLocal_Remove",
-		"testFolder/noUploadFileLocal_Remove",
-		"noUploadFileRemote_Remove",
-		"noUploadFolderRemote_Remove",
-		"testFolder/noUploadFileRemote_Remove",
+	}
+
+	for _, excludeArray := range [3][]string{syncClient.ExcludePaths, syncClient.DownloadExcludePaths, syncClient.UploadExcludePaths} {
+		for _, ignoreString := range excludeArray {
+			excludeArray = append(excludeArray, ignoreString+"_Remove")
+			excludeArray = append(excludeArray, ignoreString+"_RenameToFullContext")
+		}
 	}
 
 	syncClient.initIgnoreParsers()
 
 }
 
-func createTestFilesAndFolders(local string, remote string) ([]checkedFileOrFolder, []checkedFileOrFolder) {
-
-	//Write local files
-	ioutil.WriteFile(path.Join(local, "testFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "ignoreFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "noUploadFileLocal"), []byte(fileContents), 0666)
-
-	os.Mkdir(path.Join(local, "testFolder"), 0755)
-	os.Mkdir(path.Join(local, "testFolderLocal"), 0755)
-	os.Mkdir(path.Join(local, "ignoreFolderLocal"), 0755)
-	os.Mkdir(path.Join(local, "noDownloadFolderLocal"), 0755)
-	os.Mkdir(path.Join(local, "noUploadFolderLocal"), 0755)
-
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal"), []byte(fileContents), 0666)
-
-	// Write remote files
-	ioutil.WriteFile(path.Join(remote, "testFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
-
-	os.Mkdir(path.Join(remote, "testFolder"), 0755)
-	os.Mkdir(path.Join(remote, "testFolderRemote"), 0755)
-	os.Mkdir(path.Join(remote, "ignoreFolderRemote"), 0755)
-	os.Mkdir(path.Join(remote, "noDownloadFolderRemote"), 0755)
-	os.Mkdir(path.Join(remote, "noUploadFolderRemote"), 0755)
-
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote"), []byte(fileContents), 0666)
-
-	//-----------The following files will be removed later-------------------------------------
-	//Write local files
-	ioutil.WriteFile(path.Join(local, "testFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "ignoreFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "noUploadFileLocal_Remove"), []byte(fileContents), 0666)
-
-	os.Mkdir(path.Join(local, "testFolder_Remove"), 0755)
-	os.Mkdir(path.Join(local, "testFolderLocal_Remove"), 0755)
-	os.Mkdir(path.Join(local, "ignoreFolderLocal_Remove"), 0755)
-	os.Mkdir(path.Join(local, "noDownloadFolderLocal_Remove"), 0755)
-	os.Mkdir(path.Join(local, "noUploadFolderLocal_Remove"), 0755)
-
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal_Remove"), []byte(fileContents), 0666)
-
-	// Write remote files
-	ioutil.WriteFile(path.Join(remote, "testFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote_Remove"), []byte(fileContents), 0666)
-
-	os.Mkdir(path.Join(remote, "testFolderRemote_Remove"), 0755)
-	os.Mkdir(path.Join(remote, "ignoreFolderRemote_Remove"), 0755)
-	os.Mkdir(path.Join(remote, "noDownloadFolderRemote_Remove"), 0755)
-	os.Mkdir(path.Join(remote, "noUploadFolderRemote_Remove"), 0755)
-
-	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote_Remove"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote_Remove"), []byte(fileContents), 0666)
-
+func makeBasicTestCases() ([]checkedFileOrFolder, []checkedFileOrFolder) {
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
 			path:                "testFileLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "ignoreFileLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: false,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "noDownloadFileLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "noUploadFileLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: false,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/testFileLocal",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/ignoreFileLocal",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/noDownloadFileLocal",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/noUploadFileLocal",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-
-		checkedFileOrFolder{
-			path:                "testFileRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "ignoreFileRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "noDownloadFileRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "noUploadFileRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/testFileRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/ignoreFileRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/noDownloadFileRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/noUploadFileRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 	}
 
@@ -354,71 +234,219 @@ func createTestFilesAndFolders(local string, remote string) ([]checkedFileOrFold
 			path:                "testFolder",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "testFolderLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "ignoreFolderLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: false,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "noDownloadFolderLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 		checkedFileOrFolder{
 			path:                "noUploadFolderLocal",
 			shouldExistInLocal:  true,
 			shouldExistInRemote: false,
-		},
-
-		checkedFileOrFolder{
-			path:                "testFolderRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "ignoreFolderRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "noDownloadFolderRemote",
-			shouldExistInLocal:  false,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "noUploadFolderRemote",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
+			editLocation:        editInLocal,
 		},
 	}
 
-	for _, f := range filesToCheck {
-		removeEquivalent := checkedFileOrFolder{
-			path:                f.path + "_Remove",
-			shouldExistInLocal:  f.shouldExistInLocal,
-			shouldExistInRemote: f.shouldExistInRemote,
+	//Add Files and Folders that are editd in Remote
+	for n, array := range [2][]checkedFileOrFolder{filesToCheck, foldersToCheck} {
+		for _, f := range array {
+
+			if strings.Contains(f.path, "Upload") {
+				f.path = strings.Replace(f.path, "Upload", "Download", -1)
+			} else if strings.Contains(f.path, "Download") {
+				f.path = strings.Replace(f.path, "Download", "Upload", -1)
+			}
+
+			remoteEquivalent := checkedFileOrFolder{
+				path:                strings.Replace(f.path, "Local", "Remote", -1),
+				shouldExistInLocal:  f.shouldExistInRemote,
+				shouldExistInRemote: f.shouldExistInLocal,
+				editLocation:        editInRemote,
+			}
+			array = append(array, remoteEquivalent)
 		}
-		filesToCheck = append(filesToCheck, removeEquivalent)
+		if n == 0 {
+			filesToCheck = array
+		} else {
+			foldersToCheck = array
+		}
 	}
-	for _, f := range foldersToCheck {
-		if f.path == "testFolder" {
-			continue
+
+	//Add Files and Folders that are inside a shared testFolder
+	for n, array := range [2][]checkedFileOrFolder{filesToCheck, foldersToCheck} {
+
+		for _, f := range array {
+			deepEquivalent := checkedFileOrFolder{
+				path:                path.Join("testFolder/", f.path),
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+				editLocation:        f.editLocation,
+			}
+			array = append(array, deepEquivalent)
 		}
-		removeEquivalent := checkedFileOrFolder{
-			path:                f.path + "_Remove",
-			shouldExistInLocal:  f.shouldExistInLocal,
-			shouldExistInRemote: f.shouldExistInRemote,
+
+		if n == 0 {
+			filesToCheck = array
+		} else {
+			foldersToCheck = array
 		}
-		foldersToCheck = append(foldersToCheck, removeEquivalent)
 	}
 
 	return filesToCheck, foldersToCheck
+}
+
+func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck []checkedFileOrFolder, foldersToCheck []checkedFileOrFolder) error {
+
+	for _, f := range foldersToCheck {
+		var parentDir string
+		if f.editLocation == editInLocal {
+			parentDir = local
+		} else if f.editLocation == editInRemote {
+			parentDir = remote
+		} else if f.editLocation == editOutside {
+			parentDir = outside
+		} else {
+			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
+		}
+		os.Mkdir(path.Join(parentDir, f.path), 0755)
+	}
+
+	for _, f := range filesToCheck {
+		var parentDir string
+		if f.editLocation == editInLocal {
+			parentDir = local
+		} else if f.editLocation == editInRemote {
+			parentDir = remote
+		} else if f.editLocation == editOutside {
+			parentDir = outside
+		} else {
+			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
+		}
+		ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
+
+	}
+
+	/*
+		//Add Remove-Stuff
+		for _, f := range filesToCheck {
+			removeEquivalent := checkedFileOrFolder{
+				path:                f.path + "_Remove",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+			}
+			filesToCheck = append(filesToCheck, removeEquivalent)
+		}
+		for _, f := range foldersToCheck {
+			if f.path == "testFolder" {
+				continue
+			}
+			removeEquivalent := checkedFileOrFolder{
+				path:                f.path + "_Remove",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+			}
+			foldersToCheck = append(foldersToCheck, removeEquivalent)
+		}
+
+		//Add Rename-Stuff
+		for _, f := range filesToCheck {
+			if strings.HasSuffix(f.path, "_Remove") {
+				continue
+			}
+			renameEquivalent := checkedFileOrFolder{
+				path:                f.path + "_RenameToFullContext",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+			}
+			filesToCheck = append(filesToCheck, renameEquivalent)
+
+			if strings.Contains(f.path, "testFile") {
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToOutside",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToIgnore",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoDownload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoUpload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+			}
+		}
+
+		for _, f := range foldersToCheck {
+			if strings.HasSuffix(f.path, "_Remove") {
+				continue
+			}
+			if f.path == "testFolder" {
+				continue
+			}
+			renameEquivalent := checkedFileOrFolder{
+				path:                f.path + "_RenameToFullContext",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+			}
+			foldersToCheck = append(foldersToCheck, renameEquivalent)
+
+			if strings.Contains(f.path, "testFile") {
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToOutside",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				foldersToCheck = append(foldersToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToIgnore",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				foldersToCheck = append(foldersToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoDownload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				foldersToCheck = append(foldersToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoUpload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+				}
+				foldersToCheck = append(foldersToCheck, renameEquivalent)
+			}
+		}
+	*/
+
+	return nil
 }
 
 func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck []checkedFileOrFolder, foldersToCheck []checkedFileOrFolder, removeSuffix string) ([]checkedFileOrFolder, []checkedFileOrFolder, error) {
