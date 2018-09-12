@@ -34,7 +34,6 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 		DestPath:  testRemotePath,
 
 		testing: true,
-		verbose: true,
 	}
 }
 
@@ -132,6 +131,7 @@ func TestInitialSync(t *testing.T) {
 	defer syncClient.Stop()
 
 	syncClient.errorChan = make(chan error)
+	setExcludePaths(syncClient)
 
 	// Start client
 	err := syncClient.setup()
@@ -154,7 +154,7 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	filesToCheck, foldersToCheck := createTestFolders(local, remote, syncClient)
+	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote, syncClient)
 
 	go syncClient.startUpstream()
 
@@ -165,7 +165,7 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 }
 func TestNormalSync(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -180,6 +180,7 @@ func TestNormalSync(t *testing.T) {
 	defer syncClient.Stop()
 
 	syncClient.errorChan = make(chan error)
+	setExcludePaths(syncClient)
 
 	// Start client
 	err := syncClient.setup()
@@ -205,7 +206,7 @@ func TestNormalSync(t *testing.T) {
 	go syncClient.startUpstream()
 	go syncClient.startDownstream()
 
-	filesToCheck, foldersToCheck := createTestFolders(local, remote, syncClient)
+	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote, syncClient)
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
 }
@@ -308,7 +309,7 @@ func TestRunningSync(t *testing.T) {
 	}
 }
 
-func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]checkedFileOrFolder, []checkedFileOrFolder) {
+func setExcludePaths(syncClient *SyncConfig) {
 
 	syncClient.ExcludePaths = []string{
 		"ignoreFileLocal",
@@ -336,6 +337,12 @@ func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]c
 		"noUploadFolderRemote",
 		"testFolder/noUploadFileRemote",
 	}
+
+	syncClient.initIgnoreParsers()
+
+}
+
+func createTestFilesAndFolders(local string, remote string, syncClient *SyncConfig) ([]checkedFileOrFolder, []checkedFileOrFolder) {
 
 	//Write local files
 	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
@@ -371,9 +378,9 @@ func createTestFolders(local string, remote string, syncClient *SyncConfig) ([]c
 
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile3"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "testFile4"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote"), []byte(fileContents), 0666)
 
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
