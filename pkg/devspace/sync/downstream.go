@@ -369,7 +369,7 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 
 	for _, element := range createFolders {
 		if element.IsDirectory {
-			if numCreateFolders <= 3 {
+			if numCreateFolders <= 3 || d.config.verbose {
 				d.config.Logln("[Downstream] Create folder: " + element.Name)
 			}
 
