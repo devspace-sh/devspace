@@ -1,11 +1,12 @@
 package sync
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,87 +36,6 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 
 		testing: true,
 	}
-}
-
-func removeFolderAndWait(from, to, postfix string) error {
-	foldernameFrom := path.Join(from, "testFolder"+postfix)
-	foldernameTo := path.Join(to, "testFolder"+postfix)
-
-	os.RemoveAll(foldernameFrom)
-
-	for i := 0; i < 50; i++ {
-		if _, err := os.Stat(foldernameTo); err != nil {
-			return nil
-		}
-
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	return fmt.Errorf("Removing folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
-}
-
-func removeFileAndWait(from, to, postfix string) error {
-	filenameFrom := path.Join(from, "testFile"+postfix)
-	filenameTo := path.Join(to, "testFile"+postfix)
-
-	os.Remove(filenameFrom)
-
-	for i := 0; i < 50; i++ {
-		if _, err := os.Stat(filenameTo); err != nil {
-			return nil
-		}
-
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	return fmt.Errorf("Removing file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
-}
-
-func createFolderAndWait(from, to, postfix string) error {
-	foldernameFrom := path.Join(from, "testFolder"+postfix)
-	foldernameTo := path.Join(to, "testFolder"+postfix)
-
-	os.Mkdir(foldernameFrom, 0755)
-
-	for i := 0; i < 50; i++ {
-		if stat, err := os.Stat(foldernameTo); err == nil {
-			if stat.IsDir() == false {
-				return fmt.Errorf("Created folder %s from is a file in destination %s", foldernameFrom, foldernameTo)
-			}
-
-			return nil
-		}
-
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	return fmt.Errorf("Created folder %s wasn't correctly synced to %s", foldernameFrom, foldernameTo)
-}
-
-func createFileAndWait(from, to, postfix string) error {
-	filenameFrom := path.Join(from, "testFile"+postfix)
-	filenameTo := path.Join(to, "testFile"+postfix)
-	fileContents := "testFile" + postfix
-
-	ioutil.WriteFile(filenameFrom, []byte(fileContents), 0666)
-
-	for i := 0; i < 50; i++ {
-		time.Sleep(time.Millisecond * 100)
-
-		if _, err := os.Stat(filenameTo); err == nil {
-			data, err := ioutil.ReadFile(filenameTo)
-			if err != nil {
-				continue
-			}
-			if string(data) != fileContents {
-				continue
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("Created file %s wasn't correctly synced to %s", filenameFrom, filenameTo)
 }
 
 func TestInitialSync(t *testing.T) {
@@ -154,7 +74,7 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote, syncClient)
+	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote)
 
 	go syncClient.startUpstream()
 
@@ -210,109 +130,18 @@ func TestNormalSync(t *testing.T) {
 
 	<-syncClient.readyChan
 
-	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote, syncClient)
-
+	filesToCheck, foldersToCheck := createTestFilesAndFolders(local, remote)
+	if err != nil {
+		t.Error(err)
+	}
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
-	return
-}
-
-func TestRunningSync(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on windows")
-	}
-
-	remote, local := initTestDirs(t)
-	defer os.RemoveAll(remote)
-	defer os.RemoveAll(local)
-
-	syncClient := createTestSyncClient(local, remote)
-	defer syncClient.Stop()
-
-	syncClient.errorChan = make(chan error)
-
-	// Start client
-	err := syncClient.setup()
-	if err != nil {
-		t.Errorf("Couldn't init test sync client: %v", err)
-		return
-	}
-
-	// Start upstream
-	err = syncClient.upstream.start()
+	filesToCheck, foldersToCheck, err = removeSomeTestFilesAndFolders(local, remote, filesToCheck, foldersToCheck, "_Remove")
 	if err != nil {
 		t.Error(err)
-		return
 	}
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
-	// Start downstream
-	err = syncClient.downstream.start()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Start sync and do initial sync
-	go syncClient.startUpstream()
-	go syncClient.startDownstream()
-
-	// Create
-	err = createFileAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFileAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFolderAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = createFolderAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Remove
-	err = removeFileAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFileAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFolderAndWait(local, remote, "1")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = removeFolderAndWait(remote, local, "2")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Check if there is an error in the error channel
-	select {
-	case err = <-syncClient.errorChan:
-		t.Error(err)
-		return
-	default:
-	}
 }
 
 func setExcludePaths(syncClient *SyncConfig) {
@@ -324,6 +153,12 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"ignoreFileRemote",
 		"ignoreFolderRemote",
 		"testFolder/ignoreFileRemote",
+		"ignoreFileLocal_Remove",
+		"ignoreFolderLocal_Remove",
+		"testFolder/ignoreFileLocal_Remove",
+		"ignoreFileRemote_Remove",
+		"ignoreFolderRemote_Remove",
+		"testFolder/ignoreFileRemote_Remove",
 	}
 
 	syncClient.DownloadExcludePaths = []string{
@@ -333,6 +168,12 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"noDownloadFileRemote",
 		"noDownloadFolderRemote",
 		"testFolder/noDownloadFileRemote",
+		"noDownloadFileLocal_Remove",
+		"noDownloadFolderLocal_Remove",
+		"testFolder/noDownloadFileLocal_Remove",
+		"noDownloadFileRemote_Remove",
+		"noDownloadFolderRemote_Remove",
+		"testFolder/noDownloadFileRemote_Remove",
 	}
 
 	syncClient.UploadExcludePaths = []string{
@@ -342,13 +183,19 @@ func setExcludePaths(syncClient *SyncConfig) {
 		"noUploadFileRemote",
 		"noUploadFolderRemote",
 		"testFolder/noUploadFileRemote",
+		"noUploadFileLocal_Remove",
+		"noUploadFolderLocal_Remove",
+		"testFolder/noUploadFileLocal_Remove",
+		"noUploadFileRemote_Remove",
+		"noUploadFolderRemote_Remove",
+		"testFolder/noUploadFileRemote_Remove",
 	}
 
 	syncClient.initIgnoreParsers()
 
 }
 
-func createTestFilesAndFolders(local string, remote string, syncClient *SyncConfig) ([]checkedFileOrFolder, []checkedFileOrFolder) {
+func createTestFilesAndFolders(local string, remote string) ([]checkedFileOrFolder, []checkedFileOrFolder) {
 
 	//Write local files
 	ioutil.WriteFile(path.Join(local, "testFileLocal1"), []byte(fileContents), 0666)
@@ -387,6 +234,45 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote"), []byte(fileContents), 0666)
 	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote"), []byte(fileContents), 0666)
+
+	//-----------The following files will be removed later-------------------------------------
+	//Write local files
+	ioutil.WriteFile(path.Join(local, "testFileLocal1_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFileLocal2_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "ignoreFileLocal_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "noDownloadFileLocal_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "noUploadFileLocal_Remove"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(local, "testFolder_Remove"), 0755)
+	os.Mkdir(path.Join(local, "testFolderLocal_Remove"), 0755)
+	os.Mkdir(path.Join(local, "ignoreFolderLocal_Remove"), 0755)
+	os.Mkdir(path.Join(local, "noDownloadFolderLocal_Remove"), 0755)
+	os.Mkdir(path.Join(local, "noUploadFolderLocal_Remove"), 0755)
+
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal1_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "testFileLocal2_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "ignoreFileLocal_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "noDownloadFileLocal_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(local, "testFolder", "noUploadFileLocal_Remove"), []byte(fileContents), 0666)
+
+	// Write remote files
+	ioutil.WriteFile(path.Join(remote, "testFileRemote1_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFileRemote2_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "ignoreFileRemote_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noDownloadFileRemote_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "noUploadFileRemote_Remove"), []byte(fileContents), 0666)
+
+	os.Mkdir(path.Join(remote, "testFolder_Remove"), 0755)
+	os.Mkdir(path.Join(remote, "testFolderRemote_Remove"), 0755)
+	os.Mkdir(path.Join(remote, "ignoreFolderRemote_Remove"), 0755)
+	os.Mkdir(path.Join(remote, "noDownloadFolderRemote_Remove"), 0755)
+	os.Mkdir(path.Join(remote, "noUploadFolderRemote_Remove"), 0755)
+
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote1_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "testFileRemote2_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "ignoreFileRemote_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noDownloadFileRemote_Remove"), []byte(fileContents), 0666)
+	ioutil.WriteFile(path.Join(remote, "testFolder", "noUploadFileRemote_Remove"), []byte(fileContents), 0666)
 
 	filesToCheck := []checkedFileOrFolder{
 		checkedFileOrFolder{
@@ -541,7 +427,59 @@ func createTestFilesAndFolders(local string, remote string, syncClient *SyncConf
 		},
 	}
 
+	for _, f := range filesToCheck {
+		removeEquivalent := checkedFileOrFolder{
+			path:                f.path + "_Remove",
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+		}
+		filesToCheck = append(filesToCheck, removeEquivalent)
+	}
+	for _, f := range foldersToCheck {
+		removeEquivalent := checkedFileOrFolder{
+			path:                f.path + "_Remove",
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+		}
+		foldersToCheck = append(foldersToCheck, removeEquivalent)
+	}
+
 	return filesToCheck, foldersToCheck
+}
+
+func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck []checkedFileOrFolder, foldersToCheck []checkedFileOrFolder, removeSuffix string) ([]checkedFileOrFolder, []checkedFileOrFolder, error) {
+
+	removeIfSuffixMatch := func(path string, f os.FileInfo, err error) error {
+		if strings.HasSuffix(path, removeSuffix) {
+			return os.RemoveAll(path)
+		}
+		return nil
+	}
+
+	err := filepath.Walk(remote, removeIfSuffixMatch)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = filepath.Walk(local, removeIfSuffixMatch)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for n, f := range filesToCheck {
+		if strings.HasSuffix(f.path, removeSuffix) {
+			filesToCheck[n].shouldExistInLocal = false
+			filesToCheck[n].shouldExistInRemote = false
+		}
+	}
+
+	for n, f := range foldersToCheck {
+		if strings.HasSuffix(f.path, removeSuffix) {
+			foldersToCheck[n].shouldExistInLocal = false
+			foldersToCheck[n].shouldExistInRemote = false
+		}
+	}
+
+	return filesToCheck, foldersToCheck, nil
 }
 
 func TestCreateDirInFileMap(t *testing.T) {
