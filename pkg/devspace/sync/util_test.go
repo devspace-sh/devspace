@@ -116,17 +116,21 @@ func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []c
 	beginTimeStamp := time.Now()
 
 	var missingFileOrFolder checkedFileOrFolder
+	var unexpectedFileOrFolder checkedFileOrFolder
 
 Outer:
 	for time.Since(beginTimeStamp) < timeout {
 
+		missingFileOrFolder = checkedFileOrFolder{}
+		unexpectedFileOrFolder = checkedFileOrFolder{}
+
 		/*
 			If something is expected to be there but it isn't, we expect that the sync-job isn't finished yet.
-			The same applies if a file has missing content.
-			Therefore we continue the outer Loop until everything is there or the time runs up.
+			The same applies if a file has missing content. Also if a file is there when it shouldn't be.
+			In these cases we continue the outer Loop until everything is there or the time runs up.
 
-			If something unexpected happens like an unxpected error or wrong file content or a wrong file type
-			or the existance of a file or folder that shouldn't be there, we let the test fail and return*/
+			If something unexpected happens like an unxpected error or a wrong file type, we let the test fail and return
+		*/
 		// Check files
 	FileCheck:
 		for _, v := range files {
@@ -139,8 +143,8 @@ Outer:
 				continue Outer
 			}
 			if !v.shouldExistInLocal && !os.IsNotExist(err) {
-				t.Error("Local File " + localFile + " shouldn't exist but it does")
-				return
+				unexpectedFileOrFolder = v
+				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
 				t.Error(err)
@@ -153,8 +157,8 @@ Outer:
 				continue Outer
 			}
 			if !v.shouldExistInRemote && !os.IsNotExist(err) {
-				t.Error("Remote File " + remoteFile + " shouldn't exist but it does")
-				return
+				unexpectedFileOrFolder = v
+				continue Outer
 			}
 			if !v.shouldExistInRemote && os.IsNotExist(err) {
 				continue FileCheck
@@ -180,7 +184,6 @@ Outer:
 		}
 
 		// Check folders
-	FolderCheck:
 		for _, v := range folders {
 			localFolder := path.Join(local, v.path)
 			remoteFolder := path.Join(remote, v.path)
@@ -190,12 +193,12 @@ Outer:
 				missingFileOrFolder = v
 				continue Outer
 			}
+			if !v.shouldExistInLocal && !os.IsNotExist(err) {
+				unexpectedFileOrFolder = v
+				continue Outer
+			}
 			if err != nil && !os.IsNotExist(err) {
 				t.Error(err)
-				return
-			}
-			if !v.shouldExistInLocal && !os.IsNotExist(err) {
-				t.Error("Local Directory " + localFolder + " shouldn't exist but it does")
 				return
 			}
 			if err == nil && stat.IsDir() == false {
@@ -208,10 +211,11 @@ Outer:
 				missingFileOrFolder = v
 				continue Outer
 			}
-			if !v.shouldExistInRemote && os.IsNotExist(err) {
-				continue FolderCheck
+			if !v.shouldExistInRemote && !os.IsNotExist(err) {
+				unexpectedFileOrFolder = v
+				continue Outer
 			}
-			if err != nil {
+			if err != nil && !os.IsNotExist(err) {
 				t.Error(err)
 				return
 			}
@@ -245,5 +249,11 @@ Outer:
 		return
 	}
 
-	t.Error("Sync Failed. Missing: " + path.Join(remote, missingFileOrFolder.path))
+	if missingFileOrFolder.path != "" {
+		t.Error("Sync Failed. Missing: " + path.Join(remote, missingFileOrFolder.path))
+	} else if unexpectedFileOrFolder.path != "" {
+		t.Error("Sync Failed. Shouldn't be there: " + path.Join(remote, unexpectedFileOrFolder.path))
+	} else {
+		t.Error("unexpected")
+	}
 }
