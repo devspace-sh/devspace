@@ -186,7 +186,7 @@ Outer:
 
 			if v.shouldExistInRemote {
 				if string(remoteData) != fileContents {
-					t.Errorf("Wrong file contentsin file %s, got %s, expected %s", remoteFile, string(remoteData), fileContents)
+					t.Errorf("Wrong file contents in file %s, got %s, expected %s", remoteFile, string(remoteData), fileContents)
 					return
 				}
 			}
@@ -236,11 +236,9 @@ Outer:
 
 		//If this code is reached, everything is fine
 		return
-
 	}
 
 	//If this code is reached, every time the results of the checks showed an unfinished sync. Timeout is reached
-
 	printPathAndReturnNil := func(path string, f os.FileInfo, err error) error {
 		t.Log(path)
 		return nil
@@ -260,6 +258,5 @@ Outer:
 		return
 	}
 
-	t.Error("Sync Failed. " +
-		"Missing: " + path.Join(remote, missingFileOrFolder.path))
+	t.Error("Sync Failed. Missing: " + path.Join(remote, missingFileOrFolder.path))
 }
