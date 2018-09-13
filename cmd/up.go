@@ -12,7 +12,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/kaniko"
+	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 

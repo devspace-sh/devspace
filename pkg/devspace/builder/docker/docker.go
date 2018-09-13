@@ -10,15 +10,39 @@ import (
 	"context"
 
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/docker/docker/api/types"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 var isMinikubeVar *bool
 
+const dockerFileFolder = ".docker"
+
+// Builder holds the necessary information to build and push docker images
+type Builder struct {
+	RegistryURL string
+	ImageName   string
+	ImageTag    string
+}
+
+// NewBuilder creates a new docker Builder instance
+func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) *Builder {
+	return &Builder{
+		RegistryURL: registryURL,
+		ImageName:   imageName,
+		ImageTag:    imageTag,
+	}
+}
+
+// Authenticate authenticates the cli with a remote registry
+func (b *Builder) Authenticate(user, password string) error {
+	return nil
+}
+
 // BuildImage builds a dockerimage with the docker cli
-func BuildImage(dockerfilePath, buildtag string, buildArgs []string) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
 	if isMinikube() {
-		err := builImageMinikube(dockerfilePath, buildtag, buildArgs)
+		err := builImageMinikube(dockerfilePath, b.RegistryURL+b.ImageName+b.ImageTag, nil)
 
 		if err == nil {
 			return nil
@@ -26,33 +50,33 @@ func BuildImage(dockerfilePath, buildtag string, buildArgs []string) error {
 
 		// Fallback to normal docker cli if minikube failed
 	}
+	/*
+		ctx := context.Background()
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
 
-	ctx := context.Background()
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+		dockerArgs := []string{"build", cwd, "--file", dockerfilePath, "-t", buildtag}
+		dockerArgs = append(dockerArgs, buildArgs...)
 
-	dockerArgs := []string{"build", cwd, "--file", dockerfilePath, "-t", buildtag}
-	dockerArgs = append(dockerArgs, buildArgs...)
+		cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
 
-	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
+		cmd.Stdout = log.GetInstance()
+		cmd.Stderr = log.GetInstance()
 
-	cmd.Stdout = log.GetInstance()
-	cmd.Stderr = log.GetInstance()
+		err = cmd.Run()
 
-	err = cmd.Run()
-
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}*/
 
 	return nil
 }
 
 // PushImage pushes an image to the specified registry
-func PushImage(buildtag string) error {
-	if isMinikube() {
+func (b *Builder) PushImage() error {
+	/*if isMinikube() {
 		err := pushImageMinikube(buildtag)
 
 		if err == nil {
@@ -74,7 +98,7 @@ func PushImage(buildtag string) error {
 
 	if err != nil {
 		return err
-	}
+	}*/
 
 	return nil
 }
