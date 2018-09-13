@@ -100,7 +100,8 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	//checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	//This seems to hang in travis
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 }
 
 func TestNormalSync(t *testing.T) {
