@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -159,6 +160,14 @@ func TestNormalSync(t *testing.T) {
 	filesToCheck, foldersToCheck, err = removeSomeTestFilesAndFolders(local, remote, filesToCheck, foldersToCheck, "_Remove")
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+
+	filesToCheck, foldersToCheck, err = renameSomeTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
@@ -185,6 +194,12 @@ func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
 			syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, testCase.path)
 		} else if strings.Contains(testCase.path, "noUpload") {
 			syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, testCase.path)
+		} else if strings.HasSuffix(testCase.path, "_RenameToIgnore") {
+			syncClient.ExcludePaths = append(syncClient.ExcludePaths, testCase.path+"After")
+		} else if strings.HasSuffix(testCase.path, "_RenameToNoDownload") {
+			syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, testCase.path+"After")
+		} else if strings.HasSuffix(testCase.path, "_RenameToNoUpload") {
+			syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, testCase.path+"After")
 		}
 	}
 
@@ -254,12 +269,12 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 	}
 
 	//Add Files and Folders that are edited in Remote
-	filesToCheck = addRemoteTestCases(filesToCheck)
-	foldersToCheck = addRemoteTestCases(foldersToCheck)
+	filesToCheck = makeRemoteTestCases(filesToCheck)
+	foldersToCheck = makeRemoteTestCases(foldersToCheck)
 
 	//Add Files and Folders that are inside a shared testFolder
-	filesToCheck = addDeepTestCases(filesToCheck)
-	foldersToCheck = addDeepTestCases(foldersToCheck)
+	filesToCheck = makeDeepTestCases(filesToCheck)
+	foldersToCheck = makeDeepTestCases(foldersToCheck)
 
 	return filesToCheck, foldersToCheck
 }
@@ -279,7 +294,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
 			}
-			filesToCheck = append(filesToCheck, removeEquivalent)
+			array = append(array, removeEquivalent)
 
 			renameEquivalent := checkedFileOrFolder{
 				path:                f.path + "_RenameToFullContext",
@@ -287,37 +302,39 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
 			}
-			filesToCheck = append(filesToCheck, renameEquivalent)
+			array = append(array, renameEquivalent)
 
-			if strings.Contains(f.path, "testFile") {
+			isFullyIncluded, _ := regexp.Compile("(testFolder\\/)?(testFile|testFolder)(Local|Remote)$")
+
+			if isFullyIncluded.MatchString(f.path) {
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToOutside",
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
 				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
+				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToIgnore",
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
 				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
+				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToNoDownload",
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
 				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
+				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToNoUpload",
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
 				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
+				array = append(array, renameEquivalent)
 			}
 		}
 
@@ -364,8 +381,8 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 		},
 	}
 
-	renameFilesFromOutside = addDeepTestCases(renameFilesFromOutside)
-	renameFolderFromOutside = addDeepTestCases(renameFolderFromOutside)
+	renameFilesFromOutside = makeDeepTestCases(renameFilesFromOutside)
+	renameFolderFromOutside = makeDeepTestCases(renameFolderFromOutside)
 
 	filesToCheck = append(filesToCheck, renameFilesFromOutside...)
 	foldersToCheck = append(foldersToCheck, renameFolderFromOutside...)
@@ -374,7 +391,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 
 }
 
-func addRemoteTestCases(testCases testCaseList) testCaseList {
+func makeRemoteTestCases(testCases testCaseList) testCaseList {
 
 	for _, f := range testCases {
 
@@ -396,7 +413,7 @@ func addRemoteTestCases(testCases testCaseList) testCaseList {
 	return testCases
 }
 
-func addDeepTestCases(testCases testCaseList) testCaseList {
+func makeDeepTestCases(testCases testCaseList) testCaseList {
 
 	for _, f := range testCases {
 
@@ -419,34 +436,24 @@ func addDeepTestCases(testCases testCaseList) testCaseList {
 func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) error {
 
 	for _, f := range foldersToCheck {
-		var parentDir string
-		if f.editLocation == editInLocal {
-			parentDir = local
-		} else if f.editLocation == editInRemote {
-			parentDir = remote
-		} else if f.editLocation == editOutside {
-			parentDir = outside
-		} else {
-			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
+		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		if err != nil {
+			return errors.Trace(err)
 		}
-		err := os.Mkdir(path.Join(parentDir, f.path), 0755)
+
+		err = os.Mkdir(path.Join(parentDir, f.path), 0755)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
 
 	for _, f := range filesToCheck {
-		var parentDir string
-		if f.editLocation == editInLocal {
-			parentDir = local
-		} else if f.editLocation == editInRemote {
-			parentDir = remote
-		} else if f.editLocation == editOutside {
-			parentDir = outside
-		} else {
-			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
+		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		if err != nil {
+			return errors.Trace(err)
 		}
-		err := ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
+
+		err = ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -488,6 +495,72 @@ func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck tes
 		if strings.HasSuffix(f.path, removeSuffix) {
 			foldersToCheck[n].shouldExistInLocal = false
 			foldersToCheck[n].shouldExistInRemote = false
+		}
+	}
+
+	return filesToCheck, foldersToCheck, nil
+}
+
+func renameSomeTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList, error) {
+
+	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
+
+		for n, f := range array {
+
+			if !strings.Contains(f.path, "_Rename") {
+				continue
+			}
+
+			fromParentDir, err := getParentDir(local, remote, outside, f.editLocation)
+			if err != nil {
+				return nil, nil, errors.Trace(err)
+			}
+			fromPath := path.Join(fromParentDir, f.path)
+
+			var toParentDir string
+			if strings.HasSuffix(f.path, "_RenameToOutside") {
+				toParentDir = outside
+			} else if strings.Contains(f.path, "Local_Rename") {
+				toParentDir = local
+			} else if strings.Contains(f.path, "Remote_Rename") {
+				toParentDir = remote
+			}
+
+			f.path = f.path + "After"
+			toPath := path.Join(toParentDir, f.path)
+
+			err = os.Rename(fromPath, toPath)
+			if err != nil {
+				return nil, nil, errors.Trace(err)
+			}
+
+			if strings.HasSuffix(f.path, "_RenameToFullContextAfter") {
+				f.shouldExistInLocal = true
+				f.shouldExistInRemote = true
+			} else if strings.HasSuffix(f.path, "_RenameToNoDownloadAfter") {
+				f.shouldExistInRemote = true
+				f.shouldExistInLocal = f.editLocation == editInLocal
+			} else if strings.HasSuffix(f.path, "_RenameToNoUploadAfter") {
+				f.shouldExistInLocal = true
+				f.shouldExistInRemote = f.editLocation == editInRemote
+			} else if strings.HasSuffix(f.path, "_RenameToIgnoreAfter") {
+				f.shouldExistInLocal = f.editLocation == editInLocal
+				f.shouldExistInRemote = f.editLocation == editInRemote
+			} else if strings.HasSuffix(f.path, "_RenameToOutsideAfter") {
+				f.shouldExistInLocal = false
+				f.shouldExistInRemote = false
+			} else {
+				return nil, nil, errors.New("Bad rename suffix of " + f.path)
+			}
+
+			array[n] = f
+
+		}
+
+		if n == 0 {
+			filesToCheck = array
+		} else {
+			foldersToCheck = array
 		}
 	}
 

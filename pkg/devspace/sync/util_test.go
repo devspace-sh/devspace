@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 // TODO: CopyToContainer test
@@ -108,6 +110,18 @@ const (
 	editInLocal  = 1
 	editOutside  = 2
 )
+
+func getParentDir(localDir string, remoteDir string, outsideDir string, editLocation int) (string, error) {
+	if editLocation == editInLocal {
+		return localDir, nil
+	} else if editLocation == editInRemote {
+		return remoteDir, nil
+	} else if editLocation == editOutside {
+		return outsideDir, nil
+	} else {
+		return "", errors.New("CreateLocation " + string(editLocation) + " unknown")
+	}
+}
 
 type checkedFileOrFolder struct {
 	path                string
@@ -246,25 +260,6 @@ Outer:
 				t.Errorf("Expected %s to be a dir", remoteFolder)
 				return
 			}
-		}
-
-		printPathAndReturnNil := func(path string, f os.FileInfo, err error) error {
-			t.Log(path)
-			return nil
-		}
-
-		t.Log("Remote Path Content:")
-		err := filepath.Walk(remote, printPathAndReturnNil)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		t.Log("Local Path Content:")
-		err = filepath.Walk(local, printPathAndReturnNil)
-		if err != nil {
-			t.Error(err)
-			return
 		}
 
 		//If this code is reached, everything is fine
