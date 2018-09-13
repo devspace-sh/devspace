@@ -2,10 +2,13 @@ package docker
 
 import (
 	"os"
+	"strings"
 
 	"context"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"
+	"github.com/docker/docker/registry"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/docker/cli/cli/command/image/build"
@@ -21,16 +24,15 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
-var isMinikubeVar *bool
-
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	RegistryURL string
 	ImageName   string
 	ImageTag    string
 
-	imageURL string
-	client   client.CommonAPIClient
+	imageURL   string
+	authConfig *types.AuthConfig
+	client     client.CommonAPIClient
 }
 
 // NewBuilder creates a new docker Builder instance
@@ -49,16 +51,34 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 		}
 	}
 
+	// Check if it's the official registry or not
+	ref, err := reference.ParseNormalizedNamed(registryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	repoInfo, err := registry.ParseRepositoryInfo(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	imageURL := registryURL + "/" + imageName + ":" + imageTag
+	if repoInfo.Index.Official {
+		imageURL = imageName + ":" + imageTag
+	}
+
 	return &Builder{
 		RegistryURL: registryURL,
 		ImageName:   imageName,
 		ImageTag:    imageTag,
-		imageURL:    registryURL + "/" + imageName + ":" + imageTag,
+		imageURL:    imageURL,
 		client:      cli,
 	}, nil
 }
 
 // BuildImage builds a dockerimage with the docker cli
+// contextPath is the absolute path to the context path
+// dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
 	if options == nil {
 		options = &types.ImageBuildOptions{}
@@ -76,7 +96,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return errors.Errorf("error checking context: '%s'.", err)
+		return errors.Errorf("Error checking context: '%s'", err)
 	}
 
 	// And canonicalize dockerfile name to a platform-independent one
@@ -105,7 +125,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		AuthConfigs: authConfigs,
 	})
 	if err != nil {
-		return errors.Wrap(err, "docker build")
+		return err
 	}
 	defer response.Body.Close()
 
@@ -118,36 +138,70 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	return nil
 }
 
-// Authenticate authenticates the cli with a remote registry
-func (b *Builder) Authenticate(user, password string) error {
+// Authenticate authenticates the client with a remote registry
+func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) error {
+	ctx := context.Background()
+	serverAddress := b.RegistryURL
+	ref, err := reference.ParseNormalizedNamed(serverAddress)
+	if err != nil {
+		return err
+	}
+
+	repoInfo, err := registry.ParseRepositoryInfo(ref)
+	if err != nil {
+		return err
+	}
+
+	authServer := getOfficialServer(ctx, b.client)
+	if repoInfo.Index.Official {
+		serverAddress = authServer
+	}
+
+	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
+	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
+		authConfig.Username = strings.TrimSpace(user)
+		authConfig.Password = strings.TrimSpace(password)
+	}
+
+	response, err := b.client.RegistryLogin(ctx, *authConfig)
+	if err != nil {
+		return err
+	}
+
+	if response.IdentityToken != "" {
+		authConfig.Password = ""
+		authConfig.IdentityToken = response.IdentityToken
+	}
+
+	b.authConfig = authConfig
 	return nil
 }
 
 // PushImage pushes an image to the specified registry
 func (b *Builder) PushImage() error {
-	/*if isMinikube() {
-		err := pushImageMinikube(buildtag)
-
-		if err == nil {
-			return nil
-		}
-
-		// Fallback to normal docker cli if minikube failed
-	}
-
 	ctx := context.Background()
-	dockerArgs := []string{"push", buildtag}
-
-	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
-
-	cmd.Stdout = log.GetInstance()
-	cmd.Stderr = log.GetInstance()
-
-	err := cmd.Run()
-
+	ref, err := reference.ParseNormalizedNamed(b.imageURL)
 	if err != nil {
 		return err
-	}*/
+	}
+
+	encodedAuth, err := encodeAuthToBase64(*b.authConfig)
+	if err != nil {
+		return err
+	}
+
+	out, err := b.client.ImagePush(ctx, reference.FamiliarString(ref), types.ImagePushOptions{
+		RegistryAuth: encodedAuth,
+	})
+	if err != nil {
+		return err
+	}
+
+	fd, _ := term.GetFdInfo(os.Stdout)
+	err = jsonmessage.DisplayJSONMessagesStream(out, log.GetInstance(), fd, false, nil)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

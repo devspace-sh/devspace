@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var isMinikubeVar *bool
+
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
