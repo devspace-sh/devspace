@@ -20,7 +20,28 @@ Program inside any Kubernetes cluster (e.g. minikube, self-hosted or cloud platf
 coming soon
 
 ## Installation
+These commands will install the devspace CLI and add it to the PATH environment variable. For more details, see the full [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html).
 
+### For Windows
+1. Open CMD with **admin rights**.
+2. Run this install script:
+```cmd
+curl -s "https://raw.githubusercontent.com/covexo/devspace/master/scripts/installer-win.bat" >"%Temp%\install-devspace.bat"
+"%Temp%\install-devspace.bat" "%PROGRAMFILES%\devspace"
+del "%Temp%\install-devspace.bat"
+```
+
+**Note:** After running the install script, you should reopen the terminal window to refresh the environment variables.
+
+### For Linux
+```bash
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+```
+
+### For Mac
+```bash
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+```
 
 ## Quickstart
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
@@ -68,5 +89,3 @@ This project is mainly written in Golang. To contribute code,
 
 ## License
 You can use the DevSpace CLI for any private or commercial projects because it is licensed unter the Apache 2.0 open source license.
-
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcovexo%2Fdevspace?ref=badge_large)
