@@ -224,7 +224,7 @@ func (cmd *UpCmd) buildImage() {
 	if cmd.flags.imageDestination != "" {
 		imageDestination = cmd.flags.imageDestination
 	}
-	err := kaniko.BuildDockerfile(cmd.kubectl, *config.DevSpace.Release.Namespace, imageDestination, registry.PullSecretName, *config.Services.Registry.Insecure)
+	err := kaniko.BuildDockerfile(cmd.kubectl, *config.DevSpace.Release.Namespace, imageDestination, registry.PullSecretName, *config.Image.Registry.Insecure)
 
 	config.Image.Tag = &imageTag
 

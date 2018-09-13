@@ -222,7 +222,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 	var err error
 	config := configutil.GetConfig(false)
 
-	registryReleaseName := *config.Services.Registry.Internal.Release.Name
+	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
 		cmd.kubectl, err = kubectl.NewClient()

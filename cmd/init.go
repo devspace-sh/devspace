@@ -373,7 +373,8 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
-	registryConfig := cmd.config.Services.Registry
+	registryConfig := cmd.config.Image.Registry
+	internalRegistryConfig := cmd.config.Services.InternalRegistry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
@@ -385,8 +386,8 @@ func (cmd *InitCmd) configureRegistry() {
 		internalRegistryKey := "internal registry"
 		defaultRegistryValue := internalRegistryKey
 
-		if registryConfig.External != nil {
-			defaultRegistryValue = *registryConfig.External
+		if registryConfig.URL != nil {
+			defaultRegistryValue = *registryConfig.URL
 		}
 		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
@@ -395,41 +396,41 @@ func (cmd *InitCmd) configureRegistry() {
 		})
 
 		if *registryURL != internalRegistryKey {
-			registryConfig.External = registryURL
-			registryConfig.Internal = nil
+			registryConfig.URL = registryURL
+			internalRegistryConfig = nil
 		} else {
-			registryConfig.External = nil
+			registryConfig.URL = nil
 
-			if registryConfig.Internal.Release.Name == nil {
-				registryConfig.Internal.Release.Name = configutil.String("devspace-registry")
+			if internalRegistryConfig.Release.Name == nil {
+				internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 			}
 
-			if registryConfig.Internal.Release.Namespace == nil {
-				registryConfig.Internal.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+			if internalRegistryConfig.Release.Namespace == nil {
+				internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
 			}
-			registryUser := cmd.overwriteConfig.Services.Registry.User
+			registryAuth := cmd.overwriteConfig.Image.Registry.Auth
 
-			if registryUser.Username == nil {
+			if registryAuth.Username == nil {
 				randomUserSuffix, err := randutil.GenerateRandomString(5)
 
 				if err != nil {
 					log.Fatalf("Error creating random username: %s", err.Error())
 				}
-				registryUser.Username = configutil.String("user-" + randomUserSuffix)
+				registryAuth.Username = configutil.String("user-" + randomUserSuffix)
 			}
 
-			if registryUser.Password == nil {
+			if registryAuth.Password == nil {
 				randomPassword, err := randutil.GenerateRandomString(12)
 
 				if err != nil {
 					log.Fatalf("Error creating random password: %s", err.Error())
 				}
-				registryUser.Password = &randomPassword
+				registryAuth.Password = &randomPassword
 			}
 			var registryReleaseValues map[interface{}]interface{}
 
-			if registryConfig.Internal.Release.Values != nil {
-				registryReleaseValues = *registryConfig.Internal.Release.Values
+			if internalRegistryConfig.Release.Values != nil {
+				registryReleaseValues = *internalRegistryConfig.Release.Values
 			} else {
 				registryReleaseValues = map[interface{}]interface{}{}
 
@@ -475,7 +476,7 @@ func (cmd *InitCmd) configureRegistry() {
 					secretMap["htpasswd"] = ""
 				}
 			}
-			registryConfig.Internal.Release.Values = &registryReleaseValues
+			internalRegistryConfig.Release.Values = &registryReleaseValues
 		}
 	}
 }

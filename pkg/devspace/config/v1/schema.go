@@ -14,9 +14,10 @@ type Config struct {
 
 //ImageConfig defines the image specification
 type ImageConfig struct {
-	Name      *string `yaml:"name"`
-	Tag       *string `yaml:"tag"`
-	BuildTime *string `yaml:"buildTime"`
+	Name      *string         `yaml:"name"`
+	Tag       *string         `yaml:"tag"`
+	BuildTime *string         `yaml:"buildTime"`
+	Registry  *RegistryConfig `yaml:"registry"`
 }
 
 //DevSpaceConfig defines the devspace deployment
@@ -28,8 +29,8 @@ type DevSpaceConfig struct {
 
 //ServiceConfig defines additional services
 type ServiceConfig struct {
-	Tiller   *TillerConfig   `yaml:"tiller,omitempty"`
-	Registry *RegistryConfig `yaml:"registry,omitempty"`
+	Tiller           *TillerConfig     `yaml:"tiller,omitempty"`
+	InternalRegistry *InternalRegistry `yaml:"internalRegistry,omitempty"`
 }
 
 //TillerConfig defines the tiller service
@@ -40,10 +41,9 @@ type TillerConfig struct {
 
 //RegistryConfig defines the registry service
 type RegistryConfig struct {
-	External *string           `yaml:"external,omitempty"`
-	Internal *InternalRegistry `yaml:"internal,omitempty"`
-	User     *RegistryUser     `yaml:"user,omitempty"`
-	Insecure *bool             `yaml:"insecure,omitempty"`
+	URL      *string       `yaml:"url,omitempty"`
+	Auth     *RegistryAuth `yaml:"auth,omitempty"`
+	Insecure *bool         `yaml:"insecure,omitempty"`
 }
 
 //InternalRegistry defines the deployment of an internal registry
@@ -52,8 +52,8 @@ type InternalRegistry struct {
 	Host    *string  `yaml:"host,omitempty"`
 }
 
-//RegistryUser is a user for the registry
-type RegistryUser struct {
+//RegistryAuth is a user for the registry
+type RegistryAuth struct {
 	Username *string `yaml:"username"`
 	Password *string `yaml:"password"`
 }

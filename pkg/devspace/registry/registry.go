@@ -26,16 +26,16 @@ const registryPort = 5000
 // InitRegistry deploys and starts a new docker registry if necessary
 func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) error {
 	config := configutil.GetConfig(false)
-	registryConfig := config.Services.Registry
-	registryUser := registryConfig.User
-	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryUser.Username + ":" + *registryUser.Password))
+	registryConfig := config.Image.Registry
+	internalRegistryConfig := config.Services.InternalRegistry
+	registryAuth := config.Image.Registry.Auth
+	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryAuth.Username + ":" + *registryAuth.Password))
 
-	if registryConfig.External == nil {
-		registry := registryConfig.Internal
-		registryReleaseName := *registry.Release.Name
-		registryReleaseNamespace := *registry.Release.Namespace
+	if registryConfig.URL == nil {
+		registryReleaseName := *internalRegistryConfig.Release.Name
+		registryReleaseNamespace := *internalRegistryConfig.Release.Namespace
 
-		_, err := helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registry.Release.Values)
+		_, err := helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", internalRegistryConfig.Release.Values)
 
 		if err != nil {
 			return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
@@ -64,7 +64,7 @@ func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) e
 			oldHtpasswdDataBytes := []byte(oldHtpasswdData)
 			newHtpasswdData, _ = htpasswd.ParseHtpasswd(oldHtpasswdDataBytes)
 		}
-		err = newHtpasswdData.SetPassword(*registryUser.Username, *registryUser.Password, htpasswd.HashBCrypt)
+		err = newHtpasswdData.SetPassword(*registryAuth.Username, *registryAuth.Password, htpasswd.HashBCrypt)
 
 		if err != nil {
 			return fmt.Errorf("Unable to set password in htpasswd: %s", err.Error())
@@ -97,7 +97,7 @@ func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) e
 			}
 
 			if len(registryService.Spec.ClusterIP) > 0 {
-				registryConfig.Internal.Host = configutil.String(registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort))
+				internalRegistryConfig.Host = configutil.String(registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort))
 				break
 			}
 
@@ -165,13 +165,13 @@ func GetImageURL(includingLatestTag bool) string {
 //GetRegistryHostname returns the hostname of the registry including the port
 func GetRegistryHostname() string {
 	config := configutil.GetConfig(false)
-	registryConfig := config.Services.Registry
+	registryConfig := config.Image.Registry
 
-	if registryConfig.External != nil {
-		return *registryConfig.External
+	if registryConfig.URL != nil {
+		return *registryConfig.URL
 	}
 	registryHostname := ""
-	registryReleaseValues := registryConfig.Internal.Release.Values
+	registryReleaseValues := config.Services.InternalRegistry.Release.Values
 
 	if registryReleaseValues != nil {
 		registryValues := yamlq.NewQuery(*registryReleaseValues)
@@ -188,7 +188,7 @@ func GetRegistryHostname() string {
 
 	if len(registryHostname) == 0 {
 		registryConfig.Insecure = configutil.Bool(true)
-		registryHostname = *registryConfig.Internal.Host
+		registryHostname = *config.Services.InternalRegistry.Host
 	} else {
 		registryConfig.Insecure = configutil.Bool(false)
 	}

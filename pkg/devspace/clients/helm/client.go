@@ -239,8 +239,8 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 			config.DevSpace.Release.Namespace,
 		}
 
-		if config.Services.Registry.Internal.Release.Namespace != nil {
-			appNamespaces = append(appNamespaces, config.Services.Registry.Internal.Release.Namespace)
+		if config.Services.InternalRegistry.Release.Namespace != nil {
+			appNamespaces = append(appNamespaces, config.Services.InternalRegistry.Release.Namespace)
 		}
 		tillerConfig.AppNamespaces = &appNamespaces
 

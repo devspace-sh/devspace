@@ -14,13 +14,14 @@ func makeConfig() *v1.Config {
 			Release:        &v1.Release{},
 			Sync:           &[]*v1.SyncConfig{},
 		},
-		Image: &v1.ImageConfig{},
-		Services: &v1.ServiceConfig{
+		Image: &v1.ImageConfig{
 			Registry: &v1.RegistryConfig{
-				Internal: &v1.InternalRegistry{
-					Release: &v1.Release{},
-				},
-				User: &v1.RegistryUser{},
+				Auth: &v1.RegistryAuth{},
+			},
+		},
+		Services: &v1.ServiceConfig{
+			InternalRegistry: &v1.InternalRegistry{
+				Release: &v1.Release{},
 			},
 			Tiller: &v1.TillerConfig{
 				AppNamespaces: &[]*string{},

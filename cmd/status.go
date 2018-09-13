@@ -153,7 +153,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 	config := configutil.GetConfig(false)
-	registry := config.Services.Registry.Internal
+	registry := config.Services.InternalRegistry
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
