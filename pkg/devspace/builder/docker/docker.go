@@ -1,76 +1,125 @@
 package docker
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"context"
 
+	"github.com/docker/docker/pkg/term"
+
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/idtools"
+
+	"github.com/docker/docker/pkg/progress"
+	"github.com/docker/docker/pkg/streamformatter"
+	"github.com/pkg/errors"
+
+	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 var isMinikubeVar *bool
-
-const dockerFileFolder = ".docker"
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	RegistryURL string
 	ImageName   string
 	ImageTag    string
+
+	imageURL string
+	client   client.CommonAPIClient
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) *Builder {
+func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*Builder, error) {
+	var cli client.CommonAPIClient
+	var err error
+
+	if preferMinikube {
+		cli, err = newDockerClientFromMinikube()
+	}
+	if preferMinikube == false || err != nil {
+		cli, err = newDockerClientFromEnvironment()
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Builder{
 		RegistryURL: registryURL,
 		ImageName:   imageName,
 		ImageTag:    imageTag,
-	}
-}
-
-// Authenticate authenticates the cli with a remote registry
-func (b *Builder) Authenticate(user, password string) error {
-	return nil
+		imageURL:    registryURL + "/" + imageName + ":" + imageTag,
+		client:      cli,
+	}, nil
 }
 
 // BuildImage builds a dockerimage with the docker cli
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
-	if isMinikube() {
-		err := builImageMinikube(dockerfilePath, b.RegistryURL+b.ImageName+b.ImageTag, nil)
-
-		if err == nil {
-			return nil
-		}
-
-		// Fallback to normal docker cli if minikube failed
+	if options == nil {
+		options = &types.ImageBuildOptions{}
 	}
-	/*
-		ctx := context.Background()
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
 
-		dockerArgs := []string{"build", cwd, "--file", dockerfilePath, "-t", buildtag}
-		dockerArgs = append(dockerArgs, buildArgs...)
+	ctx := context.Background()
+	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
+	if err != nil {
+		return err
+	}
 
-		cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
+	excludes, err := build.ReadDockerignore(contextDir)
+	if err != nil {
+		return err
+	}
 
-		cmd.Stdout = log.GetInstance()
-		cmd.Stderr = log.GetInstance()
+	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
+		return errors.Errorf("error checking context: '%s'.", err)
+	}
 
-		err = cmd.Run()
+	// And canonicalize dockerfile name to a platform-independent one
+	authConfigs, _ := getAllAuthConfigs()
+	relDockerfile, err = archive.CanonicalTarNameForPath(relDockerfile)
+	if err != nil {
+		return err
+	}
 
-		if err != nil {
-			return err
-		}*/
+	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
+		ExcludePatterns: excludes,
+		ChownOpts:       &idtools.IDPair{UID: 0, GID: 0},
+	})
+	if err != nil {
+		return err
+	}
 
+	// Setup an upload progress bar
+	progressOutput := streamformatter.NewProgressOutput(log.GetInstance())
+	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
+	response, err := b.client.ImageBuild(ctx, body, types.ImageBuildOptions{
+		Tags:        []string{b.imageURL},
+		Dockerfile:  relDockerfile,
+		BuildArgs:   options.BuildArgs,
+		AuthConfigs: authConfigs,
+	})
+	if err != nil {
+		return errors.Wrap(err, "docker build")
+	}
+	defer response.Body.Close()
+
+	fd, _ := term.GetFdInfo(os.Stdout)
+	err = jsonmessage.DisplayJSONMessagesStream(response.Body, log.GetInstance(), fd, false, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Authenticate authenticates the cli with a remote registry
+func (b *Builder) Authenticate(user, password string) error {
 	return nil
 }
 
@@ -101,128 +150,4 @@ func (b *Builder) PushImage() error {
 	}*/
 
 	return nil
-}
-
-func pushImageMinikube(buildtag string) error {
-	ctx := context.Background()
-	dockerArgs, err := getMinikubeCliArgs()
-	if err != nil {
-		return err
-	}
-
-	log.Info("Pushing image on minikube docker daemon")
-	dockerArgs = append(dockerArgs, "push", buildtag)
-
-	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
-
-	cmd.Stdout = log.GetInstance()
-	cmd.Stderr = log.GetInstance()
-
-	err = cmd.Run()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func builImageMinikube(dockerfilePath, buildtag string, buildArgs []string) error {
-	ctx := context.Background()
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	dockerArgs, err := getMinikubeCliArgs()
-	if err != nil {
-		return err
-	}
-
-	log.Info("Building image on minikube docker daemon")
-
-	dockerArgs = append(dockerArgs, "build", cwd, "--file", dockerfilePath, "-t", buildtag)
-	dockerArgs = append(dockerArgs, buildArgs...)
-
-	cmd := exec.CommandContext(ctx, "docker", dockerArgs...)
-
-	cmd.Stdout = log.GetInstance()
-	cmd.Stderr = log.GetInstance()
-
-	err = cmd.Run()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return nil
-}
-
-func getMinikubeCliArgs() ([]string, error) {
-	env, err := getMinikubeEnvironment()
-
-	if err != nil {
-		return nil, err
-	}
-
-	dockerArgs := []string{}
-	dockerCertPath := env["DOCKER_CERT_PATH"]
-
-	if dockerCertPath != "" {
-		dockerArgs = append(dockerArgs, "--tlscacert", filepath.Join(dockerCertPath, "ca.pem"))
-		dockerArgs = append(dockerArgs, "--tlscert", filepath.Join(dockerCertPath, "cert.pem"))
-		dockerArgs = append(dockerArgs, "--tlskey", filepath.Join(dockerCertPath, "key.pem"))
-
-		if env["DOCKER_TLS_VERIFY"] == "1" {
-			dockerArgs = append(dockerArgs, "--tlsverify")
-		}
-	}
-
-	if env["DOCKER_HOST"] != "" {
-		dockerArgs = append(dockerArgs, "--host", env["DOCKER_HOST"])
-	} else {
-		return nil, fmt.Errorf("Unspecified docker host")
-	}
-
-	return dockerArgs, nil
-}
-
-func isMinikube() bool {
-	if isMinikubeVar == nil {
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-		cfg, err := kubeConfig.RawConfig()
-
-		if err != nil {
-			return false
-		}
-
-		isMinikube := cfg.CurrentContext == "minikube"
-		isMinikubeVar = &isMinikube
-	}
-
-	return *isMinikubeVar
-}
-
-func getMinikubeEnvironment() (map[string]string, error) {
-	cmd := exec.Command("minikube", "docker-env", "--shell", "none")
-	out, err := cmd.Output()
-
-	if err != nil {
-		return nil, err
-	}
-
-	env := map[string]string{}
-
-	for _, line := range strings.Split(string(out), "\n") {
-		envKeyValue := strings.Split(line, "=")
-
-		if len(envKeyValue) != 2 {
-			continue
-		}
-
-		env[envKeyValue[0]] = envKeyValue[1]
-	}
-
-	return env, nil
 }
