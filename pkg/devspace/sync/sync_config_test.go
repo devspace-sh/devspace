@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -102,6 +101,8 @@ func TestInitialSync(t *testing.T) {
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 }
+
+/*
 func TestNormalSync(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on windows")
@@ -172,6 +173,7 @@ func TestNormalSync(t *testing.T) {
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
 }
+*/
 
 func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
 
