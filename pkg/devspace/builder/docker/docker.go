@@ -51,20 +51,22 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 		}
 	}
 
-	// Check if it's the official registry or not
-	ref, err := reference.ParseNormalizedNamed(registryURL)
-	if err != nil {
-		return nil, err
-	}
+	imageURL := imageName + ":" + imageTag
+	if registryURL != "" {
+		// Check if it's the official registry or not
+		ref, err := reference.ParseNormalizedNamed(registryURL)
+		if err != nil {
+			return nil, err
+		}
 
-	repoInfo, err := registry.ParseRepositoryInfo(ref)
-	if err != nil {
-		return nil, err
-	}
+		repoInfo, err := registry.ParseRepositoryInfo(ref)
+		if err != nil {
+			return nil, err
+		}
 
-	imageURL := registryURL + "/" + imageName + ":" + imageTag
-	if repoInfo.Index.Official {
-		imageURL = imageName + ":" + imageTag
+		if repoInfo.Index.Official == false {
+			imageURL = registryURL + "/" + imageName + ":" + imageTag
+		}
 	}
 
 	return &Builder{
@@ -141,20 +143,25 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) error {
 	ctx := context.Background()
-	serverAddress := b.RegistryURL
-	ref, err := reference.ParseNormalizedNamed(serverAddress)
-	if err != nil {
-		return err
-	}
-
-	repoInfo, err := registry.ParseRepositoryInfo(ref)
-	if err != nil {
-		return err
-	}
-
 	authServer := getOfficialServer(ctx, b.client)
-	if repoInfo.Index.Official {
+	serverAddress := b.RegistryURL
+
+	if serverAddress == "" {
 		serverAddress = authServer
+	} else {
+		ref, err := reference.ParseNormalizedNamed(serverAddress)
+		if err != nil {
+			return err
+		}
+
+		repoInfo, err := registry.ParseRepositoryInfo(ref)
+		if err != nil {
+			return err
+		}
+
+		if repoInfo.Index.Official {
+			serverAddress = authServer
+		}
 	}
 
 	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
