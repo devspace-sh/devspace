@@ -1,23 +1,26 @@
 ![DevSpace Workflow](docs/website/static/img/header-readme.svg)
 
-# DevSpace CLI - Cloud-Native Development with Kubernetes
+# DevSpace - Cloud-Native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 [![Join the community on Spectrum Chart](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/devspace)
 
-With the DevSpace CLI, developers can build cloud-native applications directly inside a Kubernetes cluster. It works with any self-hosted Kubernetes cluster (e.g. minikube or baremetal) as well as with managed Kubernetes clusters provided by cloud platforms, e.g. Google Kubernetes Engine.
+With a DevSpace, you can build, test and run code directly inside any Kubernetes cluster. You can run `devspace up` in any of your projects and the client-only DevSpace CLI will start a DevSpace within your Kubernetes cluster. Keep coding as usual and the DevSpace CLI will sync any code change directly into the containers of your DevSpace. No more waiting for re-building images, re-deploying containers and restarting applications on every source code change. Simply edit your code with any IDE and run your code instantly inside your DevSpace.
 
 ## Why use a DevSpace?
-Your DevSpace lets you build, test and run code directly inside a Kubernetes cluster and:
-- Allows you to access cluster-internal services and data with ease
-- Works perfectly with your favorite **hot reloading** tools (e.g. nodemon)
-- Lets you iterate quickly: no more re-building and pushing images on every change
-- Integrates into your existing workflow: **code with your favorite IDE** and desktop tools
-- Allows you to build, test and run code directly inside Kubernetes (via **real-time code synchronization**)
-- Supports efficient debugging through port forwarding and terminal proxying
-- Provides **automatic image building** without the need to install Docker
-- Lets you migrate to Docker & Kubernetes within minutes
-- Works with any Kubernetes cluster (e.g. minikube, self-hosted or cloud platform)
+Program inside any Kubernetes cluster (e.g. minikube, self-hosted or cloud platform) and:
+- iterate quickly: no more re-building and pushing images on every change
+- save time with **hot reloading** tools (e.g. nodemon)
+- keep your existing workflow: **code with your favorite IDE** and desktop tools
+- access cluster-internal services and data with ease
+- debug efficiently with port forwarding and terminal proxying
+- migrate to Docker & Kubernetes within minutes
+
+## Demo
+coming soon
+
+## Installation
+
 
 ## Quickstart
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
@@ -27,9 +30,6 @@ devspace up
 Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to start coding with a DevSpace.
 
 **Note:** Don't worry, with the cleanup command `devspace reset`, you can easily reset your project and go back to local development.
-
-## Demo
-coming soon
 
 ## Documentation
 Here you can find some links to the most important pages of our documentation:

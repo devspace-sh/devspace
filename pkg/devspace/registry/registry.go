@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/foomo/htpasswd"
 	"k8s.io/client-go/kubernetes"
@@ -23,39 +25,73 @@ import (
 const PullSecretName = "devspace-pull-secret"
 const registryPort = 5000
 
-// InitRegistry deploys and starts a new docker registry if necessary
-func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) error {
-	config := configutil.GetConfig(false)
-	registryConfig := config.Image.Registry
-	internalRegistryConfig := config.Services.InternalRegistry
-	registryAuth := config.Image.Registry.Auth
+// CreatePullSecret creates an image pull secret for a registry
+func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryConfig v1.RegistryConfig) error {
+	registryAuth := registryConfig.Auth
 	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryAuth.Username + ":" + *registryAuth.Password))
-
-	if registryConfig.URL == nil {
-		registryReleaseName := *internalRegistryConfig.Release.Name
-		registryReleaseNamespace := *internalRegistryConfig.Release.Namespace
-
-		// Check if registry namespace exists
-		_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
-		if err != nil {
-			// Create registry namespace
-			_, err = kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: registryReleaseNamespace,
-				},
-			})
-
-			if err != nil {
-				return err
+	pullSecretDataValue := []byte(`{
+		"auths": {
+			"` + *registryConfig.URL + `": {
+				"auth": "` + registryAuthEncoded + `",
+				"email": "noreply-devspace@covexo.com"
 			}
 		}
+	}`)
 
-		_, err = helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registry.Release.Values)
+	pullSecretData := map[string][]byte{}
+	pullSecretDataKey := k8sv1.DockerConfigJsonKey
+	pullSecretData[pullSecretDataKey] = pullSecretDataValue
+
+	registryPullSecret := &k8sv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: PullSecretName,
+		},
+		Data: pullSecretData,
+		Type: k8sv1.SecretTypeDockerConfigJson,
+	}
+	_, err := kubectl.Core().Secrets(namespace).Get(PullSecretName, metav1.GetOptions{})
+
+	if err != nil {
+		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
+	} else {
+		_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
+	}
+
+	if err != nil {
+		return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+	}
+	return nil
+}
+
+// InitRegistry deploys and starts a new docker registry if necessary
+func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
+	registryReleaseName := *internalRegistry.Release.Name
+	registryReleaseNamespace := *internalRegistry.Release.Namespace
+	registryReleaseValues := internalRegistry.Release.Values
+
+	// Check if registry namespace exists
+	_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create registry namespace
+		_, err = kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: registryReleaseNamespace,
+			},
+		})
 
 		if err != nil {
-			return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
+			return err
 		}
+	}
 
+	_, err = helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registryReleaseValues)
+
+	if err != nil {
+		return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
+	}
+
+	if registryConfig != nil && registryConfig.Auth != nil {
+		registryAuth := registryConfig.Auth
 		htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
 		htpasswdSecret, err := kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 
@@ -96,97 +132,36 @@ func InitRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper) e
 		} else {
 			_, err = kubectl.Core().Secrets(registryReleaseNamespace).Update(htpasswdSecret)
 		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("Unable to update htpasswd secret: %s", err.Error())
+	}
+	registryServiceName := registryReleaseName + "-docker-registry"
+	serviceHostname := ""
+	maxServiceWaiting := 60 * time.Second
+	serviceWaitingInterval := 3 * time.Second
+
+	for true {
+		registryService, err := kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
 
 		if err != nil {
-			return fmt.Errorf("Unable to update htpasswd secret: %s", err.Error())
+			log.Panic(err)
 		}
-		registryServiceName := registryReleaseName + "-docker-registry"
-		maxServiceWaiting := 60 * time.Second
-		serviceWaitingInterval := 3 * time.Second
 
-		for true {
-			registryService, err := kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
+		if len(registryService.Spec.ClusterIP) > 0 {
+			serviceHostname = registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort)
+			break
+		}
 
-			if err != nil {
-				log.Panic(err)
-			}
+		time.Sleep(serviceWaitingInterval)
+		maxServiceWaiting = maxServiceWaiting - serviceWaitingInterval
 
-			if len(registryService.Spec.ClusterIP) > 0 {
-				internalRegistryConfig.Host = configutil.String(registryService.Spec.ClusterIP + ":" + strconv.Itoa(registryPort))
-				break
-			}
-
-			time.Sleep(serviceWaitingInterval)
-			maxServiceWaiting = maxServiceWaiting - serviceWaitingInterval
-
-			if maxServiceWaiting <= 0 {
-				return errors.New("Timeout waiting for registry service to start")
-			}
+		if maxServiceWaiting <= 0 {
+			return errors.New("Timeout waiting for registry service to start")
 		}
 	}
-	registryHostname := GetRegistryHostname()
-
-	pullSecretDataValue := []byte(`{
-		"auths": {
-			"` + registryHostname + `": {
-				"auth": "` + registryAuthEncoded + `",
-				"email": "noreply-devspace@covexo.com"
-			}
-		}
-	}`)
-
-	pullSecretData := map[string][]byte{}
-	pullSecretDataKey := k8sv1.DockerConfigJsonKey
-	pullSecretData[pullSecretDataKey] = pullSecretDataValue
-
-	registryPullSecret := &k8sv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: PullSecretName,
-		},
-		Data: pullSecretData,
-		Type: k8sv1.SecretTypeDockerConfigJson,
-	}
-	appRelease := config.DevSpace.Release
-	appNamespace := *appRelease.Namespace
-
-	_, err := kubectl.Core().Secrets(appNamespace).Get(PullSecretName, metav1.GetOptions{})
-
-	if err != nil {
-		_, err = kubectl.Core().Secrets(appNamespace).Create(registryPullSecret)
-	} else {
-		_, err = kubectl.Core().Secrets(appNamespace).Update(registryPullSecret)
-	}
-
-	if err != nil {
-		return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
-	}
-
-	return nil
-}
-
-//GetImageURL returns the image (optional with tag)
-func GetImageURL(includingLatestTag bool) string {
-	config := configutil.GetConfig(false)
-	image := *config.Image.Name
-
-	image = GetRegistryHostname() + "/" + image
-
-	if includingLatestTag {
-		image = image + ":" + *config.Image.Tag
-	}
-	return image
-}
-
-//GetRegistryHostname returns the hostname of the registry including the port
-func GetRegistryHostname() string {
-	config := configutil.GetConfig(false)
-	registryConfig := config.Image.Registry
-
-	if registryConfig.URL != nil {
-		return *registryConfig.URL
-	}
-	registryHostname := ""
-	registryReleaseValues := config.Services.InternalRegistry.Release.Values
+	ingressHostname := ""
 
 	if registryReleaseValues != nil {
 		registryValues := yamlq.NewQuery(*registryReleaseValues)
@@ -196,16 +171,35 @@ func GetRegistryHostname() string {
 			firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
 
 			if len(firstIngressHostname) > 0 {
-				registryHostname = firstIngressHostname
+				ingressHostname = firstIngressHostname
 			}
 		}
 	}
 
-	if len(registryHostname) == 0 {
+	if len(ingressHostname) == 0 {
+		registryConfig.URL = configutil.String(serviceHostname)
 		registryConfig.Insecure = configutil.Bool(true)
-		registryHostname = *config.Services.InternalRegistry.Host
 	} else {
+		registryConfig.URL = configutil.String(ingressHostname)
 		registryConfig.Insecure = configutil.Bool(false)
 	}
-	return registryHostname
+	return nil
+}
+
+//GetImageURL returns the image (optional with tag)
+func GetImageURL(imageConfig v1.ImageConfig, includingLatestTag bool) string {
+	config := configutil.GetConfig(false)
+	registryName := *imageConfig.Registry
+	registryMap := *config.Registries
+	registryConfig, registryFound := registryMap[registryName]
+
+	if !registryFound {
+		log.Fatalf("Unable to find registry: %s", registryName)
+	}
+	image := *registryConfig.URL + "/" + *imageConfig.Name
+
+	if includingLatestTag {
+		image = image + ":" + *imageConfig.Tag
+	}
+	return image
 }

@@ -41,7 +41,7 @@ type UpCmd struct {
 type UpCmdFlags struct {
 	tiller           bool
 	open             string
-	initRegistry     bool
+	initRegistries   bool
 	build            bool
 	shell            string
 	sync             bool
@@ -55,7 +55,7 @@ type UpCmdFlags struct {
 var UpFlagsDefault = &UpCmdFlags{
 	tiller:         true,
 	open:           "cmd",
-	initRegistry:   true,
+	initRegistries: true,
 	build:          true,
 	sync:           true,
 	deploy:         false,
@@ -130,7 +130,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	cmd.initHelm()
 
-	if cmd.flags.initRegistry {
+	if cmd.flags.initRegistries {
 		if cmd.flags.initRegistry && cmd.flags.imageDestination == "" {
 			log.StartWait("Initializing docker registry")
 			err := registry.InitRegistry(cmd.kubectl, cmd.helm)

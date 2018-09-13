@@ -26,6 +26,8 @@ type InitCmd struct {
 	chartGenerator  *generator.ChartGenerator
 	config          *v1.Config
 	overwriteConfig *v1.Config
+	defaultImage    *v1.ImageConfig
+	defaultRegistry *v1.RegistryConfig
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -117,11 +119,24 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Namespace: configutil.String("default"),
 			},
 		},
-		Image: &v1.ImageConfig{
-			Name: configutil.String("devspace"),
+		Images: &map[string]*v1.ImageConfig{
+			"default": &v1.ImageConfig{
+				Name: configutil.String("devspace"),
+			},
+		},
+		Registries: &map[string]*v1.RegistryConfig{
+			"default": &v1.RegistryConfig{
+				Auth: &v1.RegistryAuth{},
+			},
 		},
 	})
 	cmd.overwriteConfig = configutil.GetOverwriteConfig()
+
+	imageMap := *cmd.config.Images
+	cmd.defaultImage, _ = imageMap["default"]
+
+	registryMap := *cmd.config.Registries
+	cmd.defaultRegistry, _ = registryMap["default"]
 
 	cmd.initChartGenerator()
 
@@ -153,7 +168,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.configureKubernetes()
 		cmd.configureDevSpace()
 
-		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
+		cmd.defaultImage.Name = cmd.config.DevSpace.Release.Name
 
 		cmd.configureTiller()
 		cmd.configureRegistry()
@@ -373,7 +388,6 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
-	registryConfig := cmd.config.Image.Registry
 	internalRegistryConfig := cmd.config.Services.InternalRegistry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -386,8 +400,8 @@ func (cmd *InitCmd) configureRegistry() {
 		internalRegistryKey := "internal registry"
 		defaultRegistryValue := internalRegistryKey
 
-		if registryConfig.URL != nil {
-			defaultRegistryValue = *registryConfig.URL
+		if cmd.defaultRegistry.URL != nil {
+			defaultRegistryValue = *cmd.defaultRegistry.URL
 		}
 		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
@@ -396,11 +410,9 @@ func (cmd *InitCmd) configureRegistry() {
 		})
 
 		if *registryURL != internalRegistryKey {
-			registryConfig.URL = registryURL
+			cmd.defaultRegistry.URL = registryURL
 			internalRegistryConfig = nil
 		} else {
-			registryConfig.URL = nil
-
 			if internalRegistryConfig.Release.Name == nil {
 				internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 			}
@@ -408,7 +420,17 @@ func (cmd *InitCmd) configureRegistry() {
 			if internalRegistryConfig.Release.Namespace == nil {
 				internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
 			}
-			registryAuth := cmd.overwriteConfig.Image.Registry.Auth
+			overwriteRegistryMap := *cmd.overwriteConfig.Registries
+
+			overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["default"]
+
+			if !overwriteRegistryConfigFound {
+				overwriteRegistryConfig = &v1.RegistryConfig{
+					Auth: &v1.RegistryAuth{},
+				}
+				overwriteRegistryMap["default"] = overwriteRegistryConfig
+			}
+			registryAuth := overwriteRegistryConfig.Auth
 
 			if registryAuth.Username == nil {
 				randomUserSuffix, err := randutil.GenerateRandomString(5)

@@ -15,5 +15,4 @@ type TillerConfig struct {
 //InternalRegistry defines the deployment of an internal registry
 type InternalRegistry struct {
 	Release *Release `yaml:"release,omitempty"`
-	Host    *string  `yaml:"host,omitempty"`
 }
