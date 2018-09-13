@@ -43,7 +43,7 @@ func loadClusterConfig(config *v1.Cluster, overwriteExistingValues bool) {
 		}
 
 		if config.User == nil {
-			config.User = &v1.User{}
+			config.User = &v1.ClusterUser{}
 		}
 
 		if config.User.Username == nil {
