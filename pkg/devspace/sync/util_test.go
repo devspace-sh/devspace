@@ -118,9 +118,9 @@ func getParentDir(localDir string, remoteDir string, outsideDir string, editLoca
 		return remoteDir, nil
 	} else if editLocation == editOutside {
 		return outsideDir, nil
-	} else {
-		return "", errors.New("CreateLocation " + string(editLocation) + " unknown")
 	}
+
+	return "", errors.New("CreateLocation " + string(editLocation) + " unknown")
 }
 
 type checkedFileOrFolder struct {
