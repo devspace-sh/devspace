@@ -47,7 +47,6 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 	}
 }
 
-/*
 func TestInitialSync(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on windows")
@@ -101,9 +100,8 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	//checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 }
-*/
 
 func TestNormalSync(t *testing.T) {
 	if runtime.GOOS == "windows" {
