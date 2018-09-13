@@ -380,10 +380,6 @@ func (s *stdoutLogger) SetLevel(level logrus.Level) {
 	s.level = level
 }
 
-func (s *stdoutLogger) GetStream() io.Writer {
-	return os.Stdout
-}
-
 func (s *stdoutLogger) printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
@@ -406,7 +402,7 @@ func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context map[str
 	}
 }
 
-func (s *stdoutLogger) Write(message string) {
+func (s *stdoutLogger) Write(message []byte) (int, error) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
@@ -414,9 +410,11 @@ func (s *stdoutLogger) Write(message string) {
 		s.loadingText.Stop()
 	}
 
-	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+	n, err := fnTypeInformationMap[infoFn].stream.Write(message)
 
 	if s.loadingText != nil {
 		s.loadingText.Start()
 	}
+
+	return n, err
 }
