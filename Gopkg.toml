@@ -16,6 +16,10 @@
   revision = "ae7016427f8cba4e4d8fcb979d6ba313ee2c0702"
 
 [[constraint]]
+  name = "github.com/docker/cli"
+  version = "v18.06.1-ce"
+
+[[constraint]]
   name = "github.com/rhysd/go-github-selfupdate"
   revision = "41c1bbb0804a2994dae69502a8c76e7c456ad45e"
 
