@@ -116,6 +116,22 @@ type checkedFileOrFolder struct {
 	editLocation        int
 }
 
+type testCaseList []checkedFileOrFolder
+
+func (arr testCaseList) Len() int {
+	return len(arr)
+}
+
+func (arr testCaseList) Less(i, j int) bool {
+	return len(arr[i].path) < len(arr[j].path)
+}
+
+func (arr testCaseList) Swap(i, j int) {
+	x := arr[i]
+	arr[i] = arr[j]
+	arr[j] = x
+}
+
 const fileContents = "TestContents"
 
 func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []checkedFileOrFolder, local string, remote string, timeout time.Duration) {
@@ -230,6 +246,25 @@ Outer:
 				t.Errorf("Expected %s to be a dir", remoteFolder)
 				return
 			}
+		}
+
+		printPathAndReturnNil := func(path string, f os.FileInfo, err error) error {
+			t.Log(path)
+			return nil
+		}
+
+		t.Log("Remote Path Content:")
+		err := filepath.Walk(remote, printPathAndReturnNil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		t.Log("Local Path Content:")
+		err = filepath.Walk(local, printPathAndReturnNil)
+		if err != nil {
+			t.Error(err)
+			return
 		}
 
 		//If this code is reached, everything is fine

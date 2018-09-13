@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -54,11 +55,13 @@ func TestInitialSync(t *testing.T) {
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
 
+	filesToCheck, foldersToCheck := makeBasicTestCases()
+
 	syncClient := createTestSyncClient(local, remote)
 	defer syncClient.Stop()
 
 	syncClient.errorChan = make(chan error)
-	setExcludePaths(syncClient)
+	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
 
 	// Start client
 	err := syncClient.setup()
@@ -80,8 +83,6 @@ func TestInitialSync(t *testing.T) {
 		t.Error(err)
 		return
 	}
-
-	filesToCheck, foldersToCheck := makeBasicTestCases()
 
 	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
@@ -110,11 +111,15 @@ func TestNormalSync(t *testing.T) {
 	defer os.RemoveAll(local)
 	defer os.RemoveAll(outside)
 
+	filesToCheck, foldersToCheck := makeBasicTestCases()
+	filesToCheck, foldersToCheck = makeRemoveAndRenameTestCases(filesToCheck, foldersToCheck)
+	sort.Stable(foldersToCheck)
+
 	syncClient := createTestSyncClient(local, remote)
 	defer syncClient.Stop()
 
 	syncClient.errorChan = make(chan error)
-	setExcludePaths(syncClient)
+	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
 
 	// Start client
 	err := syncClient.setup()
@@ -144,8 +149,6 @@ func TestNormalSync(t *testing.T) {
 
 	<-syncClient.readyChan
 
-	filesToCheck, foldersToCheck := makeBasicTestCases()
-
 	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
 		t.Error(err)
@@ -161,39 +164,27 @@ func TestNormalSync(t *testing.T) {
 
 }
 
-func setExcludePaths(syncClient *SyncConfig) {
+func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
 
-	syncClient.ExcludePaths = []string{
-		"ignoreFileLocal",
-		"ignoreFolderLocal",
-		"testFolder/ignoreFileLocal",
-		"ignoreFileRemote",
-		"ignoreFolderRemote",
-		"testFolder/ignoreFileRemote",
-	}
+	syncClient.ExcludePaths = []string{}
 
-	syncClient.DownloadExcludePaths = []string{
-		"noDownloadFileLocal",
-		"noDownloadFolderLocal",
-		"testFolder/noDownloadFileLocal",
-		"noDownloadFileRemote",
-		"noDownloadFolderRemote",
-		"testFolder/noDownloadFileRemote",
-	}
+	syncClient.DownloadExcludePaths = []string{}
 
-	syncClient.UploadExcludePaths = []string{
-		"noUploadFileLocal",
-		"noUploadFolderLocal",
-		"testFolder/noUploadFileLocal",
-		"noUploadFileRemote",
-		"noUploadFolderRemote",
-		"testFolder/noUploadFileRemote",
-	}
+	syncClient.UploadExcludePaths = []string{}
 
-	for _, excludeArray := range [3][]string{syncClient.ExcludePaths, syncClient.DownloadExcludePaths, syncClient.UploadExcludePaths} {
-		for _, ignoreString := range excludeArray {
-			excludeArray = append(excludeArray, ignoreString+"_Remove")
-			excludeArray = append(excludeArray, ignoreString+"_RenameToFullContext")
+	for _, testCase := range testCases {
+		/*
+			All paths that should be in these ExcludePaths are marked like this with these strings.
+			for Example: ignoreFileLocal
+			The RenameTo... parts of some files contain those, too, but those use Big Letters so they are not excluded.
+			For example: testFileLocal_RenameToIgnore
+		*/
+		if strings.Contains(testCase.path, "ignore") {
+			syncClient.ExcludePaths = append(syncClient.ExcludePaths, testCase.path)
+		} else if strings.Contains(testCase.path, "noDownload") {
+			syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, testCase.path)
+		} else if strings.Contains(testCase.path, "noUpload") {
+			syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, testCase.path)
 		}
 	}
 
@@ -201,8 +192,8 @@ func setExcludePaths(syncClient *SyncConfig) {
 
 }
 
-func makeBasicTestCases() ([]checkedFileOrFolder, []checkedFileOrFolder) {
-	filesToCheck := []checkedFileOrFolder{
+func makeBasicTestCases() (testCaseList, testCaseList) {
+	filesToCheck := testCaseList{
 		checkedFileOrFolder{
 			path:                "testFileLocal",
 			shouldExistInLocal:  true,
@@ -229,7 +220,7 @@ func makeBasicTestCases() ([]checkedFileOrFolder, []checkedFileOrFolder) {
 		},
 	}
 
-	foldersToCheck := []checkedFileOrFolder{
+	foldersToCheck := testCaseList{
 		checkedFileOrFolder{
 			path:                "testFolder",
 			shouldExistInLocal:  true,
@@ -262,55 +253,170 @@ func makeBasicTestCases() ([]checkedFileOrFolder, []checkedFileOrFolder) {
 		},
 	}
 
-	//Add Files and Folders that are editd in Remote
-	for n, array := range [2][]checkedFileOrFolder{filesToCheck, foldersToCheck} {
-		for _, f := range array {
-
-			if strings.Contains(f.path, "Upload") {
-				f.path = strings.Replace(f.path, "Upload", "Download", -1)
-			} else if strings.Contains(f.path, "Download") {
-				f.path = strings.Replace(f.path, "Download", "Upload", -1)
-			}
-
-			remoteEquivalent := checkedFileOrFolder{
-				path:                strings.Replace(f.path, "Local", "Remote", -1),
-				shouldExistInLocal:  f.shouldExistInRemote,
-				shouldExistInRemote: f.shouldExistInLocal,
-				editLocation:        editInRemote,
-			}
-			array = append(array, remoteEquivalent)
-		}
-		if n == 0 {
-			filesToCheck = array
-		} else {
-			foldersToCheck = array
-		}
-	}
+	//Add Files and Folders that are edited in Remote
+	filesToCheck = addRemoteTestCases(filesToCheck)
+	foldersToCheck = addRemoteTestCases(foldersToCheck)
 
 	//Add Files and Folders that are inside a shared testFolder
-	for n, array := range [2][]checkedFileOrFolder{filesToCheck, foldersToCheck} {
-
-		for _, f := range array {
-			deepEquivalent := checkedFileOrFolder{
-				path:                path.Join("testFolder/", f.path),
-				shouldExistInLocal:  f.shouldExistInLocal,
-				shouldExistInRemote: f.shouldExistInRemote,
-				editLocation:        f.editLocation,
-			}
-			array = append(array, deepEquivalent)
-		}
-
-		if n == 0 {
-			filesToCheck = array
-		} else {
-			foldersToCheck = array
-		}
-	}
+	filesToCheck = addDeepTestCases(filesToCheck)
+	foldersToCheck = addDeepTestCases(foldersToCheck)
 
 	return filesToCheck, foldersToCheck
 }
 
-func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck []checkedFileOrFolder, foldersToCheck []checkedFileOrFolder) error {
+func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList) {
+
+	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
+		for _, f := range array {
+
+			if f.path == "testFolder" {
+				continue
+			}
+
+			removeEquivalent := checkedFileOrFolder{
+				path:                f.path + "_Remove",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+				editLocation:        f.editLocation,
+			}
+			filesToCheck = append(filesToCheck, removeEquivalent)
+
+			renameEquivalent := checkedFileOrFolder{
+				path:                f.path + "_RenameToFullContext",
+				shouldExistInLocal:  f.shouldExistInLocal,
+				shouldExistInRemote: f.shouldExistInRemote,
+				editLocation:        f.editLocation,
+			}
+			filesToCheck = append(filesToCheck, renameEquivalent)
+
+			if strings.Contains(f.path, "testFile") {
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToOutside",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+					editLocation:        f.editLocation,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToIgnore",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+					editLocation:        f.editLocation,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoDownload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+					editLocation:        f.editLocation,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+				renameEquivalent = checkedFileOrFolder{
+					path:                f.path + "_RenameToNoUpload",
+					shouldExistInLocal:  f.shouldExistInLocal,
+					shouldExistInRemote: f.shouldExistInRemote,
+					editLocation:        f.editLocation,
+				}
+				filesToCheck = append(filesToCheck, renameEquivalent)
+			}
+		}
+
+		if n == 0 {
+			filesToCheck = array
+		} else {
+			foldersToCheck = array
+		}
+	}
+
+	renameFilesFromOutside := testCaseList{
+		checkedFileOrFolder{
+			path:                "testFileOutsideToLocal_RenameToFullContext",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: false,
+			editLocation:        editOutside,
+		},
+		checkedFileOrFolder{
+			path:                "testFileOutsideToRemote_RenameToFullContext",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: false,
+			editLocation:        editOutside,
+		},
+	}
+
+	renameFolderFromOutside := testCaseList{
+		checkedFileOrFolder{
+			path:                "testFolderOutsideToLocal_RenameToFullContext",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: false,
+			editLocation:        editOutside,
+		},
+		checkedFileOrFolder{
+			path:                "testFolderOutsideToRemote_RenameToFullContext",
+			shouldExistInLocal:  false,
+			shouldExistInRemote: false,
+			editLocation:        editOutside,
+		},
+		checkedFileOrFolder{
+			path:                "testFolder",
+			shouldExistInLocal:  true,
+			shouldExistInRemote: true,
+			editLocation:        editOutside,
+		},
+	}
+
+	renameFilesFromOutside = addDeepTestCases(renameFilesFromOutside)
+	renameFolderFromOutside = addDeepTestCases(renameFolderFromOutside)
+
+	filesToCheck = append(filesToCheck, renameFilesFromOutside...)
+	foldersToCheck = append(foldersToCheck, renameFolderFromOutside...)
+
+	return filesToCheck, foldersToCheck
+
+}
+
+func addRemoteTestCases(testCases testCaseList) testCaseList {
+
+	for _, f := range testCases {
+
+		if strings.Contains(f.path, "Upload") {
+			f.path = strings.Replace(f.path, "Upload", "Download", -1)
+		} else if strings.Contains(f.path, "Download") {
+			f.path = strings.Replace(f.path, "Download", "Upload", -1)
+		}
+
+		remoteEquivalent := checkedFileOrFolder{
+			path:                strings.Replace(f.path, "Local", "Remote", -1),
+			shouldExistInLocal:  f.shouldExistInRemote,
+			shouldExistInRemote: f.shouldExistInLocal,
+			editLocation:        editInRemote,
+		}
+		testCases = append(testCases, remoteEquivalent)
+	}
+
+	return testCases
+}
+
+func addDeepTestCases(testCases testCaseList) testCaseList {
+
+	for _, f := range testCases {
+
+		if f.path == "testFolder" {
+			continue
+		}
+
+		deepEquivalent := checkedFileOrFolder{
+			path:                path.Join("testFolder/", f.path),
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+			editLocation:        f.editLocation,
+		}
+		testCases = append(testCases, deepEquivalent)
+	}
+
+	return testCases
+}
+
+func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) error {
 
 	for _, f := range foldersToCheck {
 		var parentDir string
@@ -323,7 +429,10 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 		} else {
 			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
 		}
-		os.Mkdir(path.Join(parentDir, f.path), 0755)
+		err := os.Mkdir(path.Join(parentDir, f.path), 0755)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	for _, f := range filesToCheck {
@@ -337,119 +446,17 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 		} else {
 			return errors.New("CreateLocation " + string(f.editLocation) + " unknown")
 		}
-		ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
+		err := ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
+		if err != nil {
+			return errors.Trace(err)
+		}
 
 	}
-
-	/*
-		//Add Remove-Stuff
-		for _, f := range filesToCheck {
-			removeEquivalent := checkedFileOrFolder{
-				path:                f.path + "_Remove",
-				shouldExistInLocal:  f.shouldExistInLocal,
-				shouldExistInRemote: f.shouldExistInRemote,
-			}
-			filesToCheck = append(filesToCheck, removeEquivalent)
-		}
-		for _, f := range foldersToCheck {
-			if f.path == "testFolder" {
-				continue
-			}
-			removeEquivalent := checkedFileOrFolder{
-				path:                f.path + "_Remove",
-				shouldExistInLocal:  f.shouldExistInLocal,
-				shouldExistInRemote: f.shouldExistInRemote,
-			}
-			foldersToCheck = append(foldersToCheck, removeEquivalent)
-		}
-
-		//Add Rename-Stuff
-		for _, f := range filesToCheck {
-			if strings.HasSuffix(f.path, "_Remove") {
-				continue
-			}
-			renameEquivalent := checkedFileOrFolder{
-				path:                f.path + "_RenameToFullContext",
-				shouldExistInLocal:  f.shouldExistInLocal,
-				shouldExistInRemote: f.shouldExistInRemote,
-			}
-			filesToCheck = append(filesToCheck, renameEquivalent)
-
-			if strings.Contains(f.path, "testFile") {
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToOutside",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToIgnore",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToNoDownload",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToNoUpload",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				filesToCheck = append(filesToCheck, renameEquivalent)
-			}
-		}
-
-		for _, f := range foldersToCheck {
-			if strings.HasSuffix(f.path, "_Remove") {
-				continue
-			}
-			if f.path == "testFolder" {
-				continue
-			}
-			renameEquivalent := checkedFileOrFolder{
-				path:                f.path + "_RenameToFullContext",
-				shouldExistInLocal:  f.shouldExistInLocal,
-				shouldExistInRemote: f.shouldExistInRemote,
-			}
-			foldersToCheck = append(foldersToCheck, renameEquivalent)
-
-			if strings.Contains(f.path, "testFile") {
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToOutside",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				foldersToCheck = append(foldersToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToIgnore",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				foldersToCheck = append(foldersToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToNoDownload",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				foldersToCheck = append(foldersToCheck, renameEquivalent)
-				renameEquivalent = checkedFileOrFolder{
-					path:                f.path + "_RenameToNoUpload",
-					shouldExistInLocal:  f.shouldExistInLocal,
-					shouldExistInRemote: f.shouldExistInRemote,
-				}
-				foldersToCheck = append(foldersToCheck, renameEquivalent)
-			}
-		}
-	*/
 
 	return nil
 }
 
-func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck []checkedFileOrFolder, foldersToCheck []checkedFileOrFolder, removeSuffix string) ([]checkedFileOrFolder, []checkedFileOrFolder, error) {
+func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck testCaseList, foldersToCheck testCaseList, removeSuffix string) (testCaseList, testCaseList, error) {
 
 	var completeSuffix string
 	removeIfSuffixMatch := func(path string, f os.FileInfo, err error) error {
