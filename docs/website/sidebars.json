@@ -25,6 +25,7 @@
     "Advanced": [
       "advanced/logs",
       "advanced/kubernetes",
+      "advanced/sync",
       "advanced/architecture"
     ]
   }
