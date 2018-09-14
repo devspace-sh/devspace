@@ -329,7 +329,7 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 					log.StopWait()
 
 					if buildErr == nil {
-						log.Info("Authentication successful (" + *registryConf.URL + ")")
+						log.Done("Authentication successful (" + *registryConf.URL + ")")
 						buildOptions := &types.ImageBuildOptions{}
 
 						if imageConf.Build.Engine.Docker.Options != nil {
@@ -337,16 +337,10 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 								buildOptions.BuildArgs = *imageConf.Build.Engine.Docker.Options.BuildArgs
 							}
 						}
-						log.StartWait("Building Docker image")
 						buildErr = dockerBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
-						log.StopWait()
 
 						if buildErr == nil {
-							log.Info("Image successfully built")
-
-							log.StartWait("Pushing Docker image")
 							buildErr = dockerBuilder.PushImage()
-							log.StopWait()
 
 							if buildErr == nil {
 								log.Info("Image pushed to registry (" + *registryConf.URL + ")")
