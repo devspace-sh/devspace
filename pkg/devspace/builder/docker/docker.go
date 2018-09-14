@@ -54,7 +54,7 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 	imageURL := imageName + ":" + imageTag
 	if registryURL != "" {
 		// Check if it's the official registry or not
-		ref, err := reference.ParseNormalizedNamed(registryURL)
+		ref, err := reference.ParseNormalizedNamed(registryURL + "/" + imageURL)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,7 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 		}
 
 		if repoInfo.Index.Official == false {
-			imageURL = registryURL + "/" + imageName + ":" + imageTag
+			imageURL = registryURL + "/" + imageURL
 		}
 	}
 
@@ -149,7 +149,7 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 	if serverAddress == "" {
 		serverAddress = authServer
 	} else {
-		ref, err := reference.ParseNormalizedNamed(serverAddress)
+		ref, err := reference.ParseNormalizedNamed(b.imageURL)
 		if err != nil {
 			return err
 		}
