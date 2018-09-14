@@ -343,7 +343,20 @@ func isZero(v reflect.Value) bool {
 }
 
 func getYamlKey(key string) string {
-	return strings.ToLower(key[0:1]) + key[1:]
+	re := ""
+
+	for i := 0; i < len(key); i++ {
+		letter := key[i : i+1]
+		lowerLetter := strings.ToLower(letter)
+
+		if i == 0 || (letter != lowerLetter) {
+			re = re + lowerLetter
+		} else {
+			re = re + key[i:]
+			break
+		}
+	}
+	return re
 }
 
 func getPointerValue(object interface{}) (interface{}, bool) {
