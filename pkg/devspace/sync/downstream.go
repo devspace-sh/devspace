@@ -216,7 +216,7 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 
 	// Each file is represented in one line
 	for _, element := range files {
-		if lenFiles <= 3 {
+		if lenFiles <= 3 || d.config.verbose {
 			d.config.Logf("[Downstream] Download file %s, size: %d", element.Name, element.Size)
 		}
 
@@ -335,7 +335,7 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 		absFilepath := filepath.Join(d.config.WatchPath, key)
 
 		if shouldRemoveLocal(absFilepath, value, d.config) {
-			if numRemoveFiles <= 3 {
+			if numRemoveFiles <= 3 || d.config.verbose {
 				d.config.Logf("[Downstream] Remove %s", key)
 			}
 
@@ -369,7 +369,7 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 
 	for _, element := range createFolders {
 		if element.IsDirectory {
-			if numCreateFolders <= 3 {
+			if numCreateFolders <= 3 || d.config.verbose {
 				d.config.Logln("[Downstream] Create folder: " + element.Name)
 			}
 

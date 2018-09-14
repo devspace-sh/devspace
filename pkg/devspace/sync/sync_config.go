@@ -50,13 +50,16 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent   bool
+	silent  bool
+	verbose bool
+
 	stopOnce sync.Once
 	stopped  bool
 
 	// Used for testing
 	testing   bool
 	errorChan chan error
+	readyChan chan bool
 }
 
 // Logf prints the given information to the synclog with context data
@@ -76,7 +79,11 @@ func (s *SyncConfig) Logln(line interface{}) {
 		if s.Pod != nil {
 			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
 		} else {
-			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+			syncLog.
+				WithKey("local",
+					s.WatchPath).
+				WithKey("container", s.DestPath).
+				Info(line)
 		}
 	}
 }
@@ -223,6 +230,10 @@ func (s *SyncConfig) startUpstream() {
 	}
 
 	defer notify.Stop(s.upstream.events)
+
+	if s.readyChan != nil {
+		s.readyChan <- true
+	}
 
 	err = s.upstream.mainLoop()
 	if err != nil {
