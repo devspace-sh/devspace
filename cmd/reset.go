@@ -151,6 +151,8 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *ResetCmd) determineResetExtent() {
+	config := configutil.GetConfig(false)
+
 	cmd.flags.deleteDevspaceFolder = true
 	cmd.flags.deleteRelease = true
 
@@ -166,11 +168,13 @@ func (cmd *ResetCmd) determineResetExtent() {
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteRegistry = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the docker registry be removed ? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
+	if config.Services.InternalRegistry != nil {
+		cmd.flags.deleteRegistry = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the internal registry be removed ? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
+	}
 
 	cmd.flags.deleteTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the tiller server be removed ? (y/n)",
@@ -222,7 +226,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 	var err error
 	config := configutil.GetConfig(false)
 
-	registryReleaseName := *config.Services.Registry.Internal.Release.Name
+	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
 		cmd.kubectl, err = kubectl.NewClient()

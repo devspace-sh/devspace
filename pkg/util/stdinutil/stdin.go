@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/daviddengcn/go-colortext"
+
 	"github.com/covexo/devspace/pkg/util/paramutil"
 )
 
@@ -47,7 +50,7 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 
 		if len(params.DefaultValue) > 0 {
 			fmt.Print("\n")
-			fmt.Print("Press ENTER to use: " + params.DefaultValue + "")
+			log.WriteColored("Press ENTER to use: "+params.DefaultValue, ct.Green)
 		}
 		fmt.Print("\n")
 
@@ -79,6 +82,8 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 			input = ""
 		}
 	}
+	fmt.Println("")
+
 	return &input
 }
 

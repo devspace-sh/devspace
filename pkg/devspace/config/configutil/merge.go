@@ -5,6 +5,14 @@ import (
 	"unsafe"
 )
 
+// Merge deeply merges two objects
+func Merge(object interface{}, overwriteObject interface{}) {
+	objectPointerUnsafe := unsafe.Pointer(&object)
+	overwriteObjectPointerUnsafe := unsafe.Pointer(&overwriteObject)
+
+	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
+}
+
 func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
 	overwriteObjectRef := reflect.ValueOf(overwriteObjectPointer)
 
@@ -36,14 +44,16 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		case reflect.Map:
 			var mergedMap map[interface{}]interface{}
 
-			if !objectPointerRef.IsNil() {
+			if objectPointerRef.IsNil() {
 				objectRef.Set(overwriteObjectRef)
 			} else {
 				mergedMap = map[interface{}]interface{}{}
 
-				overwriteMap := overwriteObject.(map[interface{}]interface{})
+				genericPointerType := reflect.TypeOf(mergedMap)
 
-				for key, overwriteValue := range overwriteMap {
+				for _, keyRef := range overwriteObjectRef.MapKeys() {
+					key := keyRef.Interface()
+					overwriteValue := getMapValue(overwriteObject, key, genericPointerType)
 					valuePointer, keyExists := mergedMap[key]
 
 					valuePointerRef := reflect.ValueOf(valuePointer)

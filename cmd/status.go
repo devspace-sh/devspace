@@ -153,7 +153,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 	config := configutil.GetConfig(false)
-	registry := config.Services.Registry.Internal
+	registry := config.Services.InternalRegistry
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
@@ -297,7 +297,7 @@ func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernete
 		return nil, err
 	}
 
-	if len(releases.Releases) == 0 {
+	if releases == nil || len(releases.Releases) == 0 {
 		return nil, errors.New("No release found")
 	}
 

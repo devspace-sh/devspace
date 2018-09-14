@@ -11,7 +11,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/imdario/mergo"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -26,6 +25,8 @@ type InitCmd struct {
 	chartGenerator  *generator.ChartGenerator
 	config          *v1.Config
 	overwriteConfig *v1.Config
+	defaultImage    *v1.ImageConfig
+	defaultRegistry *v1.RegistryConfig
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -109,7 +110,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		cmd.config = configutil.GetConfigInstance()
 	}
-	mergo.Merge(cmd.config, &v1.Config{
+	configutil.Merge(cmd.config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
 			Release: &v1.Release{
@@ -117,11 +118,35 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Namespace: configutil.String("default"),
 			},
 		},
-		Image: &v1.ImageConfig{
-			Name: configutil.String("devspace"),
+		Images: &map[string]*v1.ImageConfig{
+			"default": &v1.ImageConfig{
+				Name: configutil.String("devspace"),
+				Build: &v1.BuildConfig{
+					Engine: &v1.BuildEngine{
+						Docker: &v1.DockerBuildEngine{
+							Enabled: configutil.Bool(true),
+						},
+					},
+				},
+				Registry: configutil.String("default"),
+			},
+		},
+		Registries: &map[string]*v1.RegistryConfig{
+			"default": &v1.RegistryConfig{
+				Auth: &v1.RegistryAuth{},
+			},
+			"internal": &v1.RegistryConfig{
+				Auth: &v1.RegistryAuth{},
+			},
 		},
 	})
-	cmd.overwriteConfig = configutil.GetOverwriteConfig()
+	cmd.overwriteConfig = configutil.GetOverwriteConfig(false)
+
+	imageMap := *cmd.config.Images
+	cmd.defaultImage, _ = imageMap["default"]
+
+	registryMap := *cmd.config.Registries
+	cmd.defaultRegistry, _ = registryMap["default"]
 
 	cmd.initChartGenerator()
 
@@ -153,7 +178,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.configureKubernetes()
 		cmd.configureDevSpace()
 
-		cmd.config.Image.Name = cmd.config.DevSpace.Release.Name
+		cmd.defaultImage.Name = cmd.config.DevSpace.Release.Name
 
 		cmd.configureTiller()
 		cmd.configureRegistry()
@@ -373,7 +398,7 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
-	registryConfig := cmd.config.Services.Registry
+	internalRegistryConfig := cmd.config.Services.InternalRegistry
 
 	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to enable automatic Docker image building?",
@@ -385,51 +410,90 @@ func (cmd *InitCmd) configureRegistry() {
 		internalRegistryKey := "internal registry"
 		defaultRegistryValue := internalRegistryKey
 
-		if registryConfig.External != nil {
-			defaultRegistryValue = *registryConfig.External
+		if cmd.defaultRegistry.URL != nil {
+			defaultRegistryValue = *cmd.defaultRegistry.URL
 		}
 		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
+			Question:               "Which registry do you want to push to? ('internal registry', 'hub.docker.com' or URL)",
 			DefaultValue:           defaultRegistryValue,
 			ValidationRegexPattern: "^.*$",
 		})
 
 		if *registryURL != internalRegistryKey {
-			registryConfig.External = registryURL
-			registryConfig.Internal = nil
+			cmd.defaultRegistry.URL = registryURL
+			internalRegistryConfig = nil
+
+			if *registryURL == "hub.docker.com" {
+				defaultImageName := *cmd.defaultImage.Name
+				defaultImageNameParts := strings.Split(defaultImageName, "/")
+				existingDockerUsername := ""
+
+				if len(defaultImageNameParts) > 1 {
+					existingDockerUsername = defaultImageNameParts[0]
+				}
+
+				dockerUsername := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "What is your Docker username?",
+					DefaultValue:           existingDockerUsername,
+					ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
+				})
+				cmd.defaultImage.Name = configutil.String(*dockerUsername + "/" + strings.TrimPrefix(defaultImageName, *dockerUsername))
+			}
 		} else {
-			registryConfig.External = nil
+			imageMap := *cmd.config.Images
+			defaultImageConf, defaultImageExists := imageMap["default"]
 
-			if registryConfig.Internal.Release.Name == nil {
-				registryConfig.Internal.Release.Name = configutil.String("devspace-registry")
+			if defaultImageExists {
+				defaultImageConf.Registry = configutil.String("internal")
 			}
 
-			if registryConfig.Internal.Release.Namespace == nil {
-				registryConfig.Internal.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+			if internalRegistryConfig == nil {
+				internalRegistryConfig = &v1.InternalRegistry{
+					Release: &v1.Release{},
+				}
+				cmd.config.Services.InternalRegistry = internalRegistryConfig
 			}
-			registryUser := cmd.overwriteConfig.Services.Registry.User
 
-			if registryUser.Username == nil {
+			if internalRegistryConfig.Release.Name == nil {
+				internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
+			}
+
+			if internalRegistryConfig.Release.Namespace == nil {
+				internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+			}
+			overwriteRegistryMap := *cmd.overwriteConfig.Registries
+
+			overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
+
+			if !overwriteRegistryConfigFound {
+				overwriteRegistryConfig = &v1.RegistryConfig{
+					Auth: &v1.RegistryAuth{},
+				}
+				overwriteRegistryMap["internal"] = overwriteRegistryConfig
+			}
+			registryAuth := overwriteRegistryConfig.Auth
+
+			if registryAuth.Username == nil {
 				randomUserSuffix, err := randutil.GenerateRandomString(5)
 
 				if err != nil {
 					log.Fatalf("Error creating random username: %s", err.Error())
 				}
-				registryUser.Username = configutil.String("user-" + randomUserSuffix)
+				registryAuth.Username = configutil.String("user-" + randomUserSuffix)
 			}
 
-			if registryUser.Password == nil {
+			if registryAuth.Password == nil {
 				randomPassword, err := randutil.GenerateRandomString(12)
 
 				if err != nil {
 					log.Fatalf("Error creating random password: %s", err.Error())
 				}
-				registryUser.Password = &randomPassword
+				registryAuth.Password = &randomPassword
 			}
 			var registryReleaseValues map[interface{}]interface{}
 
-			if registryConfig.Internal.Release.Values != nil {
-				registryReleaseValues = *registryConfig.Internal.Release.Values
+			if internalRegistryConfig.Release.Values != nil {
+				registryReleaseValues = *internalRegistryConfig.Release.Values
 			} else {
 				registryReleaseValues = map[interface{}]interface{}{}
 
@@ -475,7 +539,7 @@ func (cmd *InitCmd) configureRegistry() {
 					secretMap["htpasswd"] = ""
 				}
 			}
-			registryConfig.Internal.Release.Values = &registryReleaseValues
+			internalRegistryConfig.Release.Values = &registryReleaseValues
 		}
 	}
 }

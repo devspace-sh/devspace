@@ -1,0 +1,34 @@
+package v1
+
+//DevSpaceConfig defines the devspace deployment
+type DevSpaceConfig struct {
+	Release        *Release                 `yaml:"release"`
+	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
+	Sync           *[]*SyncConfig           `yaml:"sync"`
+}
+
+//PortForwardingConfig defines the ports for a port forwarding to a DevSpace
+type PortForwardingConfig struct {
+	Namespace     *string             `yaml:"namespace"`
+	ResourceType  *string             `yaml:"resourceType"`
+	LabelSelector *map[string]*string `yaml:"labelSelector"`
+	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
+}
+
+//PortMapping defines the ports for a PortMapping
+type PortMapping struct {
+	LocalPort  *int `yaml:"localPort"`
+	RemotePort *int `yaml:"remotePort"`
+}
+
+//SyncConfig defines the paths for a SyncFolder
+type SyncConfig struct {
+	Namespace            *string             `yaml:"namespace"`
+	ResourceType         *string             `yaml:"resourceType"`
+	LabelSelector        *map[string]*string `yaml:"labelSelector"`
+	LocalSubPath         *string             `yaml:"localSubPath"`
+	ContainerPath        *string             `yaml:"containerPath"`
+	ExcludePaths         *[]string           `yaml:"excludePaths"`
+	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
+	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`
+}

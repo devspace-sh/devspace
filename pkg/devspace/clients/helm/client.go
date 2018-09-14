@@ -255,8 +255,8 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 			config.DevSpace.Release.Namespace,
 		}
 
-		if config.Services.Registry.Internal.Release.Namespace != nil {
-			appNamespaces = append(appNamespaces, config.Services.Registry.Internal.Release.Namespace)
+		if config.Services.InternalRegistry != nil && config.Services.InternalRegistry.Release.Namespace != nil {
+			appNamespaces = append(appNamespaces, config.Services.InternalRegistry.Release.Namespace)
 		}
 		tillerConfig.AppNamespaces = &appNamespaces
 
@@ -504,13 +504,13 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 			return nil, err
 		}
 		chartDownloader := &helmdownloader.Manager{
-		/*		Out:        i.out,
-				ChartPath:  i.chartPath,
-				HelmHome:   settings.Home,
-				Keyring:    defaultKeyring(),
-				SkipUpdate: false,
-				Getters:    getter.All(settings),
-		*/
+			/*		Out:        i.out,
+					ChartPath:  i.chartPath,
+					HelmHome:   settings.Home,
+					Keyring:    defaultKeyring(),
+					SkipUpdate: false,
+					Getters:    getter.All(settings),
+			*/
 		}
 		err = chartDownloader.Update()
 
