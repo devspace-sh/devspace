@@ -22,17 +22,6 @@ The DevSpace CLI will deploy the Helm chart specified under [chart/](/docs/confi
 
 **Note:** If you do not have a [Helm chart](/docs/configuration/chart.html) yet, the DevSpace CLI will automatically create one for you.
 
-## 2-Way Code Sync
-The DevSpace CLI will establish a bi-directional code synchronization between your local source code directory and the main dev pod inside your DevSpace. The synchonization has the following characteristics:
-
-- No server-side component is required to use the sync mechanism.
-- The sync algorithm keeps track of all (remote and local) files within an in-built, local database.
-- The code sync works with any container filesystem (i.e. ephemeral storage and mounted volumes).
-- The code sync is lightning fast and very reliable. It detects remote changes as well as local changes quickly and synchronizes them respectively.
-- The sync algorithm only requires the following stardard POSIX commands to be available inside your development container: sleep, mkdir, rm, mv, cat, ls, printf, echo, kill, tar, sh
-
-**Note:** You can configure the sync path mappings via [.devspace/config.yaml](/docs/configuration/config.yaml.html).
-
 ## Terminal Proxy
 The terminal proxy opens a terminal within your dev container and connects your local command-line to it. This way, you can directly run commands inside your DevSpace and stream the response directly to your local computer.
 
