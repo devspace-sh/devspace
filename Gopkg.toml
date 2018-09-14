@@ -3,17 +3,13 @@
   revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
 
 [[constraint]]
-  name = "github.com/imdario/mergo"
-  version = "v0.3.6"
-
-[[constraint]]
   name = "github.com/juju/errors"
   revision = "22422dad46e14561a0854ad42497a75af9b61909"
 
 [[constraint]]
   name = "github.com/docker/docker"
   source = "https://github.com/moby/moby"
-  revision = "ae7016427f8cba4e4d8fcb979d6ba313ee2c0702"
+  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"
 
 [[constraint]]
   name = "github.com/docker/cli"
@@ -80,6 +76,10 @@
   revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
 
 [[override]]
+ name = "github.com/docker/go-metrics"
+ revision = "d466d4f6fd960e01820085bd7e1a24426ee7ef18"
+
+[[override]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.10.0"
 
@@ -109,7 +109,7 @@
 
 [[override]]
   name = "github.com/docker/distribution"
-  revision = "a97d7c0c155be14d1380c075d3197a5d89c2abc2"
+  revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
 
 [[override]]
   name = "github.com/sirupsen/logrus"

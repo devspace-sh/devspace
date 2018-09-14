@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"os"
 	"strings"
 
 	"context"
@@ -10,7 +9,7 @@ import (
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -22,6 +21,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/docker/docker/pkg/jsonmessage"
+)
+
+var (
+	stdin, stdout, stderr = term.StdStreams()
 )
 
 // Builder holds the necessary information to build and push docker images
@@ -87,6 +90,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	ctx := context.Background()
+	outStream := command.NewOutStream(stdout)
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -118,7 +122,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	// Setup an upload progress bar
-	progressOutput := streamformatter.NewProgressOutput(log.GetInstance())
+	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
 	response, err := b.client.ImageBuild(ctx, body, types.ImageBuildOptions{
 		Tags:        []string{b.imageURL},
@@ -131,8 +135,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 	defer response.Body.Close()
 
-	fd, _ := term.GetFdInfo(os.Stdout)
-	err = jsonmessage.DisplayJSONMessagesStream(response.Body, log.GetInstance(), fd, false, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 	if err != nil {
 		return err
 	}
@@ -204,8 +207,8 @@ func (b *Builder) PushImage() error {
 		return err
 	}
 
-	fd, _ := term.GetFdInfo(os.Stdout)
-	err = jsonmessage.DisplayJSONMessagesStream(out, log.GetInstance(), fd, false, nil)
+	outStream := command.NewOutStream(stdout)
+	err = jsonmessage.DisplayJSONMessagesStream(out, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 	if err != nil {
 		return err
 	}
