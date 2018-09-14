@@ -49,7 +49,7 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 
 	// Exclude changes on the upload exclude list
 	// if s.uploadIgnoreMatcher != nil {
-	// 	if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+	//	if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
 	//		return false
 	//	}
 	// }
