@@ -74,6 +74,9 @@ func SaveConfig() error {
 		}
 		return ioutil.WriteFile(workdir+overwriteConfigPath, overwriteConfigYaml, os.ModePerm)
 	}
+	configLoaded = true
+	overwriteConfigLoaded = true
+
 	return nil
 }
 

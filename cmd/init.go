@@ -414,7 +414,7 @@ func (cmd *InitCmd) configureRegistry() {
 			defaultRegistryValue = *cmd.defaultRegistry.URL
 		}
 		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which registry do you want to push to? (URL or 'internal registry')",
+			Question:               "Which registry do you want to push to? ('internal registry', 'hub.docker.com' or URL)",
 			DefaultValue:           defaultRegistryValue,
 			ValidationRegexPattern: "^.*$",
 		})
@@ -422,6 +422,23 @@ func (cmd *InitCmd) configureRegistry() {
 		if *registryURL != internalRegistryKey {
 			cmd.defaultRegistry.URL = registryURL
 			internalRegistryConfig = nil
+
+			if *registryURL == "hub.docker.com" {
+				defaultImageName := *cmd.defaultImage.Name
+				defaultImageNameParts := strings.Split(defaultImageName, "/")
+				existingDockerUsername := ""
+
+				if len(defaultImageNameParts) > 1 {
+					existingDockerUsername = defaultImageNameParts[0]
+				}
+
+				dockerUsername := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "What is your Docker username?",
+					DefaultValue:           existingDockerUsername,
+					ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
+				})
+				cmd.defaultImage.Name = configutil.String(*dockerUsername + "/" + strings.TrimPrefix(defaultImageName, *dockerUsername))
+			}
 		} else {
 			imageMap := *cmd.config.Images
 			defaultImageConf, defaultImageExists := imageMap["default"]

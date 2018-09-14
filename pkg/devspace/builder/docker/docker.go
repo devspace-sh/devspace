@@ -165,6 +165,7 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 	}
 
 	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
+
 	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
 		authConfig.Username = strings.TrimSpace(user)
 		authConfig.Password = strings.TrimSpace(password)

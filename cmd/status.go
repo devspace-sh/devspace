@@ -297,7 +297,7 @@ func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernete
 		return nil, err
 	}
 
-	if len(releases.Releases) == 0 {
+	if releases == nil || len(releases.Releases) == 0 {
 		return nil, errors.New("No release found")
 	}
 

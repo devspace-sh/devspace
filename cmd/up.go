@@ -304,24 +304,32 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
 					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
 				}
-				dockerBuilder, buildErr = docker.NewBuilder(*registryConf.URL, *imageConf.Name, imageTag, preferMinikube)
+				registryURL := *registryConf.URL
+
+				if registryURL == "hub.docker.com" {
+					registryURL = ""
+				}
+				dockerBuilder, buildErr = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
 
 				if buildErr == nil {
 					username := ""
 					password := ""
 
-					if registryConf.Auth.Username != nil {
-						username = *registryConf.Auth.Username
-					}
+					if registryConf.Auth != nil {
+						if registryConf.Auth.Username != nil {
+							username = *registryConf.Auth.Username
+						}
 
-					if registryConf.Auth.Password != nil {
-						password = *registryConf.Auth.Password
+						if registryConf.Auth.Password != nil {
+							password = *registryConf.Auth.Password
+						}
 					}
 					log.StartWait("Authenticating (" + *registryConf.URL + ")")
 					buildErr = dockerBuilder.Authenticate(username, password, len(username) == 0)
 					log.StopWait()
 
 					if buildErr == nil {
+						log.Info("Authentication successful (" + *registryConf.URL + ")")
 						buildOptions := &types.ImageBuildOptions{}
 
 						if imageConf.Build.Engine.Docker.Options != nil {
@@ -334,9 +342,15 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 						log.StopWait()
 
 						if buildErr == nil {
+							log.Info("Image successfully built")
+
 							log.StartWait("Pushing Docker image")
 							buildErr = dockerBuilder.PushImage()
 							log.StopWait()
+
+							if buildErr == nil {
+								log.Info("Image pushed to registry (" + *registryConf.URL + ")")
+							}
 						}
 					}
 				}
@@ -352,6 +366,7 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			if err != nil {
 				log.Fatalf("Config saving error: %s", err.Error())
 			}
+			log.Done("Done building and pushing image '" + imageName + "'")
 		} else {
 			log.Infof("Skip building image '%s'", imageName)
 		}
@@ -453,7 +468,7 @@ func (cmd *UpCmd) deployChart() {
 				err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
 
 				if err != nil {
-					log.Panicf("Error during waiting for pod: %s", err.Error())
+					log.Fatalf("Error during waiting for pod: %s", err.Error())
 				}
 
 				break

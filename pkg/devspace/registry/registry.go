@@ -196,7 +196,12 @@ func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	if registryConfErr != nil {
 		log.Fatal(registryConfErr)
 	}
-	image := *registryConfig.URL + "/" + *imageConfig.Name
+	image := *imageConfig.Name
+	registryURL := *registryConfig.URL
+
+	if registryURL != "" && registryURL != "hub.docker.com" {
+		image = registryURL + "/" + image
+	}
 
 	if includingLatestTag {
 		image = image + ":" + *imageConfig.Tag
