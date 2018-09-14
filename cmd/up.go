@@ -8,6 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
+
+	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+
 	"github.com/covexo/devspace/pkg/util/randutil"
 
 	"github.com/covexo/devspace/pkg/util/log"
@@ -39,16 +45,15 @@ type UpCmd struct {
 
 // UpCmdFlags are the flags available for the up-command
 type UpCmdFlags struct {
-	tiller           bool
-	open             string
-	initRegistries   bool
-	build            bool
-	shell            string
-	sync             bool
-	deploy           bool
-	portforwarding   bool
-	noSleep          bool
-	imageDestination string
+	tiller         bool
+	open           string
+	initRegistries bool
+	build          bool
+	shell          string
+	sync           bool
+	deploy         bool
+	portforwarding bool
+	noSleep        bool
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -88,14 +93,13 @@ Starts and connects your DevSpace:
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
-	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistry, "init-registry", cmd.flags.initRegistry, "Install or upgrade Docker registry")
+	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
 	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
-	cobraCmd.Flags().StringVar(&cmd.flags.imageDestination, "image-destination", "", "Choose image destination")
 }
 
 // Run executes the command logic
@@ -131,38 +135,18 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.initHelm()
 
 	if cmd.flags.initRegistries {
-		if cmd.flags.initRegistry && cmd.flags.imageDestination == "" {
-			log.StartWait("Initializing docker registry")
-			err := registry.InitRegistry(cmd.kubectl, cmd.helm)
-			log.StopWait()
-
-			if err != nil {
-				log.Fatalf("Docker registry error: %v", err)
-			}
-
-			log.Done("Docker registry started")
-		}
+		cmd.initRegistries()
 	}
-
-	var shouldRebuild bool
+	mustRedeploy := cmd.flags.deploy
 
 	if cmd.flags.build {
-		shouldRebuild = cmd.shouldRebuild(cobraCmd.Flags().Changed("build"))
-
-		if shouldRebuild {
-			cmd.buildImage()
-
-			err = configutil.SaveConfig()
-			if err != nil {
-				log.Fatalf("Config saving error: %s", err.Error())
-			}
-		}
+		mustRedeploy = cmd.buildImages(cobraCmd.Flags().Changed("build"))
 	}
 
 	// Check if we find a running release pod
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
 
-	if err != nil || cmd.flags.deploy || shouldRebuild {
+	if err != nil || mustRedeploy {
 		cmd.deployChart()
 	} else {
 		cmd.pod = pod
@@ -206,14 +190,47 @@ func (cmd *UpCmd) ensureNamespace() error {
 	return nil
 }
 
-func (cmd *UpCmd) shouldRebuild(buildFlagChanged bool) bool {
+func (cmd *UpCmd) initRegistries() {
 	config := configutil.GetConfig(false)
+	registryMap := *config.Registries
+
+	if config.Services.InternalRegistry != nil {
+		registryConf, regConfExists := registryMap["internal"]
+
+		if !regConfExists {
+			log.Fatal("Registry config not found for internal registry")
+		}
+		log.StartWait("Initializing internal registry")
+		err := registry.InitInternalRegistry(cmd.kubectl, cmd.helm, config.Services.InternalRegistry, registryConf)
+
+		err = configutil.SaveConfig()
+		log.StopWait()
+
+		if err != nil {
+			log.Fatalf("Internal registry error: %v", err)
+		}
+
+		log.Done("Internal registry started")
+	}
+
+	for registryName, registryConf := range registryMap {
+		log.StartWait("Creating image pull secret for registry: " + registryName)
+		err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryConf)
+		log.StopWait()
+
+		if err != nil {
+			log.Fatalf("Failed to create pull secret for registry: %v", err)
+		}
+	}
+}
+
+func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string, buildFlagChanged bool) bool {
 	mustRebuild := true
-	dockerfileInfo, statErr := os.Stat(cmd.workdir + "/Dockerfile")
+	dockerfileInfo, statErr := os.Stat(dockerfilePath)
 	var dockerfileModTime time.Time
 
 	if statErr != nil {
-		if config.Image.BuildTime == nil {
+		if imageConf.Build.LatestTimestamp == nil {
 			log.Fatalf("Dockerfile missing: %s", statErr.Error())
 		} else {
 			mustRebuild = false
@@ -223,39 +240,117 @@ func (cmd *UpCmd) shouldRebuild(buildFlagChanged bool) bool {
 
 		// When user has not used -b or --build flags
 		if buildFlagChanged == false {
-			if config.Image.BuildTime != nil {
-				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *config.Image.BuildTime)
+			if imageConf.Build.LatestTimestamp != nil {
+				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *imageConf.Build.LatestTimestamp)
 
 				// only rebuild Docker image when Dockerfile has changed since latest build
 				mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
 			}
 		}
 	}
-	config.Image.BuildTime = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
+	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
 
 	return mustRebuild
 }
 
-func (cmd *UpCmd) buildImage() {
-	config := configutil.GetConfig(false)
+// returns true when one of the images had to be rebuild
+func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
+	re := false
+	config := configutil.GetConfig(true)
 
-	imageTag, randErr := randutil.GenerateRandomString(7)
+	for imageName, imageConf := range *config.Images {
+		dockerfilePath := "./Dockerfile"
+		contextPath := "./"
 
-	if randErr != nil {
-		log.Fatalf("Image building failed: %s", randErr.Error())
+		if imageConf.Build.DockerfilePath != nil {
+			dockerfilePath = *imageConf.Build.DockerfilePath
+		}
+
+		if imageConf.Build.ContextPath != nil {
+			contextPath = *imageConf.Build.ContextPath
+		}
+		dockerfilePath = filepath.Join(cmd.workdir, strings.TrimPrefix(dockerfilePath, "."))
+		contextPath = filepath.Join(cmd.workdir, strings.TrimPrefix(contextPath, "."))
+
+		if cmd.shouldRebuild(imageConf, dockerfilePath, buildFlagChanged) {
+			re = true
+			imageTag, randErr := randutil.GenerateRandomString(7)
+
+			if randErr != nil {
+				log.Fatalf("Image building failed: %s", randErr.Error())
+			}
+			registryConf, registryErr := registry.GetRegistryConfig(imageConf)
+
+			if registryErr != nil {
+				log.Fatal(registryErr)
+			}
+			var buildErr error
+
+			buildInfo := "Building image '%s' with engine '%s'"
+
+			if imageConf.Build.Engine.Kaniko != nil {
+				log.Infof(buildInfo, imageName, "kaniko")
+
+				imageDestination := registry.GetImageURL(imageConf, false) + ":" + imageTag
+
+				buildErr = kaniko.BuildDockerfile(cmd.kubectl, *config.DevSpace.Release.Namespace, imageDestination, registry.PullSecretName, *registryConf.Insecure)
+			} else {
+				log.Infof(buildInfo, imageName, "docker")
+
+				var dockerBuilder *docker.Builder
+
+				preferMinikube := true
+
+				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
+					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
+				}
+				dockerBuilder, buildErr = docker.NewBuilder(*registryConf.URL, *imageConf.Name, imageTag, preferMinikube)
+
+				if buildErr == nil {
+					username := ""
+					password := ""
+
+					if registryConf.Auth.Username != nil {
+						username = *registryConf.Auth.Username
+					}
+
+					if registryConf.Auth.Password != nil {
+						password = *registryConf.Auth.Password
+					}
+					buildErr = dockerBuilder.Authenticate(username, password, len(username) == 0)
+
+					if buildErr == nil {
+						buildOptions := &types.ImageBuildOptions{}
+
+						if imageConf.Build.Engine.Docker.Options != nil {
+							if imageConf.Build.Engine.Docker.Options.BuildArgs != nil {
+								buildOptions.BuildArgs = *imageConf.Build.Engine.Docker.Options.BuildArgs
+							}
+						}
+						buildErr = dockerBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+
+						if buildErr == nil {
+							buildErr = dockerBuilder.PushImage()
+						}
+					}
+				}
+			}
+
+			if buildErr != nil {
+				log.Fatalf("Image building failed: %s", buildErr.Error())
+			}
+			imageConf.Tag = &imageTag
+
+			err := configutil.SaveConfig()
+
+			if err != nil {
+				log.Fatalf("Config saving error: %s", err.Error())
+			}
+		} else {
+			log.Infof("Skip building image '%s'", imageName)
+		}
 	}
-	imageDestination := registry.GetImageURL(false) + ":" + imageTag
-
-	if cmd.flags.imageDestination != "" {
-		imageDestination = cmd.flags.imageDestination
-	}
-	err := kaniko.BuildDockerfile(cmd.kubectl, *config.DevSpace.Release.Namespace, imageDestination, registry.PullSecretName, *config.Image.Registry.Insecure)
-
-	config.Image.Tag = &imageTag
-
-	if err != nil {
-		log.Fatalf("Image building failed: %s", err.Error())
-	}
+	return re
 }
 
 func (cmd *UpCmd) initHelm() {
@@ -284,16 +379,19 @@ func (cmd *UpCmd) deployChart() {
 	chartPath := "chart/"
 
 	values := map[interface{}]interface{}{}
-	containerValues := map[interface{}]interface{}{}
+	containerValues := map[string]interface{}{}
 
-	containerValues["image"] = registry.GetImageURL(true)
+	for imageName, imageConf := range *config.Images {
+		container := map[string]interface{}{}
+		container["image"] = registry.GetImageURL(imageConf, true)
 
-	if !cmd.flags.noSleep {
-		containerValues["command"] = []string{"sleep"}
-		containerValues["args"] = []string{"99999999"}
+		if !cmd.flags.noSleep {
+			container["command"] = []string{"sleep"}
+			container["args"] = []string{"99999999"}
+		}
+		containerValues[imageName] = container
 	}
-
-	values["container"] = containerValues
+	values["containers"] = containerValues
 
 	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
 

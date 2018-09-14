@@ -10,9 +10,10 @@ type ImageConfig struct {
 
 //BuildConfig defines the build process for an image
 type BuildConfig struct {
-	ContextPath    *string      `yaml:"contextPath"`
-	DockerfilePath *string      `yaml:"dockerfilePath"`
-	Engine         *BuildEngine `yaml:"engine"`
+	ContextPath     *string      `yaml:"contextPath"`
+	DockerfilePath  *string      `yaml:"dockerfilePath"`
+	Engine          *BuildEngine `yaml:"engine"`
+	LatestTimestamp *string      `yaml:"latestTime"`
 }
 
 //BuildEngine defines which build engine to use
@@ -23,8 +24,7 @@ type BuildEngine struct {
 
 //KanikoBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoBuildEngine struct {
-	Enabled *bool                     `yaml:"enabled"`
-	Options *DockerBuildEngineOptions `yaml:"options"`
+	Enabled *bool `yaml:"enabled"`
 }
 
 //DockerBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost

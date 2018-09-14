@@ -14,11 +14,9 @@ func makeConfig() *v1.Config {
 			Release:        &v1.Release{},
 			Sync:           &[]*v1.SyncConfig{},
 		},
-		Images: &map[string]*v1.ImageConfig{},
+		Images:     &map[string]*v1.ImageConfig{},
+		Registries: &map[string]*v1.RegistryConfig{},
 		Services: &v1.ServiceConfig{
-			InternalRegistry: &v1.InternalRegistry{
-				Release: &v1.Release{},
-			},
 			Tiller: &v1.TillerConfig{
 				AppNamespaces: &[]*string{},
 				Release:       &v1.Release{},

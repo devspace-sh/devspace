@@ -92,7 +92,7 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:9453458ba06a7b4b5a6cb522b479f449b4d9387bcf33f9a7e3fdb834569d7a40"
+  digest = "1:2aaf2cc045d0219bba79655e4df795b973168c310574669cb75786684f7287d3"
   name = "github.com/bmatcuk/doublestar"
   packages = ["."]
   pruneopts = "UT"
@@ -165,7 +165,7 @@
   revision = "a97d7c0c155be14d1380c075d3197a5d89c2abc2"
 
 [[projects]]
-  digest = "1:9ca8262c554849bde9b801160acfed553a9cb7bccae797de594327ccc4c3360a"
+  digest = "1:3557114df6012e88db834d75b8ceadfb5bd748cd7a48e0a4d3191541d95cab53"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -706,7 +706,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:c1072f27d5b8be1032af14ed7776f475bc58d35723a753c4b92c953d92e3eb33"
+  digest = "1:6d4d9067e639d96a804ee9a30fa89c7233c5c5edbfe736072ff00d48c97bccc4"
   name = "github.com/otiai10/copy"
   packages = ["."]
   pruneopts = "UT"
@@ -1507,7 +1507,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:7ae7497bb0f95b9f0d3d5876cb4140645773697c4f7ec12621da7ddc369d784f"
+  digest = "1:dabd439d62fbe939504ccb2ec6783d91412cdfc83e204731c16623a8d750d529"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1551,7 +1551,7 @@
   revision = "e3762e86a74c878ffed47484592986685639c2cd"
 
 [[projects]]
-  digest = "1:a93d65b059d465cd84ba089b8daf6fbacf3beeb0e78fa1a4cf0585398795b37c"
+  digest = "1:96dd0316331274d35050f78288957e6d04bd5594457ea1f7c24f463d19b7d793"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/events",
@@ -1748,12 +1748,18 @@
     "github.com/docker/cli/cli/command/image/build",
     "github.com/docker/cli/cli/config",
     "github.com/docker/cli/cli/config/configfile",
+    "github.com/docker/distribution/reference",
     "github.com/docker/docker/api",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/client",
     "github.com/docker/docker/pkg/archive",
+    "github.com/docker/docker/pkg/homedir",
     "github.com/docker/docker/pkg/idtools",
+    "github.com/docker/docker/pkg/jsonmessage",
+    "github.com/docker/docker/pkg/progress",
+    "github.com/docker/docker/pkg/streamformatter",
     "github.com/docker/docker/pkg/term",
+    "github.com/docker/docker/registry",
     "github.com/docker/go-connections/tlsconfig",
     "github.com/foomo/htpasswd",
     "github.com/imdario/mergo",

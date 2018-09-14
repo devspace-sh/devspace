@@ -11,7 +11,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/imdario/mergo"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -111,7 +110,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		cmd.config = configutil.GetConfigInstance()
 	}
-	mergo.Merge(cmd.config, &v1.Config{
+	configutil.Merge(cmd.config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
 			Release: &v1.Release{
@@ -122,10 +121,21 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
 				Name: configutil.String("devspace"),
+				Build: &v1.BuildConfig{
+					Engine: &v1.BuildEngine{
+						Docker: &v1.DockerBuildEngine{
+							Enabled: configutil.Bool(true),
+						},
+					},
+				},
+				Registry: configutil.String("default"),
 			},
 		},
 		Registries: &map[string]*v1.RegistryConfig{
 			"default": &v1.RegistryConfig{
+				Auth: &v1.RegistryAuth{},
+			},
+			"internal": &v1.RegistryConfig{
 				Auth: &v1.RegistryAuth{},
 			},
 		},
@@ -413,6 +423,20 @@ func (cmd *InitCmd) configureRegistry() {
 			cmd.defaultRegistry.URL = registryURL
 			internalRegistryConfig = nil
 		} else {
+			imageMap := *cmd.config.Images
+			defaultImageConf, defaultImageExists := imageMap["default"]
+
+			if defaultImageExists {
+				defaultImageConf.Registry = configutil.String("internal")
+			}
+
+			if internalRegistryConfig == nil {
+				internalRegistryConfig = &v1.InternalRegistry{
+					Release: &v1.Release{},
+				}
+				cmd.config.Services.InternalRegistry = internalRegistryConfig
+			}
+
 			if internalRegistryConfig.Release.Name == nil {
 				internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 			}
@@ -422,13 +446,13 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 			overwriteRegistryMap := *cmd.overwriteConfig.Registries
 
-			overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["default"]
+			overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
 
 			if !overwriteRegistryConfigFound {
 				overwriteRegistryConfig = &v1.RegistryConfig{
 					Auth: &v1.RegistryAuth{},
 				}
-				overwriteRegistryMap["default"] = overwriteRegistryConfig
+				overwriteRegistryMap["internal"] = overwriteRegistryConfig
 			}
 			registryAuth := overwriteRegistryConfig.Auth
 

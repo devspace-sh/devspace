@@ -26,10 +26,12 @@ const PullSecretName = "devspace-pull-secret"
 const registryPort = 5000
 
 // CreatePullSecret creates an image pull secret for a registry
-func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryConfig v1.RegistryConfig) error {
+func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryConfig *v1.RegistryConfig) error {
 	registryAuth := registryConfig.Auth
-	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryAuth.Username + ":" + *registryAuth.Password))
-	pullSecretDataValue := []byte(`{
+
+	if registryAuth != nil && registryAuth.Username != nil && registryAuth.Password != nil {
+		registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryAuth.Username + ":" + *registryAuth.Password))
+		pullSecretDataValue := []byte(`{
 		"auths": {
 			"` + *registryConfig.URL + `": {
 				"auth": "` + registryAuthEncoded + `",
@@ -38,27 +40,28 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryC
 		}
 	}`)
 
-	pullSecretData := map[string][]byte{}
-	pullSecretDataKey := k8sv1.DockerConfigJsonKey
-	pullSecretData[pullSecretDataKey] = pullSecretDataValue
+		pullSecretData := map[string][]byte{}
+		pullSecretDataKey := k8sv1.DockerConfigJsonKey
+		pullSecretData[pullSecretDataKey] = pullSecretDataValue
 
-	registryPullSecret := &k8sv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: PullSecretName,
-		},
-		Data: pullSecretData,
-		Type: k8sv1.SecretTypeDockerConfigJson,
-	}
-	_, err := kubectl.Core().Secrets(namespace).Get(PullSecretName, metav1.GetOptions{})
+		registryPullSecret := &k8sv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: PullSecretName,
+			},
+			Data: pullSecretData,
+			Type: k8sv1.SecretTypeDockerConfigJson,
+		}
+		_, err := kubectl.Core().Secrets(namespace).Get(PullSecretName, metav1.GetOptions{})
 
-	if err != nil {
-		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
-	} else {
-		_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
-	}
+		if err != nil {
+			_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
+		} else {
+			_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
+		}
 
-	if err != nil {
-		return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+		if err != nil {
+			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+		}
 	}
 	return nil
 }
@@ -187,14 +190,11 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 }
 
 //GetImageURL returns the image (optional with tag)
-func GetImageURL(imageConfig v1.ImageConfig, includingLatestTag bool) string {
-	config := configutil.GetConfig(false)
-	registryName := *imageConfig.Registry
-	registryMap := *config.Registries
-	registryConfig, registryFound := registryMap[registryName]
+func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
+	registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
 
-	if !registryFound {
-		log.Fatalf("Unable to find registry: %s", registryName)
+	if registryConfErr != nil {
+		log.Fatal(registryConfErr)
 	}
 	image := *registryConfig.URL + "/" + *imageConfig.Name
 
@@ -202,4 +202,16 @@ func GetImageURL(imageConfig v1.ImageConfig, includingLatestTag bool) string {
 		image = image + ":" + *imageConfig.Tag
 	}
 	return image
+}
+
+func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
+	config := configutil.GetConfig(false)
+	registryName := *imageConfig.Registry
+	registryMap := *config.Registries
+	registryConfig, registryFound := registryMap[registryName]
+
+	if !registryFound {
+		return nil, errors.New("Unable to find registry: " + registryName)
+	}
+	return registryConfig, nil
 }
