@@ -8,7 +8,9 @@ import (
 	"github.com/daviddengcn/go-colortext"
 )
 
-const waitInterval = time.Millisecond * 150
+//Rule: waitInterval * n = 1s
+//with n€N
+const waitInterval = time.Millisecond * 200
 
 type loadingText struct {
 	Stream  io.Writer
@@ -45,7 +47,7 @@ func (l *loadingText) Start() {
 func (l *loadingText) getLoadingChar() string {
 	var loadingChar string
 
-	switch l.loadingRune {
+	switch l.loadingRune % 4 {
 	case 0:
 		loadingChar = "|"
 	case 1:
@@ -57,10 +59,6 @@ func (l *loadingText) getLoadingChar() string {
 	}
 
 	l.loadingRune++
-
-	if l.loadingRune > 3 {
-		l.loadingRune = 0
-	}
 
 	return loadingChar
 }
