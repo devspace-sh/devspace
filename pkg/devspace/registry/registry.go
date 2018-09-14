@@ -66,7 +66,7 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryC
 	return nil
 }
 
-// InitRegistry deploys and starts a new docker registry if necessary
+// InitInternalRegistry deploys and starts a new docker registry if necessary
 func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
 	registryReleaseName := *internalRegistry.Release.Name
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
@@ -204,6 +204,7 @@ func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	return image
 }
 
+// GetRegistryConfig returns the registry config for an image or an error if the registry is not defined
 func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
 	config := configutil.GetConfig(false)
 	registryName := *imageConfig.Registry

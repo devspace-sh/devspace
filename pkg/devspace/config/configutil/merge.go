@@ -5,11 +5,12 @@ import (
 	"unsafe"
 )
 
-func Merge(objectPointer interface{}, overwriteObjectPointer interface{}) {
-	objectPointerUnsafe := unsafe.Pointer(&objectPointer)
-	overwriteObjectPointerUnsafe := unsafe.Pointer(&overwriteObjectPointer)
+// Merge deeply merges two objects
+func Merge(object interface{}, overwriteObject interface{}) {
+	objectPointerUnsafe := unsafe.Pointer(&object)
+	overwriteObjectPointerUnsafe := unsafe.Pointer(&overwriteObject)
 
-	merge(objectPointer, overwriteObjectPointer, objectPointerUnsafe, overwriteObjectPointerUnsafe)
+	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
 }
 
 func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
