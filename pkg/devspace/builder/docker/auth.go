@@ -42,16 +42,16 @@ func getDefaultAuthConfig(client client.CommonAPIClient, checkCredStore bool, se
 	var authconfig types.AuthConfig
 	var err error
 
-	configfile, _ := loadDockerConfig()
-
 	if !isDefaultRegistry {
 		serverAddress = registry.ConvertToHostname(serverAddress)
 	}
 
 	if checkCredStore {
-		authconfig, err = configfile.GetAuthConfig(serverAddress)
-	} else {
-		authconfig = types.AuthConfig{}
+		configfile, err := loadDockerConfig()
+
+		if configfile != nil && err == nil {
+			authconfig, err = configfile.GetAuthConfig(serverAddress)
+		}
 	}
 
 	authconfig.ServerAddress = serverAddress

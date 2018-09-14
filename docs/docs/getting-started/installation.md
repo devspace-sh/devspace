@@ -19,15 +19,18 @@ del "%Temp%\install-devspace.bat"
 **Note:** After running the install script, you should reopen the terminal window to refresh the environment variables.
 
 ### For Linux
-1. Run this install script with **root privileges**:
+1. Run the command:
 ```bash
-tmpdir=$(dirname $(mktemp -u))
-curl -s "https://raw.githubusercontent.com/covexo/devspace/master/scripts/installer-linux.sh" >"$tmpdir/install-devspace.sh"
-"$tmpdir/install-devspace.sh" "/usr/bin/devspace"
-rm -r "$tmpdir"
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+```
+
+### For Mac
+1. Run the command:
+```bash
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ## Binary Download
 An alternative to the install scripts is to:
 1. download the latest release from the [GitHub releases page](https://github.com/covexo/devspace/releases)
-2. add the binary folder path to the PATH environment variable **OR** run `PATH_TO_YOUR_RELEASE_FILE install` with admin/root priveleges
+2. add the binary folder path to your PATH environment variable **OR** run `PATH_TO_YOUR_RELEASE_FILE install` with admin/root priveleges
