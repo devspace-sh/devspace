@@ -293,10 +293,10 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 
 	delete(downloadChanges, relativePath)
 
-	s.fileIndex.fileMapMutex.Lock()
 	// Exclude changes on the upload exclude list
 	if s.uploadIgnoreMatcher != nil {
 		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+			s.fileIndex.fileMapMutex.Lock()
 			// Add to file map and prevent download if local file is newer than the remote one
 			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < ceilMtime(stat.ModTime()) {
 				// Add it to the fileMap
@@ -307,11 +307,13 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 					IsDirectory: stat.IsDir(),
 				}
 			}
+			s.fileIndex.fileMapMutex.Unlock()
 
 			return nil
 		}
 	}
 
+	s.fileIndex.fileMapMutex.Lock()
 	shouldUpload := shouldUpload(relativePath, stat, s, true)
 	s.fileIndex.fileMapMutex.Unlock()
 
@@ -343,7 +345,7 @@ func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*
 		return nil
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && relativePath != "" {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
 			Mtime:       ceilMtime(stat.ModTime()),
