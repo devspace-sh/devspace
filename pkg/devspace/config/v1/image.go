@@ -13,7 +13,7 @@ type BuildConfig struct {
 	ContextPath     *string      `yaml:"contextPath"`
 	DockerfilePath  *string      `yaml:"dockerfilePath"`
 	Engine          *BuildEngine `yaml:"engine"`
-	LatestTimestamp *string      `yaml:"latestTime"`
+	LatestTimestamp *string      `yaml:"latestTimestamp"`
 }
 
 //BuildEngine defines which build engine to use

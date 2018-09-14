@@ -140,7 +140,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			},
 		},
 	})
-	cmd.overwriteConfig = configutil.GetOverwriteConfig()
+	cmd.overwriteConfig = configutil.GetOverwriteConfig(false)
 
 	imageMap := *cmd.config.Images
 	cmd.defaultImage, _ = imageMap["default"]

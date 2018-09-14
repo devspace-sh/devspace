@@ -46,6 +46,10 @@ func ConfigExists() (bool, error) {
 //GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig(reload bool) *v1.Config {
 	if !configLoaded || reload {
+		if reload {
+			config = makeConfig()
+			configRaw = makeConfig()
+		}
 		configLoaded = true
 
 		err := loadConfig(configRaw, configPath)
@@ -53,7 +57,7 @@ func GetConfig(reload bool) *v1.Config {
 		if err != nil {
 			log.Fatal("Unable to load config.")
 		}
-		GetOverwriteConfig()
+		GetOverwriteConfig(false)
 
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
@@ -66,8 +70,12 @@ func GetConfig(reload bool) *v1.Config {
 }
 
 //GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
-func GetOverwriteConfig() *v1.Config {
-	if !overwriteConfigLoaded {
+func GetOverwriteConfig(reload bool) *v1.Config {
+	if !overwriteConfigLoaded || reload {
+		if reload {
+			overwriteConfig = makeConfig()
+			overwriteConfigRaw = makeConfig()
+		}
 		overwriteConfigLoaded = true
 
 		//ignore error as overwrite.yaml is optional

@@ -256,7 +256,7 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 // returns true when one of the images had to be rebuild
 func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 	re := false
-	config := configutil.GetConfig(true)
+	config := configutil.GetConfig(false)
 
 	for imageName, imageConf := range *config.Images {
 		dockerfilePath := "./Dockerfile"
@@ -317,7 +317,9 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 					if registryConf.Auth.Password != nil {
 						password = *registryConf.Auth.Password
 					}
+					log.StartWait("Authenticating (" + *registryConf.URL + ")")
 					buildErr = dockerBuilder.Authenticate(username, password, len(username) == 0)
+					log.StopWait()
 
 					if buildErr == nil {
 						buildOptions := &types.ImageBuildOptions{}
@@ -327,10 +329,14 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 								buildOptions.BuildArgs = *imageConf.Build.Engine.Docker.Options.BuildArgs
 							}
 						}
+						log.StartWait("Building Docker image")
 						buildErr = dockerBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+						log.StopWait()
 
 						if buildErr == nil {
+							log.StartWait("Pushing Docker image")
 							buildErr = dockerBuilder.PushImage()
+							log.StopWait()
 						}
 					}
 				}
