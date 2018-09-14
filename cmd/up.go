@@ -12,7 +12,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/kaniko"
+	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
@@ -103,7 +103,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	workdir, err := os.Getwd()
-
 	if err != nil {
 		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
@@ -111,7 +110,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.workdir = workdir
 
 	configExists, _ := configutil.ConfigExists()
-
 	if !configExists {
 		initCmd := &InitCmd{
 			flags: InitCmdFlagsDefault,
@@ -119,11 +117,17 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		initCmd.Run(nil, []string{})
 	}
-	cmd.kubectl, err = kubectl.NewClient()
 
+	cmd.kubectl, err = kubectl.NewClient()
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
+		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
+
+	err = cmd.ensureNamespace()
+	if err != nil {
+		log.Fatalf("Unable to create release namespace: %v", err)
+	}
+
 	cmd.initHelm()
 
 	if cmd.flags.initRegistry {
@@ -133,7 +137,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.StopWait()
 
 			if err != nil {
-				log.Fatalf("Docker registry error: %s", err.Error())
+				log.Fatalf("Docker registry error: %v", err)
 			}
 
 			log.Done("Docker registry started")
@@ -149,7 +153,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			cmd.buildImage()
 
 			err = configutil.SaveConfig()
-
 			if err != nil {
 				log.Fatalf("Config saving error: %s", err.Error())
 			}
@@ -179,6 +182,28 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	cmd.enterTerminal()
+}
+
+func (cmd *UpCmd) ensureNamespace() error {
+	config := configutil.GetConfig(false)
+	releaseNamespace := *config.DevSpace.Release.Namespace
+
+	// Check if registry namespace exists
+	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create registry namespace
+		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: releaseNamespace,
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cmd *UpCmd) shouldRebuild(buildFlagChanged bool) bool {

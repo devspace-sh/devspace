@@ -142,13 +142,13 @@ func GetInstance() Logger {
 // WriteColored writes a message in color
 func WriteColored(message string, color ct.Color) {
 	ct.Foreground(color, false)
-	stdoutLog.Write(message)
+	stdoutLog.Write([]byte(message))
 	ct.ResetColor()
 }
 
 // Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
 func Write(message string) {
-	stdoutLog.Write(message)
+	stdoutLog.Write([]byte(message))
 }
 
 // PrintTable prints a table with header columns and string values

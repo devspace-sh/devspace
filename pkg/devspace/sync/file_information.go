@@ -56,7 +56,7 @@ func (p parsingError) Error() string {
 }
 
 func getFindCommand(destPath string) string {
-	return "mkdir -p '" + destPath + "' && find '" + destPath + "' -exec stat -c \"%n///%s,%Y,%f,%a,%u,%g\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
+	return "mkdir -p '" + destPath + "' && find -L '" + destPath + "' -exec stat -c \"%n///%s,%Y,%f,%a,%u,%g\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
 }
 
 func parseFileInformation(fileline, destPath string) (*fileInformation, error) {

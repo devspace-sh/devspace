@@ -1,7 +1,6 @@
 package log
 
 import (
-	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -180,10 +179,6 @@ func (f *fileLogger) SetLevel(level logrus.Level) {
 	f.logger.SetLevel(level)
 }
 
-func (f *fileLogger) GetStream() io.Writer {
-	return f.logger.Out
-}
-
 func (f *fileLogger) printWithContext(fnType logFunctionType, contextFields map[string]interface{}, args ...interface{}) {
 	switch fnType {
 	case doneFn:
@@ -222,6 +217,6 @@ func (f *fileLogger) printWithContextf(fnType logFunctionType, contextFields map
 	}
 }
 
-func (f *fileLogger) Write(message string) {
-	f.logger.Info(message)
+func (f *fileLogger) Write(message []byte) (int, error) {
+	return f.logger.Out.Write(message)
 }

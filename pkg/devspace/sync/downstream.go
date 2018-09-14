@@ -490,6 +490,19 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 	// File found don't delete it
 	delete(removeFiles, fileInformation.Name)
 
+	// Update mode, gid & uid if exists
+	if d.config.fileIndex.fileMap[fileInformation.Name] != nil {
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
+	}
+
+	// Exclude symlinks
+	if fileInformation.IsSymbolicLink {
+		// Add them to the fileMap though
+		d.config.fileIndex.fileMap[fileInformation.Name] = fileInformation
+	}
+
 	// Should we download the file / folder?
 	if shouldDownload(fileInformation, d.config) {
 		*createFiles = append(*createFiles, fileInformation)

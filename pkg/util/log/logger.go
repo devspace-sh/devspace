@@ -1,8 +1,6 @@
 package log
 
 import (
-	"io"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,10 +36,8 @@ type Logger interface {
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
-	Write(message string)
-
+	Write(message []byte) (int, error)
 	SetLevel(level logrus.Level)
-	GetStream() io.Writer
 
 	printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{})
 	printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{})

@@ -167,6 +167,24 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 	// File / Folder exist -> Create File or Folder
 	// if File / Folder does not exist, we create a new remove change
 	if err == nil {
+		// Exclude changes on the upload exclude list
+		if s.uploadIgnoreMatcher != nil {
+			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+				// Add to file map and prevent download if local file is newer than the remote one
+				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < ceilMtime(stat.ModTime()) {
+					// Add it to the fileMap
+					s.fileIndex.fileMap[relativePath] = &fileInformation{
+						Name:        relativePath,
+						Mtime:       ceilMtime(stat.ModTime()),
+						Size:        stat.Size(),
+						IsDirectory: stat.IsDir(),
+					}
+				}
+
+				return nil
+			}
+		}
+
 		if shouldUpload(relativePath, stat, s, false) {
 			// New Create Task
 			return &fileInformation{
