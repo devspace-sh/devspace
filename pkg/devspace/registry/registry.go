@@ -1,7 +1,9 @@
 package registry
 
 import (
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -21,49 +23,61 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PullSecretName for the docker registry
-const PullSecretName = "devspace-pull-secret"
+const registryAuthSecretNamePrefix = "devspace-registry-auth-"
 const registryPort = 5000
 
 // CreatePullSecret creates an image pull secret for a registry
-func CreatePullSecret(kubectl *kubernetes.Clientset, namespace string, registryConfig *v1.RegistryConfig) error {
-	registryAuth := registryConfig.Auth
+func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string) error {
+	pullSecretName := GetRegistryAuthSecretName(registryURL)
 
-	if registryAuth != nil && registryAuth.Username != nil && registryAuth.Password != nil {
-		registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(*registryAuth.Username + ":" + *registryAuth.Password))
-		pullSecretDataValue := []byte(`{
-		"auths": {
-			"` + *registryConfig.URL + `": {
-				"auth": "` + registryAuthEncoded + `",
-				"email": "noreply-devspace@covexo.com"
+	if registryURL == "hub.docker.com" || registryURL == "" {
+		registryURL = "https://index.docker.io/v1/"
+	}
+	authToken := passwordOrToken
+
+	if username != "" {
+		authToken = username + ":" + authToken
+	}
+	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(authToken))
+	pullSecretDataValue := []byte(`{
+			"auths": {
+				"` + registryURL + `": {
+					"auth": "` + registryAuthEncoded + `",
+					"email": "` + email + `"
+				}
 			}
-		}
-	}`)
+		}`)
 
-		pullSecretData := map[string][]byte{}
-		pullSecretDataKey := k8sv1.DockerConfigJsonKey
-		pullSecretData[pullSecretDataKey] = pullSecretDataValue
+	pullSecretData := map[string][]byte{}
+	pullSecretDataKey := k8sv1.DockerConfigJsonKey
+	pullSecretData[pullSecretDataKey] = pullSecretDataValue
 
-		registryPullSecret := &k8sv1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: PullSecretName,
-			},
-			Data: pullSecretData,
-			Type: k8sv1.SecretTypeDockerConfigJson,
-		}
-		_, err := kubectl.Core().Secrets(namespace).Get(PullSecretName, metav1.GetOptions{})
+	registryPullSecret := &k8sv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pullSecretName,
+		},
+		Data: pullSecretData,
+		Type: k8sv1.SecretTypeDockerConfigJson,
+	}
+	_, err := kubectl.Core().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
 
-		if err != nil {
-			_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
-		} else {
-			_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
-		}
+	if err != nil {
+		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
+	} else {
+		_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
+	}
 
-		if err != nil {
-			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
-		}
+	if err != nil {
+		return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
 	}
 	return nil
+}
+
+// GetRegistryAuthSecretName returns the name of the image pull secret for a registry
+func GetRegistryAuthSecretName(registryURL string) string {
+	registryHash := md5.Sum([]byte(registryURL))
+
+	return registryAuthSecretNamePrefix + hex.EncodeToString(registryHash[:])
 }
 
 // InitInternalRegistry deploys and starts a new docker registry if necessary

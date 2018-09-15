@@ -2,29 +2,76 @@ package kaniko
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/registry"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/docker/docker/api/types"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
-// BuildDockerfile builds a dockerfile in a kaniko build pod
-func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestination, pullSecretName string, allowInsecureRegistry bool) error {
-	workdir, err := os.Getwd()
+// Builder holds the necessary information to build and push docker images
+type Builder struct {
+	RegistryURL    string
+	ImageName      string
+	ImageTag       string
+	BuildNamespace string
 
-	if err != nil {
-		return fmt.Errorf("Unable to determine current workdir: %s", err.Error())
+	allowInsecureRegistry bool
+	kubectl               *kubernetes.Clientset
+}
+
+// NewBuilder creates a new kaniko.Builder instance
+func NewBuilder(registryURL, imageName, imageTag, buildNamespace string, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+	return &Builder{
+		RegistryURL:           registryURL,
+		ImageName:             imageName,
+		ImageTag:              imageTag,
+		BuildNamespace:        buildNamespace,
+		allowInsecureRegistry: allowInsecureRegistry,
+		kubectl:               kubectl,
+	}, nil
+}
+
+// Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
+func (b *Builder) Authenticate(username, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+	email := "noreply@devspace-cloud.com"
+
+	if len(username) == 0 {
+		dockerBuilder, dockerBuilderErr := docker.NewBuilder(b.RegistryURL, b.ImageName, b.ImageTag, false)
+		if dockerBuilderErr != nil {
+			return nil, dockerBuilderErr
+		}
+
+		authConfig, err := dockerBuilder.Authenticate(username, password, true)
+		if err != nil {
+			return nil, err
+		}
+		username = authConfig.Username
+		email = authConfig.Email
+
+		if authConfig.Password != "" {
+			password = authConfig.Password
+		} else {
+			password = authConfig.IdentityToken
+		}
 	}
+	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email)
+}
 
+// BuildImage builds a dockerimage within a kaniko pod
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
+	pullSecretName := registry.GetRegistryAuthSecretName(b.RegistryURL)
 	randString, _ := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
 	buildPod := &k8sv1.Pod{
@@ -77,7 +124,7 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
 
-		deleteErr := client.Core().Pods(buildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
+		deleteErr := b.kubectl.Core().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
 
@@ -88,8 +135,8 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 
 	intr := interrupt.New(nil, deleteBuildPod)
 
-	err = intr.Run(func() error {
-		buildPodCreated, buildPodCreateErr := client.Core().Pods(buildNamespace).Create(buildPod)
+	err := intr.Run(func() error {
+		buildPodCreated, buildPodCreateErr := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
 
 		if buildPodCreateErr != nil {
 			return fmt.Errorf("Unable to create build pod: %s", buildPodCreateErr.Error())
@@ -102,7 +149,7 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		log.StartWait("Waiting for kaniko build pod to start")
 
 		for readyWaitTime > 0 {
-			buildPod, _ = client.Core().Pods(buildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 
 			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
 				buildPodReady = true
@@ -119,7 +166,7 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		if !buildPodReady {
 			return fmt.Errorf("Unable to start build pod")
 		}
-		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(workdir)
+		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(contextPath)
 
 		if ignoreRuleErr != nil {
 			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
@@ -128,16 +175,26 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		buildContainer := &buildPod.Spec.Containers[0]
 
 		log.StartWait("Uploading files to build container")
-		err := synctool.CopyToContainer(client, buildPod, buildContainer, workdir, "/src", ignoreRules)
-		log.StopWait()
+		err := synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, contextPath, "/src", ignoreRules)
 
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %s", err.Error())
 		}
+		err = synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, dockerfilePath, "/src", ignoreRules)
 
+		if err != nil {
+			return fmt.Errorf("Error uploading files to container: %s", err.Error())
+		}
+		log.StopWait()
 		log.Done("Uploaded files to container")
+
 		log.StartWait("Building container image")
 
+		imageDestination := b.ImageName + ":" + b.ImageTag
+
+		if b.RegistryURL != "" {
+			imageDestination = strings.TrimSuffix(b.RegistryURL, "/") + "/" + imageDestination
+		}
 		containerBuildPath := "/src"
 		exitChannel := make(chan error)
 		kanikoBuildCmd := []string{
@@ -148,11 +205,11 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 			"--single-snapshot",
 		}
 
-		if allowInsecureRegistry {
+		if b.allowInsecureRegistry {
 			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure-skip-tls-verify")
 		}
 
-		stdin, stdout, stderr, execErr := kubectl.Exec(client, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
+		stdin, stdout, stderr, execErr := kubectl.Exec(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
 		stdin.Close()
 
 		if execErr != nil {
@@ -177,5 +234,10 @@ func BuildDockerfile(client *kubernetes.Clientset, buildNamespace, imageDestinat
 		return err
 	}
 
+	return nil
+}
+
+// PushImage is required to implement builder.BuilderInterface
+func (b *Builder) PushImage() error {
 	return nil
 }
