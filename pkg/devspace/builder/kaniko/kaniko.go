@@ -237,7 +237,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	return nil
 }
 
-// PushImage is required to implement builder.BuilderInterface
+// PushImage is required to implement builder.Interface
 func (b *Builder) PushImage() error {
 	return nil
 }

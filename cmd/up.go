@@ -298,7 +298,7 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 				log.Fatal(registryErr)
 			}
 			var buildErr error
-			var imageBuilder builder.BuilderInterface
+			var imageBuilder builder.Interface
 
 			buildInfo := "Building image '%s' with engine '%s'"
 
