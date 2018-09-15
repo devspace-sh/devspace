@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/covexo/devspace/pkg/util/yamlutil"
+
+	"github.com/covexo/devspace/pkg/devspace/builder"
+
 	"github.com/docker/docker/api/types"
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
@@ -214,12 +218,21 @@ func (cmd *UpCmd) initRegistries() {
 	}
 
 	for registryName, registryConf := range registryMap {
-		log.StartWait("Creating image pull secret for registry: " + registryName)
-		err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryConf)
-		log.StopWait()
+		if registryConf.Auth != nil && registryConf.Auth.Password != nil {
+			username := ""
+			password := *registryConf.Auth.Password
+			email := "noreply@devspace-cloud.com"
 
-		if err != nil {
-			log.Fatalf("Failed to create pull secret for registry: %v", err)
+			if registryConf.Auth.Username != nil {
+				username = *registryConf.Auth.Username
+			}
+			log.StartWait("Creating image pull secret for registry: " + registryName)
+			err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, *registryConf.URL, username, password, email)
+			log.StopWait()
+
+			if err != nil {
+				log.Fatalf("Failed to create pull secret for registry: %v", err)
+			}
 		}
 	}
 }
@@ -285,66 +298,74 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 				log.Fatal(registryErr)
 			}
 			var buildErr error
+			var imageBuilder builder.Interface
 
 			buildInfo := "Building image '%s' with engine '%s'"
 
+			registryURL := *registryConf.URL
+
+			if registryURL == "hub.docker.com" {
+				registryURL = ""
+			}
+			engineName := ""
+
 			if imageConf.Build.Engine.Kaniko != nil {
-				log.Infof(buildInfo, imageName, "kaniko")
+				engineName = "kaniko"
+				buildNamespace := *config.DevSpace.Release.Namespace
+				allowInsecurePush := false
 
-				imageDestination := registry.GetImageURL(imageConf, false) + ":" + imageTag
+				if imageConf.Build.Engine.Kaniko.Namespace != nil {
+					buildNamespace = *imageConf.Build.Engine.Kaniko.Namespace
+				}
 
-				buildErr = kaniko.BuildDockerfile(cmd.kubectl, *config.DevSpace.Release.Namespace, imageDestination, registry.PullSecretName, *registryConf.Insecure)
+				if registryConf.Insecure != nil {
+					allowInsecurePush = *registryConf.Insecure
+				}
+				imageBuilder, buildErr = kaniko.NewBuilder(registryURL, *imageConf.Name, imageTag, buildNamespace, cmd.kubectl, allowInsecurePush)
 			} else {
-				log.Infof(buildInfo, imageName, "docker")
-
-				var dockerBuilder *docker.Builder
-
+				engineName = "docker"
 				preferMinikube := true
 
 				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
 					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
 				}
-				registryURL := *registryConf.URL
+				imageBuilder, buildErr = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
+			}
+			log.Infof(buildInfo, imageName, engineName)
 
-				if registryURL == "hub.docker.com" {
-					registryURL = ""
+			if buildErr == nil {
+				username := ""
+				password := ""
+
+				if registryConf.Auth != nil {
+					if registryConf.Auth.Username != nil {
+						username = *registryConf.Auth.Username
+					}
+
+					if registryConf.Auth.Password != nil {
+						password = *registryConf.Auth.Password
+					}
 				}
-				dockerBuilder, buildErr = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
+				log.StartWait("Authenticating (" + *registryConf.URL + ")")
+				_, buildErr = imageBuilder.Authenticate(username, password, len(username) == 0)
+				log.StopWait()
 
 				if buildErr == nil {
-					username := ""
-					password := ""
+					log.Done("Authentication successful (" + *registryConf.URL + ")")
+					buildOptions := &types.ImageBuildOptions{}
 
-					if registryConf.Auth != nil {
-						if registryConf.Auth.Username != nil {
-							username = *registryConf.Auth.Username
-						}
-
-						if registryConf.Auth.Password != nil {
-							password = *registryConf.Auth.Password
+					if imageConf.Build.Options != nil {
+						if imageConf.Build.Options.BuildArgs != nil {
+							buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
 						}
 					}
-					log.StartWait("Authenticating (" + *registryConf.URL + ")")
-					buildErr = dockerBuilder.Authenticate(username, password, len(username) == 0)
-					log.StopWait()
+					buildErr = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
 
 					if buildErr == nil {
-						log.Done("Authentication successful (" + *registryConf.URL + ")")
-						buildOptions := &types.ImageBuildOptions{}
-
-						if imageConf.Build.Engine.Docker.Options != nil {
-							if imageConf.Build.Engine.Docker.Options.BuildArgs != nil {
-								buildOptions.BuildArgs = *imageConf.Build.Engine.Docker.Options.BuildArgs
-							}
-						}
-						buildErr = dockerBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+						buildErr = imageBuilder.PushImage()
 
 						if buildErr == nil {
-							buildErr = dockerBuilder.PushImage()
-
-							if buildErr == nil {
-								log.Info("Image pushed to registry (" + *registryConf.URL + ")")
-							}
+							log.Info("Image pushed to registry (" + *registryConf.URL + ")")
 						}
 					}
 				}
@@ -394,6 +415,10 @@ func (cmd *UpCmd) deployChart() {
 	chartPath := "chart/"
 
 	values := map[interface{}]interface{}{}
+	overwriteValues := map[interface{}]interface{}{}
+
+	yamlutil.ReadYamlFromFile(chartPath, values)
+
 	containerValues := map[string]interface{}{}
 
 	for imageName, imageConf := range *config.Images {
@@ -406,9 +431,25 @@ func (cmd *UpCmd) deployChart() {
 		}
 		containerValues[imageName] = container
 	}
-	values["containers"] = containerValues
 
-	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &values)
+	pullSecrets := []string{}
+	existingPullSecrets, pullSecretsExisting := values["pullSecrets"]
+
+	if pullSecretsExisting {
+		pullSecrets = existingPullSecrets.([]string)
+	}
+
+	for _, registryConf := range *config.Registries {
+		if registryConf.URL != nil {
+			registrySecretName := registry.GetRegistryAuthSecretName(*registryConf.URL)
+			pullSecrets = append(pullSecrets, registrySecretName)
+		}
+	}
+
+	overwriteValues["containers"] = containerValues
+	overwriteValues["pullSecrets"] = pullSecrets
+
+	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
 
 	log.StopWait()
 

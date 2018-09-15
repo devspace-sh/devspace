@@ -144,7 +144,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 }
 
 // Authenticate authenticates the client with a remote registry
-func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) error {
+func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
 	ctx := context.Background()
 	authServer := getOfficialServer(ctx, b.client)
 	serverAddress := b.RegistryURL
@@ -154,12 +154,12 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 	} else {
 		ref, err := reference.ParseNormalizedNamed(b.imageURL)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		repoInfo, err := registry.ParseRepositoryInfo(ref)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if repoInfo.Index.Official {
@@ -176,7 +176,7 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 
 	response, err := b.client.RegistryLogin(ctx, *authConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if response.IdentityToken != "" {
@@ -185,7 +185,8 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 	}
 
 	b.authConfig = authConfig
-	return nil
+
+	return b.authConfig, nil
 }
 
 // PushImage pushes an image to the specified registry

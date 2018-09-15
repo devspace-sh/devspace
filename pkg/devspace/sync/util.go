@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +31,19 @@ func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Cont
 	}
 
 	if stat.IsDir() == false {
-		return errors.New("Only directories can be copied by this function")
+		LocalFile := LocalPath
+		LocalPath = filepath.Dir(LocalPath)
+
+		files, readDirErr := ioutil.ReadDir(LocalPath)
+		if readDirErr != nil {
+			return errors.Trace(readDirErr)
+		}
+
+		for _, file := range files {
+			if filepath.Join(LocalPath, file.Name()) != LocalFile {
+				ExcludePaths = append(ExcludePaths, "/"+file.Name())
+			}
+		}
 	}
 
 	s := &SyncConfig{
