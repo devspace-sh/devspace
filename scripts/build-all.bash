@@ -23,7 +23,7 @@ GO_BUILD_CMD="go build -a -installsuffix cgo"
 GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION} -X main.flagImportDuringSolve=${IMPORT_DURING_SOLVE}"
 
 if [[ -z "${DEVSPACE_BUILD_PLATFORMS}" ]]; then
-    DEVSPACE_BUILD_PLATFORMS="linux windows darwin freebsd"
+    DEVSPACE_BUILD_PLATFORMS="linux windows darwin"
 fi
 
 if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
