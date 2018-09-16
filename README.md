@@ -53,7 +53,7 @@ The DevSpace CLI allows you to create a DevSpace for any existing project with j
 ```
 devspace up
 ```
-Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to start coding with a DevSpace.
+Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to see how to get started with a DevSpace.
 
 **Note:** Don't worry, with you can use `devspace reset` to reset your project and go back to local development.
 
