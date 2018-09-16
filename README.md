@@ -34,7 +34,7 @@ curl -s "https://raw.githubusercontent.com/covexo/devspace/master/scripts/instal
 del "%Temp%\install-devspace.bat"
 ```
 
-**Note:** After running the install script, you should reopen the terminal window to refresh the environment variables.
+**Note:** After running the install script, you should close and re-open your terminal window or IDE to refresh the environment variables.
 
 ### For Linux
 ```bash
@@ -47,11 +47,13 @@ curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | s
 ```
 
 ## [Quickstart](https://devspace.covexo.com/docs/getting-started/quickstart.html)
+To get started with the DevSpace CLI, you only need a Kubernetes cluster. If you do not have one yet, take a look at our [Minikube Install Guide](https://devspace.covexo.com/docs/advanced/kubernetes.html) or [request access to the private beta of the DevSpace Cloud](https://devspace-cloud.com/).
+
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
 ```
 devspace up
 ```
-Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to start coding with a DevSpace.
+Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to see how to get started with a DevSpace.
 
 **Note:** Don't worry, with you can use `devspace reset` to reset your project and go back to local development.
 
