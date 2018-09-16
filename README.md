@@ -19,7 +19,7 @@ Program inside any Kubernetes cluster (e.g. minikube, self-hosted or cloud platf
 ## Demo
 This demo shows how to run `devspace up` directly from the terminal inside Visual Studio Code. However, the DevSpace CLI is not a plugin and will work with any terminal. In this example, we are starting a DevSpace for a React application.
 
-![DevSpace CLI Demo](docs/website/static/img/devspace-cli-demo-readme.gif)
+![DevSpace CLI Demo](https://devspace.covexo.com/img/devspace-cli-demo-readme.gif)
 
 ## Installation
 These commands will install the devspace CLI and add it to the PATH environment variable. For more details, see the full [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html).
