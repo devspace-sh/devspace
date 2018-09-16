@@ -23,7 +23,7 @@ This demo shows how to run `devspace up` directly from the terminal inside Visua
 ![DevSpace CLI Demo](docs/website/static/img/devspace-cli-demo-readme.gif)
 
 ## [Installation](https://devspace.covexo.com/docs/getting-started/installation.html)
-These commands will install the devspace CLI and add it to the PATH environment variable. For more details, see: [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html)
+These commands will install the DevSpace CLI and add it to the PATH environment variable. For more details, see: [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html)
 
 ### For Windows
 1. Open CMD with **admin rights**.
@@ -64,7 +64,9 @@ Here you can find some links to the most important pages of our documentation:
 - [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html)
 
 ## [DevSpace Cloud](https://devspace-cloud.com/)
-The DevSpace Cloud provides hosted DevSpaces. The service is currently in private beta. If you would like to join the beta program, you can **[request access to the DevSpace Cloud](https://devspace-cloud.com/)**. As a thank you for testing the DevSpace cloud, members of the beta program will receive a special **forever free subcription** to the DevSpace Cloud.
+The DevSpace Cloud provides hosted DevSpaces. The service is currently in private beta. If you would like to join the beta program, you can **[request access to the DevSpace Cloud](https://devspace-cloud.com/)**. 
+
+As a thank you for testing the DevSpace Cloud, members of the beta program will receive a special **forever free subcription** to the DevSpace Cloud.
 
 ## [Architecture](https://devspace.covexo.com/docs/advanced/architecture.html)
 Architecturally, the DevSpace CLI is a client-side software that interacts with services within your Kubernetes cluster. While the DevSpace CLI can deploy required services (e.g. image registry, Tiller server, Kaniko build pods) automatically, you can also configure it to use already deployed or externally hosted services.
