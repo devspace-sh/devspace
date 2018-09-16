@@ -5,14 +5,15 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
 [![Join the community on Spectrum Chart](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/devspace)
 
-With a DevSpace, you can build, test and run code directly inside any Kubernetes cluster. You can run `devspace up` in any of your projects and the client-only DevSpace CLI will start a DevSpace within your Kubernetes cluster. Keep coding as usual and the DevSpace CLI will sync any code change directly into the containers of your DevSpace. No more waiting for re-building images, re-deploying containers and restarting applications on every source code change. Simply edit your code with any IDE and run your code instantly inside your DevSpace.
+With a DevSpace, you can build, test and run **code directly inside any Kubernetes cluster**. You can run `devspace up` in any of your projects and the client-only DevSpace CLI will start a DevSpace within your Kubernetes cluster. Keep coding as usual and the DevSpace CLI will sync any code change directly into the containers of your DevSpace. 
+
+**No more waiting** for re-building images, re-deploying containers and restarting applications on every source code change. Simply edit your code with any IDE and run your code instantly inside your DevSpace.
 
 ## Why use a DevSpace?
 Program inside any Kubernetes cluster (e.g. minikube, self-hosted or cloud platform) and:
-- iterate quickly: no more re-building and pushing images on every change
-- save time with **hot reloading** tools (e.g. nodemon)
-- keep your existing workflow: **code with your favorite IDE** and desktop tools
-- access cluster-internal services and data with ease
+- iterate quickly: no more building and pushing images on every change, use **hot reloading** instead (e.g. with nodemon)
+- keep your existing workflow and tools: **the DevSpace CLI works with every IDE** (no plugins required)
+- access cluster-internal services and data during development
 - debug efficiently with port forwarding and terminal proxying
 - migrate to Docker & Kubernetes within minutes
 
@@ -21,8 +22,8 @@ This demo shows how to run `devspace up` directly from the terminal inside Visua
 
 ![DevSpace CLI Demo](docs/website/static/img/devspace-cli-demo-readme.gif)
 
-## Installation
-These commands will install the devspace CLI and add it to the PATH environment variable. For more details, see the full [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html).
+## [Installation](https://devspace.covexo.com/docs/getting-started/installation.html)
+These commands will install the DevSpace CLI and add it to the PATH environment variable. For more details, see: [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html)
 
 ### For Windows
 1. Open CMD with **admin rights**.
@@ -45,23 +46,29 @@ curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | s
 curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
-## Quickstart
+## [Quickstart](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
 ```
 devspace up
 ```
 Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to start coding with a DevSpace.
 
-**Note:** Don't worry, with the cleanup command `devspace reset`, you can easily reset your project and go back to local development.
+**Note:** Don't worry, with you can use `devspace reset` to reset your project and go back to local development.
 
-## Documentation
+## [Documentation](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 Here you can find some links to the most important pages of our documentation:
 - [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html)
+- [Frequently Asked Questions (FAQ)](https://devspace.covexo.com/docs/getting-started/faq.html)
 - [CLI Documentation](https://devspace.covexo.com/docs/cli/init.html)
-- [Configuration Specification](https://devspace.covexo.com/docs/configuration/dockerfile.html)
+- [Configuration Options](https://devspace.covexo.com/docs/configuration/dockerfile.html)
 - [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html)
 
-## Architecture
+## [DevSpace Cloud](https://devspace-cloud.com/)
+The DevSpace Cloud provides hosted DevSpaces. The service is currently in private beta. If you would like to join the beta program, you can **[request access to the DevSpace Cloud](https://devspace-cloud.com/)**. 
+
+As a thank you for testing the DevSpace Cloud, members of the beta program will receive a special **forever free subcription** to the DevSpace Cloud.
+
+## [Architecture](https://devspace.covexo.com/docs/advanced/architecture.html)
 Architecturally, the DevSpace CLI is a client-side software that interacts with services within your Kubernetes cluster. While the DevSpace CLI can deploy required services (e.g. image registry, Tiller server, Kaniko build pods) automatically, you can also configure it to use already deployed or externally hosted services.
 
 ![DevSpace CLI Architecture](docs/website/static/img/devspace-architecture.svg)
@@ -70,7 +77,7 @@ For a more detailed description of the internals of the DevSpace CLI, take a loo
 
 **Note:** Any interaction between your local computer and your DevSpace is passed through your Kubernetes API server, so you should ensure that your API server is protected with a suitable configuration for using TLS.
 
-## Contributing
+## [Contributing](CONTRIBUTING.md)
 As any open source projects, we are looking forward to your contributions.
 
 ### Reporting Issues
