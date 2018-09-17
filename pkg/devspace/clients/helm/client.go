@@ -82,15 +82,13 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 
 	tillerConfig := config.Services.Tiller
 	kubeconfig, err := kubectl.GetClientConfig()
-
 	if err != nil {
 		return nil, err
 	}
 
-	tillerErr := ensureTiller(kubectlClient, config, upgradeTiller)
-
-	if tillerErr != nil {
-		return nil, tillerErr
+	err = ensureTiller(kubectlClient, config, upgradeTiller)
+	if err != nil {
+		return nil, err
 	}
 
 	var tunnel *kube.Tunnel
@@ -104,7 +102,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	// Next we wait till we can establish a tunnel to the running pod
 	for tunnelWaitTime > 0 {
 		tunnel, err = portforwarder.New(*tillerConfig.Release.Namespace, kubectlClient, kubeconfig)
-
 		if err == nil {
 			break
 		}
@@ -146,7 +143,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	}
 
 	homeDir, err := homedir.Dir()
-
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +159,10 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	_, repoFileNotFound := os.Stat(repoFile)
 
 	if repoFileNotFound != nil {
-		fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
+		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	wrapper := &HelmClientWrapper{
@@ -174,10 +173,13 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		TillerConfig: tillerConfig,
 		kubectl:      kubectlClient,
 	}
-	_, stableRepoCacheNotFoundErr := os.Stat(stableRepoCachePathAbs)
 
-	if stableRepoCacheNotFoundErr != nil {
-		wrapper.updateRepos()
+	_, err = os.Stat(stableRepoCachePathAbs)
+	if err != nil {
+		err = wrapper.updateRepos()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return wrapper, nil
@@ -222,10 +224,8 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		defer log.StopWait()
 
 		_, err := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Get(tillerSA.Name, metav1.GetOptions{})
-
 		if err != nil {
 			_, err := kubectlClient.CoreV1().ServiceAccounts(tillerSA.Namespace).Create(tillerSA)
-
 			if err != nil {
 				return err
 			}
@@ -244,12 +244,14 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				Verbs: []string{k8sv1beta1.ResourceAll},
 			},
 		})
-
 		if err != nil {
 			return err
 		}
 
-		helminstaller.Install(kubectlClient, tillerOptions)
+		err = helminstaller.Install(kubectlClient, tillerOptions)
+		if err != nil {
+			return err
+		}
 
 		appNamespaces := []*string{
 			config.DevSpace.Release.Namespace,
@@ -258,15 +260,19 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		if config.Services.InternalRegistry != nil && config.Services.InternalRegistry.Release.Namespace != nil {
 			appNamespaces = append(appNamespaces, config.Services.InternalRegistry.Release.Namespace)
 		}
+
 		tillerConfig.AppNamespaces = &appNamespaces
-
 		for _, appNamespace := range *tillerConfig.AppNamespaces {
-			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
+			if *appNamespace == tillerRoleManagerName {
+				continue
+			}
 
+			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
 			if err != nil {
 				return err
 			}
 		}
+
 		log.StopWait()
 		log.Done("Tiller started")
 
@@ -326,6 +332,7 @@ func addAppNamespaces(appNamespaces *[]*string, namespaces []*string) {
 			newAppNamespaces = append(newAppNamespaces, ns)
 		}
 	}
+
 	appNamespaces = &newAppNamespaces
 }
 
@@ -354,33 +361,39 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 	err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
+	if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
+		errs = append(errs, err)
+	}
 
-	if err != nil {
+	err = kubectlClient.CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
 		errs = append(errs, err)
 	}
 
 	err = kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(tillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-
-	if err != nil {
+	if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
 		errs = append(errs, err)
 	}
+
 	roleNamespace := append(*tillerConfig.AppNamespaces, &tillerNamespace)
-
 	for _, appNamespace := range roleNamespace {
-		roleName := tillerRoleName
-
-		if *appNamespace == tillerNamespace {
-			roleName = tillerRoleManagerName
-		}
-		err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(roleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-
-		if err != nil {
+		err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(tillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
 			errs = append(errs, err)
 		}
 
-		err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(roleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(tillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
+			errs = append(errs, err)
+		}
 
-		if err != nil {
+		err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(tillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
+			errs = append(errs, err)
+		}
+
+		err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(tillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
 			errs = append(errs, err)
 		}
 	}
@@ -429,6 +442,8 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 			Name:     role.Name,
 		},
 	}
+
+	// Ignore Errors
 	kubectlClient.RbacV1beta1().Roles(namespace).Create(role)
 	kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(rolebinding)
 
@@ -437,20 +452,21 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 
 func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
-
 	if err != nil {
 		return err
 	}
+
 	repos := []*repo.ChartRepository{}
 
 	for _, repoData := range allRepos.Repositories {
 		repo, err := repo.NewChartRepository(repoData, getter.All(*helmClientWrapper.Settings))
-
 		if err != nil {
 			return err
 		}
+
 		repos = append(repos, repo)
 	}
+
 	wg := sync.WaitGroup{}
 
 	for _, re := range repos {
@@ -460,7 +476,6 @@ func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 			defer wg.Done()
 
 			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
-
 			if err != nil {
 				log.With(err).Error("Unable to download repo index")
 
@@ -476,21 +491,21 @@ func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 
 // ReleaseExists checks if the given release name exists
 func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (bool, error) {
-	_, releaseHistoryErr := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
-
-	if releaseHistoryErr != nil {
-		if strings.Contains(releaseHistoryErr.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
+	_, err := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
+	if err != nil {
+		if strings.Contains(err.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
 			return false, nil
 		}
-		return false, releaseHistoryErr
+
+		return false, err
 	}
+
 	return true, nil
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
-
 	if err != nil {
 		return nil, err
 	}
@@ -592,11 +607,11 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 	}
 	os.MkdirAll(helmClientWrapper.Settings.Home.Archive(), os.ModePerm)
 
-	chartPath, _, chartDownloadErr := chartDownloader.DownloadTo(chartName, chartVersion, helmClientWrapper.Settings.Home.Archive())
-
-	if chartDownloadErr != nil {
-		return nil, chartDownloadErr
+	chartPath, _, err := chartDownloader.DownloadTo(chartName, chartVersion, helmClientWrapper.Settings.Home.Archive())
+	if err != nil {
+		return nil, err
 	}
+
 	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
 }
 

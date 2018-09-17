@@ -54,7 +54,6 @@ type SyncConfig struct {
 	verbose bool
 
 	stopOnce sync.Once
-	stopped  bool
 
 	// Used for testing
 	testing   bool
@@ -96,7 +95,7 @@ func (s *SyncConfig) Error(err error) {
 		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 	}
 
-	if s.stopped == false && s.errorChan != nil {
+	if s.errorChan != nil {
 		s.errorChan <- err
 	}
 }
@@ -404,8 +403,6 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 // Stop stops the sync process
 func (s *SyncConfig) Stop() {
 	s.stopOnce.Do(func() {
-		s.stopped = true
-
 		if s.upstream != nil && s.upstream.interrupt != nil {
 			close(s.upstream.interrupt)
 

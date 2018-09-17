@@ -313,9 +313,8 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 func setupTTY() term.TTY {
 	t := term.TTY{
 		Out: os.Stdout,
+		In:  os.Stdin,
 	}
-
-	t.In = os.Stdin
 
 	if !t.IsTerminalIn() {
 		log.Info("Unable to use a TTY - input is not a terminal or the right kind of file")
@@ -327,12 +326,9 @@ func setupTTY() term.TTY {
 	// can safely set t.Raw to true
 	t.Raw = true
 
-	_, stdout, _ := dockerterm.StdStreams()
+	stdin, stdout, _ := dockerterm.StdStreams()
 
-	// io.Copy(os.Stdin, stdin)
-	// t.In = stdin
-
-	io.Copy(stdout, os.Stdout)
+	t.In = stdin
 	t.Out = stdout
 
 	return t

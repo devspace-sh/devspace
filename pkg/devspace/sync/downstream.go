@@ -52,7 +52,7 @@ func (d *downstream) startShell() error {
 	} else {
 		var err error
 
-		cmd := exec.Command("bash", "-c", "sh")
+		cmd := exec.Command("sh")
 
 		d.stdinPipe, err = cmd.StdinPipe()
 		if err != nil {

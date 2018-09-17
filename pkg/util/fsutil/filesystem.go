@@ -1,7 +1,6 @@
 package fsutil
 
 import (
-	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
@@ -16,27 +15,12 @@ import (
 
 //WriteToFile writes data to a file
 func WriteToFile(data []byte, filePath string) error {
-	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-
-	file, fopenErr := os.OpenFile(filePath, os.O_CREATE, os.ModePerm)
-
-	defer file.Close()
-
-	if fopenErr != nil {
-		return fopenErr
+	err := os.MkdirAll(filepath.Dir(filePath), 0755)
+	if err != nil {
+		return err
 	}
-	fileWriter := bufio.NewWriter(file)
-	_, fwriteErr := fileWriter.Write(data)
 
-	if fwriteErr != nil {
-		return fwriteErr
-	}
-	flushErr := fileWriter.Flush()
-
-	if flushErr != nil {
-		return flushErr
-	}
-	return nil
+	return ioutil.WriteFile(filePath, data, 0666)
 }
 
 //Copy copies a file to a destination path

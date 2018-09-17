@@ -102,7 +102,6 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 	}
 
 	_, err = helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registryReleaseValues)
-
 	if err != nil {
 		return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
 	}
@@ -132,8 +131,8 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 			oldHtpasswdDataBytes := []byte(oldHtpasswdData)
 			newHtpasswdData, _ = htpasswd.ParseHtpasswd(oldHtpasswdDataBytes)
 		}
-		err = newHtpasswdData.SetPassword(*registryAuth.Username, *registryAuth.Password, htpasswd.HashBCrypt)
 
+		err = newHtpasswdData.SetPassword(*registryAuth.Username, *registryAuth.Password, htpasswd.HashBCrypt)
 		if err != nil {
 			return fmt.Errorf("Unable to set password in htpasswd: %s", err.Error())
 		}
@@ -143,7 +142,6 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 		htpasswdSecret.Data["htpasswd"] = newHtpasswdDataBytes
 
 		_, err = kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
-
 		if err != nil {
 			_, err = kubectl.Core().Secrets(registryReleaseNamespace).Create(htpasswdSecret)
 		} else {
@@ -154,6 +152,7 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 	if err != nil {
 		return fmt.Errorf("Unable to update htpasswd secret: %s", err.Error())
 	}
+
 	registryServiceName := registryReleaseName + "-docker-registry"
 	serviceHostname := ""
 	maxServiceWaiting := 60 * time.Second
@@ -161,9 +160,8 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 
 	for true {
 		registryService, err := kubectl.Core().Services(registryReleaseNamespace).Get(registryServiceName, metav1.GetOptions{})
-
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 
 		if len(registryService.Spec.ClusterIP) > 0 {
@@ -178,8 +176,8 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 			return errors.New("Timeout waiting for registry service to start")
 		}
 	}
-	ingressHostname := ""
 
+	ingressHostname := ""
 	if registryReleaseValues != nil {
 		registryValues := yamlq.NewQuery(*registryReleaseValues)
 		isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
@@ -200,7 +198,37 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 		registryConfig.URL = configutil.String(ingressHostname)
 		registryConfig.Insecure = configutil.Bool(false)
 	}
+
+	// Wait till registry is started
+	err = waitForRegistry(registryReleaseNamespace, registryServiceName, kubectl)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, client *kubernetes.Clientset) error {
+	registryWaitingTime := 2 * 60 * time.Second
+	registryCheckInverval := 5 * time.Second
+
+	log.StartWait("Waiting for internal registry to start")
+	defer log.StopWait()
+
+	for registryWaitingTime > 0 {
+		registryDeloyment, err := client.ExtensionsV1beta1().Deployments(registryNamespace).Get(registryReleaseDeploymentName, metav1.GetOptions{})
+		if err != nil {
+			continue
+		}
+		if registryDeloyment.Status.ReadyReplicas == registryDeloyment.Status.Replicas {
+			return nil
+		}
+
+		time.Sleep(registryCheckInverval)
+		registryWaitingTime = registryWaitingTime - registryCheckInverval
+	}
+
+	return errors.New("Internal registry start waiting time timed out")
 }
 
 //GetImageURL returns the image (optional with tag)
