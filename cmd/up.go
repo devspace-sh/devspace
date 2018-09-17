@@ -200,18 +200,21 @@ func (cmd *UpCmd) initRegistries() {
 
 	if config.Services.InternalRegistry != nil {
 		registryConf, regConfExists := registryMap["internal"]
-
 		if !regConfExists {
 			log.Fatal("Registry config not found for internal registry")
 		}
+
 		log.StartWait("Initializing internal registry")
 		err := registry.InitInternalRegistry(cmd.kubectl, cmd.helm, config.Services.InternalRegistry, registryConf)
-
-		err = configutil.SaveConfig()
 		log.StopWait()
 
 		if err != nil {
 			log.Fatalf("Internal registry error: %v", err)
+		}
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Saving config error: %v", err)
 		}
 
 		log.Done("Internal registry started")
@@ -222,12 +225,17 @@ func (cmd *UpCmd) initRegistries() {
 			username := ""
 			password := *registryConf.Auth.Password
 			email := "noreply@devspace-cloud.com"
+			registryURL := ""
 
 			if registryConf.Auth.Username != nil {
 				username = *registryConf.Auth.Username
 			}
+			if registryConf.URL != nil {
+				registryURL = *registryConf.URL
+			}
+
 			log.StartWait("Creating image pull secret for registry: " + registryName)
-			err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, *registryConf.URL, username, password, email)
+			err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
 			log.StopWait()
 
 			if err != nil {
@@ -238,13 +246,14 @@ func (cmd *UpCmd) initRegistries() {
 }
 
 func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string, buildFlagChanged bool) bool {
-	mustRebuild := true
-	dockerfileInfo, statErr := os.Stat(dockerfilePath)
 	var dockerfileModTime time.Time
 
-	if statErr != nil {
+	mustRebuild := true
+	dockerfileInfo, err := os.Stat(dockerfilePath)
+
+	if err != nil {
 		if imageConf.Build.LatestTimestamp == nil {
-			log.Fatalf("Dockerfile missing: %s", statErr.Error())
+			log.Fatalf("Dockerfile missing: %v", err)
 		} else {
 			mustRebuild = false
 		}
@@ -301,13 +310,15 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			var imageBuilder builder.Interface
 
 			buildInfo := "Building image '%s' with engine '%s'"
+			engineName := ""
+			registryURL := ""
 
-			registryURL := *registryConf.URL
-
+			if registryConf.URL != nil {
+				registryURL = *registryConf.URL
+			}
 			if registryURL == "hub.docker.com" {
 				registryURL = ""
 			}
-			engineName := ""
 
 			if imageConf.Build.Engine.Kaniko != nil {
 				engineName = "kaniko"
@@ -336,7 +347,11 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			if buildErr == nil {
 				username := ""
 				password := ""
+				registryURL := ""
 
+				if registryConf.URL != nil {
+					registryURL = *registryConf.URL
+				}
 				if registryConf.Auth != nil {
 					if registryConf.Auth.Username != nil {
 						username = *registryConf.Auth.Username
@@ -346,12 +361,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 						password = *registryConf.Auth.Password
 					}
 				}
-				log.StartWait("Authenticating (" + *registryConf.URL + ")")
+				log.StartWait("Authenticating (" + registryURL + ")")
 				_, buildErr = imageBuilder.Authenticate(username, password, len(username) == 0)
 				log.StopWait()
 
 				if buildErr == nil {
-					log.Done("Authentication successful (" + *registryConf.URL + ")")
+					log.Done("Authentication successful (" + registryURL + ")")
 					buildOptions := &types.ImageBuildOptions{}
 
 					if imageConf.Build.Options != nil {
@@ -365,7 +380,7 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 						buildErr = imageBuilder.PushImage()
 
 						if buildErr == nil {
-							log.Info("Image pushed to registry (" + *registryConf.URL + ")")
+							log.Info("Image pushed to registry (" + registryURL + ")")
 						}
 					}
 				}
@@ -395,7 +410,6 @@ func (cmd *UpCmd) initHelm() {
 		defer log.StopWait()
 
 		client, err := helmClient.NewClient(cmd.kubectl, false)
-
 		if err != nil {
 			log.Fatalf("Error initializing helm client: %s", err.Error())
 		}
@@ -525,7 +539,7 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 	syncConfigs := make([]*synctool.SyncConfig, 0, len(*config.DevSpace.Sync))
 
 	for _, syncPath := range *config.DevSpace.Sync {
-		absLocalPath, err := filepath.Abs(cmd.workdir + *syncPath.LocalSubPath)
+		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
 
 		if err != nil {
 			log.Panicf("Unable to resolve localSubPath %s: %s", *syncPath.LocalSubPath, err.Error())
