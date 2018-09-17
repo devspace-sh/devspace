@@ -301,12 +301,11 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			if randErr != nil {
 				log.Fatalf("Image building failed: %s", randErr.Error())
 			}
-			registryConf, registryErr := registry.GetRegistryConfig(imageConf)
-
-			if registryErr != nil {
-				log.Fatal(registryErr)
+			registryConf, err := registry.GetRegistryConfig(imageConf)
+			if err != nil {
+				log.Fatal(err)
 			}
-			var buildErr error
+
 			var imageBuilder builder.Interface
 
 			buildInfo := "Building image '%s' with engine '%s'"
@@ -332,7 +331,10 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 				if registryConf.Insecure != nil {
 					allowInsecurePush = *registryConf.Insecure
 				}
-				imageBuilder, buildErr = kaniko.NewBuilder(registryURL, *imageConf.Name, imageTag, buildNamespace, cmd.kubectl, allowInsecurePush)
+				imageBuilder, err = kaniko.NewBuilder(registryURL, *imageConf.Name, imageTag, buildNamespace, cmd.kubectl, allowInsecurePush)
+				if err != nil {
+					log.Fatalf("Error creating kaniko builder: %v", err)
+				}
 			} else {
 				engineName = "docker"
 				preferMinikube := true
@@ -340,62 +342,66 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
 					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
 				}
-				imageBuilder, buildErr = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
+
+				imageBuilder, err = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
+				if err != nil {
+					log.Fatalf("Error creating docker client: %v", err)
+				}
 			}
+
 			log.Infof(buildInfo, imageName, engineName)
 
-			if buildErr == nil {
-				username := ""
-				password := ""
-				registryURL := ""
+			username := ""
+			password := ""
 
-				if registryConf.URL != nil {
-					registryURL = *registryConf.URL
+			if registryConf.URL != nil {
+				registryURL = *registryConf.URL
+			}
+			if registryConf.Auth != nil {
+				if registryConf.Auth.Username != nil {
+					username = *registryConf.Auth.Username
 				}
-				if registryConf.Auth != nil {
-					if registryConf.Auth.Username != nil {
-						username = *registryConf.Auth.Username
-					}
 
-					if registryConf.Auth.Password != nil {
-						password = *registryConf.Auth.Password
-					}
-				}
-				log.StartWait("Authenticating (" + registryURL + ")")
-				_, buildErr = imageBuilder.Authenticate(username, password, len(username) == 0)
-				log.StopWait()
-
-				if buildErr == nil {
-					log.Done("Authentication successful (" + registryURL + ")")
-					buildOptions := &types.ImageBuildOptions{}
-
-					if imageConf.Build.Options != nil {
-						if imageConf.Build.Options.BuildArgs != nil {
-							buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
-						}
-					}
-					buildErr = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
-
-					if buildErr == nil {
-						buildErr = imageBuilder.PushImage()
-
-						if buildErr == nil {
-							log.Info("Image pushed to registry (" + registryURL + ")")
-						}
-					}
+				if registryConf.Auth.Password != nil {
+					password = *registryConf.Auth.Password
 				}
 			}
 
-			if buildErr != nil {
-				log.Fatalf("Image building failed: %s", buildErr.Error())
+			log.StartWait("Authenticating (" + registryURL + ")")
+			_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
+			log.StopWait()
+
+			if err != nil {
+				log.Fatalf("Error during image registry authentication: %v", err)
 			}
+
+			log.Done("Authentication successful (" + registryURL + ")")
+
+			buildOptions := &types.ImageBuildOptions{}
+			if imageConf.Build.Options != nil {
+				if imageConf.Build.Options.BuildArgs != nil {
+					buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
+				}
+			}
+
+			err = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+			if err != nil {
+				log.Fatalf("Error during image build: %v", err)
+			}
+
+			err = imageBuilder.PushImage()
+			if err != nil {
+				log.Fatalf("Error during image push: %v", err)
+			}
+
+			log.Info("Image pushed to registry (" + registryURL + ")")
 			imageConf.Tag = &imageTag
 
-			err := configutil.SaveConfig()
-
+			err = configutil.SaveConfig()
 			if err != nil {
 				log.Fatalf("Config saving error: %s", err.Error())
 			}
+
 			log.Done("Done building and pushing image '" + imageName + "'")
 		} else {
 			log.Infof("Skip building image '%s'", imageName)
