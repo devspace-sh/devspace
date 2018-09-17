@@ -21,13 +21,13 @@ del "%Temp%\install-devspace.bat"
 ### For Linux
 1. Run the command:
 ```bash
-curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ### For Mac
 1. Run the command:
 ```bash
-curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nr 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ## Binary Download
