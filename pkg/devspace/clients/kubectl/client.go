@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
@@ -28,6 +29,8 @@ import (
 	"k8s.io/kubernetes/pkg/util/node"
 )
 
+var isMinikubeVar *bool
+
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	config, err := GetClientConfig()
@@ -37,6 +40,24 @@ func NewClient() (*kubernetes.Clientset, error) {
 	}
 
 	return kubernetes.NewForConfig(config)
+}
+
+// IsMinikube returns true if the Kubernetes cluster is a minikube
+func IsMinikube() bool {
+	if isMinikubeVar == nil {
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+		cfg, err := kubeConfig.RawConfig()
+
+		if err != nil {
+			return false
+		}
+
+		isMinikube := cfg.CurrentContext == "minikube"
+		isMinikubeVar = &isMinikube
+	}
+
+	return *isMinikubeVar
 }
 
 // GetFirstRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string

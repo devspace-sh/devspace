@@ -2,19 +2,19 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
-	"k8s.io/client-go/tools/clientcmd"
 )
-
-var isMinikubeVar *bool
 
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -27,6 +27,10 @@ func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 }
 
 func newDockerClientFromMinikube() (client.CommonAPIClient, error) {
+	if kubectl.IsMinikube() == false {
+		return nil, errors.New("Cluster is not a minikube cluster")
+	}
+
 	env, err := getMinikubeEnvironment()
 	if err != nil {
 		return nil, err
@@ -63,23 +67,6 @@ func newDockerClientFromMinikube() (client.CommonAPIClient, error) {
 	}
 
 	return client.NewClient(host, version, httpclient, nil)
-}
-
-func isMinikube() bool {
-	if isMinikubeVar == nil {
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-		cfg, err := kubeConfig.RawConfig()
-
-		if err != nil {
-			return false
-		}
-
-		isMinikube := cfg.CurrentContext == "minikube"
-		isMinikubeVar = &isMinikube
-	}
-
-	return *isMinikubeVar
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {
