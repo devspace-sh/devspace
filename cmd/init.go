@@ -153,12 +153,11 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	createChart := cmd.flags.overwrite
 
 	if !cmd.flags.overwrite {
-		_, dockerfileNotFound := os.Stat(cmd.workdir + "/Dockerfile")
 		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
 
-		if dockerfileNotFound == nil || chartDirNotFound == nil {
+		if chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to overwrite the Dockerfile and the existing files in /chart? (yes | no)",
+				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
 				DefaultValue:           "no",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			})

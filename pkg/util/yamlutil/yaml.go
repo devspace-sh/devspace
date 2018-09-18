@@ -20,9 +20,9 @@ func WriteYamlToFile(yamlData interface{}, filePath string) error {
 //ReadYamlFromFile reads a yaml file
 func ReadYamlFromFile(filePath string, yamlTarget interface{}) error {
 	yamlFile, err := ioutil.ReadFile(filePath)
-
 	if err != nil {
 		return err
 	}
+
 	return yaml.Unmarshal(yamlFile, yamlTarget)
 }
