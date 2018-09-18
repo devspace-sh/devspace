@@ -7,6 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+
+	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -397,10 +401,31 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
+	dockerUsername := ""
+	createInternalRegistryDefaultAnswer := "yes"
+
+	var imageBuilder *docker.Builder
+	var dockerBuilderErr error
+
+	imageBuilder, dockerBuilderErr = docker.NewBuilder("", "", "", false)
+
+	if dockerBuilderErr == nil {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, dockerAuthErr := imageBuilder.Authenticate("", "", true)
+		log.StopWait()
+
+		if dockerAuthErr == nil {
+			dockerUsername = dockerAuthConfig.Username
+
+			if dockerUsername != "" {
+				createInternalRegistryDefaultAnswer = "no"
+			}
+		}
+	}
 	internalRegistryConfig := cmd.config.Services.InternalRegistry
 	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
-		DefaultValue:           "yes",
+		DefaultValue:           createInternalRegistryDefaultAnswer,
 		ValidationRegexPattern: "^(yes)|(no)$",
 	})
 
@@ -413,22 +438,77 @@ func (cmd *InitCmd) configureRegistry() {
 
 		cmd.defaultRegistry.URL = registryURL
 		internalRegistryConfig = nil
+		loginWarningServer := ""
+
+		if dockerUsername == "" {
+			if *registryURL != "hub.docker.com" {
+				loginWarningServer = " " + *registryURL
+				imageBuilder, dockerBuilderErr = docker.NewBuilder(*registryURL, "", "", false)
+			}
+
+			if dockerBuilderErr == nil {
+				log.StartWait("Checking Docker credentials")
+				dockerAuthConfig, dockerAuthErr := imageBuilder.Authenticate("", "", true)
+				log.StopWait()
+
+				if dockerAuthErr == nil {
+					dockerUsername = dockerAuthConfig.Username
+				}
+			}
+		}
+
+		if dockerUsername == "" {
+			if cmd.defaultImage.Build.Engine.Docker != nil {
+				log.Fatal("Make sure you login to the registry with: docker login" + loginWarningServer)
+			} else {
+				registryMapOverwrite := *cmd.overwriteConfig.Registries
+				defaultRegistryOverwrite, defaultRegistryOverwriteDefined := registryMapOverwrite["default"]
+
+				if !defaultRegistryOverwriteDefined {
+					defaultRegistryOverwrite = &v1.RegistryConfig{}
+					registryMapOverwrite["default"] = defaultRegistryOverwrite
+				}
+
+				if defaultRegistryOverwrite.Auth == nil {
+					defaultRegistryOverwrite.Auth = &v1.RegistryAuth{}
+				}
+
+				if defaultRegistryOverwrite.Auth.Username == nil {
+					defaultRegistryOverwrite.Auth.Username = configutil.String("")
+				}
+
+				defaultRegistryOverwrite.Auth.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Which username do you want to use to push images to " + *registryURL + "?",
+					DefaultValue:           *defaultRegistryOverwrite.Auth.Username,
+					ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
+				})
+				dockerUsername = *defaultRegistryOverwrite.Auth.Username
+
+				if defaultRegistryOverwrite.Auth.Password == nil {
+					defaultRegistryOverwrite.Auth.Password = configutil.String("")
+				}
+
+				defaultRegistryOverwrite.Auth.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Which password do you want to use to push images to " + *registryURL + "?",
+					DefaultValue:           *defaultRegistryOverwrite.Auth.Password,
+					ValidationRegexPattern: "^.*$",
+				})
+			}
+		}
 
 		if *registryURL == "hub.docker.com" {
 			defaultImageName := *cmd.defaultImage.Name
 			defaultImageNameParts := strings.Split(defaultImageName, "/")
-			existingDockerUsername := ""
 
-			if len(defaultImageNameParts) > 1 {
-				existingDockerUsername = defaultImageNameParts[0]
+			if len(defaultImageNameParts) < 2 {
+				defaultImageName = dockerUsername + "/" + strings.TrimPrefix(defaultImageName, dockerUsername)
 			}
 
-			dockerUsername := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Docker username?",
-				DefaultValue:           existingDockerUsername,
+			cmd.defaultImage.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Which image name do you want to use on Docker Hub?",
+				DefaultValue:           defaultImageName,
 				ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
 			})
-			cmd.defaultImage.Name = configutil.String(*dockerUsername + "/" + strings.TrimPrefix(defaultImageName, *dockerUsername))
 		}
 	} else {
 		imageMap := *cmd.config.Images
@@ -513,6 +593,8 @@ func (cmd *InitCmd) configureRegistry() {
 						},
 					},
 				}
+			} else if kubectl.IsMinikube() == false {
+				log.Warn("Your Kubernetes cluster will not be able to pull images from a registry without a registry domain!\n")
 			}
 		}
 		secrets, registryHasSecrets := registryReleaseValues["secrets"]
