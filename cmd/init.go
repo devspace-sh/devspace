@@ -373,12 +373,36 @@ func (cmd *InitCmd) configureKubernetes() {
 			DefaultValue:           *clusterConfig.APIServer,
 			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
 		})
+
+		if clusterConfig.CaCert == nil {
+			clusterConfig.CaCert = configutil.String("")
+		}
 		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is the CA Certificate of your API Server? (PEM)",
 			DefaultValue:           *clusterConfig.CaCert,
 			InputTerminationString: "-----END CERTIFICATE-----",
 		})
-		clusterConfig.User.Username = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
+
+		if clusterConfig.User == nil {
+			clusterConfig.User = &v1.ClusterUser{
+				Username:   configutil.String(""),
+				ClientCert: configutil.String(""),
+				ClientKey:  configutil.String(""),
+			}
+		} else {
+			if clusterConfig.User.Username == nil {
+				clusterConfig.User.Username = configutil.String("")
+			}
+
+			if clusterConfig.User.ClientCert == nil {
+				clusterConfig.User.ClientCert = configutil.String("")
+			}
+
+			if clusterConfig.User.ClientKey == nil {
+				clusterConfig.User.ClientKey = configutil.String("")
+			}
+		}
+		clusterConfig.User.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes username?",
 			DefaultValue:           *clusterConfig.User.Username,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
