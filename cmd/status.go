@@ -115,7 +115,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 			"",
 			err.Error(),
 		})
-	} else {
+	} else if registryStatus != nil {
 		values = append(values, registryStatus)
 	}
 
@@ -154,6 +154,10 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 	config := configutil.GetConfig(false)
 	registry := config.Services.InternalRegistry
+	if registry == nil {
+		return nil, nil
+	}
+
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
