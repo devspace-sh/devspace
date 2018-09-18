@@ -3,11 +3,11 @@ title: Source Code Synchronization
 ---
 
 # Code Synchronization
-The DevSpace CLI synchronization mechanism is written from scratch and made for kubernetes development with hot reloading. While current other kubernetes development solutions (like draft, skaffold and telepresence) help the developer with the problem how to test and deploy cloud-native applications in kubernetes clusters, actual iterative development, testing and hot reloading of cloud-native applications within kubernetes is still an annoying problem. Especially for developers of programming languages that support hot reload development environments, such as nodejs, this is a hassle. The DevSpace CLI has a syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container, a deployment pipeline or a docker build. This greatly accelerates development, debugging and testing directly in remote containers.
+The DevSpace CLI synchronization mechanism is written from scratch and made for Kubernetes development with hot reloading. While current other Kubernetes development solutions (like draft, skaffold and telepresence) help the developer with the problem how to test and deploy cloud-native applications in Kubernetes clusters, actual iterative development, testing and hot reloading of cloud-native applications within Kubernetes is still an annoying problem. Especially for developers of programming languages that support hot reload development environments, such as nodejs, this is a hassle. The DevSpace CLI has a syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container, a deployment pipeline or a docker build. This greatly accelerates development, debugging and testing directly in remote containers.
 
 Our main requirements to the sync mechanism were:
 - Easy to integrate, no cluster dependencies, client-only implementation
-- Should work in every kubernetes cluster
+- Should work in every Kubernetes cluster
 - Should work with most containers, without installing additional binaries or changing the Dockerfile
 - Should work with every container filesystem (i.e. ephemeral storage and mounted volumes)
 - File watchers and hot reload tools like nodemon should recognize sync changes like on local filesystem
