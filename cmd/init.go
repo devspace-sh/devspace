@@ -399,148 +399,139 @@ func (cmd *InitCmd) configureKubernetes() {
 
 func (cmd *InitCmd) configureRegistry() {
 	internalRegistryConfig := cmd.config.Services.InternalRegistry
-
-	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to enable automatic Docker image building?",
+	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
 		DefaultValue:           "yes",
 		ValidationRegexPattern: "^(yes)|(no)$",
 	})
 
-	if *enableAutomaticBuilds == "yes" {
-		internalRegistryKey := "internal registry"
-		defaultRegistryValue := internalRegistryKey
-
-		if cmd.defaultRegistry.URL != nil {
-			defaultRegistryValue = *cmd.defaultRegistry.URL
-		}
+	if *createInternalRegistry == "no" {
 		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which registry do you want to push to? ('internal registry', 'hub.docker.com' or URL)",
-			DefaultValue:           defaultRegistryValue,
+			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
+			DefaultValue:           "hub.docker.com",
 			ValidationRegexPattern: "^.*$",
 		})
 
-		if *registryURL != internalRegistryKey {
-			cmd.defaultRegistry.URL = registryURL
-			internalRegistryConfig = nil
+		cmd.defaultRegistry.URL = registryURL
+		internalRegistryConfig = nil
 
-			if *registryURL == "hub.docker.com" {
-				defaultImageName := *cmd.defaultImage.Name
-				defaultImageNameParts := strings.Split(defaultImageName, "/")
-				existingDockerUsername := ""
+		if *registryURL == "hub.docker.com" {
+			defaultImageName := *cmd.defaultImage.Name
+			defaultImageNameParts := strings.Split(defaultImageName, "/")
+			existingDockerUsername := ""
 
-				if len(defaultImageNameParts) > 1 {
-					existingDockerUsername = defaultImageNameParts[0]
-				}
-
-				dockerUsername := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "What is your Docker username?",
-					DefaultValue:           existingDockerUsername,
-					ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
-				})
-				cmd.defaultImage.Name = configutil.String(*dockerUsername + "/" + strings.TrimPrefix(defaultImageName, *dockerUsername))
+			if len(defaultImageNameParts) > 1 {
+				existingDockerUsername = defaultImageNameParts[0]
 			}
+
+			dockerUsername := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is your Docker username?",
+				DefaultValue:           existingDockerUsername,
+				ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
+			})
+			cmd.defaultImage.Name = configutil.String(*dockerUsername + "/" + strings.TrimPrefix(defaultImageName, *dockerUsername))
+		}
+	} else {
+		imageMap := *cmd.config.Images
+		defaultImageConf, defaultImageExists := imageMap["default"]
+
+		if defaultImageExists {
+			defaultImageConf.Registry = configutil.String("internal")
+		}
+
+		if internalRegistryConfig == nil {
+			internalRegistryConfig = &v1.InternalRegistry{
+				Release: &v1.Release{},
+			}
+			cmd.config.Services.InternalRegistry = internalRegistryConfig
+		}
+
+		if internalRegistryConfig.Release.Name == nil {
+			internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
+		}
+
+		if internalRegistryConfig.Release.Namespace == nil {
+			internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+		}
+		overwriteRegistryMap := *cmd.overwriteConfig.Registries
+
+		overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
+
+		if !overwriteRegistryConfigFound {
+			overwriteRegistryConfig = &v1.RegistryConfig{
+				Auth: &v1.RegistryAuth{},
+			}
+			overwriteRegistryMap["internal"] = overwriteRegistryConfig
+		}
+		registryAuth := overwriteRegistryConfig.Auth
+
+		if registryAuth.Username == nil {
+			randomUserSuffix, err := randutil.GenerateRandomString(5)
+
+			if err != nil {
+				log.Fatalf("Error creating random username: %s", err.Error())
+			}
+			registryAuth.Username = configutil.String("user-" + randomUserSuffix)
+		}
+
+		if registryAuth.Password == nil {
+			randomPassword, err := randutil.GenerateRandomString(12)
+
+			if err != nil {
+				log.Fatalf("Error creating random password: %s", err.Error())
+			}
+			registryAuth.Password = &randomPassword
+		}
+		var registryReleaseValues map[interface{}]interface{}
+
+		if internalRegistryConfig.Release.Values != nil {
+			registryReleaseValues = *internalRegistryConfig.Release.Values
 		} else {
-			imageMap := *cmd.config.Images
-			defaultImageConf, defaultImageExists := imageMap["default"]
+			registryReleaseValues = map[interface{}]interface{}{}
 
-			if defaultImageExists {
-				defaultImageConf.Registry = configutil.String("internal")
-			}
+			registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
+				ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
+			})
 
-			if internalRegistryConfig == nil {
-				internalRegistryConfig = &v1.InternalRegistry{
-					Release: &v1.Release{},
-				}
-				cmd.config.Services.InternalRegistry = internalRegistryConfig
-			}
-
-			if internalRegistryConfig.Release.Name == nil {
-				internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
-			}
-
-			if internalRegistryConfig.Release.Namespace == nil {
-				internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
-			}
-			overwriteRegistryMap := *cmd.overwriteConfig.Registries
-
-			overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
-
-			if !overwriteRegistryConfigFound {
-				overwriteRegistryConfig = &v1.RegistryConfig{
-					Auth: &v1.RegistryAuth{},
-				}
-				overwriteRegistryMap["internal"] = overwriteRegistryConfig
-			}
-			registryAuth := overwriteRegistryConfig.Auth
-
-			if registryAuth.Username == nil {
-				randomUserSuffix, err := randutil.GenerateRandomString(5)
-
-				if err != nil {
-					log.Fatalf("Error creating random username: %s", err.Error())
-				}
-				registryAuth.Username = configutil.String("user-" + randomUserSuffix)
-			}
-
-			if registryAuth.Password == nil {
-				randomPassword, err := randutil.GenerateRandomString(12)
-
-				if err != nil {
-					log.Fatalf("Error creating random password: %s", err.Error())
-				}
-				registryAuth.Password = &randomPassword
-			}
-			var registryReleaseValues map[interface{}]interface{}
-
-			if internalRegistryConfig.Release.Values != nil {
-				registryReleaseValues = *internalRegistryConfig.Release.Values
-			} else {
-				registryReleaseValues = map[interface{}]interface{}{}
-
-				registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
-					ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
-				})
-
-				if *registryDomain != "" {
-					registryReleaseValues = map[interface{}]interface{}{
-						"Ingress": map[string]interface{}{
-							"Enabled": true,
-							"Hosts": []string{
-								*registryDomain,
-							},
-							"Annotations": map[string]string{
-								"Kubernetes.io/tls-acme": "true",
-							},
-							"Tls": []map[string]interface{}{
-								map[string]interface{}{
-									"SecretName": "tls-devspace-registry",
-									"Hosts": []string{
-										*registryDomain,
-									},
+			if *registryDomain != "" {
+				registryReleaseValues = map[interface{}]interface{}{
+					"Ingress": map[string]interface{}{
+						"Enabled": true,
+						"Hosts": []string{
+							*registryDomain,
+						},
+						"Annotations": map[string]string{
+							"Kubernetes.io/tls-acme": "true",
+						},
+						"Tls": []map[string]interface{}{
+							map[string]interface{}{
+								"SecretName": "tls-devspace-registry",
+								"Hosts": []string{
+									*registryDomain,
 								},
 							},
 						},
-					}
+					},
 				}
 			}
-			secrets, registryHasSecrets := registryReleaseValues["secrets"]
-
-			if !registryHasSecrets {
-				secrets = map[interface{}]interface{}{}
-				registryReleaseValues["secrets"] = secrets
-			}
-			secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
-
-			if secretsIsMap {
-				_, registryHasSecretHtpasswd := secretMap["htpasswd"]
-
-				if !registryHasSecretHtpasswd {
-					secretMap["htpasswd"] = ""
-				}
-			}
-			internalRegistryConfig.Release.Values = &registryReleaseValues
 		}
+		secrets, registryHasSecrets := registryReleaseValues["secrets"]
+
+		if !registryHasSecrets {
+			secrets = map[interface{}]interface{}{}
+			registryReleaseValues["secrets"] = secrets
+		}
+		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
+
+		if secretsIsMap {
+			_, registryHasSecretHtpasswd := secretMap["htpasswd"]
+
+			if !registryHasSecretHtpasswd {
+				secretMap["htpasswd"] = ""
+			}
+		}
+		internalRegistryConfig.Release.Values = &registryReleaseValues
 	}
 }
 
