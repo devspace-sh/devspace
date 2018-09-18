@@ -75,12 +75,12 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 
 		if isInitial {
 			// File is older locally than remote so don't update remote
-			if ceilMtime(stat.ModTime()) <= s.fileIndex.fileMap[relativePath].Mtime+1 {
+			if roundMtime(stat.ModTime()) <= s.fileIndex.fileMap[relativePath].Mtime {
 				return false
 			}
 		} else {
 			// File did not change or was changed by downstream
-			if ceilMtime(stat.ModTime()) == s.fileIndex.fileMap[relativePath].Mtime && stat.Size() == s.fileIndex.fileMap[relativePath].Size {
+			if roundMtime(stat.ModTime()) == s.fileIndex.fileMap[relativePath].Mtime && stat.Size() == s.fileIndex.fileMap[relativePath].Size {
 				return false
 			}
 		}
@@ -140,12 +140,18 @@ func shouldDownload(fileInformation *fileInformation, s *SyncConfig) bool {
 // - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
 func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *SyncConfig) bool {
 	if fileInformation == nil {
+		s.Logf("Skip %s because fileInformation is nil", absFilepath)
 		return false
 	}
+
+	// We don't need to check s.ignoreMatcher, because if a path is ignored it will never be added to the fileMap, because shouldDownload
+	// and shouldUpload are always false, and hence it never appears in the fileMap and is not copied to the remove fileMap clone
+	// in the beginning of the downstream mainLoop
 
 	// Exclude files on the exclude list
 	if s.downloadIgnoreMatcher != nil {
 		if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
+			s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
 			return false
 		}
 	}
@@ -153,12 +159,14 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
+		s.Logf("Skip %s because stat returned %v", absFilepath, stat)
 		return false
 	}
 
 	// We don't delete the file if we haven't tracked it
 	if stat != nil && s.fileIndex.fileMap[fileInformation.Name] != nil {
 		if stat.IsDir() != s.fileIndex.fileMap[fileInformation.Name].IsDirectory || stat.IsDir() != fileInformation.IsDirectory {
+			s.Logf("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
 			return false
 		}
 
@@ -166,9 +174,13 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 			// We don't delete the file if it has changed in the map since we collected changes
 			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
 				// We don't delete the file if it has changed on the filesystem meanwhile
-				if ceilMtime(stat.ModTime()) <= fileInformation.Mtime {
+				if roundMtime(stat.ModTime()) <= fileInformation.Mtime {
 					return true
 				}
+
+				s.Logf("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, roundMtime(stat.ModTime()), fileInformation.Mtime)
+			} else {
+				s.Logf("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
 			}
 		} else {
 			return true

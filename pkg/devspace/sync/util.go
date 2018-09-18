@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -84,16 +83,9 @@ func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Cont
 	return nil
 }
 
-// We need this function because tar ceils up the mtime to seconds on the server
-func ceilMtime(mtime time.Time) int64 {
-	if mtime.UnixNano()%1000000000 != 0 {
-		num := strconv.FormatInt(mtime.UnixNano(), 10)
-		ret, _ := strconv.Atoi(num[:len(num)-9])
-
-		return int64(ret) + 1
-	}
-
-	return mtime.Unix()
+// We need this function because tar rounds the mtime on the server as well
+func roundMtime(mtime time.Time) int64 {
+	return mtime.Round(time.Second).Unix()
 }
 
 func getRelativeFromFullPath(fullpath string, prefix string) string {

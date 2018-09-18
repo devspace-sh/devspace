@@ -62,11 +62,11 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 	stat, err := os.Stat(outFileName)
 
 	if err == nil {
-		if ceilMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {
+		if roundMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {
 			// Update filemap otherwise we download and download again
 			config.fileIndex.fileMap[relativePath] = &fileInformation{
 				Name:        relativePath,
-				Mtime:       ceilMtime(stat.ModTime()),
+				Mtime:       roundMtime(stat.ModTime()),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			}
@@ -317,7 +317,7 @@ func createFileInformationFromStat(relativePath string, stat os.FileInfo, config
 	fileInformation := &fileInformation{
 		Name:        relativePath,
 		Size:        stat.Size(),
-		Mtime:       ceilMtime(stat.ModTime()),
+		Mtime:       roundMtime(stat.ModTime()),
 		IsDirectory: stat.IsDir(),
 	}
 

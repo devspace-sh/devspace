@@ -171,11 +171,11 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 		if s.uploadIgnoreMatcher != nil {
 			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
 				// Add to file map and prevent download if local file is newer than the remote one
-				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < ceilMtime(stat.ModTime()) {
+				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < roundMtime(stat.ModTime()) {
 					// Add it to the fileMap
 					s.fileIndex.fileMap[relativePath] = &fileInformation{
 						Name:        relativePath,
-						Mtime:       ceilMtime(stat.ModTime()),
+						Mtime:       roundMtime(stat.ModTime()),
 						Size:        stat.Size(),
 						IsDirectory: stat.IsDir(),
 					}
@@ -189,7 +189,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 			// New Create Task
 			return &fileInformation{
 				Name:        relativePath,
-				Mtime:       ceilMtime(stat.ModTime()),
+				Mtime:       roundMtime(stat.ModTime()),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			}
