@@ -13,8 +13,8 @@ Flags:
   -l, --language string           Programming language of your project
   -o, --overwrite                 Overwrite existing chart files and Dockerfile
   -r, --reconfigure               Change existing configuration
-      --templateRepoPath string   Local path for cloning chart template repository (uses temp
-folder if not specified)
+      --templateRepoPath string   Local path for cloning chart template repository (uses temp folder
+if not specified)
       --templateRepoUrl string    Git repository for chart templates (default "https://github.com/covexo/devspace-templates.git")
 ```
 

@@ -13,6 +13,8 @@
       "cli/up",
       "cli/down",
       "cli/reset",
+      "cli/add",
+      "cli/remove",
       "cli/install",
       "cli/upgrade"
     ],
