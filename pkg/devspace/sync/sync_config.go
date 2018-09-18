@@ -308,11 +308,11 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
 			s.fileIndex.fileMapMutex.Lock()
 			// Add to file map and prevent download if local file is newer than the remote one
-			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < ceilMtime(stat.ModTime()) {
+			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < roundMtime(stat.ModTime()) {
 				// Add it to the fileMap
 				s.fileIndex.fileMap[relativePath] = &fileInformation{
 					Name:        relativePath,
-					Mtime:       ceilMtime(stat.ModTime()),
+					Mtime:       roundMtime(stat.ModTime()),
 					Size:        stat.Size(),
 					IsDirectory: stat.IsDir(),
 				}
@@ -338,7 +338,7 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 	// Add file to upload
 	*sendChanges = append(*sendChanges, &fileInformation{
 		Name:        relativePath,
-		Mtime:       ceilMtime(stat.ModTime()),
+		Mtime:       roundMtime(stat.ModTime()),
 		Size:        stat.Size(),
 		IsDirectory: false,
 	})
@@ -358,7 +358,7 @@ func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*
 	if len(files) == 0 && relativePath != "" {
 		*sendChanges = append(*sendChanges, &fileInformation{
 			Name:        relativePath,
-			Mtime:       ceilMtime(stat.ModTime()),
+			Mtime:       roundMtime(stat.ModTime()),
 			Size:        stat.Size(),
 			IsDirectory: true,
 		})

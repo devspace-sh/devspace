@@ -611,21 +611,3 @@ func TestRemoveDirInFileMap(t *testing.T) {
 		t.Fail()
 	}
 }
-
-func TestCeilMtime(t *testing.T) {
-	ceiledNumberNano := time.Unix(1533647574, 0)
-	ceiledNumberSeconds := time.Unix(1533647574, 0)
-
-	unceiledNumberNano := time.Unix(1533647574, 1)
-	unceiledNumberSeconds := time.Unix(1533647575, 0)
-
-	if ceilMtime(ceiledNumberNano) != ceiledNumberSeconds.Unix() {
-		t.Error("ceilMtime failed ceiledNumberNano != ceiledNumberSeconds")
-		t.Fail()
-	}
-
-	if ceilMtime(unceiledNumberNano) != unceiledNumberSeconds.Unix() {
-		t.Error("ceilMtime failed unceiledNumberNano != unceiledNumberSeconds")
-		t.Fail()
-	}
-}

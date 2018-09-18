@@ -141,7 +141,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.flags.initRegistries {
 		cmd.initRegistries()
 	}
-	mustRedeploy := cmd.flags.deploy
+	mustRedeploy := false
 
 	if cmd.flags.build {
 		mustRedeploy = cmd.buildImages(cobraCmd.Flags().Changed("build"))
@@ -150,7 +150,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if we find a running release pod
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
 
-	if err != nil || mustRedeploy {
+	if err != nil || mustRedeploy || cmd.flags.deploy {
 		cmd.deployChart()
 	} else {
 		cmd.pod = pod
