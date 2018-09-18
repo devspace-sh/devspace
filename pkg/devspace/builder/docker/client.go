@@ -28,7 +28,7 @@ func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 
 func newDockerClientFromMinikube() (client.CommonAPIClient, error) {
 	if kubectl.IsMinikube() == false {
-		return nil, errors.New("Cluster is not a minikube cluster.")
+		return nil, errors.New("Cluster is not a minikube cluster")
 	}
 
 	env, err := getMinikubeEnvironment()
