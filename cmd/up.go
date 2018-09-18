@@ -437,7 +437,10 @@ func (cmd *UpCmd) deployChart() {
 	values := map[interface{}]interface{}{}
 	overwriteValues := map[interface{}]interface{}{}
 
-	yamlutil.ReadYamlFromFile(chartPath, values)
+	err := yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
+	if err != nil {
+		log.Fatalf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
+	}
 
 	containerValues := map[string]interface{}{}
 
@@ -449,14 +452,15 @@ func (cmd *UpCmd) deployChart() {
 			container["command"] = []string{"sleep"}
 			container["args"] = []string{"99999999"}
 		}
+
 		containerValues[imageName] = container
 	}
 
-	pullSecrets := []string{}
+	pullSecrets := []interface{}{}
 	existingPullSecrets, pullSecretsExisting := values["pullSecrets"]
 
 	if pullSecretsExisting {
-		pullSecrets = existingPullSecrets.([]string)
+		pullSecrets = existingPullSecrets.([]interface{})
 	}
 
 	for _, registryConf := range *config.Registries {
