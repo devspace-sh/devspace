@@ -448,9 +448,9 @@ func (cmd *UpCmd) deployChart() {
 		container := map[string]interface{}{}
 		container["image"] = registry.GetImageURL(imageConf, true)
 
-		if !cmd.flags.noSleep {
-			container["command"] = []string{"sleep"}
-			container["args"] = []string{"99999999"}
+		if cmd.flags.noSleep {
+			container["command"] = []string{}
+			container["args"] = []string{}
 		}
 
 		containerValues[imageName] = container
