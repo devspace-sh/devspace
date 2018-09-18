@@ -531,7 +531,7 @@ func (cmd *InitCmd) configureRegistry() {
 			cmd.defaultImage.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Which image name do you want to use on Docker Hub?",
 				DefaultValue:           defaultImageName,
-				ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
+				ValidationRegexPattern: "^[a-zA-Z0-9/]{4,30}$",
 			})
 		}
 	} else {
