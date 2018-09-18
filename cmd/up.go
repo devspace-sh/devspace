@@ -557,7 +557,12 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 				labels = append(labels, key+"="+*value)
 			}
 
-			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), *config.DevSpace.Release.Namespace)
+			namespace := *config.DevSpace.Release.Namespace
+			if syncPath.Namespace != nil && *syncPath.Namespace != "" {
+				namespace = *syncPath.Namespace
+			}
+
+			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), namespace)
 
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
@@ -608,7 +613,12 @@ func (cmd *UpCmd) startPortForwarding() {
 					labels = append(labels, key+"="+*value)
 				}
 
-				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), *config.DevSpace.Release.Namespace)
+				namespace := *config.DevSpace.Release.Namespace
+				if portForwarding.Namespace != nil && *portForwarding.Namespace != "" {
+					namespace = *portForwarding.Namespace
+				}
+
+				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), namespace)
 
 				if err != nil {
 					log.Errorf("Unable to list devspace pods: %s", err.Error())
