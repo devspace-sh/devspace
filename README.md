@@ -99,4 +99,4 @@ This project is mainly written in Golang. To contribute code,
 4. Build the project, e.g. via `go build -o devspace.exe`
 
 ## License
-You can use the DevSpace CLI for any private or commercial projects because it is licensed unter the Apache 2.0 open source license.
+You can use the DevSpace CLI for any private or commercial projects because it is licensed under the Apache 2.0 open source license.
