@@ -16,7 +16,9 @@
       "cli/add",
       "cli/remove",
       "cli/install",
-      "cli/upgrade"
+      "cli/upgrade",
+      "cli/list",
+      "cli/status"
     ],
     "Configuration": [
       "configuration/dockerfile",
