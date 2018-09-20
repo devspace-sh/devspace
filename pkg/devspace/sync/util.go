@@ -56,7 +56,7 @@ func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Cont
 		testing:      testing,
 	}
 
-	syncLog = log.GetInstance()
+	// syncLog = log.GetInstance()
 	s.setup()
 
 	err = s.upstream.start()
@@ -78,7 +78,7 @@ func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Cont
 
 	s.Stop()
 
-	syncLog = nil
+	// syncLog = nil
 
 	return nil
 }
