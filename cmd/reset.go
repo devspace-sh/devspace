@@ -66,6 +66,7 @@ command: devspace down
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
+
 	var err error
 	log.Infof("Start resetting project")
 	cmd.determineResetExtent()
