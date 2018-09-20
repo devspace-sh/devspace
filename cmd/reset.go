@@ -66,11 +66,16 @@ command: devspace down
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
+
 	var err error
+	log.Infof("Start resetting project")
 	cmd.determineResetExtent()
 
 	if cmd.flags.deleteRelease {
+
+		log.StartWait("Deleting release")
 		err = cmd.deleteRelease()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting release: %s", err.Error())
@@ -80,7 +85,10 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteRegistry {
+
+		log.StartWait("Deleting docker registry")
 		err = cmd.deleteRegistry()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting docker registry: %s", err.Error())
@@ -94,7 +102,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteTiller {
+		log.StartWait("Deleting tiller server")
 		err = cmd.deleteTiller()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting tiller: %s", err.Error())
@@ -108,7 +118,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteChart {
+		log.StartWait("Deleting chart")
 		err = cmd.deleteChart()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting chart: %s", err.Error())
@@ -122,7 +134,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteDockerfile {
+		log.StartWait("Deleting Dockerfile")
 		err = cmd.deleteDockerfile()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting Dockerfile: %s", err.Error())
@@ -136,7 +150,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteDevspaceFolder {
+		log.StartWait("Deleting .devSpace Folder")
 		err = cmd.deleteDevspaceFolder()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting .devspace folder: ", err.Error())
@@ -148,6 +164,8 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Done("Successfully deleted .devspace folder")
 		}
 	}
+
+	log.Done("Your project is being reset")
 }
 
 func (cmd *ResetCmd) determineResetExtent() {
