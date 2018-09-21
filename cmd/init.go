@@ -192,6 +192,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
 		}
+
+		_ = configutil.GetConfig(true)
 	}
 }
 
