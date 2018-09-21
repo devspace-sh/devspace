@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -33,8 +36,9 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
+	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/exec"
+	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // UpCmd is a struct that defines a command call for "up"
@@ -71,6 +75,8 @@ var UpFlagsDefault = &UpCmdFlags{
 	portforwarding: true,
 	noSleep:        false,
 }
+
+const clusterRoleBindingName = "devspace-users"
 
 func init() {
 	cmd := &UpCmd{
@@ -136,6 +142,11 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create release namespace: %v", err)
 	}
 
+	err = cmd.ensureClusterRoleBinding()
+	if err != nil {
+		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
+	}
+
 	cmd.initHelm()
 
 	if cmd.flags.initRegistries {
@@ -191,6 +202,92 @@ func (cmd *UpCmd) ensureNamespace() error {
 		}
 	}
 
+	return nil
+}
+
+func (cmd *UpCmd) ensureClusterRoleBinding() error {
+	/*
+		config := configutil.GetConfig(false)
+
+		accessReview := &k8sauthorizationv1.SelfSubjectAccessReview{
+			Spec: k8sauthorizationv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &k8sauthorizationv1.ResourceAttributes{
+					Namespace: *config.DevSpace.Release.Namespace,
+					Verb:      "create",
+					Group:     "rbac.authorization.k8s.io",
+					Resource:  "roles",
+				},
+			},
+		}
+
+		resp, permErr := cmd.kubectl.Authorization().SelfSubjectAccessReviews().Create(accessReview)
+
+		if permErr != nil {*/
+
+	if kubectl.IsMinikube() {
+		return nil
+	}
+
+	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+
+	if err != nil {
+		clusterConfig, _ := kubectl.GetClientConfig()
+
+		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
+			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			})
+
+			if *createRoleBinding == "no" {
+				log.Fatal("Please create ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
+			}
+			username := configutil.String("")
+
+			log.StartWait("Checking gcloud account")
+			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()
+			log.StopWait()
+
+			if gcloudErr == nil {
+				gcloudEmail := strings.TrimSuffix(strings.TrimSuffix(string(gcloudOutput), "\r\n"), "\n")
+
+				if gcloudEmail != "" {
+					username = &gcloudEmail
+				}
+			}
+
+			username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is the email address of your Google Cloud account?",
+				DefaultValue:           *username,
+				ValidationRegexPattern: ".+",
+			})
+
+			rolebinding := &k8sv1beta1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterRoleBindingName,
+				},
+				Subjects: []k8sv1beta1.Subject{
+					{
+						Kind: "User",
+						Name: *username,
+					},
+				},
+				RoleRef: k8sv1beta1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "ClusterRole",
+					Name:     "cluster-admin",
+				},
+			}
+
+			_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			if roleBindingErr != nil {
+				return roleBindingErr
+			}
+		} else {
+			log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
+		}
+	}
 	return nil
 }
 
@@ -351,12 +448,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 
 			log.Infof(buildInfo, imageName, engineName)
 
-			username := ""
-			password := ""
-
 			if registryConf.URL != nil {
 				registryURL = *registryConf.URL
 			}
+
+			username := ""
+			password := ""
 			if registryConf.Auth != nil {
 				if registryConf.Auth.Username != nil {
 					username = *registryConf.Auth.Username
@@ -497,9 +594,13 @@ func (cmd *UpCmd) deployChart() {
 
 		if len(podList.Items) > 0 {
 			highestRevision := 0
-			var selectedPod k8sv1.Pod
+			var selectedPod *k8sv1.Pod
 
 			for i, pod := range podList.Items {
+				if kubectl.GetPodStatus(&pod) == "Terminating" {
+					continue
+				}
+
 				podRevision, podHasRevision := pod.Annotations["revision"]
 				hasHigherRevision := (i == 0)
 
@@ -512,27 +613,30 @@ func (cmd *UpCmd) deployChart() {
 				}
 
 				if hasHigherRevision {
-					selectedPod = pod
+					selectedPod = &pod
 					highestRevision, _ = strconv.Atoi(podRevision)
 				}
 			}
-			_, hasRevision := selectedPod.Annotations["revision"]
 
-			if !hasRevision || highestRevision == releaseRevision {
-				if !hasRevision {
-					log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+			if selectedPod != nil {
+				_, hasRevision := selectedPod.Annotations["revision"]
+
+				if !hasRevision || highestRevision == releaseRevision {
+					if !hasRevision {
+						log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+					}
+
+					cmd.pod = selectedPod
+					err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
+
+					if err != nil {
+						log.Fatalf("Error during waiting for pod: %s", err.Error())
+					}
+
+					break
+				} else {
+					log.Info("Waiting for release upgrade to complete.")
 				}
-
-				cmd.pod = &selectedPod
-				err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
-
-				if err != nil {
-					log.Fatalf("Error during waiting for pod: %s", err.Error())
-				}
-
-				break
-			} else {
-				log.Info("Waiting for release upgrade to complete.")
 			}
 		} else {
 			log.Info("Waiting for release to be deployed.")
@@ -668,7 +772,7 @@ func (cmd *UpCmd) enterTerminal() {
 	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
-		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
+		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
 			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}

@@ -7,9 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
@@ -210,6 +212,9 @@ func GetClientConfig() (*rest.Config, error) {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
 
+	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
+		return clientcmd.BuildConfigFromFlags("", filepath.Join(fsutil.GetHomeDir(), ".kube", "config"))
+	}
 	return &rest.Config{
 		Host:     *config.Cluster.APIServer,
 		Username: *config.Cluster.User.Username,
