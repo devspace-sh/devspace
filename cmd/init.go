@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -480,6 +481,9 @@ func (cmd *InitCmd) configureRegistry() {
 				}
 			}
 		}
+		googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")
+		isGoogleRegistry := googleRegistryRegex.Match([]byte(*registryURL))
+		isDockerHub := *registryURL == "hub.docker.com"
 
 		if dockerUsername == "" {
 			if cmd.defaultImage.Build.Engine.Docker != nil {
@@ -519,11 +523,10 @@ func (cmd *InitCmd) configureRegistry() {
 				})
 			}
 		}
+		defaultImageName := *cmd.defaultImage.Name
+		defaultImageNameParts := strings.Split(defaultImageName, "/")
 
-		if *registryURL == "hub.docker.com" {
-			defaultImageName := *cmd.defaultImage.Name
-			defaultImageNameParts := strings.Split(defaultImageName, "/")
-
+		if isDockerHub {
 			if len(defaultImageNameParts) < 2 {
 				defaultImageName = dockerUsername + "/" + strings.TrimPrefix(defaultImageName, dockerUsername)
 			}
@@ -533,6 +536,17 @@ func (cmd *InitCmd) configureRegistry() {
 				DefaultValue:           defaultImageName,
 				ValidationRegexPattern: "^[a-zA-Z0-9/]{4,30}$",
 			})
+		}
+
+		if isGoogleRegistry {
+			if len(defaultImageNameParts) < 2 {
+				gcloudProjectName := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "What is the name of your Google Cloud Project? (run 'gcloud config get-value project' to get the project name)",
+					DefaultValue:           "",
+					ValidationRegexPattern: "^.*$",
+				})
+				cmd.defaultImage.Name = configutil.String(*gcloudProjectName + "/" + strings.TrimPrefix(defaultImageName, *gcloudProjectName))
+			}
 		}
 	} else {
 		imageMap := *cmd.config.Images

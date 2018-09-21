@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,6 +64,8 @@ repositories:
   name: stable
   url: https://kubernetes-charts.storage.googleapis.com
 `
+
+var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 	{
@@ -230,6 +233,13 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				return err
 			}
 		}
+		serviceAccountSubject := []k8sv1beta1.Subject{
+			{
+				Kind:      k8sv1beta1.ServiceAccountKind,
+				Name:      tillerServiceAccountName,
+				Namespace: tillerNamespace,
+			},
+		}
 
 		err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleManagerName, tillerNamespace, []k8sv1beta1.PolicyRule{
 			{
@@ -243,7 +253,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				},
 				Verbs: []string{k8sv1beta1.ResourceAll},
 			},
-		})
+		}, serviceAccountSubject)
 		if err != nil {
 			return err
 		}
@@ -267,7 +277,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				continue
 			}
 
-			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
+			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules, serviceAccountSubject)
 			if err != nil {
 				return err
 			}
@@ -415,8 +425,7 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 //	 return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
 // }
 
-func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, name, namespace string, rules []k8sv1beta1.PolicyRule) error {
-	tillerNamespace := *tillerConfig.Release.Namespace
+func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, name, namespace string, rules []k8sv1beta1.PolicyRule, subjects []k8sv1beta1.Subject) error {
 	role := &k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -429,13 +438,7 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 			Name:      name + "-binding",
 			Namespace: namespace,
 		},
-		Subjects: []k8sv1beta1.Subject{
-			{
-				Kind:      k8sv1beta1.ServiceAccountKind,
-				Name:      tillerServiceAccountName,
-				Namespace: tillerNamespace,
-			},
-		},
+		Subjects: subjects,
 		RoleRef: k8sv1beta1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
@@ -443,9 +446,15 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 		},
 	}
 
-	// Ignore Errors
-	kubectlClient.RbacV1beta1().Roles(namespace).Create(role)
-	kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(rolebinding)
+	_, roleErr := kubectlClient.RbacV1beta1().Roles(namespace).Create(role)
+	if roleErr != nil && alreadyExistsRegexp.Match([]byte(roleErr.Error())) == false {
+		return roleErr
+	}
+
+	_, roleBindingErr := kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(rolebinding)
+	if roleBindingErr != nil && alreadyExistsRegexp.Match([]byte(roleBindingErr.Error())) == false {
+		return roleBindingErr
+	}
 
 	return nil
 }

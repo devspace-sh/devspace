@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -33,8 +36,9 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
+	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/exec"
+	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // UpCmd is a struct that defines a command call for "up"
@@ -71,6 +75,8 @@ var UpFlagsDefault = &UpCmdFlags{
 	portforwarding: true,
 	noSleep:        false,
 }
+
+const clusterRoleBindingName = "devspace-users"
 
 func init() {
 	cmd := &UpCmd{
@@ -136,6 +142,11 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create release namespace: %v", err)
 	}
 
+	err = cmd.ensureClusterRoleBinding()
+	if err != nil {
+		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
+	}
+
 	cmd.initHelm()
 
 	if cmd.flags.initRegistries {
@@ -191,6 +202,68 @@ func (cmd *UpCmd) ensureNamespace() error {
 		}
 	}
 
+	return nil
+}
+
+func (cmd *UpCmd) ensureClusterRoleBinding() error {
+	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+
+	if err != nil {
+		createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes)|(no)$",
+		})
+
+		if *createRoleBinding == "no" {
+			log.Fatal("Please create ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
+		}
+		username := configutil.String("")
+
+		clusterConfig, _ := kubectl.GetClientConfig()
+
+		if clusterConfig.Username == "" {
+			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()
+
+			if gcloudErr == nil {
+				gcloudEmail := strings.TrimSuffix(strings.TrimSuffix(string(gcloudOutput), "\r\n"), "\n")
+
+				if gcloudEmail != "" {
+					username = &gcloudEmail
+				}
+			}
+		} else {
+			username = &clusterConfig.Username
+		}
+
+		username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "What is your cluster username? (Email address of the Google account for GKE clusters)",
+			DefaultValue:           *username,
+			ValidationRegexPattern: ".+",
+		})
+
+		rolebinding := &k8sv1beta1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleBindingName,
+			},
+			Subjects: []k8sv1beta1.Subject{
+				{
+					Kind: "User",
+					Name: *username,
+				},
+			},
+			RoleRef: k8sv1beta1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+		}
+
+		_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+		if roleBindingErr != nil {
+			return roleBindingErr
+		}
+	}
 	return nil
 }
 
@@ -351,12 +424,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 
 			log.Infof(buildInfo, imageName, engineName)
 
-			username := ""
-			password := ""
-
 			if registryConf.URL != nil {
 				registryURL = *registryConf.URL
 			}
+
+			username := ""
+			password := ""
 			if registryConf.Auth != nil {
 				if registryConf.Auth.Username != nil {
 					username = *registryConf.Auth.Username
@@ -668,7 +741,7 @@ func (cmd *UpCmd) enterTerminal() {
 	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
 
 	if terminalErr != nil {
-		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
+		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
 			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}

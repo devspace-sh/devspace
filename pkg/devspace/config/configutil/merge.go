@@ -42,23 +42,19 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 				objectRef.Set(reflect.Append(objectRef, overwriteValue))
 			}
 		case reflect.Map:
-			var mergedMap map[interface{}]interface{}
-
 			if objectPointerRef.IsNil() {
 				objectRef.Set(overwriteObjectRef)
 			} else {
-				mergedMap = map[interface{}]interface{}{}
-
-				genericPointerType := reflect.TypeOf(mergedMap)
+				genericPointerType := reflect.TypeOf(overwriteObject)
 
 				for _, keyRef := range overwriteObjectRef.MapKeys() {
 					key := keyRef.Interface()
 					overwriteValue := getMapValue(overwriteObject, key, genericPointerType)
-					valuePointer, keyExists := mergedMap[key]
+					valuePointerRef := objectRef.MapIndex(keyRef)
 
-					valuePointerRef := reflect.ValueOf(valuePointer)
+					if isZero(valuePointerRef) == false {
+						valuePointer := valuePointerRef.Interface()
 
-					if keyExists && !valuePointerRef.IsNil() {
 						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
 					} else {
 						keyRef := reflect.ValueOf(key)
