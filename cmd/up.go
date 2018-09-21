@@ -206,23 +206,45 @@ func (cmd *UpCmd) ensureNamespace() error {
 }
 
 func (cmd *UpCmd) ensureClusterRoleBinding() error {
+	/*
+		config := configutil.GetConfig(false)
+
+		accessReview := &k8sauthorizationv1.SelfSubjectAccessReview{
+			Spec: k8sauthorizationv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &k8sauthorizationv1.ResourceAttributes{
+					Namespace: *config.DevSpace.Release.Namespace,
+					Verb:      "create",
+					Group:     "rbac.authorization.k8s.io",
+					Resource:  "roles",
+				},
+			},
+		}
+
+		resp, permErr := cmd.kubectl.Authorization().SelfSubjectAccessReviews().Create(accessReview)
+
+		if permErr != nil {*/
+
+	if kubectl.IsMinikube() {
+		return nil
+	}
+
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 
 	if err != nil {
-		createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		})
-
-		if *createRoleBinding == "no" {
-			log.Fatal("Please create ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
-		}
-		username := configutil.String("")
-
 		clusterConfig, _ := kubectl.GetClientConfig()
 
-		if clusterConfig.Username == "" {
+		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
+			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			})
+
+			if *createRoleBinding == "no" {
+				log.Fatal("Please create ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
+			}
+			username := configutil.String("")
+
 			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()
 
 			if gcloudErr == nil {
@@ -232,36 +254,36 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 					username = &gcloudEmail
 				}
 			}
-		} else {
-			username = &clusterConfig.Username
-		}
 
-		username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is your cluster username? (Email address of the Google account for GKE clusters)",
-			DefaultValue:           *username,
-			ValidationRegexPattern: ".+",
-		})
+			username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is the email address of your Google Cloud account?",
+				DefaultValue:           *username,
+				ValidationRegexPattern: ".+",
+			})
 
-		rolebinding := &k8sv1beta1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterRoleBindingName,
-			},
-			Subjects: []k8sv1beta1.Subject{
-				{
-					Kind: "User",
-					Name: *username,
+			rolebinding := &k8sv1beta1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterRoleBindingName,
 				},
-			},
-			RoleRef: k8sv1beta1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "cluster-admin",
-			},
-		}
+				Subjects: []k8sv1beta1.Subject{
+					{
+						Kind: "User",
+						Name: *username,
+					},
+				},
+				RoleRef: k8sv1beta1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "ClusterRole",
+					Name:     "cluster-admin",
+				},
+			}
 
-		_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
-		if roleBindingErr != nil {
-			return roleBindingErr
+			_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			if roleBindingErr != nil {
+				return roleBindingErr
+			}
+		} else {
+			log.Fatal("Permissions missing: Please create the ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
 		}
 	}
 	return nil
