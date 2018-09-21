@@ -171,8 +171,13 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 func (cmd *ResetCmd) determineResetExtent() {
 	config := configutil.GetConfig(false)
 
-	cmd.flags.deleteDevspaceFolder = true
 	cmd.flags.deleteRelease = true
+
+	cmd.flags.deleteDevspaceFolder = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Should the .devspace folder be removed? (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
 
 	cmd.flags.deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Dockerfile be removed? (y/n)",
