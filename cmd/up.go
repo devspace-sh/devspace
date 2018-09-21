@@ -283,7 +283,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 				return roleBindingErr
 			}
 		} else {
-			log.Fatal("Permissions missing: Please create the ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
+			log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
 		}
 	}
 	return nil
