@@ -62,10 +62,6 @@ func GetConfig(reload bool) *v1.Config {
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
 	}
-
-	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
-		loadClusterConfig(config.Cluster, false)
-	}
 	return config
 }
 

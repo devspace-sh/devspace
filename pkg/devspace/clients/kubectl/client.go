@@ -7,14 +7,17 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
@@ -210,15 +213,19 @@ func GetClientConfig() (*rest.Config, error) {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
 
-	return &rest.Config{
-		Host:     *config.Cluster.APIServer,
-		Username: *config.Cluster.User.Username,
-		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(*config.Cluster.CaCert),
-			CertData: []byte(*config.Cluster.User.ClientCert),
-			KeyData:  []byte(*config.Cluster.User.ClientKey),
-		},
-	}, nil
+	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
+		return clientcmd.BuildConfigFromFlags("", filepath.Join(fsutil.GetHomeDir(), ".kube", "config"))
+	} else {
+		return &rest.Config{
+			Host:     *config.Cluster.APIServer,
+			Username: *config.Cluster.User.Username,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData:   []byte(*config.Cluster.CaCert),
+				CertData: []byte(*config.Cluster.User.ClientCert),
+				KeyData:  []byte(*config.Cluster.User.ClientKey),
+			},
+		}, nil
+	}
 }
 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
