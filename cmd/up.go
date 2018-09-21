@@ -592,9 +592,13 @@ func (cmd *UpCmd) deployChart() {
 
 		if len(podList.Items) > 0 {
 			highestRevision := 0
-			var selectedPod k8sv1.Pod
+			var selectedPod *k8sv1.Pod
 
 			for i, pod := range podList.Items {
+				if kubectl.GetPodStatus(&pod) == "Terminating" {
+					continue
+				}
+
 				podRevision, podHasRevision := pod.Annotations["revision"]
 				hasHigherRevision := (i == 0)
 
@@ -607,27 +611,30 @@ func (cmd *UpCmd) deployChart() {
 				}
 
 				if hasHigherRevision {
-					selectedPod = pod
+					selectedPod = &pod
 					highestRevision, _ = strconv.Atoi(podRevision)
 				}
 			}
-			_, hasRevision := selectedPod.Annotations["revision"]
 
-			if !hasRevision || highestRevision == releaseRevision {
-				if !hasRevision {
-					log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+			if selectedPod != nil {
+				_, hasRevision := selectedPod.Annotations["revision"]
+
+				if !hasRevision || highestRevision == releaseRevision {
+					if !hasRevision {
+						log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+					}
+
+					cmd.pod = selectedPod
+					err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
+
+					if err != nil {
+						log.Fatalf("Error during waiting for pod: %s", err.Error())
+					}
+
+					break
+				} else {
+					log.Info("Waiting for release upgrade to complete.")
 				}
-
-				cmd.pod = &selectedPod
-				err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
-
-				if err != nil {
-					log.Fatalf("Error during waiting for pod: %s", err.Error())
-				}
-
-				break
-			} else {
-				log.Info("Waiting for release upgrade to complete.")
 			}
 		} else {
 			log.Info("Waiting for release to be deployed.")
