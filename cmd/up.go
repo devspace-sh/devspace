@@ -245,7 +245,9 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 			}
 			username := configutil.String("")
 
+			log.StartWait("Checking gcloud account")
 			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()
+			log.StopWait()
 
 			if gcloudErr == nil {
 				gcloudEmail := strings.TrimSuffix(strings.TrimSuffix(string(gcloudOutput), "\r\n"), "\n")
