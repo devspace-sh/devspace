@@ -162,6 +162,8 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Delete(clusterRoleBindingName, &metav1.DeleteOptions{})
 		if err != nil {
 			log.Failf("Failed to remove ClusterRoleBinding: ", err.Error())
+		} else {
+			log.Done("Successfully deleted ClusterRoleBinding '" + clusterRoleBindingName + "'")
 		}
 	}
 }
