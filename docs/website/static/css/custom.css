@@ -94,6 +94,12 @@ h3 {
     background: #233366;
 }
 
+.post em {
+    font-style: italic;
+    font-size: 90%;
+    padding: 0 2px;
+}
+
 .post .hljs {
     margin: 0 -25px;
 }

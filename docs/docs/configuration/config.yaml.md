@@ -114,7 +114,7 @@ To access applications running inside a DevSpace, the DevSpace CLI allows to con
 - `labelSelector` *map[string]string* usually the release/app name
 - `portMappings` *PortMapping array* 
 
-### devspace.portForwarding[*].portMappings[*]
+### devspace.portForwarding[].portMappings[]
 PortMapping:
 - `localPort` *string* on localhost 
 - `remotePort` *string* remote pod port
@@ -136,29 +136,29 @@ In the example above, the entire code within the project would be synchronized w
 ## images
 This section of the config defines a map of images that can be used in the helm chart that is deployed during `devspace up`. 
 
-### images[*]
+### images[]
 An image is defined by:
 - `name` *string* of the image that is being pushed to the registry
 - `tag` *string* stating the latest tag pushed to the registry (auto-generated)
 - `registry` *string* referencing one of the keys defined in the `registries` map
 - `build` *BuildConfig* defines the build procedure for this image  
 
-### images[*].build
+### images[].build
 BuildConfig:
 - `engine` *Engine* The engine that should be used for building the image  
 
-### images[*].build.engine
+### images[].build.engine
 Engine:
 An image build is mainly defined by the build engine. There are 2 build engines currently supported (choose only one):
 - `docker` *DockerConfig* uses the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
 - `kaniko` *KanikoConfig* builds images in userspace within a build pod running inside the Kubernetes cluster  
 
-### images[*].build.engine.docker
+### images[].build.engine.docker
 DockerConfig:
 - `enabled` *bool* if true the local docker daemon is used for image building
 - `preferMinikube` *bool* if true and the current kubectl context is minikube, the minikube docker daemon is used for image building  
 
-### images[*].build.engine.kaniko
+### images[].build.engine.kaniko
 KanikoConfig:
 - `enabled` *bool* if true a kaniko build pod is used for image building
 - `namespace` *string* specifies the namespace where the build pod should be started  
@@ -166,13 +166,13 @@ KanikoConfig:
 ## registries
 This section of the config defines a map of image registries. You can use any external registry or link to the [services.internalRegistry](#services-internal-registry)
 
-### registries[*]
+### registries[]
 ImageRegistry:
 - `url` *string* of the registry (format: myregistry.com:port)
 - `insecure` *bool* flag to allow pushing to registries without HTTPS
 - `user` *RegistryUser* credentials for pushing to / pulling from the registry
 
-### registries[*].user
+### registries[].user
 RegistryUser:
 - `username` *string* that should be used for pushing and pulling from the registry
 - `password` *string* that should be used for pushing and pulling from the registry
