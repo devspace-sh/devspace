@@ -55,7 +55,7 @@ devspace up
 ```
 Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to see how to get started with a DevSpace.
 
-**Note:** Don't worry, with you can use `devspace reset` to reset your project and go back to local development.
+**Note:** Don't worry, you can use `devspace reset` to reset your project and go back to local development.
 
 ## [Documentation](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 Here you can find some links to the most important pages of our documentation:
