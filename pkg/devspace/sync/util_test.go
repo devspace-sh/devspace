@@ -14,8 +14,8 @@ import (
 
 // TODO: CopyToContainer test
 func TestCopyToContainerTestable(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on windows")
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping test on non linux platform")
 	}
 
 	remote, local, _ := initTestDirs(t)
@@ -102,7 +102,6 @@ func TestCopyToContainerTestable(t *testing.T) {
 	}
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
-
 }
 
 const (
@@ -149,7 +148,6 @@ func (arr testCaseList) Swap(i, j int) {
 const fileContents = "TestContents"
 
 func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []checkedFileOrFolder, local string, remote string, timeout time.Duration) {
-
 	beginTimeStamp := time.Now()
 
 	var missingFileOrFolder string
@@ -157,6 +155,7 @@ func checkFilesAndFolders(t *testing.T, files []checkedFileOrFolder, folders []c
 
 Outer:
 	for time.Since(beginTimeStamp) < timeout {
+		time.Sleep(time.Millisecond * 100)
 
 		missingFileOrFolder = ""
 		unexpectedFileOrFolder = ""
@@ -265,6 +264,9 @@ Outer:
 		//If this code is reached, everything is fine
 		return
 	}
+
+	// Print time since check start
+	t.Logf("Time since check start: %s", time.Since(beginTimeStamp).String())
 
 	//If this code is reached, every time the results of the checks showed an unfinished sync. Timeout is reached
 	printPathAndReturnNil := func(path string, f os.FileInfo, err error) error {

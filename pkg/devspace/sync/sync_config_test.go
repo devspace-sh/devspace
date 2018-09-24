@@ -63,8 +63,8 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 }
 
 func TestInitialSync(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on windows")
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping test on non linux platform")
 	}
 
 	remote, local, outside := initTestDirs(t)
@@ -116,13 +116,12 @@ func TestInitialSync(t *testing.T) {
 		return
 	}
 
-	//This seems to hang in travis
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 }
 
 func TestNormalSync(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on windows")
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping test on non linux systems")
 	}
 
 	remote, local, outside := initTestDirs(t)
@@ -187,16 +186,12 @@ func TestNormalSync(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
-
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
 }
 
 func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
-
 	syncClient.ExcludePaths = []string{}
-
 	syncClient.DownloadExcludePaths = []string{}
-
 	syncClient.UploadExcludePaths = []string{}
 
 	for _, testCase := range testCases {
@@ -298,7 +293,6 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 }
 
 func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList) {
-
 	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
 		for _, f := range array {
 
@@ -406,13 +400,10 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 	foldersToCheck = append(foldersToCheck, renameFolderFromOutside...)
 
 	return filesToCheck, foldersToCheck
-
 }
 
 func makeRemoteTestCases(testCases testCaseList) testCaseList {
-
 	for _, f := range testCases {
-
 		if strings.Contains(f.path, "Upload") {
 			f.path = strings.Replace(f.path, "Upload", "Download", -1)
 		} else if strings.Contains(f.path, "Download") {
@@ -432,9 +423,7 @@ func makeRemoteTestCases(testCases testCaseList) testCaseList {
 }
 
 func makeDeepTestCases(testCases testCaseList) testCaseList {
-
 	for _, f := range testCases {
-
 		if f.path == "testFolder" {
 			continue
 		}
@@ -452,7 +441,6 @@ func makeDeepTestCases(testCases testCaseList) testCaseList {
 }
 
 func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) error {
-
 	for _, f := range foldersToCheck {
 		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
 		if err != nil {
@@ -482,7 +470,6 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 }
 
 func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck testCaseList, foldersToCheck testCaseList, removeSuffix string) (testCaseList, testCaseList, error) {
-
 	var completeSuffix string
 	removeIfSuffixMatch := func(path string, f os.FileInfo, err error) error {
 		if strings.HasSuffix(path, completeSuffix) {
@@ -520,11 +507,8 @@ func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck tes
 }
 
 func renameSomeTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList, error) {
-
 	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
-
 		for n, f := range array {
-
 			if !strings.Contains(f.path, "_Rename") {
 				continue
 			}
@@ -572,7 +556,6 @@ func renameSomeTestFilesAndFolders(local string, remote string, outside string, 
 			}
 
 			array[n] = f
-
 		}
 
 		if n == 0 {
