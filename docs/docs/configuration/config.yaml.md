@@ -110,26 +110,26 @@ Defines how the DevSpace is deployed to your cluster. See [Type: Release](#type-
 
 ### devspace.portForwarding
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
-- `resourceType` _string_ kubernetes resource type that is selected (currently only `pod` is supported)
-- `labelSelector` _map[string]string_ usually the release/app name
-- `portMappings` _PortMapping array_ 
+- `resourceType` *string* kubernetes resource type that is selected (currently only `pod` is supported)
+- `labelSelector` *map[string]string* usually the release/app name
+- `portMappings` *PortMapping array* 
 
 ### devspace.portForwarding[*].portMappings[*]
 PortMapping:
-- `localPort` _string_ on localhost 
-- `remotePort` _string_ remote pod port
+- `localPort` *string* on localhost 
+- `remotePort` *string* remote pod port
 
 In the example above, you could open `localhost:8080` inside your browser to see the output of the application listening on port 80 within your DevSpace.
 
 ### devspace.sync
 To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure real-time code synchronizations. A sync config consists of the following:
-- `resourceType` _string_ kubernetes resource type that is selected (currently only `pod` is supported)
-- `labelSelector` _map[string]string_ usually the release/app name
-- `localSubPath` _string_ relative path to the folder that should be synced (default: path to your local project root)
-- `containerPath` _string_ absolute path within the container
-- `excludePaths` _string array_ paths to exclude files/folders from sync in .gitignore syntax
-- `downloadExcludePaths` _string array_ paths to exclude files/folders from download in .gitignore syntax
-- `uploadExcludePaths` _string array_ paths to exclude files/folders from upload in .gitignore syntax
+- `resourceType` *string* kubernetes resource type that is selected (currently only `pod` is supported)
+- `labelSelector` *map[string]string* usually the release/app name
+- `localSubPath` *string* relative path to the folder that should be synced (default: path to your local project root)
+- `containerPath` *string* absolute path within the container
+- `excludePaths` *string array* paths to exclude files/folders from sync in .gitignore syntax
+- `downloadExcludePaths` *string array* paths to exclude files/folders from download in .gitignore syntax
+- `uploadExcludePaths` *string array* paths to exclude files/folders from upload in .gitignore syntax
 
 In the example above, the entire code within the project would be synchronized with the folder `/app` inside the DevSpace, with the exception of the `node_modules/` folder.
 
@@ -138,74 +138,74 @@ This section of the config defines a map of images that can be used in the helm 
 
 ### images[*]
 An image is defined by:
-- `name` _string_ of the image that is being pushed to the registry
-- `tag` _string_ stating the latest tag pushed to the registry (auto-generated)
-- `registry` _string_ referencing one of the keys defined in the `registries` map
-- `build` _BuildConfig_ defines the build procedure for this image  
+- `name` *string* of the image that is being pushed to the registry
+- `tag` *string* stating the latest tag pushed to the registry (auto-generated)
+- `registry` *string* referencing one of the keys defined in the `registries` map
+- `build` *BuildConfig* defines the build procedure for this image  
 
 ### images[*].build
 BuildConfig:
-- `engine` _Engine_ The engine that should be used for building the image  
+- `engine` *Engine* The engine that should be used for building the image  
 
 ### images[*].build.engine
 Engine:
 An image build is mainly defined by the build engine. There are 2 build engines currently supported (choose only one):
-- `docker` _DockerConfig_ uses the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
-- `kaniko` _KanikoConfig_ builds images in userspace within a build pod running inside the Kubernetes cluster  
+- `docker` *DockerConfig* uses the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
+- `kaniko` *KanikoConfig* builds images in userspace within a build pod running inside the Kubernetes cluster  
 
 ### images[*].build.engine.docker
 DockerConfig:
-- `enabled` _bool_ if true the local docker daemon is used for image building
-- `preferMinikube` _bool_ if true and the current kubectl context is minikube, the minikube docker daemon is used for image building  
+- `enabled` *bool* if true the local docker daemon is used for image building
+- `preferMinikube` *bool* if true and the current kubectl context is minikube, the minikube docker daemon is used for image building  
 
 ### images[*].build.engine.kaniko
 KanikoConfig:
-- `enabled` _bool_ if true a kaniko build pod is used for image building
-- `namespace` _string_ specifies the namespace where the build pod should be started  
+- `enabled` *bool* if true a kaniko build pod is used for image building
+- `namespace` *string* specifies the namespace where the build pod should be started  
 
 ## registries
 This section of the config defines a map of image registries. You can use any external registry or link to the [services.internalRegistry](#services-internal-registry)
 
 ### registries[*]
 ImageRegistry:
-- `url` _string_ of the registry (format: myregistry.com:port)
-- `insecure` _bool_ flag to allow pushing to registries without HTTPS
-- `user` _RegistryUser_ credentials for pushing to / pulling from the registry
+- `url` *string* of the registry (format: myregistry.com:port)
+- `insecure` *bool* flag to allow pushing to registries without HTTPS
+- `user` *RegistryUser* credentials for pushing to / pulling from the registry
 
 ### registries[*].user
 RegistryUser:
-- `username` _string_ that should be used for pushing and pulling from the registry
-- `password` _string_ that should be used for pushing and pulling from the registry
+- `username` *string* that should be used for pushing and pulling from the registry
+- `password` *string* that should be used for pushing and pulling from the registry
 
 ## services
 Defines cluster services that the DevSpace uses.
 
 ### services.internalRegistry
 The `internalRegistry` is used to tell the DevSpace CLI to deploy a private registry inside the Kubernetes cluster:
-- `release` _Release_ for deploying the registry (see [Type: Release](#type-release))
+- `release` *Release* for deploying the registry (see [Type: Release](#type-release))
 
 ### services.tiller
 The `tiller` service is defined by:
-- `release` _Release_ definition for tiller (see [Type: Release](#type-release))
-- `appNamespaces` _string array_ defines a list of namespace that tiller may deploy applications to  
+- `release` *Release* definition for tiller (see [Type: Release](#type-release))
+- `appNamespaces` *string array* defines a list of namespace that tiller may deploy applications to  
 
 ## cluster
 The `cluster` field specifies:
-- `useKubeConfig` _bool_ if true use the credentials defined in $HOME/.kube/config
+- `useKubeConfig` *bool* if true use the credentials defined in $HOME/.kube/config
 
 If `useKubeConfig` is `false`, the following fields need to be specified:
-- `apiServer` _string_ (Kubernetes API-Server URL)
-- `caCert` _string_ (CaCert for the Kubernetes API-Server in PEM format)
-- `user`  _ClusterUser_  
+- `apiServer` *string* (Kubernetes API-Server URL)
+- `caCert` *string* (CaCert for the Kubernetes API-Server in PEM format)
+- `user`  *ClusterUser*  
 
 ### cluster.user
 ClusterUser:
-- `username` _string_
-- `clientCert` _string_ (PEM format)
-- `clientKey` _string_ (PEM format)  
+- `username` *string*
+- `clientCert` *string* (PEM format)
+- `clientKey` *string* (PEM format)  
 
 ## Type: Release
 A `release` is specified through:
-- `name` _string_ of the release
-- `namespace` _string_ to deploy the release to
-- `values` _map[string] any_ that are set during the deployment (contents of the values.yaml in helm)  
+- `name` *string* of the release
+- `namespace` *string* to deploy the release to
+- `values` *map[string] any* that are set during the deployment (contents of the values.yaml in helm)  
