@@ -32,6 +32,21 @@ func initTestDirs(t *testing.T) (string, string, string) {
 		t.Fatalf("Couldn't create test dir: %v", err)
 	}
 
+	testRemotePath, err = filepath.EvalSymlinks(testRemotePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testLocalPath, err = filepath.EvalSymlinks(testLocalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outside, err = filepath.EvalSymlinks(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return testRemotePath, testLocalPath, outside
 }
 
@@ -55,6 +70,7 @@ func TestInitialSync(t *testing.T) {
 	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
+	defer os.RemoveAll(outside)
 
 	filesToCheck, foldersToCheck := makeBasicTestCases()
 

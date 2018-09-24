@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -101,6 +102,14 @@ func (s *SyncConfig) Error(err error) {
 }
 
 func (s *SyncConfig) setup() error {
+	// we have to resolve the real local path, because the watcher gives us the real path always
+	realLocalPath, err := filepath.EvalSymlinks(s.WatchPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	s.WatchPath = realLocalPath
+
 	if s.ExcludePaths == nil {
 		s.ExcludePaths = make([]string, 0, 2)
 	}
@@ -125,7 +134,7 @@ func (s *SyncConfig) setup() error {
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
-	err := s.initIgnoreParsers()
+	err = s.initIgnoreParsers()
 	if err != nil {
 		return errors.Trace(err)
 	}
