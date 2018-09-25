@@ -754,6 +754,18 @@ func (helmClientWrapper *HelmClientWrapper) BuildDependencies(chartPath string) 
 	return man.Build()
 }
 
+// UpdateDependencies updates the dependencies
+func (helmClientWrapper *HelmClientWrapper) UpdateDependencies(chartPath string) error {
+	man := &helmdownloader.Manager{
+		Out:       ioutil.Discard,
+		ChartPath: chartPath,
+		HelmHome:  helmClientWrapper.Settings.Home,
+		Getters:   getter.All(*helmClientWrapper.Settings),
+	}
+
+	return man.Update()
+}
+
 // DeleteRelease deletes a helm release and optionally purges it
 func (helmClientWrapper *HelmClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
 	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
+	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -162,6 +164,23 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 					}
 
 					// Rebuild dependencies
+					kubectl, err := kubectl.NewClient()
+					if err != nil {
+						log.Fatalf("Unable to create new kubectl client: %v", err)
+					}
+
+					helm, err := helmClient.NewClient(kubectl, false)
+					if err != nil {
+						log.Fatalf("Error initializing helm client: %v", err)
+					}
+
+					log.StartWait("Update chart dependencies")
+					err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
+					log.StopWait()
+
+					if err != nil {
+						log.Fatal(err)
+					}
 
 					break
 				}

@@ -181,6 +181,10 @@ func PrintTable(header []string, values [][]string) {
 
 	Write("\n")
 
+	if len(values) == 0 {
+		Write(" No entries found\n")
+	}
+
 	// Print Values
 	for _, v := range values {
 		for key, value := range v {

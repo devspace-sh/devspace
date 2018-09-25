@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/covexo/devspace/pkg/util/yamlutil"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
@@ -175,9 +178,6 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Done("Chart found")
-	entry := "- name: \"" + version.GetName() + "\"\n" +
-		"  version: \"" + version.GetVersion() + "\"\n" +
-		"  repository: \"" + repo.URL + "\"\n"
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -188,22 +188,45 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 
 	_, err = os.Stat(requirementsFile)
 	if os.IsNotExist(err) {
-		entry = "dependencies:\n" + entry
+		entry := "dependencies:\n" +
+			"- name: \"" + version.GetName() + "\"\n" +
+			"  version: \"" + version.GetVersion() + "\"\n" +
+			"  repository: \"" + repo.URL + "\"\n"
+
+		err = ioutil.WriteFile(requirementsFile, []byte(entry), 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		yamlContents := map[interface{}]interface{}{}
+		err = yamlutil.ReadYamlFromFile(requirementsFile, yamlContents)
+		if err != nil {
+			log.Fatalf("Error parsing %s: %v", requirementsFile, err)
+		}
+
+		dependenciesArr := []interface{}{}
+		if dependencies, ok := yamlContents["dependencies"]; ok {
+			dependenciesArr, ok = dependencies.([]interface{})
+			if ok == false {
+				log.Fatalf("Error parsing %s: Key dependencies is not an array", requirementsFile)
+			}
+		}
+
+		dependenciesArr = append(dependenciesArr, map[interface{}]interface{}{
+			"name":       version.GetName(),
+			"version":    version.GetVersion(),
+			"repository": repo.URL,
+		})
+		yamlContents["dependencies"] = dependenciesArr
+
+		err = yamlutil.WriteYamlToFile(yamlContents, requirementsFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	f, err := os.OpenFile(requirementsFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer f.Close()
-
-	if _, err = f.WriteString(entry); err != nil {
-		log.Fatal(err)
-	}
-
-	log.StartWait("Building chart")
-	err = helm.BuildDependencies(filepath.Join(cwd, "chart"))
+	log.StartWait("Update chart dependencies")
+	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
 	log.StopWait()
 
 	if err != nil {
