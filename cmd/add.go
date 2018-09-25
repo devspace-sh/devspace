@@ -8,6 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/helm/pkg/repo"
+
+	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/covexo/devspace/pkg/util/tar"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
@@ -15,6 +19,8 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/russross/blackfriday"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +53,7 @@ type addPortCmdFlags struct {
 type addPackageFlags struct {
 	AppVersion   string
 	ChartVersion string
+	SkipQuestion bool
 }
 
 func init() {
@@ -148,6 +155,7 @@ func init() {
 
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.AppVersion, "app-version", "", "App version")
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.ChartVersion, "chart-version", "", "Chart version")
+	addPackageCmd.Flags().BoolVar(&cmd.packageFlags.SkipQuestion, "skip-question", false, "Skips the question to show the readme in a browser")
 
 	addCmd.AddCommand(addPackageCmd)
 }
@@ -185,7 +193,6 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	}
 
 	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
-
 	_, err = os.Stat(requirementsFile)
 	if os.IsNotExist(err) {
 		entry := "dependencies:\n" +
@@ -233,7 +240,60 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.Donef("Successfully added %s as chart dependency", version.GetName())
+	f, err := os.OpenFile(filepath.Join(cwd, "chart", "values.yaml"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+	if _, err = f.WriteString("\n" + version.GetName() + ": {}\n"); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added %s as chart dependency, you can configure the package in 'chart/values.yaml'", version.GetName())
+	cmd.showReadme(version)
+}
+
+func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if cmd.packageFlags.SkipQuestion {
+		return
+	}
+
+	showReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Do you want to open the package README? (y|n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)",
+	})
+
+	if showReadme == "n" {
+		return
+	}
+
+	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(cwd, "chart", "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output := blackfriday.MarkdownCommon([]byte(content))
+	f, err := os.OpenFile(filepath.Join(os.TempDir(), "Readme.html"), os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write(output)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f.Close()
+	open.Start(f.Name())
 }
 
 // RunAddSync executes the add sync command logic
@@ -284,7 +344,6 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	config.DevSpace.Sync = &syncConfig
 
 	err = configutil.SaveConfig()
-
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}
