@@ -57,11 +57,12 @@ type UpCmdFlags struct {
 	open           string
 	initRegistries bool
 	build          bool
-	shell          string
 	sync           bool
 	deploy         bool
 	portforwarding bool
 	noSleep        bool
+	verboseSync    bool
+	container      string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -74,6 +75,8 @@ var UpFlagsDefault = &UpCmdFlags{
 	deploy:         false,
 	portforwarding: true,
 	noSleep:        false,
+	verboseSync:    false,
+	container:      "",
 }
 
 const clusterRoleBindingName = "devspace-users"
@@ -97,16 +100,16 @@ Starts and connects your DevSpace:
 4. Starts the sync client
 5. Enters the container shell
 #######################################################`,
-		Args: cobra.NoArgs,
-		Run:  cmd.Run,
+		Run: cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
-	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
+	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
+	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
 	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
@@ -180,7 +183,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	cmd.enterTerminal()
+	cmd.enterTerminal(args)
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -675,12 +678,36 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
+				if len(pod.Spec.Containers) == 0 {
+					log.Warnf("Cannot start sync on pod, because selected pod %s/%s has no containers", pod.Namespace, pod.Name)
+					continue
+				}
+
+				container := &pod.Spec.Containers[0]
+				if syncPath.ContainerName != nil && *syncPath.ContainerName != "" {
+					found := false
+
+					for _, c := range pod.Spec.Containers {
+						if c.Name == *syncPath.ContainerName {
+							container = &c
+							found = true
+							break
+						}
+					}
+
+					if found == false {
+						log.Warnf("Couldn't start sync, because container %s wasn't found in pod %s/%s", *syncPath.ContainerName, pod.Namespace, pod.Name)
+						continue
+					}
+				}
+
 				syncConfig := &synctool.SyncConfig{
 					Kubectl:   cmd.kubectl,
 					Pod:       pod,
-					Container: &pod.Spec.Containers[0],
+					Container: container,
 					WatchPath: absLocalPath,
 					DestPath:  *syncPath.ContainerPath,
+					Verbose:   cmd.flags.verboseSync,
 				}
 
 				if syncPath.ExcludePaths != nil {
@@ -700,7 +727,7 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 					log.Fatalf("Sync error: %s", err.Error())
 				}
 
-				log.Donef("Sync started on %s <-> %s", absLocalPath, *syncPath.ContainerPath)
+				log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, *syncPath.ContainerPath, pod.Namespace, pod.Name)
 				syncConfigs = append(syncConfigs, syncConfig)
 			}
 		}
@@ -756,24 +783,37 @@ func (cmd *UpCmd) startPortForwarding() {
 	}
 }
 
-func (cmd *UpCmd) enterTerminal() {
-	var shell []string
+func (cmd *UpCmd) enterTerminal(args []string) {
+	var command []string
+	config := configutil.GetConfig(false)
 
-	if len(cmd.flags.shell) == 0 {
-		shell = []string{
+	if len(args) == 0 && (config.DevSpace.Terminal.Command == nil || len(*config.DevSpace.Terminal.Command) == 0) {
+		command = []string{
 			"sh",
 			"-c",
 			"command -v bash >/dev/null 2>&1 && exec bash || exec sh",
 		}
 	} else {
-		shell = []string{cmd.flags.shell}
+		if len(args) > 0 {
+			command = args
+		} else {
+			for _, cmd := range *config.DevSpace.Terminal.Command {
+				command = append(command, *cmd)
+			}
+		}
 	}
 
-	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
+	containerName := cmd.pod.Spec.Containers[0].Name
+	if cmd.flags.container != "" {
+		containerName = cmd.flags.container
+	} else if config.DevSpace.Terminal.ContainerName != nil {
+		containerName = *config.DevSpace.Terminal.ContainerName
+	}
 
+	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, containerName, command, true, nil)
 	if terminalErr != nil {
 		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
-			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
+			log.Fatalf("Unable to start terminal session: %v", terminalErr)
 		}
 	}
 }

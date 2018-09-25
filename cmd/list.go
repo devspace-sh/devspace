@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/spf13/cobra"
 )
 
@@ -72,6 +75,63 @@ func init() {
 	}
 
 	listCmd.AddCommand(listPortCmd)
+
+	listPackageCmd := &cobra.Command{
+		Use:   "package",
+		Short: "Lists all added packages",
+		Long: `
+	#######################################################
+	############### devspace list package #################
+	#######################################################
+	Lists the packages that were added to the devspace
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunListPackage,
+	}
+
+	listCmd.AddCommand(listPackageCmd)
+}
+
+// RunListPackage runs the list sync command logic
+func (cmd *ListCmd) RunListPackage(cobraCmd *cobra.Command, args []string) {
+	headerColumnNames := []string{
+		"Name",
+		"Version",
+		"Repository",
+	}
+	values := [][]string{}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
+	_, err = os.Stat(requirementsFile)
+	if os.IsNotExist(err) == false {
+		yamlContents := map[interface{}]interface{}{}
+		err = yamlutil.ReadYamlFromFile(requirementsFile, yamlContents)
+		if err != nil {
+			log.Fatalf("Error parsing %s: %v", requirementsFile, err)
+		}
+
+		if dependencies, ok := yamlContents["dependencies"]; ok {
+			if dependenciesArr, ok := dependencies.([]interface{}); ok {
+				for _, dependency := range dependenciesArr {
+					if dependencyMap, ok := dependency.(map[interface{}]interface{}); ok {
+						values = append(values, []string{
+							dependencyMap["name"].(string),
+							dependencyMap["version"].(string),
+							dependencyMap["repository"].(string),
+						})
+					}
+				}
+			}
+		}
+	}
+
+	log.PrintTable(headerColumnNames, values)
 }
 
 // RunListSync runs the list sync command logic

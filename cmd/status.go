@@ -76,15 +76,14 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 		"NAMESPACE",
 		"INFO",
 	}
-	cmd.kubectl, err = kubectl.NewClient()
 
+	cmd.kubectl, err = kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
 	// Check if tiller server is there
 	tillerStatus, err := cmd.getTillerStatus()
-
 	if err != nil {
 		values = append(values, []string{
 			"Tiller",
@@ -100,7 +99,6 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 
 	values = append(values, tillerStatus)
 	cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)
-
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %s", err.Error())
 	}

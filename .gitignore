@@ -15,5 +15,6 @@
 # History Plugin for VS Code
 .history/
 
-devspace
+/devspace
 debug
+.DS_STORE

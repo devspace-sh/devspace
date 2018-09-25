@@ -10,6 +10,7 @@ func makeConfig() *v1.Config {
 			User: &v1.ClusterUser{},
 		},
 		DevSpace: &v1.DevSpaceConfig{
+			Terminal:       &v1.Terminal{},
 			PortForwarding: &[]*v1.PortForwardingConfig{},
 			Release:        &v1.Release{},
 			Sync:           &[]*v1.SyncConfig{},

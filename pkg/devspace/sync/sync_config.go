@@ -39,6 +39,7 @@ type SyncConfig struct {
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
+	Verbose              bool
 
 	fileIndex *fileIndex
 
@@ -51,9 +52,7 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent  bool
-	verbose bool
-
+	silent   bool
 	stopOnce sync.Once
 
 	// Used for testing
