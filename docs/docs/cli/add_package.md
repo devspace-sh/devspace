@@ -4,7 +4,7 @@ title: devspace add package
 
 With `devspace add package`, you can easily add a package (helm chart) like mysql, nginx etc. to your devspace. To view all available packages run `devspace add package`.  
 
-The devspace add package command adds the helm chart as a dependency in the requirements.yaml and calls the internal `helm dependency update`, which downloads the chart and places it in the chart/charts folder. To remove the dependency call `devspace remove package PACKAGE`.  
+The devspace add package command adds the helm chart as a dependency in the requirements.yaml and calls the internal `helm dependency update` (helm doesn't need to be installed), which downloads the chart and places it in the chart/charts folder. To remove the dependency call `devspace remove package PACKAGE`.  
 
 By default the standard stable helm chart repository is used (see: [Helm Charts](https://github.com/helm/charts/tree/master/stable)). If you want to add additional charts, just add the repository via `helm repo add` ([documentation](https://docs.helm.sh/helm/#helm-repo-add)).  
 
