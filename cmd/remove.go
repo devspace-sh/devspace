@@ -170,12 +170,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						err = yamlutil.WriteYamlToFile(yamlContents, requirementsPath)
-						if err != nil {
-							log.Fatal(err)
-						}
-
-						cmd.rebuildDependencies()
+						cmd.rebuildDependencies(yamlContents)
 						break
 					}
 				}
@@ -187,12 +182,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 
 		yamlContents["dependencies"] = []interface{}{}
 
-		err = yamlutil.WriteYamlToFile(yamlContents, requirementsPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		cmd.rebuildDependencies()
+		cmd.rebuildDependencies(yamlContents)
 		log.Done("Successfully removed all dependencies")
 		return
 	}
@@ -200,8 +190,13 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 	log.Done("No dependencies found")
 }
 
-func (cmd *RemoveCmd) rebuildDependencies() {
+func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interface{}) {
 	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(cwd, "chart", "requirements.yaml"))
 	if err != nil {
 		log.Fatal(err)
 	}
