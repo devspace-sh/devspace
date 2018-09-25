@@ -183,18 +183,18 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 
 			log.Donef("Successfully removed dependency %s", args[0])
 			return
-		} else {
-			yamlContents["dependencies"] = []interface{}{}
-
-			err = yamlutil.WriteYamlToFile(yamlContents, requirementsPath)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			cmd.rebuildDependencies()
-			log.Done("Successfully removed all dependencies")
-			return
 		}
+
+		yamlContents["dependencies"] = []interface{}{}
+
+		err = yamlutil.WriteYamlToFile(yamlContents, requirementsPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cmd.rebuildDependencies()
+		log.Done("Successfully removed all dependencies")
+		return
 	}
 
 	log.Done("No dependencies found")
