@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
+	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -14,10 +17,11 @@ import (
 
 // AddCmd holds the information needed for the add command
 type AddCmd struct {
-	flags     *AddCmdFlags
-	syncFlags *addSyncCmdFlags
-	portFlags *addPortCmdFlags
-	dsConfig  *v1.DevSpaceConfig
+	flags        *AddCmdFlags
+	syncFlags    *addSyncCmdFlags
+	portFlags    *addPortCmdFlags
+	packageFlags *addPackageFlags
+	dsConfig     *v1.DevSpaceConfig
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -37,11 +41,17 @@ type addPortCmdFlags struct {
 	Selector     string
 }
 
+type addPackageFlags struct {
+	AppVersion   string
+	ChartVersion string
+}
+
 func init() {
 	cmd := &AddCmd{
-		flags:     &AddCmdFlags{},
-		syncFlags: &addSyncCmdFlags{},
-		portFlags: &addPortCmdFlags{},
+		flags:        &AddCmdFlags{},
+		syncFlags:    &addSyncCmdFlags{},
+		portFlags:    &addPortCmdFlags{},
+		packageFlags: &addPackageFlags{},
 	}
 
 	addCmd := &cobra.Command{
@@ -93,7 +103,7 @@ func init() {
 
 	addPortCmd := &cobra.Command{
 		Use:   "port",
-		Short: "Lists port forwarding configuration",
+		Short: "Add a new port forward configuration",
 		Long: `
 	#######################################################
 	################ devspace add port ####################
@@ -111,6 +121,96 @@ func init() {
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
+
+	addPackageCmd := &cobra.Command{
+		Use:   "package",
+		Short: "Add a helm chart",
+		Long: ` 
+	#######################################################
+	############### devspace add package ##################
+	#######################################################
+	Adds an existing helm chart to the devspace
+	(run 'devspace add package' to display all available 
+	helm charts)
+	
+	Examples:
+	devspace add package
+	devspace add package mysql
+	devspace add package mysql --app-version=5.7.14
+	devspace add package mysql --chart-version=0.10.3
+	#######################################################
+	`,
+		Run: cmd.RunAddPackage,
+	}
+
+	addPackageCmd.Flags().StringVar(&cmd.packageFlags.AppVersion, "app-version", "", "App version")
+	addPackageCmd.Flags().StringVar(&cmd.packageFlags.ChartVersion, "chart-version", "", "Chart version")
+
+	addCmd.AddCommand(addPackageCmd)
+}
+
+// RunAddPackage executes the add package command logic
+func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
+	kubectl, err := kubectl.NewClient()
+	if err != nil {
+		log.Fatalf("Unable to create new kubectl client: %v", err)
+	}
+
+	helm, err := helmClient.NewClient(kubectl, false)
+	if err != nil {
+		log.Fatalf("Error initializing helm client: %v", err)
+	}
+
+	if len(args) != 1 {
+		helm.PrintAllAvailableCharts()
+		return
+	}
+
+	log.StartWait("Search Chart")
+	repo, version, err := helm.SearchChart(args[0], cmd.packageFlags.ChartVersion, cmd.packageFlags.AppVersion)
+	log.StopWait()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Done("Chart found")
+	entry := "- name: \"" + version.GetName() + "\"\n" +
+		"  version: \"" + version.GetVersion() + "\"\n" +
+		"  repository: \"" + repo.URL + "\"\n"
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
+
+	_, err = os.Stat(requirementsFile)
+	if os.IsNotExist(err) {
+		entry = "dependencies:\n" + entry
+	}
+
+	f, err := os.OpenFile(requirementsFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
+	if _, err = f.WriteString(entry); err != nil {
+		log.Fatal(err)
+	}
+
+	log.StartWait("Building chart")
+	err = helm.BuildDependencies(filepath.Join(cwd, "chart"))
+	log.StopWait()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added %s as chart dependency", version.GetName())
 }
 
 // RunAddSync executes the add sync command logic

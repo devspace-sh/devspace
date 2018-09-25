@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/spf13/cobra"
 )
 
@@ -102,6 +105,71 @@ func init() {
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
+
+	removePackageCmd := &cobra.Command{
+		Use:   "package",
+		Short: "Removes forwarded ports from a devspace",
+		Long: `
+	#######################################################
+	############## devspace remove package ################
+	#######################################################
+	Removes a package from the devspace:
+	devspace remove package mysql
+	#######################################################
+	`,
+		Args: cobra.MaximumNArgs(1),
+		Run:  cmd.RunRemovePackage,
+	}
+
+	removeCmd.AddCommand(removePackageCmd)
+}
+
+// RunRemovePackage executes the remove package command logic
+func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	requirementsPath := filepath.Join(cwd, "chart", "requirements.yaml")
+	yamlContents := map[interface{}]interface{}{}
+
+	err = yamlutil.ReadYamlFromFile(requirementsPath, yamlContents)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if dependencies, ok := yamlContents["dependencies"]; ok {
+		dependenciesArr, ok := dependencies.([]interface{})
+		if ok == false {
+			log.Fatalf("Error parsing yaml: %v", dependencies)
+		}
+
+		for key, dependency := range dependenciesArr {
+			dependencyMap, ok := dependency.(map[interface{}]interface{})
+			if ok == false {
+				log.Fatalf("Error parsing yaml: %v", dependencies)
+			}
+
+			if name, ok := dependencyMap["name"]; ok {
+				if name == args[0] {
+					dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
+					yamlContents["dependencies"] = dependenciesArr
+
+					err = yamlutil.WriteYamlToFile(yamlContents, requirementsPath)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					// Rebuild dependencies
+
+					break
+				}
+			}
+		}
+	}
+
+	log.Donef("Successfully removed dependency %s", args[0])
 }
 
 // RunRemoveSync executes the remove sync command logic
