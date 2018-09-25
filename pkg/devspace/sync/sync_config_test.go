@@ -56,9 +56,9 @@ func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
 	return &SyncConfig{
 		WatchPath: testLocalPath,
 		DestPath:  testRemotePath,
+		Verbose:   true,
 
 		testing: true,
-		verbose: true,
 	}
 }
 
