@@ -270,7 +270,7 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 	}
 
 	// Print changes
-	if u.config.verbose {
+	if u.config.Verbose {
 		for _, c := range writtenFiles {
 			if c.IsDirectory {
 				u.config.Logf("[Upstream] Create Folder %s", c.Name)
@@ -387,7 +387,7 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 				}
 
 				// Print changes
-				if u.config.verbose {
+				if u.config.Verbose {
 					u.config.Logf("[Upstream] Remove %s", relativePath)
 				}
 			}
