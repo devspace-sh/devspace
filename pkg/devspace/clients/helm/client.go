@@ -39,6 +39,7 @@ import (
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
@@ -203,7 +204,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
-		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.9.1",
+		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.10.0",
 		ServiceAccount: tillerSA.ObjectMeta.Name,
 	}
 
@@ -515,6 +516,29 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 	return true, nil
 }
 
+func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
+	missing := []string{}
+
+	deps := ch.GetDependencies()
+	for _, r := range reqs.Dependencies {
+		found := false
+		for _, d := range deps {
+			if d.Metadata.Name == r.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, r.Name)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("found in requirements.yaml, but missing in charts/ directory: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
@@ -522,36 +546,30 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		return nil, err
 	}
 
-	chartDependencies := chart.GetDependencies()
+	if req, err := helmchartutil.LoadRequirements(chart); err == nil {
+		// If checkDependencies returns an error, we have unfulfilled dependencies.
+		// As of Helm 2.4.0, this is treated as a stopping condition:
+		// https://github.com/kubernetes/helm/issues/2209
+		if err := checkDependencies(chart, req); err != nil {
+			man := &helmdownloader.Manager{
+				Out:       ioutil.Discard,
+				ChartPath: chartPath,
+				HelmHome:  helmClientWrapper.Settings.Home,
+				Getters:   getter.All(*helmClientWrapper.Settings),
+			}
+			if err := man.Update(); err != nil {
+				return nil, err
+			}
 
-	if len(chartDependencies) > 0 {
-		_, err = helmchartutil.LoadRequirements(chart)
-
-		if err != nil {
-			return nil, err
-		}
-		chartDownloader := &helmdownloader.Manager{
-			/*		Out:        i.out,
-					ChartPath:  i.chartPath,
-					HelmHome:   settings.Home,
-					Keyring:    defaultKeyring(),
-					SkipUpdate: false,
-					Getters:    getter.All(settings),
-			*/
-		}
-		err = chartDownloader.Update()
-
-		if err != nil {
-			return nil, err
-		}
-		chart, err = helmchartutil.Load(chartPath)
-
-		if err != nil {
-			return nil, err
+			// Update all dependencies which are present in /charts.
+			chart, err = helmchartutil.Load(chartPath)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
 
+	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
 	if err != nil {
 		return nil, err
 	}
