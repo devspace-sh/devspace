@@ -668,20 +668,19 @@ func (cmd *InitCmd) determineLanguage() {
 	if len(cmd.chartGenerator.Language) == 0 {
 		log.StartWait("Detecting programming language")
 
+		detectedLang := ""
 		supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
-
-		if err != nil {
-			log.Fatalf("Unable to get supported languages: %s", err.Error())
-		}
-		detectedLang, langDetectionErr := cmd.chartGenerator.GetLanguage()
-
-		if langDetectionErr != nil {
-			//log.Error(langDetectionErr)
+		if err == nil {
+			detectedLang, _ = cmd.chartGenerator.GetLanguage()
 		}
 
 		if detectedLang == "" {
 			detectedLang = "none"
 		}
+		if len(supportedLanguages) == 0 {
+			supportedLanguages = []string{"none"}
+		}
+
 		log.StopWait()
 
 		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{

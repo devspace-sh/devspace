@@ -628,6 +628,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}
+
 	getter := getter.All(*helmClientWrapper.Settings)
 	chartDownloader := downloader.ChartDownloader{
 		HelmHome: helmClientWrapper.Settings.Home,
