@@ -238,7 +238,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 		return nil, err
 	}
 
-	if len(releases.Releases) == 0 {
+	if releases == nil || len(releases.Releases) == 0 {
 		return nil, errors.New("No release found")
 	}
 

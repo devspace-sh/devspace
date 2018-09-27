@@ -240,14 +240,25 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	f, err := os.OpenFile(filepath.Join(cwd, "chart", "values.yaml"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	// Check if key already exists
+	valuesYaml := filepath.Join(cwd, "chart", "values.yaml")
+	valuesYamlContents := map[interface{}]interface{}{}
+
+	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
 	}
 
-	defer f.Close()
-	if _, err = f.WriteString("\n" + version.GetName() + ": {}\n"); err != nil {
-		log.Fatal(err)
+	if _, ok := valuesYamlContents[version.GetName()]; ok == false {
+		f, err := os.OpenFile(valuesYaml, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer f.Close()
+		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ": {}\n"); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Donef("Successfully added %s as chart dependency, you can configure the package in 'chart/values.yaml'", version.GetName())
