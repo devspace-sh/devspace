@@ -82,30 +82,30 @@ func (cg *ChartGenerator) GetSupportedLanguages() ([]string, error) {
 // CreateChart creates a chart of a project that works with Helm
 func (cg *ChartGenerator) CreateChart() error {
 	chartUpdateError := cg.getChartTemplates()
-
 	if chartUpdateError != nil {
 		return chartUpdateError
 	}
-	language, langError := cg.GetLanguage()
 
+	language, langError := cg.GetLanguage()
 	if langError != nil {
 		return langError
 	}
-	_, languageTemplateNotFound := os.Stat(cg.TemplateRepo.LocalPath + "/" + language)
 
+	_, languageTemplateNotFound := os.Stat(cg.TemplateRepo.LocalPath + "/" + language)
 	if languageTemplateNotFound != nil {
 		return errors.New("Language Template not found")
 	}
-	copyBaseError := fsutil.Copy(cg.TemplateRepo.LocalPath+"/_base", cg.Path, false)
 
+	copyBaseError := fsutil.Copy(cg.TemplateRepo.LocalPath+"/_base", cg.Path, false)
 	if copyBaseError != nil {
 		return copyBaseError
 	}
-	copyError := fsutil.Copy(cg.TemplateRepo.LocalPath+"/"+cg.Language, cg.Path, false)
 
+	copyError := fsutil.Copy(cg.TemplateRepo.LocalPath+"/"+cg.Language, cg.Path, false)
 	if copyError != nil {
 		return copyError
 	}
+
 	return nil
 }
 
