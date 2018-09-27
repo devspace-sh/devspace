@@ -68,7 +68,9 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Check if we find a running release pod
+	log.StartWait("Find a running devspace pod")
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	log.StopWait()
 	if err != nil {
 		log.Fatal("Cannot find a running devspace pod")
 	}
