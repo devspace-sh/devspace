@@ -38,7 +38,6 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/client-go/kubernetes"
-	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // UpCmd is a struct that defines a command call for "up"
@@ -181,7 +180,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	cmd.enterTerminal(args)
+	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -791,41 +790,6 @@ func (cmd *UpCmd) startPortForwarding() {
 			}
 		} else {
 			log.Warn("Currently only pod resource type is supported for portforwarding")
-		}
-	}
-}
-
-func (cmd *UpCmd) enterTerminal(args []string) {
-	var command []string
-	config := configutil.GetConfig(false)
-
-	if len(args) == 0 && (config.DevSpace.Terminal.Command == nil || len(*config.DevSpace.Terminal.Command) == 0) {
-		command = []string{
-			"sh",
-			"-c",
-			"command -v bash >/dev/null 2>&1 && exec bash || exec sh",
-		}
-	} else {
-		if len(args) > 0 {
-			command = args
-		} else {
-			for _, cmd := range *config.DevSpace.Terminal.Command {
-				command = append(command, *cmd)
-			}
-		}
-	}
-
-	containerName := cmd.pod.Spec.Containers[0].Name
-	if cmd.flags.container != "" {
-		containerName = cmd.flags.container
-	} else if config.DevSpace.Terminal.ContainerName != nil {
-		containerName = *config.DevSpace.Terminal.ContainerName
-	}
-
-	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, containerName, command, true, nil)
-	if terminalErr != nil {
-		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
-			log.Fatalf("Unable to start terminal session: %v", terminalErr)
 		}
 	}
 }
