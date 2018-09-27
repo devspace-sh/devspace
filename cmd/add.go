@@ -246,7 +246,7 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 
 	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
 	if err != nil {
-		log.Fatalf("Error parsing %s: %v", err)
+		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
 	}
 
 	if _, ok := valuesYamlContents[version.GetName()]; ok == false {
