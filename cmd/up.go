@@ -70,7 +70,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	tiller:         true,
 	open:           "cmd",
 	initRegistries: true,
-	build:          true,
+	build:          false,
 	sync:           true,
 	deploy:         false,
 	portforwarding: true,
@@ -106,13 +106,13 @@ Starts and connects your DevSpace:
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Force image build")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
-	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep (Override the containers.default.command and containers.default.args values with empty strings)")
 }
 
 // Run executes the command logic
@@ -155,11 +155,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.flags.initRegistries {
 		cmd.initRegistries()
 	}
-	mustRedeploy := false
 
-	if cmd.flags.build {
-		mustRedeploy = cmd.buildImages(cobraCmd.Flags().Changed("build"))
-	}
+	// Build image if necessary
+	mustRedeploy := cmd.buildImages()
 
 	// Check if we find a running release pod
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
@@ -345,7 +343,7 @@ func (cmd *UpCmd) initRegistries() {
 	}
 }
 
-func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string, buildFlagChanged bool) bool {
+func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string) bool {
 	var dockerfileModTime time.Time
 
 	mustRebuild := true
@@ -361,7 +359,7 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 		dockerfileModTime = dockerfileInfo.ModTime()
 
 		// When user has not used -b or --build flags
-		if buildFlagChanged == false {
+		if cmd.flags.build == false {
 			if imageConf.Build.LatestTimestamp != nil {
 				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *imageConf.Build.LatestTimestamp)
 
@@ -370,13 +368,13 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 			}
 		}
 	}
-	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
 
+	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
 	return mustRebuild
 }
 
 // returns true when one of the images had to be rebuild
-func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
+func (cmd *UpCmd) buildImages() bool {
 	re := false
 	config := configutil.GetConfig(false)
 
@@ -391,10 +389,18 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 		if imageConf.Build.ContextPath != nil {
 			contextPath = *imageConf.Build.ContextPath
 		}
-		dockerfilePath = filepath.Join(cmd.workdir, strings.TrimPrefix(dockerfilePath, "."))
-		contextPath = filepath.Join(cmd.workdir, strings.TrimPrefix(contextPath, "."))
 
-		if cmd.shouldRebuild(imageConf, dockerfilePath, buildFlagChanged) {
+		dockerfilePath, err := filepath.Abs(dockerfilePath)
+		if err != nil {
+			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
+		}
+
+		contextPath, err = filepath.Abs(contextPath)
+		if err != nil {
+			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
+		}
+
+		if cmd.shouldRebuild(imageConf, dockerfilePath) {
 			re = true
 			imageTag, randErr := randutil.GenerateRandomString(7)
 
@@ -481,6 +487,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			if imageConf.Build.Options != nil {
 				if imageConf.Build.Options.BuildArgs != nil {
 					buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
+				}
+				if imageConf.Build.Options.Target != nil {
+					buildOptions.Target = *imageConf.Build.Options.Target
+				}
+				if imageConf.Build.Options.Network != nil {
+					buildOptions.NetworkMode = *imageConf.Build.Options.Network
 				}
 			}
 
