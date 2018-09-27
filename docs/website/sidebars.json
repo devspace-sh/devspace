@@ -11,6 +11,7 @@
     "Commands": [
       "cli/init",
       "cli/up",
+      "cli/enter",
       "cli/down",
       "cli/reset",
       "cli/add",

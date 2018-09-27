@@ -73,13 +73,15 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.kubectl == nil || cmd.helm == nil {
 		cmd.kubectl, err = kubectl.NewClient()
 		if err != nil {
-			log.Failf("Failed to initialize kubectl client: ", err.Error())
+			log.Failf("Failed to initialize kubectl client: %v", err)
 		}
 	}
 	cmd.determineResetExtent()
 
 	if cmd.flags.deleteRelease {
+		log.StartWait("Deleting devspace release")
 		err = cmd.deleteRelease()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting release: %s", err.Error())
@@ -89,7 +91,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteRegistry {
+		log.StartWait("Deleting docker registry")
 		err = cmd.deleteRegistry()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting docker registry: %s", err.Error())
@@ -103,7 +107,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteTiller {
+		log.StartWait("Deleting tiller")
 		err = cmd.deleteTiller()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting tiller: %s", err.Error())
@@ -148,7 +154,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteDevspaceFolder()
 
 		if err != nil {
-			log.Failf("Error deleting .devspace folder: ", err.Error())
+			log.Failf("Error deleting .devspace folder: %v", err)
 
 			if cmd.shouldContinue() == false {
 				return
@@ -159,9 +165,12 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteClusterRoleBinding {
+		log.StartWait("Deleting cluster role bindings")
 		err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Delete(clusterRoleBindingName, &metav1.DeleteOptions{})
+		log.StopWait()
+
 		if err != nil {
-			log.Failf("Failed to remove ClusterRoleBinding: ", err.Error())
+			log.Failf("Failed to remove ClusterRoleBinding: %v", err)
 		} else {
 			log.Done("Successfully deleted ClusterRoleBinding '" + clusterRoleBindingName + "'")
 		}

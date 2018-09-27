@@ -38,4 +38,6 @@ type DockerBuildEngine struct {
 //BuildOptions defines options for building Docker images
 type BuildOptions struct {
 	BuildArgs *map[string]*string `yaml:"buildArgs"`
+	Target    *string             `yaml:"target"`
+	Network   *string             `yaml:"network"`
 }
