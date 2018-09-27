@@ -204,7 +204,7 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWr
 	}
 
 	// Wait for registry if it is not ready yet
-	if registryDeployment == nil || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
+	if registryDeployment == nil || registryDeployment.Status.Replicas == 0 || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
 		// Wait till registry is started
 		err = waitForRegistry(registryReleaseNamespace, registryReleaseDeploymentName, kubectl)
 		if err != nil {
