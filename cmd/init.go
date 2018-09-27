@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -542,11 +543,19 @@ func (cmd *InitCmd) configureRegistry() {
 
 		if isGoogleRegistry {
 			if len(defaultImageNameParts) < 2 {
+				project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
+				gcloudProject := ""
+
+				if err == nil {
+					gcloudProject = strings.TrimSpace(string(project))
+				}
+
 				gcloudProjectName := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "What is the name of your Google Cloud Project? (run 'gcloud config get-value project' to get the project name)",
-					DefaultValue:           "",
+					Question:               "What Google Cloud Project should be used?",
+					DefaultValue:           gcloudProject,
 					ValidationRegexPattern: "^.*$",
 				})
+
 				cmd.defaultImage.Name = configutil.String(*gcloudProjectName + "/" + strings.TrimPrefix(defaultImageName, *gcloudProjectName))
 			}
 		}
