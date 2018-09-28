@@ -4,6 +4,7 @@ package v1
 type DevSpaceConfig struct {
 	Terminal       *Terminal                `yaml:"terminal"`
 	Release        *Release                 `yaml:"release"`
+	ChartHash      *string                  `yaml:"chartHash"`
 	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
 	Sync           *[]*SyncConfig           `yaml:"sync"`
 }
