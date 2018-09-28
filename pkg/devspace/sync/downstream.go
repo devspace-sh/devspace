@@ -248,7 +248,7 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 
 							sleep 0.1;
 					done;
-					tar -czf "$tmpFileOutput" -T "$tmpFileInput" 2>/dev/null;
+					tar -czf "$tmpFileOutput" -T "$tmpFileInput" 2>/tmp/devspace-downstream-error;
 					(>&2 echo "` + StartAck + `");
 					(>&2 echo $(stat -c "%s" "$tmpFileOutput"));
 					(>&2 echo "` + EndAck + `");
@@ -344,11 +344,11 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 			} else {
 				err := os.Remove(absFilepath)
 				if err != nil {
-					d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+					if os.IsNotExist(err) == false {
+						d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+					}
 				}
 			}
-		} else {
-			d.config.Logf("[Downstream] Skip delete %s", key)
 		}
 
 		delete(fileMap, key)

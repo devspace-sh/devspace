@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/covexo/devspace/pkg/util/hash"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
@@ -159,10 +160,22 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	mustRedeploy := cmd.buildImages()
 
 	// Check if we find a running release pod
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	config := configutil.GetConfig(false)
+	hash, err := hash.Directory("chart")
+	if err != nil {
+		log.Fatalf("Error hashing chart directory: %v", err)
+	}
 
-	if err != nil || mustRedeploy || cmd.flags.deploy {
+	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
 		cmd.deployChart()
+
+		config.DevSpace.ChartHash = &hash
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
+		}
 	} else {
 		cmd.pod = pod
 	}

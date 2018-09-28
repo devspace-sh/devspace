@@ -149,7 +149,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// Exclude files on the exclude list
 	if s.downloadIgnoreMatcher != nil {
 		if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-			s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
+			// s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
 			return false
 		}
 	}
@@ -157,7 +157,10 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
-		s.Logf("Skip %s because stat returned %v", absFilepath, stat)
+		if os.IsNotExist(err) == false {
+			s.Logf("Skip %s because stat returned %v", absFilepath, err)
+		}
+
 		return false
 	}
 
