@@ -29,6 +29,8 @@ devSpace:
     # Map of key value matchLabel selectors
     labelSelector:
       release: my-app
+    # namespace where to select the pods from
+    namespace: my-namespace
     # Array of port mappings
     portMappings:
       # The local machine port
@@ -140,6 +142,7 @@ Defines how the DevSpace is deployed to your cluster. See [Type: Release](#type-
 ### devspace.portForwarding
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
 - `resourceType` *string* kubernetes resource type that is selected (currently only `pod` is supported)
+- `namespace` *string* the namespace where to select the pods from
 - `labelSelector` *map[string]string* usually the release/app name
 - `portMappings` *PortMapping array* 
 
@@ -154,6 +157,7 @@ In the example above, you could open `localhost:8080` inside your browser to see
 To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure real-time code synchronizations. A sync config consists of the following:
 - `resourceType` *string* kubernetes resource type that is selected (currently only `pod` is supported)
 - `labelSelector` *map[string]string* label selector to select the correct pod (usually the release/app name)
+- `namespace` *string* the namespace where to select the pods from
 - `containerName` *string* the name of the container within the pod to sync to (default: the first specified container in the pod)
 - `localSubPath` *string* relative path to the folder that should be synced (default: path to your local project root)
 - `containerPath` *string* absolute path within the container
