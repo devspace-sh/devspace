@@ -11,6 +11,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
@@ -36,7 +37,6 @@ var isMinikubeVar *bool
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	config, err := GetClientConfig()
-
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +49,14 @@ func GetClientConfig() (*rest.Config, error) {
 	config := configutil.GetConfig(false)
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
+	}
+
+	// Update devspace cloud cluster config
+	if config.Cluster.DevSpaceCloud != nil && *config.Cluster.DevSpaceCloud {
+		err := cloud.Update(config, false)
+		if err != nil {
+			log.Warnf("Couldn't update devspace cloud cluster information: %v", err)
+		}
 	}
 
 	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {

@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/login"
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 
@@ -369,7 +369,7 @@ func (cmd *InitCmd) useDevSpaceCloud() bool {
 		cmd.config.Cluster.DevSpaceCloud = &useDevSpaceCloud
 		cmd.config.Cluster.UseKubeConfig = &addToContext
 
-		err := login.Update(cmd.config, true)
+		err := cloud.Update(cmd.config, true)
 		if err != nil {
 			log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
 		}

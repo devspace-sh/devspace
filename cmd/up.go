@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/login"
-
 	"github.com/covexo/devspace/pkg/util/hash"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
@@ -137,15 +135,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		initCmd.Run(nil, []string{})
 	}
 
-	// Load config
-	config := configutil.GetConfig(false)
-	if config.Cluster.DevSpaceCloud != nil && *config.Cluster.DevSpaceCloud {
-		err = login.Update(config, false)
-		if err != nil {
-			log.Warnf("Couldn't update devspace cloud cluster information: %v", err)
-		}
-	}
-
 	cmd.kubectl, err = kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
@@ -175,6 +164,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("Error hashing chart directory: %v", err)
 	}
+
+	// Load config
+	config := configutil.GetConfig(false)
 
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
 	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
