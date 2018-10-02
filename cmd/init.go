@@ -9,7 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/util/kubeconfig"
+
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/login"
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 
@@ -17,7 +22,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -116,6 +120,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		cmd.config = configutil.GetConfigInstance()
 	}
+
 	configutil.Merge(cmd.config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
@@ -217,7 +222,6 @@ func (cmd *InitCmd) initChartGenerator() {
 
 func (cmd *InitCmd) configureDevSpace() {
 	_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-
 	if chartDirNotFound == nil {
 		/*TODO
 		existingChartYaml := map[interface{}]interface{}{}
@@ -239,17 +243,12 @@ func (cmd *InitCmd) configureDevSpace() {
 			}
 		}*/
 	}
+
 	cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           *cmd.config.DevSpace.Release.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-
-	// cmd.appConfig.Container.Ports, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-	// 	Question:               "Which port(s) does your application listen on? (separated by spaces)",
-	// 	DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
-	// 	ValidationRegexPattern: "^[1-9][0-9]{0,4}?(\\s[1-9][0-9]{0,4})?$",
-	// }))
 
 	ports := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which port(s) does your application listen on? (separated by spaces)",
@@ -266,11 +265,13 @@ func (cmd *InitCmd) configureDevSpace() {
 	}
 	cmd.addDefaultSyncConfig()
 
-	cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+	if cmd.config.DevSpace.Release.Namespace == nil || len(*cmd.config.DevSpace.Release.Namespace) == 0 {
+		cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which Kubernetes namespace should your application run in?",
+			DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
+			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+		})
+	}
 
 	/* TODO
 	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -340,38 +341,85 @@ func (cmd *InitCmd) configureTiller() {
 	tillerConfig := cmd.config.Services.Tiller
 	tillerRelease := tillerConfig.Release
 
-	if tillerRelease.Namespace == nil {
+	if tillerRelease.Namespace == nil || len(*tillerRelease.Namespace) == 0 {
 		tillerRelease.Namespace = cmd.config.DevSpace.Release.Namespace
+
+		tillerRelease.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which Kubernetes namespace should your tiller server run in?",
+			DefaultValue:           *tillerRelease.Namespace,
+			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+		})
 	}
-	tillerRelease.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your tiller server run in?",
-		DefaultValue:           *tillerRelease.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+}
+
+func (cmd *InitCmd) useDevSpaceCloud() bool {
+	useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Do you want to use the devspace cloud? (free ready-to-use kubernetes) (yes | no)",
+		DefaultValue:           "yes",
+		ValidationRegexPattern: "^(yes)|(no)$",
+	}) == "yes"
+
+	if useDevSpaceCloud {
+		namespace, cluster, authInfo, err := login.CheckAuth()
+		if err != nil {
+			log.Fatalf("Error authenticating to devspace cloud: %v", err)
+		}
+
+		cmd.config.DevSpace.Release.Namespace = &namespace
+		cmd.config.Services.Tiller.Release.Namespace = &namespace
+
+		addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes)|(no)$",
+		}) == "yes"
+
+		if addToContext {
+			err = login.UpdateKubeConfig(cluster, authInfo, true)
+			if err != nil {
+				log.Fatalf("Couldn't update kube config: %v", err)
+			}
+
+			cmd.config.Cluster.UseKubeConfig = &addToContext
+			cmd.config.Cluster.KubeContext = configutil.String(login.DevSpaceCloudContextName)
+		} else {
+			cmd.config.Cluster.UseKubeConfig = &addToContext
+			cmd.config.Cluster.APIServer = &cluster.Server
+			cmd.config.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
+
+			cmd.config.Cluster.User = &v1.ClusterUser{
+				ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
+				ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
+			}
+		}
+
+		return true
+	}
+
+	return false
 }
 
 func (cmd *InitCmd) configureKubernetes() {
 	clusterConfig := cmd.config.Cluster
 	useKubeConfig := false
-	homeDir, homeErr := homedir.Dir()
 
-	if homeErr != nil {
-		log.With(homeErr).Fatalf("Unable to determine home dir")
+	// Check if devspace cloud should be used
+	if cmd.useDevSpaceCloud() {
+		return
 	}
-	kubeConfigPath := homeDir + "/.kube/config"
 
-	_, kubeConfigNotFound := os.Stat(kubeConfigPath)
-
-	if kubeConfigNotFound == nil {
+	_, err := os.Stat(clientcmd.RecommendedHomeFile)
+	if err == nil {
 		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		})
+
 		useKubeConfig = (*skipAnswer == "yes")
 	}
-	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 
+	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 	if !useKubeConfig {
 		if clusterConfig.APIServer == nil {
 			clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
@@ -393,15 +441,10 @@ func (cmd *InitCmd) configureKubernetes() {
 
 		if clusterConfig.User == nil {
 			clusterConfig.User = &v1.ClusterUser{
-				Username:   configutil.String(""),
 				ClientCert: configutil.String(""),
 				ClientKey:  configutil.String(""),
 			}
 		} else {
-			if clusterConfig.User.Username == nil {
-				clusterConfig.User.Username = configutil.String("")
-			}
-
 			if clusterConfig.User.ClientCert == nil {
 				clusterConfig.User.ClientCert = configutil.String("")
 			}
@@ -410,11 +453,6 @@ func (cmd *InitCmd) configureKubernetes() {
 				clusterConfig.User.ClientKey = configutil.String("")
 			}
 		}
-		clusterConfig.User.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is your Kubernetes username?",
-			DefaultValue:           *clusterConfig.User.Username,
-			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-		})
 		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
 			Question:               "What is your Kubernetes client certificate? (PEM)",
 			DefaultValue:           *clusterConfig.User.ClientCert,
@@ -425,6 +463,13 @@ func (cmd *InitCmd) configureKubernetes() {
 			DefaultValue:           *clusterConfig.User.ClientKey,
 			InputTerminationString: "-----END RSA PRIVATE KEY-----",
 		})
+	} else {
+		currentContext, err := kubeconfig.GetCurrentContext()
+		if err != nil {
+			log.Fatalf("Couldn't determine current kubernetes context: %v", err)
+		}
+
+		clusterConfig.KubeContext = &currentContext
 	}
 }
 

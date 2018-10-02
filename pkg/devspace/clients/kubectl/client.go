@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sync"
 
+	"github.com/covexo/devspace/pkg/util/kubeconfig"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
@@ -42,6 +42,37 @@ func NewClient() (*kubernetes.Clientset, error) {
 	}
 
 	return kubernetes.NewForConfig(config)
+}
+
+//GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
+func GetClientConfig() (*rest.Config, error) {
+	config := configutil.GetConfig(false)
+	if config.Cluster == nil {
+		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
+	}
+
+	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
+		// If we should use a certain kube context use that
+		if config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
+			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+			if err != nil {
+				return nil, err
+			}
+
+			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *config.Cluster.KubeContext, nil, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+		}
+
+		return clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+	}
+
+	return &rest.Config{
+		Host: *config.Cluster.APIServer,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   []byte(*config.Cluster.CaCert),
+			CertData: []byte(*config.Cluster.User.ClientCert),
+			KeyData:  []byte(*config.Cluster.User.ClientKey),
+		},
+	}, nil
 }
 
 // IsMinikube returns true if the Kubernetes cluster is a minikube
@@ -202,28 +233,6 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 	return kubectl.Core().Pods(namespace).List(metav1.ListOptions{
 		LabelSelector: matchLabelString,
 	})
-}
-
-//GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
-func GetClientConfig() (*rest.Config, error) {
-	config := configutil.GetConfig(false)
-
-	if config.Cluster == nil {
-		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
-	}
-
-	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
-		return clientcmd.BuildConfigFromFlags("", filepath.Join(fsutil.GetHomeDir(), ".kube", "config"))
-	}
-	return &rest.Config{
-		Host:     *config.Cluster.APIServer,
-		Username: *config.Cluster.User.Username,
-		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(*config.Cluster.CaCert),
-			CertData: []byte(*config.Cluster.User.ClientCert),
-			KeyData:  []byte(*config.Cluster.User.ClientKey),
-		},
-	}, nil
 }
 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
