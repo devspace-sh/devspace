@@ -369,7 +369,7 @@ func (cmd *InitCmd) useDevSpaceCloud() bool {
 		cmd.config.Cluster.DevSpaceCloud = &useDevSpaceCloud
 		cmd.config.Cluster.UseKubeConfig = &addToContext
 
-		err := login.Update(cmd.config)
+		err := login.Update(cmd.config, true)
 		if err != nil {
 			log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
 		}

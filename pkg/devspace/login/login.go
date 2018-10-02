@@ -157,7 +157,7 @@ func Login() (string, *api.Cluster, *api.AuthInfo, error) {
 }
 
 // Update updates the devspace cloud information if necessary
-func Update(config *v1.Config) error {
+func Update(config *v1.Config, switchContext bool) error {
 	// Don't update anything if we don't use the devspace cloud
 	if *config.Cluster.DevSpaceCloud == false {
 		return nil
@@ -172,7 +172,7 @@ func Update(config *v1.Config) error {
 	config.Services.Tiller.Release.Namespace = &namespace
 
 	if *config.Cluster.UseKubeConfig {
-		err = UpdateKubeConfig(cluster, authInfo, true)
+		err = UpdateKubeConfig(cluster, authInfo, switchContext)
 		if err != nil {
 			return err
 		}

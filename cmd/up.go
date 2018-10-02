@@ -140,7 +140,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Load config
 	config := configutil.GetConfig(false)
 	if config.Cluster.DevSpaceCloud != nil && *config.Cluster.DevSpaceCloud {
-		err = login.Update(config)
+		err = login.Update(config, false)
 		if err != nil {
 			log.Warnf("Couldn't update devspace cloud cluster information: %v", err)
 		}
