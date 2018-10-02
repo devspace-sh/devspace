@@ -360,37 +360,18 @@ func (cmd *InitCmd) useDevSpaceCloud() bool {
 	}) == "yes"
 
 	if useDevSpaceCloud {
-		namespace, cluster, authInfo, err := login.CheckAuth()
-		if err != nil {
-			log.Fatalf("Error authenticating to devspace cloud: %v", err)
-		}
-
-		cmd.config.DevSpace.Release.Namespace = &namespace
-		cmd.config.Services.Tiller.Release.Namespace = &namespace
-
 		addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 
-		if addToContext {
-			err = login.UpdateKubeConfig(cluster, authInfo, true)
-			if err != nil {
-				log.Fatalf("Couldn't update kube config: %v", err)
-			}
+		cmd.config.Cluster.DevSpaceCloud = &useDevSpaceCloud
+		cmd.config.Cluster.UseKubeConfig = &addToContext
 
-			cmd.config.Cluster.UseKubeConfig = &addToContext
-			cmd.config.Cluster.KubeContext = configutil.String(login.DevSpaceCloudContextName)
-		} else {
-			cmd.config.Cluster.UseKubeConfig = &addToContext
-			cmd.config.Cluster.APIServer = &cluster.Server
-			cmd.config.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
-
-			cmd.config.Cluster.User = &v1.ClusterUser{
-				ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
-				ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
-			}
+		err := login.Update(cmd.config)
+		if err != nil {
+			log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
 		}
 
 		return true

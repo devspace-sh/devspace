@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -37,7 +39,7 @@ type DevSpaceCloudConfig struct {
 	Token string `yaml:"token"`
 }
 
-// CheckAuth verifies if the user is logged into the devspace cloud and if not loggs the user in
+// CheckAuth verifies if the user is logged into the devspace cloud and if not logs the user in
 func CheckAuth() (string, *api.Cluster, *api.AuthInfo, error) {
 	homedir, err := homedir.Dir()
 	if err != nil {
@@ -80,6 +82,13 @@ func GetClusterConfig(cfg *DevSpaceCloudConfig) (string, *api.Cluster, *api.Auth
 		return "", nil, nil, err
 	}
 
+	if resp.StatusCode == 401 {
+		return Login()
+	}
+	if resp.StatusCode != 200 {
+		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
+	}
+
 	var objmap map[string]*json.RawMessage
 	err = json.Unmarshal(body, &objmap)
 	if err != nil {
@@ -107,7 +116,7 @@ func GetClusterConfig(cfg *DevSpaceCloudConfig) (string, *api.Cluster, *api.Auth
 	return namespace, cluster, authInfo, nil
 }
 
-// Login loggs the user into the devspace cloud
+// Login logs the user into the devspace cloud
 func Login() (string, *api.Cluster, *api.AuthInfo, error) {
 	tokenChannel := make(chan string)
 	homedir, err := homedir.Dir()
@@ -145,6 +154,41 @@ func Login() (string, *api.Cluster, *api.AuthInfo, error) {
 	}
 
 	return GetClusterConfig(&cfg)
+}
+
+// Update updates the devspace cloud information if necessary
+func Update(config *v1.Config) error {
+	// Don't update anything if we don't use the devspace cloud
+	if *config.Cluster.DevSpaceCloud == false {
+		return nil
+	}
+
+	namespace, cluster, authInfo, err := CheckAuth()
+	if err != nil {
+		return err
+	}
+
+	config.DevSpace.Release.Namespace = &namespace
+	config.Services.Tiller.Release.Namespace = &namespace
+
+	if *config.Cluster.UseKubeConfig {
+		err = UpdateKubeConfig(cluster, authInfo, true)
+		if err != nil {
+			return err
+		}
+
+		config.Cluster.KubeContext = configutil.String(DevSpaceCloudContextName)
+	} else {
+		config.Cluster.APIServer = &cluster.Server
+		config.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
+
+		config.Cluster.User = &v1.ClusterUser{
+			ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
+			ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
+		}
+	}
+
+	return err
 }
 
 // UpdateKubeConfig adds the devspace-cloud context if necessary and switches the current context

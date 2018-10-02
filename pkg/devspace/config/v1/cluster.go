@@ -3,6 +3,7 @@ package v1
 //Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
 	UseKubeConfig *bool        `yaml:"useKubeConfig,omitempty"`
+	DevSpaceCloud *bool        `yaml:"devSpaceCloud,omitempty"`
 	KubeContext   *string      `yaml:"kubeContext,omitempty"`
 	APIServer     *string      `yaml:"apiServer,omitempty"`
 	CaCert        *string      `yaml:"caCert,omitempty"`
