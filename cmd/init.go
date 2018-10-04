@@ -352,29 +352,74 @@ func (cmd *InitCmd) configureTiller() {
 	}
 }
 
-func (cmd *InitCmd) useDevSpaceCloud() bool {
-	useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to use the devspace cloud? (free ready-to-use kubernetes) (yes | no)",
-		DefaultValue:           "yes",
-		ValidationRegexPattern: "^(yes)|(no)$",
-	}) == "yes"
+func (cmd *InitCmd) useCloudProvider() bool {
+	providerConfig, err := cloud.ParseCloudConfig()
+	if err != nil {
+		log.Fatalf("Error loading cloud config: %v", err)
+	}
 
-	if useDevSpaceCloud {
-		addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
+	if len(providerConfig) > 1 {
+		cloudProvider := "("
+
+		for name, _ := range providerConfig {
+			if len(cloudProvider) > 1 {
+				", "
+			}
+
+			cloudProvider += name
+		}
+
+		cloudProvider += ")"
+		cloudProviderSelected := ""
+
+		for _, ok := providerConfig[cloudProviderSelected]; ok == false && cloudProviderSelected != "no"; {
+			cloudProviderSelected := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProvider,
+				DefaultValue: cloud.DevSpaceCloudProviderName,
+			})
+		}
+
+		if cloudProviderSelected != "no" {
+			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want to add the cloud provider to the $HOME/.kube/config file? (yes | no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			}) == "yes"
+
+			cmd.config.Cluster.CloudProvider = &cloudProviderSelected
+			cmd.config.Cluster.UseKubeConfig = &addToContext
+
+			err := cloud.Update(providerConfig, cmd.config, true)
+			if err != nil {
+				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+			}
+
+			return true
+		}
+	} else {
+		useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to use the devspace cloud? (free ready-to-use kubernetes) (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 
-		cmd.config.Cluster.DevSpaceCloud = &useDevSpaceCloud
-		cmd.config.Cluster.UseKubeConfig = &addToContext
+		if useDevSpaceCloud {
+			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			}) == "yes"
 
-		err := cloud.Update(cmd.config, true)
-		if err != nil {
-			log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+			cmd.config.Cluster.CloudProvider = &cloud.DevSpaceCloudProviderName
+			cmd.config.Cluster.UseKubeConfig = &addToContext
+
+			err := cloud.Update(providerConfig, cmd.config, true)
+			if err != nil {
+				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+			}
+
+			return true
 		}
-
-		return true
 	}
 
 	return false

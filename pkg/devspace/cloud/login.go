@@ -5,72 +5,35 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
 
 	"github.com/covexo/devspace/pkg/util/log"
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
-	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// DevSpaceCloudConfigPath holds the path to the cloud config file
-const DevSpaceCloudConfigPath = ".devspace/cloudConfig.yaml"
-
-// DevSpaceCloudLogin is the endpoint to login an user
-const DevSpaceCloudLogin = "https://cloud.devspace.covexo.com/login"
-
-// DevSpaceCloudGetClusterConfig is the endpoint to retrieve the cluster configuration
-const DevSpaceCloudGetClusterConfig = "https://cloud.devspace.covexo.com/clusterConfig"
-
-// DevSpaceCloudContextName is the name for the kube config context
-const DevSpaceCloudContextName = "devspace-cloud"
-
-// DevSpaceCloudConfig describes the struct to hold the cloud configuration
-type DevSpaceCloudConfig struct {
-	Token string `yaml:"token"`
-}
-
 // CheckAuth verifies if the user is logged into the devspace cloud and if not logs the user in
-func CheckAuth() (string, *api.Cluster, *api.AuthInfo, error) {
-	homedir, err := homedir.Dir()
-	if err != nil {
-		return "", nil, nil, err
+func CheckAuth(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
+	if provider.Token == "" {
+		return Login(provider)
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(homedir, DevSpaceCloudConfigPath))
-	if os.IsNotExist(err) {
-		return Login()
-	} else if err != nil {
-		return "", nil, nil, errors.Wrapf(err, "Error reading file %q", filepath.Join(homedir, DevSpaceCloudConfigPath))
-	}
-
-	cloudConfig := &DevSpaceCloudConfig{}
-	err = yaml.Unmarshal(data, cloudConfig)
-	if err != nil {
-		return "", nil, nil, err
-	}
-
-	return GetClusterConfig(cloudConfig)
+	return GetClusterConfig(provider)
 }
 
 // GetClusterConfig retrieves the cluster and authconfig from the devspace cloud
-func GetClusterConfig(cfg *DevSpaceCloudConfig) (string, *api.Cluster, *api.AuthInfo, error) {
+func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", DevSpaceCloudGetClusterConfig, nil)
+	req, err := http.NewRequest("GET", provider.GetConfig, nil)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
-	req.Header.Set("Authorization", cfg.Token)
+	req.Header.Set("Authorization", provider.Token)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -83,7 +46,7 @@ func GetClusterConfig(cfg *DevSpaceCloudConfig) (string, *api.Cluster, *api.Auth
 	}
 
 	if resp.StatusCode == 401 {
-		return Login()
+		return Login(provider)
 	}
 	if resp.StatusCode != 200 {
 		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
@@ -117,72 +80,76 @@ func GetClusterConfig(cfg *DevSpaceCloudConfig) (string, *api.Cluster, *api.Auth
 }
 
 // Login logs the user into the devspace cloud
-func Login() (string, *api.Cluster, *api.AuthInfo, error) {
+func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	tokenChannel := make(chan string)
-	homedir, err := homedir.Dir()
-	if err != nil {
-		return "", nil, nil, err
-	}
 
-	cfgPath := filepath.Join(homedir, DevSpaceCloudConfigPath)
-
-	log.StartWait("Logging into DevSpace cloud " + DevSpaceCloudLogin + " ...")
+	log.StartWait("Logging into cloud " + provider.Login + " ...")
 	server := startServer(tokenChannel)
 
-	open.Start(DevSpaceCloudLogin)
+	open.Start(provider.Login)
 
 	token := <-tokenChannel
 	close(tokenChannel)
 
-	err = server.Shutdown(nil)
+	err := server.Shutdown(nil)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
-	cfg := DevSpaceCloudConfig{
-		Token: token,
-	}
-
-	err = os.MkdirAll(filepath.Dir(cfgPath), 0755)
+	providerConfig, err := ParseCloudConfig()
 	if err != nil {
 		return "", nil, nil, err
 	}
 
-	err = yamlutil.WriteYamlToFile(cfg, cfgPath)
+	providerConfig[provider.Name].Token = token
+
+	err = SaveCloudConfig(providerConfig)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
-	return GetClusterConfig(&cfg)
+	return GetClusterConfig(providerConfig[provider.Name])
 }
 
-// Update updates the devspace cloud information if necessary
-func Update(config *v1.Config, switchContext bool) error {
-	// Don't update anything if we don't use the devspace cloud
-	if *config.Cluster.DevSpaceCloud == false {
+// Update updates the cloud provider information if necessary
+func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContext bool) error {
+	cloudProvider := *dsConfig.Cluster.CloudProvider
+
+	// Don't update anything if we don't use a cloud provider
+	if cloudProvider == "" {
 		return nil
 	}
 
-	namespace, cluster, authInfo, err := CheckAuth()
+	provider, ok := providerConfig[cloudProvider]
+	if ok == false {
+		return fmt.Errorf("Config for cloud provider %s couldn't be found", cloudProvider)
+	}
+
+	namespace, cluster, authInfo, err := CheckAuth(provider)
 	if err != nil {
 		return err
 	}
 
-	config.DevSpace.Release.Namespace = &namespace
-	config.Services.Tiller.Release.Namespace = &namespace
+	dsConfig.DevSpace.Release.Namespace = &namespace
+	dsConfig.Services.Tiller.Release.Namespace = &namespace
 
-	if *config.Cluster.UseKubeConfig {
-		err = UpdateKubeConfig(cluster, authInfo, switchContext)
+	if *dsConfig.Cluster.UseKubeConfig {
+		kubeContext := DevSpaceKubeContextName
+		if provider.KubeContext != "" {
+			kubeContext = provider.KubeContext
+		}
+
+		err = UpdateKubeConfig(kubeContext, cluster, authInfo, switchKubeContext)
 		if err != nil {
 			return err
 		}
 
-		config.Cluster.KubeContext = configutil.String(DevSpaceCloudContextName)
+		dsConfig.Cluster.KubeContext = configutil.String(kubeContext)
 	} else {
-		config.Cluster.APIServer = &cluster.Server
-		config.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
+		dsConfig.Cluster.APIServer = &cluster.Server
+		dsConfig.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
 
-		config.Cluster.User = &v1.ClusterUser{
+		dsConfig.Cluster.User = &v1.ClusterUser{
 			ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
 			ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
 		}
@@ -192,27 +159,27 @@ func Update(config *v1.Config, switchContext bool) error {
 }
 
 // UpdateKubeConfig adds the devspace-cloud context if necessary and switches the current context
-func UpdateKubeConfig(cluster *api.Cluster, authInfo *api.AuthInfo, switchContext bool) error {
+func UpdateKubeConfig(contextName string, cluster *api.Cluster, authInfo *api.AuthInfo, switchContext bool) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
 
 	// Switch context if necessary
-	if switchContext && config.CurrentContext != DevSpaceCloudContextName {
-		config.CurrentContext = DevSpaceCloudContextName
+	if switchContext && config.CurrentContext != contextName {
+		config.CurrentContext = contextName
 	}
 
-	config.Clusters[DevSpaceCloudContextName] = cluster
-	config.AuthInfos[DevSpaceCloudContextName] = authInfo
+	config.Clusters[contextName] = cluster
+	config.AuthInfos[contextName] = authInfo
 
 	// Check if we need to add the context
-	if _, ok := config.Contexts[DevSpaceCloudContextName]; !ok {
+	if _, ok := config.Contexts[contextName]; !ok {
 		context := api.NewContext()
-		context.Cluster = DevSpaceCloudContextName
-		context.AuthInfo = DevSpaceCloudContextName
+		context.Cluster = contextName
+		context.AuthInfo = contextName
 
-		config.Contexts[DevSpaceCloudContextName] = context
+		config.Contexts[contextName] = context
 	}
 
 	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
