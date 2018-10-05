@@ -72,7 +72,7 @@ func GetClientConfig() (*rest.Config, error) {
 				return nil, err
 			}
 
-			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *config.Cluster.KubeContext, nil, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *config.Cluster.KubeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 		}
 
 		return clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
