@@ -8,7 +8,6 @@ You can easily setup a DevSpace for any existing project. This quickstart guide 
 3. [Coding with your DevSpace](/docs/getting-started/coding)
 4. [Cleanup](/docs/getting-started/cleanup) (optional)
 
-
 ## Prerequiste: A Kubernetes Cluster (e.g. Minikube)
 To get started, you need a Kubernetes cluster. If you do not have one yet, check out our **[Kubernetes Installation Guide](/docs/advanced/kubernetes)**.
 
