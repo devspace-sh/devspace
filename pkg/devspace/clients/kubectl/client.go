@@ -55,12 +55,12 @@ func GetClientConfig() (*rest.Config, error) {
 	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
 		providerConfig, err := cloud.ParseCloudConfig()
 		if err != nil {
-			log.Fatalf("Couldn't load cloud provider config: %v", err)
+			return nil, fmt.Errorf("Couldn't load cloud provider config: %v", err)
 		}
 
 		err = cloud.Update(providerConfig, config, false)
 		if err != nil {
-			log.Warnf("Couldn't update devspace cloud cluster information: %v", err)
+			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
 	}
 
