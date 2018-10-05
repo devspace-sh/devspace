@@ -235,6 +235,7 @@ The `tiller` service is defined by:
 ## cluster
 The `cluster` field specifies:
 - `useKubeConfig` *bool* if true use the credentials defined in $HOME/.kube/config
+- `kubeContext` *string* the context to use from $HOME/.kube/config
 
 If `useKubeConfig` is `false`, the following fields need to be specified:
 - `apiServer` *string* (Kubernetes API-Server URL)
@@ -243,7 +244,6 @@ If `useKubeConfig` is `false`, the following fields need to be specified:
 
 ### cluster.user
 ClusterUser:
-- `username` *string*
 - `clientCert` *string* (PEM format)
 - `clientKey` *string* (PEM format)  
 
