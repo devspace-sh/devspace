@@ -33,21 +33,6 @@ func SaveConfig() error {
 		return configErr
 	}
 
-	if config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig {
-		clusterConfig := map[string]bool{
-			"useKubeConfig": true,
-		}
-		_, configHasCluster := configMap["cluster"]
-
-		if configHasCluster {
-			configMap["cluster"] = clusterConfig
-		}
-		_, overwriteConfigHasCluster := overwriteMap["cluster"]
-
-		if overwriteConfigHasCluster {
-			overwriteMap["cluster"] = clusterConfig
-		}
-	}
 	configYaml, yamlErr := yaml.Marshal(configMap)
 
 	if yamlErr != nil {
