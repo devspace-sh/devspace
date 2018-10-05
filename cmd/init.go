@@ -361,9 +361,9 @@ func (cmd *InitCmd) useCloudProvider() bool {
 	if len(providerConfig) > 1 {
 		cloudProvider := "("
 
-		for name, _ := range providerConfig {
+		for name := range providerConfig {
 			if len(cloudProvider) > 1 {
-				", "
+				cloudProvider += ", "
 			}
 
 			cloudProvider += name
@@ -373,7 +373,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		cloudProviderSelected := ""
 
 		for _, ok := providerConfig[cloudProviderSelected]; ok == false && cloudProviderSelected != "no"; {
-			cloudProviderSelected := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			cloudProviderSelected = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProvider,
 				DefaultValue: cloud.DevSpaceCloudProviderName,
 			})
@@ -410,7 +410,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 				ValidationRegexPattern: "^(yes)|(no)$",
 			}) == "yes"
 
-			cmd.config.Cluster.CloudProvider = &cloud.DevSpaceCloudProviderName
+			cmd.config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
 			cmd.config.Cluster.UseKubeConfig = &addToContext
 
 			err := cloud.Update(providerConfig, cmd.config, true)
@@ -430,7 +430,7 @@ func (cmd *InitCmd) configureKubernetes() {
 	useKubeConfig := false
 
 	// Check if devspace cloud should be used
-	if cmd.useDevSpaceCloud() {
+	if cmd.useCloudProvider() {
 		return
 	}
 
