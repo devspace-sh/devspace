@@ -22,18 +22,25 @@ type ProviderConfig map[string]*Provider
 type Provider struct {
 	Name        string `yaml:"name,omitempty"`
 	KubeContext string `yaml:"kubecontext,omitempty"`
-	Login       string `yaml:"login,omitempty"`
-	GetConfig   string `yaml:"getConfig,omitempty"`
+	Host        string `yaml:"host,omitempty"`
 	Token       string `yaml:"token,omitempty"`
 }
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
 const DevSpaceCloudProviderName = "devspace-cloud"
 
+// LoginEndpoint is the cloud endpoint that will log you in
+const LoginEndpoint = "/login"
+
+// LoginSuccessEndpoint is the url redirected to after successful login
+const LoginSuccessEndpoint = "/loginSuccess"
+
+// GetClusterConfigEndpoint is the endpoint where to get the kubernetes context data
+const GetClusterConfigEndpoint = "/clusterConfig"
+
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Login:       "https://cloud.devspace.covexo.com/login",
-	GetConfig:   "https://cloud.devspace.covexo.com/clusterConfig",
+	Host:        "https://cloud.devspace.covexo.com",
 	KubeContext: DevSpaceKubeContextName,
 }
 
@@ -58,8 +65,7 @@ func ParseCloudConfig() (ProviderConfig, error) {
 	}
 
 	if _, ok := cloudConfig[DevSpaceCloudProviderName]; ok {
-		cloudConfig[DevSpaceCloudProviderName].GetConfig = DevSpaceCloudProviderConfig.GetConfig
-		cloudConfig[DevSpaceCloudProviderName].Login = DevSpaceCloudProviderConfig.Login
+		cloudConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
 	} else {
 		cloudConfig[DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
 	}
@@ -84,8 +90,7 @@ func SaveCloudConfig(config ProviderConfig) error {
 		provider.Name = ""
 
 		if name == DevSpaceCloudProviderName {
-			provider.Login = ""
-			provider.GetConfig = ""
+			provider.Host = ""
 		}
 	}
 
