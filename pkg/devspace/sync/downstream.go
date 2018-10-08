@@ -216,7 +216,7 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 
 	// Each file is represented in one line
 	for _, element := range files {
-		if lenFiles <= 3 || d.config.verbose {
+		if lenFiles <= 3 || d.config.Verbose {
 			d.config.Logf("[Downstream] Download file %s, size: %d", element.Name, element.Size)
 		}
 
@@ -248,7 +248,7 @@ func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
 
 							sleep 0.1;
 					done;
-					tar -czf "$tmpFileOutput" -T "$tmpFileInput" 2>/dev/null;
+					tar -czf "$tmpFileOutput" -T "$tmpFileInput" 2>/tmp/devspace-downstream-error;
 					(>&2 echo "` + StartAck + `");
 					(>&2 echo $(stat -c "%s" "$tmpFileOutput"));
 					(>&2 echo "` + EndAck + `");
@@ -335,7 +335,7 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 		absFilepath := filepath.Join(d.config.WatchPath, key)
 
 		if shouldRemoveLocal(absFilepath, value, d.config) {
-			if numRemoveFiles <= 3 || d.config.verbose {
+			if numRemoveFiles <= 3 || d.config.Verbose {
 				d.config.Logf("[Downstream] Remove %s", key)
 			}
 
@@ -344,11 +344,11 @@ func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformati
 			} else {
 				err := os.Remove(absFilepath)
 				if err != nil {
-					d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+					if os.IsNotExist(err) == false {
+						d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+					}
 				}
 			}
-		} else {
-			d.config.Logf("[Downstream] Skip delete %s", key)
 		}
 
 		delete(fileMap, key)
@@ -369,7 +369,7 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 
 	for _, element := range createFolders {
 		if element.IsDirectory {
-			if numCreateFolders <= 3 || d.config.verbose {
+			if numCreateFolders <= 3 || d.config.Verbose {
 				d.config.Logln("[Downstream] Create folder: " + element.Name)
 			}
 

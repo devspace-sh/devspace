@@ -61,11 +61,9 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 
 	// Check if we already tracked the path
 	if s.fileIndex.fileMap[relativePath] != nil {
-		// Folder already exists
+		// Folder already exists, don't send change
 		if stat.IsDir() {
-			// We want to initially walk over all files therefore we return true for a directory
-			// Later on a created directory locally that already exists in the fileMap should be ignored
-			return isInitial
+			return false
 		}
 
 		// Exclude symlinks
@@ -151,7 +149,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// Exclude files on the exclude list
 	if s.downloadIgnoreMatcher != nil {
 		if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-			s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
+			// s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
 			return false
 		}
 	}
@@ -159,7 +157,10 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
-		s.Logf("Skip %s because stat returned %v", absFilepath, stat)
+		if os.IsNotExist(err) == false {
+			s.Logf("Skip %s because stat returned %v", absFilepath, err)
+		}
+
 		return false
 	}
 

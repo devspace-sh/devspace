@@ -128,6 +128,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		Tags:        []string{b.imageURL},
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
+		Target:      options.Target,
+		NetworkMode: options.NetworkMode,
 		AuthConfigs: authConfigs,
 	})
 	if err != nil {

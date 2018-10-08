@@ -2,7 +2,9 @@ package v1
 
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
+	Terminal       *Terminal                `yaml:"terminal"`
 	Release        *Release                 `yaml:"release"`
+	ChartHash      *string                  `yaml:"chartHash"`
 	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
 	Sync           *[]*SyncConfig           `yaml:"sync"`
 }
@@ -28,6 +30,7 @@ type SyncConfig struct {
 	LabelSelector        *map[string]*string `yaml:"labelSelector"`
 	LocalSubPath         *string             `yaml:"localSubPath"`
 	ContainerPath        *string             `yaml:"containerPath"`
+	ContainerName        *string             `yaml:"containerName"`
 	ExcludePaths         *[]string           `yaml:"excludePaths"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`

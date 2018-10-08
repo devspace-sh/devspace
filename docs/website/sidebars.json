@@ -11,10 +11,13 @@
     "Commands": [
       "cli/init",
       "cli/up",
+      "cli/enter",
       "cli/down",
       "cli/reset",
       "cli/add",
+      "cli/add_package",
       "cli/remove",
+      "cli/remove_package",
       "cli/install",
       "cli/upgrade",
       "cli/list",

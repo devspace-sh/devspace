@@ -270,7 +270,7 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 	}
 
 	// Print changes
-	if u.config.verbose {
+	if u.config.Verbose {
 		for _, c := range writtenFiles {
 			if c.IsDirectory {
 				u.config.Logf("[Upstream] Create Folder %s", c.Name)
@@ -313,7 +313,7 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 							sleep 0.1;
 					done;
 
-					tar xzpf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/dev/null;
+					tar xzpf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/tmp/devspace-upstream-error;
 					echo "` + EndAck + `";
 		` // We need that extra new line or otherwise the command is not sent
 
@@ -387,7 +387,7 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 				}
 
 				// Print changes
-				if u.config.verbose {
+				if u.config.Verbose {
 					u.config.Logf("[Upstream] Remove %s", relativePath)
 				}
 			}

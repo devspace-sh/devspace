@@ -2,22 +2,35 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"k8s.io/helm/pkg/repo"
+
+	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/covexo/devspace/pkg/util/tar"
+	"github.com/covexo/devspace/pkg/util/yamlutil"
+
+	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
+	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/russross/blackfriday"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
 // AddCmd holds the information needed for the add command
 type AddCmd struct {
-	flags     *AddCmdFlags
-	syncFlags *addSyncCmdFlags
-	portFlags *addPortCmdFlags
-	dsConfig  *v1.DevSpaceConfig
+	flags        *AddCmdFlags
+	syncFlags    *addSyncCmdFlags
+	portFlags    *addPortCmdFlags
+	packageFlags *addPackageFlags
+	dsConfig     *v1.DevSpaceConfig
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -37,11 +50,18 @@ type addPortCmdFlags struct {
 	Selector     string
 }
 
+type addPackageFlags struct {
+	AppVersion   string
+	ChartVersion string
+	SkipQuestion bool
+}
+
 func init() {
 	cmd := &AddCmd{
-		flags:     &AddCmdFlags{},
-		syncFlags: &addSyncCmdFlags{},
-		portFlags: &addPortCmdFlags{},
+		flags:        &AddCmdFlags{},
+		syncFlags:    &addSyncCmdFlags{},
+		portFlags:    &addPortCmdFlags{},
+		packageFlags: &addPackageFlags{},
 	}
 
 	addCmd := &cobra.Command{
@@ -93,7 +113,7 @@ func init() {
 
 	addPortCmd := &cobra.Command{
 		Use:   "port",
-		Short: "Lists port forwarding configuration",
+		Short: "Add a new port forward configuration",
 		Long: `
 	#######################################################
 	################ devspace add port ####################
@@ -111,6 +131,180 @@ func init() {
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
+
+	addPackageCmd := &cobra.Command{
+		Use:   "package",
+		Short: "Add a helm chart",
+		Long: ` 
+	#######################################################
+	############### devspace add package ##################
+	#######################################################
+	Adds an existing helm chart to the devspace
+	(run 'devspace add package' to display all available 
+	helm charts)
+	
+	Examples:
+	devspace add package
+	devspace add package mysql
+	devspace add package mysql --app-version=5.7.14
+	devspace add package mysql --chart-version=0.10.3
+	#######################################################
+	`,
+		Run: cmd.RunAddPackage,
+	}
+
+	addPackageCmd.Flags().StringVar(&cmd.packageFlags.AppVersion, "app-version", "", "App version")
+	addPackageCmd.Flags().StringVar(&cmd.packageFlags.ChartVersion, "chart-version", "", "Chart version")
+	addPackageCmd.Flags().BoolVar(&cmd.packageFlags.SkipQuestion, "skip-question", false, "Skips the question to show the readme in a browser")
+
+	addCmd.AddCommand(addPackageCmd)
+}
+
+// RunAddPackage executes the add package command logic
+func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
+	kubectl, err := kubectl.NewClient()
+	if err != nil {
+		log.Fatalf("Unable to create new kubectl client: %v", err)
+	}
+
+	helm, err := helmClient.NewClient(kubectl, false)
+	if err != nil {
+		log.Fatalf("Error initializing helm client: %v", err)
+	}
+
+	if len(args) != 1 {
+		helm.PrintAllAvailableCharts()
+		return
+	}
+
+	log.StartWait("Search Chart")
+	repo, version, err := helm.SearchChart(args[0], cmd.packageFlags.ChartVersion, cmd.packageFlags.AppVersion)
+	log.StopWait()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Done("Chart found")
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
+	_, err = os.Stat(requirementsFile)
+	if os.IsNotExist(err) {
+		entry := "dependencies:\n" +
+			"- name: \"" + version.GetName() + "\"\n" +
+			"  version: \"" + version.GetVersion() + "\"\n" +
+			"  repository: \"" + repo.URL + "\"\n"
+
+		err = ioutil.WriteFile(requirementsFile, []byte(entry), 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		yamlContents := map[interface{}]interface{}{}
+		err = yamlutil.ReadYamlFromFile(requirementsFile, yamlContents)
+		if err != nil {
+			log.Fatalf("Error parsing %s: %v", requirementsFile, err)
+		}
+
+		dependenciesArr := []interface{}{}
+		if dependencies, ok := yamlContents["dependencies"]; ok {
+			dependenciesArr, ok = dependencies.([]interface{})
+			if ok == false {
+				log.Fatalf("Error parsing %s: Key dependencies is not an array", requirementsFile)
+			}
+		}
+
+		dependenciesArr = append(dependenciesArr, map[interface{}]interface{}{
+			"name":       version.GetName(),
+			"version":    version.GetVersion(),
+			"repository": repo.URL,
+		})
+		yamlContents["dependencies"] = dependenciesArr
+
+		err = yamlutil.WriteYamlToFile(yamlContents, requirementsFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	log.StartWait("Update chart dependencies")
+	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
+	log.StopWait()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check if key already exists
+	valuesYaml := filepath.Join(cwd, "chart", "values.yaml")
+	valuesYamlContents := map[interface{}]interface{}{}
+
+	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
+	if err != nil {
+		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
+	}
+
+	if _, ok := valuesYamlContents[version.GetName()]; ok == false {
+		f, err := os.OpenFile(valuesYaml, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer f.Close()
+		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ": {}\n"); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	log.Donef("Successfully added %s as chart dependency, you can configure the package in 'chart/values.yaml'", version.GetName())
+	cmd.showReadme(version)
+}
+
+func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if cmd.packageFlags.SkipQuestion {
+		return
+	}
+
+	showReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Do you want to open the package README? (y|n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)",
+	})
+
+	if showReadme == "n" {
+		return
+	}
+
+	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(cwd, "chart", "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output := blackfriday.MarkdownCommon([]byte(content))
+	f, err := os.OpenFile(filepath.Join(os.TempDir(), "Readme.html"), os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write(output)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f.Close()
+	open.Start(f.Name())
 }
 
 // RunAddSync executes the add sync command logic
@@ -161,7 +355,6 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	config.DevSpace.Sync = &syncConfig
 
 	err = configutil.SaveConfig()
-
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}

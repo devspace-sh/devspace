@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -38,6 +39,7 @@ type SyncConfig struct {
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
+	Verbose              bool
 
 	fileIndex *fileIndex
 
@@ -50,9 +52,7 @@ type SyncConfig struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent  bool
-	verbose bool
-
+	silent   bool
 	stopOnce sync.Once
 
 	// Used for testing
@@ -101,6 +101,14 @@ func (s *SyncConfig) Error(err error) {
 }
 
 func (s *SyncConfig) setup() error {
+	// we have to resolve the real local path, because the watcher gives us the real path always
+	realLocalPath, err := filepath.EvalSymlinks(s.WatchPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	s.WatchPath = realLocalPath
+
 	if s.ExcludePaths == nil {
 		s.ExcludePaths = make([]string, 0, 2)
 	}
@@ -125,7 +133,7 @@ func (s *SyncConfig) setup() error {
 		syncLog.SetLevel(logrus.InfoLevel)
 	}
 
-	err := s.initIgnoreParsers()
+	err = s.initIgnoreParsers()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -268,7 +276,7 @@ func (s *SyncConfig) initialSync() error {
 	}
 	s.fileIndex.fileMapMutex.Unlock()
 
-	err = s.diffServerClient(s.WatchPath, &localChanges, fileMapClone)
+	err = s.diffServerClient(s.WatchPath, &localChanges, fileMapClone, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -292,7 +300,7 @@ func (s *SyncConfig) initialSync() error {
 	return nil
 }
 
-func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation, dontSend bool) error {
 	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
 	stat, err := os.Lstat(filepath)
 
@@ -319,34 +327,34 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 			}
 			s.fileIndex.fileMapMutex.Unlock()
 
-			return nil
+			dontSend = true
 		}
 	}
 
-	s.fileIndex.fileMapMutex.Lock()
-	shouldUpload := shouldUpload(relativePath, stat, s, true)
-	s.fileIndex.fileMapMutex.Unlock()
-
-	if shouldUpload == false {
-		return nil
-	}
-
 	if stat.IsDir() {
-		return s.diffDir(filepath, stat, sendChanges, downloadChanges)
+		return s.diffDir(filepath, stat, sendChanges, downloadChanges, dontSend)
 	}
 
-	// Add file to upload
-	*sendChanges = append(*sendChanges, &fileInformation{
-		Name:        relativePath,
-		Mtime:       roundMtime(stat.ModTime()),
-		Size:        stat.Size(),
-		IsDirectory: false,
-	})
+	if dontSend == false {
+		s.fileIndex.fileMapMutex.Lock()
+		shouldUpload := shouldUpload(relativePath, stat, s, true)
+		s.fileIndex.fileMapMutex.Unlock()
+
+		if shouldUpload {
+			// Add file to upload
+			*sendChanges = append(*sendChanges, &fileInformation{
+				Name:        relativePath,
+				Mtime:       roundMtime(stat.ModTime()),
+				Size:        stat.Size(),
+				IsDirectory: false,
+			})
+		}
+	}
 
 	return nil
 }
 
-func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation) error {
+func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation, dontSend bool) error {
 	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
 	files, err := ioutil.ReadDir(filepath)
 
@@ -355,17 +363,23 @@ func (s *SyncConfig) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*
 		return nil
 	}
 
-	if len(files) == 0 && relativePath != "" {
-		*sendChanges = append(*sendChanges, &fileInformation{
-			Name:        relativePath,
-			Mtime:       roundMtime(stat.ModTime()),
-			Size:        stat.Size(),
-			IsDirectory: true,
-		})
+	if len(files) == 0 && relativePath != "" && dontSend == false {
+		s.fileIndex.fileMapMutex.Lock()
+		shouldUpload := shouldUpload(relativePath, stat, s, true)
+		s.fileIndex.fileMapMutex.Unlock()
+
+		if shouldUpload {
+			*sendChanges = append(*sendChanges, &fileInformation{
+				Name:        relativePath,
+				Mtime:       roundMtime(stat.ModTime()),
+				Size:        stat.Size(),
+				IsDirectory: true,
+			})
+		}
 	}
 
 	for _, f := range files {
-		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges); err != nil {
+		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges, dontSend); err != nil {
 			return errors.Trace(err)
 		}
 	}

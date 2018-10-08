@@ -3,10 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/hash"
+	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
@@ -33,8 +37,8 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
+	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/exec"
 )
 
 // UpCmd is a struct that defines a command call for "up"
@@ -53,11 +57,12 @@ type UpCmdFlags struct {
 	open           string
 	initRegistries bool
 	build          bool
-	shell          string
 	sync           bool
 	deploy         bool
 	portforwarding bool
 	noSleep        bool
+	verboseSync    bool
+	container      string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -65,12 +70,16 @@ var UpFlagsDefault = &UpCmdFlags{
 	tiller:         true,
 	open:           "cmd",
 	initRegistries: true,
-	build:          true,
+	build:          false,
 	sync:           true,
 	deploy:         false,
 	portforwarding: true,
 	noSleep:        false,
+	verboseSync:    false,
+	container:      "",
 }
+
+const clusterRoleBindingName = "devspace-users"
 
 func init() {
 	cmd := &UpCmd{
@@ -91,19 +100,19 @@ Starts and connects your DevSpace:
 4. Starts the sync client
 5. Enters the container shell
 #######################################################`,
-		Args: cobra.NoArgs,
-		Run:  cmd.Run,
+		Run: cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Build image if Dockerfile has been modified")
-	cobraCmd.Flags().StringVarP(&cmd.flags.shell, "shell", "s", "", "Shell command (default: bash, fallback: sh)")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Force image build")
+	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
+	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Deploy chart")
-	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep (Override the containers.default.command and containers.default.args values with empty strings)")
 }
 
 // Run executes the command logic
@@ -136,22 +145,39 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create release namespace: %v", err)
 	}
 
+	err = cmd.ensureClusterRoleBinding()
+	if err != nil {
+		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
+	}
+
 	cmd.initHelm()
 
 	if cmd.flags.initRegistries {
 		cmd.initRegistries()
 	}
-	mustRedeploy := false
 
-	if cmd.flags.build {
-		mustRedeploy = cmd.buildImages(cobraCmd.Flags().Changed("build"))
-	}
+	// Build image if necessary
+	mustRedeploy := cmd.buildImages()
 
 	// Check if we find a running release pod
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	hash, err := hash.Directory("chart")
+	if err != nil {
+		log.Fatalf("Error hashing chart directory: %v", err)
+	}
 
-	if err != nil || mustRedeploy || cmd.flags.deploy {
+	// Load config
+	config := configutil.GetConfig(false)
+
+	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
 		cmd.deployChart()
+
+		config.DevSpace.ChartHash = &hash
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
+		}
 	} else {
 		cmd.pod = pod
 	}
@@ -169,7 +195,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	cmd.enterTerminal()
+	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -191,6 +217,92 @@ func (cmd *UpCmd) ensureNamespace() error {
 		}
 	}
 
+	return nil
+}
+
+func (cmd *UpCmd) ensureClusterRoleBinding() error {
+	/*
+		config := configutil.GetConfig(false)
+
+		accessReview := &k8sauthorizationv1.SelfSubjectAccessReview{
+			Spec: k8sauthorizationv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &k8sauthorizationv1.ResourceAttributes{
+					Namespace: *config.DevSpace.Release.Namespace,
+					Verb:      "create",
+					Group:     "rbac.authorization.k8s.io",
+					Resource:  "roles",
+				},
+			},
+		}
+
+		resp, permErr := cmd.kubectl.Authorization().SelfSubjectAccessReviews().Create(accessReview)
+
+		if permErr != nil {*/
+
+	if kubectl.IsMinikube() {
+		return nil
+	}
+
+	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+
+	if err != nil {
+		clusterConfig, _ := kubectl.GetClientConfig()
+
+		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
+			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			})
+
+			if *createRoleBinding == "no" {
+				log.Fatal("Please create ClusterRoleBinding '" + clusterRoleBindingName + "' manually")
+			}
+			username := configutil.String("")
+
+			log.StartWait("Checking gcloud account")
+			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()
+			log.StopWait()
+
+			if gcloudErr == nil {
+				gcloudEmail := strings.TrimSuffix(strings.TrimSuffix(string(gcloudOutput), "\r\n"), "\n")
+
+				if gcloudEmail != "" {
+					username = &gcloudEmail
+				}
+			}
+
+			username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is the email address of your Google Cloud account?",
+				DefaultValue:           *username,
+				ValidationRegexPattern: ".+",
+			})
+
+			rolebinding := &k8sv1beta1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterRoleBindingName,
+				},
+				Subjects: []k8sv1beta1.Subject{
+					{
+						Kind: "User",
+						Name: *username,
+					},
+				},
+				RoleRef: k8sv1beta1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "ClusterRole",
+					Name:     "cluster-admin",
+				},
+			}
+
+			_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			if roleBindingErr != nil {
+				return roleBindingErr
+			}
+		} else {
+			log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
+		}
+	}
 	return nil
 }
 
@@ -245,7 +357,7 @@ func (cmd *UpCmd) initRegistries() {
 	}
 }
 
-func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string, buildFlagChanged bool) bool {
+func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string) bool {
 	var dockerfileModTime time.Time
 
 	mustRebuild := true
@@ -261,7 +373,7 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 		dockerfileModTime = dockerfileInfo.ModTime()
 
 		// When user has not used -b or --build flags
-		if buildFlagChanged == false {
+		if cmd.flags.build == false {
 			if imageConf.Build.LatestTimestamp != nil {
 				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *imageConf.Build.LatestTimestamp)
 
@@ -270,13 +382,13 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 			}
 		}
 	}
-	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
 
+	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
 	return mustRebuild
 }
 
 // returns true when one of the images had to be rebuild
-func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
+func (cmd *UpCmd) buildImages() bool {
 	re := false
 	config := configutil.GetConfig(false)
 
@@ -291,10 +403,18 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 		if imageConf.Build.ContextPath != nil {
 			contextPath = *imageConf.Build.ContextPath
 		}
-		dockerfilePath = filepath.Join(cmd.workdir, strings.TrimPrefix(dockerfilePath, "."))
-		contextPath = filepath.Join(cmd.workdir, strings.TrimPrefix(contextPath, "."))
 
-		if cmd.shouldRebuild(imageConf, dockerfilePath, buildFlagChanged) {
+		dockerfilePath, err := filepath.Abs(dockerfilePath)
+		if err != nil {
+			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
+		}
+
+		contextPath, err = filepath.Abs(contextPath)
+		if err != nil {
+			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
+		}
+
+		if cmd.shouldRebuild(imageConf, dockerfilePath) {
 			re = true
 			imageTag, randErr := randutil.GenerateRandomString(7)
 
@@ -351,12 +471,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 
 			log.Infof(buildInfo, imageName, engineName)
 
-			username := ""
-			password := ""
-
 			if registryConf.URL != nil {
 				registryURL = *registryConf.URL
 			}
+
+			username := ""
+			password := ""
 			if registryConf.Auth != nil {
 				if registryConf.Auth.Username != nil {
 					username = *registryConf.Auth.Username
@@ -381,6 +501,12 @@ func (cmd *UpCmd) buildImages(buildFlagChanged bool) bool {
 			if imageConf.Build.Options != nil {
 				if imageConf.Build.Options.BuildArgs != nil {
 					buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
+				}
+				if imageConf.Build.Options.Target != nil {
+					buildOptions.Target = *imageConf.Build.Options.Target
+				}
+				if imageConf.Build.Options.Network != nil {
+					buildOptions.NetworkMode = *imageConf.Build.Options.Network
 				}
 			}
 
@@ -497,9 +623,13 @@ func (cmd *UpCmd) deployChart() {
 
 		if len(podList.Items) > 0 {
 			highestRevision := 0
-			var selectedPod k8sv1.Pod
+			var selectedPod *k8sv1.Pod
 
 			for i, pod := range podList.Items {
+				if kubectl.GetPodStatus(&pod) == "Terminating" {
+					continue
+				}
+
 				podRevision, podHasRevision := pod.Annotations["revision"]
 				hasHigherRevision := (i == 0)
 
@@ -512,27 +642,30 @@ func (cmd *UpCmd) deployChart() {
 				}
 
 				if hasHigherRevision {
-					selectedPod = pod
+					selectedPod = &pod
 					highestRevision, _ = strconv.Atoi(podRevision)
 				}
 			}
-			_, hasRevision := selectedPod.Annotations["revision"]
 
-			if !hasRevision || highestRevision == releaseRevision {
-				if !hasRevision {
-					log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+			if selectedPod != nil {
+				_, hasRevision := selectedPod.Annotations["revision"]
+
+				if !hasRevision || highestRevision == releaseRevision {
+					if !hasRevision {
+						log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
+					}
+
+					cmd.pod = selectedPod
+					err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
+
+					if err != nil {
+						log.Fatalf("Error during waiting for pod: %s", err.Error())
+					}
+
+					break
+				} else {
+					log.Info("Waiting for release upgrade to complete.")
 				}
-
-				cmd.pod = &selectedPod
-				err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
-
-				if err != nil {
-					log.Fatalf("Error during waiting for pod: %s", err.Error())
-				}
-
-				break
-			} else {
-				log.Info("Waiting for release upgrade to complete.")
 			}
 		} else {
 			log.Info("Waiting for release to be deployed.")
@@ -571,12 +704,36 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 			if err != nil {
 				log.Panicf("Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
+				if len(pod.Spec.Containers) == 0 {
+					log.Warnf("Cannot start sync on pod, because selected pod %s/%s has no containers", pod.Namespace, pod.Name)
+					continue
+				}
+
+				container := &pod.Spec.Containers[0]
+				if syncPath.ContainerName != nil && *syncPath.ContainerName != "" {
+					found := false
+
+					for _, c := range pod.Spec.Containers {
+						if c.Name == *syncPath.ContainerName {
+							container = &c
+							found = true
+							break
+						}
+					}
+
+					if found == false {
+						log.Warnf("Couldn't start sync, because container %s wasn't found in pod %s/%s", *syncPath.ContainerName, pod.Namespace, pod.Name)
+						continue
+					}
+				}
+
 				syncConfig := &synctool.SyncConfig{
 					Kubectl:   cmd.kubectl,
 					Pod:       pod,
-					Container: &pod.Spec.Containers[0],
+					Container: container,
 					WatchPath: absLocalPath,
 					DestPath:  *syncPath.ContainerPath,
+					Verbose:   cmd.flags.verboseSync,
 				}
 
 				if syncPath.ExcludePaths != nil {
@@ -596,7 +753,7 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 					log.Fatalf("Sync error: %s", err.Error())
 				}
 
-				log.Donef("Sync started on %s <-> %s", absLocalPath, *syncPath.ContainerPath)
+				log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, *syncPath.ContainerPath, pod.Namespace, pod.Name)
 				syncConfigs = append(syncConfigs, syncConfig)
 			}
 		}
@@ -648,28 +805,6 @@ func (cmd *UpCmd) startPortForwarding() {
 			}
 		} else {
 			log.Warn("Currently only pod resource type is supported for portforwarding")
-		}
-	}
-}
-
-func (cmd *UpCmd) enterTerminal() {
-	var shell []string
-
-	if len(cmd.flags.shell) == 0 {
-		shell = []string{
-			"sh",
-			"-c",
-			"command -v bash >/dev/null 2>&1 && exec bash || exec sh",
-		}
-	} else {
-		shell = []string{cmd.flags.shell}
-	}
-
-	_, _, _, terminalErr := kubectl.Exec(cmd.kubectl, cmd.pod, cmd.pod.Spec.Containers[0].Name, shell, true, nil)
-
-	if terminalErr != nil {
-		if _, ok := terminalErr.(exec.CodeExitError); ok == false {
-			log.Fatalf("Unable to start terminal session: %s", terminalErr.Error())
 		}
 	}
 }

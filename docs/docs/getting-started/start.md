@@ -10,7 +10,7 @@ devspace up
 This command will: 
 1. ask some basic configuration questions,
 2. create a Dockerfile, a helm chart and the devspace config (see below),
-3. start a Tiller server and a private Docker registry in your Kubernetes cluster,
+3. start a Tiller server (if necessary) and a private Docker registry (if wanted, you can also use any other registry) in your Kubernetes cluster,
 4. build your Dockerfile and deploy the helm chart in chart/,
 5. start port-forwarding and real-time code synchronization,
 6. and open a terminal session.
@@ -34,5 +34,6 @@ YOUR_PROJECT_PATH/
 |   |-- .gitignore
 |   |-- cluster.yaml
 |   |-- config.yaml
-```
+```  
+
 **Note:** Don't worry, you can simply run `devspace reset` to reset your project to its original state (see [Cleanup](/docs/getting-started/cleanup.html)).

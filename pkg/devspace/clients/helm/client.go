@@ -2,8 +2,12 @@ package helm
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +39,7 @@ import (
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
@@ -63,6 +68,8 @@ repositories:
   name: stable
   url: https://kubernetes-charts.storage.googleapis.com
 `
+
+var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 var defaultPolicyRules = []k8sv1beta1.PolicyRule{
 	{
@@ -197,7 +204,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
-		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.9.1",
+		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.10.0",
 		ServiceAccount: tillerSA.ObjectMeta.Name,
 	}
 
@@ -230,6 +237,13 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				return err
 			}
 		}
+		serviceAccountSubject := []k8sv1beta1.Subject{
+			{
+				Kind:      k8sv1beta1.ServiceAccountKind,
+				Name:      tillerServiceAccountName,
+				Namespace: tillerNamespace,
+			},
+		}
 
 		err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleManagerName, tillerNamespace, []k8sv1beta1.PolicyRule{
 			{
@@ -243,7 +257,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				},
 				Verbs: []string{k8sv1beta1.ResourceAll},
 			},
-		})
+		}, serviceAccountSubject)
 		if err != nil {
 			return err
 		}
@@ -267,7 +281,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 				continue
 			}
 
-			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules)
+			err = ensureRoleBinding(kubectlClient, tillerConfig, tillerRoleName, *appNamespace, defaultPolicyRules, serviceAccountSubject)
 			if err != nil {
 				return err
 			}
@@ -415,8 +429,7 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerCo
 //	 return ensureRoleBinding(helmClientWrapper.kubectl, tillerRoleName, namespace, helmClientWrapper.Settings.TillerNamespace, defaultPolicyRules)
 // }
 
-func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, name, namespace string, rules []k8sv1beta1.PolicyRule) error {
-	tillerNamespace := *tillerConfig.Release.Namespace
+func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig, name, namespace string, rules []k8sv1beta1.PolicyRule, subjects []k8sv1beta1.Subject) error {
 	role := &k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -429,13 +442,7 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 			Name:      name + "-binding",
 			Namespace: namespace,
 		},
-		Subjects: []k8sv1beta1.Subject{
-			{
-				Kind:      k8sv1beta1.ServiceAccountKind,
-				Name:      tillerServiceAccountName,
-				Namespace: tillerNamespace,
-			},
-		},
+		Subjects: subjects,
 		RoleRef: k8sv1beta1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
@@ -443,9 +450,15 @@ func ensureRoleBinding(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Til
 		},
 	}
 
-	// Ignore Errors
-	kubectlClient.RbacV1beta1().Roles(namespace).Create(role)
-	kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(rolebinding)
+	_, roleErr := kubectlClient.RbacV1beta1().Roles(namespace).Create(role)
+	if roleErr != nil && alreadyExistsRegexp.Match([]byte(roleErr.Error())) == false {
+		return roleErr
+	}
+
+	_, roleBindingErr := kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(rolebinding)
+	if roleBindingErr != nil && alreadyExistsRegexp.Match([]byte(roleBindingErr.Error())) == false {
+		return roleBindingErr
+	}
 
 	return nil
 }
@@ -503,6 +516,29 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 	return true, nil
 }
 
+func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
+	missing := []string{}
+
+	deps := ch.GetDependencies()
+	for _, r := range reqs.Dependencies {
+		found := false
+		for _, d := range deps {
+			if d.Metadata.Name == r.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, r.Name)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("found in requirements.yaml, but missing in charts/ directory: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
@@ -510,36 +546,30 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 		return nil, err
 	}
 
-	chartDependencies := chart.GetDependencies()
+	if req, err := helmchartutil.LoadRequirements(chart); err == nil {
+		// If checkDependencies returns an error, we have unfulfilled dependencies.
+		// As of Helm 2.4.0, this is treated as a stopping condition:
+		// https://github.com/kubernetes/helm/issues/2209
+		if err := checkDependencies(chart, req); err != nil {
+			man := &helmdownloader.Manager{
+				Out:       ioutil.Discard,
+				ChartPath: chartPath,
+				HelmHome:  helmClientWrapper.Settings.Home,
+				Getters:   getter.All(*helmClientWrapper.Settings),
+			}
+			if err := man.Update(); err != nil {
+				return nil, err
+			}
 
-	if len(chartDependencies) > 0 {
-		_, err = helmchartutil.LoadRequirements(chart)
-
-		if err != nil {
-			return nil, err
-		}
-		chartDownloader := &helmdownloader.Manager{
-			/*		Out:        i.out,
-					ChartPath:  i.chartPath,
-					HelmHome:   settings.Home,
-					Keyring:    defaultKeyring(),
-					SkipUpdate: false,
-					Getters:    getter.All(settings),
-			*/
-		}
-		err = chartDownloader.Update()
-
-		if err != nil {
-			return nil, err
-		}
-		chart, err = helmchartutil.Load(chartPath)
-
-		if err != nil {
-			return nil, err
+			// Update all dependencies which are present in /charts.
+			chart, err = helmchartutil.Load(chartPath)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
 
+	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
 	if err != nil {
 		return nil, err
 	}
@@ -598,6 +628,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}
+
 	getter := getter.All(*helmClientWrapper.Settings)
 	chartDownloader := downloader.ChartDownloader{
 		HelmHome: helmClientWrapper.Settings.Home,
@@ -613,6 +644,145 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName strin
 	}
 
 	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
+}
+
+// stringArraySorter
+type stringArraySorter [][]string
+
+// Len returns the length of this scoreSorter.
+func (s stringArraySorter) Len() int { return len(s) }
+
+// Swap performs an in-place swap.
+func (s stringArraySorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+// Less compares a to b, and returns true if a is less than b.
+func (s stringArraySorter) Less(a, b int) bool { return s[a][0] < s[b][0] }
+
+// PrintAllAvailableCharts prints all available charts
+func (helmClientWrapper *HelmClientWrapper) PrintAllAvailableCharts() {
+	var values stringArraySorter
+	var header = []string{
+		"NAME",
+		"CHART VERSION",
+		"APP VERSION",
+		"DESCRIPTION",
+	}
+
+	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, re := range allRepos.Repositories {
+		n := re.Name
+		f := helmClientWrapper.Settings.Home.CacheIndex(n)
+
+		ind, err := repo.LoadIndexFile(f)
+		if err != nil {
+			continue
+		}
+
+		// Sort versions
+		ind.SortEntries()
+
+		for _, versions := range ind.Entries {
+			if len(versions) == 0 {
+				continue
+			}
+
+			description := versions[0].Description
+			if len(description) > 45 {
+				description = description[:45] + "..."
+			}
+
+			values = append(values, []string{
+				versions[0].GetName(),
+				versions[0].GetVersion(),
+				versions[0].GetAppVersion(),
+				description,
+			})
+		}
+	}
+
+	sort.Sort(values)
+	log.PrintTable(header, values)
+}
+
+// SearchChart searches the chart name in all repositories
+func (helmClientWrapper *HelmClientWrapper) SearchChart(chartName, chartVersion, appVersion string) (*repo.Entry, *repo.ChartVersion, error) {
+	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, re := range allRepos.Repositories {
+		n := re.Name
+		f := helmClientWrapper.Settings.Home.CacheIndex(n)
+
+		ind, err := repo.LoadIndexFile(f)
+		if err != nil {
+			continue
+		}
+
+		// Sort versions
+		ind.SortEntries()
+
+		// Check if chart exists
+		if versions, ok := ind.Entries[chartName]; ok {
+			if len(versions) == 0 {
+				// Skip chart names that have zero releases.
+				continue
+			}
+
+			if chartVersion != "" {
+				for _, version := range versions {
+					if version.GetVersion() == chartVersion {
+						return re, version, nil
+					}
+				}
+
+				return nil, nil, fmt.Errorf("Chart %s with chart version %s not found", chartName, chartVersion)
+			}
+
+			if appVersion != "" {
+				for _, version := range versions {
+					if version.GetAppVersion() == appVersion {
+						return re, version, nil
+					}
+				}
+
+				return nil, nil, fmt.Errorf("Chart %s with app version %s not found", chartName, appVersion)
+			}
+
+			return re, versions[0], nil
+		}
+	}
+
+	return nil, nil, fmt.Errorf("Chart %s not found", chartName)
+}
+
+// BuildDependencies builds the dependencies
+func (helmClientWrapper *HelmClientWrapper) BuildDependencies(chartPath string) error {
+	man := &helmdownloader.Manager{
+		Out:       ioutil.Discard,
+		ChartPath: chartPath,
+		HelmHome:  helmClientWrapper.Settings.Home,
+		Getters:   getter.All(*helmClientWrapper.Settings),
+	}
+
+	return man.Build()
+}
+
+// UpdateDependencies updates the dependencies
+func (helmClientWrapper *HelmClientWrapper) UpdateDependencies(chartPath string) error {
+	man := &helmdownloader.Manager{
+		Out:       ioutil.Discard,
+		ChartPath: chartPath,
+		HelmHome:  helmClientWrapper.Settings.Home,
+		Getters:   getter.All(*helmClientWrapper.Settings),
+	}
+
+	return man.Update()
 }
 
 // DeleteRelease deletes a helm release and optionally purges it

@@ -12,6 +12,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -25,12 +26,13 @@ type ResetCmd struct {
 
 // ResetCmdFlags holds the command flags
 type ResetCmdFlags struct {
-	deleteDockerfile     bool
-	deleteChart          bool
-	deleteRegistry       bool
-	deleteTiller         bool
-	deleteDevspaceFolder bool
-	deleteRelease        bool
+	deleteDockerfile         bool
+	deleteChart              bool
+	deleteRegistry           bool
+	deleteTiller             bool
+	deleteDevspaceFolder     bool
+	deleteRelease            bool
+	deleteClusterRoleBinding bool
 }
 
 func init() {
@@ -67,10 +69,19 @@ command: devspace down
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var err error
+
+	if cmd.kubectl == nil || cmd.helm == nil {
+		cmd.kubectl, err = kubectl.NewClient()
+		if err != nil {
+			log.Failf("Failed to initialize kubectl client: %v", err)
+		}
+	}
 	cmd.determineResetExtent()
 
 	if cmd.flags.deleteRelease {
+		log.StartWait("Deleting devspace release")
 		err = cmd.deleteRelease()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting release: %s", err.Error())
@@ -80,7 +91,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteRegistry {
+		log.StartWait("Deleting docker registry")
 		err = cmd.deleteRegistry()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting docker registry: %s", err.Error())
@@ -94,7 +107,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.deleteTiller {
+		log.StartWait("Deleting tiller")
 		err = cmd.deleteTiller()
+		log.StopWait()
 
 		if err != nil {
 			log.Failf("Error deleting tiller: %s", err.Error())
@@ -139,7 +154,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		err = cmd.deleteDevspaceFolder()
 
 		if err != nil {
-			log.Failf("Error deleting .devspace folder: ", err.Error())
+			log.Failf("Error deleting .devspace folder: %v", err)
 
 			if cmd.shouldContinue() == false {
 				return
@@ -148,13 +163,30 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Done("Successfully deleted .devspace folder")
 		}
 	}
+
+	if cmd.flags.deleteClusterRoleBinding {
+		log.StartWait("Deleting cluster role bindings")
+		err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Delete(clusterRoleBindingName, &metav1.DeleteOptions{})
+		log.StopWait()
+
+		if err != nil {
+			log.Failf("Failed to remove ClusterRoleBinding: %v", err)
+		} else {
+			log.Done("Successfully deleted ClusterRoleBinding '" + clusterRoleBindingName + "'")
+		}
+	}
 }
 
 func (cmd *ResetCmd) determineResetExtent() {
 	config := configutil.GetConfig(false)
 
-	cmd.flags.deleteDevspaceFolder = true
 	cmd.flags.deleteRelease = true
+
+	cmd.flags.deleteDevspaceFolder = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Should the .devspace folder be removed? (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
 
 	cmd.flags.deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Dockerfile be removed? (y/n)",
@@ -163,24 +195,34 @@ func (cmd *ResetCmd) determineResetExtent() {
 	}) == "y"
 
 	cmd.flags.deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the Chart (chart/*) be removed ? (y/n)",
+		Question:               "Should the Chart (chart/*) be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
 	if config.Services.InternalRegistry != nil {
 		cmd.flags.deleteRegistry = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the internal registry be removed ? (y/n)",
+			Question:               "Should the internal registry be removed? (y/n)",
 			DefaultValue:           "y",
 			ValidationRegexPattern: "^(y|n)$",
 		}) == "y"
 	}
 
 	cmd.flags.deleteTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the tiller server be removed ? (y/n)",
+		Question:               "Should the tiller server be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
+
+	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+
+	if err == nil {
+		cmd.flags.deleteClusterRoleBinding = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
+	}
 }
 
 func (cmd *ResetCmd) shouldContinue() bool {
@@ -198,12 +240,6 @@ func (cmd *ResetCmd) deleteRelease() error {
 	releaseName := *config.DevSpace.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		cmd.kubectl, err = kubectl.NewClient()
-
-		if err != nil {
-			return err
-		}
-
 		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
 
 		if isDeployed == false {
@@ -229,12 +265,6 @@ func (cmd *ResetCmd) deleteRegistry() error {
 	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		cmd.kubectl, err = kubectl.NewClient()
-
-		if err != nil {
-			return err
-		}
-
 		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
 
 		if isDeployed == false {
@@ -254,16 +284,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 }
 
 func (cmd *ResetCmd) deleteTiller() error {
-	var err error
 	config := configutil.GetConfig(false)
-
-	if cmd.kubectl == nil {
-		cmd.kubectl, err = kubectl.NewClient()
-
-		if err != nil {
-			return err
-		}
-	}
 
 	return helmClient.DeleteTiller(cmd.kubectl, config.Services.Tiller)
 }
