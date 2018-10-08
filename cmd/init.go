@@ -372,11 +372,13 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		cloudProvider += ")"
 		cloudProviderSelected := ""
 
-		for _, ok := providerConfig[cloudProviderSelected]; ok == false && cloudProviderSelected != "no"; {
-			cloudProviderSelected = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		for ok := false; ok == false && cloudProviderSelected != "no"; {
+			cloudProviderSelected = strings.TrimSpace(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProvider,
 				DefaultValue: cloud.DevSpaceCloudProviderName,
-			})
+			}))
+
+			_, ok = providerConfig[cloudProviderSelected]
 		}
 
 		if cloudProviderSelected != "no" {

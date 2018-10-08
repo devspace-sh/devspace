@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -81,6 +82,7 @@ func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, 
 
 // Login logs the user into the devspace cloud
 func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
+	ctx := context.Background()
 	tokenChannel := make(chan string)
 
 	log.StartWait("Logging into cloud " + provider.Host + LoginEndpoint + " ...")
@@ -91,7 +93,7 @@ func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	token := <-tokenChannel
 	close(tokenChannel)
 
-	err := server.Shutdown(nil)
+	err := server.Shutdown(ctx)
 	if err != nil {
 		return "", nil, nil, err
 	}
