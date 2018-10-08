@@ -40,7 +40,7 @@ const GetClusterConfigEndpoint = "/clusterConfig"
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Host:        "http://localhost:8080",
+	Host:        "https://cloud.devspace.covexo.com",
 	KubeContext: DevSpaceKubeContextName,
 }
 
