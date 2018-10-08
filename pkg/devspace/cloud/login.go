@@ -28,7 +28,7 @@ func CheckAuth(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) 
 // GetClusterConfig retrieves the cluster and authconfig from the devspace cloud
 func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", provider.GetConfig, nil)
+	req, err := http.NewRequest("GET", provider.Host+GetClusterConfigEndpoint, nil)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -83,10 +83,10 @@ func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, 
 func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	tokenChannel := make(chan string)
 
-	log.StartWait("Logging into cloud " + provider.Login + " ...")
-	server := startServer(tokenChannel)
+	log.StartWait("Logging into cloud " + provider.Host + LoginEndpoint + " ...")
+	server := startServer(provider.Host+LoginSuccessEndpoint, tokenChannel)
 
-	open.Start(provider.Login)
+	open.Start(provider.Host + LoginEndpoint)
 
 	token := <-tokenChannel
 	close(tokenChannel)
@@ -185,12 +185,10 @@ func UpdateKubeConfig(contextName string, cluster *api.Cluster, authInfo *api.Au
 	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
 }
 
-func startServer(tokenChannel chan string) *http.Server {
+func startServer(redirectURI string, tokenChannel chan string) *http.Server {
 	srv := &http.Server{Addr: ":25853"}
 
 	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "<script type=\"text/javascript\">window.close();</script>")
-
 		keys, ok := r.URL.Query()["token"]
 		if !ok || len(keys[0]) < 1 {
 			log.Fatal("Bad request")
@@ -198,6 +196,8 @@ func startServer(tokenChannel chan string) *http.Server {
 
 		log.StopWait()
 		tokenChannel <- keys[0]
+
+		http.Redirect(w, r, redirectURI, http.StatusSeeOther)
 	})
 
 	go func() {
