@@ -22,7 +22,7 @@ type ProviderConfig map[string]*Provider
 type Provider struct {
 	Name        string `yaml:"name,omitempty"`
 	KubeContext string `yaml:"kubecontext,omitempty"`
-	Host        string `yaml:"login,omitempty"`
+	Host        string `yaml:"host,omitempty"`
 	Token       string `yaml:"token,omitempty"`
 }
 
