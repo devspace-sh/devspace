@@ -63,6 +63,11 @@ func GetClientConfig() (*rest.Config, error) {
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			return nil, fmt.Errorf("Error saving config: %v", err)
+		}
 	}
 
 	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
