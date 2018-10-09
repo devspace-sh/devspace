@@ -63,6 +63,11 @@ func GetClientConfig() (*rest.Config, error) {
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			return nil, fmt.Errorf("Error saving config: %v", err)
+		}
 	}
 
 	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
@@ -117,15 +122,23 @@ func GetClientConfig() (*rest.Config, error) {
 // IsMinikube returns true if the Kubernetes cluster is a minikube
 func IsMinikube() bool {
 	if isMinikubeVar == nil {
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-		cfg, err := kubeConfig.RawConfig()
+		isMinikube := false
+		config := configutil.GetConfig(false)
+		if config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig == true {
+			if config.Cluster.KubeContext == nil {
+				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+				kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+				cfg, err := kubeConfig.RawConfig()
+				if err != nil {
+					return false
+				}
 
-		if err != nil {
-			return false
+				isMinikube = cfg.CurrentContext == "minikube"
+			} else {
+				isMinikube = *config.Cluster.KubeContext == "minikube"
+			}
 		}
 
-		isMinikube := cfg.CurrentContext == "minikube"
 		isMinikubeVar = &isMinikube
 	}
 

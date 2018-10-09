@@ -391,7 +391,9 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			cmd.config.Cluster.CloudProvider = &cloudProviderSelected
 			cmd.config.Cluster.UseKubeConfig = &addToContext
 
+			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
 			err := cloud.Update(providerConfig, cmd.config, true)
+			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
 			}
@@ -415,7 +417,9 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			cmd.config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
 			cmd.config.Cluster.UseKubeConfig = &addToContext
 
+			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
 			err := cloud.Update(providerConfig, cmd.config, true)
+			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
 			}

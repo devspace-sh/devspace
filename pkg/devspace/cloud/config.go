@@ -20,10 +20,9 @@ type ProviderConfig map[string]*Provider
 
 // Provider describes the struct to hold the cloud configuration
 type Provider struct {
-	Name        string `yaml:"name,omitempty"`
-	KubeContext string `yaml:"kubecontext,omitempty"`
-	Host        string `yaml:"host,omitempty"`
-	Token       string `yaml:"token,omitempty"`
+	Name  string `yaml:"name,omitempty"`
+	Host  string `yaml:"host,omitempty"`
+	Token string `yaml:"token,omitempty"`
 }
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
@@ -40,8 +39,7 @@ const GetClusterConfigEndpoint = "/clusterConfig"
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Host:        "https://cloud.devspace.covexo.com",
-	KubeContext: DevSpaceKubeContextName,
+	Host: "https://cloud.devspace.covexo.com",
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations
