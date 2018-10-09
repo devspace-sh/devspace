@@ -141,7 +141,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContex
 			kubeContext = provider.KubeContext
 		}
 
-		err = UpdateKubeConfig(kubeContext, cluster, authInfo, switchKubeContext)
+		err = UpdateKubeConfig(kubeContext, namespace, cluster, authInfo, switchKubeContext)
 		if err != nil {
 			return err
 		}
@@ -154,6 +154,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContex
 		dsConfig.Cluster.User = &v1.ClusterUser{
 			ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
 			ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
+			Token:      configutil.String(string(authInfo.Token)),
 		}
 	}
 
@@ -161,7 +162,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContex
 }
 
 // UpdateKubeConfig adds the devspace-cloud context if necessary and switches the current context
-func UpdateKubeConfig(contextName string, cluster *api.Cluster, authInfo *api.AuthInfo, switchContext bool) error {
+func UpdateKubeConfig(contextName, namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, switchContext bool) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
@@ -172,14 +173,18 @@ func UpdateKubeConfig(contextName string, cluster *api.Cluster, authInfo *api.Au
 		config.CurrentContext = contextName
 	}
 
+	// We generate a unique auth info name for each devspace
+	authInfoName := contextName + "-" + namespace
+
 	config.Clusters[contextName] = cluster
-	config.AuthInfos[contextName] = authInfo
+	config.AuthInfos[authInfoName] = authInfo
 
 	// Check if we need to add the context
 	if _, ok := config.Contexts[contextName]; !ok {
 		context := api.NewContext()
 		context.Cluster = contextName
-		context.AuthInfo = contextName
+		context.AuthInfo = authInfoName
+		context.Namespace = namespace
 
 		config.Contexts[contextName] = context
 	}

@@ -14,4 +14,5 @@ type Cluster struct {
 type ClusterUser struct {
 	ClientCert *string `yaml:"clientCert,omitempty"`
 	ClientKey  *string `yaml:"clientKey,omitempty"`
+	Token      *string `yaml:"token,omitempty"`
 }
