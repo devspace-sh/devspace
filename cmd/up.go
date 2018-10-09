@@ -156,7 +156,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Build image if necessary
 	mustRedeploy := cmd.buildImages()
 
-	// Check if we find a running release pod
+	// Check if the chart directory has changed
 	hash, err := hash.Directory("chart")
 	if err != nil {
 		log.Fatalf("Error hashing chart directory: %v", err)
@@ -165,6 +165,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Load config
 	config := configutil.GetConfig(false)
 
+	// Check if we find a running release pod
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
 	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
 		cmd.deployChart()
