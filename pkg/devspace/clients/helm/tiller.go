@@ -36,14 +36,20 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		ServiceAccount: TillerServiceAccountName,
 	}
 
-	// Create tiller namespace & ignore any errors
-	kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: tillerNamespace,
-		},
-	})
+	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create tiller namespace
+		_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: tillerNamespace,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
 
-	_, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	_, err = kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		// Create tiller server
 		err = createTiller(kubectlClient, config, tillerOptions)

@@ -140,7 +140,10 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	cmd.ensureNamespace()
+	err = cmd.ensureNamespace()
+	if err != nil {
+		log.Fatalf("Unable to create namespace: %v", err)
+	}
 
 	err = cmd.ensureClusterRoleBinding()
 	if err != nil {
@@ -196,16 +199,21 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
 }
 
-func (cmd *UpCmd) ensureNamespace() {
+func (cmd *UpCmd) ensureNamespace() error {
 	config := configutil.GetConfig(false)
 	releaseNamespace := *config.DevSpace.Release.Namespace
 
-	// Create release namespace and ignore errors
-	_, _ = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: releaseNamespace,
-		},
-	})
+	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create release namespace
+		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: releaseNamespace,
+			},
+		})
+	}
+
+	return err
 }
 
 func (cmd *UpCmd) ensureClusterRoleBinding() error {

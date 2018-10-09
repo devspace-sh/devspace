@@ -22,15 +22,21 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper,
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
 	registryReleaseValues := internalRegistry.Release.Values
 
-	// Create registry namespace & ignore errors
-	kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: registryReleaseNamespace,
-		},
-	})
+	_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create registryReleaseNamespace
+		_, err = kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: registryReleaseNamespace,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
 
 	// Deploy the registry
-	_, err := helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registryReleaseValues)
+	_, err = helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registryReleaseValues)
 	if err != nil {
 		return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
 	}
