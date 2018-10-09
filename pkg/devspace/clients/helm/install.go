@@ -1,0 +1,147 @@
+package helm
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
+	yaml "gopkg.in/yaml.v2"
+	helmchartutil "k8s.io/helm/pkg/chartutil"
+	"k8s.io/helm/pkg/downloader"
+	helmdownloader "k8s.io/helm/pkg/downloader"
+	"k8s.io/helm/pkg/getter"
+	k8shelm "k8s.io/helm/pkg/helm"
+	"k8s.io/helm/pkg/proto/hapi/chart"
+	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
+)
+
+func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
+	missing := []string{}
+
+	deps := ch.GetDependencies()
+	for _, r := range reqs.Dependencies {
+		found := false
+		for _, d := range deps {
+			if d.Metadata.Name == r.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, r.Name)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("found in requirements.yaml, but missing in charts/ directory: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
+func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+	chart, err := helmchartutil.Load(chartPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if req, err := helmchartutil.LoadRequirements(chart); err == nil {
+		// If checkDependencies returns an error, we have unfulfilled dependencies.
+		// As of Helm 2.4.0, this is treated as a stopping condition:
+		// https://github.com/kubernetes/helm/issues/2209
+		if err := checkDependencies(chart, req); err != nil {
+			man := &helmdownloader.Manager{
+				Out:       ioutil.Discard,
+				ChartPath: chartPath,
+				HelmHome:  helmClientWrapper.Settings.Home,
+				Getters:   getter.All(*helmClientWrapper.Settings),
+			}
+			if err := man.Update(); err != nil {
+				return nil, err
+			}
+
+			// Update all dependencies which are present in /charts.
+			chart, err = helmchartutil.Load(chartPath)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
+	if err != nil {
+		return nil, err
+	}
+
+	deploymentTimeout := int64(10 * 60)
+	overwriteValues := []byte("")
+
+	if values != nil {
+		unmarshalledValues, err := yaml.Marshal(values)
+
+		if err != nil {
+			return nil, err
+		}
+		overwriteValues = unmarshalledValues
+	}
+
+	var release *hapi_release5.Release
+
+	if releaseExists {
+		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
+			releaseName,
+			chartPath,
+			k8shelm.UpgradeTimeout(deploymentTimeout),
+			k8shelm.UpdateValueOverrides(overwriteValues),
+			k8shelm.ReuseValues(false),
+			k8shelm.UpgradeWait(true),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		release = upgradeResponse.GetRelease()
+	} else {
+		installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
+			chart,
+			releaseNamespace,
+			k8shelm.InstallTimeout(deploymentTimeout),
+			k8shelm.ValueOverrides(overwriteValues),
+			k8shelm.ReleaseName(releaseName),
+			k8shelm.InstallReuseName(false),
+			k8shelm.InstallWait(true),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		release = installResponse.GetRelease()
+	}
+	return release, nil
+}
+
+// InstallChartByName installs the given chart by name under the releasename in the releasenamespace
+func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+	if len(chartVersion) == 0 {
+		chartVersion = ">0.0.0-0"
+	}
+
+	getter := getter.All(*helmClientWrapper.Settings)
+	chartDownloader := downloader.ChartDownloader{
+		HelmHome: helmClientWrapper.Settings.Home,
+		Out:      os.Stdout,
+		Getters:  getter,
+		Verify:   downloader.VerifyNever,
+	}
+	os.MkdirAll(helmClientWrapper.Settings.Home.Archive(), os.ModePerm)
+
+	chartPath, _, err := chartDownloader.DownloadTo(chartName, chartVersion, helmClientWrapper.Settings.Home.Archive())
+	if err != nil {
+		return nil, err
+	}
+
+	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values)
+}

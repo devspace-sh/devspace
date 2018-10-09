@@ -284,9 +284,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 }
 
 func (cmd *ResetCmd) deleteTiller() error {
-	config := configutil.GetConfig(false)
-
-	return helmClient.DeleteTiller(cmd.kubectl, config.Services.Tiller)
+	return helmClient.DeleteTiller(cmd.kubectl)
 }
 
 func (cmd *ResetCmd) deleteDockerfile() error {

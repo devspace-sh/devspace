@@ -85,9 +85,7 @@ func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 	ctx := context.Background()
 	tokenChannel := make(chan string)
 
-	log.StartWait("Logging into cloud " + provider.Host + LoginEndpoint + " ...")
 	server := startServer(provider.Host+LoginSuccessEndpoint, tokenChannel)
-
 	open.Start(provider.Host + LoginEndpoint)
 
 	token := <-tokenChannel
@@ -136,10 +134,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContex
 	dsConfig.Services.Tiller.Release.Namespace = &namespace
 
 	if *dsConfig.Cluster.UseKubeConfig {
-		kubeContext := DevSpaceKubeContextName
-		if provider.KubeContext != "" {
-			kubeContext = provider.KubeContext
-		}
+		kubeContext := DevSpaceKubeContextName + "-" + namespace
 
 		err = UpdateKubeConfig(kubeContext, namespace, cluster, authInfo, switchKubeContext)
 		if err != nil {
@@ -173,17 +168,14 @@ func UpdateKubeConfig(contextName, namespace string, cluster *api.Cluster, authI
 		config.CurrentContext = contextName
 	}
 
-	// We generate a unique auth info name for each devspace
-	authInfoName := contextName + "-" + namespace
-
 	config.Clusters[contextName] = cluster
-	config.AuthInfos[authInfoName] = authInfo
+	config.AuthInfos[contextName] = authInfo
 
 	// Check if we need to add the context
 	if _, ok := config.Contexts[contextName]; !ok {
 		context := api.NewContext()
 		context.Cluster = contextName
-		context.AuthInfo = authInfoName
+		context.AuthInfo = contextName
 		context.Namespace = namespace
 
 		config.Contexts[contextName] = context
@@ -201,9 +193,7 @@ func startServer(redirectURI string, tokenChannel chan string) *http.Server {
 			log.Fatal("Bad request")
 		}
 
-		log.StopWait()
 		tokenChannel <- keys[0]
-
 		http.Redirect(w, r, redirectURI, http.StatusSeeOther)
 	})
 

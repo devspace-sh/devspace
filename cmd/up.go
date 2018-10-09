@@ -140,10 +140,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = cmd.ensureNamespace()
-	if err != nil {
-		log.Fatalf("Unable to create release namespace: %v", err)
-	}
+	cmd.ensureNamespace()
 
 	err = cmd.ensureClusterRoleBinding()
 	if err != nil {
@@ -198,56 +195,26 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
 }
 
-func (cmd *UpCmd) ensureNamespace() error {
+func (cmd *UpCmd) ensureNamespace() {
 	config := configutil.GetConfig(false)
 	releaseNamespace := *config.DevSpace.Release.Namespace
 
-	// Check if registry namespace exists
-	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
-	if err != nil {
-		// Create registry namespace
-		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: releaseNamespace,
-			},
-		})
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Create release namespace and ignore errors
+	_, _ = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: releaseNamespace,
+		},
+	})
 }
 
 func (cmd *UpCmd) ensureClusterRoleBinding() error {
-	/*
-		config := configutil.GetConfig(false)
-
-		accessReview := &k8sauthorizationv1.SelfSubjectAccessReview{
-			Spec: k8sauthorizationv1.SelfSubjectAccessReviewSpec{
-				ResourceAttributes: &k8sauthorizationv1.ResourceAttributes{
-					Namespace: *config.DevSpace.Release.Namespace,
-					Verb:      "create",
-					Group:     "rbac.authorization.k8s.io",
-					Resource:  "roles",
-				},
-			},
-		}
-
-		resp, permErr := cmd.kubectl.Authorization().SelfSubjectAccessReviews().Create(accessReview)
-
-		if permErr != nil {*/
-
 	if kubectl.IsMinikube() {
 		return nil
 	}
 
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
-
 	if err != nil {
 		clusterConfig, _ := kubectl.GetClientConfig()
-
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
@@ -295,14 +262,19 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 				},
 			}
 
-			_, roleBindingErr := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
-			if roleBindingErr != nil {
-				return roleBindingErr
+			_, err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			if err != nil {
+				return err
 			}
 		} else {
-			log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
+			cfg := configutil.GetConfig(false)
+
+			if cfg.Cluster.CloudProvider == nil || *cfg.Cluster.CloudProvider == "" {
+				log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
+			}
 		}
 	}
+
 	return nil
 }
 

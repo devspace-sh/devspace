@@ -117,15 +117,23 @@ func GetClientConfig() (*rest.Config, error) {
 // IsMinikube returns true if the Kubernetes cluster is a minikube
 func IsMinikube() bool {
 	if isMinikubeVar == nil {
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-		cfg, err := kubeConfig.RawConfig()
+		isMinikube := false
+		config := configutil.GetConfig(false)
+		if config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig == true {
+			if config.Cluster.KubeContext == nil {
+				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+				kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+				cfg, err := kubeConfig.RawConfig()
+				if err != nil {
+					return false
+				}
 
-		if err != nil {
-			return false
+				isMinikube = cfg.CurrentContext == "minikube"
+			} else {
+				isMinikube = *config.Cluster.KubeContext == "minikube"
+			}
 		}
 
-		isMinikube := cfg.CurrentContext == "minikube"
 		isMinikubeVar = &isMinikube
 	}
 
