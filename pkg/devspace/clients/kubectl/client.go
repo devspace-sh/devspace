@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
@@ -78,14 +79,39 @@ func GetClientConfig() (*rest.Config, error) {
 		return clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
 	}
 
-	return &rest.Config{
-		Host: *config.Cluster.APIServer,
-		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(*config.Cluster.CaCert),
-			CertData: []byte(*config.Cluster.User.ClientCert),
-			KeyData:  []byte(*config.Cluster.User.ClientKey),
-		},
-	}, nil
+	// We create a new config object here
+	kubeAuthInfo := api.NewAuthInfo()
+	if config.Cluster.User != nil {
+		if config.Cluster.User.ClientCert != nil {
+			kubeAuthInfo.ClientCertificateData = []byte(*config.Cluster.User.ClientCert)
+		}
+		if config.Cluster.User.ClientKey != nil {
+			kubeAuthInfo.ClientKeyData = []byte(*config.Cluster.User.ClientKey)
+		}
+		if config.Cluster.User.Token != nil {
+			kubeAuthInfo.Token = *config.Cluster.User.Token
+		}
+	}
+
+	kubeCluster := api.NewCluster()
+	if config.Cluster.APIServer != nil {
+		kubeCluster.Server = *config.Cluster.APIServer
+	}
+	if config.Cluster.CaCert != nil {
+		kubeCluster.CertificateAuthorityData = []byte(*config.Cluster.CaCert)
+	}
+
+	kubeContext := api.NewContext()
+	kubeContext.Cluster = "devspace"
+	kubeContext.AuthInfo = "devspace"
+
+	kubeConfig := api.NewConfig()
+	kubeConfig.AuthInfos["devspace"] = kubeAuthInfo
+	kubeConfig.Clusters["devspace"] = kubeCluster
+	kubeConfig.Contexts["devspace"] = kubeContext
+	kubeConfig.CurrentContext = "devspace"
+
+	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 }
 
 // IsMinikube returns true if the Kubernetes cluster is a minikube
