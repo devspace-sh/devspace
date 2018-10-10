@@ -244,19 +244,7 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-		s.loadingText = nil
-	}
-
-	fnInformation := fnTypeInformationMap[fatalFn]
-
-	ct.Foreground(fnInformation.color, false)
-	fnInformation.stream.Write([]byte(fnInformation.tag))
-
-	ct.ResetColor()
-	fnInformation.stream.Write([]byte(fmt.Sprintln(args...)))
-
+	s.writeMessage(fatalFn, fmt.Sprintln(args...))
 	s.writeMessageToFileLogger(fatalFn, args...)
 
 	if s.fileLogger == nil {
@@ -268,18 +256,7 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-		s.loadingText = nil
-	}
-
-	fnInformation := fnTypeInformationMap[fatalFn]
-
-	ct.Foreground(fnInformation.color, false)
-	fnInformation.stream.Write([]byte(fnInformation.tag))
-
-	ct.ResetColor()
-	fnInformation.stream.Write([]byte(fmt.Sprintf(format, args...)))
+	s.writeMessage(fatalFn, fmt.Sprintf(format, args...)+"\n")
 	s.writeMessageToFileLoggerf(fatalFn, format, args...)
 
 	if s.fileLogger == nil {
@@ -290,11 +267,6 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 func (s *stdoutLogger) Panic(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
-
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-		s.loadingText = nil
-	}
 
 	s.writeMessage(panicFn, fmt.Sprintln(args...))
 	s.writeMessageToFileLogger(panicFn, args...)
