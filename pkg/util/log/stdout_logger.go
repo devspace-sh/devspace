@@ -91,7 +91,7 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 
 		fnInformation.stream.Write([]byte(message))
 
-		if s.loadingText != nil {
+		if s.loadingText != nil && fnType != fatalFn {
 			s.loadingText.Start()
 		}
 	}

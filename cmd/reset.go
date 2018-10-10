@@ -27,6 +27,7 @@ type ResetCmd struct {
 // ResetCmdFlags holds the command flags
 type ResetCmdFlags struct {
 	deleteDockerfile         bool
+	deleteDockerignore       bool
 	deleteChart              bool
 	deleteRegistry           bool
 	deleteTiller             bool
@@ -150,6 +151,20 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	if cmd.flags.deleteDockerignore {
+		err = cmd.deleteDockerignore()
+
+		if err != nil {
+			log.Failf("Error deleting .dockerignore: %s", err.Error())
+
+			if cmd.shouldContinue() == false {
+				return
+			}
+		} else {
+			log.Done("Successfully deleted .dockerignore")
+		}
+	}
+
 	if cmd.flags.deleteDevspaceFolder {
 		err = cmd.deleteDevspaceFolder()
 
@@ -190,6 +205,12 @@ func (cmd *ResetCmd) determineResetExtent() {
 
 	cmd.flags.deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Dockerfile be removed? (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
+
+	cmd.flags.deleteDockerignore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Should the .dockerignore be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
@@ -289,6 +310,10 @@ func (cmd *ResetCmd) deleteTiller() error {
 
 func (cmd *ResetCmd) deleteDockerfile() error {
 	return os.Remove(path.Join(cmd.workdir, "Dockerfile"))
+}
+
+func (cmd *ResetCmd) deleteDockerignore() error {
+	return os.Remove(path.Join(cmd.workdir, ".dockerignore"))
 }
 
 func (cmd *ResetCmd) deleteChart() error {
