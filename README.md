@@ -43,7 +43,7 @@ curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | s
 
 ### For Mac
 ```bash
-curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl -s -H "Accept: application/json"  "https://api.github.com/repos/covexo/devspace/releases/latest"  | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ## [Quickstart](https://devspace.covexo.com/docs/getting-started/quickstart.html)
