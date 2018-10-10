@@ -25,15 +25,17 @@ var overwriteConfig = makeConfig()
 var overwriteConfigRaw = makeConfig()
 var configLoaded = false
 var overwriteConfigLoaded = false
-var workdir string
+
+// Workdir is public so it can be changed by tests
+var Workdir string
 
 func init() {
-	workdir, _ = os.Getwd()
+	Workdir, _ = os.Getwd()
 }
 
 //ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
-	_, configNotFound := os.Stat(workdir + configPath)
+	_, configNotFound := os.Stat(Workdir + configPath)
 
 	if configNotFound != nil {
 		return false, nil

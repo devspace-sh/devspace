@@ -38,14 +38,14 @@ func SaveConfig() error {
 	if yamlErr != nil {
 		return yamlErr
 	}
-	configDir := filepath.Dir(workdir + configPath)
+	configDir := filepath.Dir(Workdir + configPath)
 
 	os.MkdirAll(configDir, os.ModePerm)
 
 	if !configExists {
 		fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 	}
-	writeErr := ioutil.WriteFile(workdir+configPath, configYaml, os.ModePerm)
+	writeErr := ioutil.WriteFile(Workdir+configPath, configYaml, os.ModePerm)
 
 	if writeErr != nil {
 		return writeErr
@@ -57,7 +57,7 @@ func SaveConfig() error {
 		if yamlErr != nil {
 			return yamlErr
 		}
-		return ioutil.WriteFile(workdir+overwriteConfigPath, overwriteConfigYaml, os.ModePerm)
+		return ioutil.WriteFile(Workdir+overwriteConfigPath, overwriteConfigYaml, os.ModePerm)
 	}
 	configLoaded = true
 	overwriteConfigLoaded = true
