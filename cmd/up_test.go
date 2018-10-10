@@ -12,6 +12,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRun(t *testing.T) {
@@ -37,6 +38,47 @@ func TestRun(t *testing.T) {
 		configutil.Workdir = workDirBefore
 	}()
 
+	upCmdObj := UpCmd{
+		flags: &UpCmdFlags{
+			sync: false,
+		},
+	}
+
+	mockStdin("exit\\\\n")
+	defer cleanUpMockedStdin()
+
+	defer func() {
+		client, err := kubectl.NewClient()
+		if err != nil {
+			t.Error(err)
+		}
+		propagationPolicy := metav1.DeletePropagationForeground
+		client.Core().Namespaces().Delete("test-cmd-up", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	}()
+
+	/*resetCmdObj := ResetCmd{
+		flags: &ResetCmdFlags{},
+	}
+	resetCmdObj.kubectl, err = kubectl.NewClient()
+	if err != nil {
+		t.Error(err)
+	}
+	resetCmdObj.helm, err = helm.NewClient(resetCmdObj.kubectl, false)
+	if err != nil {
+		t.Error(err)
+	}
+	resetCmdObj.deleteRegistry()*/
+
+	upCmdObj.Run(nil, []string{})
+	log.StopFileLogging()
+
+	//TODO: Somehow stop all processes from the command above
+
+	testReset(t, dir)
+
+}
+
+func testReset(t *testing.T, dir string) {
 	resetCmdObj := ResetCmd{
 		flags: &ResetCmdFlags{
 			deleteDockerfile:         true,
@@ -49,35 +91,9 @@ func TestRun(t *testing.T) {
 			deleteClusterRoleBinding: false,
 		},
 	}
-
-	resetCmdObj.kubectl, err = kubectl.NewClient()
-	if err != nil {
-		t.Error(err)
-	}
-	resetCmdObj.deleteRelease()
-	resetCmdObj.deleteRegistry()
-	resetCmdObj.deleteTiller()
-
-	upCmdObj := UpCmd{
-		flags: UpFlagsDefault,
-	}
-
-	mockStdin("exit\\\\n")
-	defer cleanUpMockedStdin()
-
-	log.Logdir, err = ioutil.TempDir("", "")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Remove(log.Logdir)
-
-	upCmdObj.Run(nil, []string{})
-
-	//TODO: Somehow stop all processes from the command above
-
 	resetCmdObj.Run(nil, []string{})
 
-	_, err = os.Stat(path.Join(dir, "Dockerfile"))
+	_, err := os.Stat(path.Join(dir, "Dockerfile"))
 	assert.Equal(t, true, os.IsNotExist(err))
 	_, err = os.Stat(path.Join(dir, ".dockerignore"))
 	assert.Equal(t, true, os.IsNotExist(err))
@@ -90,7 +106,6 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, false, os.IsNotExist(err))
 	_, err = os.Stat(path.Join(dir, "package.json"))
 	assert.Equal(t, false, os.IsNotExist(err))
-
 }
 
 var tmpfile *os.File

@@ -1,6 +1,7 @@
 package log
 
 import (
+	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,8 @@ var runtimeErrorHandlersOverriden bool
 
 type fileLogger struct {
 	logger *logrus.Logger
+	//This writer should be the same as logger.Out, but with a callable Close-method
+	writer io.WriteCloser
 }
 
 // GetFileLogger returns a logger instance for the specified filename
@@ -35,6 +38,7 @@ func GetFileLogger(filename string) Logger {
 			newLogger.Warnf("Unable to open " + filename + " log file. Will log to stdout.")
 		} else {
 			newLogger.logger.SetOutput(logFile)
+			newLogger.writer = logFile
 		}
 
 		logs[filename] = newLogger
@@ -219,4 +223,8 @@ func (f *fileLogger) printWithContextf(fnType logFunctionType, contextFields map
 
 func (f *fileLogger) Write(message []byte) (int, error) {
 	return f.logger.Out.Write(message)
+}
+
+func (f *fileLogger) Close() error {
+	return f.writer.Close()
 }

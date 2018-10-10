@@ -41,4 +41,6 @@ type Logger interface {
 
 	printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{})
 	printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{})
+
+	Close() error
 }
