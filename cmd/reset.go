@@ -209,11 +209,15 @@ func (cmd *ResetCmd) determineResetExtent() {
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteDockerignore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the .dockerignore be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
+	if _, err := os.Stat(path.Join(cmd.workdir, ".dockerignore")); !os.IsNotExist(err) {
+		cmd.flags.deleteDockerignore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the .dockerignore be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
+	} else {
+		cmd.flags.deleteDockerignore = false
+	}
 
 	cmd.flags.deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the Chart (chart/*) be removed? (y/n)",
