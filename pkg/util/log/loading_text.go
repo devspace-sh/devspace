@@ -14,10 +14,11 @@ type loadingText struct {
 	Stream  io.Writer
 	Message string
 
-	startTimestamp int64
-	loadingRune    int
-	isShown        bool
-	stopChan       chan bool
+	startTimestamp    int64
+	loadingRune       int
+	isShown           bool
+	stopChan          chan bool
+	stopConfirmedChan chan bool
 }
 
 func (l *loadingText) Start() {
@@ -27,6 +28,9 @@ func (l *loadingText) Start() {
 	if l.stopChan == nil {
 		l.stopChan = make(chan bool)
 	}
+	if l.stopConfirmedChan == nil {
+		l.stopConfirmedChan = make(chan bool)
+	}
 
 	go func() {
 		l.render()
@@ -34,6 +38,7 @@ func (l *loadingText) Start() {
 		for {
 			select {
 			case <-l.stopChan:
+				l.stopConfirmedChan <- true
 				return
 			case <-time.After(waitInterval):
 				l.render()
@@ -82,6 +87,7 @@ func (l *loadingText) render() {
 
 func (l *loadingText) Stop() {
 	l.stopChan <- true
+	<-l.stopConfirmedChan
 	l.Stream.Write([]byte("\r"))
 
 	messageLength := len(l.Message) + 20
