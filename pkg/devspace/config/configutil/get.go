@@ -29,11 +29,10 @@ var configRaw *v1.Config
 var overwriteConfig *v1.Config
 var overwriteConfigRaw *v1.Config
 
-// Thread-safety helpers
+// Thread-safety helper
 var getConfigOnce sync.Once
-var getOverrideConfigOnce sync.Once
 
-//ConfigExists checks whether the yaml file for the config exists
+// ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
 	workdir, _ := os.Getwd()
 
@@ -48,46 +47,42 @@ func ConfigExists() (bool, error) {
 }
 
 // InitConfig initializes the config objects
-func InitConfig() (*v1.Config, *v1.Config) {
+func InitConfig() *v1.Config {
 	config = makeConfig()
 	configRaw = makeConfig()
 	overwriteConfig = makeConfig()
 	overwriteConfigRaw = makeConfig()
 
-	return config, overwriteConfig
+	return config
 }
 
-//GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
+// GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig() *v1.Config {
 	getConfigOnce.Do(func() {
 		config = makeConfig()
 		configRaw = makeConfig()
+		overwriteConfig = makeConfig()
+		overwriteConfigRaw = makeConfig()
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
 			log.Fatal("Unable to load config.")
 		}
 
-		GetOverwriteConfig()
+		//ignore error as overwrite.yaml is optional
+		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
 
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
+		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
 	})
 
 	return config
 }
 
-//GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
+// GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
 func GetOverwriteConfig() *v1.Config {
-	getOverrideConfigOnce.Do(func() {
-		overwriteConfig = makeConfig()
-		overwriteConfigRaw = makeConfig()
-
-		//ignore error as overwrite.yaml is optional
-		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
-
-		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
-	})
+	GetConfig()
 
 	return overwriteConfig
 }

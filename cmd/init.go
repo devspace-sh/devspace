@@ -120,7 +120,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
 		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
 
-		config, _ = configutil.InitConfig()
+		config = configutil.InitConfig()
 	}
 
 	configutil.Merge(config, &v1.Config{
