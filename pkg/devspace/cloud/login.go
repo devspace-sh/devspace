@@ -46,10 +46,10 @@ func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, 
 		return "", nil, nil, err
 	}
 
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == http.StatusUnauthorized {
 		return Login(provider)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
 	}
 
