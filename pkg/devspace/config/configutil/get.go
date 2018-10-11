@@ -48,10 +48,12 @@ func ConfigExists() (bool, error) {
 
 // InitConfig initializes the config objects
 func InitConfig() *v1.Config {
-	config = makeConfig()
-	configRaw = makeConfig()
-	overwriteConfig = makeConfig()
-	overwriteConfigRaw = makeConfig()
+	getConfigOnce.Do(func() {
+		config = makeConfig()
+		configRaw = makeConfig()
+		overwriteConfig = makeConfig()
+		overwriteConfigRaw = makeConfig()
+	})
 
 	return config
 }
