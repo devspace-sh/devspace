@@ -8,9 +8,9 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
 	"github.com/covexo/yamlq"
 	"github.com/foomo/htpasswd"
 	k8sv1 "k8s.io/api/core/v1"

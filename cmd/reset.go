@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 

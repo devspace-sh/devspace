@@ -59,7 +59,7 @@ func GetClientConfig() (*rest.Config, error) {
 			return nil, fmt.Errorf("Couldn't load cloud provider config: %v", err)
 		}
 
-		err = cloud.Update(providerConfig, config, false)
+		err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
@@ -70,7 +70,7 @@ func GetClientConfig() (*rest.Config, error) {
 		}
 	}
 
-	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
+	if config.Cluster.APIServer == nil {
 		// If we should use a certain kube context use that
 		if config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
 			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
@@ -125,7 +125,7 @@ func IsMinikube() bool {
 	if isMinikubeVar == nil {
 		isMinikube := false
 		config := configutil.GetConfig(false)
-		if config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig == true {
+		if config.Cluster.APIServer == nil {
 			if config.Cluster.KubeContext == nil {
 				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 				kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})

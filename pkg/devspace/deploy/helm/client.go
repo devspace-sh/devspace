@@ -17,9 +17,9 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
@@ -40,8 +40,9 @@ type HelmClientWrapper struct {
 // NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
 	config := configutil.GetConfig(false)
-
 	tillerConfig := config.Services.Tiller
+	tillerNamespace := *config.Services.Tiller.Release.Namespace
+
 	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 
 	// Next we wait till we can establish a tunnel to the running pod
 	for tunnelWaitTime > 0 {
-		tunnel, err = portforwarder.New(*tillerConfig.Release.Namespace, kubectlClient, kubeconfig)
+		tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
 		if err == nil {
 			break
 		}

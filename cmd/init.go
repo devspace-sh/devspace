@@ -6,15 +6,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 
@@ -185,12 +184,17 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
+		if configExists {
+			// Delete config & overwrite config
+			os.Remove(filepath.Join(workdir, configutil.ConfigPath))
+			os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
+		}
+
 		cmd.configureKubernetes()
 		cmd.configureDevSpace()
 
 		cmd.defaultImage.Name = cmd.config.DevSpace.Release.Name
 
-		cmd.configureTiller()
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
@@ -244,25 +248,27 @@ func (cmd *InitCmd) configureDevSpace() {
 		}*/
 	}
 
-	cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	/* cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "What is the name of your application?",
 		DefaultValue:           *cmd.config.DevSpace.Release.Name,
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+	}) */
 
-	ports := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which port(s) does your application listen on? (separated by spaces)",
-		DefaultValue:           "",
-		ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
-	}), " ")
+	/*
+		ports := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which port(s) does your application listen on? (separated by spaces)",
+			DefaultValue:           "",
+			ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
+		}), " ")
 
-	for _, port := range ports {
-		portInt, _ := strconv.Atoi(port)
+		for _, port := range ports {
+			portInt, _ := strconv.Atoi(port)
 
-		if portInt > 0 {
-			cmd.addPortForwarding(portInt)
-		}
-	}
+			if portInt > 0 {
+				cmd.addPortForwarding(portInt)
+			}
+		}*/
+
 	cmd.addDefaultSyncConfig()
 
 	if cmd.config.DevSpace.Release.Namespace == nil || len(*cmd.config.DevSpace.Release.Namespace) == 0 {
@@ -272,13 +278,6 @@ func (cmd *InitCmd) configureDevSpace() {
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
 	}
-
-	/* TODO
-	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which domain do you want to run your application on?",
-		DefaultValue:           cmd.appConfig.External.Domain,
-		ValidationRegexPattern: "^([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,}$",
-	})*/
 }
 
 func (cmd *InitCmd) addPortForwarding(port int) {
@@ -337,21 +336,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	cmd.config.DevSpace.Sync = &syncConfig
 }
 
-func (cmd *InitCmd) configureTiller() {
-	tillerConfig := cmd.config.Services.Tiller
-	tillerRelease := tillerConfig.Release
-
-	if tillerRelease.Namespace == nil || len(*tillerRelease.Namespace) == 0 {
-		tillerRelease.Namespace = cmd.config.DevSpace.Release.Namespace
-
-		tillerRelease.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which Kubernetes namespace should your tiller server run in?",
-			DefaultValue:           *tillerRelease.Namespace,
-			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-		})
-	}
-}
-
 func (cmd *InitCmd) useCloudProvider() bool {
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
@@ -389,10 +373,9 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			}) == "yes"
 
 			cmd.config.Cluster.CloudProvider = &cloudProviderSelected
-			cmd.config.Cluster.UseKubeConfig = &addToContext
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, cmd.config, true)
+			err := cloud.Update(providerConfig, cmd.config, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
@@ -415,10 +398,9 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			}) == "yes"
 
 			cmd.config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
-			cmd.config.Cluster.UseKubeConfig = &addToContext
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, cmd.config, true)
+			err := cloud.Update(providerConfig, cmd.config, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
@@ -451,7 +433,6 @@ func (cmd *InitCmd) configureKubernetes() {
 		useKubeConfig = (*skipAnswer == "yes")
 	}
 
-	clusterConfig.UseKubeConfig = configutil.Bool(useKubeConfig)
 	if !useKubeConfig {
 		if clusterConfig.APIServer == nil {
 			clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
@@ -527,6 +508,7 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 		}
 	}
+
 	internalRegistryConfig := cmd.config.Services.InternalRegistry
 	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
@@ -654,12 +636,11 @@ func (cmd *InitCmd) configureRegistry() {
 		if internalRegistryConfig.Release.Name == nil {
 			internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 		}
-
 		if internalRegistryConfig.Release.Namespace == nil {
 			internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
 		}
-		overwriteRegistryMap := *cmd.overwriteConfig.Registries
 
+		overwriteRegistryMap := *cmd.overwriteConfig.Registries
 		overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
 
 		if !overwriteRegistryConfigFound {
@@ -668,8 +649,8 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 			overwriteRegistryMap["internal"] = overwriteRegistryConfig
 		}
-		registryAuth := overwriteRegistryConfig.Auth
 
+		registryAuth := overwriteRegistryConfig.Auth
 		if registryAuth.Username == nil {
 			randomUserSuffix, err := randutil.GenerateRandomString(5)
 
@@ -687,8 +668,8 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 			registryAuth.Password = &randomPassword
 		}
-		var registryReleaseValues map[interface{}]interface{}
 
+		var registryReleaseValues map[interface{}]interface{}
 		if internalRegistryConfig.Release.Values != nil {
 			registryReleaseValues = *internalRegistryConfig.Release.Values
 		} else {
@@ -723,14 +704,14 @@ func (cmd *InitCmd) configureRegistry() {
 				log.Warn("Your Kubernetes cluster will not be able to pull images from a registry without a registry domain!\n")
 			}
 		}
-		secrets, registryHasSecrets := registryReleaseValues["secrets"]
 
+		secrets, registryHasSecrets := registryReleaseValues["secrets"]
 		if !registryHasSecrets {
 			secrets = map[interface{}]interface{}{}
 			registryReleaseValues["secrets"] = secrets
 		}
-		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
 
+		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
 		if secretsIsMap {
 			_, registryHasSecretHtpasswd := secretMap["htpasswd"]
 
@@ -738,6 +719,7 @@ func (cmd *InitCmd) configureRegistry() {
 				secretMap["htpasswd"] = ""
 			}
 		}
+
 		internalRegistryConfig.Release.Values = &registryReleaseValues
 	}
 }

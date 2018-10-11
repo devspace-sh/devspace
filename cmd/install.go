@@ -7,7 +7,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/envutil"
 	"github.com/covexo/devspace/pkg/util/log"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 

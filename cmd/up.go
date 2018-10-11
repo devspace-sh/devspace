@@ -20,6 +20,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 
+	"github.com/covexo/devspace/pkg/devspace/config/runtime"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/covexo/devspace/pkg/util/randutil"
@@ -30,8 +31,8 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -166,16 +167,18 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load config
-	config := configutil.GetConfig(false)
+	runtimeConfig, err := runtime.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading .runtime.yaml: %v", err)
+	}
 
 	// Check if we find a running release pod
 	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
+	if err != nil || mustRedeploy || cmd.flags.deploy || runtimeConfig.HelmChartHash != hash {
 		cmd.deployChart()
 
-		config.DevSpace.ChartHash = &hash
-
-		err = configutil.SaveConfig()
+		runtimeConfig.HelmChartHash = hash
+		err = runtime.SaveConfig(runtimeConfig)
 		if err != nil {
 			log.Fatalf("Error saving config: %v", err)
 		}
@@ -338,33 +341,22 @@ func (cmd *UpCmd) initRegistries() {
 	}
 }
 
-func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string) bool {
-	var dockerfileModTime time.Time
-
+func (cmd *UpCmd) shouldRebuild(runtimeConfig *runtime.Config, imageConf *v1.ImageConfig, dockerfilePath string) bool {
 	mustRebuild := true
 	dockerfileInfo, err := os.Stat(dockerfilePath)
 
 	if err != nil {
-		if imageConf.Build.LatestTimestamp == nil {
-			log.Fatalf("Dockerfile missing: %v", err)
-		} else {
-			mustRebuild = false
-		}
+		log.Warnf("Dockerfile %s missing: %v", dockerfilePath, err)
+		mustRebuild = false
 	} else {
-		dockerfileModTime = dockerfileInfo.ModTime()
-
 		// When user has not used -b or --build flags
 		if cmd.flags.build == false {
-			if imageConf.Build.LatestTimestamp != nil {
-				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *imageConf.Build.LatestTimestamp)
-
-				// only rebuild Docker image when Dockerfile has changed since latest build
-				mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
-			}
+			// only rebuild Docker image when Dockerfile has changed since latest build
+			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
 		}
 	}
 
-	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
+	runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	return mustRebuild
 }
 
@@ -372,6 +364,10 @@ func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string
 func (cmd *UpCmd) buildImages() bool {
 	re := false
 	config := configutil.GetConfig(false)
+	runtimeConfig, err := runtime.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading .runtime.yaml: %v", err)
+	}
 
 	for imageName, imageConf := range *config.Images {
 		dockerfilePath := "./Dockerfile"
@@ -395,7 +391,7 @@ func (cmd *UpCmd) buildImages() bool {
 			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
 		}
 
-		if cmd.shouldRebuild(imageConf, dockerfilePath) {
+		if cmd.shouldRebuild(runtimeConfig, imageConf, dockerfilePath) {
 			re = true
 			imageTag, randErr := randutil.GenerateRandomString(7)
 
@@ -514,6 +510,12 @@ func (cmd *UpCmd) buildImages() bool {
 			log.Infof("Skip building image '%s'", imageName)
 		}
 	}
+
+	err = runtime.SaveConfig(runtimeConfig)
+	if err != nil {
+		log.Fatalf("Error saving .runtime.yaml: %v", err)
+	}
+
 	return re
 }
 

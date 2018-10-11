@@ -16,9 +16,13 @@ const configGitignore = `logs/
 overwrite.yaml
 `
 
-const configPath = "/.devspace/config.yaml"
-const overwriteConfigPath = "/.devspace/overwrite.yaml"
+// ConfigPath is the path for the main config
+const ConfigPath = "/.devspace/config.yaml"
 
+// OverwriteConfigPath specifies where the override.yaml lies
+const OverwriteConfigPath = "/.devspace/overwrite.yaml"
+
+// TODO: make thread safe
 var config = makeConfig()
 var configRaw = makeConfig()
 var overwriteConfig = makeConfig()
@@ -33,7 +37,7 @@ func init() {
 
 //ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
-	_, configNotFound := os.Stat(workdir + configPath)
+	_, configNotFound := os.Stat(workdir + ConfigPath)
 
 	if configNotFound != nil {
 		return false, nil
@@ -50,18 +54,20 @@ func GetConfig(reload bool) *v1.Config {
 			config = makeConfig()
 			configRaw = makeConfig()
 		}
+
 		configLoaded = true
 
-		err := loadConfig(configRaw, configPath)
-
+		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
 			log.Fatal("Unable to load config.")
 		}
+
 		GetOverwriteConfig(false)
 
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
 	}
+
 	return config
 }
 
@@ -72,13 +78,15 @@ func GetOverwriteConfig(reload bool) *v1.Config {
 			overwriteConfig = makeConfig()
 			overwriteConfigRaw = makeConfig()
 		}
+
 		overwriteConfigLoaded = true
 
 		//ignore error as overwrite.yaml is optional
-		loadConfig(overwriteConfigRaw, overwriteConfigPath)
+		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
 
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
 	}
+
 	return overwriteConfig
 }
 
