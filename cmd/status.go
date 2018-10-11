@@ -150,7 +150,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registry := config.Services.InternalRegistry
 	if registry == nil {
 		return nil, nil
@@ -203,7 +203,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, *config.Services.Tiller.Release.Namespace)
 
 	if err != nil {
@@ -231,7 +231,7 @@ func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
@@ -292,7 +292,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 }
 
 func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	releases, err := helm.Client.ListReleases()
 
 	if err != nil {

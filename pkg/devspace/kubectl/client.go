@@ -47,7 +47,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
@@ -124,7 +124,7 @@ func GetClientConfig() (*rest.Config, error) {
 func IsMinikube() bool {
 	if isMinikubeVar == nil {
 		isMinikube := false
-		config := configutil.GetConfig(false)
+		config := configutil.GetConfig()
 		if config.Cluster.APIServer == nil {
 			if config.Cluster.KubeContext == nil {
 				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()

@@ -149,7 +149,7 @@ func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 
 // GetRegistryConfig returns the registry config for an image or an error if the registry is not defined
 func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registryName := *imageConfig.Registry
 	registryMap := *config.Registries
 	registryConfig, registryFound := registryMap[registryName]

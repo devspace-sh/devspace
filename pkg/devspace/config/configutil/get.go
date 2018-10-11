@@ -2,6 +2,7 @@ package configutil
 
 import (
 	"os"
+	"sync"
 	"unsafe"
 
 	"github.com/covexo/devspace/pkg/util/log"
@@ -22,75 +23,71 @@ const ConfigPath = "/.devspace/config.yaml"
 // OverwriteConfigPath specifies where the override.yaml lies
 const OverwriteConfigPath = "/.devspace/overwrite.yaml"
 
-// TODO: make thread safe
-var config = makeConfig()
-var configRaw = makeConfig()
-var overwriteConfig = makeConfig()
-var overwriteConfigRaw = makeConfig()
-var configLoaded = false
-var overwriteConfigLoaded = false
-var workdir string
+// Global config vars
+var config *v1.Config
+var configRaw *v1.Config
+var overwriteConfig *v1.Config
+var overwriteConfigRaw *v1.Config
 
-func init() {
-	workdir, _ = os.Getwd()
-}
+// Thread-safety helpers
+var getConfigOnce sync.Once
+var getOverrideConfigOnce sync.Once
 
 //ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
-	_, configNotFound := os.Stat(workdir + ConfigPath)
+	workdir, _ := os.Getwd()
 
-	if configNotFound != nil {
+	_, err := os.Stat(workdir + ConfigPath)
+	if os.IsNotExist(err) {
 		return false, nil
+	} else if err != nil {
+		return false, err
 	}
-	config := GetConfig(false)
 
-	return (config.Version != nil), nil
+	return true, nil
+}
+
+// InitConfig initializes the config objects
+func InitConfig() (*v1.Config, *v1.Config) {
+	config = makeConfig()
+	configRaw = makeConfig()
+	overwriteConfig = makeConfig()
+	overwriteConfigRaw = makeConfig()
+
+	return config, overwriteConfig
 }
 
 //GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
-func GetConfig(reload bool) *v1.Config {
-	if !configLoaded || reload {
-		if reload {
-			config = makeConfig()
-			configRaw = makeConfig()
-		}
-
-		configLoaded = true
+func GetConfig() *v1.Config {
+	getConfigOnce.Do(func() {
+		config = makeConfig()
+		configRaw = makeConfig()
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
 			log.Fatal("Unable to load config.")
 		}
 
-		GetOverwriteConfig(false)
+		GetOverwriteConfig()
 
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
-	}
+	})
 
 	return config
 }
 
 //GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
-func GetOverwriteConfig(reload bool) *v1.Config {
-	if !overwriteConfigLoaded || reload {
-		if reload {
-			overwriteConfig = makeConfig()
-			overwriteConfigRaw = makeConfig()
-		}
-
-		overwriteConfigLoaded = true
+func GetOverwriteConfig() *v1.Config {
+	getOverrideConfigOnce.Do(func() {
+		overwriteConfig = makeConfig()
+		overwriteConfigRaw = makeConfig()
 
 		//ignore error as overwrite.yaml is optional
 		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
 
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
-	}
+	})
 
 	return overwriteConfig
-}
-
-//GetConfigInstance returns the reference to the config (in most cases it is recommended to use GetConfig instaed)
-func GetConfigInstance() *v1.Config {
-	return config
 }

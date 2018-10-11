@@ -223,7 +223,7 @@ func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interf
 
 // RunRemoveSync executes the remove sync command logic
 func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
 
 	if err != nil {
@@ -261,7 +261,7 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 
 // RunRemovePort executes the remove port command logic
 func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
 

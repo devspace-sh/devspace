@@ -203,7 +203,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	releaseNamespace := *config.DevSpace.Release.Namespace
 
 	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
@@ -279,7 +279,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 				return err
 			}
 		} else {
-			cfg := configutil.GetConfig(false)
+			cfg := configutil.GetConfig()
 
 			if cfg.Cluster.CloudProvider == nil || *cfg.Cluster.CloudProvider == "" {
 				log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
@@ -291,7 +291,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 }
 
 func (cmd *UpCmd) initRegistries() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registryMap := *config.Registries
 
 	if config.Services.InternalRegistry != nil {
@@ -363,7 +363,7 @@ func (cmd *UpCmd) shouldRebuild(runtimeConfig *runtime.Config, imageConf *v1.Ima
 // returns true when one of the images had to be rebuild
 func (cmd *UpCmd) buildImages() bool {
 	re := false
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	runtimeConfig, err := runtime.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading .runtime.yaml: %v", err)
@@ -535,7 +535,7 @@ func (cmd *UpCmd) initHelm() {
 }
 
 func (cmd *UpCmd) deployChart() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	log.StartWait("Deploying helm chart")
 
@@ -661,7 +661,7 @@ func (cmd *UpCmd) deployChart() {
 }
 
 func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	syncConfigs := make([]*synctool.SyncConfig, 0, len(*config.DevSpace.Sync))
 
 	for _, syncPath := range *config.DevSpace.Sync {
@@ -746,7 +746,7 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 }
 
 func (cmd *UpCmd) startPortForwarding() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	for _, portForwarding := range *config.DevSpace.PortForwarding {
 		if *portForwarding.ResourceType == "pod" {

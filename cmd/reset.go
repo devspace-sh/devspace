@@ -178,7 +178,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *ResetCmd) determineResetExtent() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	cmd.flags.deleteRelease = true
 
@@ -235,7 +235,7 @@ func (cmd *ResetCmd) shouldContinue() bool {
 
 func (cmd *ResetCmd) deleteRelease() error {
 	var err error
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	releaseName := *config.DevSpace.Release.Name
 
@@ -260,7 +260,7 @@ func (cmd *ResetCmd) deleteRelease() error {
 
 func (cmd *ResetCmd) deleteRegistry() error {
 	var err error
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 

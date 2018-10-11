@@ -160,7 +160,7 @@ func IsTillerDeployed(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Till
 
 // DeleteTiller clears the tiller server, the service account and role binding
 func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	tillerConfig := config.Services.Tiller
 	tillerNamespace := *tillerConfig.Release.Namespace

@@ -80,7 +80,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 func enterTerminal(client *kubernetes.Clientset, pod *k8sv1.Pod, containerNameOverride string, args []string) {
 	var command []string
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if len(args) == 0 && (config.DevSpace.Terminal.Command == nil || len(*config.DevSpace.Terminal.Command) == 0) {
 		command = []string{

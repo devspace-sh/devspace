@@ -39,7 +39,7 @@ type HelmClientWrapper struct {
 
 // NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	tillerConfig := config.Services.Tiller
 	tillerNamespace := *config.Services.Tiller.Release.Namespace
 

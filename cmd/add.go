@@ -309,7 +309,7 @@ func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if cmd.syncFlags.Selector == "" {
 		cmd.syncFlags.Selector = "release=" + *config.DevSpace.Release.Name
@@ -362,7 +362,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if cmd.portFlags.Selector == "" {
 		cmd.portFlags.Selector = "release=" + *config.DevSpace.Release.Name
@@ -390,7 +390,7 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	// Check if we should add to existing port mapping
 	for _, v := range *config.DevSpace.PortForwarding {

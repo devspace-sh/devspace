@@ -32,8 +32,6 @@ type InitCmd struct {
 	flags           *InitCmdFlags
 	workdir         string
 	chartGenerator  *generator.ChartGenerator
-	config          *v1.Config
-	overwriteConfig *v1.Config
 	defaultImage    *v1.ImageConfig
 	defaultRegistry *v1.RegistryConfig
 }
@@ -106,21 +104,26 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	workdir, err := os.Getwd()
-
 	if err != nil {
 		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
 
 	cmd.workdir = workdir
-	configExists, _ := configutil.ConfigExists()
 
-	if configExists {
-		cmd.config = configutil.GetConfig(false)
+	var config *v1.Config
+
+	configExists, _ := configutil.ConfigExists()
+	if configExists && cmd.flags.reconfigure == false {
+		config = configutil.GetConfig()
 	} else {
-		cmd.config = configutil.GetConfigInstance()
+		// Delete config & overwrite config
+		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
+		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
+
+		config, _ = configutil.InitConfig()
 	}
 
-	configutil.Merge(cmd.config, &v1.Config{
+	configutil.Merge(config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
 			Release: &v1.Release{
@@ -150,12 +153,11 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			},
 		},
 	})
-	cmd.overwriteConfig = configutil.GetOverwriteConfig(false)
 
-	imageMap := *cmd.config.Images
+	imageMap := *config.Images
 	cmd.defaultImage, _ = imageMap["default"]
 
-	registryMap := *cmd.config.Registries
+	registryMap := *config.Registries
 	cmd.defaultRegistry, _ = registryMap["default"]
 
 	cmd.initChartGenerator()
@@ -184,26 +186,16 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		if configExists {
-			// Delete config & overwrite config
-			os.Remove(filepath.Join(workdir, configutil.ConfigPath))
-			os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
-		}
-
 		cmd.configureKubernetes()
 		cmd.configureDevSpace()
 
-		cmd.defaultImage.Name = cmd.config.DevSpace.Release.Name
-
+		cmd.defaultImage.Name = config.DevSpace.Release.Name
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
-
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
 		}
-
-		_ = configutil.GetConfig(true)
 	}
 }
 
@@ -225,63 +217,22 @@ func (cmd *InitCmd) initChartGenerator() {
 }
 
 func (cmd *InitCmd) configureDevSpace() {
-	_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-	if chartDirNotFound == nil {
-		/*TODO
-		existingChartYaml := map[interface{}]interface{}{}
-		existingChartValuesYaml := map[interface{}]interface{}{}
-
-		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/Chart.yaml", existingChartYaml)
-		yamlutil.ReadYamlFromFile(cmd.workdir+"/chart/values.yaml", existingChartValuesYaml)
-
-		cmd.config.Release.Name = existingChartYaml["name"].(string)
-
-		applicationValues, applicationValuesCorrect := existingChartValuesYaml["container"].(map[interface{}]interface{})
-		externalValues, externalValuesCorrect := existingChartValuesYaml["external"].(map[interface{}]interface{})
-
-		if externalValuesCorrect {
-			value, isCorrect := externalValues["domain"].(string)
-
-			if isCorrect {
-				cmd.appConfig.External.Domain = value
-			}
-		}*/
-	}
-
-	/* cmd.config.DevSpace.Release.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "What is the name of your application?",
-		DefaultValue:           *cmd.config.DevSpace.Release.Name,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	}) */
-
-	/*
-		ports := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which port(s) does your application listen on? (separated by spaces)",
-			DefaultValue:           "",
-			ValidationRegexPattern: "^([1-9][0-9]{0,4})?(\\s[1-9][0-9]{0,4})*?$",
-		}), " ")
-
-		for _, port := range ports {
-			portInt, _ := strconv.Atoi(port)
-
-			if portInt > 0 {
-				cmd.addPortForwarding(portInt)
-			}
-		}*/
-
+	config := configutil.GetConfig()
 	cmd.addDefaultSyncConfig()
 
-	if cmd.config.DevSpace.Release.Namespace == nil || len(*cmd.config.DevSpace.Release.Namespace) == 0 {
-		cmd.config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	if config.DevSpace.Release.Namespace == nil || len(*config.DevSpace.Release.Namespace) == 0 {
+		config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which Kubernetes namespace should your application run in?",
-			DefaultValue:           *cmd.config.DevSpace.Release.Namespace,
+			DefaultValue:           *config.DevSpace.Release.Namespace,
 			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 		})
 	}
 }
 
 func (cmd *InitCmd) addPortForwarding(port int) {
-	for _, portForwarding := range *cmd.config.DevSpace.PortForwarding {
+	config := configutil.GetConfig()
+
+	for _, portForwarding := range *config.DevSpace.PortForwarding {
 		for _, portMapping := range *portForwarding.PortMappings {
 			if *portMapping.RemotePort == port {
 				return
@@ -289,7 +240,7 @@ func (cmd *InitCmd) addPortForwarding(port int) {
 		}
 	}
 
-	portForwarding := append(*cmd.config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+	portForwarding := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
 		PortMappings: &[]*v1.PortMapping{
 			{
 				LocalPort:  &port,
@@ -298,14 +249,17 @@ func (cmd *InitCmd) addPortForwarding(port int) {
 		},
 		ResourceType: configutil.String("pod"),
 		LabelSelector: &map[string]*string{
-			"release": cmd.config.DevSpace.Release.Name,
+			"release": config.DevSpace.Release.Name,
 		},
 	})
-	cmd.config.DevSpace.PortForwarding = &portForwarding
+
+	config.DevSpace.PortForwarding = &portForwarding
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
-	for _, syncPath := range *cmd.config.DevSpace.Sync {
+	config := configutil.GetConfig()
+
+	for _, syncPath := range *config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
 			return
 		}
@@ -324,19 +278,21 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		}
 	}
 
-	syncConfig := append(*cmd.config.DevSpace.Sync, &v1.SyncConfig{
+	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		ContainerPath: configutil.String("/app"),
 		LocalSubPath:  configutil.String("./"),
 		ResourceType:  configutil.String("pod"),
 		LabelSelector: &map[string]*string{
-			"release": cmd.config.DevSpace.Release.Name,
+			"release": config.DevSpace.Release.Name,
 		},
 		UploadExcludePaths: &uploadExcludePaths,
 	})
-	cmd.config.DevSpace.Sync = &syncConfig
+
+	config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
+	config := configutil.GetConfig()
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading cloud config: %v", err)
@@ -372,10 +328,10 @@ func (cmd *InitCmd) useCloudProvider() bool {
 				ValidationRegexPattern: "^(yes)|(no)$",
 			}) == "yes"
 
-			cmd.config.Cluster.CloudProvider = &cloudProviderSelected
+			config.Cluster.CloudProvider = &cloudProviderSelected
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, cmd.config, addToContext, true)
+			err := cloud.Update(providerConfig, config, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
@@ -397,10 +353,10 @@ func (cmd *InitCmd) useCloudProvider() bool {
 				ValidationRegexPattern: "^(yes)|(no)$",
 			}) == "yes"
 
-			cmd.config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
+			config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, cmd.config, addToContext, true)
+			err := cloud.Update(providerConfig, config, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
@@ -414,7 +370,8 @@ func (cmd *InitCmd) useCloudProvider() bool {
 }
 
 func (cmd *InitCmd) configureKubernetes() {
-	clusterConfig := cmd.config.Cluster
+	config := configutil.GetConfig()
+	clusterConfig := config.Cluster
 	useKubeConfig := false
 
 	// Check if devspace cloud should be used
@@ -487,6 +444,9 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
+	config := configutil.GetConfig()
+	overwriteConfig := configutil.GetOverwriteConfig()
+
 	dockerUsername := ""
 	createInternalRegistryDefaultAnswer := "yes"
 
@@ -509,7 +469,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	internalRegistryConfig := cmd.config.Services.InternalRegistry
+	internalRegistryConfig := config.Services.InternalRegistry
 	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
 		DefaultValue:           createInternalRegistryDefaultAnswer,
@@ -543,6 +503,7 @@ func (cmd *InitCmd) configureRegistry() {
 				}
 			}
 		}
+
 		googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")
 		isGoogleRegistry := googleRegistryRegex.Match([]byte(*registryURL))
 		isDockerHub := *registryURL == "hub.docker.com"
@@ -551,7 +512,7 @@ func (cmd *InitCmd) configureRegistry() {
 			if cmd.defaultImage.Build.Engine.Docker != nil {
 				log.Fatal("Make sure you login to the registry with: docker login" + loginWarningServer)
 			} else {
-				registryMapOverwrite := *cmd.overwriteConfig.Registries
+				registryMapOverwrite := *overwriteConfig.Registries
 				defaultRegistryOverwrite, defaultRegistryOverwriteDefined := registryMapOverwrite["default"]
 
 				if !defaultRegistryOverwriteDefined {
@@ -619,7 +580,7 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 		}
 	} else {
-		imageMap := *cmd.config.Images
+		imageMap := *config.Images
 		defaultImageConf, defaultImageExists := imageMap["default"]
 
 		if defaultImageExists {
@@ -630,17 +591,17 @@ func (cmd *InitCmd) configureRegistry() {
 			internalRegistryConfig = &v1.InternalRegistry{
 				Release: &v1.Release{},
 			}
-			cmd.config.Services.InternalRegistry = internalRegistryConfig
+			config.Services.InternalRegistry = internalRegistryConfig
 		}
 
 		if internalRegistryConfig.Release.Name == nil {
 			internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 		}
 		if internalRegistryConfig.Release.Namespace == nil {
-			internalRegistryConfig.Release.Namespace = cmd.config.DevSpace.Release.Namespace
+			internalRegistryConfig.Release.Namespace = config.DevSpace.Release.Namespace
 		}
 
-		overwriteRegistryMap := *cmd.overwriteConfig.Registries
+		overwriteRegistryMap := *overwriteConfig.Registries
 		overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
 
 		if !overwriteRegistryConfigFound {
@@ -761,7 +722,6 @@ func (cmd *InitCmd) determineLanguage() {
 
 func (cmd *InitCmd) createChart() {
 	err := cmd.chartGenerator.CreateChart()
-
 	if err != nil {
 		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}

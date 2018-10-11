@@ -43,8 +43,7 @@ your project, use: devspace reset
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
