@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +56,21 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 
 	// Persist the app namespaces to the config
 	for _, appNamespace := range appNamespaces {
+		// Create namespaces if they are not there already
+		_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
+		if err != nil {
+			log.Infof("Create namespace %s", *appNamespace)
+
+			_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: *appNamespace,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		err = addDeployAccessToTiller(kubectlClient, tillerNamespace, *appNamespace)
 		if err != nil {
 			return err

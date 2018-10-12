@@ -203,6 +203,8 @@ func (cmd *UpCmd) ensureNamespace() error {
 
 	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
 	if err != nil {
+		log.Infof("Create namespace %s", releaseNamespace)
+
 		// Create release namespace
 		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
