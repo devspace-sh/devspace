@@ -188,6 +188,7 @@ func InternalRegistry() error {
 	}
 
 	internalRegistryConfig.Release.Values = &registryReleaseValues
+	config.Registries = &overwriteRegistryMap
 
 	return nil
 }

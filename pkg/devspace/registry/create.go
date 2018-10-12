@@ -88,6 +88,7 @@ func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistr
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
 
 	registryAuth := registryConfig.Auth
+
 	htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
 	htpasswdSecret, err := kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 	if err != nil {

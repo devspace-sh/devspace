@@ -148,7 +148,7 @@ func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig,
 		if imageConfig.Tag != nil {
 			image = image + ":" + *imageConfig.Tag
 		} else {
-			image = image + ":" + generatedConfig.ImageTags[image]
+			image = image + ":" + generatedConfig.ImageTags[*imageConfig.Name]
 		}
 	}
 

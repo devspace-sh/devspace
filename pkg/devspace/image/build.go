@@ -80,8 +80,6 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				return false, err
 			}
 
-			log.Info(registryURL, *imageConf.Name)
-
 			if len(registryURL) > 0 {
 				// Crop registry Url from imageName
 				imageName = imageName[len(registryURL)+1:]
