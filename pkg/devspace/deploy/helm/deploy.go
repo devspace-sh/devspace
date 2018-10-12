@@ -16,6 +16,8 @@ import (
 // WaitForReleasePodToGetReady waits for the release pod to get ready
 func WaitForReleasePodToGetReady(client *kubernetes.Clientset, releaseName, releaseNamespace string, releaseRevision int) (*k8sv1.Pod, error) {
 	for true {
+		time.Sleep(4 * time.Second)
+
 		podList, err := client.Core().Pods(releaseNamespace).List(metav1.ListOptions{
 			LabelSelector: "release=" + releaseName,
 		})
@@ -71,11 +73,7 @@ func WaitForReleasePodToGetReady(client *kubernetes.Clientset, releaseName, rele
 		} else {
 			log.Info("Waiting for release to be deployed.")
 		}
-
-		time.Sleep(2 * time.Second)
 	}
-
-	log.StopWait()
 
 	return nil, nil
 }
