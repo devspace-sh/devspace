@@ -172,7 +172,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if cmd.flags.reconfigure || !configExists {
 		cmd.configureKubernetes()
-		cmd.configureDevSpace()
 
 		cmd.defaultImage.Name = config.DevSpace.Release.Name
 		cmd.configureRegistry()
@@ -203,42 +202,12 @@ func (cmd *InitCmd) initChartGenerator() {
 
 func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
-	cmd.addDefaultSyncConfig()
 
-	if config.DevSpace.Release.Namespace == nil || len(*config.DevSpace.Release.Namespace) == 0 {
-		config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which Kubernetes namespace should your application run in?",
-			DefaultValue:           *config.DevSpace.Release.Namespace,
-			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-		})
-	}
-}
-
-func (cmd *InitCmd) addPortForwarding(port int) {
-	config := configutil.GetConfig()
-
-	for _, portForwarding := range *config.DevSpace.PortForwarding {
-		for _, portMapping := range *portForwarding.PortMappings {
-			if *portMapping.RemotePort == port {
-				return
-			}
-		}
-	}
-
-	portForwarding := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-		PortMappings: &[]*v1.PortMapping{
-			{
-				LocalPort:  &port,
-				RemotePort: &port,
-			},
-		},
-		ResourceType: configutil.String("pod"),
-		LabelSelector: &map[string]*string{
-			"release": config.DevSpace.Release.Name,
-		},
+	config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           *config.DevSpace.Release.Namespace,
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
-
-	config.DevSpace.PortForwarding = &portForwarding
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
@@ -360,72 +329,77 @@ func (cmd *InitCmd) configureKubernetes() {
 	useKubeConfig := false
 
 	// Check if devspace cloud should be used
-	if cmd.useCloudProvider() {
-		return
-	}
+	if cmd.useCloudProvider() == false {
+		_, err := os.Stat(clientcmd.RecommendedHomeFile)
+		if err == nil {
+			skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			})
 
-	_, err := os.Stat(clientcmd.RecommendedHomeFile)
-	if err == nil {
-		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		})
-
-		useKubeConfig = (*skipAnswer == "yes")
-	}
-
-	if !useKubeConfig {
-		if clusterConfig.APIServer == nil {
-			clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
+			useKubeConfig = (*skipAnswer == "yes")
 		}
-		clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-			DefaultValue:           *clusterConfig.APIServer,
-			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
-		})
 
-		if clusterConfig.CaCert == nil {
-			clusterConfig.CaCert = configutil.String("")
-		}
-		clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-			Question:               "What is the CA Certificate of your API Server? (PEM)",
-			DefaultValue:           *clusterConfig.CaCert,
-			InputTerminationString: "-----END CERTIFICATE-----",
-		})
-
-		if clusterConfig.User == nil {
-			clusterConfig.User = &v1.ClusterUser{
-				ClientCert: configutil.String(""),
-				ClientKey:  configutil.String(""),
+		if !useKubeConfig {
+			if clusterConfig.APIServer == nil {
+				clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
 			}
+
+			clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
+				DefaultValue:           *clusterConfig.APIServer,
+				ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
+			})
+
+			if clusterConfig.CaCert == nil {
+				clusterConfig.CaCert = configutil.String("")
+			}
+			clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
+				Question:               "What is the CA Certificate of your API Server? (PEM)",
+				DefaultValue:           *clusterConfig.CaCert,
+				InputTerminationString: "-----END CERTIFICATE-----",
+			})
+
+			if clusterConfig.User == nil {
+				clusterConfig.User = &v1.ClusterUser{
+					ClientCert: configutil.String(""),
+					ClientKey:  configutil.String(""),
+				}
+			} else {
+				if clusterConfig.User.ClientCert == nil {
+					clusterConfig.User.ClientCert = configutil.String("")
+				}
+
+				if clusterConfig.User.ClientKey == nil {
+					clusterConfig.User.ClientKey = configutil.String("")
+				}
+			}
+
+			clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
+				Question:               "What is your Kubernetes client certificate? (PEM)",
+				DefaultValue:           *clusterConfig.User.ClientCert,
+				InputTerminationString: "-----END CERTIFICATE-----",
+			})
+
+			clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is your Kubernetes client key? (RSA, PEM)",
+				DefaultValue:           *clusterConfig.User.ClientKey,
+				InputTerminationString: "-----END RSA PRIVATE KEY-----",
+			})
 		} else {
-			if clusterConfig.User.ClientCert == nil {
-				clusterConfig.User.ClientCert = configutil.String("")
+			currentContext, err := kubeconfig.GetCurrentContext()
+			if err != nil {
+				log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 			}
 
-			if clusterConfig.User.ClientKey == nil {
-				clusterConfig.User.ClientKey = configutil.String("")
-			}
-		}
-		clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-			Question:               "What is your Kubernetes client certificate? (PEM)",
-			DefaultValue:           *clusterConfig.User.ClientCert,
-			InputTerminationString: "-----END CERTIFICATE-----",
-		})
-		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is your Kubernetes client key? (RSA, PEM)",
-			DefaultValue:           *clusterConfig.User.ClientKey,
-			InputTerminationString: "-----END RSA PRIVATE KEY-----",
-		})
-	} else {
-		currentContext, err := kubeconfig.GetCurrentContext()
-		if err != nil {
-			log.Fatalf("Couldn't determine current kubernetes context: %v", err)
+			clusterConfig.KubeContext = &currentContext
 		}
 
-		clusterConfig.KubeContext = &currentContext
+		cmd.configureDevSpace()
 	}
+
+	cmd.addDefaultSyncConfig()
 }
 
 func (cmd *InitCmd) configureRegistry() {

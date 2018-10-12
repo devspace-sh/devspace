@@ -57,7 +57,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	tunnelWaitTime := 2 * 60 * time.Second
 	tunnelCheckInterval := 5 * time.Second
 
-	log.StartWait("Waiting for tiller to become ready")
+	log.StartWait("Waiting for " + tillerNamespace + "/tiller-deploy to become ready")
 	defer log.StopWait()
 
 	// Next we wait till we can establish a tunnel to the running pod
@@ -88,7 +88,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 
 	for helmWaitTime > 0 {
 		_, tillerError = client.ListReleases(k8shelm.ReleaseListLimit(1))
-
 		if tillerError == nil || helmWaitTime < 0 {
 			break
 		}
