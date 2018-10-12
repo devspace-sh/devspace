@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/covexo/devspace/pkg/util/log"
@@ -128,22 +129,29 @@ func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, cl
 }
 
 // GetImageURL returns the image (optional with tag)
-func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
-	registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
-
-	if registryConfErr != nil {
-		log.Fatal(registryConfErr)
-	}
+func GetImageURL(imageName string, generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	image := *imageConfig.Name
-	registryURL := *registryConfig.URL
 
-	if registryURL != "" && registryURL != "hub.docker.com" {
-		image = registryURL + "/" + image
+	if imageConfig.Registry != nil {
+		registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
+		if registryConfErr != nil {
+			log.Fatal(registryConfErr)
+		}
+
+		registryURL := *registryConfig.URL
+		if registryURL != "" && registryURL != "hub.docker.com" {
+			image = registryURL + "/" + image
+		}
 	}
 
 	if includingLatestTag {
-		image = image + ":" + *imageConfig.Tag
+		if imageConfig.Tag != nil {
+			image = image + ":" + *imageConfig.Tag
+		} else {
+			image = image + ":" + generatedConfig.ImageTags[imageName]
+		}
 	}
+
 	return image
 }
 

@@ -345,7 +345,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
+		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
 		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
@@ -411,7 +411,7 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 		}
 	}
 	portMap := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-		ResourceType:  configutil.String(cmd.portFlags.ResourceType),
+		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 	})

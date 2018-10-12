@@ -266,7 +266,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		ContainerPath: configutil.String("/app"),
 		LocalSubPath:  configutil.String("./"),
-		ResourceType:  configutil.String("pod"),
+		ResourceType:  nil,
 		LabelSelector: &map[string]*string{
 			"release": config.DevSpace.Release.Name,
 		},

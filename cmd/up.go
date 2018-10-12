@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -381,6 +380,7 @@ func (cmd *UpCmd) deployChart() {
 	config := configutil.GetConfig()
 
 	log.StartWait("Deploying helm chart")
+	defer log.StopWait()
 
 	releaseName := *config.DevSpace.Release.Name
 	releaseNamespace := *config.DevSpace.Release.Namespace
@@ -426,9 +426,6 @@ func (cmd *UpCmd) deployChart() {
 	overwriteValues["pullSecrets"] = pullSecrets
 
 	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
-
-	log.StopWait()
-
 	if err != nil {
 		log.Fatalf("Unable to deploy helm chart: %s", err.Error())
 	}
@@ -436,71 +433,11 @@ func (cmd *UpCmd) deployChart() {
 	releaseRevision := int(appRelease.Version)
 	log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
 	log.StartWait("Waiting for release pod to become ready")
-	defer log.StopWait()
 
-	for true {
-		podList, err := cmd.kubectl.Core().Pods(releaseNamespace).List(metav1.ListOptions{
-			LabelSelector: "release=" + releaseName,
-		})
-
-		if err != nil {
-			log.Panicf("Unable to list devspace pods: %s", err.Error())
-		}
-
-		if len(podList.Items) > 0 {
-			highestRevision := 0
-			var selectedPod *k8sv1.Pod
-
-			for i, pod := range podList.Items {
-				if kubectl.GetPodStatus(&pod) == "Terminating" {
-					continue
-				}
-
-				podRevision, podHasRevision := pod.Annotations["revision"]
-				hasHigherRevision := (i == 0)
-
-				if !hasHigherRevision && podHasRevision {
-					podRevisionInt, _ := strconv.Atoi(podRevision)
-
-					if podRevisionInt > highestRevision {
-						hasHigherRevision = true
-					}
-				}
-
-				if hasHigherRevision {
-					selectedPod = &pod
-					highestRevision, _ = strconv.Atoi(podRevision)
-				}
-			}
-
-			if selectedPod != nil {
-				_, hasRevision := selectedPod.Annotations["revision"]
-
-				if !hasRevision || highestRevision == releaseRevision {
-					if !hasRevision {
-						log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
-					}
-
-					cmd.pod = selectedPod
-					err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
-
-					if err != nil {
-						log.Fatalf("Error during waiting for pod: %s", err.Error())
-					}
-
-					break
-				} else {
-					log.Info("Waiting for release upgrade to complete.")
-				}
-			}
-		} else {
-			log.Info("Waiting for release to be deployed.")
-		}
-
-		time.Sleep(2 * time.Second)
+	cmd.pod, err = helmClient.WaitForReleasePodToGetReady(cmd.kubectl, releaseName, releaseNamespace, releaseRevision)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	log.StopWait()
 }
 
 func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
@@ -592,7 +529,7 @@ func (cmd *UpCmd) startPortForwarding() {
 	config := configutil.GetConfig()
 
 	for _, portForwarding := range *config.DevSpace.PortForwarding {
-		if *portForwarding.ResourceType == "pod" {
+		if portForwarding.ResourceType == nil || *portForwarding.ResourceType == "pod" {
 			if len(*portForwarding.LabelSelector) > 0 {
 				labels := make([]string, 0, len(*portForwarding.LabelSelector))
 
@@ -633,23 +570,4 @@ func (cmd *UpCmd) startPortForwarding() {
 			log.Warn("Currently only pod resource type is supported for portforwarding")
 		}
 	}
-}
-
-func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
-	for maxWaitTime > 0 {
-		pod, err := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-
-		if err != nil {
-			return err
-		}
-
-		if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].Ready {
-			return nil
-		}
-
-		time.Sleep(checkInterval)
-		maxWaitTime = maxWaitTime - checkInterval
-	}
-
-	return fmt.Errorf("Max wait time expired")
 }
