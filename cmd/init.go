@@ -3,9 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
@@ -13,14 +11,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/configure"
 
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/randutil"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -29,11 +26,10 @@ import (
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
-	flags           *InitCmdFlags
-	workdir         string
-	chartGenerator  *generator.ChartGenerator
-	defaultImage    *v1.ImageConfig
-	defaultRegistry *v1.RegistryConfig
+	flags          *InitCmdFlags
+	workdir        string
+	chartGenerator *generator.ChartGenerator
+	defaultImage   *v1.ImageConfig
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -134,14 +130,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
 				Name: configutil.String("devspace"),
-				Build: &v1.BuildConfig{
-					Engine: &v1.BuildEngine{
-						Docker: &v1.DockerBuildEngine{
-							Enabled: configutil.Bool(true),
-						},
-					},
-				},
-				Registry: configutil.String("default"),
 			},
 		},
 		Registries: &map[string]*v1.RegistryConfig{
@@ -155,10 +143,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	})
 
 	imageMap := *config.Images
-	cmd.defaultImage, _ = imageMap["default"]
-
-	registryMap := *config.Registries
-	cmd.defaultRegistry, _ = registryMap["default"]
+	cmd.defaultImage = imageMap["default"]
 
 	cmd.initChartGenerator()
 
@@ -444,32 +429,23 @@ func (cmd *InitCmd) configureKubernetes() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
-	config := configutil.GetConfig()
-	overwriteConfig := configutil.GetOverwriteConfig()
-
 	dockerUsername := ""
 	createInternalRegistryDefaultAnswer := "yes"
 
-	var imageBuilder *docker.Builder
-	var dockerBuilderErr error
-
-	imageBuilder, dockerBuilderErr = docker.NewBuilder("", "", "", false)
-
-	if dockerBuilderErr == nil {
+	imageBuilder, err := docker.NewBuilder("", "", "", false)
+	if err == nil {
 		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, dockerAuthErr := imageBuilder.Authenticate("", "", true)
+		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
 		log.StopWait()
 
-		if dockerAuthErr == nil {
+		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
-
 			if dockerUsername != "" {
 				createInternalRegistryDefaultAnswer = "no"
 			}
 		}
 	}
 
-	internalRegistryConfig := config.Services.InternalRegistry
 	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
 		DefaultValue:           createInternalRegistryDefaultAnswer,
@@ -477,211 +453,15 @@ func (cmd *InitCmd) configureRegistry() {
 	})
 
 	if *createInternalRegistry == "no" {
-		registryURL := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
-			DefaultValue:           "hub.docker.com",
-			ValidationRegexPattern: "^.*$",
-		})
-
-		cmd.defaultRegistry.URL = registryURL
-		internalRegistryConfig = nil
-		loginWarningServer := ""
-
-		if dockerUsername == "" {
-			if *registryURL != "hub.docker.com" {
-				loginWarningServer = " " + *registryURL
-				imageBuilder, dockerBuilderErr = docker.NewBuilder(*registryURL, "", "", false)
-			}
-
-			if dockerBuilderErr == nil {
-				log.StartWait("Checking Docker credentials")
-				dockerAuthConfig, dockerAuthErr := imageBuilder.Authenticate("", "", true)
-				log.StopWait()
-
-				if dockerAuthErr == nil {
-					dockerUsername = dockerAuthConfig.Username
-				}
-			}
-		}
-
-		googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")
-		isGoogleRegistry := googleRegistryRegex.Match([]byte(*registryURL))
-		isDockerHub := *registryURL == "hub.docker.com"
-
-		if dockerUsername == "" {
-			if cmd.defaultImage.Build.Engine.Docker != nil {
-				log.Fatal("Make sure you login to the registry with: docker login" + loginWarningServer)
-			} else {
-				registryMapOverwrite := *overwriteConfig.Registries
-				defaultRegistryOverwrite, defaultRegistryOverwriteDefined := registryMapOverwrite["default"]
-
-				if !defaultRegistryOverwriteDefined {
-					defaultRegistryOverwrite = &v1.RegistryConfig{}
-					registryMapOverwrite["default"] = defaultRegistryOverwrite
-				}
-
-				if defaultRegistryOverwrite.Auth == nil {
-					defaultRegistryOverwrite.Auth = &v1.RegistryAuth{}
-				}
-
-				if defaultRegistryOverwrite.Auth.Username == nil {
-					defaultRegistryOverwrite.Auth.Username = configutil.String("")
-				}
-
-				defaultRegistryOverwrite.Auth.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "Which username do you want to use to push images to " + *registryURL + "?",
-					DefaultValue:           *defaultRegistryOverwrite.Auth.Username,
-					ValidationRegexPattern: "^[a-zA-Z0-9]{4,30}$",
-				})
-				dockerUsername = *defaultRegistryOverwrite.Auth.Username
-
-				if defaultRegistryOverwrite.Auth.Password == nil {
-					defaultRegistryOverwrite.Auth.Password = configutil.String("")
-				}
-
-				defaultRegistryOverwrite.Auth.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "Which password do you want to use to push images to " + *registryURL + "?",
-					DefaultValue:           *defaultRegistryOverwrite.Auth.Password,
-					ValidationRegexPattern: "^.*$",
-				})
-			}
-		}
-		defaultImageName := *cmd.defaultImage.Name
-		defaultImageNameParts := strings.Split(defaultImageName, "/")
-
-		if isDockerHub {
-			if len(defaultImageNameParts) < 2 {
-				defaultImageName = dockerUsername + "/" + strings.TrimPrefix(defaultImageName, dockerUsername)
-			}
-
-			cmd.defaultImage.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Which image name do you want to use on Docker Hub?",
-				DefaultValue:           defaultImageName,
-				ValidationRegexPattern: "^[a-zA-Z0-9/]{4,30}$",
-			})
-		}
-
-		if isGoogleRegistry {
-			if len(defaultImageNameParts) < 2 {
-				project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-				gcloudProject := ""
-
-				if err == nil {
-					gcloudProject = strings.TrimSpace(string(project))
-				}
-
-				gcloudProjectName := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "What Google Cloud Project should be used?",
-					DefaultValue:           gcloudProject,
-					ValidationRegexPattern: "^.*$",
-				})
-
-				cmd.defaultImage.Name = configutil.String(*gcloudProjectName + "/" + strings.TrimPrefix(defaultImageName, *gcloudProjectName))
-			}
+		err := configure.ImageName(dockerUsername)
+		if err != nil {
+			log.Fatal(err)
 		}
 	} else {
-		imageMap := *config.Images
-		defaultImageConf, defaultImageExists := imageMap["default"]
-
-		if defaultImageExists {
-			defaultImageConf.Registry = configutil.String("internal")
+		err := configure.InternalRegistry()
+		if err != nil {
+			log.Fatal(err)
 		}
-
-		if internalRegistryConfig == nil {
-			internalRegistryConfig = &v1.InternalRegistry{
-				Release: &v1.Release{},
-			}
-			config.Services.InternalRegistry = internalRegistryConfig
-		}
-
-		if internalRegistryConfig.Release.Name == nil {
-			internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
-		}
-		if internalRegistryConfig.Release.Namespace == nil {
-			internalRegistryConfig.Release.Namespace = config.DevSpace.Release.Namespace
-		}
-
-		overwriteRegistryMap := *overwriteConfig.Registries
-		overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
-
-		if !overwriteRegistryConfigFound {
-			overwriteRegistryConfig = &v1.RegistryConfig{
-				Auth: &v1.RegistryAuth{},
-			}
-			overwriteRegistryMap["internal"] = overwriteRegistryConfig
-		}
-
-		registryAuth := overwriteRegistryConfig.Auth
-		if registryAuth.Username == nil {
-			randomUserSuffix, err := randutil.GenerateRandomString(5)
-
-			if err != nil {
-				log.Fatalf("Error creating random username: %s", err.Error())
-			}
-			registryAuth.Username = configutil.String("user-" + randomUserSuffix)
-		}
-
-		if registryAuth.Password == nil {
-			randomPassword, err := randutil.GenerateRandomString(12)
-
-			if err != nil {
-				log.Fatalf("Error creating random password: %s", err.Error())
-			}
-			registryAuth.Password = &randomPassword
-		}
-
-		var registryReleaseValues map[interface{}]interface{}
-		if internalRegistryConfig.Release.Values != nil {
-			registryReleaseValues = *internalRegistryConfig.Release.Values
-		} else {
-			registryReleaseValues = map[interface{}]interface{}{}
-
-			registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
-				ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
-			})
-
-			if *registryDomain != "" {
-				registryReleaseValues = map[interface{}]interface{}{
-					"Ingress": map[string]interface{}{
-						"Enabled": true,
-						"Hosts": []string{
-							*registryDomain,
-						},
-						"Annotations": map[string]string{
-							"Kubernetes.io/tls-acme": "true",
-						},
-						"Tls": []map[string]interface{}{
-							map[string]interface{}{
-								"SecretName": "tls-devspace-registry",
-								"Hosts": []string{
-									*registryDomain,
-								},
-							},
-						},
-					},
-				}
-			} else if kubectl.IsMinikube() == false {
-				log.Warn("Your Kubernetes cluster will not be able to pull images from a registry without a registry domain!\n")
-			}
-		}
-
-		secrets, registryHasSecrets := registryReleaseValues["secrets"]
-		if !registryHasSecrets {
-			secrets = map[interface{}]interface{}{}
-			registryReleaseValues["secrets"] = secrets
-		}
-
-		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
-		if secretsIsMap {
-			_, registryHasSecretHtpasswd := secretMap["htpasswd"]
-
-			if !registryHasSecretHtpasswd {
-				secretMap["htpasswd"] = ""
-			}
-		}
-
-		internalRegistryConfig.Release.Values = &registryReleaseValues
 	}
 }
 
@@ -725,29 +505,4 @@ func (cmd *InitCmd) createChart() {
 	if err != nil {
 		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
-
-	/*TODO
-	createdChartYaml := map[interface{}]interface{}{}
-	createdChartValuesYaml := map[interface{}]interface{}{}
-
-	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", &createdChartYaml)
-	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", &createdChartValuesYaml)
-
-	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
-
-	if !chartHasContainerValues && containerValues != nil {
-		containerValues["port"] = cmd.appConfig.Container.Ports
-
-		createdChartValuesYaml["container"] = containerValues
-	}
-
-	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
-
-	if !chartHasExternalValues && externalValues != nil {
-		externalValues["domain"] = cmd.appConfig.External.Domain
-		createdChartValuesYaml["external"] = externalValues
-	}
-	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
-	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
-	*/
 }

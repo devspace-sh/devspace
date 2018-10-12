@@ -14,20 +14,11 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
-	"github.com/covexo/devspace/pkg/devspace/builder"
-
-	"github.com/docker/docker/api/types"
-
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-
-	"github.com/covexo/devspace/pkg/devspace/config/runtime"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
-
-	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/image"
 
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
@@ -167,7 +158,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load config
-	runtimeConfig, err := runtime.LoadConfig()
+	runtimeConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading .runtime.yaml: %v", err)
 	}
@@ -178,7 +169,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.deployChart()
 
 		runtimeConfig.HelmChartHash = hash
-		err = runtime.SaveConfig(runtimeConfig)
+		err = generated.SaveConfig(runtimeConfig)
 		if err != nil {
 			log.Fatalf("Error saving config: %v", err)
 		}
@@ -294,7 +285,7 @@ func (cmd *UpCmd) initRegistries() {
 	config := configutil.GetConfig()
 	registryMap := *config.Registries
 
-	if config.Services.InternalRegistry != nil {
+	if config.Services != nil && config.Services.InternalRegistry != nil && config.Registries != nil {
 		registryConf, regConfExists := registryMap["internal"]
 		if !regConfExists {
 			log.Fatal("Registry config not found for internal registry")
@@ -316,202 +307,54 @@ func (cmd *UpCmd) initRegistries() {
 		log.Done("Internal registry started")
 	}
 
-	for registryName, registryConf := range registryMap {
-		if registryConf.Auth != nil && registryConf.Auth.Password != nil {
-			username := ""
-			password := *registryConf.Auth.Password
-			email := "noreply@devspace-cloud.com"
-			registryURL := ""
+	if registryMap != nil {
+		for registryName, registryConf := range registryMap {
+			if registryConf.Auth != nil && registryConf.Auth.Password != nil {
+				username := ""
+				password := *registryConf.Auth.Password
+				email := "noreply@devspace-cloud.com"
+				registryURL := ""
 
-			if registryConf.Auth.Username != nil {
-				username = *registryConf.Auth.Username
-			}
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
+				if registryConf.Auth.Username != nil {
+					username = *registryConf.Auth.Username
+				}
+				if registryConf.URL != nil {
+					registryURL = *registryConf.URL
+				}
 
-			log.StartWait("Creating image pull secret for registry: " + registryName)
-			err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
-			log.StopWait()
+				log.StartWait("Creating image pull secret for registry: " + registryName)
+				err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
+				log.StopWait()
 
-			if err != nil {
-				log.Fatalf("Failed to create pull secret for registry: %v", err)
+				if err != nil {
+					log.Fatalf("Failed to create pull secret for registry: %v", err)
+				}
 			}
 		}
 	}
-}
-
-func (cmd *UpCmd) shouldRebuild(runtimeConfig *runtime.Config, imageConf *v1.ImageConfig, dockerfilePath string) bool {
-	mustRebuild := true
-	dockerfileInfo, err := os.Stat(dockerfilePath)
-
-	if err != nil {
-		log.Warnf("Dockerfile %s missing: %v", dockerfilePath, err)
-		mustRebuild = false
-	} else {
-		// When user has not used -b or --build flags
-		if cmd.flags.build == false {
-			// only rebuild Docker image when Dockerfile has changed since latest build
-			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
-		}
-	}
-
-	runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
-	return mustRebuild
 }
 
 // returns true when one of the images had to be rebuild
 func (cmd *UpCmd) buildImages() bool {
 	re := false
 	config := configutil.GetConfig()
-	runtimeConfig, err := runtime.LoadConfig()
+	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading .runtime.yaml: %v", err)
 	}
 
 	for imageName, imageConf := range *config.Images {
-		dockerfilePath := "./Dockerfile"
-		contextPath := "./"
-
-		if imageConf.Build.DockerfilePath != nil {
-			dockerfilePath = *imageConf.Build.DockerfilePath
-		}
-
-		if imageConf.Build.ContextPath != nil {
-			contextPath = *imageConf.Build.ContextPath
-		}
-
-		dockerfilePath, err := filepath.Abs(dockerfilePath)
+		shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
 		if err != nil {
-			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
+			log.Fatal(err)
 		}
 
-		contextPath, err = filepath.Abs(contextPath)
-		if err != nil {
-			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
-		}
-
-		if cmd.shouldRebuild(runtimeConfig, imageConf, dockerfilePath) {
+		if shouldRebuild {
 			re = true
-			imageTag, randErr := randutil.GenerateRandomString(7)
-
-			if randErr != nil {
-				log.Fatalf("Image building failed: %s", randErr.Error())
-			}
-			registryConf, err := registry.GetRegistryConfig(imageConf)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			var imageBuilder builder.Interface
-
-			buildInfo := "Building image '%s' with engine '%s'"
-			engineName := ""
-			registryURL := ""
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-			if registryURL == "hub.docker.com" {
-				registryURL = ""
-			}
-
-			if imageConf.Build.Engine.Kaniko != nil {
-				engineName = "kaniko"
-				buildNamespace := *config.DevSpace.Release.Namespace
-				allowInsecurePush := false
-
-				if imageConf.Build.Engine.Kaniko.Namespace != nil {
-					buildNamespace = *imageConf.Build.Engine.Kaniko.Namespace
-				}
-
-				if registryConf.Insecure != nil {
-					allowInsecurePush = *registryConf.Insecure
-				}
-				imageBuilder, err = kaniko.NewBuilder(registryURL, *imageConf.Name, imageTag, buildNamespace, cmd.kubectl, allowInsecurePush)
-				if err != nil {
-					log.Fatalf("Error creating kaniko builder: %v", err)
-				}
-			} else {
-				engineName = "docker"
-				preferMinikube := true
-
-				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
-					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
-				}
-
-				imageBuilder, err = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
-				if err != nil {
-					log.Fatalf("Error creating docker client: %v", err)
-				}
-			}
-
-			log.Infof(buildInfo, imageName, engineName)
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-
-			username := ""
-			password := ""
-			if registryConf.Auth != nil {
-				if registryConf.Auth.Username != nil {
-					username = *registryConf.Auth.Username
-				}
-
-				if registryConf.Auth.Password != nil {
-					password = *registryConf.Auth.Password
-				}
-			}
-
-			log.StartWait("Authenticating (" + registryURL + ")")
-			_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
-			log.StopWait()
-
-			if err != nil {
-				log.Fatalf("Error during image registry authentication: %v", err)
-			}
-
-			log.Done("Authentication successful (" + registryURL + ")")
-
-			buildOptions := &types.ImageBuildOptions{}
-			if imageConf.Build.Options != nil {
-				if imageConf.Build.Options.BuildArgs != nil {
-					buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
-				}
-				if imageConf.Build.Options.Target != nil {
-					buildOptions.Target = *imageConf.Build.Options.Target
-				}
-				if imageConf.Build.Options.Network != nil {
-					buildOptions.NetworkMode = *imageConf.Build.Options.Network
-				}
-			}
-
-			err = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
-			if err != nil {
-				log.Fatalf("Error during image build: %v", err)
-			}
-
-			err = imageBuilder.PushImage()
-			if err != nil {
-				log.Fatalf("Error during image push: %v", err)
-			}
-
-			log.Info("Image pushed to registry (" + registryURL + ")")
-			imageConf.Tag = &imageTag
-
-			err = configutil.SaveConfig()
-			if err != nil {
-				log.Fatalf("Config saving error: %s", err.Error())
-			}
-
-			log.Done("Done building and pushing image '" + imageName + "'")
-		} else {
-			log.Infof("Skip building image '%s'", imageName)
 		}
 	}
 
-	err = runtime.SaveConfig(runtimeConfig)
+	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		log.Fatalf("Error saving .runtime.yaml: %v", err)
 	}

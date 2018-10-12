@@ -11,7 +11,7 @@ type DevSpaceConfig struct {
 //PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
 	Namespace     *string             `yaml:"namespace"`
-	ResourceType  *string             `yaml:"resourceType"`
+	ResourceType  *string             `yaml:"resourceType,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector"`
 	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
@@ -25,11 +25,11 @@ type PortMapping struct {
 //SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
 	Namespace            *string             `yaml:"namespace"`
-	ResourceType         *string             `yaml:"resourceType"`
+	ResourceType         *string             `yaml:"resourceType,omitempty"`
 	LabelSelector        *map[string]*string `yaml:"labelSelector"`
 	LocalSubPath         *string             `yaml:"localSubPath"`
 	ContainerPath        *string             `yaml:"containerPath"`
-	ContainerName        *string             `yaml:"containerName"`
+	ContainerName        *string             `yaml:"containerName,omitempty"`
 	ExcludePaths         *[]string           `yaml:"excludePaths"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`

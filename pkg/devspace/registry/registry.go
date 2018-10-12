@@ -153,9 +153,9 @@ func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) 
 	registryName := *imageConfig.Registry
 	registryMap := *config.Registries
 	registryConfig, registryFound := registryMap[registryName]
-
 	if !registryFound {
 		return nil, errors.New("Unable to find registry: " + registryName)
 	}
+
 	return registryConfig, nil
 }
