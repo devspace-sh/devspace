@@ -176,8 +176,14 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 				excludedPaths += v
 			}
 		}
+
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
 		syncPaths = append(syncPaths, []string{
-			*value.ResourceType,
+			resourceType,
 			selector,
 			*value.LocalSubPath,
 			*value.ContainerPath,
@@ -208,7 +214,6 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	// Transform values into string arrays
 	for _, value := range *config.DevSpace.PortForwarding {
 		selector := ""
-
 		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
@@ -218,7 +223,6 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		}
 
 		portMappings := ""
-
 		for _, v := range *value.PortMappings {
 			if len(portMappings) > 0 {
 				portMappings += ", "
@@ -227,8 +231,13 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
 		}
 
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
 		portForwards = append(portForwards, []string{
-			*value.ResourceType,
+			resourceType,
 			selector,
 			portMappings,
 		})
