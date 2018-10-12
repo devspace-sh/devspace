@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +23,7 @@ const TillerRoleManagerName = "tiller-config-manager"
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) error {
-	tillerConfig := dsConfig.Services.Tiller
-	tillerNamespace := *dsConfig.Services.Tiller.Release.Namespace
+	tillerNamespace := GetTillerNamespace()
 
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
@@ -45,14 +45,32 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 	}
 
 	// Check if there is an internal registry
-	if dsConfig.Services.InternalRegistry != nil && dsConfig.Services.InternalRegistry.Release.Namespace != nil {
+	if dsConfig.Services.InternalRegistry != nil && dsConfig.Services.InternalRegistry.Release != nil && dsConfig.Services.InternalRegistry.Release.Namespace != nil {
 		// Tiller needs access to the internal registry namespace
 		appNamespaces = append(appNamespaces, dsConfig.Services.InternalRegistry.Release.Namespace)
 	}
 
+	if dsConfig.Services.Tiller != nil && dsConfig.Services.Tiller.AppNamespaces != nil {
+		appNamespaces = append(appNamespaces, *dsConfig.Services.Tiller.AppNamespaces...)
+	}
+
 	// Persist the app namespaces to the config
-	tillerConfig.AppNamespaces = &appNamespaces
-	for _, appNamespace := range *tillerConfig.AppNamespaces {
+	for _, appNamespace := range appNamespaces {
+		// Create namespaces if they are not there already
+		_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
+		if err != nil {
+			log.Infof("Create namespace %s", *appNamespace)
+
+			_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: *appNamespace,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		err = addDeployAccessToTiller(kubectlClient, tillerNamespace, *appNamespace)
 		if err != nil {
 			return err

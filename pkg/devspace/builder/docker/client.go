@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"

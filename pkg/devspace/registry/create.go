@@ -8,16 +8,16 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
 	"github.com/covexo/yamlq"
 	"github.com/foomo/htpasswd"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
+func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
 	registryReleaseName := *internalRegistry.Release.Name
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
 	registryReleaseValues := internalRegistry.Release.Values
@@ -88,6 +88,7 @@ func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistr
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
 
 	registryAuth := registryConfig.Auth
+
 	htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
 	htpasswdSecret, err := kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 	if err != nil {

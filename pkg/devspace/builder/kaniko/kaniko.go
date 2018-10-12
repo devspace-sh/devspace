@@ -8,7 +8,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"github.com/covexo/devspace/pkg/util/log"

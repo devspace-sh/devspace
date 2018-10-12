@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/daviddengcn/go-colortext"
 	"github.com/spf13/cobra"
@@ -18,7 +18,7 @@ import (
 // StatusCmd holds the information needed for the status command
 type StatusCmd struct {
 	flags   *StatusCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
@@ -150,7 +150,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registry := config.Services.InternalRegistry
 	if registry == nil {
 		return nil, nil
@@ -203,8 +203,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
-	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, *config.Services.Tiller.Release.Namespace)
+	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, helmClient.GetTillerNamespace())
 
 	if err != nil {
 		return nil, err
@@ -231,7 +230,7 @@ func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	releases, err := cmd.helm.Client.ListReleases()
 
 	if err != nil {
@@ -291,8 +290,8 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }
 
-func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
-	config := configutil.GetConfig(false)
+func getRunningDevSpacePod(helm *helmClient.ClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
+	config := configutil.GetConfig()
 	releases, err := helm.Client.ListReleases()
 
 	if err != nil {

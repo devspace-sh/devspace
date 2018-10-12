@@ -15,7 +15,7 @@ import (
 
 	"github.com/juju/errors"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 )
 
 type downstream struct {

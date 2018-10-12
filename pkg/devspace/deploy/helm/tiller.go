@@ -28,7 +28,7 @@ repositories:
 `
 
 func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrade bool) error {
-	tillerNamespace := *config.Services.Tiller.Release.Namespace
+	tillerNamespace := GetTillerNamespace()
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
@@ -38,6 +38,8 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
 	if err != nil {
+		log.Infof("Create namespace %s", tillerNamespace)
+
 		// Create tiller namespace
 		_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -67,7 +69,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		}
 	}
 
-	return waitUntilTillerIsStarted(kubectlClient, tillerNamespace)
+	return waitUntilTillerIsStarted(kubectlClient)
 }
 
 func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, tillerOptions *helminstaller.Options) error {
@@ -75,7 +77,7 @@ func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, till
 	defer log.StopWait()
 
 	// If the service account is already there we do not create it or any roles/rolebindings
-	_, err := kubectlClient.CoreV1().ServiceAccounts(*dsConfig.Services.Tiller.Release.Namespace).Get(TillerServiceAccountName, metav1.GetOptions{})
+	_, err := kubectlClient.CoreV1().ServiceAccounts(GetTillerNamespace()).Get(TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
 		err = createTillerRBAC(kubectlClient, dsConfig)
 		if err != nil {
@@ -87,7 +89,7 @@ func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, till
 	return helminstaller.Install(kubectlClient, tillerOptions)
 }
 
-func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
+func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset) error {
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
 
@@ -95,7 +97,7 @@ func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset, tillerNamespa
 	defer log.StopWait()
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(GetTillerNamespace()).Get(TillerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -142,11 +144,24 @@ func addAppNamespaces(appNamespaces *[]*string, namespaces []*string) {
 	appNamespaces = &newAppNamespaces
 }
 
-// IsTillerDeployed determines if we could connect to a tiller server
-func IsTillerDeployed(kubectlClient *kubernetes.Clientset, tillerConfig *v1.TillerConfig) bool {
-	tillerNamespace := *tillerConfig.Release.Namespace
-	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+// GetTillerNamespace retrieves the tillernamespace
+func GetTillerNamespace() string {
+	config := configutil.GetConfig()
+	if config.DevSpace.Release == nil || config.DevSpace.Release.Namespace == nil {
+		log.Panic("Cannot get tiller namespace when helm is not configured")
+	}
 
+	if config.Services == nil || config.Services.Tiller == nil || config.Services.Tiller.Release == nil || config.Services.Tiller.Release.Namespace == nil {
+		return *config.DevSpace.Release.Namespace
+	}
+
+	return *config.Services.Tiller.Release.Namespace
+}
+
+// IsTillerDeployed determines if we could connect to a tiller server
+func IsTillerDeployed(kubectlClient *kubernetes.Clientset) bool {
+	tillerNamespace := GetTillerNamespace()
+	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -160,10 +175,9 @@ func IsTillerDeployed(kubectlClient *kubernetes.Clientset, tillerConfig *v1.Till
 
 // DeleteTiller clears the tiller server, the service account and role binding
 func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
-	tillerConfig := config.Services.Tiller
-	tillerNamespace := *tillerConfig.Release.Namespace
+	tillerNamespace := GetTillerNamespace()
 	errs := make([]error, 0, 1)
 	propagationPolicy := metav1.DeletePropagationForeground
 
@@ -186,8 +200,16 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 			errs = append(errs, err)
 		}
 
-		roleNamespace := append(*tillerConfig.AppNamespaces, &tillerNamespace)
-		for _, appNamespace := range roleNamespace {
+		appNamespaces := []*string{
+			config.DevSpace.Release.Namespace,
+			&tillerNamespace,
+		}
+
+		if config.Services.InternalRegistry != nil && config.Services.InternalRegistry.Release != nil && config.Services.InternalRegistry.Release.Namespace != nil {
+			appNamespaces = append(appNamespaces, config.Services.InternalRegistry.Release.Namespace)
+		}
+
+		for _, appNamespace := range appNamespaces {
 			err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 			if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
 				errs = append(errs, err)

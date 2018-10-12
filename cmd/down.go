@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 
 	"github.com/spf13/cobra"
@@ -43,8 +43,7 @@ your project, use: devspace reset
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
