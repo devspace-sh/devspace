@@ -34,7 +34,7 @@ func ImageName(dockerUsername string) error {
 			log.StopWait()
 
 			if err != nil {
-				return fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", err, *registryURL)
+				return fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", *registryURL)
 			}
 
 			dockerUsername = dockerAuthConfig.Username

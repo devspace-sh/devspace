@@ -172,8 +172,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if cmd.flags.reconfigure || !configExists {
 		cmd.configureKubernetes()
-
-		cmd.defaultImage.Name = config.DevSpace.Release.Name
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
@@ -407,7 +405,7 @@ func (cmd *InitCmd) configureRegistry() {
 	createInternalRegistryDefaultAnswer := "yes"
 
 	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err == nil {
+	if err != nil {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
 		log.StopWait()
@@ -417,6 +415,15 @@ func (cmd *InitCmd) configureRegistry() {
 			if dockerUsername != "" {
 				createInternalRegistryDefaultAnswer = "no"
 			}
+		}
+	} else {
+		// Set default build engine to kaniko, if no docker is installed
+		cmd.defaultImage.Build = &v1.BuildConfig{
+			Engine: &v1.BuildEngine{
+				Kaniko: &v1.KanikoBuildEngine{
+					Enabled: configutil.Bool(true),
+				},
+			},
 		}
 	}
 
