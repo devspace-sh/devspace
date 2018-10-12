@@ -35,7 +35,7 @@ import (
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
 	flags     *UpCmdFlags
-	helm      *helmClient.HelmClientWrapper
+	helm      *helmClient.ClientWrapper
 	kubectl   *kubernetes.Clientset
 	workdir   string
 	pod       *k8sv1.Pod
@@ -116,7 +116,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	cmd.workdir = workdir
-
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
 		initCmd := &InitCmd{
@@ -147,34 +146,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.initRegistries()
 	}
 
-	// Build image if necessary
-	mustRedeploy := cmd.buildImages()
-
-	// Check if the chart directory has changed
-	hash, err := hash.Directory("chart")
-	if err != nil {
-		log.Fatalf("Error hashing chart directory: %v", err)
-	}
-
-	// Load config
-	runtimeConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading .runtime.yaml: %v", err)
-	}
-
-	// Check if we find a running release pod
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-	if err != nil || mustRedeploy || cmd.flags.deploy || runtimeConfig.HelmChartHash != hash {
-		cmd.deployChart()
-
-		runtimeConfig.HelmChartHash = hash
-		err = generated.SaveConfig(runtimeConfig)
-		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
-		}
-	} else {
-		cmd.pod = pod
-	}
+	cmd.buildAndDeploy()
 
 	if cmd.flags.portforwarding {
 		cmd.startPortForwarding()
@@ -190,6 +162,39 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
+}
+
+func (cmd *UpCmd) buildAndDeploy() {
+	// Load config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
+	// Build image if necessary
+	mustRedeploy := cmd.buildImages(generatedConfig)
+
+	// Check if the chart directory has changed
+	hash, err := hash.Directory("chart")
+	if err != nil {
+		log.Fatalf("Error hashing chart directory: %v", err)
+	}
+
+	// Check if we find a running release pod
+	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	if err != nil || mustRedeploy || cmd.flags.deploy || generatedConfig.HelmChartHash != hash {
+		cmd.deployChart(generatedConfig)
+
+		generatedConfig.HelmChartHash = hash
+
+		// Save Config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
+		}
+	} else {
+		cmd.pod = pod
+	}
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -333,13 +338,9 @@ func (cmd *UpCmd) initRegistries() {
 }
 
 // returns true when one of the images had to be rebuild
-func (cmd *UpCmd) buildImages() bool {
+func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	re := false
 	config := configutil.GetConfig()
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
-	}
 
 	for imageName, imageConf := range *config.Images {
 		shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
@@ -350,11 +351,6 @@ func (cmd *UpCmd) buildImages() bool {
 		if shouldRebuild {
 			re = true
 		}
-	}
-
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Error saving generated.yaml: %v", err)
 	}
 
 	return re
@@ -375,12 +371,8 @@ func (cmd *UpCmd) initHelm() {
 	}
 }
 
-func (cmd *UpCmd) deployChart() {
+func (cmd *UpCmd) deployChart(generatedConfig *generated.Config) {
 	config := configutil.GetConfig()
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Panic(err)
-	}
 
 	log.StartWait("Deploying helm chart")
 	defer log.StopWait()
@@ -392,7 +384,7 @@ func (cmd *UpCmd) deployChart() {
 	values := map[interface{}]interface{}{}
 	overwriteValues := map[interface{}]interface{}{}
 
-	err = yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
+	err := yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
 	if err != nil {
 		log.Fatalf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
 	}
@@ -401,7 +393,7 @@ func (cmd *UpCmd) deployChart() {
 
 	for imageName, imageConf := range *config.Images {
 		container := map[string]interface{}{}
-		container["image"] = registry.GetImageURL(imageName, generatedConfig, imageConf, true)
+		container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
 
 		if cmd.flags.noSleep {
 			container["command"] = []string{}

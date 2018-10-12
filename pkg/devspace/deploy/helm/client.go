@@ -29,8 +29,8 @@ import (
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
 
-// HelmClientWrapper holds the necessary information for helm
-type HelmClientWrapper struct {
+// ClientWrapper holds the necessary information for helm
+type ClientWrapper struct {
 	Client       *k8shelm.Client
 	Settings     *helmenvironment.EnvSettings
 	TillerConfig *v1.TillerConfig
@@ -38,7 +38,7 @@ type HelmClientWrapper struct {
 }
 
 // NewClient creates a new helm client
-func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
+func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*ClientWrapper, error) {
 	config := configutil.GetConfig()
 	tillerNamespace := GetTillerNamespace()
 
@@ -117,7 +117,6 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
 
 	_, repoFileNotFound := os.Stat(repoFile)
-
 	if repoFileNotFound != nil {
 		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 		if err != nil {
@@ -134,7 +133,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		}
 	}
 
-	wrapper := &HelmClientWrapper{
+	wrapper := &ClientWrapper{
 		Client: client,
 		Settings: &helmenvironment.EnvSettings{
 			Home: helmpath.Home(helmHomePath),
@@ -154,7 +153,7 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 	return wrapper, nil
 }
 
-func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
+func (helmClientWrapper *ClientWrapper) updateRepos() error {
 	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
@@ -194,7 +193,7 @@ func (helmClientWrapper *HelmClientWrapper) updateRepos() error {
 }
 
 // ReleaseExists checks if the given release name exists
-func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (bool, error) {
+func (helmClientWrapper *ClientWrapper) ReleaseExists(releaseName string) (bool, error) {
 	_, err := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
 	if err != nil {
 		if strings.Contains(err.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
@@ -208,6 +207,6 @@ func (helmClientWrapper *HelmClientWrapper) ReleaseExists(releaseName string) (b
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (helmClientWrapper *HelmClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
+func (helmClientWrapper *ClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
 	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
 }

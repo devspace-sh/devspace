@@ -28,12 +28,14 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 
-	if imageConf.Build.DockerfilePath != nil {
-		dockerfilePath = *imageConf.Build.DockerfilePath
-	}
+	if imageConf.Build != nil {
+		if imageConf.Build.DockerfilePath != nil {
+			dockerfilePath = *imageConf.Build.DockerfilePath
+		}
 
-	if imageConf.Build.ContextPath != nil {
-		contextPath = *imageConf.Build.ContextPath
+		if imageConf.Build.ContextPath != nil {
+			contextPath = *imageConf.Build.ContextPath
+		}
 	}
 
 	dockerfilePath, err := filepath.Abs(dockerfilePath)
@@ -56,7 +58,6 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		var registryConf *v1.RegistryConfig
 		var imageBuilder builder.Interface
 
-		buildInfo := "Building image '%s' with engine '%s'"
 		engineName := ""
 		registryURL := ""
 		imageName := *imageConf.Name
@@ -79,6 +80,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				return false, err
 			}
 
+			log.Info(registryURL, *imageConf.Name)
+
 			if len(registryURL) > 0 {
 				// Crop registry Url from imageName
 				imageName = imageName[len(registryURL)+1:]
@@ -90,7 +93,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		if imageConf.Build.Engine != nil && imageConf.Build.Engine.Kaniko != nil {
+		if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Kaniko != nil {
 			engineName = "kaniko"
 			buildNamespace := *config.DevSpace.Release.Namespace
 			allowInsecurePush := false
@@ -111,7 +114,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			engineName = "docker"
 			preferMinikube := true
 
-			if imageConf.Build.Engine != nil && imageConf.Build.Engine.Docker != nil && imageConf.Build.Engine.Docker.PreferMinikube != nil {
+			if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Docker != nil && imageConf.Build.Engine.Docker.PreferMinikube != nil {
 				preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
 			}
 
@@ -121,7 +124,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		log.Infof(buildInfo, imageName, engineName)
+		log.Infof("Building image '%s' with engine '%s'", imageName, engineName)
 
 		username := ""
 		password := ""
@@ -146,7 +149,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Done("Authentication successful (" + registryURL + ")")
 
 		buildOptions := &types.ImageBuildOptions{}
-		if imageConf.Build.Options != nil {
+
+		if imageConf.Build != nil && imageConf.Build.Options != nil {
 			if imageConf.Build.Options.BuildArgs != nil {
 				buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
 			}
@@ -202,7 +206,7 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 
 // GetRegistryFromImageName retrieves the registry name from an imageName
 func GetRegistryFromImageName(imageName string) (string, error) {
-	ref, err := reference.ParseNormalizedNamed("localhost:8080/fabian1991/devspace:tag")
+	ref, err := reference.ParseNormalizedNamed(imageName)
 	if err != nil {
 		return "", err
 	}

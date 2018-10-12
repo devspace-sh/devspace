@@ -68,7 +68,7 @@ func GetConfig() *v1.Config {
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
-			log.Fatal("Unable to load config.")
+			log.Fatalf("Unable to load config: %v. Please run `devspace init -r` to correct your config", err)
 		}
 
 		//ignore error as overwrite.yaml is optional
@@ -77,6 +77,10 @@ func GetConfig() *v1.Config {
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
+
+		if config.DevSpace.Release != nil && config.DevSpace.Release.Namespace == nil {
+			config.DevSpace.Release.Namespace = String("default")
+		}
 	})
 
 	return config

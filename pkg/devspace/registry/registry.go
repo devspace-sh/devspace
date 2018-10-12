@@ -79,7 +79,7 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
+func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
 	registryReleaseName := *internalRegistry.Release.Name
 	registryReleaseDeploymentName := registryReleaseName + "-docker-registry"
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
@@ -129,7 +129,7 @@ func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, cl
 }
 
 // GetImageURL returns the image (optional with tag)
-func GetImageURL(imageName string, generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
+func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	image := *imageConfig.Name
 
 	if imageConfig.Registry != nil {
@@ -148,7 +148,7 @@ func GetImageURL(imageName string, generatedConfig *generated.Config, imageConfi
 		if imageConfig.Tag != nil {
 			image = image + ":" + *imageConfig.Tag
 		} else {
-			image = image + ":" + generatedConfig.ImageTags[imageName]
+			image = image + ":" + generatedConfig.ImageTags[image]
 		}
 	}
 

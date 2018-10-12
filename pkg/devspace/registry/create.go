@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
+func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
 	registryReleaseName := *internalRegistry.Release.Name
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
 	registryReleaseValues := internalRegistry.Release.Values

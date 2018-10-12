@@ -18,7 +18,7 @@ import (
 // StatusCmd holds the information needed for the status command
 type StatusCmd struct {
 	flags   *StatusCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
@@ -290,7 +290,7 @@ func (cmd *StatusCmd) getDevspaceStatus() ([]string, error) {
 	return nil, fmt.Errorf("Devspace helm release %s not found", *config.DevSpace.Release.Name)
 }
 
-func getRunningDevSpacePod(helm *helmClient.HelmClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
+func getRunningDevSpacePod(helm *helmClient.ClientWrapper, client *kubernetes.Clientset) (*k8sv1.Pod, error) {
 	config := configutil.GetConfig()
 	releases, err := helm.Client.ListReleases()
 

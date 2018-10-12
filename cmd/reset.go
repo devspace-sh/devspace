@@ -19,7 +19,7 @@ import (
 // ResetCmd holds the needed command information
 type ResetCmd struct {
 	flags   *ResetCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }

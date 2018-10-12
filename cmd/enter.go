@@ -14,7 +14,7 @@ import (
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
 	flags   *EnterCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	pod     *k8sv1.Pod
 }
