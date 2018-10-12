@@ -203,8 +203,7 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 }
 
 func (cmd *StatusCmd) getTillerStatus() ([]string, error) {
-	config := configutil.GetConfig()
-	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, *config.Services.Tiller.Release.Namespace)
+	tillerPod, err := kubectl.GetPodsFromDeployment(cmd.kubectl, helmClient.TillerDeploymentName, helmClient.GetTillerNamespace())
 
 	if err != nil {
 		return nil, err

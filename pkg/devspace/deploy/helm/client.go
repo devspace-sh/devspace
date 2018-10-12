@@ -40,8 +40,7 @@ type HelmClientWrapper struct {
 // NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmClientWrapper, error) {
 	config := configutil.GetConfig()
-	tillerConfig := config.Services.Tiller
-	tillerNamespace := *config.Services.Tiller.Release.Namespace
+	tillerNamespace := GetTillerNamespace()
 
 	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
@@ -124,6 +123,15 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*HelmCl
 		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	tillerConfig := config.Services.Tiller
+	if tillerConfig == nil {
+		tillerConfig = &v1.TillerConfig{
+			Release: &v1.Release{
+				Namespace: &tillerNamespace,
+			},
 		}
 	}
 

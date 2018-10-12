@@ -261,7 +261,7 @@ func (cmd *ResetCmd) deleteRelease() error {
 	releaseName := *config.DevSpace.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
 
 		if isDeployed == false {
 			return nil
@@ -286,7 +286,7 @@ func (cmd *ResetCmd) deleteRegistry() error {
 	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
 
 		if isDeployed == false {
 			return nil

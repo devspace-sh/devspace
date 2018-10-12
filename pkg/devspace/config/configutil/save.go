@@ -16,13 +16,12 @@ import (
 func SaveConfig() error {
 	workdir, _ := os.Getwd()
 	configMapRaw, overwriteMapRaw, err := getConfigAndOverwriteMaps(config, configRaw, overwriteConfig, overwriteConfigRaw)
-
-	configMap, _ := configMapRaw.(map[interface{}]interface{})
-	overwriteMap, _ := overwriteMapRaw.(map[interface{}]interface{})
-
 	if err != nil {
 		return err
 	}
+
+	configMap, _ := configMapRaw.(map[interface{}]interface{})
+	overwriteMap, _ := overwriteMapRaw.(map[interface{}]interface{})
 
 	configYaml, err := yaml.Marshal(configMap)
 	if err != nil {

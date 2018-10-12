@@ -22,8 +22,7 @@ const TillerRoleManagerName = "tiller-config-manager"
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) error {
-	tillerConfig := dsConfig.Services.Tiller
-	tillerNamespace := *dsConfig.Services.Tiller.Release.Namespace
+	tillerNamespace := GetTillerNamespace()
 
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
@@ -39,23 +38,29 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 		}
 	}
 
-	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
-	appNamespaces := []*string{
-		dsConfig.DevSpace.Release.Namespace,
-	}
+	tillerConfig := dsConfig.Services.Tiller
+	if tillerConfig != nil {
+		// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
+		appNamespaces := []*string{
+			dsConfig.DevSpace.Release.Namespace,
+		}
 
-	// Check if there is an internal registry
-	if dsConfig.Services.InternalRegistry != nil && dsConfig.Services.InternalRegistry.Release.Namespace != nil {
-		// Tiller needs access to the internal registry namespace
-		appNamespaces = append(appNamespaces, dsConfig.Services.InternalRegistry.Release.Namespace)
-	}
+		// Check if there is an internal registry
+		if dsConfig.Services.InternalRegistry != nil && dsConfig.Services.InternalRegistry.Release != nil && dsConfig.Services.InternalRegistry.Release.Namespace != nil {
+			// Tiller needs access to the internal registry namespace
+			appNamespaces = append(appNamespaces, dsConfig.Services.InternalRegistry.Release.Namespace)
+		}
 
-	// Persist the app namespaces to the config
-	tillerConfig.AppNamespaces = &appNamespaces
-	for _, appNamespace := range *tillerConfig.AppNamespaces {
-		err = addDeployAccessToTiller(kubectlClient, tillerNamespace, *appNamespace)
-		if err != nil {
-			return err
+		if tillerConfig.AppNamespaces != nil {
+			appNamespaces = append(appNamespaces, *tillerConfig.AppNamespaces...)
+		}
+
+		// Persist the app namespaces to the config
+		for _, appNamespace := range appNamespaces {
+			err = addDeployAccessToTiller(kubectlClient, tillerNamespace, *appNamespace)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

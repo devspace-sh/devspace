@@ -293,7 +293,6 @@ func (cmd *UpCmd) initRegistries() {
 		log.StartWait("Initializing internal registry")
 		err := registry.InitInternalRegistry(cmd.kubectl, cmd.helm, config.Services.InternalRegistry, registryConf)
 		log.StopWait()
-
 		if err != nil {
 			log.Fatalf("Internal registry error: %v", err)
 		}
@@ -339,7 +338,7 @@ func (cmd *UpCmd) buildImages() bool {
 	config := configutil.GetConfig()
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading .runtime.yaml: %v", err)
+		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	for imageName, imageConf := range *config.Images {
@@ -355,7 +354,7 @@ func (cmd *UpCmd) buildImages() bool {
 
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
-		log.Fatalf("Error saving .runtime.yaml: %v", err)
+		log.Fatalf("Error saving generated.yaml: %v", err)
 	}
 
 	return re
@@ -378,6 +377,10 @@ func (cmd *UpCmd) initHelm() {
 
 func (cmd *UpCmd) deployChart() {
 	config := configutil.GetConfig()
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Panic(err)
+	}
 
 	log.StartWait("Deploying helm chart")
 	defer log.StopWait()
@@ -389,7 +392,7 @@ func (cmd *UpCmd) deployChart() {
 	values := map[interface{}]interface{}{}
 	overwriteValues := map[interface{}]interface{}{}
 
-	err := yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
+	err = yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
 	if err != nil {
 		log.Fatalf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
 	}
@@ -398,7 +401,7 @@ func (cmd *UpCmd) deployChart() {
 
 	for imageName, imageConf := range *config.Images {
 		container := map[string]interface{}{}
-		container["image"] = registry.GetImageURL(imageConf, true)
+		container["image"] = registry.GetImageURL(imageName, generatedConfig, imageConf, true)
 
 		if cmd.flags.noSleep {
 			container["command"] = []string{}
