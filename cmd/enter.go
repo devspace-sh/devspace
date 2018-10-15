@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	k8sv1 "k8s.io/api/core/v1"
@@ -14,7 +14,7 @@ import (
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
 	flags   *EnterCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	pod     *k8sv1.Pod
 }
@@ -80,7 +80,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 func enterTerminal(client *kubernetes.Clientset, pod *k8sv1.Pod, containerNameOverride string, args []string) {
 	var command []string
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if len(args) == 0 && (config.DevSpace.Terminal.Command == nil || len(*config.DevSpace.Terminal.Command) == 0) {
 		command = []string{

@@ -136,7 +136,7 @@ func (cmd *ListCmd) RunListPackage(cobraCmd *cobra.Command, args []string) {
 
 // RunListSync runs the list sync command logic
 func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if len(*config.DevSpace.Sync) == 0 {
 		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
@@ -176,8 +176,14 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 				excludedPaths += v
 			}
 		}
+
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
 		syncPaths = append(syncPaths, []string{
-			*value.ResourceType,
+			resourceType,
 			selector,
 			*value.LocalSubPath,
 			*value.ContainerPath,
@@ -190,7 +196,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 // RunListPort runs the list port command logic
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if len(*config.DevSpace.PortForwarding) == 0 {
 		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
@@ -208,7 +214,6 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	// Transform values into string arrays
 	for _, value := range *config.DevSpace.PortForwarding {
 		selector := ""
-
 		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
@@ -218,7 +223,6 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		}
 
 		portMappings := ""
-
 		for _, v := range *value.PortMappings {
 			if len(portMappings) > 0 {
 				portMappings += ", "
@@ -227,8 +231,13 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
 		}
 
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
 		portForwards = append(portForwards, []string{
-			*value.ResourceType,
+			resourceType,
 			selector,
 			portMappings,
 		})

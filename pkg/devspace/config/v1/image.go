@@ -10,11 +10,10 @@ type ImageConfig struct {
 
 //BuildConfig defines the build process for an image
 type BuildConfig struct {
-	ContextPath     *string       `yaml:"contextPath"`
-	DockerfilePath  *string       `yaml:"dockerfilePath"`
-	Engine          *BuildEngine  `yaml:"engine"`
-	LatestTimestamp *string       `yaml:"latestTimestamp"`
-	Options         *BuildOptions `yaml:"options"`
+	ContextPath    *string       `yaml:"contextPath"`
+	DockerfilePath *string       `yaml:"dockerfilePath"`
+	Engine         *BuildEngine  `yaml:"engine"`
+	Options        *BuildOptions `yaml:"options"`
 }
 
 //BuildEngine defines which build engine to use

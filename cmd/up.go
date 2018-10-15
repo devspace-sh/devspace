@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,24 +13,16 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
-	"github.com/covexo/devspace/pkg/devspace/builder"
-
-	"github.com/docker/docker/api/types"
-
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
-
-	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/image"
 
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -44,7 +35,7 @@ import (
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
 	flags     *UpCmdFlags
-	helm      *helmClient.HelmClientWrapper
+	helm      *helmClient.ClientWrapper
 	kubectl   *kubernetes.Clientset
 	workdir   string
 	pod       *k8sv1.Pod
@@ -125,7 +116,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	cmd.workdir = workdir
-
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
 		initCmd := &InitCmd{
@@ -156,32 +146,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.initRegistries()
 	}
 
-	// Build image if necessary
-	mustRedeploy := cmd.buildImages()
-
-	// Check if the chart directory has changed
-	hash, err := hash.Directory("chart")
-	if err != nil {
-		log.Fatalf("Error hashing chart directory: %v", err)
-	}
-
-	// Load config
-	config := configutil.GetConfig(false)
-
-	// Check if we find a running release pod
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-	if err != nil || mustRedeploy || cmd.flags.deploy || config.DevSpace.ChartHash == nil || *config.DevSpace.ChartHash != hash {
-		cmd.deployChart()
-
-		config.DevSpace.ChartHash = &hash
-
-		err = configutil.SaveConfig()
-		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
-		}
-	} else {
-		cmd.pod = pod
-	}
+	cmd.buildAndDeploy()
 
 	if cmd.flags.portforwarding {
 		cmd.startPortForwarding()
@@ -199,12 +164,47 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
 }
 
+func (cmd *UpCmd) buildAndDeploy() {
+	// Load config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
+	// Build image if necessary
+	mustRedeploy := cmd.buildImages(generatedConfig)
+
+	// Check if the chart directory has changed
+	hash, err := hash.Directory("chart")
+	if err != nil {
+		log.Fatalf("Error hashing chart directory: %v", err)
+	}
+
+	// Check if we find a running release pod
+	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
+	if err != nil || mustRedeploy || cmd.flags.deploy || generatedConfig.HelmChartHash != hash {
+		cmd.deployChart(generatedConfig)
+
+		generatedConfig.HelmChartHash = hash
+
+		// Save Config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
+		}
+	} else {
+		cmd.pod = pod
+	}
+}
+
 func (cmd *UpCmd) ensureNamespace() error {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	releaseNamespace := *config.DevSpace.Release.Namespace
 
 	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
 	if err != nil {
+		log.Infof("Create namespace %s", releaseNamespace)
+
 		// Create release namespace
 		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -276,7 +276,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 				return err
 			}
 		} else {
-			cfg := configutil.GetConfig(false)
+			cfg := configutil.GetConfig()
 
 			if cfg.Cluster.CloudProvider == nil || *cfg.Cluster.CloudProvider == "" {
 				log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + clusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
@@ -288,10 +288,10 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 }
 
 func (cmd *UpCmd) initRegistries() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registryMap := *config.Registries
 
-	if config.Services.InternalRegistry != nil {
+	if config.Services != nil && config.Services.InternalRegistry != nil && config.Registries != nil {
 		registryConf, regConfExists := registryMap["internal"]
 		if !regConfExists {
 			log.Fatal("Registry config not found for internal registry")
@@ -300,7 +300,6 @@ func (cmd *UpCmd) initRegistries() {
 		log.StartWait("Initializing internal registry")
 		err := registry.InitInternalRegistry(cmd.kubectl, cmd.helm, config.Services.InternalRegistry, registryConf)
 		log.StopWait()
-
 		if err != nil {
 			log.Fatalf("Internal registry error: %v", err)
 		}
@@ -313,207 +312,49 @@ func (cmd *UpCmd) initRegistries() {
 		log.Done("Internal registry started")
 	}
 
-	for registryName, registryConf := range registryMap {
-		if registryConf.Auth != nil && registryConf.Auth.Password != nil {
-			username := ""
-			password := *registryConf.Auth.Password
-			email := "noreply@devspace-cloud.com"
-			registryURL := ""
+	if registryMap != nil {
+		for registryName, registryConf := range registryMap {
+			if registryConf.Auth != nil && registryConf.Auth.Password != nil {
+				username := ""
+				password := *registryConf.Auth.Password
+				email := "noreply@devspace-cloud.com"
+				registryURL := ""
 
-			if registryConf.Auth.Username != nil {
-				username = *registryConf.Auth.Username
-			}
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-
-			log.StartWait("Creating image pull secret for registry: " + registryName)
-			err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
-			log.StopWait()
-
-			if err != nil {
-				log.Fatalf("Failed to create pull secret for registry: %v", err)
-			}
-		}
-	}
-}
-
-func (cmd *UpCmd) shouldRebuild(imageConf *v1.ImageConfig, dockerfilePath string) bool {
-	var dockerfileModTime time.Time
-
-	mustRebuild := true
-	dockerfileInfo, err := os.Stat(dockerfilePath)
-
-	if err != nil {
-		if imageConf.Build.LatestTimestamp == nil {
-			log.Fatalf("Dockerfile missing: %v", err)
-		} else {
-			mustRebuild = false
-		}
-	} else {
-		dockerfileModTime = dockerfileInfo.ModTime()
-
-		// When user has not used -b or --build flags
-		if cmd.flags.build == false {
-			if imageConf.Build.LatestTimestamp != nil {
-				latestBuildTime, _ := time.Parse(time.RFC3339Nano, *imageConf.Build.LatestTimestamp)
-
-				// only rebuild Docker image when Dockerfile has changed since latest build
-				mustRebuild = (latestBuildTime.Equal(dockerfileModTime) == false)
-			}
-		}
-	}
-
-	imageConf.Build.LatestTimestamp = configutil.String(dockerfileModTime.Format(time.RFC3339Nano))
-	return mustRebuild
-}
-
-// returns true when one of the images had to be rebuild
-func (cmd *UpCmd) buildImages() bool {
-	re := false
-	config := configutil.GetConfig(false)
-
-	for imageName, imageConf := range *config.Images {
-		dockerfilePath := "./Dockerfile"
-		contextPath := "./"
-
-		if imageConf.Build.DockerfilePath != nil {
-			dockerfilePath = *imageConf.Build.DockerfilePath
-		}
-
-		if imageConf.Build.ContextPath != nil {
-			contextPath = *imageConf.Build.ContextPath
-		}
-
-		dockerfilePath, err := filepath.Abs(dockerfilePath)
-		if err != nil {
-			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
-		}
-
-		contextPath, err = filepath.Abs(contextPath)
-		if err != nil {
-			log.Fatalf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
-		}
-
-		if cmd.shouldRebuild(imageConf, dockerfilePath) {
-			re = true
-			imageTag, randErr := randutil.GenerateRandomString(7)
-
-			if randErr != nil {
-				log.Fatalf("Image building failed: %s", randErr.Error())
-			}
-			registryConf, err := registry.GetRegistryConfig(imageConf)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			var imageBuilder builder.Interface
-
-			buildInfo := "Building image '%s' with engine '%s'"
-			engineName := ""
-			registryURL := ""
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-			if registryURL == "hub.docker.com" {
-				registryURL = ""
-			}
-
-			if imageConf.Build.Engine.Kaniko != nil {
-				engineName = "kaniko"
-				buildNamespace := *config.DevSpace.Release.Namespace
-				allowInsecurePush := false
-
-				if imageConf.Build.Engine.Kaniko.Namespace != nil {
-					buildNamespace = *imageConf.Build.Engine.Kaniko.Namespace
-				}
-
-				if registryConf.Insecure != nil {
-					allowInsecurePush = *registryConf.Insecure
-				}
-				imageBuilder, err = kaniko.NewBuilder(registryURL, *imageConf.Name, imageTag, buildNamespace, cmd.kubectl, allowInsecurePush)
-				if err != nil {
-					log.Fatalf("Error creating kaniko builder: %v", err)
-				}
-			} else {
-				engineName = "docker"
-				preferMinikube := true
-
-				if imageConf.Build.Engine.Docker.PreferMinikube != nil {
-					preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
-				}
-
-				imageBuilder, err = docker.NewBuilder(registryURL, *imageConf.Name, imageTag, preferMinikube)
-				if err != nil {
-					log.Fatalf("Error creating docker client: %v", err)
-				}
-			}
-
-			log.Infof(buildInfo, imageName, engineName)
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-
-			username := ""
-			password := ""
-			if registryConf.Auth != nil {
 				if registryConf.Auth.Username != nil {
 					username = *registryConf.Auth.Username
 				}
+				if registryConf.URL != nil {
+					registryURL = *registryConf.URL
+				}
 
-				if registryConf.Auth.Password != nil {
-					password = *registryConf.Auth.Password
+				log.StartWait("Creating image pull secret for registry: " + registryName)
+				err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
+				log.StopWait()
+
+				if err != nil {
+					log.Fatalf("Failed to create pull secret for registry: %v", err)
 				}
 			}
-
-			log.StartWait("Authenticating (" + registryURL + ")")
-			_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
-			log.StopWait()
-
-			if err != nil {
-				log.Fatalf("Error during image registry authentication: %v", err)
-			}
-
-			log.Done("Authentication successful (" + registryURL + ")")
-
-			buildOptions := &types.ImageBuildOptions{}
-			if imageConf.Build.Options != nil {
-				if imageConf.Build.Options.BuildArgs != nil {
-					buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
-				}
-				if imageConf.Build.Options.Target != nil {
-					buildOptions.Target = *imageConf.Build.Options.Target
-				}
-				if imageConf.Build.Options.Network != nil {
-					buildOptions.NetworkMode = *imageConf.Build.Options.Network
-				}
-			}
-
-			err = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
-			if err != nil {
-				log.Fatalf("Error during image build: %v", err)
-			}
-
-			err = imageBuilder.PushImage()
-			if err != nil {
-				log.Fatalf("Error during image push: %v", err)
-			}
-
-			log.Info("Image pushed to registry (" + registryURL + ")")
-			imageConf.Tag = &imageTag
-
-			err = configutil.SaveConfig()
-			if err != nil {
-				log.Fatalf("Config saving error: %s", err.Error())
-			}
-
-			log.Done("Done building and pushing image '" + imageName + "'")
-		} else {
-			log.Infof("Skip building image '%s'", imageName)
 		}
 	}
+}
+
+// returns true when one of the images had to be rebuild
+func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
+	re := false
+	config := configutil.GetConfig()
+
+	for imageName, imageConf := range *config.Images {
+		shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if shouldRebuild {
+			re = true
+		}
+	}
+
 	return re
 }
 
@@ -532,10 +373,11 @@ func (cmd *UpCmd) initHelm() {
 	}
 }
 
-func (cmd *UpCmd) deployChart() {
-	config := configutil.GetConfig(false)
+func (cmd *UpCmd) deployChart(generatedConfig *generated.Config) {
+	config := configutil.GetConfig()
 
 	log.StartWait("Deploying helm chart")
+	defer log.StopWait()
 
 	releaseName := *config.DevSpace.Release.Name
 	releaseNamespace := *config.DevSpace.Release.Namespace
@@ -553,7 +395,7 @@ func (cmd *UpCmd) deployChart() {
 
 	for imageName, imageConf := range *config.Images {
 		container := map[string]interface{}{}
-		container["image"] = registry.GetImageURL(imageConf, true)
+		container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
 
 		if cmd.flags.noSleep {
 			container["command"] = []string{}
@@ -581,9 +423,6 @@ func (cmd *UpCmd) deployChart() {
 	overwriteValues["pullSecrets"] = pullSecrets
 
 	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
-
-	log.StopWait()
-
 	if err != nil {
 		log.Fatalf("Unable to deploy helm chart: %s", err.Error())
 	}
@@ -591,75 +430,15 @@ func (cmd *UpCmd) deployChart() {
 	releaseRevision := int(appRelease.Version)
 	log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
 	log.StartWait("Waiting for release pod to become ready")
-	defer log.StopWait()
 
-	for true {
-		podList, err := cmd.kubectl.Core().Pods(releaseNamespace).List(metav1.ListOptions{
-			LabelSelector: "release=" + releaseName,
-		})
-
-		if err != nil {
-			log.Panicf("Unable to list devspace pods: %s", err.Error())
-		}
-
-		if len(podList.Items) > 0 {
-			highestRevision := 0
-			var selectedPod *k8sv1.Pod
-
-			for i, pod := range podList.Items {
-				if kubectl.GetPodStatus(&pod) == "Terminating" {
-					continue
-				}
-
-				podRevision, podHasRevision := pod.Annotations["revision"]
-				hasHigherRevision := (i == 0)
-
-				if !hasHigherRevision && podHasRevision {
-					podRevisionInt, _ := strconv.Atoi(podRevision)
-
-					if podRevisionInt > highestRevision {
-						hasHigherRevision = true
-					}
-				}
-
-				if hasHigherRevision {
-					selectedPod = &pod
-					highestRevision, _ = strconv.Atoi(podRevision)
-				}
-			}
-
-			if selectedPod != nil {
-				_, hasRevision := selectedPod.Annotations["revision"]
-
-				if !hasRevision || highestRevision == releaseRevision {
-					if !hasRevision {
-						log.Warn("Found pod without revision. Use annotation 'revision' for your pods to avoid this warning.")
-					}
-
-					cmd.pod = selectedPod
-					err = waitForPodReady(cmd.kubectl, cmd.pod, 2*60*time.Second, 5*time.Second)
-
-					if err != nil {
-						log.Fatalf("Error during waiting for pod: %s", err.Error())
-					}
-
-					break
-				} else {
-					log.Info("Waiting for release upgrade to complete.")
-				}
-			}
-		} else {
-			log.Info("Waiting for release to be deployed.")
-		}
-
-		time.Sleep(2 * time.Second)
+	cmd.pod, err = helmClient.WaitForReleasePodToGetReady(cmd.kubectl, releaseName, releaseNamespace, releaseRevision)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	log.StopWait()
 }
 
 func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	syncConfigs := make([]*synctool.SyncConfig, 0, len(*config.DevSpace.Sync))
 
 	for _, syncPath := range *config.DevSpace.Sync {
@@ -744,10 +523,10 @@ func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
 }
 
 func (cmd *UpCmd) startPortForwarding() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	for _, portForwarding := range *config.DevSpace.PortForwarding {
-		if *portForwarding.ResourceType == "pod" {
+		if portForwarding.ResourceType == nil || *portForwarding.ResourceType == "pod" {
 			if len(*portForwarding.LabelSelector) > 0 {
 				labels := make([]string, 0, len(*portForwarding.LabelSelector))
 
@@ -788,23 +567,4 @@ func (cmd *UpCmd) startPortForwarding() {
 			log.Warn("Currently only pod resource type is supported for portforwarding")
 		}
 	}
-}
-
-func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
-	for maxWaitTime > 0 {
-		pod, err := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-
-		if err != nil {
-			return err
-		}
-
-		if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].Ready {
-			return nil
-		}
-
-		time.Sleep(checkInterval)
-		maxWaitTime = maxWaitTime - checkInterval
-	}
-
-	return fmt.Errorf("Max wait time expired")
 }

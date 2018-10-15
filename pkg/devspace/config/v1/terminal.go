@@ -2,6 +2,8 @@ package v1
 
 // Terminal describes the terminal options
 type Terminal struct {
-	ContainerName *string    `yaml:"containerName"`
-	Command       *[]*string `yaml:"command"`
+	ResourceType  *string             `yaml:"resourceType"`
+	LabelSelector *map[string]*string `yaml:"labelSelector"`
+	ContainerName *string             `yaml:"containerName"`
+	Command       *[]*string          `yaml:"command"`
 }

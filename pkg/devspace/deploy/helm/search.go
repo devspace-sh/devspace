@@ -24,7 +24,7 @@ func (s stringArraySorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s stringArraySorter) Less(a, b int) bool { return s[a][0] < s[b][0] }
 
 // PrintAllAvailableCharts prints all available charts
-func (helmClientWrapper *HelmClientWrapper) PrintAllAvailableCharts() {
+func (helmClientWrapper *ClientWrapper) PrintAllAvailableCharts() {
 	var values stringArraySorter
 	var header = []string{
 		"NAME",
@@ -74,7 +74,7 @@ func (helmClientWrapper *HelmClientWrapper) PrintAllAvailableCharts() {
 }
 
 // SearchChart searches the chart name in all repositories
-func (helmClientWrapper *HelmClientWrapper) SearchChart(chartName, chartVersion, appVersion string) (*repo.Entry, *repo.ChartVersion, error) {
+func (helmClientWrapper *ClientWrapper) SearchChart(chartName, chartVersion, appVersion string) (*repo.Entry, *repo.ChartVersion, error) {
 	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
 	if err != nil {
 		return nil, nil, err
@@ -127,7 +127,7 @@ func (helmClientWrapper *HelmClientWrapper) SearchChart(chartName, chartVersion,
 }
 
 // BuildDependencies builds the dependencies
-func (helmClientWrapper *HelmClientWrapper) BuildDependencies(chartPath string) error {
+func (helmClientWrapper *ClientWrapper) BuildDependencies(chartPath string) error {
 	man := &helmdownloader.Manager{
 		Out:       ioutil.Discard,
 		ChartPath: chartPath,
@@ -139,7 +139,7 @@ func (helmClientWrapper *HelmClientWrapper) BuildDependencies(chartPath string) 
 }
 
 // UpdateDependencies updates the dependencies
-func (helmClientWrapper *HelmClientWrapper) UpdateDependencies(chartPath string) error {
+func (helmClientWrapper *ClientWrapper) UpdateDependencies(chartPath string) error {
 	man := &helmdownloader.Manager{
 		Out:       ioutil.Discard,
 		ChartPath: chartPath,

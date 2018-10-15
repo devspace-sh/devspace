@@ -218,6 +218,7 @@ func (s *SyncConfig) mainLoop() {
 		err := s.initialSync()
 		if err != nil {
 			s.Error(err)
+			log.Fatalf("[Sync] Sync stopped: %v", err)
 			return
 		}
 
@@ -233,6 +234,7 @@ func (s *SyncConfig) startUpstream() {
 	err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All)
 	if err != nil {
 		s.Error(err)
+		log.Fatalf("[Sync] Sync stopped: %v", err)
 		return
 	}
 
@@ -245,6 +247,7 @@ func (s *SyncConfig) startUpstream() {
 	err = s.upstream.mainLoop()
 	if err != nil {
 		s.Error(err)
+		log.Fatalf("[Sync] Sync stopped: %v", err)
 	}
 }
 
@@ -254,6 +257,7 @@ func (s *SyncConfig) startDownstream() {
 	err := s.downstream.mainLoop()
 	if err != nil {
 		s.Error(err)
+		log.Fatalf("[Sync] Sync stopped: %v", err)
 	}
 }
 

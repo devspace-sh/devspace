@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"unsafe"
 
 	"github.com/covexo/devspace/pkg/util/fsutil"
 	yaml "gopkg.in/yaml.v2"
@@ -15,58 +14,48 @@ import (
 
 //SaveConfig writes the data of a config to its yaml file
 func SaveConfig() error {
-	configExists, _ := ConfigExists()
-	baseConfig := makeConfig()
-
-	// just in case someone has set a pointer to one of the structs to nil, merge empty an empty config object into all configs
-	merge(config, baseConfig, unsafe.Pointer(&config), unsafe.Pointer(baseConfig))
-	merge(configRaw, baseConfig, unsafe.Pointer(&configRaw), unsafe.Pointer(baseConfig))
-	merge(overwriteConfig, baseConfig, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(baseConfig))
-	merge(overwriteConfigRaw, baseConfig, unsafe.Pointer(&overwriteConfigRaw), unsafe.Pointer(baseConfig))
-
-	configMapRaw, overwriteMapRaw, configErr := getConfigAndOverwriteMaps(config, configRaw, overwriteConfig, overwriteConfigRaw)
+	workdir, _ := os.Getwd()
+	configMapRaw, overwriteMapRaw, err := getConfigAndOverwriteMaps(config, configRaw, overwriteConfig, overwriteConfigRaw)
+	if err != nil {
+		return err
+	}
 
 	configMap, _ := configMapRaw.(map[interface{}]interface{})
 	overwriteMap, _ := overwriteMapRaw.(map[interface{}]interface{})
 
-	if configErr != nil {
-		return configErr
+	configYaml, err := yaml.Marshal(configMap)
+	if err != nil {
+		return err
 	}
 
-	configYaml, yamlErr := yaml.Marshal(configMap)
-
-	if yamlErr != nil {
-		return yamlErr
-	}
-	configDir := filepath.Dir(Workdir + configPath)
-
+	configDir := filepath.Dir(workdir + ConfigPath)
 	os.MkdirAll(configDir, os.ModePerm)
 
-	if !configExists {
+	// Check if .gitignore exists
+	_, err = os.Stat(filepath.Join(configDir, ".gitignore"))
+	if os.IsNotExist(err) {
 		fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 	}
-	writeErr := ioutil.WriteFile(Workdir+configPath, configYaml, os.ModePerm)
 
+	writeErr := ioutil.WriteFile(workdir+ConfigPath, configYaml, os.ModePerm)
 	if writeErr != nil {
 		return writeErr
 	}
 
 	if overwriteMap != nil {
-		overwriteConfigYaml, yamlErr := yaml.Marshal(overwriteMap)
-
-		if yamlErr != nil {
-			return yamlErr
+		overwriteConfigYaml, err := yaml.Marshal(overwriteMap)
+		if err != nil {
+			return err
 		}
-		return ioutil.WriteFile(Workdir+overwriteConfigPath, overwriteConfigYaml, os.ModePerm)
+
+		return ioutil.WriteFile(workdir+OverwriteConfigPath, overwriteConfigYaml, os.ModePerm)
 	}
-	configLoaded = true
-	overwriteConfigLoaded = true
 
 	return nil
 }
 
+// TODO: Think about removing configRaw & overwriteConfigRaw
 func getConfigAndOverwriteMaps(config interface{}, configRaw interface{}, overwriteConfig interface{}, overwriteConfigRaw interface{}) (interface{}, interface{}, error) {
-
 	object, isObjectNil := getPointerValue(config)
 
 	objectType := reflect.TypeOf(object)

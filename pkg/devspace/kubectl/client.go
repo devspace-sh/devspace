@@ -47,7 +47,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
@@ -59,7 +59,7 @@ func GetClientConfig() (*rest.Config, error) {
 			return nil, fmt.Errorf("Couldn't load cloud provider config: %v", err)
 		}
 
-		err = cloud.Update(providerConfig, config, false)
+		err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
@@ -70,7 +70,7 @@ func GetClientConfig() (*rest.Config, error) {
 		}
 	}
 
-	if (config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig) || config.Cluster.APIServer == nil {
+	if config.Cluster.APIServer == nil {
 		// If we should use a certain kube context use that
 		if config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
 			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
@@ -109,6 +109,7 @@ func GetClientConfig() (*rest.Config, error) {
 	kubeContext := api.NewContext()
 	kubeContext.Cluster = "devspace"
 	kubeContext.AuthInfo = "devspace"
+	kubeContext.Namespace = *config.DevSpace.Release.Namespace
 
 	kubeConfig := api.NewConfig()
 	kubeConfig.AuthInfos["devspace"] = kubeAuthInfo
@@ -123,8 +124,8 @@ func GetClientConfig() (*rest.Config, error) {
 func IsMinikube() bool {
 	if isMinikubeVar == nil {
 		isMinikube := false
-		config := configutil.GetConfig(false)
-		if config.Cluster.UseKubeConfig != nil && *config.Cluster.UseKubeConfig == true {
+		config := configutil.GetConfig()
+		if config.Cluster.APIServer == nil {
 			if config.Cluster.KubeContext == nil {
 				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 				kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})

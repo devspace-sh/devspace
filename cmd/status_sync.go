@@ -94,11 +94,25 @@ func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 		}
 
 		parsedTime, _ := time.Parse(time.RFC3339, status.LastActivityTime)
+		if parsedTime.Unix() == 0 {
+			parsedTime = time.Now()
+		}
+
 		latestActivity += " (" + intToTimeString(int(time.Now().Unix()-parsedTime.Unix())) + " ago)"
 
 		syncStatus := status.Status
 		if syncStatus == "" {
 			syncStatus = "Active"
+		}
+
+		if len(status.Pod) > 15 {
+			status.Pod = status.Pod[:15] + "..."
+		}
+		if len(status.Local) > 20 {
+			status.Local = "..." + status.Local[len(status.Local)-20:len(status.Local)]
+		}
+		if len(status.Container) > 20 {
+			status.Container = "..." + status.Container[len(status.Container)-20:len(status.Container)]
 		}
 
 		values = append(values, []string{
@@ -118,39 +132,39 @@ func intToTimeString(timeDifference int) string {
 	days := math.Floor(float64(timeDifference) / (60.0 * 60.0 * 24.0))
 	if days > 0 {
 		if days == 1 {
-			return "1 day"
+			return "1d"
 		}
 
-		return strconv.Itoa(int(days)) + " days"
+		return strconv.Itoa(int(days)) + "d"
 	}
 
 	hours := math.Floor(float64(timeDifference) / (60.0 * 60.0))
 	if hours > 0 {
 		if hours == 1 {
-			return "1 hour"
+			return "1h"
 		}
 
-		return strconv.Itoa(int(hours)) + " hours"
+		return strconv.Itoa(int(hours)) + "h"
 	}
 
 	minutes := math.Floor(float64(timeDifference) / 60.0)
 	if minutes > 0 {
 		if minutes == 1 {
-			return "1 minute"
+			return "1m"
 		}
 
-		return strconv.Itoa(int(minutes)) + " minutes"
+		return strconv.Itoa(int(minutes)) + "m"
 	}
 
 	if timeDifference > 0 {
 		if timeDifference == 1 {
-			return "1 seconds"
+			return "1s"
 		}
 
-		return strconv.Itoa(timeDifference) + " seconds"
+		return strconv.Itoa(timeDifference) + "s"
 	}
 
-	return "0 seconds"
+	return "0s"
 }
 
 func isSyncJSONMapInvalid(jsonMap map[string]string) bool {

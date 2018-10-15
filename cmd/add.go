@@ -14,10 +14,10 @@ import (
 	"github.com/covexo/devspace/pkg/util/tar"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/russross/blackfriday"
 	"github.com/skratchdot/open-golang/open"
@@ -309,7 +309,7 @@ func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if cmd.syncFlags.Selector == "" {
 		cmd.syncFlags.Selector = "release=" + *config.DevSpace.Release.Name
@@ -345,7 +345,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
+		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
 		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
@@ -362,7 +362,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	if cmd.portFlags.Selector == "" {
 		cmd.portFlags.Selector = "release=" + *config.DevSpace.Release.Name
@@ -390,7 +390,7 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	// Check if we should add to existing port mapping
 	for _, v := range *config.DevSpace.PortForwarding {
@@ -411,7 +411,7 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 		}
 	}
 	portMap := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-		ResourceType:  configutil.String(cmd.portFlags.ResourceType),
+		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 	})

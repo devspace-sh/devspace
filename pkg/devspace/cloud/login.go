@@ -46,10 +46,10 @@ func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, 
 		return "", nil, nil, err
 	}
 
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == http.StatusUnauthorized {
 		return Login(provider)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
 	}
 
@@ -112,7 +112,7 @@ func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 }
 
 // Update updates the cloud provider information if necessary
-func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContext bool) error {
+func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, switchKubeContext bool) error {
 	cloudProvider := *dsConfig.Cluster.CloudProvider
 
 	// Don't update anything if we don't use a cloud provider
@@ -131,9 +131,8 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, switchKubeContex
 	}
 
 	dsConfig.DevSpace.Release.Namespace = &namespace
-	dsConfig.Services.Tiller.Release.Namespace = &namespace
 
-	if *dsConfig.Cluster.UseKubeConfig {
+	if useKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace
 
 		err = UpdateKubeConfig(kubeContext, namespace, cluster, authInfo, switchKubeContext)

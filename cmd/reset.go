@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
@@ -19,7 +19,7 @@ import (
 // ResetCmd holds the needed command information
 type ResetCmd struct {
 	flags   *ResetCmdFlags
-	helm    *helmClient.HelmClientWrapper
+	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
@@ -193,7 +193,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *ResetCmd) determineResetExtent() {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	cmd.flags.deleteRelease = true
 
@@ -260,12 +260,12 @@ func (cmd *ResetCmd) shouldContinue() bool {
 
 func (cmd *ResetCmd) deleteRelease() error {
 	var err error
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	releaseName := *config.DevSpace.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
 
 		if isDeployed == false {
 			return nil
@@ -285,12 +285,12 @@ func (cmd *ResetCmd) deleteRelease() error {
 
 func (cmd *ResetCmd) deleteRegistry() error {
 	var err error
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
 	registryReleaseName := *config.Services.InternalRegistry.Release.Name
 
 	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl, config.Services.Tiller)
+		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
 
 		if isDeployed == false {
 			return nil

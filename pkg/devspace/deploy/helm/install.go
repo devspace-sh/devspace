@@ -40,7 +40,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	chart, err := helmchartutil.Load(chartPath)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (helmClientWrapper *HelmClientWrapper) InstallChartByPath(releaseName strin
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *HelmClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}

@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/helm"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,7 +79,7 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.HelmClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
+func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
 	registryReleaseName := *internalRegistry.Release.Name
 	registryReleaseDeploymentName := registryReleaseName + "-docker-registry"
 	registryReleaseNamespace := *internalRegistry.Release.Namespace
@@ -128,34 +129,41 @@ func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, cl
 }
 
 // GetImageURL returns the image (optional with tag)
-func GetImageURL(imageConfig *v1.ImageConfig, includingLatestTag bool) string {
-	registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
-
-	if registryConfErr != nil {
-		log.Fatal(registryConfErr)
-	}
+func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	image := *imageConfig.Name
-	registryURL := *registryConfig.URL
 
-	if registryURL != "" && registryURL != "hub.docker.com" {
-		image = registryURL + "/" + image
+	if imageConfig.Registry != nil {
+		registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
+		if registryConfErr != nil {
+			log.Fatal(registryConfErr)
+		}
+
+		registryURL := *registryConfig.URL
+		if registryURL != "" && registryURL != "hub.docker.com" {
+			image = registryURL + "/" + image
+		}
 	}
 
 	if includingLatestTag {
-		image = image + ":" + *imageConfig.Tag
+		if imageConfig.Tag != nil {
+			image = image + ":" + *imageConfig.Tag
+		} else {
+			image = image + ":" + generatedConfig.ImageTags[*imageConfig.Name]
+		}
 	}
+
 	return image
 }
 
 // GetRegistryConfig returns the registry config for an image or an error if the registry is not defined
 func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 	registryName := *imageConfig.Registry
 	registryMap := *config.Registries
 	registryConfig, registryFound := registryMap[registryName]
-
 	if !registryFound {
 		return nil, errors.New("Unable to find registry: " + registryName)
 	}
+
 	return registryConfig, nil
 }

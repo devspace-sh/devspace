@@ -8,8 +8,8 @@ type ServiceConfig struct {
 
 //TillerConfig defines the tiller service
 type TillerConfig struct {
-	Release       *Release   `yaml:"release"`
-	AppNamespaces *[]*string `yaml:"appNamespaces"`
+	Release       *Release   `yaml:"release,omitempty"`
+	AppNamespaces *[]*string `yaml:"appNamespaces,omitempty"`
 }
 
 //InternalRegistry defines the deployment of an internal registry
