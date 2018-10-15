@@ -1,7 +1,7 @@
 registries:
   internal:
     auth:
-      password: qcOK5tozAScW
-      username: user-rWmwx
+      password: Hdm86IdMpIHm
+      username: user-aYHpK
     insecure: true
-    url: 10.108.113.21:5000
+    url: 10.104.107.232:5000
