@@ -105,7 +105,8 @@ func InternalRegistry() error {
 		internalRegistryConfig.Release.Name = configutil.String("devspace-registry")
 	}
 	if internalRegistryConfig.Release.Namespace == nil {
-		internalRegistryConfig.Release.Namespace = config.DevSpace.Release.Namespace
+		devspaceNamespace := configutil.GetDevSpaceNamespace(config)
+		internalRegistryConfig.Release.Namespace = &devspaceNamespace
 	}
 
 	overwriteRegistryMap := *overwriteConfig.Registries

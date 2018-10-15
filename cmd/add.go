@@ -312,7 +312,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if cmd.syncFlags.Selector == "" {
-		cmd.syncFlags.Selector = "release=" + *config.DevSpace.Release.Name
+		cmd.syncFlags.Selector = "release=" + *configutil.GetDefaultDevSpaceDefaultReleaseName(config)
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
@@ -365,17 +365,15 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if cmd.portFlags.Selector == "" {
-		cmd.portFlags.Selector = "release=" + *config.DevSpace.Release.Name
+		cmd.portFlags.Selector = "release=" + *configutil.GetDefaultDevSpaceDefaultReleaseName(config)
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
-
 	if err != nil {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
 	portMappings, err := parsePortMappings(args[0])
-
 	if err != nil {
 		log.Fatalf("Error parsing port mappings: %s", err.Error())
 	}
@@ -383,7 +381,6 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 	cmd.insertOrReplacePortMapping(labelSelectorMap, portMappings)
 
 	err = configutil.SaveConfig()
-
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}

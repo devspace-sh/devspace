@@ -78,10 +78,6 @@ func GetConfig() *v1.Config {
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
-
-		if config.DevSpace.Release != nil && config.DevSpace.Release.Namespace == nil {
-			config.DevSpace.Release.Namespace = String("default")
-		}
 	})
 
 	return config

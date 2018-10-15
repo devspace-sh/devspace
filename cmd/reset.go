@@ -77,18 +77,11 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Failf("Failed to initialize kubectl client: %v", err)
 		}
 	}
+
 	cmd.determineResetExtent()
 
 	if cmd.flags.deleteRelease {
-		log.StartWait("Deleting devspace release")
 		err = cmd.deleteRelease()
-		log.StopWait()
-
-		if err != nil {
-			log.Failf("Error deleting release: %s", err.Error())
-		} else {
-			log.Done("Successfully deleted release")
-		}
 	}
 
 	if cmd.flags.deleteRegistry {
@@ -255,28 +248,8 @@ func (cmd *ResetCmd) shouldContinue() bool {
 }
 
 func (cmd *ResetCmd) deleteRelease() error {
-	var err error
-	config := configutil.GetConfig()
-
-	releaseName := *config.DevSpace.Release.Name
-
-	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
-
-		if isDeployed == false {
-			return nil
-		}
-
-		cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = cmd.helm.DeleteRelease(releaseName, true)
-
-	return err
+	deleteDevSpace(cmd.kubectl)
+	return nil
 }
 
 func (cmd *ResetCmd) deleteRegistry() error {

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -103,4 +104,14 @@ func SaveCloudConfig(config ProviderConfig) error {
 	}
 
 	return ioutil.WriteFile(cfgPath, out, 0600)
+}
+
+// UpdateDevSpaceConfig sets the devspace config to the correct namespaces
+func UpdateDevSpaceConfig(dsConfig *v1.Config, namespace string) error {
+	// Exchange namespaces
+	for _, deployConfig := range *dsConfig.DevSpace.Deployments {
+		deployConfig.Namespace = &namespace
+	}
+
+	return nil
 }

@@ -12,25 +12,19 @@ type ImageConfig struct {
 type BuildConfig struct {
 	ContextPath    *string       `yaml:"contextPath"`
 	DockerfilePath *string       `yaml:"dockerfilePath"`
-	Engine         *BuildEngine  `yaml:"engine"`
+	Kaniko         *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker         *DockerConfig `yaml:"docker,omitempty"`
 	Options        *BuildOptions `yaml:"options"`
 }
 
-//BuildEngine defines which build engine to use
-type BuildEngine struct {
-	Kaniko *KanikoBuildEngine `yaml:"kaniko"`
-	Docker *DockerBuildEngine `yaml:"docker"`
-}
-
-//KanikoBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost
-type KanikoBuildEngine struct {
-	Enabled   *bool   `yaml:"enabled"`
+// KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
+type KanikoConfig struct {
+	Cached    *bool   `yaml:"cached"`
 	Namespace *string `yaml:"namespace"`
 }
 
-//DockerBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost
-type DockerBuildEngine struct {
-	Enabled        *bool `yaml:"enabled"`
+// DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
+type DockerConfig struct {
 	PreferMinikube *bool `yaml:"preferMinikube"`
 }
 

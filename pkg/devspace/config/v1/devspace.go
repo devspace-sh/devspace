@@ -3,12 +3,12 @@ package v1
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
 	Terminal       *Terminal                `yaml:"terminal"`
-	Release        *Release                 `yaml:"release"`
+	Deployments    *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
 	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
 	Sync           *[]*SyncConfig           `yaml:"sync"`
 }
 
-//PortForwardingConfig defines the ports for a port forwarding to a DevSpace
+// PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
 	Namespace     *string             `yaml:"namespace"`
 	ResourceType  *string             `yaml:"resourceType,omitempty"`
@@ -16,13 +16,13 @@ type PortForwardingConfig struct {
 	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
 
-//PortMapping defines the ports for a PortMapping
+// PortMapping defines the ports for a PortMapping
 type PortMapping struct {
 	LocalPort  *int `yaml:"localPort"`
 	RemotePort *int `yaml:"remotePort"`
 }
 
-//SyncConfig defines the paths for a SyncFolder
+// SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
 	Namespace            *string             `yaml:"namespace"`
 	ResourceType         *string             `yaml:"resourceType,omitempty"`

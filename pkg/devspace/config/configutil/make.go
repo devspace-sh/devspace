@@ -12,11 +12,10 @@ func makeConfig() *v1.Config {
 		DevSpace: &v1.DevSpaceConfig{
 			Terminal:       &v1.Terminal{},
 			PortForwarding: &[]*v1.PortForwardingConfig{},
-			Release:        &v1.Release{},
+			Deployments:    &[]*v1.DeploymentConfig{},
 			Sync:           &[]*v1.SyncConfig{},
 		},
 		Images:     &map[string]*v1.ImageConfig{},
 		Registries: &map[string]*v1.RegistryConfig{},
-		Services:   &v1.ServiceConfig{},
 	}
 }

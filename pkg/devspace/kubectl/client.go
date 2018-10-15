@@ -109,7 +109,6 @@ func GetClientConfig() (*rest.Config, error) {
 	kubeContext := api.NewContext()
 	kubeContext.Cluster = "devspace"
 	kubeContext.AuthInfo = "devspace"
-	kubeContext.Namespace = *config.DevSpace.Release.Namespace
 
 	kubeConfig := api.NewConfig()
 	kubeConfig.AuthInfos["devspace"] = kubeAuthInfo

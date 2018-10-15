@@ -122,10 +122,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	configutil.Merge(config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
-			Release: &v1.Release{
-				Name:      configutil.String("devspace"),
-				Namespace: configutil.String("default"),
-			},
+			Deploy: &[]*v1.DeployConfig{},
 		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
@@ -200,11 +197,14 @@ func (cmd *InitCmd) initChartGenerator() {
 
 func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
-
-	config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *config.DevSpace.Release.Namespace,
+		DefaultValue:           "default",
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
+
+	*config.DevSpace.Deploy = append(*config.DevSpace.Deploy, &v1.DeployConfig{
+		Namespace: namespace,
 	})
 }
 
@@ -235,7 +235,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		LocalSubPath:  configutil.String("./"),
 		ResourceType:  nil,
 		LabelSelector: &map[string]*string{
-			"release": config.DevSpace.Release.Name,
+			"release": configutil.GetDefaultDevSpaceDefaultReleaseName(config),
 		},
 		UploadExcludePaths: &uploadExcludePaths,
 	})

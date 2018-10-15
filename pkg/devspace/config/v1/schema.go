@@ -10,12 +10,10 @@ type Config struct {
 	Images     *map[string]*ImageConfig    `yaml:"images,omitempty"`
 	Registries *map[string]*RegistryConfig `yaml:"registries,omitempty"`
 	Cluster    *Cluster                    `yaml:"cluster,omitempty"`
-	Services   *ServiceConfig              `yaml:"services,omitempty"`
+	Tiller     *TillerConfig               `yaml:"tiller,omitempty"`
 }
 
-//Release defines running version of a project
-type Release struct {
-	Name      *string                      `yaml:"name"`
-	Namespace *string                      `yaml:"namespace"`
-	Values    *map[interface{}]interface{} `yaml:"values,omitempty"`
+//TillerConfig defines the tiller service
+type TillerConfig struct {
+	Namespace *string `yaml:"namespace,omitempty"`
 }

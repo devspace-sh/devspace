@@ -130,7 +130,10 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 		return err
 	}
 
-	dsConfig.DevSpace.Release.Namespace = &namespace
+	err = UpdateDevSpaceConfig(dsConfig, namespace)
+	if err != nil {
+		return err
+	}
 
 	if useKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace
@@ -170,15 +173,13 @@ func UpdateKubeConfig(contextName, namespace string, cluster *api.Cluster, authI
 	config.Clusters[contextName] = cluster
 	config.AuthInfos[contextName] = authInfo
 
-	// Check if we need to add the context
-	if _, ok := config.Contexts[contextName]; !ok {
-		context := api.NewContext()
-		context.Cluster = contextName
-		context.AuthInfo = contextName
-		context.Namespace = namespace
+	// Update kube context
+	context := api.NewContext()
+	context.Cluster = contextName
+	context.AuthInfo = contextName
+	context.Namespace = namespace
 
-		config.Contexts[contextName] = context
-	}
+	config.Contexts[contextName] = context
 
 	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
 }

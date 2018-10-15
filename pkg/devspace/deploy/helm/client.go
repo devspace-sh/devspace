@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,7 +19,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
@@ -31,17 +31,21 @@ import (
 
 // ClientWrapper holds the necessary information for helm
 type ClientWrapper struct {
-	Client       *k8shelm.Client
-	Settings     *helmenvironment.EnvSettings
-	TillerConfig *v1.TillerConfig
-	kubectl      *kubernetes.Clientset
+	Client    *k8shelm.Client
+	Settings  *helmenvironment.EnvSettings
+	Namespace string
+	kubectl   *kubernetes.Clientset
 }
 
 // NewClient creates a new helm client
 func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*ClientWrapper, error) {
 	config := configutil.GetConfig()
-	tillerNamespace := GetTillerNamespace()
 
+	if config.Tiller == nil || config.Tiller.Namespace == nil {
+		return nil, errors.New("No tiller namespace specified")
+	}
+
+	tillerNamespace := *config.Tiller.Namespace
 	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
 		return nil, err
@@ -124,22 +128,13 @@ func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*Client
 		}
 	}
 
-	tillerConfig := config.Services.Tiller
-	if tillerConfig == nil {
-		tillerConfig = &v1.TillerConfig{
-			Release: &v1.Release{
-				Namespace: &tillerNamespace,
-			},
-		}
-	}
-
 	wrapper := &ClientWrapper{
 		Client: client,
 		Settings: &helmenvironment.EnvSettings{
 			Home: helmpath.Home(helmHomePath),
 		},
-		TillerConfig: tillerConfig,
-		kubectl:      kubectlClient,
+		Namespace: tillerNamespace,
+		kubectl:   kubectlClient,
 	}
 
 	_, err = os.Stat(stableRepoCachePathAbs)

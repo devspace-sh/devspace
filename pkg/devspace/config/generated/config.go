@@ -10,7 +10,7 @@ import (
 
 // Config specifies the runtime config struct
 type Config struct {
-	HelmChartHash          string            `yaml:"chartHash"`
+	ChartHashs             map[string]string `yaml:"chartHashs"`
 	DockerLatestTimestamps map[string]int64  `yaml:"dockerLatestTimestamps"`
 	ImageTags              map[string]string `yaml:"imageTags"`
 }

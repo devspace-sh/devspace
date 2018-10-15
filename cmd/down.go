@@ -3,8 +3,10 @@ package cmd
 import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	deployKubectl "github.com/covexo/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 )
@@ -43,30 +45,72 @@ your project, use: devspace reset
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-	config := configutil.GetConfig()
-
-	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
-
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
-	client, err := helmClient.NewClient(kubectl, false)
+	deleteDevSpace(kubectl)
+}
 
-	if err != nil {
-		log.Fatalf("Unable to initialize helm client: %s", err.Error())
-	}
+func deleteDevSpace(kubectl *kubernetes.Clientset) {
+	var err error
+	var client *helmClient.ClientWrapper
 
-	log.StartWait("Deleting release " + releaseName)
-	res, err := client.DeleteRelease(releaseName, true)
-	log.StopWait()
+	config := configutil.GetConfig()
 
-	if res != nil && res.Info != "" {
-		log.Donef("Successfully deleted release %s: %s", releaseName, res.Info)
-	} else if err != nil {
-		log.Donef("Error deleting release %s: %s", releaseName, err.Error())
-	} else {
-		log.Donef("Successfully deleted release %s", releaseName)
+	if config.DevSpace.Deploy != nil {
+		for _, deployConfig := range *config.DevSpace.Deploy {
+			// Delete kubectl engine
+			if deployConfig.Engine != nil && deployConfig.Engine.Kubectl != nil {
+				kubectlDeployConfig, err := deployKubectl.New(config, deployConfig)
+				if err != nil {
+					log.Warnf("Unable to create kubectl deploy config: %v", err)
+					continue
+				}
+
+				log.StartWait("Deleting kubectl deployment")
+				err = kubectlDeployConfig.Delete()
+				log.StopWait()
+				if err != nil {
+					log.Warnf("Error deleting kubectl manifests: %v", err)
+				}
+
+				log.Donef("Successfully deleted kubectl deployment")
+			} else {
+				// Delete with helm engine
+				defaultReleaseName := configutil.GetDefaultDevSpaceDefaultReleaseName(config)
+
+				releaseName := defaultReleaseName
+				if deployConfig.Engine != nil && deployConfig.Engine.Helm != nil && deployConfig.Engine.Helm.Release != nil {
+					releaseName = deployConfig.Engine.Helm.Release
+				}
+
+				if client == nil {
+					isDeployed := helmClient.IsTillerDeployed(kubectl)
+					if isDeployed == false {
+						continue
+					}
+
+					client, err = helmClient.NewClient(kubectl, false)
+					if err != nil {
+						log.Warnf("Unable to initialize helm client: %s", err.Error())
+						continue
+					}
+				}
+
+				log.StartWait("Deleting release " + *releaseName)
+				res, err := client.DeleteRelease(*releaseName, true)
+				log.StopWait()
+
+				if res != nil && res.Info != "" {
+					log.Donef("Successfully deleted release %s: %s", releaseName, res.Info)
+				} else if err != nil {
+					log.Warnf("Error deleting release %s: %s", releaseName, err.Error())
+				} else {
+					log.Donef("Successfully deleted release %s", releaseName)
+				}
+			}
+		}
 	}
 }

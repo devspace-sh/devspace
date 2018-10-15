@@ -93,7 +93,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 		if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Kaniko != nil {
 			engineName = "kaniko"
-			buildNamespace := *config.DevSpace.Release.Namespace
+			buildNamespace := configutil.GetDevSpaceNamespace(config)
 			allowInsecurePush := false
 
 			if imageConf.Build.Engine.Kaniko.Namespace != nil {
