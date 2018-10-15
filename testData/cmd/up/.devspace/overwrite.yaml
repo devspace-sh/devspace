@@ -1,0 +1,7 @@
+registries:
+  internal:
+    auth:
+      password: qcOK5tozAScW
+      username: user-rWmwx
+    insecure: true
+    url: 10.108.113.21:5000

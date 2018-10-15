@@ -6,8 +6,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/juju/errors"
@@ -32,11 +31,6 @@ func TestRun(t *testing.T) {
 	}
 	defer os.Chdir(workDirBefore)
 	os.Chdir(dir)
-
-	configutil.Workdir = dir
-	defer func() {
-		configutil.Workdir = workDirBefore
-	}()
 
 	upCmdObj := UpCmd{
 		flags: &UpCmdFlags{

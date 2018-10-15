@@ -1,17 +1,14 @@
 cluster:
   kubeContext: minikube
-  useKubeConfig: true
 devSpace:
-  chartHash: 21f351ac4bb6ea67a94e208a5e8f2e35e264813f175c370821289382429f4c68
   release:
     name: devspace
-    namespace: test-cmd-up
+    namespace: default
   sync:
   - containerPath: /app
     labelSelector:
       release: devspace
     localSubPath: ./
-    resourceType: pod
     uploadExcludePaths:
     - Dockerfile
     - .devspace/
@@ -21,28 +18,13 @@ images:
   default:
     build:
       engine:
-        docker:
+        kaniko:
           enabled: true
-      latestTimestamp: "2018-10-10T10:45:39.4575304+02:00"
     name: devspace
     registry: internal
-    tag: lqgCP25
-registries:
-  internal:
-    auth:
-      password: 1n9Vmwy7lD2c
-      username: user-HupRr
-    insecure: true
-    url: 10.0.0.157:5000
 services:
   internalRegistry:
     release:
       name: devspace-registry
-      namespace: test-cmd-up
-  tiller:
-    appNamespaces:
-    - test-cmd-up
-    - test-cmd-up
-    release:
-      namespace: test-cmd-up
+      namespace: default
 version: v1
