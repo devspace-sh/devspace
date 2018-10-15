@@ -24,7 +24,6 @@ import (
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
 	rebuild := false
-	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 
@@ -91,15 +90,14 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Kaniko != nil {
+		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
-			buildNamespace := configutil.GetDevSpaceNamespace(config)
-			allowInsecurePush := false
-
-			if imageConf.Build.Engine.Kaniko.Namespace != nil {
-				buildNamespace = *imageConf.Build.Engine.Kaniko.Namespace
+			if imageConf.Build.Kaniko.Namespace == nil {
+				log.Fatalf("No kaniko namespace configured for image %s", imageName)
 			}
 
+			buildNamespace := *imageConf.Build.Kaniko.Namespace
+			allowInsecurePush := false
 			if registryConf.Insecure != nil {
 				allowInsecurePush = *registryConf.Insecure
 			}
@@ -110,10 +108,10 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		} else {
 			engineName = "docker"
-			preferMinikube := true
 
-			if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Docker != nil && imageConf.Build.Engine.Docker.PreferMinikube != nil {
-				preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
+			preferMinikube := true
+			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.PreferMinikube != nil {
+				preferMinikube = *imageConf.Build.Docker.PreferMinikube
 			}
 
 			imageBuilder, err = docker.NewBuilder(registryURL, imageName, imageTag, preferMinikube)

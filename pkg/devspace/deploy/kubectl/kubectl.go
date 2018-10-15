@@ -4,26 +4,33 @@ import (
 	"errors"
 	"path/filepath"
 
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 )
 
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
-	CmdPath   string
-	Context   string
-	Namespace string
-	Manifests []string
+	KubeClient *kubernetes.Clientset // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
+	CmdPath    string
+	Context    string
+	Namespace  string
+	Manifests  []string
 }
 
 // New creates a new deploy config for kubectl
-func New(config *v1.Config, deployConfig *v1.DeploymentConfig) (*DeployConfig, error) {
+func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
 	if deployConfig.Kubectl.Manifests == nil {
 		return nil, errors.New("No manifests defined for kubectl deploy")
 	}
+
+	config := configutil.GetConfig()
 
 	context := ""
 	if config.Cluster != nil && config.Cluster.KubeContext != nil {
@@ -46,10 +53,11 @@ func New(config *v1.Config, deployConfig *v1.DeploymentConfig) (*DeployConfig, e
 	}
 
 	return &DeployConfig{
-		CmdPath:   cmdPath,
-		Context:   context,
-		Namespace: namespace,
-		Manifests: manifests,
+		KubeClient: kubectl,
+		CmdPath:    cmdPath,
+		Context:    context,
+		Namespace:  namespace,
+		Manifests:  manifests,
 	}, nil
 }
 
@@ -59,7 +67,7 @@ func (d *DeployConfig) Status() error {
 }
 
 // Delete deletes all matched manifests from kubernetes
-func (d *DeployConfig) Delete() error {
+func (d *DeployConfig) Delete(verbose bool) error {
 	return nil
 }
 

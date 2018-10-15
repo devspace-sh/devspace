@@ -16,7 +16,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/russross/blackfriday"
@@ -312,17 +312,15 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if cmd.syncFlags.Selector == "" {
-		cmd.syncFlags.Selector = "release=" + *configutil.GetDefaultDevSpaceDefaultReleaseName(config)
+		cmd.syncFlags.Selector = "release=" + getNameOfFirstHelmDeployment()
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
-
 	if err != nil {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
 	excludedPaths := make([]string, 0, 0)
-
 	if cmd.syncFlags.ExcludedPaths != "" {
 		excludedPathStrings := strings.Split(cmd.syncFlags.ExcludedPaths, ",")
 
@@ -333,10 +331,10 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	workdir, err := os.Getwd()
-
 	if err != nil {
 		log.Fatalf("Unable to determine current workdir: %s", err.Error())
 	}
+
 	cmd.syncFlags.LocalPath = strings.TrimPrefix(cmd.syncFlags.LocalPath, workdir)
 	cmd.syncFlags.LocalPath = "./" + strings.TrimPrefix(cmd.syncFlags.LocalPath, "./")
 
@@ -365,7 +363,7 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if cmd.portFlags.Selector == "" {
-		cmd.portFlags.Selector = "release=" + *configutil.GetDefaultDevSpaceDefaultReleaseName(config)
+		cmd.portFlags.Selector = "release=" + getNameOfFirstHelmDeployment()
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
@@ -489,4 +487,18 @@ func parseSelectors(selectorString string) (map[string]*string, error) {
 	}
 
 	return selectorMap, nil
+}
+
+func getNameOfFirstHelmDeployment() string {
+	config := configutil.GetConfig()
+
+	if config.DevSpace.Deployments != nil {
+		for _, deploymentConfig := range *config.DevSpace.Deployments {
+			if deploymentConfig.Helm != nil {
+				return *deploymentConfig.Namespace
+			}
+		}
+	}
+
+	return DefaultDevspaceDeploymentName
 }

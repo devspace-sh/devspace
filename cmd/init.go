@@ -8,8 +8,6 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 
@@ -23,6 +21,9 @@ import (
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/spf13/cobra"
 )
+
+// DefaultDevspaceDeploymentName is the name of the initial default deployment
+const DefaultDevspaceDeploymentName = "devspace-default"
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
@@ -117,12 +118,28 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
 
 		config = configutil.InitConfig()
+
+		// Set intial deployments
+		config.DevSpace.Deployments = &[]*v1.DeploymentConfig{
+			{
+				Name:      configutil.String(DefaultDevspaceDeploymentName),
+				Namespace: configutil.String("default"),
+				Helm: &v1.HelmConfig{
+					ChartPath: configutil.String("./chart"),
+				},
+			},
+		}
+
+		// Set initial tiller namespace
+		config.Tiller = &v1.TillerConfig{
+			Namespace: configutil.String("default"),
+		}
 	}
 
 	configutil.Merge(config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
-			Deploy: &[]*v1.DeployConfig{},
+			Deployments: &[]*v1.DeploymentConfig{},
 		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
@@ -148,7 +165,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if !cmd.flags.overwrite {
 		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-
 		if chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
@@ -195,52 +211,24 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 }
 
-func (cmd *InitCmd) configureDevSpace() {
+func (cmd *InitCmd) configureKubernetes() {
 	config := configutil.GetConfig()
-	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           "default",
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+	clusterConfig := config.Cluster
+	useKubeConfig := false
 
-	*config.DevSpace.Deploy = append(*config.DevSpace.Deploy, &v1.DeployConfig{
-		Namespace: namespace,
-	})
-}
-
-func (cmd *InitCmd) addDefaultSyncConfig() {
-	config := configutil.GetConfig()
-
-	for _, syncPath := range *config.DevSpace.Sync {
-		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			return
+	// Check if devspace cloud should be used
+	if cmd.useCloudProvider() == false {
+		currentContext, err := kubeconfig.GetCurrentContext()
+		if err != nil {
+			log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 		}
-	}
-	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
-	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
-	uploadExcludePaths := []string{}
 
-	if err == nil {
-		dockerignoreRules := strings.Split(string(dockerignore), "\n")
+		clusterConfig.KubeContext = &currentContext
 
-		for _, ignoreRule := range dockerignoreRules {
-			if len(ignoreRule) > 0 {
-				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
-			}
-		}
+		cmd.configureDevSpace()
 	}
 
-	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ContainerPath: configutil.String("/app"),
-		LocalSubPath:  configutil.String("./"),
-		ResourceType:  nil,
-		LabelSelector: &map[string]*string{
-			"release": configutil.GetDefaultDevSpaceDefaultReleaseName(config),
-		},
-		UploadExcludePaths: &uploadExcludePaths,
-	})
-
-	config.DevSpace.Sync = &syncConfig
+	cmd.addDefaultSyncConfig()
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
@@ -321,86 +309,56 @@ func (cmd *InitCmd) useCloudProvider() bool {
 	return false
 }
 
-func (cmd *InitCmd) configureKubernetes() {
+func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
-	clusterConfig := config.Cluster
-	useKubeConfig := false
+	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           "default",
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
 
-	// Check if devspace cloud should be used
-	if cmd.useCloudProvider() == false {
-		_, err := os.Stat(clientcmd.RecommendedHomeFile)
-		if err == nil {
-			skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
-				DefaultValue:           "yes",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
+	deployments := *config.DevSpace.Deployments
+	deployments[0].Namespace = namespace
+	config.Tiller.Namespace = namespace
+}
 
-			useKubeConfig = (*skipAnswer == "yes")
+func (cmd *InitCmd) addDefaultSyncConfig() {
+	config := configutil.GetConfig()
+
+	for _, syncPath := range *config.DevSpace.Sync {
+		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
+			return
 		}
+	}
+	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
+	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+	uploadExcludePaths := []string{}
 
-		if !useKubeConfig {
-			if clusterConfig.APIServer == nil {
-				clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
+	if err == nil {
+		dockerignoreRules := strings.Split(string(dockerignore), "\n")
+
+		for _, ignoreRule := range dockerignoreRules {
+			if len(ignoreRule) > 0 {
+				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
 			}
-
-			clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-				DefaultValue:           *clusterConfig.APIServer,
-				ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
-			})
-
-			if clusterConfig.CaCert == nil {
-				clusterConfig.CaCert = configutil.String("")
-			}
-			clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-				Question:               "What is the CA Certificate of your API Server? (PEM)",
-				DefaultValue:           *clusterConfig.CaCert,
-				InputTerminationString: "-----END CERTIFICATE-----",
-			})
-
-			if clusterConfig.User == nil {
-				clusterConfig.User = &v1.ClusterUser{
-					ClientCert: configutil.String(""),
-					ClientKey:  configutil.String(""),
-				}
-			} else {
-				if clusterConfig.User.ClientCert == nil {
-					clusterConfig.User.ClientCert = configutil.String("")
-				}
-
-				if clusterConfig.User.ClientKey == nil {
-					clusterConfig.User.ClientKey = configutil.String("")
-				}
-			}
-
-			clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes client certificate? (PEM)",
-				DefaultValue:           *clusterConfig.User.ClientCert,
-				InputTerminationString: "-----END CERTIFICATE-----",
-			})
-
-			clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes client key? (RSA, PEM)",
-				DefaultValue:           *clusterConfig.User.ClientKey,
-				InputTerminationString: "-----END RSA PRIVATE KEY-----",
-			})
-		} else {
-			currentContext, err := kubeconfig.GetCurrentContext()
-			if err != nil {
-				log.Fatalf("Couldn't determine current kubernetes context: %v", err)
-			}
-
-			clusterConfig.KubeContext = &currentContext
 		}
-
-		cmd.configureDevSpace()
 	}
 
-	cmd.addDefaultSyncConfig()
+	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
+		ContainerPath: configutil.String("/app"),
+		LocalSubPath:  configutil.String("./"),
+		ResourceType:  nil,
+		LabelSelector: &map[string]*string{
+			"release": configutil.String(DefaultDevspaceDeploymentName),
+		},
+		UploadExcludePaths: &uploadExcludePaths,
+	})
+
+	config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) configureRegistry() {
+	config := configutil.GetConfig()
 	dockerUsername := ""
 	createInternalRegistryDefaultAnswer := "yes"
 
@@ -417,12 +375,13 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 		}
 	} else {
+		deployments := *config.DevSpace.Deployments
+
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
-			Engine: &v1.BuildEngine{
-				Kaniko: &v1.KanikoBuildEngine{
-					Enabled: configutil.Bool(true),
-				},
+			Kaniko: &v1.KanikoConfig{
+				Namespace: deployments[0].Namespace,
+				Cache:     configutil.Bool(true),
 			},
 		}
 	}

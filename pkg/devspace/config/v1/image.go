@@ -19,7 +19,7 @@ type BuildConfig struct {
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cached    *bool   `yaml:"cached"`
+	Cache     *bool   `yaml:"cache"`
 	Namespace *string `yaml:"namespace"`
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/daviddengcn/go-colortext"

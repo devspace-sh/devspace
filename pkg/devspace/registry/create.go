@@ -10,17 +10,17 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/yamlq"
 	"github.com/foomo/htpasswd"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Release.Name
-	registryReleaseNamespace := *internalRegistry.Release.Namespace
-	registryReleaseValues := internalRegistry.Release.Values
+func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.DeploymentConfig, registryConfig *v1.RegistryConfig) error {
+	registryReleaseName := *internalRegistry.Name
+	registryReleaseNamespace := *internalRegistry.Namespace
+	registryReleaseValues := internalRegistry.Helm.Values
 
 	_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
 	if err != nil {
@@ -83,9 +83,9 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 	return nil
 }
 
-func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Release.Name
-	registryReleaseNamespace := *internalRegistry.Release.Namespace
+func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistry *v1.DeploymentConfig, registryConfig *v1.RegistryConfig) error {
+	registryReleaseName := *internalRegistry.Name
+	registryReleaseNamespace := *internalRegistry.Namespace
 
 	registryAuth := registryConfig.Auth
 

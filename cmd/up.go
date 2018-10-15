@@ -21,7 +21,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

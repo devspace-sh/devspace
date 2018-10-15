@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/configure"
+
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
@@ -15,7 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/helm"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,10 +81,10 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Release.Name
+func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.DeploymentConfig, registryConfig *v1.RegistryConfig) error {
+	registryReleaseName := *internalRegistry.Name
 	registryReleaseDeploymentName := registryReleaseName + "-docker-registry"
-	registryReleaseNamespace := *internalRegistry.Release.Namespace
+	registryReleaseNamespace := *internalRegistry.Namespace
 
 	// Check if registry already exists
 	registryDeployment, err := kubectl.ExtensionsV1beta1().Deployments(registryReleaseNamespace).Get(registryReleaseDeploymentName, metav1.GetOptions{})
@@ -153,6 +155,21 @@ func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig,
 	}
 
 	return image
+}
+
+// GetRegistryDeployment retrieves the registry deployment config from the devspace config
+func GetRegistryDeployment() *v1.DeploymentConfig {
+	config := configutil.GetConfig()
+
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			if *deployConfig.Name == configure.InternalRegistryName {
+				return deployConfig
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetRegistryConfig returns the registry config for an image or an error if the registry is not defined

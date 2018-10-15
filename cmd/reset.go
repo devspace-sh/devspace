@@ -3,8 +3,9 @@ package cmd
 import (
 	"os"
 	"path"
+	"path/filepath"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -18,28 +19,13 @@ import (
 
 // ResetCmd holds the needed command information
 type ResetCmd struct {
-	flags   *ResetCmdFlags
 	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
 
-// ResetCmdFlags holds the command flags
-type ResetCmdFlags struct {
-	deleteDockerfile         bool
-	deleteDockerignore       bool
-	deleteChart              bool
-	deleteRegistry           bool
-	deleteTiller             bool
-	deleteDevspaceFolder     bool
-	deleteRelease            bool
-	deleteClusterRoleBinding bool
-}
-
 func init() {
-	cmd := &ResetCmd{
-		flags: &ResetCmdFlags{},
-	}
+	cmd := &ResetCmd{}
 
 	cobraCmd := &cobra.Command{
 		Use:   "reset",
@@ -71,228 +57,165 @@ command: devspace down
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var err error
 
-	if cmd.kubectl == nil || cmd.helm == nil {
+	// Create kubectl client
+	if cmd.kubectl == nil {
 		cmd.kubectl, err = kubectl.NewClient()
 		if err != nil {
 			log.Failf("Failed to initialize kubectl client: %v", err)
 		}
 	}
 
-	cmd.determineResetExtent()
+	cmd.deleteDevSpaceDeployments()
+	cmd.deleteTiller()
+	cmd.deleteDeploymentFiles()
+	cmd.deleteImageFiles()
+	cmd.deleteClusterRoleBinding()
+	cmd.deleteDevspaceFolder()
+}
 
-	if cmd.flags.deleteRelease {
-		err = cmd.deleteRelease()
-	}
+func (cmd *ResetCmd) deleteDevSpaceDeployments() {
+	deleteDevSpace(cmd.kubectl)
+}
 
-	if cmd.flags.deleteRegistry {
-		log.StartWait("Deleting docker registry")
-		err = cmd.deleteRegistry()
-		log.StopWait()
+func (cmd *ResetCmd) deleteTiller() {
+	config := configutil.GetConfig()
 
-		if err != nil {
-			log.Failf("Error deleting docker registry: %s", err.Error())
+	if config.Tiller != nil {
+		shouldRemoveTiller := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the tiller server be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
 
-			// if cmd.shouldContinue() == false {
-			// 	return
-			// }
-		} else {
-			log.Done("Successfully deleted docker registry")
-		}
-	}
+		if shouldRemoveTiller {
+			log.StartWait("Deleting tiller")
+			err := helmClient.DeleteTiller(cmd.kubectl)
+			log.StopWait()
 
-	if cmd.flags.deleteTiller {
-		log.StartWait("Deleting tiller")
-		err = cmd.deleteTiller()
-		log.StopWait()
-
-		if err != nil {
-			log.Failf("Error deleting tiller: %s", err.Error())
-
-			if cmd.shouldContinue() == false {
-				return
+			if err != nil {
+				log.Failf("Error deleting tiller: %s", err.Error())
+			} else {
+				log.Done("Successfully deleted tiller server")
 			}
-		} else {
-			log.Done("Successfully deleted tiller server")
-		}
-	}
-
-	if cmd.flags.deleteChart {
-		err = cmd.deleteChart()
-
-		if err != nil {
-			log.Failf("Error deleting chart: %s", err.Error())
-
-			if cmd.shouldContinue() == false {
-				return
-			}
-		} else {
-			log.Done("Successfully deleted chart")
-		}
-	}
-
-	if cmd.flags.deleteDockerfile {
-		err = cmd.deleteDockerfile()
-
-		if err != nil {
-			log.Failf("Error deleting Dockerfile: %s", err.Error())
-
-			if cmd.shouldContinue() == false {
-				return
-			}
-		} else {
-			log.Done("Successfully deleted Dockerfile")
-		}
-	}
-
-	if cmd.flags.deleteDockerignore {
-		err = cmd.deleteDockerignore()
-
-		if err != nil {
-			log.Failf("Error deleting .dockerignore: %s", err.Error())
-
-			if cmd.shouldContinue() == false {
-				return
-			}
-		} else {
-			log.Done("Successfully deleted .dockerignore")
-		}
-	}
-
-	if cmd.flags.deleteDevspaceFolder {
-		err = cmd.deleteDevspaceFolder()
-
-		if err != nil {
-			log.Failf("Error deleting .devspace folder: %v", err)
-
-			if cmd.shouldContinue() == false {
-				return
-			}
-		} else {
-			log.Done("Successfully deleted .devspace folder")
-		}
-	}
-
-	if cmd.flags.deleteClusterRoleBinding {
-		log.StartWait("Deleting cluster role bindings")
-		err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Delete(clusterRoleBindingName, &metav1.DeleteOptions{})
-		log.StopWait()
-
-		if err != nil {
-			log.Failf("Failed to remove ClusterRoleBinding: %v", err)
-		} else {
-			log.Done("Successfully deleted ClusterRoleBinding '" + clusterRoleBindingName + "'")
 		}
 	}
 }
 
-func (cmd *ResetCmd) determineResetExtent() {
+func (cmd *ResetCmd) deleteDeploymentFiles() {
 	config := configutil.GetConfig()
 
-	cmd.flags.deleteRelease = true
+	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			if deployConfig.Helm != nil && deployConfig.Helm.ChartPath != nil {
+				absChartPath, err := filepath.Abs(*deployConfig.Helm.ChartPath)
 
-	cmd.flags.deleteDevspaceFolder = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				if err == nil {
+					_, err := os.Stat(absChartPath)
+					if os.IsNotExist(err) == false {
+						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+							Question:               "Should the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
+							DefaultValue:           "y",
+							ValidationRegexPattern: "^(y|n)$",
+						}) == "y"
+
+						if deleteChart {
+							os.RemoveAll(absChartPath)
+							log.Donef("Successfully deleted %s", *deployConfig.Helm.ChartPath)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func (cmd *ResetCmd) deleteImageFiles() {
+	config := configutil.GetConfig()
+
+	for _, imageConfig := range *config.Images {
+		dockerfilePath := "Dockerfile"
+		if imageConfig.Build != nil && imageConfig.Build.DockerfilePath != nil {
+			dockerfilePath = *imageConfig.Build.DockerfilePath
+		}
+
+		absDockerfilePath, err := filepath.Abs(dockerfilePath)
+		if err != nil {
+			continue
+		}
+
+		_, err = os.Stat(absDockerfilePath)
+		if os.IsNotExist(err) == false {
+			deleteDockerfile := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Should " + dockerfilePath + " be removed? (y/n)",
+				DefaultValue:           "y",
+				ValidationRegexPattern: "^(y|n)$",
+			}) == "y"
+
+			if deleteDockerfile {
+				os.Remove(absDockerfilePath)
+				log.Donef("Successfully deleted %s", absDockerfilePath)
+			}
+		}
+
+		contextPath := "."
+		if imageConfig.Build != nil && imageConfig.Build.ContextPath != nil {
+			contextPath = *imageConfig.Build.ContextPath
+		}
+
+		absContextPath, err := filepath.Abs(contextPath)
+		if err != nil {
+			continue
+		}
+
+		absDockerIgnorePath := ".dockerignore"
+		_, err = os.Stat(absDockerfilePath)
+		if os.IsNotExist(err) == false {
+			deleteDockerIgnore := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Should " + absDockerIgnorePath + " be removed? (y/n)",
+				DefaultValue:           "y",
+				ValidationRegexPattern: "^(y|n)$",
+			}) == "y"
+
+			if deleteDockerIgnore {
+				os.Remove(absDockerIgnorePath)
+				log.Donef("Successfully deleted %s", absDockerIgnorePath)
+			}
+		}
+	}
+}
+
+func (cmd *ResetCmd) deleteClusterRoleBinding() {
+	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+	if err == nil {
+		deleteRoleBinding := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
+
+		if deleteRoleBinding {
+			log.StartWait("Deleting cluster role bindings")
+			err = cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Delete(clusterRoleBindingName, &metav1.DeleteOptions{})
+			log.StopWait()
+
+			if err != nil {
+				log.Failf("Failed to remove ClusterRoleBinding: %v", err)
+			} else {
+				log.Done("Successfully deleted ClusterRoleBinding '" + clusterRoleBindingName + "'")
+			}
+		}
+	}
+}
+
+func (cmd *ResetCmd) deleteDevspaceFolder() {
+	deleteDevspaceFolder := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Should the .devspace folder be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
 
-	cmd.flags.deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the Dockerfile be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	cmd.flags.deleteDockerignore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the .dockerignore be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	cmd.flags.deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the Chart (chart/*) be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	if config.Services.InternalRegistry != nil {
-		cmd.flags.deleteRegistry = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the internal registry be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
+	if deleteDevspaceFolder {
+		os.RemoveAll(path.Join(cmd.workdir, ".devspace"))
+		log.Done("Successfully deleted .devspace folder")
 	}
-
-	cmd.flags.deleteTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the tiller server be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
-
-	if err == nil {
-		cmd.flags.deleteClusterRoleBinding = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-	}
-}
-
-func (cmd *ResetCmd) shouldContinue() bool {
-	return *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "An error occurred, should the reset command continue? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-}
-
-func (cmd *ResetCmd) deleteRelease() error {
-	deleteDevSpace(cmd.kubectl)
-	return nil
-}
-
-func (cmd *ResetCmd) deleteRegistry() error {
-	var err error
-	config := configutil.GetConfig()
-
-	registryReleaseName := *config.Services.InternalRegistry.Release.Name
-
-	if cmd.kubectl == nil || cmd.helm == nil {
-		isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
-
-		if isDeployed == false {
-			return nil
-		}
-
-		cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = cmd.helm.DeleteRelease(registryReleaseName, true)
-
-	return err
-}
-
-func (cmd *ResetCmd) deleteTiller() error {
-	return helmClient.DeleteTiller(cmd.kubectl)
-}
-
-func (cmd *ResetCmd) deleteDockerfile() error {
-	return os.Remove(path.Join(cmd.workdir, "Dockerfile"))
-}
-
-func (cmd *ResetCmd) deleteDockerignore() error {
-	return os.Remove(path.Join(cmd.workdir, ".dockerignore"))
-}
-
-func (cmd *ResetCmd) deleteChart() error {
-	return os.RemoveAll(path.Join(cmd.workdir, "chart"))
-}
-
-func (cmd *ResetCmd) deleteDevspaceFolder() error {
-	return os.RemoveAll(path.Join(cmd.workdir, ".devspace"))
 }

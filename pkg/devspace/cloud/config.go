@@ -108,9 +108,21 @@ func SaveCloudConfig(config ProviderConfig) error {
 
 // UpdateDevSpaceConfig sets the devspace config to the correct namespaces
 func UpdateDevSpaceConfig(dsConfig *v1.Config, namespace string) error {
-	// Exchange namespaces
+	// Exchange namespaces in deployments
 	for _, deployConfig := range *dsConfig.DevSpace.Deployments {
 		deployConfig.Namespace = &namespace
+	}
+
+	// Exchange namespaces in tiller config
+	if dsConfig.Tiller != nil {
+		dsConfig.Tiller.Namespace = &namespace
+	}
+
+	// Exchange namespaces in kaniko build pods
+	for _, imageConfig := range *dsConfig.Images {
+		if imageConfig.Build != nil && imageConfig.Build.Kaniko != nil {
+			imageConfig.Build.Kaniko.Namespace = &namespace
+		}
 	}
 
 	return nil

@@ -4,7 +4,7 @@ package v1
 type DevSpaceConfig struct {
 	Terminal       *Terminal                `yaml:"terminal"`
 	Deployments    *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	PortForwarding *[]*PortForwardingConfig `yaml:"portForwarding"`
+	PortForwarding *[]*PortForwardingConfig `yaml:"ports"`
 	Sync           *[]*SyncConfig           `yaml:"sync"`
 }
 
