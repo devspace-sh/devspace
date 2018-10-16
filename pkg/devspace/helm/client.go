@@ -42,7 +42,7 @@ type ClientWrapper struct {
 }
 
 // NewClient creates a new helm client
-func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*ClientWrapper, error) {
+func NewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
 	var outerError error
 
 	getOnce.Do(func() {

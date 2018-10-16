@@ -3,23 +3,20 @@ package cmd
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/covexo/devspace/pkg/util/hash"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
-	"github.com/covexo/devspace/pkg/util/yamlutil"
-
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/deploy"
+	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	deployKubectl "github.com/covexo/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/image"
+	"github.com/covexo/devspace/pkg/devspace/services"
 
 	"github.com/covexo/devspace/pkg/util/log"
 
 	"github.com/covexo/devspace/pkg/devspace/registry"
-	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -50,7 +47,6 @@ type UpCmdFlags struct {
 	sync           bool
 	deploy         bool
 	portforwarding bool
-	noSleep        bool
 	verboseSync    bool
 	container      string
 }
@@ -64,7 +60,6 @@ var UpFlagsDefault = &UpCmdFlags{
 	sync:           true,
 	deploy:         false,
 	portforwarding: true,
-	noSleep:        false,
 	verboseSync:    false,
 	container:      "",
 }
@@ -102,7 +97,6 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
-	cobraCmd.Flags().BoolVar(&cmd.flags.noSleep, "no-sleep", cmd.flags.noSleep, "Enable no-sleep (Override the containers.default.command and containers.default.args values with empty strings)")
 }
 
 // Run executes the command logic
@@ -151,11 +145,18 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.buildAndDeploy()
 
 	if cmd.flags.portforwarding {
-		cmd.startPortForwarding()
+		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start portforwarding: %v", err)
+		}
 	}
 
 	if cmd.flags.sync {
-		syncConfigs := cmd.startSync()
+		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start sync: %v", err)
+		}
+
 		defer func() {
 			for _, v := range syncConfigs {
 				v.Stop()
@@ -163,10 +164,12 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	enterTerminal(cmd.kubectl, cmd.flags.container, args)
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, args)
 }
 
 func (cmd *UpCmd) buildAndDeploy() {
+	config := configutil.GetConfig()
+
 	// Load config
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
@@ -176,26 +179,42 @@ func (cmd *UpCmd) buildAndDeploy() {
 	// Build image if necessary
 	mustRedeploy := cmd.buildImages(generatedConfig)
 
-	// Check if the chart directory has changed
-	hash, err := hash.Directory("chart")
-	if err != nil {
-		log.Fatalf("Error hashing chart directory: %v", err)
-	}
+	// Deploy all defined deployments
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			var deployClient deploy.Interface
 
-	// Check if we find a running release pod
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-	if err != nil || mustRedeploy || cmd.flags.deploy || generatedConfig.HelmChartHash != hash {
-		cmd.deployChart(generatedConfig)
+			if deployConfig.Kubectl != nil {
+				log.StartWait("Deploying " + *deployConfig.Name + " with kubectl")
 
-		generatedConfig.HelmChartHash = hash
+				deployClient, err = deployKubectl.New(cmd.kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+				}
+			} else if deployConfig.Helm != nil {
+				log.StartWait("Deploying " + *deployConfig.Name + " with helm")
+
+				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+				}
+			} else {
+				log.Fatalf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
+			}
+
+			err = deployClient.Deploy(generatedConfig, mustRedeploy || cmd.flags.deploy)
+			if err != nil {
+				log.Fatalf("Error deploying %s: %v", *deployConfig.Name, err)
+			}
+
+			log.Donef("Successfully deployed %s", *deployConfig.Name)
+		}
 
 		// Save Config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatalf("Error saving config: %v", err)
 		}
-	} else {
-		cmd.pod = pod
 	}
 }
 
@@ -294,7 +313,6 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 	return nil
 }
 
-// TODO: CHANGE THIS!!!
 func (cmd *UpCmd) initRegistries() {
 	config := configutil.GetConfig()
 	registryMap := *config.Registries
@@ -306,7 +324,7 @@ func (cmd *UpCmd) initRegistries() {
 		}
 
 		log.StartWait("Initializing helm client")
-		helm, err := helmClient.NewClient(cmd.kubectl, false)
+		helm, err := helmClient.NewClient(cmd.kubectl, log.GetInstance(), false)
 		log.StopWait()
 		if err != nil {
 			log.Fatalf("Error initializing helm client: %v", err)
@@ -375,200 +393,4 @@ func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	}
 
 	return re
-}
-
-func (cmd *UpCmd) deployChart(generatedConfig *generated.Config) {
-	config := configutil.GetConfig()
-
-	log.StartWait("Deploying helm chart")
-	defer log.StopWait()
-
-	releaseName := *config.DevSpace.Release.Name
-	releaseNamespace := *config.DevSpace.Release.Namespace
-	chartPath := "chart/"
-
-	values := map[interface{}]interface{}{}
-	overwriteValues := map[interface{}]interface{}{}
-
-	err := yamlutil.ReadYamlFromFile(chartPath+"values.yaml", values)
-	if err != nil {
-		log.Fatalf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
-	}
-
-	containerValues := map[string]interface{}{}
-
-	for imageName, imageConf := range *config.Images {
-		container := map[string]interface{}{}
-		container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
-
-		if cmd.flags.noSleep {
-			container["command"] = []string{}
-			container["args"] = []string{}
-		}
-
-		containerValues[imageName] = container
-	}
-
-	pullSecrets := []interface{}{}
-	existingPullSecrets, pullSecretsExisting := values["pullSecrets"]
-
-	if pullSecretsExisting {
-		pullSecrets = existingPullSecrets.([]interface{})
-	}
-
-	for _, registryConf := range *config.Registries {
-		if registryConf.URL != nil {
-			registrySecretName := registry.GetRegistryAuthSecretName(*registryConf.URL)
-			pullSecrets = append(pullSecrets, registrySecretName)
-		}
-	}
-
-	overwriteValues["containers"] = containerValues
-	overwriteValues["pullSecrets"] = pullSecrets
-
-	appRelease, err := cmd.helm.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
-	if err != nil {
-		log.Fatalf("Unable to deploy helm chart: %s", err.Error())
-	}
-
-	releaseRevision := int(appRelease.Version)
-	log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
-	log.StartWait("Waiting for release pod to become ready")
-
-	cmd.pod, err = helmClient.WaitForReleasePodToGetReady(cmd.kubectl, releaseName, releaseNamespace, releaseRevision)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (cmd *UpCmd) startSync() []*synctool.SyncConfig {
-	config := configutil.GetConfig()
-	syncConfigs := make([]*synctool.SyncConfig, 0, len(*config.DevSpace.Sync))
-
-	for _, syncPath := range *config.DevSpace.Sync {
-		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
-
-		if err != nil {
-			log.Panicf("Unable to resolve localSubPath %s: %s", *syncPath.LocalSubPath, err.Error())
-		} else {
-			// Retrieve pod from label selector
-			labels := make([]string, 0, len(*syncPath.LabelSelector))
-
-			for key, value := range *syncPath.LabelSelector {
-				labels = append(labels, key+"="+*value)
-			}
-
-			namespace := *config.DevSpace.Release.Namespace
-			if syncPath.Namespace != nil && *syncPath.Namespace != "" {
-				namespace = *syncPath.Namespace
-			}
-
-			pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), namespace)
-
-			if err != nil {
-				log.Panicf("Unable to list devspace pods: %s", err.Error())
-			} else if pod != nil {
-				if len(pod.Spec.Containers) == 0 {
-					log.Warnf("Cannot start sync on pod, because selected pod %s/%s has no containers", pod.Namespace, pod.Name)
-					continue
-				}
-
-				container := &pod.Spec.Containers[0]
-				if syncPath.ContainerName != nil && *syncPath.ContainerName != "" {
-					found := false
-
-					for _, c := range pod.Spec.Containers {
-						if c.Name == *syncPath.ContainerName {
-							container = &c
-							found = true
-							break
-						}
-					}
-
-					if found == false {
-						log.Warnf("Couldn't start sync, because container %s wasn't found in pod %s/%s", *syncPath.ContainerName, pod.Namespace, pod.Name)
-						continue
-					}
-				}
-
-				syncConfig := &synctool.SyncConfig{
-					Kubectl:   cmd.kubectl,
-					Pod:       pod,
-					Container: container,
-					WatchPath: absLocalPath,
-					DestPath:  *syncPath.ContainerPath,
-					Verbose:   cmd.flags.verboseSync,
-				}
-
-				if syncPath.ExcludePaths != nil {
-					syncConfig.ExcludePaths = *syncPath.ExcludePaths
-				}
-
-				if syncPath.DownloadExcludePaths != nil {
-					syncConfig.DownloadExcludePaths = *syncPath.DownloadExcludePaths
-				}
-
-				if syncPath.UploadExcludePaths != nil {
-					syncConfig.UploadExcludePaths = *syncPath.UploadExcludePaths
-				}
-
-				err = syncConfig.Start()
-				if err != nil {
-					log.Fatalf("Sync error: %s", err.Error())
-				}
-
-				log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, *syncPath.ContainerPath, pod.Namespace, pod.Name)
-				syncConfigs = append(syncConfigs, syncConfig)
-			}
-		}
-	}
-
-	return syncConfigs
-}
-
-func (cmd *UpCmd) startPortForwarding() {
-	config := configutil.GetConfig()
-
-	for _, portForwarding := range *config.DevSpace.PortForwarding {
-		if portForwarding.ResourceType == nil || *portForwarding.ResourceType == "pod" {
-			if len(*portForwarding.LabelSelector) > 0 {
-				labels := make([]string, 0, len(*portForwarding.LabelSelector))
-
-				for key, value := range *portForwarding.LabelSelector {
-					labels = append(labels, key+"="+*value)
-				}
-
-				namespace := *config.DevSpace.Release.Namespace
-				if portForwarding.Namespace != nil && *portForwarding.Namespace != "" {
-					namespace = *portForwarding.Namespace
-				}
-
-				pod, err := kubectl.GetFirstRunningPod(cmd.kubectl, strings.Join(labels, ", "), namespace)
-
-				if err != nil {
-					log.Errorf("Unable to list devspace pods: %s", err.Error())
-				} else if pod != nil {
-					ports := make([]string, len(*portForwarding.PortMappings))
-
-					for index, value := range *portForwarding.PortMappings {
-						ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
-					}
-
-					readyChan := make(chan struct{})
-
-					go kubectl.ForwardPorts(cmd.kubectl, pod, ports, make(chan struct{}), readyChan)
-
-					// Wait till forwarding is ready
-					select {
-					case <-readyChan:
-						log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
-					case <-time.After(5 * time.Second):
-						log.Error("Timeout waiting for port forwarding to start")
-					}
-				}
-			}
-		} else {
-			log.Warn("Currently only pod resource type is supported for portforwarding")
-		}
-	}
 }

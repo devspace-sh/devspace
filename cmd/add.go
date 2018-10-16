@@ -18,6 +18,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/services"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/russross/blackfriday"
 	"github.com/skratchdot/open-golang/open"
@@ -167,7 +168,7 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, false)
+	helm, err := helmClient.NewClient(kubectl, log.GetInstance(), false)
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %v", err)
 	}
@@ -312,7 +313,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if cmd.syncFlags.Selector == "" {
-		cmd.syncFlags.Selector = "release=" + getNameOfFirstHelmDeployment()
+		cmd.syncFlags.Selector = "release=" + services.GetNameOfFirstHelmDeployment()
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
@@ -360,10 +361,8 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig()
-
 	if cmd.portFlags.Selector == "" {
-		cmd.portFlags.Selector = "release=" + getNameOfFirstHelmDeployment()
+		cmd.portFlags.Selector = "release=" + services.GetNameOfFirstHelmDeployment()
 	}
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
@@ -487,18 +486,4 @@ func parseSelectors(selectorString string) (map[string]*string, error) {
 	}
 
 	return selectorMap, nil
-}
-
-func getNameOfFirstHelmDeployment() string {
-	config := configutil.GetConfig()
-
-	if config.DevSpace.Deployments != nil {
-		for _, deploymentConfig := range *config.DevSpace.Deployments {
-			if deploymentConfig.Helm != nil && deploymentConfig.Namespace != nil {
-				return *deploymentConfig.Namespace
-			}
-		}
-	}
-
-	return DefaultDevspaceDeploymentName
 }

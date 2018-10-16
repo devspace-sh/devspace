@@ -7,8 +7,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 )
 
@@ -19,10 +21,11 @@ type DeployConfig struct {
 	Context    string
 	Namespace  string
 	Manifests  []string
+	Log        log.Logger
 }
 
 // New creates a new deploy config for kubectl
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig) (*DeployConfig, error) {
+func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
@@ -58,21 +61,26 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig) (*Dep
 		Context:    context,
 		Namespace:  namespace,
 		Manifests:  manifests,
+		Log:        log,
 	}, nil
 }
 
 // Status prints the status of all matched manifests from kubernetes
-func (d *DeployConfig) Status() error {
-	return nil
+func (d *DeployConfig) Status() ([][]string, error) {
+	return nil, nil
 }
 
 // Delete deletes all matched manifests from kubernetes
-func (d *DeployConfig) Delete(verbose bool) error {
+func (d *DeployConfig) Delete() error {
 	return nil
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(images []string, tags map[string]string) error {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
+	return nil
+}
+
+func (d *DeployConfig) internalDeploy(images []string, tags map[string]string) error {
 	for _, pattern := range d.Manifests {
 		files, err := filepath.Glob(pattern)
 		if err != nil {

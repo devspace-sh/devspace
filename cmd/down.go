@@ -59,17 +59,18 @@ func deleteDevSpace(kubectl *kubernetes.Clientset) {
 
 	if config.DevSpace.Deployments != nil {
 		for _, deployConfig := range *config.DevSpace.Deployments {
+			var err error
 			var deployClient deploy.Interface
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err := deployKubectl.New(kubectl, deployConfig)
+				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config: %v", err)
 					continue
 				}
 			} else {
-				deployClient, err := deployHelm.New(kubectl, deployConfig)
+				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue
@@ -77,7 +78,7 @@ func deleteDevSpace(kubectl *kubernetes.Clientset) {
 			}
 
 			log.StartWait("Deleting deployment %s" + *deployConfig.Name)
-			err := deployClient.Delete(true)
+			err = deployClient.Delete()
 			log.StopWait()
 			if err != nil {
 				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)

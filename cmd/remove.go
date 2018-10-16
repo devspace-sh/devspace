@@ -207,7 +207,7 @@ func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interf
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, false)
+	helm, err := helmClient.NewClient(kubectl, log.GetInstance(), false)
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %v", err)
 	}

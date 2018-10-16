@@ -19,7 +19,6 @@ import (
 // StatusCmd holds the information needed for the status command
 type StatusCmd struct {
 	flags   *StatusCmdFlags
-	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
@@ -97,6 +96,8 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 			log.PrintTable(headerValues, values)
 			return
 		}
+
+		values = append(values, tillerStatus)
 	}
 
 	registryStatus, err := cmd.getRegistryStatus()
@@ -118,13 +119,13 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err := deployKubectl.New(cmd.kubectl, deployConfig)
+				deployClient, err = deployKubectl.New(cmd.kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
 			} else {
-				deployClient, err := deployHelm.New(cmd.kubectl, deployConfig)
+				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
 					continue
@@ -176,12 +177,12 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 		return nil, nil
 	}
 
-	helm, err := helmClient.NewClient(cmd.kubectl, false)
+	helm, err := helmClient.NewClient(cmd.kubectl, log.GetInstance(), false)
 	if err != nil {
 		return nil, err
 	}
 
-	releases, err := cmd.helm.Client.ListReleases()
+	releases, err := helm.Client.ListReleases()
 	if err != nil {
 		return nil, err
 	}

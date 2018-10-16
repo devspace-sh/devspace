@@ -12,6 +12,9 @@ var stdoutLog = &stdoutLogger{
 	level: logrus.DebugLevel,
 }
 
+// Discard is a logger implementation that just discards every log statement
+var Discard = DiscardLogger{}
+
 // StartWait prints a wait message until StopWait is called
 func StartWait(message string) {
 	stdoutLog.StartWait(message)

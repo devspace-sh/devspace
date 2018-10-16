@@ -25,6 +25,9 @@ const ConfigPath = "/.devspace/config.yaml"
 // OverwriteConfigPath specifies where the override.yaml lies
 const OverwriteConfigPath = "/.devspace/overwrite.yaml"
 
+// DefaultDevspaceDeploymentName is the name of the initial default deployment
+const DefaultDevspaceDeploymentName = "devspace-default"
+
 // Global config vars
 var config *v1.Config
 var configRaw *v1.Config

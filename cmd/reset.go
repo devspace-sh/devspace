@@ -20,7 +20,6 @@ import (
 
 // ResetCmd holds the needed command information
 type ResetCmd struct {
-	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
 	workdir string
 }
@@ -94,12 +93,12 @@ func (cmd *ResetCmd) deleteInternalRegistry() {
 				return
 			}
 
-			helm, err := helmClient.NewClient(cmd.kubectl, false)
+			helm, err := helmClient.NewClient(cmd.kubectl, log.GetInstance(), false)
 			if err != nil {
 				log.Fatalf("Error creating helm client: %v", err)
 			}
 
-			_, err = cmd.helm.DeleteRelease(registry.InternalRegistryName, true)
+			_, err = helm.DeleteRelease(registry.InternalRegistryName, true)
 			if err != nil {
 				log.Failf("Error deleting internal registry: %v", err)
 			} else {
@@ -199,8 +198,8 @@ func (cmd *ResetCmd) deleteImageFiles() {
 			continue
 		}
 
-		absDockerIgnorePath := ".dockerignore"
-		_, err = os.Stat(absDockerfilePath)
+		absDockerIgnorePath := filepath.Join(absContextPath, ".dockerignore")
+		_, err = os.Stat(absDockerIgnorePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerIgnore := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Should " + absDockerIgnorePath + " be removed? (y/n)",

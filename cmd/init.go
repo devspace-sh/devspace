@@ -25,9 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DefaultDevspaceDeploymentName is the name of the initial default deployment
-const DefaultDevspaceDeploymentName = "devspace-default"
-
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
@@ -127,7 +124,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Set intial deployments
 		config.DevSpace.Deployments = &[]*v1.DeploymentConfig{
 			{
-				Name:      configutil.String(DefaultDevspaceDeploymentName),
+				Name:      configutil.String(configutil.DefaultDevspaceDeploymentName),
 				Namespace: configutil.String(""),
 				Helm: &v1.HelmConfig{
 					ChartPath: configutil.String("./chart"),
@@ -184,7 +181,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		cmd.configureKubernetes()
+		// Check if devspace cloud should be used
+		if cmd.useCloudProvider() == false {
+			cmd.configureDevSpace()
+		}
+
+		cmd.addDefaultSyncConfig()
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
@@ -209,19 +211,6 @@ func (cmd *InitCmd) initChartGenerator() {
 		TemplateRepo: templateRepo,
 		Path:         cmd.workdir,
 	}
-}
-
-func (cmd *InitCmd) configureKubernetes() {
-	config := configutil.GetConfig()
-	clusterConfig := config.Cluster
-	useKubeConfig := false
-
-	// Check if devspace cloud should be used
-	if cmd.useCloudProvider() == false {
-		cmd.configureDevSpace()
-	}
-
-	cmd.addDefaultSyncConfig()
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
@@ -345,7 +334,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		ContainerPath: configutil.String("/app"),
 		LocalSubPath:  configutil.String("./"),
 		LabelSelector: &map[string]*string{
-			"release": configutil.String(DefaultDevspaceDeploymentName),
+			"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
 		},
 		UploadExcludePaths: &uploadExcludePaths,
 	})
@@ -354,7 +343,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 }
 
 func (cmd *InitCmd) configureRegistry() {
-	config := configutil.GetConfig()
 	dockerUsername := ""
 	createInternalRegistryDefaultAnswer := "yes"
 
