@@ -344,14 +344,14 @@ func (cmd *UpCmd) buildAndDeploy() {
 			var deployClient deploy.Interface
 
 			if deployConfig.Kubectl != nil {
-				log.StartWait("Deploying " + *deployConfig.Name + " with kubectl")
+				log.Info("Deploying " + *deployConfig.Name + " with kubectl")
 
 				deployClient, err = deployKubectl.New(cmd.kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
 			} else if deployConfig.Helm != nil {
-				log.StartWait("Deploying " + *deployConfig.Name + " with helm")
+				log.Info("Deploying " + *deployConfig.Name + " with helm")
 
 				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
 				if err != nil {
@@ -366,7 +366,6 @@ func (cmd *UpCmd) buildAndDeploy() {
 				log.Fatalf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
 
-			log.StopWait()
 			log.Donef("Successfully deployed %s", *deployConfig.Name)
 		}
 
