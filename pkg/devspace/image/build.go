@@ -134,7 +134,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		log.StartWait("Authenticating (" + registryURL + ")")
+		displayRegistryURL := "hub.docker.com"
+		if registryURL != "" {
+			displayRegistryURL = registryURL
+		}
+
+		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
 		log.StopWait()
 
@@ -142,7 +147,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			log.Fatalf("Error during image registry authentication: %v", err)
 		}
 
-		log.Done("Authentication successful (" + registryURL + ")")
+		log.Done("Authentication successful (" + displayRegistryURL + ")")
 
 		buildOptions := &types.ImageBuildOptions{}
 
@@ -168,7 +173,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			return false, fmt.Errorf("Error during image push: %v", err)
 		}
 
-		log.Info("Image pushed to registry (" + registryURL + ")")
+		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
 		generatedConfig.ImageTags[imageName] = imageTag

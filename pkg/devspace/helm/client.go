@@ -74,9 +74,9 @@ func NewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTille
 		defer log.StopWait()
 
 		// Next we wait till we can establish a tunnel to the running pod
-		for tunnelWaitTime > 0 {
+		for true {
 			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
-			if err == nil {
+			if err == nil && tunnel != nil {
 				break
 			}
 

@@ -253,25 +253,26 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
+	if config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0 {
+		newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
 
-	for _, v := range *config.DevSpace.Sync {
-		if cmd.syncFlags.RemoveAll ||
-			cmd.syncFlags.LocalPath == *v.LocalSubPath ||
-			cmd.syncFlags.ContainerPath == *v.ContainerPath ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
+		for _, v := range *config.DevSpace.Sync {
+			if cmd.syncFlags.RemoveAll ||
+				cmd.syncFlags.LocalPath == *v.LocalSubPath ||
+				cmd.syncFlags.ContainerPath == *v.ContainerPath ||
+				isMapEqual(labelSelectorMap, *v.LabelSelector) {
+				continue
+			}
+
+			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		newSyncPaths = append(newSyncPaths, v)
-	}
+		config.DevSpace.Sync = &newSyncPaths
 
-	config.DevSpace.Sync = &newSyncPaths
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Couldn't save config file: %s", err.Error())
+		}
 	}
 }
 
@@ -297,34 +298,37 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
-	for _, v := range *config.DevSpace.Ports {
-		if cmd.portFlags.RemoveAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
-		}
+	if config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0 {
+		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
-		newPortMappings := []*v1.PortMapping{}
-
-		for _, pm := range *v.PortMappings {
-			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
+		for _, v := range *config.DevSpace.Ports {
+			if cmd.portFlags.RemoveAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
 				continue
 			}
 
-			newPortMappings = append(newPortMappings, pm)
+			newPortMappings := []*v1.PortMapping{}
+
+			for _, pm := range *v.PortMappings {
+				if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
+					continue
+				}
+
+				newPortMappings = append(newPortMappings, pm)
+			}
+
+			if len(newPortMappings) > 0 {
+				v.PortMappings = &newPortMappings
+				newPortForwards = append(newPortForwards, v)
+			}
 		}
 
-		if len(newPortMappings) > 0 {
-			v.PortMappings = &newPortMappings
-			newPortForwards = append(newPortForwards, v)
+		config.DevSpace.Ports = &newPortForwards
+
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Couldn't save config file: %s", err.Error())
 		}
-	}
-
-	config.DevSpace.Ports = &newPortForwards
-
-	err = configutil.SaveConfig()
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}
 }
 
