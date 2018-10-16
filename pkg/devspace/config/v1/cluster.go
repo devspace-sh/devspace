@@ -4,6 +4,7 @@ package v1
 type Cluster struct {
 	CloudProvider *string      `yaml:"cloudProvider,omitempty"`
 	KubeContext   *string      `yaml:"kubeContext,omitempty"`
+	Namespace     *string      `yaml:"namespace,omitempty"`
 	APIServer     *string      `yaml:"apiServer,omitempty"`
 	CaCert        *string      `yaml:"caCert,omitempty"`
 	User          *ClusterUser `yaml:"user,omitempty"`

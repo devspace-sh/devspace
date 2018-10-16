@@ -130,10 +130,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 		return err
 	}
 
-	err = UpdateDevSpaceConfig(dsConfig, namespace)
-	if err != nil {
-		return err
-	}
+	UpdateDevSpaceConfig(dsConfig, namespace)
 
 	if useKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace
@@ -143,9 +140,11 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 			return err
 		}
 
+		dsConfig.Cluster.Namespace = &namespace
 		dsConfig.Cluster.KubeContext = configutil.String(kubeContext)
 	} else {
 		dsConfig.Cluster.APIServer = &cluster.Server
+		dsConfig.Cluster.Namespace = &namespace
 		dsConfig.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
 
 		dsConfig.Cluster.User = &v1.ClusterUser{

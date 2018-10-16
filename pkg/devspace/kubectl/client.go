@@ -70,18 +70,26 @@ func GetClientConfig() (*rest.Config, error) {
 		}
 	}
 
+	// Use kube config if desired
 	if config.Cluster.APIServer == nil {
-		// If we should use a certain kube context use that
-		if config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
-			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
-			if err != nil {
-				return nil, err
-			}
-
-			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *config.Cluster.KubeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+		kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return nil, err
 		}
 
-		return clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+		activeContext := kubeConfig.CurrentContext
+
+		// If we should use a certain kube context use that
+		if config.Cluster != nil && config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
+			activeContext = *config.Cluster.KubeContext
+		}
+
+		// Change context namespace
+		if config.Cluster != nil && config.Cluster.Namespace != nil {
+			kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace
+		}
+
+		return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 	}
 
 	// We create a new config object here
@@ -109,6 +117,11 @@ func GetClientConfig() (*rest.Config, error) {
 	kubeContext := api.NewContext()
 	kubeContext.Cluster = "devspace"
 	kubeContext.AuthInfo = "devspace"
+
+	// Change context namespace
+	if config.Cluster.Namespace != nil {
+		kubeContext.Namespace = *config.Cluster.Namespace
+	}
 
 	kubeConfig := api.NewConfig()
 	kubeConfig.AuthInfos["devspace"] = kubeAuthInfo

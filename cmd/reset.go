@@ -7,6 +7,7 @@ import (
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
@@ -75,6 +76,37 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
 	deleteDevSpace(cmd.kubectl)
+}
+
+func (cmd *ResetCmd) deleteInternalRegistry() {
+	config := configutil.GetConfig()
+
+	if config.InternalRegistry != nil {
+		shouldRegistryRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should the internal registry be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
+
+		if shouldRegistryRemoved {
+			isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
+			if isDeployed == false {
+				return
+			}
+
+			helm, err := helmClient.NewClient(cmd.kubectl, false)
+			if err != nil {
+				log.Fatalf("Error creating helm client: %v", err)
+			}
+
+			_, err = cmd.helm.DeleteRelease(registry.InternalRegistryName, true)
+			if err != nil {
+				log.Failf("Error deleting internal registry: %v", err)
+			} else {
+				log.Done("Successfully deleted internal registry")
+			}
+		}
+	}
 }
 
 func (cmd *ResetCmd) deleteTiller() {

@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
-	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
@@ -14,9 +14,7 @@ import (
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
 	flags   *EnterCmdFlags
-	helm    *helmClient.ClientWrapper
 	kubectl *kubernetes.Clientset
-	pod     *k8sv1.Pod
 }
 
 // EnterCmdFlags are the flags available for the enter-command
@@ -60,25 +58,10 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	log.StartWait("Initializing helm client")
-	cmd.helm, err = helmClient.NewClient(cmd.kubectl, false)
-	log.StopWait()
-	if err != nil {
-		log.Fatalf("Error initializing helm client: %s", err.Error())
-	}
-
-	// Check if we find a running release pod
-	log.StartWait("Find a running devspace pod")
-	pod, err := getRunningDevSpacePod(cmd.helm, cmd.kubectl)
-	log.StopWait()
-	if err != nil {
-		log.Fatal("Cannot find a running devspace pod")
-	}
-
-	enterTerminal(cmd.kubectl, pod, cmd.flags.container, args)
+	enterTerminal(cmd.kubectl, cmd.flags.container, args)
 }
 
-func enterTerminal(client *kubernetes.Clientset, pod *k8sv1.Pod, containerNameOverride string, args []string) {
+func enterTerminal(client *kubernetes.Clientset, containerNameOverride string, args []string) {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -98,6 +81,30 @@ func enterTerminal(client *kubernetes.Clientset, pod *k8sv1.Pod, containerNameOv
 		}
 	}
 
+	// Select pods
+	namespace := ""
+	if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
+		namespace = *config.DevSpace.Terminal.Namespace
+	}
+
+	// Retrieve pod from label selector
+	labelSelector := "release=" + getNameOfFirstHelmDeployment()
+	if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
+		labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
+		for key, value := range *config.DevSpace.Terminal.LabelSelector {
+			labels = append(labels, key+"="+*value)
+		}
+
+		labelSelector = strings.Join(labels, ", ")
+	}
+
+	// Get first running pod
+	pod, err := kubectl.GetFirstRunningPod(client, labelSelector, namespace)
+	if err != nil {
+		log.Fatalf("Cannot find running pod: %v", err)
+	}
+
+	// Get container name
 	containerName := pod.Spec.Containers[0].Name
 	if containerNameOverride != "" {
 		containerName = containerNameOverride

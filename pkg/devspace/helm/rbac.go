@@ -35,44 +35,49 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 	}
 
 	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
-	appNamespaces := []*string{}
-	isTillerInNamespace := false
+	appNamespaces := []*string{&tillerNamespace}
+
+	// Get default namespace
+	defaultNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+
+	// Add registry namespace
+	if config.InternalRegistry != nil {
+		appNamespaces = append(appNamespaces, config.InternalRegistry.Namespace)
+	}
 
 	// Add all namespaces that need our permission
 	if config.DevSpace.Deployments != nil && len(*config.DevSpace.Deployments) > 0 {
 		for _, deployConfig := range *config.DevSpace.Deployments {
 			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
-				appNamespaces = append(appNamespaces, deployConfig.Namespace)
-
-				if *deployConfig.Namespace == tillerNamespace {
-					isTillerInNamespace = true
+				if *deployConfig.Namespace == "" {
+					appNamespaces = append(appNamespaces, &defaultNamespace)
+					continue
 				}
-			}
-		}
-	}
 
-	// If tiller server should not deploy in it's own namespace it does not need full access to the namespace
-	if isTillerInNamespace == false {
-		err = addMinimalAccessToTiller(kubectlClient, tillerNamespace)
-		if err != nil {
-			return err
+				appNamespaces = append(appNamespaces, deployConfig.Namespace)
+			}
 		}
 	}
 
 	// Add the correct access rights to the tiller server
 	for _, appNamespace := range appNamespaces {
-		// Create namespaces if they are not there already
-		_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
-		if err != nil {
-			log.Infof("Create namespace %s", *appNamespace)
-
-			_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: *appNamespace,
-				},
-			})
+		if *appNamespace != "default" {
+			// Create namespaces if they are not there already
+			_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
 			if err != nil {
-				return err
+				log.Infof("Create namespace %s", *appNamespace)
+
+				_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: *appNamespace,
+					},
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 

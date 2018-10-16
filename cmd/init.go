@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
+
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
@@ -116,23 +119,20 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Delete config & overwrite config
 		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
 		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
+		os.Remove(filepath.Join(workdir, generated.ConfigPath))
 
+		// Create config
 		config = configutil.InitConfig()
 
 		// Set intial deployments
 		config.DevSpace.Deployments = &[]*v1.DeploymentConfig{
 			{
 				Name:      configutil.String(DefaultDevspaceDeploymentName),
-				Namespace: configutil.String("default"),
+				Namespace: configutil.String(""),
 				Helm: &v1.HelmConfig{
 					ChartPath: configutil.String("./chart"),
 				},
 			},
-		}
-
-		// Set initial tiller namespace
-		config.Tiller = &v1.TillerConfig{
-			Namespace: configutil.String("default"),
 		}
 	}
 
@@ -218,13 +218,6 @@ func (cmd *InitCmd) configureKubernetes() {
 
 	// Check if devspace cloud should be used
 	if cmd.useCloudProvider() == false {
-		currentContext, err := kubeconfig.GetCurrentContext()
-		if err != nil {
-			log.Fatalf("Couldn't determine current kubernetes context: %v", err)
-		}
-
-		clusterConfig.KubeContext = &currentContext
-
 		cmd.configureDevSpace()
 	}
 
@@ -310,16 +303,20 @@ func (cmd *InitCmd) useCloudProvider() bool {
 }
 
 func (cmd *InitCmd) configureDevSpace() {
-	config := configutil.GetConfig()
+	currentContext, err := kubeconfig.GetCurrentContext()
+	if err != nil {
+		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
+	}
+
 	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Which Kubernetes namespace should your application run in?",
 		DefaultValue:           "default",
 		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
 	})
 
-	deployments := *config.DevSpace.Deployments
-	deployments[0].Namespace = namespace
-	config.Tiller.Namespace = namespace
+	config := configutil.GetConfig()
+	config.Cluster.KubeContext = &currentContext
+	config.Cluster.Namespace = namespace
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
@@ -347,7 +344,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		ContainerPath: configutil.String("/app"),
 		LocalSubPath:  configutil.String("./"),
-		ResourceType:  nil,
 		LabelSelector: &map[string]*string{
 			"release": configutil.String(DefaultDevspaceDeploymentName),
 		},
@@ -375,33 +371,36 @@ func (cmd *InitCmd) configureRegistry() {
 			}
 		}
 	} else {
-		deployments := *config.DevSpace.Deployments
-
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
 			Kaniko: &v1.KanikoConfig{
-				Namespace: deployments[0].Namespace,
 				Cache:     configutil.Bool(true),
+				Namespace: configutil.String(""),
 			},
 		}
 	}
 
-	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
-		DefaultValue:           createInternalRegistryDefaultAnswer,
-		ValidationRegexPattern: "^(yes)|(no)$",
-	})
+	// Only deploy registry in minikube
+	if kubectl.IsMinikube() {
+		createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
+			DefaultValue:           createInternalRegistryDefaultAnswer,
+			ValidationRegexPattern: "^(yes)|(no)$",
+		})
 
-	if *createInternalRegistry == "no" {
-		err := configure.ImageName(dockerUsername)
-		if err != nil {
-			log.Fatal(err)
+		if *createInternalRegistry == "yes" {
+			err := configure.InternalRegistry()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			return
 		}
-	} else {
-		err := configure.InternalRegistry()
-		if err != nil {
-			log.Fatal(err)
-		}
+	}
+
+	err = configure.ImageName(dockerUsername)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 

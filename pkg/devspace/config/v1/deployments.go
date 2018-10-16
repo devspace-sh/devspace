@@ -3,7 +3,7 @@ package v1
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
 	Name      *string        `yaml:"name"`
-	Namespace *string        `yaml:"namespace"`
+	Namespace *string        `yaml:"namespace,omitempty"`
 	Helm      *HelmConfig    `yaml:"helm,omitempty"`
 	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty"`
 }

@@ -35,7 +35,6 @@ import (
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
 	flags     *UpCmdFlags
-	helm      *helmClient.ClientWrapper
 	kubectl   *kubernetes.Clientset
 	workdir   string
 	pod       *k8sv1.Pod
@@ -123,8 +122,13 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 
 		initCmd.Run(nil, []string{})
+
+		// Ensure that config is initialized correctly
+		config := configutil.GetConfig()
+		configutil.SetDefaults(config)
 	}
 
+	// Create kubectl client
 	cmd.kubectl, err = kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
@@ -139,8 +143,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
-
-	cmd.initHelm()
 
 	if cmd.flags.initRegistries {
 		cmd.initRegistries()
@@ -161,7 +163,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	enterTerminal(cmd.kubectl, cmd.pod, cmd.flags.container, args)
+	enterTerminal(cmd.kubectl, cmd.flags.container, args)
 }
 
 func (cmd *UpCmd) buildAndDeploy() {
@@ -199,18 +201,23 @@ func (cmd *UpCmd) buildAndDeploy() {
 
 func (cmd *UpCmd) ensureNamespace() error {
 	config := configutil.GetConfig()
-	releaseNamespace := *config.DevSpace.Release.Namespace
-
-	_, err := cmd.kubectl.CoreV1().Namespaces().Get(releaseNamespace, metav1.GetOptions{})
+	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
-		log.Infof("Create namespace %s", releaseNamespace)
+		log.Fatalf("Error getting default namespace: %v", err)
+	}
 
-		// Create release namespace
-		_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: releaseNamespace,
-			},
-		})
+	if defaultNamespace != "default" {
+		_, err = cmd.kubectl.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
+		if err != nil {
+			log.Infof("Create namespace %s", defaultNamespace)
+
+			// Create release namespace
+			_, err = cmd.kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: defaultNamespace,
+				},
+			})
+		}
 	}
 
 	return err
@@ -287,18 +294,26 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 	return nil
 }
 
+// TODO: CHANGE THIS!!!
 func (cmd *UpCmd) initRegistries() {
 	config := configutil.GetConfig()
 	registryMap := *config.Registries
 
-	if config.Services != nil && config.Services.InternalRegistry != nil && config.Registries != nil {
+	if config.InternalRegistry != nil && config.InternalRegistry.Deploy != nil && *config.InternalRegistry.Deploy == true {
 		registryConf, regConfExists := registryMap["internal"]
 		if !regConfExists {
 			log.Fatal("Registry config not found for internal registry")
 		}
 
+		log.StartWait("Initializing helm client")
+		helm, err := helmClient.NewClient(cmd.kubectl, false)
+		log.StopWait()
+		if err != nil {
+			log.Fatalf("Error initializing helm client: %v", err)
+		}
+
 		log.StartWait("Initializing internal registry")
-		err := registry.InitInternalRegistry(cmd.kubectl, cmd.helm, config.Services.InternalRegistry, registryConf)
+		err = registry.InitInternalRegistry(cmd.kubectl, helm, config.InternalRegistry, registryConf)
 		log.StopWait()
 		if err != nil {
 			log.Fatalf("Internal registry error: %v", err)
@@ -315,24 +330,28 @@ func (cmd *UpCmd) initRegistries() {
 	if registryMap != nil {
 		for registryName, registryConf := range registryMap {
 			if registryConf.Auth != nil && registryConf.Auth.Password != nil {
-				username := ""
-				password := *registryConf.Auth.Password
-				email := "noreply@devspace-cloud.com"
-				registryURL := ""
+				if config.DevSpace.Deployments != nil {
+					for _, deployConfig := range *config.DevSpace.Deployments {
+						username := ""
+						password := *registryConf.Auth.Password
+						email := "noreply@devspace-cloud.com"
+						registryURL := ""
 
-				if registryConf.Auth.Username != nil {
-					username = *registryConf.Auth.Username
-				}
-				if registryConf.URL != nil {
-					registryURL = *registryConf.URL
-				}
+						if registryConf.Auth.Username != nil {
+							username = *registryConf.Auth.Username
+						}
+						if registryConf.URL != nil {
+							registryURL = *registryConf.URL
+						}
 
-				log.StartWait("Creating image pull secret for registry: " + registryName)
-				err := registry.CreatePullSecret(cmd.kubectl, *config.DevSpace.Release.Namespace, registryURL, username, password, email)
-				log.StopWait()
+						log.StartWait("Creating image pull secret for registry: " + registryName)
+						err := registry.CreatePullSecret(cmd.kubectl, *deployConfig.Namespace, registryURL, username, password, email)
+						log.StopWait()
 
-				if err != nil {
-					log.Fatalf("Failed to create pull secret for registry: %v", err)
+						if err != nil {
+							log.Fatalf("Failed to create pull secret for registry: %v", err)
+						}
+					}
 				}
 			}
 		}
@@ -356,21 +375,6 @@ func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	}
 
 	return re
-}
-
-func (cmd *UpCmd) initHelm() {
-	if cmd.helm == nil {
-		log.StartWait("Initializing helm client")
-		defer log.StopWait()
-
-		client, err := helmClient.NewClient(cmd.kubectl, false)
-		if err != nil {
-			log.Fatalf("Error initializing helm client: %s", err.Error())
-		}
-
-		cmd.helm = client
-		log.Done("Initialized helm client")
-	}
 }
 
 func (cmd *UpCmd) deployChart(generatedConfig *generated.Config) {

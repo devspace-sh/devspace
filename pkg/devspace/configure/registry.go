@@ -9,17 +9,10 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 )
-
-// InternalRegistryChartPath is the standard path where the internal registry chart will be written to
-const InternalRegistryChartPath = ".devspace/internal-registry"
-
-// InternalRegistryName
-const InternalRegistryName = "devspace-registry"
 
 // ImageName configures the image name
 func ImageName(dockerUsername string) error {
@@ -96,15 +89,6 @@ func InternalRegistry() error {
 		defaultImageConf.Registry = configutil.String("internal")
 	}
 
-	deployments := *config.DevSpace.Deployments
-	internalRegistryConfig := &v1.DeploymentConfig{
-		Name:      configutil.String(InternalRegistryName),
-		Namespace: deployments[0].Namespace,
-		Helm: &v1.HelmConfig{
-			ChartPath: configutil.String(InternalRegistryChartPath),
-		},
-	}
-
 	overwriteRegistryMap := *overwriteConfig.Registries
 	overwriteRegistryConfig, overwriteRegistryConfigFound := overwriteRegistryMap["internal"]
 	if !overwriteRegistryConfigFound {
@@ -133,53 +117,9 @@ func InternalRegistry() error {
 		registryAuth.Password = &randomPassword
 	}
 
-	registryReleaseValues := map[interface{}]interface{}{}
-	registryDomain := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which domain should your container registry be using? (optional, requires an ingress controller)",
-		ValidationRegexPattern: "^(([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,})?$",
-	})
-
-	if *registryDomain != "" {
-		registryReleaseValues = map[interface{}]interface{}{
-			"Ingress": map[string]interface{}{
-				"Enabled": true,
-				"Hosts": []string{
-					*registryDomain,
-				},
-				"Annotations": map[string]string{
-					"Kubernetes.io/tls-acme": "true",
-				},
-				"Tls": []map[string]interface{}{
-					map[string]interface{}{
-						"SecretName": "tls-devspace-registry",
-						"Hosts": []string{
-							*registryDomain,
-						},
-					},
-				},
-			},
-		}
-	} else if kubectl.IsMinikube() == false {
-		log.Warn("Your Kubernetes cluster will not be able to pull images from a registry without a registry domain!\n")
+	config.InternalRegistry = &v1.InternalRegistryConfig{
+		Deploy: configutil.Bool(true),
 	}
-
-	secrets, registryHasSecrets := registryReleaseValues["secrets"]
-	if !registryHasSecrets {
-		secrets = map[interface{}]interface{}{}
-		registryReleaseValues["secrets"] = secrets
-	}
-
-	secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
-	if secretsIsMap {
-		_, registryHasSecretHtpasswd := secretMap["htpasswd"]
-		if !registryHasSecretHtpasswd {
-			secretMap["htpasswd"] = ""
-		}
-	}
-
-	internalRegistryConfig.Helm.Values = &registryReleaseValues
-	deployments = append(deployments, internalRegistryConfig)
-	config.Registries = &overwriteRegistryMap
 
 	return nil
 }

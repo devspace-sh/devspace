@@ -5,7 +5,9 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 )
@@ -78,6 +80,8 @@ func GetConfig() *v1.Config {
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
+
+		SetDefaults(config)
 	})
 
 	return config
@@ -88,4 +92,96 @@ func GetOverwriteConfig() *v1.Config {
 	GetConfig()
 
 	return overwriteConfig
+}
+
+// SetDefaults ensures that specific values are set in the config
+func SetDefaults(config *v1.Config) {
+	defaultNamespace, err := GetDefaultNamespace(config)
+	if err != nil {
+		log.Fatalf("Error retrieving default namespace: %v", err)
+	}
+
+	// Initialize Namespaces
+	if config.DevSpace != nil {
+		needTiller := config.InternalRegistry != nil
+
+		if config.DevSpace.Deployments != nil {
+			for index, deployConfig := range *config.DevSpace.Deployments {
+				if deployConfig.Name == nil {
+					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
+				}
+				if deployConfig.Namespace == nil {
+					deployConfig.Namespace = String("")
+				}
+				if deployConfig.Helm != nil {
+					needTiller = true
+				}
+			}
+		}
+
+		if config.DevSpace.Sync != nil {
+			for _, syncPath := range *config.DevSpace.Sync {
+				if syncPath.Namespace == nil {
+					syncPath.Namespace = String("")
+				}
+			}
+		}
+
+		if config.DevSpace.PortForwarding != nil {
+			for _, portForwarding := range *config.DevSpace.PortForwarding {
+				if portForwarding.Namespace == nil {
+					portForwarding.Namespace = String("")
+				}
+			}
+		}
+
+		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace == nil {
+			config.DevSpace.Terminal.Namespace = String("")
+		}
+
+		if needTiller && config.Tiller == nil {
+			config.Tiller = &v1.TillerConfig{
+				Namespace: &defaultNamespace,
+			}
+		}
+	}
+
+	if config.Images != nil {
+		for _, buildConfig := range *config.Images {
+			if buildConfig.Build != nil && buildConfig.Build.Kaniko != nil {
+				if buildConfig.Build.Kaniko.Namespace == nil {
+					buildConfig.Build.Kaniko.Namespace = String("")
+				}
+			}
+		}
+	}
+
+	if config.InternalRegistry != nil {
+		config.InternalRegistry.Namespace = &defaultNamespace
+	}
+}
+
+// GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
+func GetDefaultNamespace(config *v1.Config) (string, error) {
+	if config.Cluster != nil && config.Cluster.Namespace != nil {
+		return *config.Cluster.Namespace, nil
+	}
+
+	if config.Cluster == nil || config.Cluster.APIServer == nil {
+		kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return "", err
+		}
+
+		activeContext := kubeConfig.CurrentContext
+		if config.Cluster.KubeContext != nil {
+			activeContext = *config.Cluster.KubeContext
+		}
+
+		if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
+			return kubeConfig.Contexts[activeContext].Namespace, nil
+		}
+	}
+
+	return "default", nil
 }

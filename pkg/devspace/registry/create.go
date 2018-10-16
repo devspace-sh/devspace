@@ -11,32 +11,32 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/helm"
-	"github.com/covexo/yamlq"
 	"github.com/foomo/htpasswd"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.DeploymentConfig, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Name
+func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistryConfig, registryConfig *v1.RegistryConfig) error {
 	registryReleaseNamespace := *internalRegistry.Namespace
-	registryReleaseValues := internalRegistry.Helm.Values
-
-	_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
-	if err != nil {
-		// Create registryReleaseNamespace
-		_, err = kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: registryReleaseNamespace,
-			},
-		})
+	if registryReleaseNamespace != "default" {
+		_, err := kubectl.CoreV1().Namespaces().Get(registryReleaseNamespace, metav1.GetOptions{})
 		if err != nil {
-			return err
+			// Create registryReleaseNamespace
+			_, err = kubectl.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: registryReleaseNamespace,
+				},
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
+	values := map[interface{}]interface{}{}
+
 	// Deploy the registry
-	_, err = helm.InstallChartByName(registryReleaseName, registryReleaseNamespace, "stable/docker-registry", "", registryReleaseValues)
+	_, err := helm.InstallChartByName(InternalRegistryName, registryReleaseNamespace, "stable/docker-registry", "", &values)
 	if err != nil {
 		return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
 	}
@@ -51,45 +51,23 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 	}
 
 	// Get the registry url
-	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, registryReleaseName+"-docker-registry")
+	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, InternalRegistryName+"-docker-registry")
 	if err != nil {
 		return err
 	}
 
-	// Check if an ingress is configured
-	ingressHostname := ""
-	if registryReleaseValues != nil {
-		registryValues := yamlq.NewQuery(*registryReleaseValues)
-		isIngressEnabled, _ := registryValues.Bool("ingress", "enabled")
-
-		if isIngressEnabled {
-			firstIngressHostname, _ := registryValues.String("ingress", "hosts", "0")
-
-			if len(firstIngressHostname) > 0 {
-				ingressHostname = firstIngressHostname
-			}
-		}
-	}
-
 	// Update config values
-	if len(ingressHostname) == 0 {
-		registryConfig.URL = configutil.String(serviceHostname)
-		registryConfig.Insecure = configutil.Bool(true)
-	} else {
-		registryConfig.URL = configutil.String(ingressHostname)
-		registryConfig.Insecure = configutil.Bool(false)
-	}
+	registryConfig.URL = configutil.String(serviceHostname)
+	registryConfig.Insecure = configutil.Bool(true)
 
 	return nil
 }
 
-func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistry *v1.DeploymentConfig, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Name
+func createOrUpdateRegistrySecret(kubectl *kubernetes.Clientset, internalRegistry *v1.InternalRegistryConfig, registryConfig *v1.RegistryConfig) error {
 	registryReleaseNamespace := *internalRegistry.Namespace
-
 	registryAuth := registryConfig.Auth
 
-	htpasswdSecretName := registryReleaseName + "-docker-registry-secret"
+	htpasswdSecretName := InternalRegistryName + "-docker-registry-secret"
 	htpasswdSecret, err := kubectl.Core().Secrets(registryReleaseNamespace).Get(htpasswdSecretName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve secret for docker registry: %s", err.Error())

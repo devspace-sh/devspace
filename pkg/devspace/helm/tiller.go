@@ -2,6 +2,7 @@ package helm
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -171,9 +172,23 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 			&tillerNamespace,
 		}
 
-		if config.DevSpace.Deployments != nil && len(*config.DevSpace.Deployments) > 0 {
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return fmt.Errorf("Error retrieving default namespace: %v", err)
+		}
+
+		if config.InternalRegistry != nil {
+			appNamespaces = append(appNamespaces, config.InternalRegistry.Namespace)
+		}
+
+		if config.DevSpace.Deployments != nil {
 			for _, deployConfig := range *config.DevSpace.Deployments {
-				if deployConfig.Namespace != nil {
+				if deployConfig.Namespace != nil && deployConfig.Helm != nil {
+					if *deployConfig.Namespace == "" {
+						appNamespaces = append(appNamespaces, &defaultNamespace)
+						continue
+					}
+
 					appNamespaces = append(appNamespaces, deployConfig.Namespace)
 				}
 			}
