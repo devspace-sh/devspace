@@ -66,6 +66,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	cmd.deleteDevSpaceDeployments()
+	cmd.deleteInternalRegistry()
 	cmd.deleteTiller()
 	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()

@@ -120,6 +120,7 @@ func InternalRegistry() error {
 	config.InternalRegistry = &v1.InternalRegistryConfig{
 		Deploy: configutil.Bool(true),
 	}
+	config.Registries = &overwriteRegistryMap
 
 	return nil
 }
