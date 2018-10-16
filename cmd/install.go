@@ -7,7 +7,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/envutil"
 	"github.com/covexo/devspace/pkg/util/log"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
@@ -21,7 +21,6 @@ type InstallCmd struct {
 	helm     *helmClient.ClientWrapper
 	kubectl  *kubernetes.Clientset
 	dsConfig *v1.DevSpaceConfig
-	workdir  string
 }
 
 // InstallCmdFlags are the flags available for the install-command

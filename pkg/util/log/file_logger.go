@@ -157,6 +157,14 @@ func (f *fileLogger) Printf(level logrus.Level, format string, args ...interface
 	}
 }
 
+func (f *fileLogger) StartWait(message string) {
+	// Noop operation
+}
+
+func (f *fileLogger) StopWait() {
+	// Noop operation
+}
+
 func (f *fileLogger) With(obj interface{}) *LoggerEntry {
 	return &LoggerEntry{
 		logger: f,

@@ -2,6 +2,7 @@ package helm
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -28,7 +29,7 @@ repositories:
 `
 
 func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrade bool) error {
-	tillerNamespace := GetTillerNamespace()
+	tillerNamespace := *config.Tiller.Namespace
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
@@ -77,7 +78,7 @@ func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, till
 	defer log.StopWait()
 
 	// If the service account is already there we do not create it or any roles/rolebindings
-	_, err := kubectlClient.CoreV1().ServiceAccounts(GetTillerNamespace()).Get(TillerServiceAccountName, metav1.GetOptions{})
+	_, err := kubectlClient.CoreV1().ServiceAccounts(*dsConfig.Tiller.Namespace).Get(TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
 		err = createTillerRBAC(kubectlClient, dsConfig)
 		if err != nil {
@@ -92,12 +93,13 @@ func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, till
 func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset) error {
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
+	config := configutil.GetConfig()
 
 	log.StartWait("Waiting for tiller to start")
 	defer log.StopWait()
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(GetTillerNamespace()).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := kubectlClient.ExtensionsV1beta1().Deployments(*config.Tiller.Namespace).Get(TillerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -123,44 +125,10 @@ func upgradeTiller(kubectlClient *kubernetes.Clientset, tillerOptions *helminsta
 	return nil
 }
 
-func addAppNamespaces(appNamespaces *[]*string, namespaces []*string) {
-	newAppNamespaces := *appNamespaces
-
-	for _, ns := range namespaces {
-		isExisting := false
-
-		for _, existingNS := range newAppNamespaces {
-			if ns == existingNS {
-				isExisting = true
-				break
-			}
-		}
-
-		if !isExisting {
-			newAppNamespaces = append(newAppNamespaces, ns)
-		}
-	}
-
-	appNamespaces = &newAppNamespaces
-}
-
-// GetTillerNamespace retrieves the tillernamespace
-func GetTillerNamespace() string {
-	config := configutil.GetConfig()
-	if config.DevSpace.Release == nil || config.DevSpace.Release.Namespace == nil {
-		log.Panic("Cannot get tiller namespace when helm is not configured")
-	}
-
-	if config.Services == nil || config.Services.Tiller == nil || config.Services.Tiller.Release == nil || config.Services.Tiller.Release.Namespace == nil {
-		return *config.DevSpace.Release.Namespace
-	}
-
-	return *config.Services.Tiller.Release.Namespace
-}
-
 // IsTillerDeployed determines if we could connect to a tiller server
 func IsTillerDeployed(kubectlClient *kubernetes.Clientset) bool {
-	tillerNamespace := GetTillerNamespace()
+	config := configutil.GetConfig()
+	tillerNamespace := *config.Tiller.Namespace
 	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
@@ -177,7 +145,7 @@ func IsTillerDeployed(kubectlClient *kubernetes.Clientset) bool {
 func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 	config := configutil.GetConfig()
 
-	tillerNamespace := GetTillerNamespace()
+	tillerNamespace := *config.Tiller.Namespace
 	errs := make([]error, 0, 1)
 	propagationPolicy := metav1.DeletePropagationForeground
 
@@ -201,12 +169,29 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 		}
 
 		appNamespaces := []*string{
-			config.DevSpace.Release.Namespace,
 			&tillerNamespace,
 		}
 
-		if config.Services.InternalRegistry != nil && config.Services.InternalRegistry.Release != nil && config.Services.InternalRegistry.Release.Namespace != nil {
-			appNamespaces = append(appNamespaces, config.Services.InternalRegistry.Release.Namespace)
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return fmt.Errorf("Error retrieving default namespace: %v", err)
+		}
+
+		if config.InternalRegistry != nil {
+			appNamespaces = append(appNamespaces, config.InternalRegistry.Namespace)
+		}
+
+		if config.DevSpace.Deployments != nil {
+			for _, deployConfig := range *config.DevSpace.Deployments {
+				if deployConfig.Namespace != nil && deployConfig.Helm != nil {
+					if *deployConfig.Namespace == "" {
+						appNamespaces = append(appNamespaces, &defaultNamespace)
+						continue
+					}
+
+					appNamespaces = append(appNamespaces, deployConfig.Namespace)
+				}
+			}
 		}
 
 		for _, appNamespace := range appNamespaces {
@@ -242,5 +227,6 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 	if errorText == "" {
 		return nil
 	}
+
 	return errors.New(errorText)
 }

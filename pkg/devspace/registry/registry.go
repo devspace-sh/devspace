@@ -15,11 +15,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/helm"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// InternalRegistryName is the name of the release used to deploy the internal registry
+const InternalRegistryName = "devspace-registry"
+
+// InternalRegistryDeploymentName is the name of the kubernetes deployment
+const InternalRegistryDeploymentName = "devspace-registry-docker-registry"
 
 const registryAuthSecretNamePrefix = "devspace-registry-auth-"
 const registryPort = 5000
@@ -27,10 +33,10 @@ const registryPort = 5000
 // CreatePullSecret creates an image pull secret for a registry
 func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string) error {
 	pullSecretName := GetRegistryAuthSecretName(registryURL)
-
 	if registryURL == "hub.docker.com" || registryURL == "" {
 		registryURL = "https://index.docker.io/v1/"
 	}
+
 	authToken := passwordOrToken
 
 	if username != "" {
@@ -79,13 +85,11 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistry, registryConfig *v1.RegistryConfig) error {
-	registryReleaseName := *internalRegistry.Release.Name
-	registryReleaseDeploymentName := registryReleaseName + "-docker-registry"
-	registryReleaseNamespace := *internalRegistry.Release.Namespace
+func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistryConfig, registryConfig *v1.RegistryConfig) error {
+	registryReleaseNamespace := *internalRegistry.Namespace
 
 	// Check if registry already exists
-	registryDeployment, err := kubectl.ExtensionsV1beta1().Deployments(registryReleaseNamespace).Get(registryReleaseDeploymentName, metav1.GetOptions{})
+	registryDeployment, err := kubectl.ExtensionsV1beta1().Deployments(registryReleaseNamespace).Get(InternalRegistryDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		err = createRegistry(kubectl, helm, internalRegistry, registryConfig)
 		if err != nil {
@@ -96,7 +100,7 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrappe
 	// Wait for registry if it is not ready yet
 	if registryDeployment == nil || registryDeployment.Status.Replicas == 0 || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
 		// Wait till registry is started
-		err = waitForRegistry(registryReleaseNamespace, registryReleaseDeploymentName, kubectl)
+		err = waitForRegistry(registryReleaseNamespace, InternalRegistryDeploymentName, kubectl)
 		if err != nil {
 			return err
 		}

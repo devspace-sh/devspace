@@ -130,7 +130,7 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 		return err
 	}
 
-	dsConfig.DevSpace.Release.Namespace = &namespace
+	UpdateDevSpaceConfig(dsConfig, namespace)
 
 	if useKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace
@@ -140,9 +140,11 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 			return err
 		}
 
+		dsConfig.Cluster.Namespace = &namespace
 		dsConfig.Cluster.KubeContext = configutil.String(kubeContext)
 	} else {
 		dsConfig.Cluster.APIServer = &cluster.Server
+		dsConfig.Cluster.Namespace = &namespace
 		dsConfig.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
 
 		dsConfig.Cluster.User = &v1.ClusterUser{
@@ -170,15 +172,13 @@ func UpdateKubeConfig(contextName, namespace string, cluster *api.Cluster, authI
 	config.Clusters[contextName] = cluster
 	config.AuthInfos[contextName] = authInfo
 
-	// Check if we need to add the context
-	if _, ok := config.Contexts[contextName]; !ok {
-		context := api.NewContext()
-		context.Cluster = contextName
-		context.AuthInfo = contextName
-		context.Namespace = namespace
+	// Update kube context
+	context := api.NewContext()
+	context.Cluster = contextName
+	context.AuthInfo = contextName
+	context.Namespace = namespace
 
-		config.Contexts[contextName] = context
-	}
+	config.Contexts[contextName] = context
 
 	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
 }

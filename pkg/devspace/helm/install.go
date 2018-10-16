@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/downloader"
@@ -40,7 +42,19 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName string, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace string, chartPath string, values *map[interface{}]interface{}) (*hapi_release5.Release, error) {
+	if releaseNamespace == "" {
+		config := configutil.GetConfig()
+
+		// Use default namespace here
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return nil, err
+		}
+
+		releaseNamespace = defaultNamespace
+	}
+
 	chart, err := helmchartutil.Load(chartPath)
 	if err != nil {
 		return nil, err
@@ -115,6 +129,9 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName string, r
 		)
 
 		if err != nil {
+			// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
+			helmClientWrapper.DeleteRelease(releaseName, true)
+
 			return nil, err
 		}
 

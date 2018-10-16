@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	"github.com/covexo/devspace/pkg/devspace/deploy"
+	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	deployKubectl "github.com/covexo/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 )
@@ -43,30 +46,45 @@ your project, use: devspace reset
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-	config := configutil.GetConfig()
-
-	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
-
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
-	client, err := helmClient.NewClient(kubectl, false)
+	deleteDevSpace(kubectl)
+}
 
-	if err != nil {
-		log.Fatalf("Unable to initialize helm client: %s", err.Error())
-	}
+func deleteDevSpace(kubectl *kubernetes.Clientset) {
+	config := configutil.GetConfig()
 
-	log.StartWait("Deleting release " + releaseName)
-	res, err := client.DeleteRelease(releaseName, true)
-	log.StopWait()
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			var err error
+			var deployClient deploy.Interface
 
-	if res != nil && res.Info != "" {
-		log.Donef("Successfully deleted release %s: %s", releaseName, res.Info)
-	} else if err != nil {
-		log.Donef("Error deleting release %s: %s", releaseName, err.Error())
-	} else {
-		log.Donef("Successfully deleted release %s", releaseName)
+			// Delete kubectl engine
+			if deployConfig.Kubectl != nil {
+				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create kubectl deploy config: %v", err)
+					continue
+				}
+			} else {
+				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create helm deploy config: %v", err)
+					continue
+				}
+			}
+
+			log.StartWait("Deleting deployment %s" + *deployConfig.Name)
+			err = deployClient.Delete()
+			log.StopWait()
+			if err != nil {
+				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
+			}
+
+			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
+		}
 	}
 }

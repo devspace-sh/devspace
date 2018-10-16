@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	helmClient "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
@@ -20,7 +19,6 @@ type RemoveCmd struct {
 	syncFlags    *removeSyncCmdFlags
 	portFlags    *removePortCmdFlags
 	packageFlags *removePackageCmdFlags
-	workdir      string
 }
 
 type removeSyncCmdFlags struct {
@@ -36,7 +34,8 @@ type removePortCmdFlags struct {
 }
 
 type removePackageCmdFlags struct {
-	RemoveAll bool
+	RemoveAll  bool
+	Deployment string
 }
 
 func init() {
@@ -113,7 +112,6 @@ func init() {
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
-
 	removePackageCmd := &cobra.Command{
 		Use:   "package",
 		Short: "Removes forwarded ports from a devspace",
@@ -123,6 +121,7 @@ func init() {
 	#######################################################
 	Removes a package from the devspace:
 	devspace remove package mysql
+	devspace remove package mysql -d devspace-default
 	#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -130,12 +129,34 @@ func init() {
 	}
 
 	removePackageCmd.Flags().BoolVar(&cmd.packageFlags.RemoveAll, "all", false, "Remove all packages")
+	removePackageCmd.Flags().StringVarP(&cmd.packageFlags.Deployment, "deployment", "d", "", "The deployment name to use")
 	removeCmd.AddCommand(removePackageCmd)
 }
 
 // RunRemovePackage executes the remove package command logic
 func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
-	cwd, err := os.Getwd()
+	config := configutil.GetConfig()
+	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && cmd.packageFlags.Deployment == "") {
+		log.Fatalf("Please specify the deployment via the -d flag")
+	}
+
+	var deploymentConfig *v1.DeploymentConfig
+	for _, deployConfig := range *config.DevSpace.Deployments {
+		if cmd.packageFlags.Deployment == "" || cmd.packageFlags.Deployment == *deployConfig.Name {
+			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
+				log.Fatalf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
+			}
+
+			deploymentConfig = deployConfig
+			break
+		}
+	}
+
+	if deploymentConfig == nil {
+		log.Fatalf("Deployment %s not found", cmd.packageFlags.Deployment)
+	}
+
+	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -144,7 +165,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("You need to specify a package name or the --all flag")
 	}
 
-	requirementsPath := filepath.Join(cwd, "chart", "requirements.yaml")
+	requirementsPath := filepath.Join(chartPath, "requirements.yaml")
 	yamlContents := map[interface{}]interface{}{}
 
 	err = yamlutil.ReadYamlFromFile(requirementsPath, yamlContents)
@@ -170,7 +191,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						cmd.rebuildDependencies(yamlContents)
+						cmd.rebuildDependencies(chartPath, yamlContents)
 						break
 					}
 				}
@@ -182,7 +203,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 
 		yamlContents["dependencies"] = []interface{}{}
 
-		cmd.rebuildDependencies(yamlContents)
+		cmd.rebuildDependencies(chartPath, yamlContents)
 		log.Done("Successfully removed all dependencies")
 		return
 	}
@@ -190,13 +211,8 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 	log.Done("No dependencies found")
 }
 
-func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interface{}) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(cwd, "chart", "requirements.yaml"))
+func (cmd *RemoveCmd) rebuildDependencies(chartPath string, newYamlContents map[interface{}]interface{}) {
+	err := yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(chartPath, "requirements.yaml"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -207,13 +223,13 @@ func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interf
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, false)
+	helm, err := helmClient.NewClient(kubectl, log.GetInstance(), false)
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %v", err)
 	}
 
 	log.StartWait("Update chart dependencies")
-	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
+	err = helm.UpdateDependencies(chartPath)
 	log.StopWait()
 
 	if err != nil {
@@ -237,25 +253,26 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
+	if config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0 {
+		newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
 
-	for _, v := range *config.DevSpace.Sync {
-		if cmd.syncFlags.RemoveAll ||
-			cmd.syncFlags.LocalPath == *v.LocalSubPath ||
-			cmd.syncFlags.ContainerPath == *v.ContainerPath ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
+		for _, v := range *config.DevSpace.Sync {
+			if cmd.syncFlags.RemoveAll ||
+				cmd.syncFlags.LocalPath == *v.LocalSubPath ||
+				cmd.syncFlags.ContainerPath == *v.ContainerPath ||
+				isMapEqual(labelSelectorMap, *v.LabelSelector) {
+				continue
+			}
+
+			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		newSyncPaths = append(newSyncPaths, v)
-	}
+		config.DevSpace.Sync = &newSyncPaths
 
-	config.DevSpace.Sync = &newSyncPaths
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Couldn't save config file: %s", err.Error())
+		}
 	}
 }
 
@@ -264,13 +281,11 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
-
 	if err != nil {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
 	argPorts := ""
-
 	if len(args) == 1 {
 		argPorts = args[0]
 	}
@@ -283,30 +298,37 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.PortForwarding)-1)
 
-OUTER:
-	for _, v := range *config.DevSpace.PortForwarding {
-		if cmd.portFlags.RemoveAll ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
-		}
+	if config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0 {
+		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
-		for _, pm := range *v.PortMappings {
-			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
-				continue OUTER
+		for _, v := range *config.DevSpace.Ports {
+			if cmd.portFlags.RemoveAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
+				continue
+			}
+
+			newPortMappings := []*v1.PortMapping{}
+
+			for _, pm := range *v.PortMappings {
+				if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
+					continue
+				}
+
+				newPortMappings = append(newPortMappings, pm)
+			}
+
+			if len(newPortMappings) > 0 {
+				v.PortMappings = &newPortMappings
+				newPortForwards = append(newPortForwards, v)
 			}
 		}
 
-		newPortForwards = append(newPortForwards, v)
-	}
+		config.DevSpace.Ports = &newPortForwards
 
-	config.DevSpace.PortForwarding = &newPortForwards
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		err = configutil.SaveConfig()
+		if err != nil {
+			log.Fatalf("Couldn't save config file: %s", err.Error())
+		}
 	}
 }
 
