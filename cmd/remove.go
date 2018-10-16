@@ -153,6 +153,10 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	if deploymentConfig == nil {
+		log.Fatalf("Deployment %s not found", cmd.packageFlags.Deployment)
+	}
+
 	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
 	if err != nil {
 		log.Fatal(err)
@@ -277,13 +281,11 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
-
 	if err != nil {
 		log.Fatalf("Error parsing selectors: %s", err.Error())
 	}
 
 	argPorts := ""
-
 	if len(args) == 1 {
 		argPorts = args[0]
 	}
@@ -298,20 +300,25 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	ports := strings.Split(argPorts, ",")
 	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
-OUTER:
 	for _, v := range *config.DevSpace.Ports {
-		if cmd.portFlags.RemoveAll ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
+		if cmd.portFlags.RemoveAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
 			continue
 		}
 
+		newPortMappings := []*v1.PortMapping{}
+
 		for _, pm := range *v.PortMappings {
 			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
-				continue OUTER
+				continue
 			}
+
+			newPortMappings = append(newPortMappings, pm)
 		}
 
-		newPortForwards = append(newPortForwards, v)
+		if len(newPortMappings) > 0 {
+			v.PortMappings = &newPortMappings
+			newPortForwards = append(newPortForwards, v)
+		}
 	}
 
 	config.DevSpace.Ports = &newPortForwards

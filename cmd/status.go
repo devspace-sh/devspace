@@ -106,7 +106,6 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 			"Internal Registry",
 			"Not Deployed",
 			"",
-			"",
 			err.Error(),
 		})
 	} else if registryStatus != nil {
@@ -212,7 +211,6 @@ func (cmd *StatusCmd) getRegistryStatus() ([]string, error) {
 					return []string{
 						"Internal Registry",
 						"Running",
-						pod.GetName(),
 						pod.GetNamespace(),
 						"",
 						//fmt.Sprintf("Created: %s", pod.GetCreationTimestamp().String()),

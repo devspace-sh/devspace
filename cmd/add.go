@@ -186,6 +186,10 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	if deploymentConfig == nil {
+		log.Fatalf("Deployment %s not found", cmd.packageFlags.Deployment)
+	}
+
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
@@ -414,7 +418,7 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 			selectors = map[string]*string{}
 		}
 
-		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(selectors, labelSelectorMap) {
+		if isMapEqual(selectors, labelSelectorMap) {
 			portMap := append(*v.PortMappings, portMappings...)
 
 			v.PortMappings = &portMap
