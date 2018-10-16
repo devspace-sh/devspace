@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
@@ -21,7 +20,6 @@ import (
 // ResetCmd holds the needed command information
 type ResetCmd struct {
 	kubectl *kubernetes.Clientset
-	workdir string
 }
 
 func init() {
@@ -247,7 +245,7 @@ func (cmd *ResetCmd) deleteDevspaceFolder() {
 	}) == "y"
 
 	if deleteDevspaceFolder {
-		os.RemoveAll(path.Join(cmd.workdir, ".devspace"))
+		os.RemoveAll(".devspace")
 		log.Done("Successfully deleted .devspace folder")
 	}
 }

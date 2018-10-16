@@ -30,7 +30,9 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 					namespace = *portForwarding.Namespace
 				}
 
+				log.StartWait("Waiting for pods to become running")
 				pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace)
+				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"os/exec"
 	"strings"
 
@@ -31,11 +30,8 @@ import (
 
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
-	flags     *UpCmdFlags
-	kubectl   *kubernetes.Clientset
-	workdir   string
-	pod       *k8sv1.Pod
-	container *k8sv1.Container
+	flags   *UpCmdFlags
+	kubectl *kubernetes.Clientset
 }
 
 // UpCmdFlags are the flags available for the up-command
@@ -102,13 +98,8 @@ Starts and connects your DevSpace:
 // Run executes the command logic
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
+	var err error
 
-	workdir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	cmd.workdir = workdir
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
 		initCmd := &InitCmd{
@@ -164,59 +155,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, args)
-}
-
-func (cmd *UpCmd) buildAndDeploy() {
-	config := configutil.GetConfig()
-
-	// Load config
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
-	}
-
-	// Build image if necessary
-	mustRedeploy := cmd.buildImages(generatedConfig)
-
-	// Deploy all defined deployments
-	if config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
-			var deployClient deploy.Interface
-
-			if deployConfig.Kubectl != nil {
-				log.StartWait("Deploying " + *deployConfig.Name + " with kubectl")
-
-				deployClient, err = deployKubectl.New(cmd.kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
-				}
-			} else if deployConfig.Helm != nil {
-				log.StartWait("Deploying " + *deployConfig.Name + " with helm")
-
-				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
-				}
-			} else {
-				log.Fatalf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
-			}
-
-			err = deployClient.Deploy(generatedConfig, mustRedeploy || cmd.flags.deploy)
-			if err != nil {
-				log.Fatalf("Error deploying %s: %v", *deployConfig.Name, err)
-			}
-
-			log.StopWait()
-			log.Donef("Successfully deployed %s", *deployConfig.Name)
-		}
-
-		// Save Config
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
-		}
-	}
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, args, log.GetInstance())
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -383,6 +322,58 @@ func (cmd *UpCmd) initRegistries() {
 					}
 				}
 			}
+		}
+	}
+}
+
+func (cmd *UpCmd) buildAndDeploy() {
+	config := configutil.GetConfig()
+
+	// Load config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
+	// Build image if necessary
+	mustRedeploy := cmd.buildImages(generatedConfig)
+
+	// Deploy all defined deployments
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			var deployClient deploy.Interface
+
+			if deployConfig.Kubectl != nil {
+				log.StartWait("Deploying " + *deployConfig.Name + " with kubectl")
+
+				deployClient, err = deployKubectl.New(cmd.kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+				}
+			} else if deployConfig.Helm != nil {
+				log.StartWait("Deploying " + *deployConfig.Name + " with helm")
+
+				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Fatalf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+				}
+			} else {
+				log.Fatalf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
+			}
+
+			err = deployClient.Deploy(generatedConfig, mustRedeploy || cmd.flags.deploy)
+			if err != nil {
+				log.Fatalf("Error deploying %s: %v", *deployConfig.Name, err)
+			}
+
+			log.StopWait()
+			log.Donef("Successfully deployed %s", *deployConfig.Name)
+		}
+
+		// Save Config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
 		}
 	}
 }

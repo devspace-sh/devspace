@@ -13,8 +13,7 @@ import (
 
 // ListCmd holds the information needed for the list command
 type ListCmd struct {
-	flags   *ListCmdFlags
-	workdir string
+	flags *ListCmdFlags
 }
 
 // ListCmdFlags holds the possible flags for the list command

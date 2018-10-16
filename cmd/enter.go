@@ -55,5 +55,5 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, args)
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, args, log.GetInstance())
 }

@@ -19,7 +19,6 @@ type RemoveCmd struct {
 	syncFlags    *removeSyncCmdFlags
 	portFlags    *removePortCmdFlags
 	packageFlags *removePackageCmdFlags
-	workdir      string
 }
 
 type removeSyncCmdFlags struct {

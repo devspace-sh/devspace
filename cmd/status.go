@@ -20,7 +20,6 @@ import (
 type StatusCmd struct {
 	flags   *StatusCmdFlags
 	kubectl *kubernetes.Clientset
-	workdir string
 }
 
 // StatusCmdFlags holds the possible flags for the list command

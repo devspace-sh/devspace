@@ -21,7 +21,6 @@ type InstallCmd struct {
 	helm     *helmClient.ClientWrapper
 	kubectl  *kubernetes.Clientset
 	dsConfig *v1.DevSpaceConfig
-	workdir  string
 }
 
 // InstallCmdFlags are the flags available for the install-command

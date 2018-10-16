@@ -1,17 +1,17 @@
 package services
 
 import (
-	"log"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, args []string) {
+func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, args []string, log log.Logger) {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -49,7 +49,9 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, a
 	}
 
 	// Get first running pod
+	log.StartWait("Waiting for pods to become running")
 	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace)
+	log.StopWait()
 	if err != nil {
 		log.Fatalf("Cannot find running pod: %v", err)
 	}
