@@ -130,16 +130,12 @@ func SetDefaults(config *v1.Config) {
 			}
 		}
 
-		if config.DevSpace.PortForwarding != nil {
-			for _, portForwarding := range *config.DevSpace.PortForwarding {
+		if config.DevSpace.Ports != nil {
+			for _, portForwarding := range *config.DevSpace.Ports {
 				if portForwarding.Namespace == nil {
 					portForwarding.Namespace = String("")
 				}
 			}
-		}
-
-		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace == nil {
-			config.DevSpace.Terminal.Namespace = String("")
 		}
 
 		if needTiller && config.Tiller == nil {

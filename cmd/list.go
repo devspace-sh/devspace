@@ -198,7 +198,7 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.PortForwarding) == 0 {
+	if len(*config.DevSpace.Ports) == 0 {
 		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
@@ -209,10 +209,10 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(*config.DevSpace.PortForwarding))
+	portForwards := make([][]string, 0, len(*config.DevSpace.Ports))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.PortForwarding {
+	for _, value := range *config.DevSpace.Ports {
 		selector := ""
 		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {

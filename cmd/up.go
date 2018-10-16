@@ -207,6 +207,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 				log.Fatalf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
 
+			log.StopWait()
 			log.Donef("Successfully deployed %s", *deployConfig.Name)
 		}
 
@@ -346,6 +347,11 @@ func (cmd *UpCmd) initRegistries() {
 	}
 
 	if registryMap != nil {
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			log.Fatalf("Cannot get default namespace: %v", err)
+		}
+
 		for registryName, registryConf := range registryMap {
 			if registryConf.Auth != nil && registryConf.Auth.Password != nil {
 				if config.DevSpace.Deployments != nil {
@@ -362,8 +368,13 @@ func (cmd *UpCmd) initRegistries() {
 							registryURL = *registryConf.URL
 						}
 
+						namespace := *deployConfig.Namespace
+						if namespace == "" {
+							namespace = defaultNamespace
+						}
+
 						log.StartWait("Creating image pull secret for registry: " + registryName)
-						err := registry.CreatePullSecret(cmd.kubectl, *deployConfig.Namespace, registryURL, username, password, email)
+						err := registry.CreatePullSecret(cmd.kubectl, namespace, registryURL, username, password, email)
 						log.StopWait()
 
 						if err != nil {

@@ -76,8 +76,8 @@ func GetNameOfFirstHelmDeployment() string {
 
 	if config.DevSpace.Deployments != nil {
 		for _, deploymentConfig := range *config.DevSpace.Deployments {
-			if deploymentConfig.Helm != nil && deploymentConfig.Namespace != nil {
-				return *deploymentConfig.Namespace
+			if deploymentConfig.Helm != nil {
+				return *deploymentConfig.Name
 			}
 		}
 	}

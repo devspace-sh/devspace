@@ -296,10 +296,10 @@ func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.PortForwarding)-1)
+	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
 OUTER:
-	for _, v := range *config.DevSpace.PortForwarding {
+	for _, v := range *config.DevSpace.Ports {
 		if cmd.portFlags.RemoveAll ||
 			isMapEqual(labelSelectorMap, *v.LabelSelector) {
 			continue
@@ -314,10 +314,9 @@ OUTER:
 		newPortForwards = append(newPortForwards, v)
 	}
 
-	config.DevSpace.PortForwarding = &newPortForwards
+	config.DevSpace.Ports = &newPortForwards
 
 	err = configutil.SaveConfig()
-
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}

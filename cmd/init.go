@@ -347,7 +347,7 @@ func (cmd *InitCmd) configureRegistry() {
 	createInternalRegistryDefaultAnswer := "yes"
 
 	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err != nil {
+	if err == nil {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
 		log.StopWait()

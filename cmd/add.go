@@ -133,7 +133,7 @@ func init() {
 	}
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
-	addSyncCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
@@ -405,7 +405,7 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 	config := configutil.GetConfig()
 
 	// Check if we should add to existing port mapping
-	for _, v := range *config.DevSpace.PortForwarding {
+	for _, v := range *config.DevSpace.Ports {
 		var selectors map[string]*string
 
 		if v.LabelSelector != nil {
@@ -422,14 +422,14 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 			return
 		}
 	}
-	portMap := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
+	portMap := append(*config.DevSpace.Ports, &v1.PortForwardingConfig{
 		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 		Namespace:     &cmd.portFlags.Namespace,
 	})
 
-	config.DevSpace.PortForwarding = &portMap
+	config.DevSpace.Ports = &portMap
 }
 
 func isMapEqual(map1 map[string]*string, map2 map[string]*string) bool {

@@ -17,7 +17,7 @@ import (
 func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 	config := configutil.GetConfig()
 
-	for _, portForwarding := range *config.DevSpace.PortForwarding {
+	for _, portForwarding := range *config.DevSpace.Ports {
 		if portForwarding.ResourceType == nil || *portForwarding.ResourceType == "pod" {
 			if len(*portForwarding.LabelSelector) > 0 {
 				labels := make([]string, 0, len(*portForwarding.LabelSelector))

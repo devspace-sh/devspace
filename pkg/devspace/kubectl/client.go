@@ -179,7 +179,7 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			var selectedPod *k8sv1.Pod
 
 			for _, pod := range podList.Items {
-				if selectedPod == nil || pod.CreationTimestamp.After(selectedPod.CreationTimestamp.Time) {
+				if selectedPod == nil || pod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
 					selectedPod = &pod
 				}
 			}
@@ -187,6 +187,8 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			if selectedPod != nil && GetPodStatus(selectedPod) == "Running" {
 				return selectedPod, nil
 			}
+		} else {
+			log.Info("No selectable pod found")
 		}
 
 		time.Sleep(waitingInterval)

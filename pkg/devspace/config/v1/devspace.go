@@ -2,10 +2,10 @@ package v1
 
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
-	Terminal       *Terminal                `yaml:"terminal"`
-	Deployments    *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	PortForwarding *[]*PortForwardingConfig `yaml:"ports"`
-	Sync           *[]*SyncConfig           `yaml:"sync"`
+	Terminal    *Terminal                `yaml:"terminal"`
+	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Ports       *[]*PortForwardingConfig `yaml:"ports"`
+	Sync        *[]*SyncConfig           `yaml:"sync"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
