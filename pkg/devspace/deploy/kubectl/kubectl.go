@@ -40,8 +40,11 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 		context = *config.Cluster.KubeContext
 	}
 
-	namespace := ""
-	if deployConfig.Namespace != nil {
+	namespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return nil, err
+	}
+	if deployConfig.Namespace != nil && *deployConfig.Namespace != "" {
 		namespace = *deployConfig.Namespace
 	}
 
@@ -73,6 +76,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 
 // Delete deletes all matched manifests from kubernetes
 func (d *DeployConfig) Delete() error {
+	d.Log.StartWait("Loading manifests")
 	manifests, err := loadManifests(d.Manifests, d.Log)
 	if err != nil {
 		return err
@@ -92,11 +96,14 @@ func (d *DeployConfig) Delete() error {
 	cmd.Stdout = d.Log
 	cmd.Stderr = d.Log
 
+	d.Log.StartWait("Deleting manifests with kubectl")
+	defer d.Log.StopWait()
 	return cmd.Run()
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
 func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
+	d.Log.StartWait("Loading manifests")
 	manifests, err := loadManifests(d.Manifests, d.Log)
 	if err != nil {
 		return err
@@ -120,18 +127,19 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 	cmd.Stdout = d.Log
 	cmd.Stderr = d.Log
 
+	d.Log.StartWait("Applying manifests with kubectl")
+	defer d.Log.StopWait()
 	return cmd.Run()
 }
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {
 	args := []string{}
 
-	if d.Namespace != "" {
-		args = append(args, "-n", d.Namespace)
-	}
-
 	if d.Context != "" {
 		args = append(args, "--context", d.Context)
+	}
+	if d.Namespace != "" {
+		args = append(args, "-n", d.Namespace)
 	}
 
 	args = append(args, method)
@@ -160,5 +168,5 @@ func replaceManifest(manifest Manifest, tags map[string]string) {
 		return value + ":" + tags[value]
 	}
 
-	Walk(manifest, match, replace)
+	Walk(map[interface{}]interface{}(manifest), match, replace)
 }

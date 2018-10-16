@@ -75,9 +75,9 @@ func getManifestsFromFile(filepath string) ([]Manifest, error) {
 		manifest = strings.TrimLeft(manifest, "\r\n")
 		manifest = strings.TrimRight(manifest, "\r\n")
 
-		manifestData := Manifest{}
+		manifestData := make(map[interface{}]interface{})
 
-		err = yaml.Unmarshal([]byte(manifest), manifestData)
+		err = yaml.Unmarshal([]byte(manifest), &manifestData)
 		if err != nil {
 			return nil, err
 		}
