@@ -44,17 +44,20 @@ type addSyncCmdFlags struct {
 	LocalPath     string
 	ContainerPath string
 	ExcludedPaths string
+	Namespace     string
 }
 
 type addPortCmdFlags struct {
 	ResourceType string
 	Selector     string
+	Namespace    string
 }
 
 type addPackageFlags struct {
 	AppVersion   string
 	ChartVersion string
 	SkipQuestion bool
+	Deployment   string
 }
 
 func init() {
@@ -106,6 +109,7 @@ func init() {
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LocalPath, "local", "", "Relative local path")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
 
@@ -129,6 +133,7 @@ func init() {
 	}
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
+	addSyncCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
@@ -148,7 +153,7 @@ func init() {
 	devspace add package
 	devspace add package mysql
 	devspace add package mysql --app-version=5.7.14
-	devspace add package mysql --chart-version=0.10.3
+	devspace add package mysql --chart-version=0.10.3 -d devspace-default
 	#######################################################
 	`,
 		Run: cmd.RunAddPackage,
@@ -156,6 +161,7 @@ func init() {
 
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.AppVersion, "app-version", "", "App version")
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.ChartVersion, "chart-version", "", "Chart version")
+	addPackageCmd.Flags().StringVarP(&cmd.packageFlags.Deployment, "deployment", "d", "", "The deployment name to use")
 	addPackageCmd.Flags().BoolVar(&cmd.packageFlags.SkipQuestion, "skip-question", false, "Skips the question to show the readme in a browser")
 
 	addCmd.AddCommand(addPackageCmd)
@@ -163,6 +169,23 @@ func init() {
 
 // RunAddPackage executes the add package command logic
 func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
+	config := configutil.GetConfig()
+	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && cmd.packageFlags.Deployment == "") {
+		log.Fatalf("Please specify the deployment via the -d flag")
+	}
+
+	var deploymentConfig *v1.DeploymentConfig
+	for _, deployConfig := range *config.DevSpace.Deployments {
+		if cmd.packageFlags.Deployment == "" || cmd.packageFlags.Deployment == *deployConfig.Name {
+			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
+				log.Fatalf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
+			}
+
+			deploymentConfig = deployConfig
+			break
+		}
+	}
+
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
@@ -187,13 +210,12 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Done("Chart found")
-
-	cwd, err := os.Getwd()
+	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
+	requirementsFile := filepath.Join(chartPath, "requirements.yaml")
 	_, err = os.Stat(requirementsFile)
 	if os.IsNotExist(err) {
 		entry := "dependencies:\n" +
@@ -234,7 +256,7 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.StartWait("Update chart dependencies")
-	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
+	err = helm.UpdateDependencies(chartPath)
 	log.StopWait()
 
 	if err != nil {
@@ -242,7 +264,7 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Check if key already exists
-	valuesYaml := filepath.Join(cwd, "chart", "values.yaml")
+	valuesYaml := filepath.Join(chartPath, "values.yaml")
 	valuesYamlContents := map[interface{}]interface{}{}
 
 	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
@@ -262,16 +284,11 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	log.Donef("Successfully added %s as chart dependency, you can configure the package in 'chart/values.yaml'", version.GetName())
-	cmd.showReadme(version)
+	log.Donef("Successfully added %s as chart dependency, you can configure the package in '%s/values.yaml'", *deploymentConfig.Helm.ChartPath, version.GetName())
+	cmd.showReadme(chartPath, version)
 }
 
-func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func (cmd *AddCmd) showReadme(chartPath string, chartVersion *repo.ChartVersion) {
 	if cmd.packageFlags.SkipQuestion {
 		return
 	}
@@ -286,7 +303,7 @@ func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
 		return
 	}
 
-	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(cwd, "chart", "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
+	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(chartPath, "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -349,6 +366,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
 		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
 		ExcludePaths:  &excludedPaths,
+		Namespace:     &cmd.syncFlags.Namespace,
 	})
 
 	config.DevSpace.Sync = &syncConfig
@@ -408,6 +426,7 @@ func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*strin
 		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
+		Namespace:     &cmd.portFlags.Namespace,
 	})
 
 	config.DevSpace.PortForwarding = &portMap

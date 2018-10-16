@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
@@ -158,23 +159,41 @@ func IsMinikube() bool {
 	return *isMinikubeVar
 }
 
-// GetFirstRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetFirstRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
-	podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
+// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
+func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+	maxWaiting := 120 * time.Second
+	waitingInterval := 1 * time.Second
 
-	if err != nil {
-		return nil, err
-	}
+	for maxWaiting > 0 {
+		time.Sleep(waitingInterval)
 
-	for _, pod := range podList.Items {
-		if GetPodStatus(&pod) == "Running" {
-			return &pod, nil
+		podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			return nil, err
 		}
+
+		if podList.Size() > 0 && len(podList.Items) > 0 {
+			// Get Pod with latest creation timestamp
+			var selectedPod *k8sv1.Pod
+
+			for _, pod := range podList.Items {
+				if selectedPod == nil || pod.CreationTimestamp.After(selectedPod.CreationTimestamp.Time) {
+					selectedPod = &pod
+				}
+			}
+
+			if selectedPod != nil && GetPodStatus(selectedPod) == "Running" {
+				return selectedPod, nil
+			}
+		}
+
+		time.Sleep(waitingInterval)
+		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

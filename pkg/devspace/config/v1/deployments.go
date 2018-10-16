@@ -10,8 +10,7 @@ type DeploymentConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	ChartPath *string                      `yaml:"chartPath,omitempty"`
-	Values    *map[interface{}]interface{} `yaml:"values,omitempty"`
+	ChartPath *string `yaml:"chartPath,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment

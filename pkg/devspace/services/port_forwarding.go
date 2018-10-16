@@ -30,7 +30,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 					namespace = *portForwarding.Namespace
 				}
 
-				pod, err := kubectl.GetFirstRunningPod(client, strings.Join(labels, ", "), namespace)
+				pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace)
 				if err != nil {
 					return fmt.Errorf("Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {

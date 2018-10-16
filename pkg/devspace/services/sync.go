@@ -36,7 +36,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			namespace = *syncPath.Namespace
 		}
 
-		pod, err := kubectl.GetFirstRunningPod(client, strings.Join(labels, ", "), namespace)
+		pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to list devspace pods: %v", err)
 		} else if pod != nil {

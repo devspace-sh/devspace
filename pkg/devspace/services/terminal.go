@@ -49,7 +49,7 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, a
 	}
 
 	// Get first running pod
-	pod, err := kubectl.GetFirstRunningPod(client, labelSelector, namespace)
+	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace)
 	if err != nil {
 		log.Fatalf("Cannot find running pod: %v", err)
 	}

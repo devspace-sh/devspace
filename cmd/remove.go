@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -36,7 +35,8 @@ type removePortCmdFlags struct {
 }
 
 type removePackageCmdFlags struct {
-	RemoveAll bool
+	RemoveAll  bool
+	Deployment string
 }
 
 func init() {
@@ -113,7 +113,6 @@ func init() {
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
-
 	removePackageCmd := &cobra.Command{
 		Use:   "package",
 		Short: "Removes forwarded ports from a devspace",
@@ -123,6 +122,7 @@ func init() {
 	#######################################################
 	Removes a package from the devspace:
 	devspace remove package mysql
+	devspace remove package mysql -d devspace-default
 	#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -130,12 +130,30 @@ func init() {
 	}
 
 	removePackageCmd.Flags().BoolVar(&cmd.packageFlags.RemoveAll, "all", false, "Remove all packages")
+	removePackageCmd.Flags().StringVarP(&cmd.packageFlags.Deployment, "deployment", "d", "", "The deployment name to use")
 	removeCmd.AddCommand(removePackageCmd)
 }
 
 // RunRemovePackage executes the remove package command logic
 func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
-	cwd, err := os.Getwd()
+	config := configutil.GetConfig()
+	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && cmd.packageFlags.Deployment == "") {
+		log.Fatalf("Please specify the deployment via the -d flag")
+	}
+
+	var deploymentConfig *v1.DeploymentConfig
+	for _, deployConfig := range *config.DevSpace.Deployments {
+		if cmd.packageFlags.Deployment == "" || cmd.packageFlags.Deployment == *deployConfig.Name {
+			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
+				log.Fatalf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
+			}
+
+			deploymentConfig = deployConfig
+			break
+		}
+	}
+
+	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -144,7 +162,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("You need to specify a package name or the --all flag")
 	}
 
-	requirementsPath := filepath.Join(cwd, "chart", "requirements.yaml")
+	requirementsPath := filepath.Join(chartPath, "requirements.yaml")
 	yamlContents := map[interface{}]interface{}{}
 
 	err = yamlutil.ReadYamlFromFile(requirementsPath, yamlContents)
@@ -170,7 +188,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						cmd.rebuildDependencies(yamlContents)
+						cmd.rebuildDependencies(chartPath, yamlContents)
 						break
 					}
 				}
@@ -182,7 +200,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 
 		yamlContents["dependencies"] = []interface{}{}
 
-		cmd.rebuildDependencies(yamlContents)
+		cmd.rebuildDependencies(chartPath, yamlContents)
 		log.Done("Successfully removed all dependencies")
 		return
 	}
@@ -190,13 +208,8 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 	log.Done("No dependencies found")
 }
 
-func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interface{}) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(cwd, "chart", "requirements.yaml"))
+func (cmd *RemoveCmd) rebuildDependencies(chartPath string, newYamlContents map[interface{}]interface{}) {
+	err := yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(chartPath, "requirements.yaml"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -213,7 +226,7 @@ func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interf
 	}
 
 	log.StartWait("Update chart dependencies")
-	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
+	err = helm.UpdateDependencies(chartPath)
 	log.StopWait()
 
 	if err != nil {
