@@ -102,7 +102,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				allowInsecurePush = *registryConf.Insecure
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(registryURL, imageName, imageTag, buildNamespace, client, allowInsecurePush)
+			imageBuilder, err = kaniko.NewBuilder(registryURL, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
 				log.Fatalf("Error creating kaniko builder: %v", err)
 			}
@@ -176,6 +176,10 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
+		if registryURL != "" {
+			imageName = registryURL + "/" + imageName
+		}
+
 		generatedConfig.ImageTags[imageName] = imageTag
 
 		log.Done("Done building and pushing image '" + imageName + "'")
