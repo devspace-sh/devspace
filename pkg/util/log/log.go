@@ -137,7 +137,7 @@ func StartFileLogging() {
 	OverrideRuntimeErrorHandler()
 }
 
-// StopsFileLogging closes the writer of the fileLogger
+// StopFileLogging closes the writer of the fileLogger
 func StopFileLogging() {
 	stdoutLog.fileLogger = nil
 	runtimeErrorHandlersOverriden = false

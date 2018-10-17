@@ -419,7 +419,7 @@ func (s *stdoutLogger) Write(message []byte) (int, error) {
 	return n, err
 }
 
-func (f *stdoutLogger) Close() error {
+func (s *stdoutLogger) Close() error {
 	os.Exit(0)
 	return nil
 }
