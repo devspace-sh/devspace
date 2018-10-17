@@ -205,7 +205,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--context=dir://" + containerBuildPath,
 			"--destination=" + imageDestination,
 			"--single-snapshot",
-			"--insecure",
 		}
 
 		if !options.NoCache {
@@ -213,7 +212,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		if b.allowInsecureRegistry {
-			kanikoBuildCmd = append(kanikoBuildCmd, "--skip-tls-verify")
+			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure", "--skip-tls-verify")
 		}
 
 		stdin, stdout, stderr, execErr := kubectl.Exec(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
