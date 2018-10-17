@@ -49,10 +49,11 @@ type addDeploymentFlags struct {
 
 func init() {
 	cmd := &AddCmd{
-		flags:        &AddCmdFlags{},
-		syncFlags:    &addSyncCmdFlags{},
-		portFlags:    &addPortCmdFlags{},
-		packageFlags: &addPackageFlags{},
+		flags:           &AddCmdFlags{},
+		syncFlags:       &addSyncCmdFlags{},
+		portFlags:       &addPortCmdFlags{},
+		packageFlags:    &addPackageFlags{},
+		deploymentFlags: &addDeploymentFlags{},
 	}
 
 	addCmd := &cobra.Command{

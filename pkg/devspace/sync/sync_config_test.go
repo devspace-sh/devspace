@@ -75,7 +75,7 @@ func TestInitialSync(t *testing.T) {
 	filesToCheck, foldersToCheck := makeBasicTestCases()
 
 	syncClient := createTestSyncClient(local, remote)
-	defer syncClient.Stop()
+	defer syncClient.Stop(nil)
 
 	syncClient.errorChan = make(chan error)
 	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
@@ -134,7 +134,7 @@ func TestNormalSync(t *testing.T) {
 	sort.Stable(foldersToCheck)
 
 	syncClient := createTestSyncClient(local, remote)
-	defer syncClient.Stop()
+	defer syncClient.Stop(nil)
 
 	syncClient.errorChan = make(chan error)
 	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
