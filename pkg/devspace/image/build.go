@@ -176,6 +176,10 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
+		if registryURL != "" {
+			imageName = registryURL + "/" + imageName
+		}
+
 		generatedConfig.ImageTags[imageName] = imageTag
 
 		log.Done("Done building and pushing image '" + imageName + "'")

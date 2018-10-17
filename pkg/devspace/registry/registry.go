@@ -135,6 +135,7 @@ func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, cl
 // GetImageURL returns the image (optional with tag)
 func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	image := *imageConfig.Name
+	registryURL := ""
 
 	if imageConfig.Registry != nil {
 		registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
@@ -142,17 +143,22 @@ func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig,
 			log.Fatal(registryConfErr)
 		}
 
-		registryURL := *registryConfig.URL
+		registryURL = *registryConfig.URL
 		if registryURL != "" && registryURL != "hub.docker.com" {
 			image = registryURL + "/" + image
 		}
+	}
+
+	fullImageName := *imageConfig.Name
+	if registryURL != "" {
+		fullImageName = registryURL + "/" + fullImageName
 	}
 
 	if includingLatestTag {
 		if imageConfig.Tag != nil {
 			image = image + ":" + *imageConfig.Tag
 		} else {
-			image = image + ":" + generatedConfig.ImageTags[*imageConfig.Name]
+			image = image + ":" + generatedConfig.ImageTags[fullImageName]
 		}
 	}
 
