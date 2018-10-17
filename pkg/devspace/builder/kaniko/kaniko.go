@@ -205,6 +205,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--context=dir://" + containerBuildPath,
 			"--destination=" + imageDestination,
 			"--single-snapshot",
+			"--insecure",
 		}
 
 		if b.PreviousImageTag != "" {
