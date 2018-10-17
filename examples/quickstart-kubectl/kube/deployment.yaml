@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        release: devspace-default
+    spec:
+      containers:
+      - name: default
+        image: devspace-default
+        command: 
+        args:
+          {{- range $index, $arg := .Values.containers.default.args }}
+          - "{{ $arg }}"
+          {{- end }}
+      imagePullSecrets:
+        {{- range $index, $secretName := .Values.pullSecrets }}
+        - name: "{{ $secretName }}"
+        {{- end }}
