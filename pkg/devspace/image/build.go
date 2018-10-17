@@ -24,7 +24,6 @@ import (
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
 	rebuild := false
-	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 
@@ -91,15 +90,14 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Kaniko != nil {
+		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
-			buildNamespace := *config.DevSpace.Release.Namespace
-			allowInsecurePush := false
-
-			if imageConf.Build.Engine.Kaniko.Namespace != nil {
-				buildNamespace = *imageConf.Build.Engine.Kaniko.Namespace
+			if imageConf.Build.Kaniko.Namespace == nil {
+				log.Fatalf("No kaniko namespace configured for image %s", imageName)
 			}
 
+			buildNamespace := *imageConf.Build.Kaniko.Namespace
+			allowInsecurePush := false
 			if registryConf.Insecure != nil {
 				allowInsecurePush = *registryConf.Insecure
 			}
@@ -110,10 +108,10 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		} else {
 			engineName = "docker"
-			preferMinikube := true
 
-			if imageConf.Build != nil && imageConf.Build.Engine != nil && imageConf.Build.Engine.Docker != nil && imageConf.Build.Engine.Docker.PreferMinikube != nil {
-				preferMinikube = *imageConf.Build.Engine.Docker.PreferMinikube
+			preferMinikube := true
+			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.PreferMinikube != nil {
+				preferMinikube = *imageConf.Build.Docker.PreferMinikube
 			}
 
 			imageBuilder, err = docker.NewBuilder(registryURL, imageName, imageTag, preferMinikube)
@@ -136,7 +134,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		log.StartWait("Authenticating (" + registryURL + ")")
+		displayRegistryURL := "hub.docker.com"
+		if registryURL != "" {
+			displayRegistryURL = registryURL
+		}
+
+		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
 		log.StopWait()
 
@@ -144,7 +147,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			log.Fatalf("Error during image registry authentication: %v", err)
 		}
 
-		log.Done("Authentication successful (" + registryURL + ")")
+		log.Done("Authentication successful (" + displayRegistryURL + ")")
 
 		buildOptions := &types.ImageBuildOptions{}
 
@@ -170,7 +173,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			return false, fmt.Errorf("Error during image push: %v", err)
 		}
 
-		log.Info("Image pushed to registry (" + registryURL + ")")
+		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
 		generatedConfig.ImageTags[imageName] = imageTag

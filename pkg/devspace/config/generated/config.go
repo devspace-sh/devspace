@@ -10,7 +10,7 @@ import (
 
 // Config specifies the runtime config struct
 type Config struct {
-	HelmChartHash          string            `yaml:"chartHash"`
+	ChartHashs             map[string]string `yaml:"chartHashs"`
 	DockerLatestTimestamps map[string]int64  `yaml:"dockerLatestTimestamps"`
 	ImageTags              map[string]string `yaml:"imageTags"`
 }
@@ -27,6 +27,7 @@ func LoadConfig() (*Config, error) {
 		return &Config{
 			DockerLatestTimestamps: make(map[string]int64),
 			ImageTags:              make(map[string]string),
+			ChartHashs:             make(map[string]string),
 		}, nil
 	}
 
@@ -34,6 +35,16 @@ func LoadConfig() (*Config, error) {
 	err = yaml.Unmarshal(data, config)
 	if err != nil {
 		return nil, err
+	}
+
+	if config.ChartHashs == nil {
+		config.ChartHashs = make(map[string]string)
+	}
+	if config.DockerLatestTimestamps == nil {
+		config.DockerLatestTimestamps = make(map[string]int64)
+	}
+	if config.ImageTags == nil {
+		config.ImageTags = make(map[string]string)
 	}
 
 	return config, nil

@@ -1,212 +1,197 @@
 package helm
 
 import (
-	"os"
+	"fmt"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	"github.com/covexo/devspace/pkg/util/fsutil"
-	"github.com/covexo/devspace/pkg/util/log"
-
-	"k8s.io/helm/pkg/getter"
-	"k8s.io/helm/pkg/kube"
-	"k8s.io/helm/pkg/repo"
-
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	homedir "github.com/mitchellh/go-homedir"
-	k8shelm "k8s.io/helm/pkg/helm"
-	helmenvironment "k8s.io/helm/pkg/helm/environment"
-	"k8s.io/helm/pkg/helm/helmpath"
-	"k8s.io/helm/pkg/helm/portforwarder"
-	rls "k8s.io/helm/pkg/proto/hapi/services"
-	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
+	"github.com/covexo/devspace/pkg/devspace/helm"
+	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/covexo/devspace/pkg/util/hash"
+	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/yamlutil"
+	"k8s.io/client-go/kubernetes"
 )
 
-// ClientWrapper holds the necessary information for helm
-type ClientWrapper struct {
-	Client       *k8shelm.Client
-	Settings     *helmenvironment.EnvSettings
-	TillerConfig *v1.TillerConfig
-	kubectl      *kubernetes.Clientset
+// DeployConfig holds the information necessary to deploy via helm
+type DeployConfig struct {
+	KubeClient       *kubernetes.Clientset
+	TillerNamespace  string
+	DeploymentConfig *v1.DeploymentConfig
+	Log              log.Logger
 }
 
-// NewClient creates a new helm client
-func NewClient(kubectlClient *kubernetes.Clientset, upgradeTiller bool) (*ClientWrapper, error) {
+// New creates a new helm deployment client
+func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	config := configutil.GetConfig()
-	tillerNamespace := GetTillerNamespace()
-
-	kubeconfig, err := kubectl.GetClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	err = ensureTiller(kubectlClient, config, upgradeTiller)
-	if err != nil {
-		return nil, err
-	}
-
-	var tunnel *kube.Tunnel
-
-	tunnelWaitTime := 2 * 60 * time.Second
-	tunnelCheckInterval := 5 * time.Second
-
-	log.StartWait("Waiting for " + tillerNamespace + "/tiller-deploy to become ready")
-	defer log.StopWait()
-
-	// Next we wait till we can establish a tunnel to the running pod
-	for tunnelWaitTime > 0 {
-		tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
-		if err == nil {
-			break
-		}
-
-		if tunnelWaitTime <= 0 {
-			return nil, err
-		}
-
-		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
-		time.Sleep(tunnelCheckInterval)
-	}
-
-	helmWaitTime := 2 * 60 * time.Second
-	helmCheckInterval := 5 * time.Second
-
-	helmOptions := []k8shelm.Option{
-		k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
-		k8shelm.ConnectTimeout(int64(helmCheckInterval)),
-	}
-
-	client := k8shelm.NewClient(helmOptions...)
-	var tillerError error
-
-	for helmWaitTime > 0 {
-		_, tillerError = client.ListReleases(k8shelm.ReleaseListLimit(1))
-		if tillerError == nil || helmWaitTime < 0 {
-			break
-		}
-
-		helmWaitTime = helmWaitTime - helmCheckInterval
-		time.Sleep(helmCheckInterval)
-	}
-
-	log.StopWait()
-
-	if tillerError != nil {
-		return nil, tillerError
-	}
-
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return nil, err
-	}
-
-	helmHomePath := homeDir + "/.devspace/helm"
-	repoPath := helmHomePath + "/repository"
-	repoFile := repoPath + "/repositories.yaml"
-	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
-
-	os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
-	os.MkdirAll(repoPath, os.ModePerm)
-	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
-
-	_, repoFileNotFound := os.Stat(repoFile)
-	if repoFileNotFound != nil {
-		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	tillerConfig := config.Services.Tiller
-	if tillerConfig == nil {
-		tillerConfig = &v1.TillerConfig{
-			Release: &v1.Release{
-				Namespace: &tillerNamespace,
-			},
-		}
-	}
-
-	wrapper := &ClientWrapper{
-		Client: client,
-		Settings: &helmenvironment.EnvSettings{
-			Home: helmpath.Home(helmHomePath),
-		},
-		TillerConfig: tillerConfig,
-		kubectl:      kubectlClient,
-	}
-
-	_, err = os.Stat(stableRepoCachePathAbs)
-	if err != nil {
-		err = wrapper.updateRepos()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return wrapper, nil
+	return &DeployConfig{
+		KubeClient:       kubectl,
+		TillerNamespace:  *config.Tiller.Namespace,
+		DeploymentConfig: deployConfig,
+		Log:              log,
+	}, nil
 }
 
-func (helmClientWrapper *ClientWrapper) updateRepos() error {
-	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
+// Delete deletes the release
+func (d *DeployConfig) Delete() error {
+	// Delete with helm engine
+	isDeployed := helm.IsTillerDeployed(d.KubeClient)
+	if isDeployed == false {
+		return nil
+	}
+
+	// Get HelmClient
+	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
 	if err != nil {
 		return err
 	}
 
-	repos := []*repo.ChartRepository{}
-
-	for _, repoData := range allRepos.Repositories {
-		repo, err := repo.NewChartRepository(repoData, getter.All(*helmClientWrapper.Settings))
-		if err != nil {
-			return err
-		}
-
-		repos = append(repos, repo)
+	_, err = helmClient.DeleteRelease(*d.DeploymentConfig.Name, true)
+	if err != nil {
+		return err
 	}
-
-	wg := sync.WaitGroup{}
-
-	for _, re := range repos {
-		wg.Add(1)
-
-		go func(re *repo.ChartRepository) {
-			defer wg.Done()
-
-			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
-			if err != nil {
-				log.With(err).Error("Unable to download repo index")
-
-				//TODO
-			}
-		}(re)
-	}
-
-	wg.Wait()
 
 	return nil
 }
 
-// ReleaseExists checks if the given release name exists
-func (helmClientWrapper *ClientWrapper) ReleaseExists(releaseName string) (bool, error) {
-	_, err := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
-	if err != nil {
-		if strings.Contains(err.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
-			return false, nil
-		}
+// Status gets the status of the deployment
+func (d *DeployConfig) Status() ([][]string, error) {
+	var values [][]string
 
-		return false, err
+	// Get HelmClient
+	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+	if err != nil {
+		return nil, err
 	}
 
-	return true, nil
+	releases, err := helmClient.Client.ListReleases()
+	if err != nil {
+		values = append(values, []string{
+			*d.DeploymentConfig.Name,
+			"Error",
+			*d.DeploymentConfig.Namespace,
+			err.Error(),
+		})
+
+		return values, nil
+	}
+
+	if releases == nil || len(releases.Releases) == 0 {
+		values = append(values, []string{
+			*d.DeploymentConfig.Name,
+			"Not Found",
+			*d.DeploymentConfig.Namespace,
+			"No release found",
+		})
+
+		return values, nil
+	}
+
+	for _, release := range releases.Releases {
+		if release.GetName() == *d.DeploymentConfig.Name {
+			if release.Info.Status.Code.String() != "DEPLOYED" {
+				values = append(values, []string{
+					*d.DeploymentConfig.Name,
+					"Error",
+					*d.DeploymentConfig.Namespace,
+					"HELM STATUS:" + release.Info.Status.Code.String(),
+				})
+
+				return values, nil
+			}
+
+			values = append(values, []string{
+				*d.DeploymentConfig.Name,
+				"Running",
+				*d.DeploymentConfig.Namespace,
+				"",
+			})
+
+			return values, nil
+		}
+	}
+
+	values = append(values, []string{
+		*d.DeploymentConfig.Name,
+		"Not Found",
+		*d.DeploymentConfig.Namespace,
+		"No release found",
+	})
+
+	return values, nil
 }
 
-// DeleteRelease deletes a helm release and optionally purges it
-func (helmClientWrapper *ClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
-	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
+// Deploy deploys the given deployment with helm
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
+	config := configutil.GetConfig()
+
+	releaseName := *d.DeploymentConfig.Name
+	releaseNamespace := *d.DeploymentConfig.Namespace
+	chartPath := *d.DeploymentConfig.Helm.ChartPath
+
+	// Check if the chart directory has changed
+	hash, err := hash.Directory(chartPath)
+	if err != nil {
+		return fmt.Errorf("Error hashing chart directory: %v", err)
+	}
+
+	// Check if re-deployment is necessary
+	if forceDeploy || generatedConfig.ChartHashs[chartPath] != hash {
+		d.Log.StartWait("Deploying helm chart")
+		defer d.Log.StopWait()
+
+		values := map[interface{}]interface{}{}
+		overwriteValues := map[interface{}]interface{}{}
+
+		err := yamlutil.ReadYamlFromFile(filepath.Join(chartPath, "values.yaml"), values)
+		if err != nil {
+			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
+		}
+
+		// Get HelmClient
+		helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+		if err != nil {
+			return err
+		}
+
+		containerValues := map[string]interface{}{}
+
+		for imageName, imageConf := range *config.Images {
+			container := map[string]interface{}{}
+			container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
+
+			containerValues[imageName] = container
+		}
+
+		pullSecrets := []interface{}{}
+		existingPullSecrets, pullSecretsExisting := values["pullSecrets"]
+
+		if pullSecretsExisting {
+			pullSecrets = existingPullSecrets.([]interface{})
+		}
+
+		for _, registryConf := range *config.Registries {
+			if registryConf.URL != nil {
+				registrySecretName := registry.GetRegistryAuthSecretName(*registryConf.URL)
+				pullSecrets = append(pullSecrets, registrySecretName)
+			}
+		}
+
+		overwriteValues["containers"] = containerValues
+		overwriteValues["pullSecrets"] = pullSecrets
+
+		appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
+		if err != nil {
+			return fmt.Errorf("Unable to deploy helm chart: %v", err)
+		}
+
+		releaseRevision := int(appRelease.Version)
+		d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
+
+		generatedConfig.ChartHashs[chartPath] = hash
+	}
+
+	return nil
 }

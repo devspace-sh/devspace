@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
@@ -70,18 +71,26 @@ func GetClientConfig() (*rest.Config, error) {
 		}
 	}
 
+	// Use kube config if desired
 	if config.Cluster.APIServer == nil {
-		// If we should use a certain kube context use that
-		if config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
-			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
-			if err != nil {
-				return nil, err
-			}
-
-			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *config.Cluster.KubeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+		kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return nil, err
 		}
 
-		return clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+		activeContext := kubeConfig.CurrentContext
+
+		// If we should use a certain kube context use that
+		if config.Cluster != nil && config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
+			activeContext = *config.Cluster.KubeContext
+		}
+
+		// Change context namespace
+		if config.Cluster != nil && config.Cluster.Namespace != nil {
+			kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace
+		}
+
+		return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 	}
 
 	// We create a new config object here
@@ -109,7 +118,11 @@ func GetClientConfig() (*rest.Config, error) {
 	kubeContext := api.NewContext()
 	kubeContext.Cluster = "devspace"
 	kubeContext.AuthInfo = "devspace"
-	kubeContext.Namespace = *config.DevSpace.Release.Namespace
+
+	// Change context namespace
+	if config.Cluster.Namespace != nil {
+		kubeContext.Namespace = *config.Cluster.Namespace
+	}
 
 	kubeConfig := api.NewConfig()
 	kubeConfig.AuthInfos["devspace"] = kubeAuthInfo
@@ -146,23 +159,43 @@ func IsMinikube() bool {
 	return *isMinikubeVar
 }
 
-// GetFirstRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetFirstRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
-	podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
+// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
+func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+	maxWaiting := 120 * time.Second
+	waitingInterval := 1 * time.Second
 
-	if err != nil {
-		return nil, err
-	}
+	for maxWaiting > 0 {
+		time.Sleep(waitingInterval)
 
-	for _, pod := range podList.Items {
-		if GetPodStatus(&pod) == "Running" {
-			return &pod, nil
+		podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			return nil, err
 		}
+
+		if podList.Size() > 0 && len(podList.Items) > 0 {
+			// Get Pod with latest creation timestamp
+			var selectedPod *k8sv1.Pod
+
+			for _, pod := range podList.Items {
+				if selectedPod == nil || pod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
+					selectedPod = &pod
+				}
+			}
+
+			if selectedPod != nil && GetPodStatus(selectedPod) == "Running" {
+				return selectedPod, nil
+			}
+		} else {
+			log.Info("No selectable pod found")
+		}
+
+		time.Sleep(waitingInterval)
+		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

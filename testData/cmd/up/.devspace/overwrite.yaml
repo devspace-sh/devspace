@@ -4,4 +4,4 @@ registries:
       password: Hdm86IdMpIHm
       username: user-aYHpK
     insecure: true
-    url: 10.104.107.232:5000
+    url: 10.108.182.86:5000

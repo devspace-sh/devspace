@@ -3,6 +3,8 @@ package helm
 import (
 	"regexp"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
@@ -23,7 +25,8 @@ const TillerRoleManagerName = "tiller-config-manager"
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) error {
-	tillerNamespace := GetTillerNamespace()
+	config := configutil.GetConfig()
+	tillerNamespace := *config.Tiller.Namespace
 
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
@@ -31,43 +34,50 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 		return err
 	}
 
-	// If tiller server should not deploy in it's own namespace it does not need full access to the namespace
-	if tillerNamespace != *dsConfig.DevSpace.Release.Namespace {
-		err = addMinimalAccessToTiller(kubectlClient, tillerNamespace)
-		if err != nil {
-			return err
+	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
+	appNamespaces := []*string{&tillerNamespace}
+
+	// Get default namespace
+	defaultNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+
+	// Add registry namespace
+	if config.InternalRegistry != nil {
+		appNamespaces = append(appNamespaces, config.InternalRegistry.Namespace)
+	}
+
+	// Add all namespaces that need our permission
+	if config.DevSpace.Deployments != nil && len(*config.DevSpace.Deployments) > 0 {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
+				if *deployConfig.Namespace == "" {
+					appNamespaces = append(appNamespaces, &defaultNamespace)
+					continue
+				}
+
+				appNamespaces = append(appNamespaces, deployConfig.Namespace)
+			}
 		}
 	}
 
-	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
-	appNamespaces := []*string{
-		dsConfig.DevSpace.Release.Namespace,
-	}
-
-	// Check if there is an internal registry
-	if dsConfig.Services.InternalRegistry != nil && dsConfig.Services.InternalRegistry.Release != nil && dsConfig.Services.InternalRegistry.Release.Namespace != nil {
-		// Tiller needs access to the internal registry namespace
-		appNamespaces = append(appNamespaces, dsConfig.Services.InternalRegistry.Release.Namespace)
-	}
-
-	if dsConfig.Services.Tiller != nil && dsConfig.Services.Tiller.AppNamespaces != nil {
-		appNamespaces = append(appNamespaces, *dsConfig.Services.Tiller.AppNamespaces...)
-	}
-
-	// Persist the app namespaces to the config
+	// Add the correct access rights to the tiller server
 	for _, appNamespace := range appNamespaces {
-		// Create namespaces if they are not there already
-		_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
-		if err != nil {
-			log.Infof("Create namespace %s", *appNamespace)
-
-			_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: *appNamespace,
-				},
-			})
+		if *appNamespace != "default" {
+			// Create namespaces if they are not there already
+			_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
 			if err != nil {
-				return err
+				log.Infof("Create namespace %s", *appNamespace)
+
+				_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: *appNamespace,
+					},
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 

@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/util/kubeconfig"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/configure"
@@ -115,17 +116,27 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Delete config & overwrite config
 		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
 		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
+		os.Remove(filepath.Join(workdir, generated.ConfigPath))
 
+		// Create config
 		config = configutil.InitConfig()
+
+		// Set intial deployments
+		config.DevSpace.Deployments = &[]*v1.DeploymentConfig{
+			{
+				Name:      configutil.String(configutil.DefaultDevspaceDeploymentName),
+				Namespace: configutil.String(""),
+				Helm: &v1.HelmConfig{
+					ChartPath: configutil.String("./chart"),
+				},
+			},
+		}
 	}
 
 	configutil.Merge(config, &v1.Config{
 		Version: configutil.String("v1"),
 		DevSpace: &v1.DevSpaceConfig{
-			Release: &v1.Release{
-				Name:      configutil.String("devspace"),
-				Namespace: configutil.String("default"),
-			},
+			Deployments: &[]*v1.DeploymentConfig{},
 		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
@@ -151,7 +162,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if !cmd.flags.overwrite {
 		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-
 		if chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
@@ -171,7 +181,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		cmd.configureKubernetes()
+		// Check if devspace cloud should be used
+		if cmd.useCloudProvider() == false {
+			cmd.configureDevSpace()
+		}
+
+		cmd.addDefaultSyncConfig()
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
@@ -196,51 +211,6 @@ func (cmd *InitCmd) initChartGenerator() {
 		TemplateRepo: templateRepo,
 		Path:         cmd.workdir,
 	}
-}
-
-func (cmd *InitCmd) configureDevSpace() {
-	config := configutil.GetConfig()
-
-	config.DevSpace.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           *config.DevSpace.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
-}
-
-func (cmd *InitCmd) addDefaultSyncConfig() {
-	config := configutil.GetConfig()
-
-	for _, syncPath := range *config.DevSpace.Sync {
-		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			return
-		}
-	}
-	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
-	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
-	uploadExcludePaths := []string{}
-
-	if err == nil {
-		dockerignoreRules := strings.Split(string(dockerignore), "\n")
-
-		for _, ignoreRule := range dockerignoreRules {
-			if len(ignoreRule) > 0 {
-				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
-			}
-		}
-	}
-
-	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ContainerPath: configutil.String("/app"),
-		LocalSubPath:  configutil.String("./"),
-		ResourceType:  nil,
-		LabelSelector: &map[string]*string{
-			"release": config.DevSpace.Release.Name,
-		},
-		UploadExcludePaths: &uploadExcludePaths,
-	})
-
-	config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
@@ -321,83 +291,55 @@ func (cmd *InitCmd) useCloudProvider() bool {
 	return false
 }
 
-func (cmd *InitCmd) configureKubernetes() {
-	config := configutil.GetConfig()
-	clusterConfig := config.Cluster
-	useKubeConfig := false
-
-	// Check if devspace cloud should be used
-	if cmd.useCloudProvider() == false {
-		_, err := os.Stat(clientcmd.RecommendedHomeFile)
-		if err == nil {
-			skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
-				DefaultValue:           "yes",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
-
-			useKubeConfig = (*skipAnswer == "yes")
-		}
-
-		if !useKubeConfig {
-			if clusterConfig.APIServer == nil {
-				clusterConfig.APIServer = configutil.String("https://192.168.99.100:8443")
-			}
-
-			clusterConfig.APIServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-				DefaultValue:           *clusterConfig.APIServer,
-				ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
-			})
-
-			if clusterConfig.CaCert == nil {
-				clusterConfig.CaCert = configutil.String("")
-			}
-			clusterConfig.CaCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-				Question:               "What is the CA Certificate of your API Server? (PEM)",
-				DefaultValue:           *clusterConfig.CaCert,
-				InputTerminationString: "-----END CERTIFICATE-----",
-			})
-
-			if clusterConfig.User == nil {
-				clusterConfig.User = &v1.ClusterUser{
-					ClientCert: configutil.String(""),
-					ClientKey:  configutil.String(""),
-				}
-			} else {
-				if clusterConfig.User.ClientCert == nil {
-					clusterConfig.User.ClientCert = configutil.String("")
-				}
-
-				if clusterConfig.User.ClientKey == nil {
-					clusterConfig.User.ClientKey = configutil.String("")
-				}
-			}
-
-			clusterConfig.User.ClientCert = stdinutil.AskChangeQuestion(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes client certificate? (PEM)",
-				DefaultValue:           *clusterConfig.User.ClientCert,
-				InputTerminationString: "-----END CERTIFICATE-----",
-			})
-
-			clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "What is your Kubernetes client key? (RSA, PEM)",
-				DefaultValue:           *clusterConfig.User.ClientKey,
-				InputTerminationString: "-----END RSA PRIVATE KEY-----",
-			})
-		} else {
-			currentContext, err := kubeconfig.GetCurrentContext()
-			if err != nil {
-				log.Fatalf("Couldn't determine current kubernetes context: %v", err)
-			}
-
-			clusterConfig.KubeContext = &currentContext
-		}
-
-		cmd.configureDevSpace()
+func (cmd *InitCmd) configureDevSpace() {
+	currentContext, err := kubeconfig.GetCurrentContext()
+	if err != nil {
+		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 	}
 
-	cmd.addDefaultSyncConfig()
+	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Which Kubernetes namespace should your application run in?",
+		DefaultValue:           "default",
+		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+	})
+
+	config := configutil.GetConfig()
+	config.Cluster.KubeContext = &currentContext
+	config.Cluster.Namespace = namespace
+}
+
+func (cmd *InitCmd) addDefaultSyncConfig() {
+	config := configutil.GetConfig()
+
+	for _, syncPath := range *config.DevSpace.Sync {
+		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
+			return
+		}
+	}
+	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
+	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+	uploadExcludePaths := []string{}
+
+	if err == nil {
+		dockerignoreRules := strings.Split(string(dockerignore), "\n")
+
+		for _, ignoreRule := range dockerignoreRules {
+			if len(ignoreRule) > 0 {
+				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+			}
+		}
+	}
+
+	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
+		ContainerPath: configutil.String("/app"),
+		LocalSubPath:  configutil.String("./"),
+		LabelSelector: &map[string]*string{
+			"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
+		},
+		UploadExcludePaths: &uploadExcludePaths,
+	})
+
+	config.DevSpace.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) configureRegistry() {
@@ -405,7 +347,7 @@ func (cmd *InitCmd) configureRegistry() {
 	createInternalRegistryDefaultAnswer := "yes"
 
 	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err != nil {
+	if err == nil {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
 		log.StopWait()
@@ -419,30 +361,34 @@ func (cmd *InitCmd) configureRegistry() {
 	} else {
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
-			Engine: &v1.BuildEngine{
-				Kaniko: &v1.KanikoBuildEngine{
-					Enabled: configutil.Bool(true),
-				},
+			Kaniko: &v1.KanikoConfig{
+				Cache:     configutil.Bool(true),
+				Namespace: configutil.String(""),
 			},
 		}
 	}
 
-	createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
-		DefaultValue:           createInternalRegistryDefaultAnswer,
-		ValidationRegexPattern: "^(yes)|(no)$",
-	})
+	// Only deploy registry in minikube
+	if kubectl.IsMinikube() {
+		createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
+			DefaultValue:           createInternalRegistryDefaultAnswer,
+			ValidationRegexPattern: "^(yes)|(no)$",
+		})
 
-	if *createInternalRegistry == "no" {
-		err := configure.ImageName(dockerUsername)
-		if err != nil {
-			log.Fatal(err)
+		if *createInternalRegistry == "yes" {
+			err := configure.InternalRegistry()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			return
 		}
-	} else {
-		err := configure.InternalRegistry()
-		if err != nil {
-			log.Fatal(err)
-		}
+	}
+
+	err = configure.ImageName(dockerUsername)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 

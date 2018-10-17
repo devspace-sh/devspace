@@ -12,31 +12,25 @@ type ImageConfig struct {
 type BuildConfig struct {
 	ContextPath    *string       `yaml:"contextPath"`
 	DockerfilePath *string       `yaml:"dockerfilePath"`
-	Engine         *BuildEngine  `yaml:"engine"`
-	Options        *BuildOptions `yaml:"options"`
+	Kaniko         *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker         *DockerConfig `yaml:"docker,omitempty"`
+	Options        *BuildOptions `yaml:"options,omitempty"`
 }
 
-//BuildEngine defines which build engine to use
-type BuildEngine struct {
-	Kaniko *KanikoBuildEngine `yaml:"kaniko"`
-	Docker *DockerBuildEngine `yaml:"docker"`
+// KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
+type KanikoConfig struct {
+	Cache     *bool   `yaml:"cache"`
+	Namespace *string `yaml:"namespace,omitempty"`
 }
 
-//KanikoBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost
-type KanikoBuildEngine struct {
-	Enabled   *bool   `yaml:"enabled"`
-	Namespace *string `yaml:"namespace"`
-}
-
-//DockerBuildEngine tells the DevSpace CLI to build with Docker on Minikube or on localhost
-type DockerBuildEngine struct {
-	Enabled        *bool `yaml:"enabled"`
-	PreferMinikube *bool `yaml:"preferMinikube"`
+// DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
+type DockerConfig struct {
+	PreferMinikube *bool `yaml:"preferMinikube,omitempty"`
 }
 
 //BuildOptions defines options for building Docker images
 type BuildOptions struct {
-	BuildArgs *map[string]*string `yaml:"buildArgs"`
-	Target    *string             `yaml:"target"`
-	Network   *string             `yaml:"network"`
+	BuildArgs *map[string]*string `yaml:"buildArgs,omitempty"`
+	Target    *string             `yaml:"target,omitempty"`
+	Network   *string             `yaml:"network,omitempty"`
 }

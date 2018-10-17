@@ -30,6 +30,9 @@ type Logger interface {
 	Fail(args ...interface{})
 	Failf(format string, args ...interface{})
 
+	StartWait(message string)
+	StopWait()
+
 	With(object interface{}) *LoggerEntry
 	WithKey(key string, object interface{}) *LoggerEntry
 
