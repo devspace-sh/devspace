@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: devspace
+    image: devspace
+    ports:
+    - containerPort: 80

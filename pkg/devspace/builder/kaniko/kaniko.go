@@ -87,7 +87,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			Containers: []k8sv1.Container{
 				{
 					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:debug-72e088fda562a73859371354b1fc20e6fd7adea8",
+					Image:           "gcr.io/kaniko-project/executor:debug-5ac29a97734170a0547fea33b348dc7c328e2f8a",
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
 					Command: []string{
 						"/busybox/sleep",

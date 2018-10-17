@@ -1,8 +1,4 @@
 [[constraint]]
-  name = "github.com/covexo/yamlq"
-  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
-
-[[constraint]]
   name = "github.com/juju/errors"
   revision = "22422dad46e14561a0854ad42497a75af9b61909"
 

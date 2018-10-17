@@ -1,7 +1,0 @@
-registries:
-  internal:
-    auth:
-      password: XBPEVBItQ0le
-      username: user-58u2N
-    insecure: true
-    url: 10.98.233.72:5000

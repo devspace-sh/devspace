@@ -1,6 +1,6 @@
 cluster:
-  kubeContext: minikube
-  namespace: test2
+  kubeContext: gke_fabian-3_europe-west1-b_florian
+  namespace: test
 devSpace:
   deployments:
   - helm:
@@ -18,15 +18,5 @@ devSpace:
     - node_modules/
 images:
   default:
-    build:
-      kaniko:
-        cache: true
-        namespace: test2
-    name: devspace
-    registry: internal
-internalRegistry:
-  deploy: true
-  namespace: test2
-tiller:
-  namespace: test2
+    name: gcr.io/fabian-3/florian
 version: v1alpha1
