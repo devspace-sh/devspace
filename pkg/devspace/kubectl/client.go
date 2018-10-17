@@ -60,7 +60,9 @@ func GetClientConfig() (*rest.Config, error) {
 			return nil, fmt.Errorf("Couldn't load cloud provider config: %v", err)
 		}
 
+		log.StartWait("Login to cloud provider")
 		err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
+		log.StopWait()
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}

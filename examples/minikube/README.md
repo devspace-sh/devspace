@@ -66,6 +66,8 @@ root@devspace-default-6446cb6b8c-c2l2q:/app#
 
 The command deployed a tiller server and internal registry and used the minikube docker daemon to build the dockerfile.  
 
+Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
+
 # Step 2: Start developing
 
 You can start the server now with `npm start` in the open terminal. Now navigate in your browser to `localhost:3000` and you should see the output 'Hello World!'.  

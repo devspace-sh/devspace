@@ -57,11 +57,13 @@ dk0dqqO: digest: sha256:5e043c3d366676331f4ffe6a9b6f38cbc08338c25ef47789060564d3
 deployment.extensions/devspace created
 [DONE] √ Successfully deployed devspace-default
 [DONE] √ Port forwarding started on 3000:3000
-[DONE] √ Sync started on /Users/fabiankramm/Programmieren/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
+[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
 root@devspace-5b5f977b77-49cjt:/app#
 ```
 
 The command created a new kubernetes namespace for you in the devspace-cloud and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. If you want to access kubernetes resources via kubectl in the devspace-cloud you can simply change your kubectl context via `kubectl config use-context $$devspace-context-name$$`. You can find the context name in `.devspace/config.yaml` under `cluster.kubeContext`.  
+
+Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
 
 # Step 2: Start developing
 
