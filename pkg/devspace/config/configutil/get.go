@@ -28,6 +28,9 @@ const OverwriteConfigPath = "/.devspace/overwrite.yaml"
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
 const DefaultDevspaceDeploymentName = "devspace-default"
 
+// CurrentConfigVersion has the value of the current config version
+const CurrentConfigVersion = "v1alpha1"
+
 // Global config vars
 var config *v1.Config
 var configRaw *v1.Config
@@ -83,6 +86,10 @@ func GetConfig() *v1.Config {
 		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
 		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
 		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
+
+		if config.Version == nil || *config.Version != CurrentConfigVersion {
+			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
+		}
 
 		SetDefaults(config)
 	})

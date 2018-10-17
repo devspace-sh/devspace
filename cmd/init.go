@@ -134,7 +134,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	configutil.Merge(config, &v1.Config{
-		Version: configutil.String("v1"),
+		Version: configutil.String(configutil.CurrentConfigVersion),
 		DevSpace: &v1.DevSpaceConfig{
 			Deployments: &[]*v1.DeploymentConfig{},
 		},

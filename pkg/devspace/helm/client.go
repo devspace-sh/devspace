@@ -46,33 +46,39 @@ func NewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTille
 	var outerError error
 
 	getOnce.Do(func() {
-		config := configutil.GetConfig()
-		if config.Tiller == nil || config.Tiller.Namespace == nil {
-			outerError = errors.New("No tiller namespace specified")
-			return
-		}
+		helmClient, outerError = createNewClient(kubectlClient, log, upgradeTiller)
+	})
 
-		tillerNamespace := *config.Tiller.Namespace
-		kubeconfig, err := kubectl.GetClientConfig()
-		if err != nil {
-			outerError = err
-			return
-		}
+	return helmClient, outerError
+}
 
-		err = ensureTiller(kubectlClient, config, upgradeTiller)
-		if err != nil {
-			outerError = err
-			return
-		}
+func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
+	config := configutil.GetConfig()
+	if config.Tiller == nil || config.Tiller.Namespace == nil {
+		return nil, errors.New("No tiller namespace specified")
+	}
 
-		var tunnel *kube.Tunnel
+	tillerNamespace := *config.Tiller.Namespace
+	kubeconfig, err := kubectl.GetClientConfig()
+	if err != nil {
+		return nil, err
+	}
 
-		tunnelWaitTime := 2 * 60 * time.Second
-		tunnelCheckInterval := 5 * time.Second
+	err = ensureTiller(kubectlClient, config, upgradeTiller)
+	if err != nil {
+		return nil, err
+	}
 
-		log.StartWait("Waiting for " + tillerNamespace + "/tiller-deploy to become ready")
-		defer log.StopWait()
+	var tunnel *kube.Tunnel
+	var client *k8shelm.Client
 
+	tunnelWaitTime := 2 * 60 * time.Second
+	tunnelCheckInterval := 5 * time.Second
+
+	log.StartWait("Waiting for " + tillerNamespace + "/tiller-deploy to become ready")
+	defer log.StopWait()
+
+	for true {
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
 			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
@@ -81,88 +87,77 @@ func NewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTille
 			}
 
 			if tunnelWaitTime <= 0 {
-				outerError = err
-				return
+				return nil, err
 			}
 
 			tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
 			time.Sleep(tunnelCheckInterval)
 		}
 
-		helmWaitTime := 2 * 60 * time.Second
-		helmCheckInterval := 5 * time.Second
-
 		helmOptions := []k8shelm.Option{
 			k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
-			k8shelm.ConnectTimeout(int64(helmCheckInterval)),
+			k8shelm.ConnectTimeout(int64(5 * time.Second)),
 		}
 
-		client := k8shelm.NewClient(helmOptions...)
-		var tillerError error
+		client = k8shelm.NewClient(helmOptions...)
 
-		for helmWaitTime > 0 {
-			_, tillerError = client.ListReleases(k8shelm.ReleaseListLimit(1))
-			if tillerError == nil || helmWaitTime < 0 {
-				break
-			}
-
-			helmWaitTime = helmWaitTime - helmCheckInterval
-			time.Sleep(helmCheckInterval)
+		_, err = client.ListReleases(k8shelm.ReleaseListLimit(1))
+		if err == nil {
+			break
 		}
 
-		log.StopWait()
+		tunnel.Close()
 
-		if tillerError != nil {
-			outerError = tillerError
-			return
+		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
+		time.Sleep(tunnelCheckInterval)
+
+		if tunnelWaitTime < 0 {
+			return nil, errors.New("Waiting for tiller timed out")
 		}
+	}
 
-		homeDir, err := homedir.Dir()
+	log.StopWait()
+
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	helmHomePath := homeDir + "/.devspace/helm"
+	repoPath := helmHomePath + "/repository"
+	repoFile := repoPath + "/repositories.yaml"
+	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
+
+	os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
+	os.MkdirAll(repoPath, os.ModePerm)
+	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
+
+	_, repoFileNotFound := os.Stat(repoFile)
+	if repoFileNotFound != nil {
+		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 		if err != nil {
-			outerError = err
-			return
+			return nil, err
 		}
+	}
 
-		helmHomePath := homeDir + "/.devspace/helm"
-		repoPath := helmHomePath + "/repository"
-		repoFile := repoPath + "/repositories.yaml"
-		stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
+	wrapper := &ClientWrapper{
+		Client: client,
+		Settings: &helmenvironment.EnvSettings{
+			Home: helmpath.Home(helmHomePath),
+		},
+		Namespace: tillerNamespace,
+		kubectl:   kubectlClient,
+	}
 
-		os.MkdirAll(helmHomePath+"/cache", os.ModePerm)
-		os.MkdirAll(repoPath, os.ModePerm)
-		os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
-
-		_, repoFileNotFound := os.Stat(repoFile)
-		if repoFileNotFound != nil {
-			err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
-			if err != nil {
-				outerError = err
-				return
-			}
-		}
-
-		wrapper := &ClientWrapper{
-			Client: client,
-			Settings: &helmenvironment.EnvSettings{
-				Home: helmpath.Home(helmHomePath),
-			},
-			Namespace: tillerNamespace,
-			kubectl:   kubectlClient,
-		}
-
-		_, err = os.Stat(stableRepoCachePathAbs)
+	_, err = os.Stat(stableRepoCachePathAbs)
+	if err != nil {
+		err = wrapper.updateRepos()
 		if err != nil {
-			err = wrapper.updateRepos()
-			if err != nil {
-				outerError = err
-				return
-			}
+			return nil, err
 		}
+	}
 
-		helmClient = wrapper
-	})
-
-	return helmClient, outerError
+	return wrapper, nil
 }
 
 func (helmClientWrapper *ClientWrapper) updateRepos() error {
