@@ -208,7 +208,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--insecure",
 		}
 
-		if b.PreviousImageTag != "" {
+		if !options.NoCache {
 			kanikoBuildCmd = append(kanikoBuildCmd, "--cache=true", "--cache-repo="+b.PreviousImageTag)
 		}
 
