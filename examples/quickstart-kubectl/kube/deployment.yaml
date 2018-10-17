@@ -1,5 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
+metadata:
+  name: devspace
 spec:
   replicas: 1
   template:
@@ -9,13 +11,6 @@ spec:
     spec:
       containers:
       - name: default
-        image: devspace-default
-        command: 
-        args:
-          {{- range $index, $arg := .Values.containers.default.args }}
-          - "{{ $arg }}"
-          {{- end }}
-      imagePullSecrets:
-        {{- range $index, $secretName := .Values.pullSecrets }}
-        - name: "{{ $secretName }}"
-        {{- end }}
+        image: yourdockername/quickstart
+        command: ["sleep"]
+        args: ["999999999999"]

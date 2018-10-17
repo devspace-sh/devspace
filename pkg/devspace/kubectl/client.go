@@ -161,6 +161,17 @@ func IsMinikube() bool {
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
 func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+	config := configutil.GetConfig()
+
+	if namespace == "" {
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return nil, err
+		}
+
+		namespace = defaultNamespace
+	}
+
 	maxWaiting := 120 * time.Second
 	waitingInterval := 1 * time.Second
 
@@ -171,6 +182,8 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
+			log.Info("Error here")
+
 			return nil, err
 		}
 
@@ -322,7 +335,6 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
 	config, err := GetClientConfig()
-
 	if err != nil {
 		return err
 	}
@@ -334,7 +346,6 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		SubResource("portforward")
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
-
 	if err != nil {
 		return err
 	}

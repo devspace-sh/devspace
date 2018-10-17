@@ -1,7 +1,5 @@
 package kubectl
 
-import "github.com/covexo/devspace/pkg/util/log"
-
 // ReplaceFn defines the replace function
 type ReplaceFn func(value string) string
 
@@ -20,13 +18,10 @@ func Walk(d interface{}, match MatchFn, replace ReplaceFn) {
 			key := k.(string)
 			value, ok := v.(string)
 			if ok == false {
-				log.Infof("Key %s is no string", key)
-
 				Walk(v, match, replace)
 				continue
 			}
 
-			log.Infof("Key %s is string", key)
 			if match(key, value) {
 				t[k] = replace(value)
 			}
