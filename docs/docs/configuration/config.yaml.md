@@ -2,7 +2,18 @@
 title: /.devspace/config.yaml
 ---
 
-This is an example of a [.devspace/config.yaml](#)
+This is a basic example of a .devspace/config.yaml. For a complete annotated version use the one below.
+```yaml
+version: v1alpha1
+cluster:
+  # Use the free devspace-cloud to deploy the application
+  cloudProvider: devspace-cloud
+# Options regarding the devspace
+devSpace:
+
+```
+
+This is a complete annoted example of a [.devspace/config.yaml](#)
 ```yaml
 # Devspace version, currently is always v1
 version: v1
