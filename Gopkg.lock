@@ -111,7 +111,7 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:2aaf2cc045d0219bba79655e4df795b973168c310574669cb75786684f7287d3"
+  digest = "1:9453458ba06a7b4b5a6cb522b479f449b4d9387bcf33f9a7e3fdb834569d7a40"
   name = "github.com/bmatcuk/doublestar"
   packages = ["."]
   pruneopts = "UT"
@@ -125,13 +125,6 @@
   packages = ["pathdriver"]
   pruneopts = "UT"
   revision = "c2ac4ecc959316e616c37fd95143e972811bd12e"
-
-[[projects]]
-  digest = "1:46dc582e7aebd8aa4976253b0ea66e49bc439dab54541831562bbd13312ed02c"
-  name = "github.com/covexo/yamlq"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -194,7 +187,7 @@
   revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
 
 [[projects]]
-  digest = "1:5554aa6778ee3128d438eff483b2fdacf85f4c157abaafbead51af87d38264cb"
+  digest = "1:ffc2c4996d342178394513e9866703fa8cc3154f1ae0e855c9716036abccf3ff"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -758,7 +751,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:6d4d9067e639d96a804ee9a30fa89c7233c5c5edbfe736072ff00d48c97bccc4"
+  digest = "1:c1072f27d5b8be1032af14ed7776f475bc58d35723a753c4b92c953d92e3eb33"
   name = "github.com/otiai10/copy"
   packages = ["."]
   pruneopts = "UT"
@@ -811,6 +804,14 @@
   pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "UT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:b6221ec0f8903b556e127c449e7106b63e6867170c2d10a7c058623d086f2081"
@@ -970,6 +971,14 @@
   pruneopts = "UT"
   revision = "f187355171c936ac84a82793659ebb4936bc1c23"
   version = "v1.3.0"
+
+[[projects]]
+  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  pruneopts = "UT"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
   digest = "1:ebabd8967efa341b15e51b329eb5b7ebc69b573fb4adb4ac2433fa532edcadbc"
@@ -1596,7 +1605,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:dabd439d62fbe939504ccb2ec6783d91412cdfc83e204731c16623a8d750d529"
+  digest = "1:7ae7497bb0f95b9f0d3d5876cb4140645773697c4f7ec12621da7ddc369d784f"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1640,7 +1649,7 @@
   revision = "e3762e86a74c878ffed47484592986685639c2cd"
 
 [[projects]]
-  digest = "1:96dd0316331274d35050f78288957e6d04bd5594457ea1f7c24f463d19b7d793"
+  digest = "1:a93d65b059d465cd84ba089b8daf6fbacf3beeb0e78fa1a4cf0585398795b37c"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/events",
@@ -1832,7 +1841,6 @@
     "github.com/badgerodon/penv",
     "github.com/blang/semver",
     "github.com/bmatcuk/doublestar",
-    "github.com/covexo/yamlq",
     "github.com/daviddengcn/go-colortext",
     "github.com/docker/cli/cli/command",
     "github.com/docker/cli/cli/command/image/build",
@@ -1864,17 +1872,21 @@
     "github.com/skratchdot/open-golang/open",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
+    "github.com/stretchr/testify/assert",
     "gopkg.in/src-d/enry.v1",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1beta1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/client-go/transport/spdy",

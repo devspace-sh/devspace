@@ -1,6 +1,6 @@
 cluster:
   kubeContext: minikube
-  namespace: default
+  namespace: test2
 devSpace:
   deployments:
   - helm:
@@ -18,11 +18,15 @@ devSpace:
     - node_modules/
 images:
   default:
+    build:
+      kaniko:
+        cache: true
+        namespace: test2
     name: devspace
     registry: internal
 internalRegistry:
   deploy: true
-  namespace: default
+  namespace: test2
 tiller:
-  namespace: default
-version: v1
+  namespace: test2
+version: v1alpha1

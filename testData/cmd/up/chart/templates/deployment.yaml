@@ -4,40 +4,27 @@ metadata:
   name: {{ .Release.Name }}
   labels:
     release: "{{ .Release.Name }}"
-    chartName: "{{ .Chart.Name }}"
-    chartVersion: "{{ .Chart.Version }}"
 spec:
   replicas: 1
-  selector:
-    matchLabels:
-      release: "{{ .Release.Name }}"
-      chartName: "{{ .Chart.Name }}"
-      chartVersion: "{{ .Chart.Version }}"
   template:
     metadata:
       annotations:
         revision: "{{ .Release.Revision }}"
       labels:
         release: "{{ .Release.Name }}"
-        chartName: "{{ .Chart.Name }}"
-        chartVersion: "{{ .Chart.Version }}"
     spec:
-      imagePullSecrets:
-      {{- range $index, $secretName := .Values.pullSecrets }}
-      - name: "{{ $secretName }}"
-      {{- end }}
       containers:
-      {{- range $containerName, $container := .Values.containers }}
-      - name: {{ $containerName }}
-        image: "{{ $container.image }}"
+      - name: default
+        image: "{{ .Values.containers.default.image }}"
         command:
-        {{- range $index, $command := $container.command }}
-        - "{{ $command }}"
-        {{- end }}
+          {{- range $index, $command := .Values.containers.default.command }}
+          - "{{ $command }}"
+          {{- end }}
         args:
-        {{- range $index, $arg := $container.args }}
-        - "{{ $arg }}"
+          {{- range $index, $arg := .Values.containers.default.args }}
+          - "{{ $arg }}"
+          {{- end }}
+      imagePullSecrets:
+        {{- range $index, $secretName := .Values.pullSecrets }}
+        - name: "{{ $secretName }}"
         {{- end }}
-        resources:
-{{ toYaml $container.resources | indent 12 }}
-      {{- end }}

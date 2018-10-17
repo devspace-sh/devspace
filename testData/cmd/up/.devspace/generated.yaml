@@ -1,6 +1,6 @@
 chartHashs:
-  ./chart: c430d2cd7bf7f3cde0e2cef210ce79488c4d353036a300a667bfc90c0958a729
+  ./chart: ed2e3bb16e032ddc9d8fadc0944b99dec5e305ff2688aae0f5ca431b8da78f20
 dockerLatestTimestamps:
-  C:\Users\covexo\go\src\github.com\covexo\devspace\testData\cmd\up\Dockerfile: 1539764165
+  C:\Users\covexo\go\src\github.com\covexo\devspace\testData\cmd\up\Dockerfile: 1539768515
 imageTags:
-  devspace: rqDWSxL
+  devspace: wiF9SiK
