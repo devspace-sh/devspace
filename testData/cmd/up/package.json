@@ -1,0 +1,15 @@
+{
+    "name": "my-app",
+    "version": "0.0.1",
+    "description": "my js app",
+    "author": "YOUR NAME <you@company>",
+    "license": "MIT",
+    "scripts": {
+        "start": "node testJavaScript.js",
+        "develop": "nodemon testJavaScript.js"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "nodemon": "1.18.4"
+    }
+}

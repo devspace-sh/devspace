@@ -1,0 +1,7 @@
+registries:
+  internal:
+    auth:
+      password: POUtv5TE4sZf
+      username: user-bTjIX
+    insecure: true
+    url: 10.103.152.42:5000

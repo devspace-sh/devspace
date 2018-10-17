@@ -137,6 +137,20 @@ func StartFileLogging() {
 	OverrideRuntimeErrorHandler()
 }
 
+// StopFileLogging closes the writer of the fileLogger
+func StopFileLogging() {
+	stdoutLog.fileLogger = nil
+	runtimeErrorHandlersOverriden = false
+	fileLogger := GetFileLogger("default")
+	if fileLogger != nil {
+		fileLogger.Close()
+	}
+	fileLogger = GetFileLogger("errors")
+	if fileLogger != nil {
+		fileLogger.Close()
+	}
+}
+
 // GetInstance returns the Logger instance
 func GetInstance() Logger {
 	return stdoutLog
