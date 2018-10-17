@@ -76,7 +76,7 @@ func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Cont
 		return errors.Trace(err)
 	}
 
-	s.Stop()
+	s.Stop(nil)
 
 	// syncLog = nil
 

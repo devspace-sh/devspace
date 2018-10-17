@@ -81,7 +81,7 @@ func (cmd *ResetCmd) deleteInternalRegistry() {
 
 	if config.InternalRegistry != nil {
 		shouldRegistryRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the internal registry be removed? (y/n)",
+			Question:               "\n\nShould the internal registry be removed? (y/n)",
 			DefaultValue:           "y",
 			ValidationRegexPattern: "^(y|n)$",
 		}) == "y"
@@ -112,7 +112,7 @@ func (cmd *ResetCmd) deleteTiller() {
 
 	if config.Tiller != nil {
 		shouldRemoveTiller := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the tiller server be removed? (y/n)",
+			Question:               "\n\nShould the tiller server be removed? (y/n)",
 			DefaultValue:           "y",
 			ValidationRegexPattern: "^(y|n)$",
 		}) == "y"
@@ -143,7 +143,7 @@ func (cmd *ResetCmd) deleteDeploymentFiles() {
 					_, err := os.Stat(absChartPath)
 					if os.IsNotExist(err) == false {
 						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-							Question:               "Should the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
+							Question:               "\n\nShould the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
 							DefaultValue:           "y",
 							ValidationRegexPattern: "^(y|n)$",
 						}) == "y"
@@ -176,7 +176,7 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerfilePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerfile := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Should " + dockerfilePath + " be removed? (y/n)",
+				Question:               "\n\nShould " + dockerfilePath + " be removed? (y/n)",
 				DefaultValue:           "y",
 				ValidationRegexPattern: "^(y|n)$",
 			}) == "y"
@@ -201,7 +201,7 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerIgnorePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerIgnore := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Should " + absDockerIgnorePath + " be removed? (y/n)",
+				Question:               "\n\nShould " + absDockerIgnorePath + " be removed? (y/n)",
 				DefaultValue:           "y",
 				ValidationRegexPattern: "^(y|n)$",
 			}) == "y"
@@ -218,7 +218,7 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err == nil {
 		deleteRoleBinding := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
+			Question:               "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
 			DefaultValue:           "y",
 			ValidationRegexPattern: "^(y|n)$",
 		}) == "y"
@@ -239,7 +239,7 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 
 func (cmd *ResetCmd) deleteDevspaceFolder() {
 	deleteDevspaceFolder := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Should the .devspace folder be removed? (y/n)",
+		Question:               "\n\nShould the .devspace folder be removed? (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"

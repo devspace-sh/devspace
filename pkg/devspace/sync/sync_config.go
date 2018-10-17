@@ -165,7 +165,7 @@ func (s *SyncConfig) Start() error {
 
 	err = s.downstream.start()
 	if err != nil {
-		s.Stop()
+		s.Stop(nil)
 		return errors.Trace(err)
 	}
 
@@ -213,12 +213,11 @@ func (s *SyncConfig) mainLoop() {
 
 	// Start downstream and do initial sync
 	go func() {
-		defer s.Stop()
+		defer s.Stop(nil)
 
 		err := s.initialSync()
 		if err != nil {
-			s.Error(err)
-			log.Fatalf("[Sync] Sync stopped: %v", err)
+			s.Stop(err)
 			return
 		}
 
@@ -228,13 +227,12 @@ func (s *SyncConfig) mainLoop() {
 }
 
 func (s *SyncConfig) startUpstream() {
-	defer s.Stop()
+	defer s.Stop(nil)
 
 	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
 	err := notify.Watch(s.WatchPath+"/...", s.upstream.events, notify.All)
 	if err != nil {
-		s.Error(err)
-		log.Fatalf("[Sync] Sync stopped: %v", err)
+		s.Stop(err)
 		return
 	}
 
@@ -246,18 +244,16 @@ func (s *SyncConfig) startUpstream() {
 
 	err = s.upstream.mainLoop()
 	if err != nil {
-		s.Error(err)
-		log.Fatalf("[Sync] Sync stopped: %v", err)
+		s.Stop(err)
 	}
 }
 
 func (s *SyncConfig) startDownstream() {
-	defer s.Stop()
+	defer s.Stop(nil)
 
 	err := s.downstream.mainLoop()
 	if err != nil {
-		s.Error(err)
-		log.Fatalf("[Sync] Sync stopped: %v", err)
+		s.Stop(err)
 	}
 }
 
@@ -419,7 +415,7 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 }
 
 // Stop stops the sync process
-func (s *SyncConfig) Stop() {
+func (s *SyncConfig) Stop(fatalError error) {
 	s.stopOnce.Do(func() {
 		if s.upstream != nil && s.upstream.interrupt != nil {
 			close(s.upstream.interrupt)
@@ -456,5 +452,10 @@ func (s *SyncConfig) Stop() {
 		}
 
 		s.Logln("[Sync] Sync stopped")
+
+		if fatalError != nil {
+			s.log.Error(fatalError)
+			log.Fatal(fatalError)
+		}
 	})
 }

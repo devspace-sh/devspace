@@ -150,7 +150,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		defer func() {
 			for _, v := range syncConfigs {
-				v.Stop()
+				v.Stop(nil)
 			}
 		}()
 	}

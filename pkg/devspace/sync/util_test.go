@@ -19,7 +19,6 @@ func TestCopyToContainerTestable(t *testing.T) {
 	}
 
 	remote, local, _ := initTestDirs(t)
-
 	excludePaths := []string{}
 
 	// Write local files
