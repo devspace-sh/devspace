@@ -22,21 +22,23 @@ import (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	RegistryURL    string
-	ImageName      string
-	ImageTag       string
-	BuildNamespace string
+	RegistryURL      string
+	ImageName        string
+	ImageTag         string
+	PreviousImageTag string
+	BuildNamespace   string
 
 	allowInsecureRegistry bool
 	kubectl               *kubernetes.Clientset
 }
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(registryURL, imageName, imageTag, buildNamespace string, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(registryURL, imageName, imageTag, lastImageTag, buildNamespace string, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
 		RegistryURL:           registryURL,
 		ImageName:             imageName,
 		ImageTag:              imageTag,
+		PreviousImageTag:      lastImageTag,
 		BuildNamespace:        buildNamespace,
 		allowInsecureRegistry: allowInsecureRegistry,
 		kubectl:               kubectl,
@@ -85,7 +87,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			Containers: []k8sv1.Container{
 				{
 					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:debug-60bdda4c49b699f5a21545cc8a050a5f3953223f",
+					Image:           "gcr.io/kaniko-project/executor:debug-5ac29a97734170a0547fea33b348dc7c328e2f8a",
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
 					Command: []string{
 						"/busybox/sleep",
@@ -205,8 +207,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--single-snapshot",
 		}
 
+		if !options.NoCache {
+			kanikoBuildCmd = append(kanikoBuildCmd, "--cache=true", "--cache-repo="+b.PreviousImageTag)
+		}
+
 		if b.allowInsecureRegistry {
-			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure-skip-tls-verify")
+			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure", "--skip-tls-verify")
 		}
 
 		stdin, stdout, stderr, execErr := kubectl.Exec(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
