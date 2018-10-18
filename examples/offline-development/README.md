@@ -60,7 +60,7 @@ oswQSfh: digest: sha256:af6f6f701136149dc303aad52c124ab8913015e8125ae68994e06325
 [DONE] √ Deployed helm chart (Release revision: 1)
 [DONE] √ Successfully deployed devspace-default
 [DONE] √ Port forwarding started on 3000:3000
-[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/minikube <-> /app (Pod: test/devspace-default-6446cb6b8c-c2l2q)
+[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/offline-development <-> /app (Pod: test/devspace-default-6446cb6b8c-c2l2q)
 root@devspace-default-6446cb6b8c-c2l2q:/app#
 ```
 

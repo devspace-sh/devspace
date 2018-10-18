@@ -8,7 +8,7 @@ In order to use this example, make sure you have docker installed and a docker r
 
 Exchange the image name in `.devspace/config.yaml` under `images.php.name` and `images.node.name` with the image name you want to use. Do the same thing in `node/kube/deployment.yaml` under `spec.template.spec.image`.  Do **not** add a tag to these image names, because this will be done at runtime automatically.  
 
-## Optional: Use self hosted cluster (minikube, GKS etc.) instead of devspace-cloud
+## Optional: Use self hosted cluster (minikube, GKE etc.) instead of devspace-cloud
 
 If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access your cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.
 

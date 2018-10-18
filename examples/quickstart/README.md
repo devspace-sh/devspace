@@ -8,7 +8,7 @@ In order to use this example, make sure you have docker installed and a docker r
 
 Exchange the image name in `.devspace/config.yaml` under `images.default.name` with the image name you want to use. Do **not** add a tag to this image name, because this will be done at runtime automatically.  
 
-## Optional: Use self hosted cluster (minikube, GKS etc.) instead of devspace-cloud
+## Optional: Use self hosted cluster (minikube, GKE etc.) instead of devspace-cloud
 
 By default, this example will deploy to the devspace-cloud, a free managed kubernetes cluster. If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access resources on the cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.
 
@@ -61,7 +61,7 @@ dk0dqqO: digest: sha256:5e043c3d366676331f4ffe6a9b6f38cbc08338c25ef47789060564d3
 [DONE] √ Deployed helm chart (Release revision: 2)
 [DONE] √ Successfully deployed devspace-default
 [DONE] √ Port forwarding started on 3000:3000
-[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
+[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/quickstart <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
 root@devspace-5b5f977b77-49cjt:/app#
 ```
 
