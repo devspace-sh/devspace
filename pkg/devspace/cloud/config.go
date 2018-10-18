@@ -40,7 +40,7 @@ const GetClusterConfigEndpoint = "/clusterConfig"
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Host: "https://cloud.devspace.covexo.com",
+	Host: "https://cli.devspace-cloud.com",
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations
