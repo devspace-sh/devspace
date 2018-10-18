@@ -46,6 +46,8 @@ type UpCmdFlags struct {
 	portforwarding bool
 	verboseSync    bool
 	container      string
+	labelSelector  string
+	namespace      string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -60,6 +62,8 @@ var UpFlagsDefault = &UpCmdFlags{
 	portforwarding: true,
 	verboseSync:    false,
 	container:      "",
+	namespace:      "",
+	labelSelector:  "",
 }
 
 const clusterRoleBindingName = "devspace-users"
@@ -77,9 +81,9 @@ func init() {
 #################### devspace up ######################
 #######################################################
 Starts and connects your DevSpace:
-1. Connects to the Tiller server
-2. Builds your Docker image (if your Dockerfile has changed)
-3. Deploys the Helm chart in /chart
+1. Builds your Docker images (if any Dockerfile has changed)
+2. Deploys your application via helm or kubectl
+3. Forwards container ports to the local computer
 4. Starts the sync client
 5. Enters the container shell
 #######################################################`,
@@ -96,6 +100,8 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
+	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
+	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 }
 
 // Run executes the command logic
@@ -158,7 +164,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}()
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, args, log.GetInstance())
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
