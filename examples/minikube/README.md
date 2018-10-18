@@ -72,7 +72,7 @@ Furthermore a bi-directional sync was started between the local folder `/go-work
 
 You can start the server now with `npm start` in the open terminal. Now navigate in your browser to `localhost:3000` and you should see the output 'Hello World!'.  
 
-Change something in `index.js` and you should see something like this: 
+Change something in `index.js` locally and you should see something like this: 
 
 ```
 [nodemon] 1.18.4

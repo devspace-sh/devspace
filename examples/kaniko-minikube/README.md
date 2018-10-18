@@ -76,4 +76,4 @@ Furthermore a bi-directional sync was started between the local folder `/go-work
 
 You can start the server now with `go run main.go` in the open terminal. Now navigate in your browser to `localhost:8080` and you should see the output 'Hello World!'.  
 
-Change something in `main.go` and re-run `go run main.go`. Now just refresh your browser and you should see the changes immediately.  
+Change something in `main.go` locally and re-run `go run main.go`. Now just refresh your browser and you should see the changes immediately.  

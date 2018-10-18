@@ -1,0 +1,5 @@
+containers:
+  default:
+    image: "will be overriden by devspace up"
+
+pullSecrets: []
