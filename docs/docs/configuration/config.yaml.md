@@ -141,7 +141,7 @@ In this section you can define additional settings for connecting to the tiller 
 
 ## cluster
 The `cluster` field specifies:
-- `kubeContext` *string* the kubernetes context to use from $HOME/.kube/config
+- `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
 - `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
 - `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
 - `apiServer` *string* Kubernetes API-Server URL
