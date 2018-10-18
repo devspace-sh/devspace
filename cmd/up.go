@@ -42,6 +42,7 @@ type UpCmdFlags struct {
 	build          bool
 	sync           bool
 	deploy         bool
+	skipBuild      bool
 	switchContext  bool
 	portforwarding bool
 	verboseSync    bool
@@ -58,6 +59,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:          false,
 	sync:           true,
 	switchContext:  false,
+	skipBuild:      false,
 	deploy:         false,
 	portforwarding: true,
 	verboseSync:    false,
@@ -100,6 +102,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.skipBuild, "skip-build", cmd.flags.skipBuild, "Forces devspace to skip the building step")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 }
@@ -389,16 +392,19 @@ func (cmd *UpCmd) buildAndDeploy() {
 // returns true when one of the images had to be rebuild
 func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	re := false
-	config := configutil.GetConfig()
 
-	for imageName, imageConf := range *config.Images {
-		shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
-		if err != nil {
-			log.Fatal(err)
-		}
+	if cmd.flags.skipBuild == false {
+		config := configutil.GetConfig()
 
-		if shouldRebuild {
-			re = true
+		for imageName, imageConf := range *config.Images {
+			shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if shouldRebuild {
+				re = true
+			}
 		}
 	}
 
