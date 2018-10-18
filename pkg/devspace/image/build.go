@@ -208,9 +208,10 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 			// only rebuild Docker image when Dockerfile has changed since latest build
 			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
 		}
+
+		runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	}
 
-	runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	return mustRebuild
 }
 
