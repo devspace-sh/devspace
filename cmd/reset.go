@@ -34,13 +34,13 @@ func init() {
 #######################################################
 Resets your project by removing all DevSpace related 
 data from your project and your cluster, including:
-1. DevSpace release (cluster)
-2. Docker registry (cluster)
+1. DevSpace deployments
+2. Docker registry (if deployed)
 3. DevSpace config files in .devspace/ (local)
 
 Use the flag --all-data to also remove:
-1. Tiller server (cluster)
-2. Helm home (local)
+1. Tiller server (if deployed)
+2. Helm home (if helm is used)
 
 If you simply want to shutdown your DevSpace, use the 
 command: devspace down

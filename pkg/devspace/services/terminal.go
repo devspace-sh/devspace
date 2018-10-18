@@ -11,7 +11,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, args []string, log log.Logger) {
+func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, labelSelectorOverride string, namespaceOverride string, args []string, log log.Logger) {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -33,19 +33,28 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, a
 
 	// Select pods
 	namespace := ""
-	if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
-		namespace = *config.DevSpace.Terminal.Namespace
+	if namespaceOverride == "" {
+		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
+			namespace = *config.DevSpace.Terminal.Namespace
+		}
+	} else {
+		namespace = namespaceOverride
 	}
 
+	labelSelector := ""
 	// Retrieve pod from label selector
-	labelSelector := "release=" + GetNameOfFirstHelmDeployment()
-	if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
-		labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
-		for key, value := range *config.DevSpace.Terminal.LabelSelector {
-			labels = append(labels, key+"="+*value)
-		}
+	if labelSelectorOverride == "" {
+		labelSelector = "release=" + GetNameOfFirstHelmDeployment()
+		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
+			labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
+			for key, value := range *config.DevSpace.Terminal.LabelSelector {
+				labels = append(labels, key+"="+*value)
+			}
 
-		labelSelector = strings.Join(labels, ", ")
+			labelSelector = strings.Join(labels, ", ")
+		}
+	} else {
+		labelSelector = labelSelectorOverride
 	}
 
 	// Get first running pod

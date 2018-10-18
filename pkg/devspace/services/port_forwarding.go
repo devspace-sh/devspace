@@ -33,6 +33,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 				log.StartWait("Waiting for pods to become running")
 				pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace)
 				log.StopWait()
+
 				if err != nil {
 					return fmt.Errorf("Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {
@@ -44,13 +45,18 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 
 					readyChan := make(chan struct{})
 
-					go kubectl.ForwardPorts(client, pod, ports, make(chan struct{}), readyChan)
+					go func() {
+						err := kubectl.ForwardPorts(client, pod, ports, make(chan struct{}), readyChan)
+						if err != nil {
+							log.Errorf("Error starting port forwarding: %v", err)
+						}
+					}()
 
 					// Wait till forwarding is ready
 					select {
 					case <-readyChan:
 						log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
-					case <-time.After(5 * time.Second):
+					case <-time.After(20 * time.Second):
 						return fmt.Errorf("Timeout waiting for port forwarding to start")
 					}
 				}

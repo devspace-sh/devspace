@@ -2,7 +2,7 @@
 title: devspace add package
 ---
 
-With `devspace add package`, you can easily add a package (helm chart) like mysql, nginx etc. to your devspace. To view all available packages run `devspace add package`.  
+With `devspace add package`, you can easily add a package (helm chart) like mysql, nginx etc. to a deployment in your devspace (Only works if deployment method is helm). To view all available packages run `devspace add package`.  
 
 The devspace add package command adds the helm chart as a dependency in the requirements.yaml and calls the internal `helm dependency update` (helm doesn't need to be installed), which downloads the chart and places it in the chart/charts folder. To remove the dependency call `devspace remove package PACKAGE`.  
 
@@ -15,6 +15,7 @@ Usage:
 Flags:
       --app-version string     App version
       --chart-version string   Chart version
+  -d, --deployment string      The deployment name to use
   -h, --help                   help for package
       --skip-question          Skips the question to show the readme in a browser
 
@@ -22,5 +23,5 @@ Examples:
 devspace add package                                # Shows all available packages
 devspace add package mysql                          # Adds the mysql chart to the devspace
 devspace add package mysql --app-version=5.7.14     # Adds the mysql chart with app version 5.7.14 to the devspace
-devspace add package mysql --chart-version=0.10.3   # Adds the mysql chart with chart version 0.10.3 to the devspace
+devspace add package mysql --chart-version=0.10.3 -d devspace-default   # Adds the mysql chart with chart version 0.10.3 to the devspace
 ```

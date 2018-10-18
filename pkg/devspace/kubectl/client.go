@@ -14,6 +14,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
@@ -35,10 +36,21 @@ import (
 )
 
 var isMinikubeVar *bool
+var loadCloudConfigOnce sync.Once
 
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
-	config, err := GetClientConfig()
+	config, err := GetClientConfig(false)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(config)
+}
+
+// NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
+func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
+	config, err := GetClientConfig(switchContext)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +59,9 @@ func NewClient() (*kubernetes.Clientset, error) {
 }
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
-func GetClientConfig() (*rest.Config, error) {
+func GetClientConfig(switchContext bool) (*rest.Config, error) {
+	var err error
+
 	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
@@ -55,19 +69,11 @@ func GetClientConfig() (*rest.Config, error) {
 
 	// Update devspace cloud cluster config
 	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		providerConfig, err := cloud.ParseCloudConfig()
+		loadCloudConfigOnce.Do(func() {
+			err = loadCloudConfig(config, log.GetInstance())
+		})
 		if err != nil {
-			return nil, fmt.Errorf("Couldn't load cloud provider config: %v", err)
-		}
-
-		err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
-		if err != nil {
-			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
-		}
-
-		err = configutil.SaveConfig()
-		if err != nil {
-			return nil, fmt.Errorf("Error saving config: %v", err)
+			return nil, err
 		}
 	}
 
@@ -81,8 +87,17 @@ func GetClientConfig() (*rest.Config, error) {
 		activeContext := kubeConfig.CurrentContext
 
 		// If we should use a certain kube context use that
-		if config.Cluster != nil && config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 {
+		if config.Cluster != nil && config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 && activeContext != *config.Cluster.KubeContext {
 			activeContext = *config.Cluster.KubeContext
+
+			if switchContext {
+				kubeConfig.CurrentContext = activeContext
+
+				err = kubeconfig.WriteKubeConfig(kubeConfig, clientcmd.RecommendedHomeFile)
+				if err != nil {
+					return nil, fmt.Errorf("Error saving kube config: %v", err)
+				}
+			}
 		}
 
 		// Change context namespace
@@ -133,6 +148,27 @@ func GetClientConfig() (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 }
 
+func loadCloudConfig(config *v1.Config, log log.Logger) error {
+	providerConfig, err := cloud.ParseCloudConfig()
+	if err != nil {
+		return fmt.Errorf("Couldn't load cloud provider config: %v", err)
+	}
+
+	log.StartWait("Login to cloud provider")
+	err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
+	log.StopWait()
+	if err != nil {
+		log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
+	}
+
+	err = configutil.SaveConfig()
+	if err != nil {
+		return fmt.Errorf("Error saving config: %v", err)
+	}
+
+	return nil
+}
+
 // IsMinikube returns true if the Kubernetes cluster is a minikube
 func IsMinikube() bool {
 	if isMinikubeVar == nil {
@@ -161,6 +197,17 @@ func IsMinikube() bool {
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
 func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+	config := configutil.GetConfig()
+
+	if namespace == "" {
+		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return nil, err
+		}
+
+		namespace = defaultNamespace
+	}
+
 	maxWaiting := 120 * time.Second
 	waitingInterval := 1 * time.Second
 
@@ -171,6 +218,8 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
+			log.Info("Error here")
+
 			return nil, err
 		}
 
@@ -272,7 +321,7 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 
 // DescribePod returns a desription string of a pod (internally calls the kubectl describe function)
 func DescribePod(namespace, name string) (string, error) {
-	newConfig, err := GetClientConfig()
+	newConfig, err := GetClientConfig(false)
 
 	if err != nil {
 		return "", err
@@ -321,8 +370,7 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	config, err := GetClientConfig()
-
+	config, err := GetClientConfig(false)
 	if err != nil {
 		return err
 	}
@@ -334,7 +382,6 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 		SubResource("portforward")
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
-
 	if err != nil {
 		return err
 	}
@@ -354,8 +401,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, errorChannel chan<- error) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
 	var t term.TTY
 
-	kubeconfig, err := GetClientConfig()
-
+	kubeconfig, err := GetClientConfig(false)
 	if err != nil {
 		return nil, nil, nil, err
 	}
