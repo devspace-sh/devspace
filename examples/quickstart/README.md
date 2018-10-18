@@ -1,16 +1,16 @@
-# Quickstart kubectl example
+# Quickstart example
 
-This example shows you how to develop a small node express application with devspace and devspace-cloud using kubectl as deployment method instead of helm.
+This example shows you how to develop a small node express application with devspace.
 
 # Step 0: Prerequisites
 
 In order to use this example, make sure you have docker installed and a docker registry where you can push to (hub.docker.com, gcr.io etc.). Make sure you are logged in to the registry via `docker login`.  
 
-Exchange the image name in `.devspace/config.yaml` under `images.default.name` with the image name you want to use. Do the same thing in `kube/deployment.yaml` under `spec.template.spec.image`. Do **not** add a tag to those image names, because this will be done at runtime automatically.  
+Exchange the image name in `.devspace/config.yaml` under `images.default.name` with the image name you want to use. Do **not** add a tag to this image name, because this will be done at runtime automatically.  
 
 ## Optional: Use self hosted cluster (minikube, GKS etc.) instead of devspace-cloud
 
-If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access your cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.  
+By default, this example will deploy to the devspace-cloud, a free managed kubernetes cluster. If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access resources on the cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.
 
 # Step 1: Start the devspace
 
@@ -57,8 +57,8 @@ daf45b2cad9a: Layer already exists
 dk0dqqO: digest: sha256:5e043c3d366676331f4ffe6a9b6f38cbc08338c25ef47789060564d3304153a2 size: 2839
 [INFO]   Image pushed to registry (hub.docker.com)
 [DONE] √ Done building and pushing image 'fabian1991/quickstart'
-[INFO]   Deploying devspace-default with kubectl
-deployment.extensions/devspace created
+[INFO]   Deploying devspace-default with helm
+[DONE] √ Deployed helm chart (Release revision: 2)
 [DONE] √ Successfully deployed devspace-default
 [DONE] √ Port forwarding started on 3000:3000
 [DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
@@ -67,7 +67,7 @@ root@devspace-5b5f977b77-49cjt:/app#
 
 The command built your Dockerfile and pushed it to the target docker registry. Afterwards, it created a new kubernetes namespace for you in the devspace-cloud and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. If you want to access kubernetes resources via kubectl in the devspace-cloud you can simply change your kubectl context via `devspace up --switch-context`. Now you can check the running pods via `kubectl get po`.
 
-Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
+Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
 
 # Step 2: Start developing
 

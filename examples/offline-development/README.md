@@ -64,14 +64,27 @@ oswQSfh: digest: sha256:af6f6f701136149dc303aad52c124ab8913015e8125ae68994e06325
 root@devspace-default-6446cb6b8c-c2l2q:/app#
 ```
 
-The command deployed a tiller server and internal registry and used the minikube docker daemon to build the dockerfile.  
+The command deployed a tiller server, internal registry and used the minikube docker daemon to build the dockerfile.  
 
-Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
+Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/offline-development` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
 
 # Step 2: Start developing
 
-You can now disconnect from the internet. You can start the server now with `npm start` in the open terminal. Now navigate in your browser to `localhost:3000` and you should see the output 'Hello World!'.  
+You can start the server now with `npm start` in the open terminal. Now navigate in your browser to `localhost:3000` and you should see the output 'Hello World!'.  
 
-You can easily change any code within the `index.js` and restart the server with `npm start` and you should see the changes immediately, without the need of rebuilding the docker file or redeploying the chart.  
+Change something in `index.js` and you should see something like this: 
+
+```
+[nodemon] 1.18.4
+[nodemon] to restart at any time, enter `rs`
+[nodemon] watching: *.*
+[nodemon] starting `node index.js`
+Example app listening on port 3000!
+[nodemon] restarting due to changes...
+[nodemon] starting `node index.js`
+Example app listening on port 3000!
+```
+
+Now just refresh your browser and you should see the changes immediately. 
 
 You can also exit the terminal and reopen it with `devspace up` without the need of an internet connection.  

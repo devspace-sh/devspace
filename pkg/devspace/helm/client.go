@@ -59,7 +59,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 	}
 
 	tillerNamespace := *config.Tiller.Namespace
-	kubeconfig, err := kubectl.GetClientConfig()
+	kubeconfig, err := kubectl.GetClientConfig(false)
 	if err != nil {
 		return nil, err
 	}

@@ -42,6 +42,7 @@ type UpCmdFlags struct {
 	build          bool
 	sync           bool
 	deploy         bool
+	switchContext  bool
 	portforwarding bool
 	verboseSync    bool
 	container      string
@@ -54,6 +55,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistries: true,
 	build:          false,
 	sync:           true,
+	switchContext:  false,
 	deploy:         false,
 	portforwarding: true,
 	verboseSync:    false,
@@ -93,6 +95,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 }
 
 // Run executes the command logic
@@ -114,7 +117,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client
-	cmd.kubectl, err = kubectl.NewClient()
+	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -189,7 +192,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := kubectl.GetClientConfig()
+		clusterConfig, _ := kubectl.GetClientConfig(false)
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",

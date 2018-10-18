@@ -24,6 +24,7 @@ import (
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
 	rebuild := false
+	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 
@@ -92,11 +93,15 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
-			if imageConf.Build.Kaniko.Namespace == nil {
-				log.Fatalf("No kaniko namespace configured for image %s", imageName)
+			buildNamespace, err := configutil.GetDefaultNamespace(config)
+			if err != nil {
+				log.Fatalf("Error retrieving default namespace")
 			}
 
-			buildNamespace := *imageConf.Build.Kaniko.Namespace
+			if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
+				buildNamespace = *imageConf.Build.Kaniko.Namespace
+			}
+
 			allowInsecurePush := false
 			if registryConf.Insecure != nil {
 				allowInsecurePush = *registryConf.Insecure
