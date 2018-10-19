@@ -26,24 +26,25 @@ This demo shows how to run `devspace up` directly from the terminal inside Visua
 These commands will install the DevSpace CLI and add it to the PATH environment variable. For more details, see: [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html)
 
 ### For Windows
-1. Open CMD with **admin rights**.
+1. Open Powershell with **admin rights**.
 2. Run this install script:
-```cmd
-curl -s "https://raw.githubusercontent.com/covexo/devspace/master/scripts/installer-win.bat" >"%Temp%\install-devspace.bat"
-"%Temp%\install-devspace.bat" "%PROGRAMFILES%\devspace"
-del "%Temp%\install-devspace.bat"
+```powershell
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
+mkdir "$Env:Programfiles\devspace"
+wget ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest").Content -replace ".`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".","`$1") -o $Env:Programfiles\devspace\devspace.exe
+& "$Env:Programfiles\devspace\devspace.exe" "install"
 ```
 
 **Note:** After running the install script, you should close and re-open your terminal window or IDE to refresh the environment variables.
 
 ### For Linux
 ```bash
-curl --silent "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ### For Mac
 ```bash
-curl -s -H "Accept: application/json"  "https://api.github.com/repos/covexo/devspace/releases/latest"  | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest"  | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
 ## [Quickstart](https://devspace.covexo.com/docs/getting-started/quickstart.html)
