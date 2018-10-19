@@ -28,6 +28,9 @@ func CheckAuth(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) 
 
 // GetClusterConfig retrieves the cluster and authconfig from the devspace cloud
 func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
+	log.Info(provider.Host + GetClusterConfigEndpoint)
+	log.Info(provider.Token)
+
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", provider.Host+GetClusterConfigEndpoint, nil)
 	if err != nil {
