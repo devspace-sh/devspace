@@ -9,6 +9,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 
+	"github.com/covexo/devspace/pkg/util/dockerfile"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
@@ -186,7 +187,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			cmd.configureDevSpace()
 		}
 
+		cmd.addDefaultPorts()
 		cmd.addDefaultSyncConfig()
+
 		cmd.configureRegistry()
 
 		err := configutil.SaveConfig()
@@ -306,6 +309,36 @@ func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = namespace
+}
+
+func (cmd *InitCmd) addDefaultPorts() {
+	dockerfilePath := filepath.Join(cmd.workdir, "Dockerfile")
+	ports, err := dockerfile.GetPorts(dockerfilePath)
+	if err != nil {
+		log.Warnf("Error parsing dockerfile %s: %v", dockerfilePath, err)
+		return
+	}
+	if len(ports) == 0 {
+		return
+	}
+
+	portMappings := []*v1.PortMapping{}
+	for _, port := range ports {
+		portMappings = append(portMappings, &v1.PortMapping{
+			LocalPort:  &port,
+			RemotePort: &port,
+		})
+	}
+
+	config := configutil.GetConfig()
+	config.DevSpace.Ports = &[]*v1.PortForwardingConfig{
+		{
+			LabelSelector: &map[string]*string{
+				"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
+			},
+			PortMappings: &portMappings,
+		},
+	}
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {

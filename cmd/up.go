@@ -332,6 +332,12 @@ func (cmd *UpCmd) buildAndDeploy() {
 	// Build image if necessary
 	mustRedeploy := cmd.buildImages(generatedConfig)
 
+	// Save Config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Error saving config: %v", err)
+	}
+
 	// Deploy all defined deployments
 	if config.DevSpace.Deployments != nil {
 		for _, deployConfig := range *config.DevSpace.Deployments {
