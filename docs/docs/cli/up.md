@@ -20,6 +20,7 @@ Flags:
   -b, --build                   Force image build
   -c, --container string        Container name where to open the shell
   -d, --deploy                  Force chart deployment
+      --exit-after-deploy       Exits the command after building the images and deploying the devspace
   -h, --help                    help for up
       --init-registries         Initialize registries (and install internal one) (default true)
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)

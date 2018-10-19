@@ -36,36 +36,36 @@ type UpCmd struct {
 
 // UpCmdFlags are the flags available for the up-command
 type UpCmdFlags struct {
-	tiller         bool
-	open           string
-	initRegistries bool
-	build          bool
-	sync           bool
-	deploy         bool
-	skipBuild      bool
-	switchContext  bool
-	portforwarding bool
-	verboseSync    bool
-	container      string
-	labelSelector  string
-	namespace      string
+	tiller          bool
+	open            string
+	initRegistries  bool
+	build           bool
+	sync            bool
+	deploy          bool
+	exitAfterDeploy bool
+	switchContext   bool
+	portforwarding  bool
+	verboseSync     bool
+	container       string
+	labelSelector   string
+	namespace       string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
 var UpFlagsDefault = &UpCmdFlags{
-	tiller:         true,
-	open:           "cmd",
-	initRegistries: true,
-	build:          false,
-	sync:           true,
-	switchContext:  false,
-	skipBuild:      false,
-	deploy:         false,
-	portforwarding: true,
-	verboseSync:    false,
-	container:      "",
-	namespace:      "",
-	labelSelector:  "",
+	tiller:          true,
+	open:            "cmd",
+	initRegistries:  true,
+	build:           false,
+	sync:            true,
+	switchContext:   false,
+	exitAfterDeploy: false,
+	deploy:          false,
+	portforwarding:  true,
+	verboseSync:     false,
+	container:       "",
+	namespace:       "",
+	labelSelector:   "",
 }
 
 const clusterRoleBindingName = "devspace-users"
@@ -102,7 +102,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
-	cobraCmd.Flags().BoolVar(&cmd.flags.skipBuild, "skip-build", cmd.flags.skipBuild, "Forces devspace to skip the building step")
+	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 }
@@ -147,27 +147,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	cmd.buildAndDeploy()
 
-	if cmd.flags.portforwarding {
-		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to start portforwarding: %v", err)
-		}
+	if cmd.flags.exitAfterDeploy == false {
+		cmd.startServices(args)
 	}
-
-	if cmd.flags.sync {
-		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to start sync: %v", err)
-		}
-
-		defer func() {
-			for _, v := range syncConfigs {
-				v.Stop(nil)
-			}
-		}()
-	}
-
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -393,20 +375,42 @@ func (cmd *UpCmd) buildAndDeploy() {
 func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	re := false
 
-	if cmd.flags.skipBuild == false {
-		config := configutil.GetConfig()
+	config := configutil.GetConfig()
 
-		for imageName, imageConf := range *config.Images {
-			shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
-			if err != nil {
-				log.Fatal(err)
-			}
+	for imageName, imageConf := range *config.Images {
+		shouldRebuild, err := image.Build(cmd.kubectl, generatedConfig, imageName, imageConf, cmd.flags.build)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-			if shouldRebuild {
-				re = true
-			}
+		if shouldRebuild {
+			re = true
 		}
 	}
 
 	return re
+}
+
+func (cmd *UpCmd) startServices(args []string) {
+	if cmd.flags.portforwarding {
+		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start portforwarding: %v", err)
+		}
+	}
+
+	if cmd.flags.sync {
+		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start sync: %v", err)
+		}
+
+		defer func() {
+			for _, v := range syncConfigs {
+				v.Stop(nil)
+			}
+		}()
+	}
+
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }
