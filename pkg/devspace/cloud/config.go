@@ -40,6 +40,7 @@ const GetClusterConfigEndpoint = "/clusterConfig"
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
+	Name: DevSpaceCloudProviderName,
 	Host: "http://cli.devspace-cloud.com",
 }
 
@@ -84,16 +85,22 @@ func SaveCloudConfig(config ProviderConfig) error {
 	}
 
 	cfgPath := filepath.Join(homedir, DevSpaceCloudConfigPath)
+	saveConfig := ProviderConfig{}
 
 	for name, provider := range config {
-		provider.Name = ""
-
+		host := provider.Host
 		if name == DevSpaceCloudProviderName {
-			provider.Host = ""
+			host = ""
+		}
+
+		saveConfig[name] = &Provider{
+			Name:  "",
+			Host:  host,
+			Token: provider.Token,
 		}
 	}
 
-	out, err := yaml.Marshal(config)
+	out, err := yaml.Marshal(saveConfig)
 	if err != nil {
 		return err
 	}
