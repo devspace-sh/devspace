@@ -260,7 +260,7 @@ registries:
   # cluster if desired
   internal:
     # Auto-generated user and password
-    user:
+    auth:
       username: user-XXXXX
       password: XXXXXXXXXX
 # Optional: The deployed internal registry within the cluster
