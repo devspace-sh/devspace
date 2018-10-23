@@ -2,11 +2,7 @@
 title: Quickstart
 ---
 
-You can easily setup a DevSpace for any existing project. This quickstart guide will walk you through the steps to get started with the DevSpace CLI:
-1. [Installation of the the DevSpace client](/docs/getting-started/installation)
-2. [Starting your DevSpace](/docs/getting-started/start)
-3. [Coding with your DevSpace](/docs/getting-started/coding)
-4. [Cleanup](/docs/getting-started/cleanup) (optional)
+Follow this link for the [Quickstart Guide](https://devspace-cloud.com/getting-started/).
 
 ## Prerequiste: A Kubernetes Cluster (e.g. Minikube)
 To get started, you need a Kubernetes cluster. If you do not have one yet, check out our **[Kubernetes Installation Guide](/docs/advanced/kubernetes)**.
