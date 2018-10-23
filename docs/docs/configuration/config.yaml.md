@@ -123,10 +123,10 @@ This section of the config defines a map of image registries. Use this only if y
 ImageRegistry:
 - `url` *string* the url of the registry (format: myregistry.com:port)
 - `insecure` *bool* flag to allow pushing to registries without HTTPS
-- `user` *RegistryUser* credentials for pushing to / pulling from the registry
+- `auth` *RegistryAuth* credentials for pushing to / pulling from the registry
 
-### registries[].user
-RegistryUser:
+### registries[].auth
+RegistryAuth:
 - `username` *string* the user that should be used for pushing and pulling from the registry
 - `password` *string* the password should be used for pushing and pulling from the registry
 
