@@ -62,8 +62,8 @@ Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/gett
 Here you can find some links to the most important pages of our documentation:
 - [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 - [Frequently Asked Questions (FAQ)](https://devspace.covexo.com/docs/getting-started/faq.html)
+- [DevSpace Configuration Options](https://devspace.covexo.com/docs/configuration/config.yaml.html)
 - [CLI Documentation](https://devspace.covexo.com/docs/cli/init.html)
-- [Configuration Options](https://devspace.covexo.com/docs/configuration/dockerfile.html)
 - [Architecture Documentation](https://devspace.covexo.com/docs/advanced/architecture.html)
 
 ## [DevSpace Cloud](https://devspace-cloud.com/)
