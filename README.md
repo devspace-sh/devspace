@@ -47,20 +47,20 @@ curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devsp
 curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
 
-## [Quickstart](https://devspace.covexo.com/docs/getting-started/quickstart.html)
+## [Quickstart](https://devspace-cloud.com/getting-started/)
 To get started with the DevSpace CLI, you only need a Kubernetes cluster. If you do not have one yet, take a look at our [Minikube Install Guide](https://devspace.covexo.com/docs/advanced/kubernetes.html) or [request access to the private beta of the DevSpace Cloud](https://devspace-cloud.com/).
 
 The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
 ```
 devspace up
 ```
-Take a look at the [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html) on our documentation page to see how to get started with a DevSpace.
+Take a look at the [Getting Started Guide](https://devspace-cloud.com/getting-started/) on our documentation page to see how to get started with a DevSpace.
 
 **Note:** Don't worry, you can use `devspace reset` to reset your project and go back to local development.
 
 ## [Documentation](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 Here you can find some links to the most important pages of our documentation:
-- [Getting Started Guide](https://devspace.covexo.com/docs/getting-started/quickstart.html)
+- [Getting Started Guide](https://devspace-cloud.com/getting-started/)
 - [Frequently Asked Questions (FAQ)](https://devspace.covexo.com/docs/getting-started/faq.html)
 - [DevSpace Configuration Options](https://devspace.covexo.com/docs/configuration/config.yaml.html)
 - [CLI Documentation](https://devspace.covexo.com/docs/cli/init.html)
