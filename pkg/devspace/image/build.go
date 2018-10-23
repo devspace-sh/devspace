@@ -107,7 +107,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				allowInsecurePush = *registryConf.Insecure
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(registryURL, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
+			pullSecret := ""
+			if imageConf.Build.Kaniko.PullSecret != nil {
+				pullSecret = *imageConf.Build.Kaniko.PullSecret
+			}
+
+			imageBuilder, err = kaniko.NewBuilder(registryURL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
 				log.Fatalf("Error creating kaniko builder: %v", err)
 			}
