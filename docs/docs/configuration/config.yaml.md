@@ -247,13 +247,15 @@ images:
         preferMinikube: true
   database:
     name: devspace-user/devspace
-    tag: 62i5e2p
     registry: internal
     build:
       kaniko:
         # Use kaniko within the target cluster to build the image
         # instead of local or minikube docker
         cache: true
+  privateRegistryImage:
+    name: user/test
+    registry: privateRegistry
 # The registries the images should be pushed to
 registries:
   # Internal registry that will be automatically deployed to the target
@@ -263,6 +265,12 @@ registries:
     auth:
       username: user-XXXXX
       password: XXXXXXXXXX
+  # Private registry used by image privateRegistryImage
+  privateRegistry:
+    url: myPrivateRegistry.com:8080
+    auth:
+      username: user-XXXXX
+      password: XXXXXXXXXX # Can also be a token
 # Optional: The deployed internal registry within the cluster
 internalRegistry:
   deploy: true
