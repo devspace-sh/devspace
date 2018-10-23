@@ -22,6 +22,17 @@ This demo shows how to run `devspace up` directly from the terminal inside Visua
 
 ![DevSpace CLI Demo](docs/website/static/img/devspace-cli-demo-readme.gif)
 
+## [Quickstart](https://devspace-cloud.com/getting-started/)
+Follow this link for the [Quickstart Guide](https://devspace-cloud.com/getting-started/).
+
+The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
+```
+devspace up
+```
+Take a look at the [Getting Started Guide](https://devspace-cloud.com/getting-started/) to see how to get started with a DevSpace.
+
+**Note:** Don't worry, you can use `devspace reset` to reset your project and go back to local development.
+
 ## [Installation](https://devspace.covexo.com/docs/getting-started/installation.html)
 These commands will install the DevSpace CLI and add it to the PATH environment variable. For more details, see: [Install Guide](https://devspace.covexo.com/docs/getting-started/installation.html)
 
@@ -46,17 +57,6 @@ curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devsp
 ```bash
 curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
 ```
-
-## [Quickstart](https://devspace-cloud.com/getting-started/)
-Follow this link for the [Quickstart Guide](https://devspace-cloud.com/getting-started/).
-
-The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
-```
-devspace up
-```
-Take a look at the [Getting Started Guide](https://devspace-cloud.com/getting-started/) to see how to get started with a DevSpace.
-
-**Note:** Don't worry, you can use `devspace reset` to reset your project and go back to local development.
 
 ## [Documentation](https://devspace.covexo.com/docs/getting-started/quickstart.html)
 Here you can find some links to the most important pages of our documentation:
