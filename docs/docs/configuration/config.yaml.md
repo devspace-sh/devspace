@@ -180,6 +180,7 @@ devSpace:
     # Label selector to select the correct pods
     labelSelector:
       release: devspace-default
+  # What to deploy within your project
   deployments:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
@@ -194,12 +195,10 @@ devSpace:
       - kube/additional/*
   # Automatically forwarded ports on `devspace up` (same functionality as running manually kubectl port-forward)
   portForwarding:
-    # Currently only pod is supported
-  - resourceType: pod
     # Map of key value matchLabel selectors
-    labelSelector:
-      release: my-app
-    # namespace where to select the pods from
+  - labelSelector:
+      release: devspace-default
+    # optional namespace where to select the pods from
     namespace: my-namespace
     # Array of port mappings
     portMappings:
@@ -211,8 +210,7 @@ devSpace:
       remotePort: 80
   sync:
     # Currently only resource type pod is supported
-  - resourceType: pod
-    labelSelector:
+  - labelSelector:
       release: devspace-default
     # The container within the pod to sync to
     containerName: default
@@ -223,7 +221,7 @@ devSpace:
     # Exclude node_modules from up and download
     excludePaths:
     - node_modules/
-# A list of images that should be build during devspace up
+# A map of images that should be build during devspace up
 images:
   default:
     # Image name with prefixed docker image registry
@@ -256,7 +254,7 @@ images:
   privateRegistryImage:
     name: user/test
     registry: privateRegistry
-# The registries the images should be pushed to
+# Optional: the registries the images should be pushed to
 registries:
   # Internal registry that will be automatically deployed to the target
   # cluster if desired
@@ -271,7 +269,7 @@ registries:
     auth:
       username: user-XXXXX
       password: XXXXXXXXXX # Can also be a token
-# Optional: The deployed internal registry within the cluster
+# Optional: Deploy internal registry within the cluster
 internalRegistry:
   deploy: true
 # Optional: Tiller server that should be used within the cluster (only necessary if you want to use helm as deployment)
