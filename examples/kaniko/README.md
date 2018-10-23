@@ -39,16 +39,16 @@ As a third option you can provide the pullSecret to use for kaniko yourself. Mak
 apiVersion: v1
 kind: Secret
 data:
-  # .dockerconfigjson encoded in base64 e.g.: 
+  # You need to specify the .dockerconfigjson (which will be mounted in the executor pod in /root/.docker/config.json) encoded in base64 e.g.: 
   # {
   #		"auths": {
-  #			"myRegistryUrl": {
-  #				"auth": "base64Encoded(user:password/token)",
-  #				"email": "myemail@test.de"
+  #			"<registryUrl>": {
+  #				"auth": "<base64Encoded(user:password/token)>",
+  #				"email": "<myemail@test.de>"
   #			}
   #		}
   #	}
-  .dockerconfigjson: BASE64EncodedDockerConfigJson
+  .dockerconfigjson: <BASE64EncodedDockerConfigJson>
 ```
 
 Now specify the pullsecret name as the pull secret to use for kaniko in the .devspace/config:
