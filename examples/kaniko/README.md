@@ -41,13 +41,13 @@ kind: Secret
 data:
   # .dockerconfigjson encoded in base64 e.g.: 
   # {
-	#		"auths": {
-	#			"myRegistryUrl": {
-	#				"auth": "base64Encoded(user:password/token)",
-	#				"email": "myemail@test.de"
-	#			}
-	#		}
-	#	}
+  #		"auths": {
+  #			"myRegistryUrl": {
+  #				"auth": "base64Encoded(user:password/token)",
+  #				"email": "myemail@test.de"
+  #			}
+  #		}
+  #	}
   .dockerconfigjson: BASE64EncodedDockerConfigJson
 ```
 
