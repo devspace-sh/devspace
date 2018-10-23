@@ -109,7 +109,7 @@ DockerConfig:
 KanikoConfig:
 - `cache` *bool* if true the last image build is used as cache repository
 - `namespace` *string* specifies the namespace where the build pod should be started
-- `pullSecret` *string* mount this pullSecret instead of creating one to authenticate to the registry
+- `pullSecret` *string* mount this pullSecret instead of creating one to authenticate to the registry (see [kaniko](https://github.com/covexo/devspace/tree/master/examples/kaniko) for an example)
 
 ### images[].build.options
 BuildOptions:
