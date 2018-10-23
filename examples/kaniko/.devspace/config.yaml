@@ -26,5 +26,4 @@ images:
     build:
       kaniko:
         cache: true
-        namespace: ""
     name: yourdockername/kaniko

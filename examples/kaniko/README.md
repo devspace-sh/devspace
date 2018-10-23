@@ -4,13 +4,13 @@ This example shows how kaniko can be used instead of docker to build and push an
 
 # Step 0: Prerequisites
 
-In order for this example to work you need access to a docker registry, where you can push images to (e.g. hub.docker.com, gcr.io etc.). There are two options how you can push images to registries with devspace. 
+In order for this example to work you need access to a docker registry, where you can push images to (e.g. hub.docker.com, gcr.io etc.). There are three options how you can push images to registries with devspace. 
 
 ## Option 1: Use docker credentials store
 If you have docker installed, devspace can take the required auth information directly out of the docker credentials store and will create the needed secret for you in the target cluster automatically. Make sure you are logged in the registry with `docker login`.  
 
 ## Option 2: Provide auth information yourself
-As a second option you can provide your credentials directly in the config.yaml. See example below:
+As a second option you can provide your credentials directly in the config.yaml and devspace cli will create a pull secret for you automatically. See example below:
 
 ```yaml
 images:
@@ -18,7 +18,6 @@ images:
     build:
       kaniko:
         cache: true
-        namespace: ""
     # Don't prefix image name with registry url 
     name: name/devspace
     registry: myRegistry
@@ -32,6 +31,37 @@ registries:
 ```
 
 devspace will then automatically create a secret for you which kaniko can use to push to that registry.  
+
+## Option 3: Provide kaniko pull secret yourself
+As a third option you can provide the pullSecret to use for kaniko yourself. Make sure the pull secret has the following form:
+
+```yaml
+apiVersion: v1
+kind: Secret
+data:
+  # .dockerconfigjson encoded in base64 e.g.: 
+  # {
+	#		"auths": {
+	#			"myRegistryUrl": {
+	#				"auth": "base64Encoded(user:password/token)",
+	#				"email": "myemail@test.de"
+	#			}
+	#		}
+	#	}
+  .dockerconfigjson: BASE64EncodedDockerConfigJson
+```
+
+Now specify the pullsecret name as the pull secret to use for kaniko in the .devspace/config:
+
+```yaml
+images:
+  default:
+    build:
+      kaniko:
+        cache: true
+    name: registryName/name/devspace
+    pullSecret: myPullSecretName
+```
 
 ## Optional: Use self hosted cluster (minikube, GKE etc.) instead of devspace-cloud
 
