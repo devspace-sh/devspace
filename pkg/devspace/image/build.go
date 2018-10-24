@@ -24,6 +24,7 @@ import (
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
 	rebuild := false
+	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 
@@ -92,17 +93,26 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
-			if imageConf.Build.Kaniko.Namespace == nil {
-				log.Fatalf("No kaniko namespace configured for image %s", imageName)
+			buildNamespace, err := configutil.GetDefaultNamespace(config)
+			if err != nil {
+				log.Fatalf("Error retrieving default namespace")
 			}
 
-			buildNamespace := *imageConf.Build.Kaniko.Namespace
+			if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
+				buildNamespace = *imageConf.Build.Kaniko.Namespace
+			}
+
 			allowInsecurePush := false
 			if registryConf.Insecure != nil {
 				allowInsecurePush = *registryConf.Insecure
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(registryURL, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
+			pullSecret := ""
+			if imageConf.Build.Kaniko.PullSecret != nil {
+				pullSecret = *imageConf.Build.Kaniko.PullSecret
+			}
+
+			imageBuilder, err = kaniko.NewBuilder(registryURL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
 				log.Fatalf("Error creating kaniko builder: %v", err)
 			}
@@ -203,9 +213,10 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 			// only rebuild Docker image when Dockerfile has changed since latest build
 			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
 		}
+
+		runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	}
 
-	runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	return mustRebuild
 }
 

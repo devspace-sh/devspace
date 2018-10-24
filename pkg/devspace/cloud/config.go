@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -40,7 +39,8 @@ const GetClusterConfigEndpoint = "/clusterConfig"
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Host: "https://cloud.devspace.covexo.com",
+	Name: DevSpaceCloudProviderName,
+	Host: "http://cli.devspace-cloud.com",
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations
@@ -84,16 +84,22 @@ func SaveCloudConfig(config ProviderConfig) error {
 	}
 
 	cfgPath := filepath.Join(homedir, DevSpaceCloudConfigPath)
+	saveConfig := ProviderConfig{}
 
 	for name, provider := range config {
-		provider.Name = ""
-
+		host := provider.Host
 		if name == DevSpaceCloudProviderName {
-			provider.Host = ""
+			host = ""
+		}
+
+		saveConfig[name] = &Provider{
+			Name:  "",
+			Host:  host,
+			Token: provider.Token,
 		}
 	}
 
-	out, err := yaml.Marshal(config)
+	out, err := yaml.Marshal(saveConfig)
 	if err != nil {
 		return err
 	}
@@ -104,17 +110,4 @@ func SaveCloudConfig(config ProviderConfig) error {
 	}
 
 	return ioutil.WriteFile(cfgPath, out, 0600)
-}
-
-// UpdateDevSpaceConfig updates the devspace config with the newest namespace
-func UpdateDevSpaceConfig(dsConfig *v1.Config, namespace string) {
-	// Update tiller if needed
-	if dsConfig.Tiller != nil {
-		dsConfig.Tiller.Namespace = &namespace
-	}
-
-	// Update registry namespace if needed
-	if dsConfig.InternalRegistry != nil {
-		dsConfig.InternalRegistry.Namespace = &namespace
-	}
 }

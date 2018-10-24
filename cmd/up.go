@@ -36,28 +36,36 @@ type UpCmd struct {
 
 // UpCmdFlags are the flags available for the up-command
 type UpCmdFlags struct {
-	tiller         bool
-	open           string
-	initRegistries bool
-	build          bool
-	sync           bool
-	deploy         bool
-	portforwarding bool
-	verboseSync    bool
-	container      string
+	tiller          bool
+	open            string
+	initRegistries  bool
+	build           bool
+	sync            bool
+	deploy          bool
+	exitAfterDeploy bool
+	switchContext   bool
+	portforwarding  bool
+	verboseSync     bool
+	container       string
+	labelSelector   string
+	namespace       string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
 var UpFlagsDefault = &UpCmdFlags{
-	tiller:         true,
-	open:           "cmd",
-	initRegistries: true,
-	build:          false,
-	sync:           true,
-	deploy:         false,
-	portforwarding: true,
-	verboseSync:    false,
-	container:      "",
+	tiller:          true,
+	open:            "cmd",
+	initRegistries:  true,
+	build:           false,
+	sync:            true,
+	switchContext:   false,
+	exitAfterDeploy: false,
+	deploy:          false,
+	portforwarding:  true,
+	verboseSync:     false,
+	container:       "",
+	namespace:       "",
+	labelSelector:   "",
 }
 
 const clusterRoleBindingName = "devspace-users"
@@ -75,9 +83,9 @@ func init() {
 #################### devspace up ######################
 #######################################################
 Starts and connects your DevSpace:
-1. Connects to the Tiller server
-2. Builds your Docker image (if your Dockerfile has changed)
-3. Deploys the Helm chart in /chart
+1. Builds your Docker images (if any Dockerfile has changed)
+2. Deploys your application via helm or kubectl
+3. Forwards container ports to the local computer
 4. Starts the sync client
 5. Enters the container shell
 #######################################################`,
@@ -93,6 +101,10 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
+	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
+	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 }
 
 // Run executes the command logic
@@ -114,7 +126,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client
-	cmd.kubectl, err = kubectl.NewClient()
+	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -135,27 +147,9 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	cmd.buildAndDeploy()
 
-	if cmd.flags.portforwarding {
-		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to start portforwarding: %v", err)
-		}
+	if cmd.flags.exitAfterDeploy == false {
+		cmd.startServices(args)
 	}
-
-	if cmd.flags.sync {
-		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to start sync: %v", err)
-		}
-
-		defer func() {
-			for _, v := range syncConfigs {
-				v.Stop(nil)
-			}
-		}()
-	}
-
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, args, log.GetInstance())
 }
 
 func (cmd *UpCmd) ensureNamespace() error {
@@ -189,7 +183,7 @@ func (cmd *UpCmd) ensureClusterRoleBinding() error {
 
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := kubectl.GetClientConfig()
+		clusterConfig, _ := kubectl.GetClientConfig(false)
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			createRoleBinding := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want the ClusterRoleBinding '" + clusterRoleBindingName + "' to be created automatically? (yes|no)",
@@ -380,6 +374,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 // returns true when one of the images had to be rebuild
 func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 	re := false
+
 	config := configutil.GetConfig()
 
 	for imageName, imageConf := range *config.Images {
@@ -393,5 +388,37 @@ func (cmd *UpCmd) buildImages(generatedConfig *generated.Config) bool {
 		}
 	}
 
+	if re == true {
+		// Save Config
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving config: %v", err)
+		}
+	}
+
 	return re
+}
+
+func (cmd *UpCmd) startServices(args []string) {
+	if cmd.flags.portforwarding {
+		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start portforwarding: %v", err)
+		}
+	}
+
+	if cmd.flags.sync {
+		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to start sync: %v", err)
+		}
+
+		defer func() {
+			for _, v := range syncConfigs {
+				v.Stop(nil)
+			}
+		}()
+	}
+
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }

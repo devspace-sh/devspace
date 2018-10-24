@@ -454,7 +454,7 @@ func (s *SyncConfig) Stop(fatalError error) {
 		s.Logln("[Sync] Sync stopped")
 
 		if fatalError != nil {
-			s.log.Error(fatalError)
+			s.Error(fatalError)
 			log.Fatal(fatalError)
 		}
 	})

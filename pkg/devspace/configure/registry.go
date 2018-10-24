@@ -68,7 +68,7 @@ func ImageName(dockerUsername string) error {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           *registryURL + "/" + dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9\\./]{4,30}$",
+			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,30}$",
 		})
 	}
 

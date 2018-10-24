@@ -16,7 +16,9 @@ type EnterCmd struct {
 
 // EnterCmdFlags are the flags available for the enter-command
 type EnterCmdFlags struct {
-	container string
+	container     string
+	namespace     string
+	labelSelector string
 }
 
 func init() {
@@ -37,12 +39,16 @@ devspace:
 devspace enter
 devspace enter bash
 devspace enter -c myContainer
+devspace enter bash -n my-namespace
+devspace enter bash -l release=test
 #######################################################`,
 		Run: cmd.Run,
 	}
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
+	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
+	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 }
 
 // Run executes the command logic
@@ -55,5 +61,5 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, args, log.GetInstance())
+	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }

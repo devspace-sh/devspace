@@ -130,7 +130,15 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, 
 		return err
 	}
 
-	UpdateDevSpaceConfig(dsConfig, namespace)
+	// Update tiller if needed
+	if dsConfig.Tiller != nil {
+		dsConfig.Tiller.Namespace = &namespace
+	}
+
+	// Update registry namespace if needed
+	if dsConfig.InternalRegistry != nil {
+		dsConfig.InternalRegistry.Namespace = &namespace
+	}
 
 	if useKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace

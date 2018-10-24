@@ -70,7 +70,7 @@ func WriteKubeConfig(config *api.Config, filename string) error {
 	}
 
 	// write with restricted permissions
-	if err := ioutil.WriteFile(filename, data, 0600); err != nil {
+	if err := ioutil.WriteFile(filename, data, 0666); err != nil {
 		return errors.Wrapf(err, "Error writing file %s", filename)
 	}
 
