@@ -14,12 +14,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestRun(t *testing.T) {
+func TestUpWithInternalRegistry(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Error(err)
 	}
-	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UsePrivateRegistry"), dir, true)
+	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), dir, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,10 +33,9 @@ func TestRun(t *testing.T) {
 	os.Chdir(dir)
 
 	upCmdObj := UpCmd{
-		flags: &UpCmdFlags{
-			sync: false,
-		},
+		flags: UpFlagsDefault,
 	}
+	upCmdObj.flags.sync = false
 
 	mockStdin("exit\\\\n")
 	defer cleanUpMockedStdin()
@@ -47,7 +46,49 @@ func TestRun(t *testing.T) {
 			t.Error(err)
 		}
 		propagationPolicy := metav1.DeletePropagationForeground
-		client.Core().Namespaces().Delete("test-cmd-up", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Core().Namespaces().Delete("test-cmd-up-private-registry", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	}()
+
+	upCmdObj.Run(nil, []string{})
+	log.StopFileLogging()
+
+	testReset(t, dir)
+
+}
+
+func TestUpWithDockerHub(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), dir, true)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(dir)
+
+	workDirBefore, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Chdir(workDirBefore)
+	os.Chdir(dir)
+
+	upCmdObj := UpCmd{
+		flags: &UpCmdFlags{},
+	}
+	upCmdObj.flags.sync = false
+
+	mockStdin("exit\\\\n")
+	defer cleanUpMockedStdin()
+
+	defer func() {
+		client, err := kubectl.NewClient()
+		if err != nil {
+			t.Error(err)
+		}
+		propagationPolicy := metav1.DeletePropagationForeground
+		client.Core().Namespaces().Delete("217b737767c3420e68e6c3b659eb46bb", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
 	upCmdObj.Run(nil, []string{})
@@ -70,7 +111,7 @@ func testReset(t *testing.T, dir string) {
 	_, err = os.Stat(path.Join(dir, "chart"))
 	assert.Equal(t, true, os.IsNotExist(err))
 
-	_, err = os.Stat(path.Join(dir, "testJavaScript.js"))
+	_, err = os.Stat(path.Join(dir, "index.js"))
 	assert.Equal(t, false, os.IsNotExist(err))
 	_, err = os.Stat(path.Join(dir, "package.json"))
 	assert.Equal(t, false, os.IsNotExist(err))
