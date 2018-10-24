@@ -1,6 +1,0 @@
-chartHashs:
-  ./chart: ae491ba0c27592a8093e463ab5df97858881dcffbeedc4752bbb9b6679774f56
-dockerLatestTimestamps:
-  C:\Users\covexo\go\src\github.com\covexo\devspace\testData\cmd\up\Dockerfile: 1539783889
-imageTags:
-  fabian-3/florian: BcJSWp2

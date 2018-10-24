@@ -19,7 +19,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up"), dir, true)
+	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UsePrivateRegistry"), dir, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,41 +50,15 @@ func TestRun(t *testing.T) {
 		client.Core().Namespaces().Delete("test-cmd-up", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
-	/*resetCmdObj := ResetCmd{
-		flags: &ResetCmdFlags{},
-	}
-	resetCmdObj.kubectl, err = kubectl.NewClient()
-	if err != nil {
-		t.Error(err)
-	}
-	resetCmdObj.helm, err = helm.NewClient(resetCmdObj.kubectl, false)
-	if err != nil {
-		t.Error(err)
-	}
-	resetCmdObj.deleteRegistry()*/
-
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
-
-	//TODO: Somehow stop all processes from the command above
 
 	testReset(t, dir)
 
 }
 
 func testReset(t *testing.T, dir string) {
-	resetCmdObj := ResetCmd{
-		flags: &ResetCmdFlags{
-			deleteDockerfile:         true,
-			deleteDockerignore:       true,
-			deleteChart:              true,
-			deleteRegistry:           true,
-			deleteTiller:             true,
-			deleteDevspaceFolder:     true,
-			deleteRelease:            true,
-			deleteClusterRoleBinding: false,
-		},
-	}
+	resetCmdObj := ResetCmd{}
 	resetCmdObj.Run(nil, []string{})
 
 	_, err := os.Stat(path.Join(dir, "Dockerfile"))
