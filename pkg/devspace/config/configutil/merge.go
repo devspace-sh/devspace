@@ -3,6 +3,8 @@ package configutil
 import (
 	"reflect"
 	"unsafe"
+
+	"gopkg.in/yaml.v2"
 )
 
 type pointerInterface struct {
@@ -12,25 +14,26 @@ type pointerInterface struct {
 // Merge deeply merges two objects
 // object MUST be a pointer of a pointer
 // overwriteObject MUST be a pointer
-func Merge(object interface{}, overwriteObject interface{}) {
-	objectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&object))).Data
-	overwriteObjectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&overwriteObject))).Data
-
-	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
-}
-
-func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
-	overwriteObjectRef := reflect.ValueOf(overwriteObjectPointer)
+func Merge(object interface{}, overwriteObject interface{}, unifyPointers bool) {
+	overwriteObjectRef := reflect.ValueOf(overwriteObject)
 
 	if !overwriteObjectRef.IsNil() {
 		if overwriteObjectRef.Kind() == reflect.Ptr {
 			overwriteObjectRef = overwriteObjectRef.Elem()
 		}
-		objectPointerReal := reflect.ValueOf(objectPointer).Elem().Interface()
+		objectPointerReal := reflect.ValueOf(object).Elem().Interface()
 		overwriteObject := overwriteObjectRef.Interface()
+
+		if !unifyPointers {
+			overwriteObject = deepCopy(overwriteObject)
+
+			// ensure deepCopy only runs once
+			unifyPointers = true
+		}
 		overwriteObjectType := reflect.TypeOf(overwriteObject)
 		overwriteObjectKind := overwriteObjectType.Kind()
 		objectPointerRef := reflect.ValueOf(objectPointerReal)
+
 		var objectRef reflect.Value
 
 		if !objectPointerRef.IsNil() {
@@ -59,10 +62,10 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 					overwriteValue := getMapValue(overwriteObject, key, genericPointerType)
 					valuePointerRef := objectRef.MapIndex(keyRef)
 
-					if isZero(valuePointerRef) == false {
+					if isZero(valuePointerRef) == false && !isTrivialDataType(valuePointerRef) {
 						valuePointer := valuePointerRef.Interface()
 
-						Merge(&valuePointer, overwriteValue)
+						Merge(&valuePointer, overwriteValue, unifyPointers)
 					} else {
 						keyRef := reflect.ValueOf(key)
 						overwriteValueRef := reflect.ValueOf(overwriteValue)
@@ -74,23 +77,54 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		case reflect.Struct:
 			for i := 0; i < overwriteObjectRef.NumField(); i++ {
 				overwriteValueRef := overwriteObjectRef.Field(i)
-				overwriteValuePointerRef := reflect.ValueOf(overwriteValueRef.Interface())
 
-				if !overwriteValuePointerRef.IsNil() {
+				if !overwriteValueRef.IsNil() {
 					overwriteValue := overwriteValueRef.Interface()
 					valuePointerRef := objectRef.Field(i)
 
-					if valuePointerRef.IsNil() {
-						valuePointerRef.Set(reflect.ValueOf(overwriteValue))
+					if valuePointerRef.IsNil() || isTrivialDataType(valuePointerRef) {
+						valuePointerRef.Set(overwriteValueRef)
 					} else {
 						valuePointer := valuePointerRef.Interface()
 
-						Merge(&valuePointer, overwriteValue)
+						Merge(&valuePointer, overwriteValue, unifyPointers)
 					}
 				}
 			}
 		default:
+			objectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&object))).Data
+			overwriteObjectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&overwriteObject))).Data
+
 			*(*unsafe.Pointer)(objectPointerUnsafe) = overwriteObjectPointerUnsafe
 		}
 	}
+}
+
+func isTrivialDataType(value reflect.Value) bool {
+	valueType := value.Type()
+
+	if valueType.Kind() == reflect.Ptr {
+		valueType = valueType.Elem()
+	}
+
+	switch valueType.Kind() {
+	case reflect.Slice:
+		return false
+	case reflect.Map:
+		return false
+	case reflect.Struct:
+		return false
+	}
+	return true
+}
+
+func deepCopy(from interface{}) interface{} {
+	yamlData, _ := yaml.Marshal(from)
+	objectType := reflect.TypeOf(from)
+
+	copy := reflect.New(objectType).Interface()
+
+	yaml.Unmarshal(yamlData, copy)
+
+	return copy
 }
