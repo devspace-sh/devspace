@@ -13,6 +13,8 @@ func Merge(object interface{}, overwriteObject interface{}) {
 	merge(&object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
 }
 
+// objectPointer MUST be a pointer of a pointer
+// objectPointerUnsafe MUST be an unsafe pointer of a pointer
 func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
 	overwriteObjectRef := reflect.ValueOf(overwriteObjectPointer)
 
