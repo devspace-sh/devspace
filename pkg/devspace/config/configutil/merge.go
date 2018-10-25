@@ -8,9 +8,9 @@ import (
 // Merge deeply merges two objects
 func Merge(object interface{}, overwriteObject interface{}) {
 	objectPointerUnsafe := unsafe.Pointer(&object)
-	overwriteObjectPointerUnsafe := unsafe.Pointer(&overwriteObject)
+	overwriteObjectPointerUnsafe := *(*unsafe.Pointer)(unsafe.Pointer(&overwriteObject))
 
-	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
+	merge(&object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
 }
 
 func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
@@ -20,14 +20,15 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		if overwriteObjectRef.Kind() == reflect.Ptr {
 			overwriteObjectRef = overwriteObjectRef.Elem()
 		}
+		objectPointerReal := reflect.ValueOf(objectPointer).Elem().Interface()
 		overwriteObject := overwriteObjectRef.Interface()
 		overwriteObjectType := reflect.TypeOf(overwriteObject)
 		overwriteObjectKind := overwriteObjectType.Kind()
-		objectPointerRef := reflect.ValueOf(objectPointer)
+		objectPointerRef := reflect.ValueOf(objectPointerReal)
 		var objectRef reflect.Value
 
 		if !objectPointerRef.IsNil() {
-			objectRef = reflect.ValueOf(objectPointer).Elem()
+			objectRef = reflect.ValueOf(objectPointerReal).Elem()
 		}
 
 		switch overwriteObjectKind {
@@ -52,10 +53,10 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 					overwriteValue := getMapValue(overwriteObject, key, genericPointerType)
 					valuePointerRef := objectRef.MapIndex(keyRef)
 
-					if isZero(valuePointerRef) == false {
+					if isZero(valuePointerRef) == false && isTrivialDataType(valuePointerRef) {
 						valuePointer := valuePointerRef.Interface()
 
-						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
+						merge(&valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), *(*unsafe.Pointer)(unsafe.Pointer(&overwriteValue)))
 					} else {
 						keyRef := reflect.ValueOf(key)
 						overwriteValueRef := reflect.ValueOf(overwriteValue)
@@ -66,7 +67,6 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 			}
 		case reflect.Struct:
 			for i := 0; i < overwriteObjectRef.NumField(); i++ {
-				//fieldName := objectRef.Type().Field(i).Name
 				overwriteValueRef := overwriteObjectRef.Field(i)
 				overwriteValuePointerRef := reflect.ValueOf(overwriteValueRef.Interface())
 
@@ -74,17 +74,33 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 					overwriteValue := overwriteValueRef.Interface()
 					valuePointerRef := objectRef.Field(i)
 
-					if valuePointerRef.IsNil() {
-						objectRef.Field(i).Set(reflect.ValueOf(overwriteValue))
+					if valuePointerRef.IsNil() || isTrivialDataType(valuePointerRef) {
+						valuePointerRef.Set(reflect.ValueOf(overwriteValue))
 					} else {
-						valuePointer := objectRef.Field(i).Interface()
+						valuePointer := valuePointerRef.Interface()
 
-						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
+						merge(&valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), *(*unsafe.Pointer)(unsafe.Pointer(&overwriteValue)))
 					}
 				}
 			}
 		default:
-			*(*unsafe.Pointer)(objectPointerUnsafe) = overwriteObjectPointerUnsafe
+			panic("Unable to merge trivial data types")
 		}
 	}
+}
+
+func isTrivialDataType(value reflect.Value) bool {
+	if value.Type().Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+
+	switch reflect.TypeOf(value).Kind() {
+	case reflect.Slice:
+		return false
+	case reflect.Map:
+		return false
+	case reflect.Struct:
+		return false
+	}
+	return true
 }
