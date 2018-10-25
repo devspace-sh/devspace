@@ -121,8 +121,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		initCmd.Run(nil, []string{})
 
 		// Ensure that config is initialized correctly
-		config := configutil.GetConfig()
-		configutil.SetDefaults(config)
+		configutil.SetDefaultsOnce()
 	}
 
 	// Create kubectl client

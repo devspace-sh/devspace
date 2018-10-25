@@ -13,24 +13,18 @@ type pointerInterface struct {
 // object MUST be a pointer of a pointer
 // overwriteObject MUST be a pointer
 func Merge(object interface{}, overwriteObject interface{}) {
-	objectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&object))).Data
-	overwriteObjectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&overwriteObject))).Data
-
-	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
-}
-
-func merge(objectPointer interface{}, overwriteObjectPointer interface{}, objectPointerUnsafe unsafe.Pointer, overwriteObjectPointerUnsafe unsafe.Pointer) {
-	overwriteObjectRef := reflect.ValueOf(overwriteObjectPointer)
+	overwriteObjectRef := reflect.ValueOf(overwriteObject)
 
 	if !overwriteObjectRef.IsNil() {
 		if overwriteObjectRef.Kind() == reflect.Ptr {
 			overwriteObjectRef = overwriteObjectRef.Elem()
 		}
-		objectPointerReal := reflect.ValueOf(objectPointer).Elem().Interface()
+		objectPointerReal := reflect.ValueOf(object).Elem().Interface()
 		overwriteObject := overwriteObjectRef.Interface()
 		overwriteObjectType := reflect.TypeOf(overwriteObject)
 		overwriteObjectKind := overwriteObjectType.Kind()
 		objectPointerRef := reflect.ValueOf(objectPointerReal)
+
 		var objectRef reflect.Value
 
 		if !objectPointerRef.IsNil() {
@@ -90,6 +84,9 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 				}
 			}
 		default:
+			objectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&object))).Data
+			overwriteObjectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&overwriteObject))).Data
+
 			*(*unsafe.Pointer)(objectPointerUnsafe) = overwriteObjectPointerUnsafe
 		}
 	}
