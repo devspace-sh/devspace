@@ -5,10 +5,16 @@ import (
 	"unsafe"
 )
 
+type pointerInterface struct {
+	Type, Data unsafe.Pointer
+}
+
 // Merge deeply merges two objects
+// object MUST be a pointer of a pointer
+// overwriteObject MUST be a pointer
 func Merge(object interface{}, overwriteObject interface{}) {
-	objectPointerUnsafe := unsafe.Pointer(&object)
-	overwriteObjectPointerUnsafe := unsafe.Pointer(&overwriteObject)
+	objectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&object))).Data
+	overwriteObjectPointerUnsafe := (*(*pointerInterface)(unsafe.Pointer(&overwriteObject))).Data
 
 	merge(object, overwriteObject, objectPointerUnsafe, overwriteObjectPointerUnsafe)
 }
@@ -20,14 +26,15 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 		if overwriteObjectRef.Kind() == reflect.Ptr {
 			overwriteObjectRef = overwriteObjectRef.Elem()
 		}
+		objectPointerReal := reflect.ValueOf(objectPointer).Elem().Interface()
 		overwriteObject := overwriteObjectRef.Interface()
 		overwriteObjectType := reflect.TypeOf(overwriteObject)
 		overwriteObjectKind := overwriteObjectType.Kind()
-		objectPointerRef := reflect.ValueOf(objectPointer)
+		objectPointerRef := reflect.ValueOf(objectPointerReal)
 		var objectRef reflect.Value
 
 		if !objectPointerRef.IsNil() {
-			objectRef = reflect.ValueOf(objectPointer).Elem()
+			objectRef = reflect.ValueOf(objectPointerReal).Elem()
 		}
 
 		switch overwriteObjectKind {
@@ -55,7 +62,7 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 					if isZero(valuePointerRef) == false {
 						valuePointer := valuePointerRef.Interface()
 
-						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
+						Merge(&valuePointer, overwriteValue)
 					} else {
 						keyRef := reflect.ValueOf(key)
 						overwriteValueRef := reflect.ValueOf(overwriteValue)
@@ -66,7 +73,6 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 			}
 		case reflect.Struct:
 			for i := 0; i < overwriteObjectRef.NumField(); i++ {
-				//fieldName := objectRef.Type().Field(i).Name
 				overwriteValueRef := overwriteObjectRef.Field(i)
 				overwriteValuePointerRef := reflect.ValueOf(overwriteValueRef.Interface())
 
@@ -75,11 +81,11 @@ func merge(objectPointer interface{}, overwriteObjectPointer interface{}, object
 					valuePointerRef := objectRef.Field(i)
 
 					if valuePointerRef.IsNil() {
-						objectRef.Field(i).Set(reflect.ValueOf(overwriteValue))
+						valuePointerRef.Set(reflect.ValueOf(overwriteValue))
 					} else {
-						valuePointer := objectRef.Field(i).Interface()
+						valuePointer := valuePointerRef.Interface()
 
-						merge(valuePointer, overwriteValue, unsafe.Pointer(&valuePointer), unsafe.Pointer(&overwriteValue))
+						Merge(&valuePointer, overwriteValue)
 					}
 				}
 			}
