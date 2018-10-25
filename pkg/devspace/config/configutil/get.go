@@ -124,14 +124,7 @@ func SetDefaultsOnce() {
 					}
 
 					if deployConfig.Namespace == nil {
-						defaultDeployments := *defaultConfig.DevSpace.Deployments
-						defaultValue := String("")
-
-						defaultDeployments = append(defaultDeployments, &v1.DeploymentConfig{
-							Namespace: defaultValue,
-						})
-						defaultConfig.DevSpace.Deployments = &defaultDeployments
-						deployConfig.Namespace = defaultValue
+						deployConfig.Namespace = String("")
 					}
 
 					if deployConfig.Helm != nil {
@@ -157,9 +150,11 @@ func SetDefaultsOnce() {
 			}
 
 			if needTiller && config.Tiller == nil {
-				config.Tiller = &v1.TillerConfig{
+				defaultConfig.Tiller = &v1.TillerConfig{
 					Namespace: &defaultNamespace,
 				}
+
+				config.Tiller = defaultConfig.Tiller
 			}
 		}
 
@@ -174,6 +169,7 @@ func SetDefaultsOnce() {
 		}
 
 		if config.InternalRegistry != nil {
+			defaultConfig.InternalRegistry.Namespace = &defaultNamespace
 			config.InternalRegistry.Namespace = &defaultNamespace
 		}
 	})

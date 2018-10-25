@@ -218,6 +218,7 @@ func (cmd *InitCmd) initChartGenerator() {
 
 func (cmd *InitCmd) useCloudProvider() bool {
 	config := configutil.GetConfig()
+	overwriteConfig := configutil.GetOverwriteConfig()
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading cloud config: %v", err)
@@ -256,7 +257,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			config.Cluster.CloudProvider = &cloudProviderSelected
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, config, addToContext, true)
+			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
@@ -281,7 +282,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, config, addToContext, true)
+			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
 			log.StopWait()
 			if err != nil {
 				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)

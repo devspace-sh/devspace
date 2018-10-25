@@ -112,9 +112,7 @@ func Login(provider *Provider) (string, *api.Cluster, *api.AuthInfo, error) {
 }
 
 // Update updates the cloud provider information if necessary
-func Update(providerConfig ProviderConfig, dsConfig *v1.Config, useKubeContext, switchKubeContext bool) error {
-	cloudProvider := *dsConfig.Cluster.CloudProvider
-
+func Update(providerConfig ProviderConfig, cloudProvider string, dsConfig *v1.Config, useKubeContext, switchKubeContext bool) error {
 	// Don't update anything if we don't use a cloud provider
 	if cloudProvider == "" {
 		return nil

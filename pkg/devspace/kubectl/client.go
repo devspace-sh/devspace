@@ -155,7 +155,7 @@ func loadCloudConfig(config *v1.Config, log log.Logger) error {
 	}
 
 	log.StartWait("Login to cloud provider")
-	err = cloud.Update(providerConfig, config, config.Cluster.APIServer == nil, false)
+	err = cloud.Update(providerConfig, *config.Cluster.CloudProvider, config, config.Cluster.APIServer == nil, false)
 	log.StopWait()
 	if err != nil {
 		log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
