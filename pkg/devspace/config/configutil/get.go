@@ -3,7 +3,6 @@ package configutil
 import (
 	"os"
 	"sync"
-	"unsafe"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -83,9 +82,9 @@ func GetConfig() *v1.Config {
 		//ignore error as overwrite.yaml is optional
 		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
 
-		merge(&config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
-		merge(&overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
-		merge(&config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
+		Merge(&config, configRaw)
+		Merge(&overwriteConfig, overwriteConfigRaw)
+		Merge(&config, overwriteConfig)
 
 		if config.Version == nil || *config.Version != CurrentConfigVersion {
 			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
