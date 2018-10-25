@@ -142,7 +142,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 				fieldRaw := objectRawValueRef.Field(i).Elem()
 				overwriteField := overwriteValueRef.Field(i).Elem()
 
-				fieldValue := field.Interface()
+				fieldValue := reflect.New(fieldType).Interface()
 				fieldRawValue := reflect.New(fieldType).Interface()
 				overwriteFieldValue := reflect.New(fieldType).Interface()
 
@@ -151,6 +151,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 				isFieldRawNil := true
 
 				if !isZero(field) {
+					fieldValue = field.Elem().Interface()
 					isFieldNil = false
 				}
 
@@ -166,9 +167,23 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 				var fieldValueClean, overwriteFieldValueClean interface{}
 				var err error
 
-				fieldKind := fieldType.Kind()
+				if isTrivialDataType(field) {
+					saveField := ((!isFieldNil && !saveOverwriteField) || !isFieldRawNil)
 
-				if fieldKind == reflect.Map || fieldKind == reflect.Slice || fieldKind == reflect.Struct {
+					if saveField && saveOverwriteField {
+						if isTrivialOverwrite(fieldValue, overwriteFieldValue, fieldRawValue) {
+							fieldValue = fieldRawValue
+						}
+					}
+
+					if saveField {
+						fieldValueClean = fieldValue
+					}
+
+					if saveOverwriteField {
+						overwriteFieldValueClean = overwriteFieldValue
+					}
+				} else {
 					fieldValueClean, overwriteFieldValueClean, err = splitConfigs(
 						fieldValue,
 						fieldRawValue,
@@ -177,16 +192,6 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 
 					if err != nil {
 						return nil, nil, err
-					}
-				} else {
-					saveField := ((!isFieldNil && !saveOverwriteField) || !isFieldRawNil)
-
-					if saveField {
-						fieldValueClean = fieldValue
-					}
-
-					if saveOverwriteField {
-						overwriteFieldValueClean = overwriteFieldValue
 					}
 				}
 
@@ -212,6 +217,10 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 		saveOverwriteValue := !isOverwriteObjectNil
 		saveValue := ((!isObjectNil && !saveOverwriteValue) || !isObjectRawNil)
 
+		if saveValue && saveOverwriteValue {
+			saveValue = !isTrivialOverwrite(objectValueRef, overwriteObject, objectRawValue)
+		}
+
 		//TODO: Determine overwritten values and set objectValue accordingly
 
 		if saveValue && saveOverwriteValue {
@@ -223,6 +232,18 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 		}
 		return nil, nil, nil
 	}
+}
+
+func isTrivialOverwrite(objectValue, overwriteValue, objectRawValue interface{}) bool {
+	objectValueRef := reflect.ValueOf(objectValue)
+
+	if isTrivialDataType(objectValueRef) {
+		if reflect.DeepEqual(objectValue, overwriteValue) && !reflect.DeepEqual(objectValue, objectRawValue) {
+			// do not save the value if it is equal to the overwriteValue and is different than rawValue
+			return true
+		}
+	}
+	return false
 }
 
 func getMapValue(valueMap interface{}, key interface{}, refType reflect.Type) interface{} {

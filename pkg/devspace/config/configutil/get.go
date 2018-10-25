@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -89,8 +90,44 @@ func GetConfig() *v1.Config {
 		//ignore error as overwrite.yaml is optional
 		loadConfig(overwriteConfig, OverwriteConfigPath)
 
-		Merge(&config, configRaw)
-		Merge(&config, overwriteConfig)
+		configImages := *config.Images
+		configImageDefault := configImages["default"]
+		configRawImages := *configRaw.Images
+		configRawImageDefault := configRawImages["default"]
+
+		fmt.Println(configRawImageDefault.Name)
+
+		fmt.Println("")
+		fmt.Println("merge config")
+
+		Merge(&config, configRaw, false)
+
+		configImages = *config.Images
+		configImageDefault = configImages["default"]
+		configRawImages = *configRaw.Images
+		configRawImageDefault = configRawImages["default"]
+
+		fmt.Println(configImageDefault.Name)
+		fmt.Println(configRawImageDefault.Name)
+
+		fmt.Println("")
+		fmt.Println("merge overwrite config")
+
+		Merge(&config, overwriteConfig, true)
+
+		configImages = *config.Images
+		configImageDefault = configImages["default"]
+		configRawImages = *configRaw.Images
+		configRawImageDefault = configRawImages["default"]
+
+		fmt.Println(configImageDefault.Name)
+		fmt.Println(configRawImageDefault.Name)
+
+		configOverwriteImages := *configRaw.Images
+		configOverwriteImageDefault := configOverwriteImages["default"]
+
+		fmt.Println(configOverwriteImageDefault.Name)
+		fmt.Println(*configOverwriteImageDefault.Name)
 
 		SetDefaultsOnce()
 	})

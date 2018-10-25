@@ -152,7 +152,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Auth: &v1.RegistryAuth{},
 			},
 		},
-	})
+	}, false)
 
 	imageMap := *config.Images
 	cmd.defaultImage = imageMap["default"]
