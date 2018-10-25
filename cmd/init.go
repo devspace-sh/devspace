@@ -152,7 +152,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Auth: &v1.RegistryAuth{},
 			},
 		},
-	}, false)
+	}, true)
 
 	imageMap := *config.Images
 	cmd.defaultImage = imageMap["default"]
@@ -259,21 +259,21 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			err := cloud.Update(providerConfig, config, addToContext, true)
 			log.StopWait()
 			if err != nil {
-				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
 			}
 
 			return true
 		}
 	} else {
 		useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to use the devspace cloud? (free ready-to-use kubernetes) (yes | no)",
+			Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 
 		if useDevSpaceCloud {
 			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
+				Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 				DefaultValue:           "yes",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			}) == "yes"
@@ -284,7 +284,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			err := cloud.Update(providerConfig, config, addToContext, true)
 			log.StopWait()
 			if err != nil {
-				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
 			}
 
 			return true
