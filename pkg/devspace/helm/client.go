@@ -132,8 +132,8 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 	os.MkdirAll(repoPath, os.ModePerm)
 	os.MkdirAll(filepath.Dir(stableRepoCachePathAbs), os.ModePerm)
 
-	_, repoFileNotFound := os.Stat(repoFile)
-	if repoFileNotFound != nil {
+	repoFileStat, repoFileNotFound := os.Stat(repoFile)
+	if repoFileNotFound != nil || repoFileStat.Size() == 0 {
 		err = fsutil.WriteToFile([]byte(defaultRepositories), repoFile)
 		if err != nil {
 			return nil, err
