@@ -1,10 +1,10 @@
 package kubectl
 
 import (
-	"github.com/covexo/devspace/pkg/util/terminal"
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/covexo/devspace/pkg/util/terminal"
 	"io"
 	"net/http"
 	"os"

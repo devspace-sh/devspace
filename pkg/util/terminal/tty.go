@@ -7,6 +7,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
 )
 
+// SetupTTY creates a term.TTY (docker)
 func SetupTTY() term.TTY {
 	t := term.TTY{
 		Out: os.Stdout,
