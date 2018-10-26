@@ -50,7 +50,7 @@ func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.L
 
 	_, err := client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := GetClientConfig(false)
+		clusterConfig, _ := GetClientConfig()
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			username := configutil.String("")
 

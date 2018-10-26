@@ -67,7 +67,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.prepareConfig()
 
 	// Create kubectl client
-	client, err := kubectl.NewClient()
+	client, err := kubectl.NewClientDry()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -140,6 +140,9 @@ func (cmd *DeployCmd) prepareConfig() {
 				imageConf.Build.Options.Target = &cmd.flags.DockerTarget
 			}
 		}
+	}
+	if cmd.flags.CloudTarget != "" {
+		config.Cluster.CloudProviderDeployTarget = &cmd.flags.CloudTarget
 	}
 
 	// Set defaults now
