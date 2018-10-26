@@ -21,6 +21,25 @@ import (
 	dockerregistry "github.com/docker/docker/registry"
 )
 
+// BuildAll builds all images
+func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, forceRebuild bool) (bool, error) {
+	config := configutil.GetConfig()
+	re := false
+
+	for imageName, imageConf := range *config.Images {
+		shouldRebuild, err := Build(client, generatedConfig, imageName, imageConf, forceRebuild)
+		if err != nil {
+			return false, err
+		}
+
+		if shouldRebuild {
+			re = true
+		}
+	}
+
+	return re, nil
+}
+
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
 	rebuild := false

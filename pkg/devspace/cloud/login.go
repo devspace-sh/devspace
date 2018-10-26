@@ -44,12 +44,9 @@ func GetClusterConfig(provider *Provider) (string, *api.Cluster, *api.AuthInfo, 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", nil, nil, err
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
+	} else if resp.StatusCode == http.StatusUnauthorized {
 		return Login(provider)
-	}
-	if resp.StatusCode != http.StatusOK {
+	} else if resp.StatusCode != http.StatusOK {
 		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
 	}
 
