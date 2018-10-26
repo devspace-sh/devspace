@@ -5,10 +5,14 @@ import (
 	"io"
 	"time"
 
+	"github.com/covexo/devspace/pkg/util/terminal"
+
 	"github.com/daviddengcn/go-colortext"
 )
 
 const waitInterval = time.Millisecond * 150
+
+var tty = terminal.SetupTTY()
 
 type loadingText struct {
 	Stream  io.Writer
@@ -71,13 +75,30 @@ func (l *loadingText) render() {
 	} else {
 		l.Stream.Write([]byte("\r"))
 	}
+	messagePrefix := []byte("[WAIT] ")
 
 	ct.Foreground(ct.Red, false)
-	l.Stream.Write([]byte("[WAIT] "))
+	l.Stream.Write(messagePrefix)
 	ct.ResetColor()
 
 	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.startTimestamp)/int64(time.Second))
-	l.Stream.Write([]byte(l.getLoadingChar() + " " + l.Message + " (" + timeElapsed + "s)"))
+	message := []byte(l.getLoadingChar() + " " + l.Message)
+	messageSuffix := " (" + timeElapsed + "s)"
+	terminalSize := tty.GetSize()
+	prefixLength := len(messagePrefix)
+	suffixLength := len(messageSuffix)
+
+	if uint16(prefixLength+len(message)+suffixLength) > terminalSize.Width {
+		dots := []byte("...")
+		maxMessageLength := terminalSize.Width - uint16(prefixLength+suffixLength+len(dots))
+
+		if maxMessageLength > 0 {
+			message = append(message[:maxMessageLength], dots...)
+		}
+	}
+	message = append(message, messageSuffix...)
+
+	l.Stream.Write(message)
 }
 
 func (l *loadingText) Stop() {
