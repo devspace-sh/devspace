@@ -137,8 +137,33 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		return fmt.Errorf("Error hashing chart directory: %v", err)
 	}
 
+	// Get HelmClient
+	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+	if err != nil {
+		return err
+	}
+
+	// Check if redeploying is necessary
+	reDeploy := forceDeploy || generatedConfig.ChartHashs[chartPath] != hash
+	if reDeploy == false {
+		releases, err := helmClient.Client.ListReleases()
+		if err != nil {
+			return err
+		}
+
+		reDeploy = true
+		if releases != nil {
+			for _, release := range releases.Releases {
+				if release.GetName() == releaseName {
+					reDeploy = false
+					break
+				}
+			}
+		}
+	}
+
 	// Check if re-deployment is necessary
-	if forceDeploy || generatedConfig.ChartHashs[chartPath] != hash {
+	if reDeploy {
 		d.Log.StartWait("Deploying helm chart")
 		defer d.Log.StopWait()
 
@@ -150,14 +175,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
 		}
 
-		// Get HelmClient
-		helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
-		if err != nil {
-			return err
-		}
-
 		containerValues := map[string]interface{}{}
-
 		for imageName, imageConf := range *config.Images {
 			container := map[string]interface{}{}
 			container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
