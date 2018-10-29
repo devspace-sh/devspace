@@ -56,7 +56,7 @@ func TestUpWithInternalRegistry(t *testing.T) {
 
 }
 
-func TestUpWithDockerHub(t *testing.T) {
+/*func TestUpWithDockerHub(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Error(err)
@@ -96,7 +96,7 @@ func TestUpWithDockerHub(t *testing.T) {
 
 	testReset(t, dir)
 
-}
+}*/
 
 func testReset(t *testing.T, dir string) {
 	resetCmdObj := ResetCmd{}
