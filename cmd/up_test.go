@@ -16,7 +16,7 @@ import (
 
 func TestUpWithInternalRegistry(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
-	defer resetWorkDir()
+	defer resetWorkDir(t)
 
 	upCmdObj := UpCmd{
 		flags: UpFlagsDefault,
@@ -35,11 +35,6 @@ func TestUpWithInternalRegistry(t *testing.T) {
 		client.Core().Namespaces().Delete("test-cmd-up-private-registry", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
-	tmpDir, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	log.Debug("WorkDir=" + tmpDir)
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
@@ -87,7 +82,6 @@ func createTempFolderCopy(source string, t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer os.Remove(dir)
 
 	workDirBefore, err = os.Getwd()
 	if err != nil {
@@ -96,7 +90,13 @@ func createTempFolderCopy(source string, t *testing.T) {
 	os.Chdir(dir)
 }
 
-func resetWorkDir() {
+func resetWorkDir(t *testing.T) {
+	tmpDir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+	os.Remove(tmpDir)
+
 	os.Chdir(workDirBefore)
 }
 
