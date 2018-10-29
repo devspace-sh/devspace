@@ -277,7 +277,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
-	log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
+	log.StartWait("Logging into cloud provider " + cloudProviderSelected + "...")
 	err := cloud.Update(providerConfig, overwriteConfig, &cloud.UpdateOptions{
 		CloudProvider:     *config.Cluster.CloudProvider,
 		UseKubeContext:    addToContext,
