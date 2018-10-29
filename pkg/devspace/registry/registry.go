@@ -97,6 +97,16 @@ func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrappe
 		}
 	}
 
+	// Get the registry url
+	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, InternalRegistryName+"-docker-registry")
+	if err != nil {
+		return err
+	}
+
+	// Update config values
+	registryConfig.URL = configutil.String(serviceHostname)
+	registryConfig.Insecure = configutil.Bool(true)
+
 	// Wait for registry if it is not ready yet
 	if registryDeployment == nil || registryDeployment.Status.Replicas == 0 || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
 		// Wait till registry is started
