@@ -35,6 +35,7 @@ func TestUpWithInternalRegistry(t *testing.T) {
 		client.Core().Namespaces().Delete("test-cmd-up-private-registry", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
+	log.Debug("WorkDir=" + os.Getwd())
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
@@ -77,6 +78,7 @@ func createTempFolderCopy(source string, t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	log.Debug("TempDir at " + dir)
 	err = fsutil.Copy(source, dir, true)
 	if err != nil {
 		t.Error(err)
