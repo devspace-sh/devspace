@@ -101,17 +101,11 @@ func (d *downstream) mainLoop() error {
 
 	for {
 		removeFiles := d.cloneFileMap()
-		removeFilesLen := len(removeFiles)
 
 		// Check for changes remotely
 		createFiles, err := d.collectChanges(removeFiles)
 		if err != nil {
 			return errors.Trace(err)
-		}
-
-		// There is an issue with collect changes, hence we return an error
-		if removeFilesLen == len(removeFiles) {
-			return errors.New("Sync cannot execute find command remotely")
 		}
 
 		amountChanges := len(createFiles) + len(removeFiles)
@@ -157,6 +151,7 @@ func (d *downstream) cloneFileMap() map[string]*fileInformation {
 
 func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]*fileInformation, error) {
 	createFiles := make([]*fileInformation, 0, 128)
+	destPathFound := false
 
 	// Write find command to stdin pipe
 	cmd := getFindCommand(d.config.DestPath)
@@ -189,7 +184,7 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 			return nil, errors.Trace(err)
 		}
 
-		done, overlap, err = d.parseLines(string(buf), overlap, &createFiles, removeFiles)
+		done, overlap, err = d.parseLines(string(buf), overlap, &createFiles, removeFiles, &destPathFound)
 		if err != nil {
 			if _, ok := err.(parsingError); ok {
 				time.Sleep(time.Second * 4)
@@ -201,10 +196,14 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 		}
 	}
 
+	if destPathFound == false {
+		return nil, errors.New("DestPath not found, find command did not execute correctly")
+	}
+
 	return createFiles, nil
 }
 
-func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) (bool, string, error) {
+func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation, destPathFound *bool) (bool, string, error) {
 	lines := strings.Split(buffer, "\n")
 
 	for index, element := range lines {
@@ -229,7 +228,10 @@ func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInfo
 				msg: "Parsing Error",
 			}
 		} else if line != "" {
-			err := d.evaluateFile(line, createFiles, removeFiles)
+			destPath, err := d.evaluateFile(line, createFiles, removeFiles)
+			if destPath {
+				*destPathFound = destPath
+			}
 
 			if err != nil {
 				return true, "", errors.Trace(err)
@@ -240,7 +242,7 @@ func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInfo
 	return false, overlap, nil
 }
 
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) error {
+func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) (bool, error) {
 	d.config.fileIndex.fileMapMutex.Lock()
 	defer d.config.fileIndex.fileMapMutex.Unlock()
 
@@ -248,12 +250,12 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 
 	// Error parsing line
 	if err != nil {
-		return errors.Trace(err)
+		return false, errors.Trace(err)
 	}
 
 	// No file found
 	if fileInformation == nil {
-		return nil
+		return true, nil
 	}
 
 	// File found don't delete it
@@ -277,7 +279,7 @@ func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformati
 		*createFiles = append(*createFiles, fileInformation)
 	}
 
-	return nil
+	return false, nil
 }
 
 func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles map[string]*fileInformation) error {
