@@ -88,7 +88,7 @@ func (l *loadingText) render() {
 	prefixLength := len(messagePrefix)
 	suffixLength := len(messageSuffix)
 
-	if uint16(prefixLength+len(message)+suffixLength) > terminalSize.Width {
+	if terminalSize != nil && uint16(prefixLength+len(message)+suffixLength) > terminalSize.Width {
 		dots := []byte("...")
 		maxMessageLength := terminalSize.Width - uint16(prefixLength+suffixLength+len(dots))
 
