@@ -15,22 +15,8 @@ import (
 )
 
 func TestUpWithInternalRegistry(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Error(err)
-	}
-	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), dir, true)
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Remove(dir)
-
-	workDirBefore, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Chdir(workDirBefore)
-	os.Chdir(dir)
+	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
+	defer resetWorkDir()
 
 	upCmdObj := UpCmd{
 		flags: UpFlagsDefault,
@@ -52,27 +38,13 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
-	testReset(t, dir)
+	testReset(t)
 
 }
 
 /*func TestUpWithDockerHub(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Error(err)
-	}
-	err = fsutil.Copy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), dir, true)
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Remove(dir)
-
-	workDirBefore, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Chdir(workDirBefore)
-	os.Chdir(dir)
+	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
+	defer resetWorkDir()
 
 	upCmdObj := UpCmd{
 		flags: &UpCmdFlags{},
@@ -98,11 +70,40 @@ func TestUpWithInternalRegistry(t *testing.T) {
 
 }*/
 
-func testReset(t *testing.T, dir string) {
+var workDirBefore string
+
+func createTempFolderCopy(source string, t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Error(err)
+	}
+	err = fsutil.Copy(source, dir, true)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(dir)
+
+	workDirBefore, err = os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+	os.Chdir(dir)
+}
+
+func resetWorkDir() {
+	os.Chdir(workDirBefore)
+}
+
+func testReset(t *testing.T) {
 	resetCmdObj := ResetCmd{}
 	resetCmdObj.Run(nil, []string{})
 
-	_, err := os.Stat(path.Join(dir, "Dockerfile"))
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Stat(path.Join(dir, "Dockerfile"))
 	assert.Equal(t, true, os.IsNotExist(err))
 	_, err = os.Stat(path.Join(dir, ".dockerignore"))
 	assert.Equal(t, true, os.IsNotExist(err))
