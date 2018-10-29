@@ -134,7 +134,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	configutil.Merge(config, &v1.Config{
+	configutil.Merge(&config, &v1.Config{
 		Version: configutil.String(configutil.CurrentConfigVersion),
 		DevSpace: &v1.DevSpaceConfig{
 			Deployments: &[]*v1.DeploymentConfig{},
@@ -152,7 +152,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Auth: &v1.RegistryAuth{},
 			},
 		},
-	})
+	}, true)
 
 	imageMap := *config.Images
 	cmd.defaultImage = imageMap["default"]
@@ -218,6 +218,7 @@ func (cmd *InitCmd) initChartGenerator() {
 
 func (cmd *InitCmd) useCloudProvider() bool {
 	config := configutil.GetConfig()
+	overwriteConfig := configutil.GetOverwriteConfig()
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading cloud config: %v", err)
@@ -256,24 +257,24 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			config.Cluster.CloudProvider = &cloudProviderSelected
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, config, addToContext, true)
+			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
 			log.StopWait()
 			if err != nil {
-				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
 			}
 
 			return true
 		}
 	} else {
 		useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to use the devspace cloud? (free ready-to-use kubernetes) (yes | no)",
+			Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 
 		if useDevSpaceCloud {
 			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to add the devspace-cloud to the $HOME/.kube/config file? (yes | no)",
+				Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 				DefaultValue:           "yes",
 				ValidationRegexPattern: "^(yes)|(no)$",
 			}) == "yes"
@@ -281,10 +282,10 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
 
 			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, config, addToContext, true)
+			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
 			log.StopWait()
 			if err != nil {
-				log.Fatalf("Couldn't authenticate to devspace cloud: %v", err)
+				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
 			}
 
 			return true

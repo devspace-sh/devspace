@@ -3,7 +3,6 @@ package configutil
 import (
 	"os"
 	"sync"
-	"unsafe"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -32,13 +31,14 @@ const DefaultDevspaceDeploymentName = "devspace-default"
 const CurrentConfigVersion = "v1alpha1"
 
 // Global config vars
-var config *v1.Config
-var configRaw *v1.Config
-var overwriteConfig *v1.Config
-var overwriteConfigRaw *v1.Config
+var config *v1.Config          // merged config
+var configRaw *v1.Config       // config from .devspace/config.yaml
+var overwriteConfig *v1.Config // overwrite config from .devspace/config.yaml
+var defaultConfig *v1.Config   // default config values
 
 // Thread-safety helper
 var getConfigOnce sync.Once
+var setDefaultsOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
@@ -58,9 +58,10 @@ func ConfigExists() (bool, error) {
 func InitConfig() *v1.Config {
 	getConfigOnce.Do(func() {
 		config = makeConfig()
+		overwriteConfig = makeConfig()
 		configRaw = makeConfig()
 		overwriteConfig = makeConfig()
-		overwriteConfigRaw = makeConfig()
+		defaultConfig = makeConfig()
 	})
 
 	return config
@@ -70,9 +71,10 @@ func InitConfig() *v1.Config {
 func GetConfig() *v1.Config {
 	getConfigOnce.Do(func() {
 		config = makeConfig()
+		overwriteConfig = makeConfig()
 		configRaw = makeConfig()
 		overwriteConfig = makeConfig()
-		overwriteConfigRaw = makeConfig()
+		defaultConfig = makeConfig()
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
@@ -80,18 +82,17 @@ func GetConfig() *v1.Config {
 			log.Fatal("Please run `devspace init -r` to repair your config")
 		}
 
-		//ignore error as overwrite.yaml is optional
-		loadConfig(overwriteConfigRaw, OverwriteConfigPath)
-
-		merge(config, configRaw, unsafe.Pointer(&config), unsafe.Pointer(configRaw))
-		merge(overwriteConfig, overwriteConfigRaw, unsafe.Pointer(&overwriteConfig), unsafe.Pointer(overwriteConfigRaw))
-		merge(config, overwriteConfig, unsafe.Pointer(&config), unsafe.Pointer(overwriteConfig))
-
-		if config.Version == nil || *config.Version != CurrentConfigVersion {
+		if configRaw.Version == nil || *configRaw.Version != CurrentConfigVersion {
 			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
 		}
 
-		SetDefaults(config)
+		//ignore error as overwrite.yaml is optional
+		loadConfig(overwriteConfig, OverwriteConfigPath)
+
+		Merge(&config, configRaw, false)
+		Merge(&config, overwriteConfig, true)
+
+		SetDefaultsOnce()
 	})
 
 	return config
@@ -104,67 +105,74 @@ func GetOverwriteConfig() *v1.Config {
 	return overwriteConfig
 }
 
-// SetDefaults ensures that specific values are set in the config
-func SetDefaults(config *v1.Config) {
-	defaultNamespace, err := GetDefaultNamespace(config)
-	if err != nil {
-		log.Fatalf("Error retrieving default namespace: %v", err)
-	}
+// SetDefaultsOnce ensures that specific values are set in the config
+func SetDefaultsOnce() {
+	setDefaultsOnce.Do(func() {
+		defaultNamespace, err := GetDefaultNamespace(config)
+		if err != nil {
+			log.Fatalf("Error retrieving default namespace: %v", err)
+		}
 
-	// Initialize Namespaces
-	if config.DevSpace != nil {
-		needTiller := config.InternalRegistry != nil
+		// Initialize Namespaces
+		if config.DevSpace != nil {
+			needTiller := config.InternalRegistry != nil
 
-		if config.DevSpace.Deployments != nil {
-			for index, deployConfig := range *config.DevSpace.Deployments {
-				if deployConfig.Name == nil {
-					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
+			if config.DevSpace.Deployments != nil {
+				for index, deployConfig := range *config.DevSpace.Deployments {
+					if deployConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed deployment at index %d", index)
+					}
+
+					if deployConfig.Namespace == nil {
+						deployConfig.Namespace = String("")
+					}
+
+					if deployConfig.Helm != nil {
+						needTiller = true
+					}
 				}
-				if deployConfig.Namespace == nil {
-					deployConfig.Namespace = String("")
+			}
+
+			if config.DevSpace.Sync != nil {
+				for _, syncPath := range *config.DevSpace.Sync {
+					if syncPath.Namespace == nil {
+						syncPath.Namespace = String("")
+					}
 				}
-				if deployConfig.Helm != nil {
-					needTiller = true
+			}
+
+			if config.DevSpace.Ports != nil {
+				for _, portForwarding := range *config.DevSpace.Ports {
+					if portForwarding.Namespace == nil {
+						portForwarding.Namespace = String("")
+					}
+				}
+			}
+
+			if needTiller && config.Tiller == nil {
+				defaultConfig.Tiller = &v1.TillerConfig{
+					Namespace: &defaultNamespace,
+				}
+
+				config.Tiller = defaultConfig.Tiller
+			}
+		}
+
+		if config.Images != nil {
+			for _, buildConfig := range *config.Images {
+				if buildConfig.Build != nil && buildConfig.Build.Kaniko != nil {
+					if buildConfig.Build.Kaniko.Namespace == nil {
+						buildConfig.Build.Kaniko.Namespace = String("")
+					}
 				}
 			}
 		}
 
-		if config.DevSpace.Sync != nil {
-			for _, syncPath := range *config.DevSpace.Sync {
-				if syncPath.Namespace == nil {
-					syncPath.Namespace = String("")
-				}
-			}
+		if config.InternalRegistry != nil {
+			defaultConfig.InternalRegistry.Namespace = &defaultNamespace
+			config.InternalRegistry.Namespace = &defaultNamespace
 		}
-
-		if config.DevSpace.Ports != nil {
-			for _, portForwarding := range *config.DevSpace.Ports {
-				if portForwarding.Namespace == nil {
-					portForwarding.Namespace = String("")
-				}
-			}
-		}
-
-		if needTiller && config.Tiller == nil {
-			config.Tiller = &v1.TillerConfig{
-				Namespace: &defaultNamespace,
-			}
-		}
-	}
-
-	if config.Images != nil {
-		for _, buildConfig := range *config.Images {
-			if buildConfig.Build != nil && buildConfig.Build.Kaniko != nil {
-				if buildConfig.Build.Kaniko.Namespace == nil {
-					buildConfig.Build.Kaniko.Namespace = String("")
-				}
-			}
-		}
-	}
-
-	if config.InternalRegistry != nil {
-		config.InternalRegistry.Namespace = &defaultNamespace
-	}
+	})
 }
 
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
