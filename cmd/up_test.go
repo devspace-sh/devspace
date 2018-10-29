@@ -35,7 +35,11 @@ func TestUpWithInternalRegistry(t *testing.T) {
 		client.Core().Namespaces().Delete("test-cmd-up-private-registry", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
-	log.Debug("WorkDir=" + os.Getwd())
+	tmpDir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+	log.Debug("WorkDir=" + tmpDir)
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
