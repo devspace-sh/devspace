@@ -8,7 +8,6 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/foomo/htpasswd"
@@ -49,16 +48,6 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 			return err
 		}
 	}
-
-	// Get the registry url
-	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, InternalRegistryName+"-docker-registry")
-	if err != nil {
-		return err
-	}
-
-	// Update config values
-	registryConfig.URL = configutil.String(serviceHostname)
-	registryConfig.Insecure = configutil.Bool(true)
 
 	return nil
 }
