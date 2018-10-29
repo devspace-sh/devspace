@@ -169,7 +169,9 @@ func SetDefaultsOnce() {
 		}
 
 		if config.InternalRegistry != nil {
-			defaultConfig.InternalRegistry.Namespace = &defaultNamespace
+			defaultConfig.InternalRegistry = &v1.InternalRegistry{
+				Namespace: &defaultNamespace,
+			}
 			config.InternalRegistry.Namespace = &defaultNamespace
 		}
 	})
