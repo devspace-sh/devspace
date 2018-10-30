@@ -6,6 +6,7 @@
     ],
     "Commands": [
       "cli/init",
+      "cli/deploy",
       "cli/up",
       "cli/enter",
       "cli/down",
