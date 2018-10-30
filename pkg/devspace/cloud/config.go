@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultDeployTarget is the default deployment target that is written to the config.yaml during the init process
-const DefaultDeployTarget = "prod"
+const DefaultDeployTarget = "production"
 
 // DevSpaceCloudConfigPath holds the path to the cloud config file
 const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
