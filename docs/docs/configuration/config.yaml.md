@@ -14,6 +14,7 @@ devSpace:
     # For this deployment we use helm as deployment method (kubectl would be also an option)
     helm:
       chartPath: ./chart
+      devOverwrite: ./chart/dev-overwrite.yaml
   sync:
   - containerPath: /app
     labelSelector:
@@ -21,6 +22,12 @@ devSpace:
     localSubPath: ./
     uploadExcludePaths:
     - .devspace/
+  portForwarding:
+  - labelSelector:
+      release: devspace-default
+    portMappings:
+    - localPort: 3000
+      remotePort: 3000
 images:
   default:
     name: mydockername/devspace
@@ -45,6 +52,7 @@ In this section, so called deployments are defined, which will be deployed to th
 ### devspace.deployments[].helm
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
 - `chartPath` *string* the path where the helm chart is laying
+- `devOverwrite` *string* the path to a files that overwrites the values.yaml when using `devspace up`
 
 ### devspace.deployments[].kubectl
 When using kubectl as deployment method, `devspace up` will use kubectl apply on the specified manifests to deploy them to the target cluster. [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl) is needed in order for this option to work.  
@@ -186,7 +194,9 @@ devSpace:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
       # Use helm to deploy this chart
-      chartPath: chart/
+      chartPath: ./chart
+      # Overwrite the values.yaml with dev-values.yaml when running devspace up
+      devOverwrite: ./chart/dev-overwrite.yaml
   - name: devspace-kubectl
     kubectl: 
       manifests:

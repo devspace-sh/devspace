@@ -182,7 +182,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 	// Deploy all defined deployments
 	if config.DevSpace.Deployments != nil {
 		// Deploy all
-		err = deploy.All(cmd.kubectl, generatedConfig, mustRedeploy || cmd.flags.deploy, log.GetInstance())
+		err = deploy.All(cmd.kubectl, generatedConfig, mustRedeploy || cmd.flags.deploy, true, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

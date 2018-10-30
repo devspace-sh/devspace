@@ -1,6 +1,6 @@
 **What issue type does this pull request address?** (keep at least one, remove the others)  
 /kind bug
-/king enhancement
+/kind enhancement
 /kind feature
 /kind documentation
 
