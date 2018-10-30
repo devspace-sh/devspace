@@ -1,20 +1,21 @@
-version: v1
-portForwarding:
-- resourceType: pod
-  labelSelector:
-    release: devspace-docs
-  portMappings:
-  - localPort: 3000
-    remotePort: 3000
-  - localPort: 35729
-    remotePort: 35729
-syncPath:
-- resourceType: pod
-  labelSelector:
-    release: devspace-docs
-  localSubPath: ./
-  containerPath: /app
-  excludeRegex: []
-registry:
-  secrets:
-    htpasswd: ""
+cluster:
+  cloudProvider: devspace-cloud
+devSpace:
+  deployments:
+  - helm:
+      chartPath: ./chart
+    name: devspace-default
+  sync:
+  - containerPath: /app
+    labelSelector:
+      release: devspace-default
+    localSubPath: ./
+    uploadExcludePaths:
+    - Dockerfile
+    - .devspace/
+    - chart/
+    - node_modules/
+images:
+  default:
+    name: covexo/devspace-cli-docs
+version: v1alpha1
