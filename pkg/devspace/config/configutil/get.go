@@ -18,11 +18,14 @@ const configGitignore = `logs/
 overwrite.yaml
 `
 
+// DefaultConfigPath is the default config path to use
+const DefaultConfigPath = "/.devspace/config.yaml"
+
 // ConfigPath is the path for the main config
-const ConfigPath = "/.devspace/config.yaml"
+var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
-const OverwriteConfigPath = "/.devspace/overwrite.yaml"
+var OverwriteConfigPath = "/.devspace/overwrite.yaml"
 
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
 const DefaultDevspaceDeploymentName = "devspace-default"
@@ -69,6 +72,14 @@ func InitConfig() *v1.Config {
 
 // GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig() *v1.Config {
+	GetConfigWithoutDefaults()
+	SetDefaultsOnce()
+
+	return config
+}
+
+// GetConfigWithoutDefaults returns the config without setting the default values
+func GetConfigWithoutDefaults() *v1.Config {
 	getConfigOnce.Do(func() {
 		config = makeConfig()
 		overwriteConfig = makeConfig()
@@ -91,8 +102,6 @@ func GetConfig() *v1.Config {
 
 		Merge(&config, configRaw, false)
 		Merge(&config, overwriteConfig, true)
-
-		SetDefaultsOnce()
 	})
 
 	return config
@@ -172,7 +181,8 @@ func SetDefaultsOnce() {
 			defaultConfig.InternalRegistry = &v1.InternalRegistryConfig{
 				Namespace: &defaultNamespace,
 			}
-			config.InternalRegistry.Namespace = &defaultNamespace
+
+			config.InternalRegistry.Namespace = defaultConfig.InternalRegistry.Namespace
 		}
 	})
 }

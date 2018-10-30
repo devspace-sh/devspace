@@ -100,6 +100,7 @@ BuildConfig:
 - `docker` *DockerConfig* use the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
 - `kaniko` *KanikoConfig* build images in userspace within a build pod running inside the Kubernetes cluster 
 - `options` *BuildOptions* additional options used for building the image
+- `disabled` *bool* Optional: if true building is skipped for this image (Can be useful when using in overwrite.yaml)
 
 ### images[].build.docker
 DockerConfig:

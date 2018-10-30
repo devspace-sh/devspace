@@ -49,7 +49,7 @@ func ImageName(dockerUsername string) error {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which image name do you want to use on Docker Hub?",
 			DefaultValue:           dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9/]{4,30}$",
+			ValidationRegexPattern: "^[a-zA-Z0-9/-]{4,60}$",
 		})
 	} else if isGoogleRegistry {
 		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
@@ -68,7 +68,7 @@ func ImageName(dockerUsername string) error {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           *registryURL + "/" + dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,30}$",
+			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
 		})
 	}
 

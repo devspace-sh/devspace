@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/covexo/devspace/pkg/util/terminal"
 	"io"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/terminal"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
@@ -40,7 +41,7 @@ var loadCloudConfigOnce sync.Once
 
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
-	config, err := GetClientConfig(false)
+	config, err := getClientConfig(false)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
 func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
-	config, err := GetClientConfig(switchContext)
+	config, err := getClientConfig(switchContext)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +60,11 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 }
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
-func GetClientConfig(switchContext bool) (*rest.Config, error) {
+func GetClientConfig() (*rest.Config, error) {
+	return getClientConfig(false)
+}
+
+func getClientConfig(switchContext bool) (*rest.Config, error) {
 	var err error
 
 	config := configutil.GetConfig()
@@ -69,9 +74,12 @@ func GetClientConfig(switchContext bool) (*rest.Config, error) {
 
 	// Update devspace cloud cluster config
 	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		loadCloudConfigOnce.Do(func() {
-			err = loadCloudConfig(config, log.GetInstance())
-		})
+		target := ""
+		if config.Cluster.CloudProviderDeployTarget != nil {
+			target = *config.Cluster.CloudProviderDeployTarget
+		}
+
+		err = loadCloudConfig(config, target, log.GetInstance())
 		if err != nil {
 			return nil, err
 		}
@@ -148,25 +156,27 @@ func GetClientConfig(switchContext bool) (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 }
 
-func loadCloudConfig(config *v1.Config, log log.Logger) error {
-	providerConfig, err := cloud.ParseCloudConfig()
-	if err != nil {
-		return fmt.Errorf("Couldn't load cloud provider config: %v", err)
-	}
+func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
+	var outerError error
 
-	log.StartWait("Login to cloud provider")
-	err = cloud.Update(providerConfig, *config.Cluster.CloudProvider, config, config.Cluster.APIServer == nil, false)
-	log.StopWait()
-	if err != nil {
-		log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
-	}
+	loadCloudConfigOnce.Do(func() {
+		providerConfig, err := cloud.ParseCloudConfig()
+		if err != nil {
+			outerError = fmt.Errorf("Couldn't load cloud provider config: %v", err)
+			return
+		}
 
-	err = configutil.SaveConfig()
-	if err != nil {
-		return fmt.Errorf("Error saving config: %v", err)
-	}
+		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
+			UseKubeContext:    config.Cluster.APIServer == nil,
+			SwitchKubeContext: false,
+			Target:            target,
+		}, log)
+		if err != nil {
+			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
+		}
+	})
 
-	return nil
+	return outerError
 }
 
 // IsMinikube returns true if the Kubernetes cluster is a minikube
@@ -218,8 +228,6 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
-			log.Info("Error here")
-
 			return nil, err
 		}
 
@@ -233,8 +241,14 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 				}
 			}
 
-			if selectedPod != nil && GetPodStatus(selectedPod) == "Running" {
-				return selectedPod, nil
+			if selectedPod != nil {
+				podStatus := GetPodStatus(selectedPod)
+
+				if podStatus == "Running" {
+					return selectedPod, nil
+				} else if podStatus == "Error" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" {
+					return nil, fmt.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
+				}
 			}
 		}
 
@@ -321,7 +335,7 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 
 // DescribePod returns a desription string of a pod (internally calls the kubectl describe function)
 func DescribePod(namespace, name string) (string, error) {
-	newConfig, err := GetClientConfig(false)
+	newConfig, err := GetClientConfig()
 
 	if err != nil {
 		return "", err
@@ -370,7 +384,7 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	config, err := GetClientConfig(false)
+	config, err := GetClientConfig()
 	if err != nil {
 		return err
 	}
@@ -401,7 +415,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, errorChannel chan<- error) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
 	var t term.TTY
 
-	kubeconfig, err := GetClientConfig(false)
+	kubeconfig, err := GetClientConfig()
 	if err != nil {
 		return nil, nil, nil, err
 	}

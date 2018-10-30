@@ -9,6 +9,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// DefaultDeployTarget is the default deployment target that is written to the config.yaml during the init process
+const DefaultDeployTarget = "prod"
+
 // DevSpaceCloudConfigPath holds the path to the cloud config file
 const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
 

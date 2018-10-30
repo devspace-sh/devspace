@@ -215,6 +215,7 @@ func (cmd *ResetCmd) deleteImageFiles() {
 }
 
 func (cmd *ResetCmd) deleteClusterRoleBinding() {
+	clusterRoleBindingName := kubectl.ClusterRoleBindingName
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err == nil {
 		deleteRoleBinding := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{

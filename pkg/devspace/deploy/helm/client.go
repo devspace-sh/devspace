@@ -209,6 +209,8 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
 
 		generatedConfig.ChartHashs[chartPath] = hash
+	} else {
+		d.Log.Infof("Skipping chart %s", chartPath)
 	}
 
 	return nil
