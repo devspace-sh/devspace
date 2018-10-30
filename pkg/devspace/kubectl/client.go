@@ -41,17 +41,7 @@ var loadCloudConfigOnce sync.Once
 
 //NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
-}
-
-// NewClientDry creates a new kubernetes client without modifying any files
-func NewClientDry() (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(false, true)
+	config, err := getClientConfig(false)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +51,7 @@ func NewClientDry() (*kubernetes.Clientset, error) {
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
 func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(switchContext, false)
+	config, err := getClientConfig(switchContext)
 	if err != nil {
 		return nil, err
 	}
@@ -71,10 +61,10 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 
 //GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
-	return getClientConfig(false, false)
+	return getClientConfig(false)
 }
 
-func getClientConfig(switchContext bool, dry bool) (*rest.Config, error) {
+func getClientConfig(switchContext bool) (*rest.Config, error) {
 	var err error
 
 	config := configutil.GetConfig()
@@ -84,7 +74,12 @@ func getClientConfig(switchContext bool, dry bool) (*rest.Config, error) {
 
 	// Update devspace cloud cluster config
 	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		err = loadCloudConfig(config, "", log.GetInstance())
+		target := ""
+		if config.Cluster.CloudProviderDeployTarget != nil {
+			target = *config.Cluster.CloudProviderDeployTarget
+		}
+
+		err = loadCloudConfig(config, target, log.GetInstance())
 		if err != nil {
 			return nil, err
 		}

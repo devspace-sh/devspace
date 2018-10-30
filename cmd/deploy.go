@@ -19,11 +19,12 @@ type DeployCmd struct {
 
 // DeployCmdFlags holds the possible down cmd flags
 type DeployCmdFlags struct {
-	Namespace    string
-	KubeContext  string
-	Config       string
-	DockerTarget string
-	CloudTarget  string
+	Namespace     string
+	KubeContext   string
+	Config        string
+	DockerTarget  string
+	CloudTarget   string
+	SwitchContext bool
 }
 
 func init() {
@@ -55,6 +56,7 @@ devspace deploy --cloud-target=production
 	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
+	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 
 	rootCmd.AddCommand(cobraCmd)
 }
@@ -67,7 +69,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.prepareConfig()
 
 	// Create kubectl client
-	client, err := kubectl.NewClientDry()
+	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -123,10 +125,22 @@ func (cmd *DeployCmd) prepareConfig() {
 	config := configutil.GetConfigWithoutDefaults()
 
 	if cmd.flags.Namespace != "" {
-		config.Cluster.Namespace = &cmd.flags.Namespace
+		config.Cluster = &v1.Cluster{
+			Namespace:   &cmd.flags.Namespace,
+			KubeContext: config.Cluster.KubeContext,
+			APIServer:   config.Cluster.APIServer,
+			CaCert:      config.Cluster.CaCert,
+			User:        config.Cluster.User,
+		}
 	}
 	if cmd.flags.KubeContext != "" {
-		config.Cluster.KubeContext = &cmd.flags.KubeContext
+		config.Cluster = &v1.Cluster{
+			Namespace:   config.Cluster.Namespace,
+			KubeContext: &cmd.flags.KubeContext,
+			APIServer:   config.Cluster.APIServer,
+			CaCert:      config.Cluster.CaCert,
+			User:        config.Cluster.User,
+		}
 	}
 	if cmd.flags.DockerTarget != "" {
 		if config.Images != nil {
