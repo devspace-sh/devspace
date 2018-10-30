@@ -15,11 +15,14 @@ import (
 // TODO: Change this
 var DevSpaceURL = ""
 
+// UseDeployTarget uses the config deploy target
+// TODO: Refactor this
+var UseDeployTarget = false
+
 // UpdateOptions specifies the possible options for the update command
 type UpdateOptions struct {
 	UseKubeContext    bool
 	SwitchKubeContext bool
-	Target            string
 }
 
 // Update updates the cloud provider information if necessary
@@ -29,6 +32,11 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	// Don't update anything if we don't use a cloud provider
 	if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
 		return nil
+	}
+
+	target := ""
+	if UseDeployTarget && dsConfig.Cluster.CloudProviderDeployTarget != nil {
+		target = *dsConfig.Cluster.CloudProviderDeployTarget
 	}
 
 	// Get selected cloud provider from config
@@ -44,23 +52,23 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	if dsConfig.Cluster.Namespace != nil {
 		devSpaceID = *dsConfig.Cluster.Namespace
 	}
-	if devSpaceID == "" && options.Target != "" {
-		return fmt.Errorf("Cannot deploy to target %s without a devspace. You need to run `devspace up` beforehand", options.Target)
+	if devSpaceID == "" && target != "" {
+		return fmt.Errorf("Cannot deploy to target %s without a devspace. You need to run `devspace up` beforehand", target)
 	}
 
-	domain, namespace, cluster, authInfo, err := CheckAuth(provider, devSpaceID, options.Target, log)
+	domain, namespace, cluster, authInfo, err := CheckAuth(provider, devSpaceID, target, log)
 	if err != nil {
 		return err
 	}
 
 	log.Infof("Successfully logged into %s", selectedCloudProvider)
-	if options.Target != "" {
-		log.Infof("Using cloud provider target %s", options.Target)
+	if target != "" {
+		log.Infof("Using cloud provider target %s", target)
 	}
 
 	DevSpaceURL = domain
 
-	err = updateDevSpaceConfig(namespace, cluster, authInfo, options)
+	err = updateDevSpaceConfig(target, namespace, cluster, authInfo, options)
 	if err != nil {
 		return err
 	}
@@ -68,7 +76,7 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	return nil
 }
 
-func updateDevSpaceConfig(namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, options *UpdateOptions) error {
+func updateDevSpaceConfig(target, namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, options *UpdateOptions) error {
 	dsConfig := configutil.GetConfig()
 	overwriteConfig := configutil.GetOverwriteConfig()
 	saveConfig := false
@@ -135,7 +143,7 @@ func updateDevSpaceConfig(namespace string, cluster *api.Cluster, authInfo *api.
 		}
 	}
 
-	if saveConfig && options.Target == "" {
+	if saveConfig && target == "" {
 		err := configutil.SaveConfig()
 		if err != nil {
 			return err
