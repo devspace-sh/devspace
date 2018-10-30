@@ -79,6 +79,9 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		if randErr != nil {
 			return false, fmt.Errorf("Image building failed: %s", randErr.Error())
 		}
+		if imageConf.Tag != nil {
+			imageTag = *imageConf.Tag
+		}
 
 		var registryConf *v1.RegistryConfig
 		var imageBuilder builder.Interface
