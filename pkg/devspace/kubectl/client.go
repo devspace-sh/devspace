@@ -74,12 +74,7 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 
 	// Update devspace cloud cluster config
 	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		target := ""
-		if config.Cluster.CloudProviderDeployTarget != nil {
-			target = *config.Cluster.CloudProviderDeployTarget
-		}
-
-		err = loadCloudConfig(config, target, log.GetInstance())
+		err = loadCloudConfig(config, log.GetInstance())
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +151,7 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 }
 
-func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
+func loadCloudConfig(config *v1.Config, log log.Logger) error {
 	var outerError error
 
 	loadCloudConfigOnce.Do(func() {
@@ -169,7 +164,6 @@ func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
 		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
 			UseKubeContext:    config.Cluster.APIServer == nil,
 			SwitchKubeContext: false,
-			Target:            target,
 		}, log)
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)

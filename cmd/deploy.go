@@ -64,6 +64,7 @@ devspace deploy --cloud-target=production
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
+	cloud.UseDeployTarget = true
 	log.StartFileLogging()
 
 	// Prepare the config
