@@ -42,7 +42,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 			return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 		}
 
-		log.Donef("Successfully deployed %s", *deployConfig.Name)
+		log.Donef("Finished deploying %s", *deployConfig.Name)
 	}
 
 	return nil

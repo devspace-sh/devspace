@@ -455,7 +455,7 @@ func (s *SyncConfig) Stop(fatalError error) {
 
 		if fatalError != nil {
 			s.Error(fatalError)
-			log.Fatal(fatalError)
+			log.Fatalf("[Sync] Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
 		}
 	})
 }

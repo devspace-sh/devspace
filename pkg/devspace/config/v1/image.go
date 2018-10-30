@@ -10,6 +10,7 @@ type ImageConfig struct {
 
 //BuildConfig defines the build process for an image
 type BuildConfig struct {
+	Disabled       *bool         `yaml:"disabled,omitempty"`
 	ContextPath    *string       `yaml:"contextPath"`
 	DockerfilePath *string       `yaml:"dockerfilePath"`
 	Kaniko         *KanikoConfig `yaml:"kaniko,omitempty"`

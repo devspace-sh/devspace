@@ -1,6 +1,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,12 +23,17 @@ import (
 )
 
 // BuildAll builds all images
-func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, forceRebuild bool) (bool, error) {
+func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, forceRebuild bool, log log.Logger) (bool, error) {
 	config := configutil.GetConfig()
 	re := false
 
 	for imageName, imageConf := range *config.Images {
-		shouldRebuild, err := Build(client, generatedConfig, imageName, imageConf, forceRebuild)
+		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
+			log.Infof("Skipping building image %s", imageName)
+			continue
+		}
+
+		shouldRebuild, err := Build(client, generatedConfig, imageName, imageConf, forceRebuild, log)
 		if err != nil {
 			return false, err
 		}
@@ -41,7 +47,7 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, f
 }
 
 // Build builds an image with the specified engine
-func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
+func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool, log log.Logger) (bool, error) {
 	rebuild := false
 	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
@@ -114,7 +120,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			engineName = "kaniko"
 			buildNamespace, err := configutil.GetDefaultNamespace(config)
 			if err != nil {
-				log.Fatalf("Error retrieving default namespace")
+				return false, errors.New("Error retrieving default namespace")
 			}
 
 			if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
@@ -133,7 +139,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 			imageBuilder, err = kaniko.NewBuilder(registryURL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
-				log.Fatalf("Error creating kaniko builder: %v", err)
+				return false, fmt.Errorf("Error creating kaniko builder: %v", err)
 			}
 		} else {
 			engineName = "docker"
@@ -145,7 +151,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 			imageBuilder, err = docker.NewBuilder(registryURL, imageName, imageTag, preferMinikube)
 			if err != nil {
-				log.Fatalf("Error creating docker client: %v", err)
+				return false, fmt.Errorf("Error creating docker client: %v", err)
 			}
 		}
 
@@ -173,7 +179,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.StopWait()
 
 		if err != nil {
-			log.Fatalf("Error during image registry authentication: %v", err)
+			return false, fmt.Errorf("Error during image registry authentication: %v", err)
 		}
 
 		log.Done("Authentication successful (" + displayRegistryURL + ")")

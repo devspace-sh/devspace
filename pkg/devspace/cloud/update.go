@@ -14,20 +14,25 @@ import (
 type UpdateOptions struct {
 	UseKubeContext    bool
 	SwitchKubeContext bool
-	CloudProvider     string
 	Target            string
 }
 
 // Update updates the cloud provider information if necessary
-func Update(providerConfig ProviderConfig, dsConfig *v1.Config, options *UpdateOptions) error {
+func Update(providerConfig ProviderConfig, options *UpdateOptions) error {
+	dsConfig := configutil.GetConfig()
+
 	// Don't update anything if we don't use a cloud provider
-	if options.CloudProvider == "" {
+	if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
 		return nil
 	}
 
-	provider, ok := providerConfig[options.CloudProvider]
+	// Get selected cloud provider from config
+	selectedCloudProvider := *dsConfig.Cluster.CloudProvider
+
+	// Get provider configuration
+	provider, ok := providerConfig[selectedCloudProvider]
 	if ok == false {
-		return fmt.Errorf("Config for cloud provider %s couldn't be found", options.CloudProvider)
+		return fmt.Errorf("Config for cloud provider %s couldn't be found", selectedCloudProvider)
 	}
 
 	devSpaceID := ""
@@ -43,39 +48,91 @@ func Update(providerConfig ProviderConfig, dsConfig *v1.Config, options *UpdateO
 		return err
 	}
 
+	err = updateDevSpaceConfig(namespace, cluster, authInfo, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateDevSpaceConfig(namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, options *UpdateOptions) error {
+	dsConfig := configutil.GetConfig()
+	overwriteConfig := configutil.GetOverwriteConfig()
+	saveConfig := false
+
 	// Update tiller if needed
-	if dsConfig.Tiller != nil {
-		dsConfig.Tiller.Namespace = &namespace
+	if dsConfig.Tiller != nil && dsConfig.Tiller.Namespace != nil {
+		*dsConfig.Tiller.Namespace = namespace
 	}
 
 	// Update registry namespace if needed
-	if dsConfig.InternalRegistry != nil {
-		dsConfig.InternalRegistry.Namespace = &namespace
+	if dsConfig.InternalRegistry != nil && dsConfig.InternalRegistry.Namespace != nil {
+		*dsConfig.InternalRegistry.Namespace = namespace
 	}
 
+	// Exchange cluster information
 	if options.UseKubeContext {
 		kubeContext := DevSpaceKubeContextName + "-" + namespace
 
-		err = UpdateKubeConfig(kubeContext, namespace, cluster, authInfo, options.SwitchKubeContext)
-		if err != nil {
-			return err
+		if dsConfig.Cluster.KubeContext == nil || *dsConfig.Cluster.KubeContext != kubeContext || dsConfig.Cluster.Namespace == nil || *dsConfig.Cluster.Namespace != namespace {
+			dsConfig.Cluster = &v1.Cluster{
+				CloudProvider:             dsConfig.Cluster.CloudProvider,
+				CloudProviderDeployTarget: dsConfig.Cluster.CloudProviderDeployTarget,
+			}
+
+			overwriteConfig.Cluster = &v1.Cluster{
+				Namespace:   &namespace,
+				KubeContext: configutil.String(kubeContext),
+			}
+
+			dsConfig.Cluster.Namespace = overwriteConfig.Cluster.Namespace
+			dsConfig.Cluster.KubeContext = overwriteConfig.Cluster.KubeContext
+
+			saveConfig = true
 		}
 
-		dsConfig.Cluster.Namespace = &namespace
-		dsConfig.Cluster.KubeContext = configutil.String(kubeContext)
+		if saveConfig || options.SwitchKubeContext {
+			err := UpdateKubeConfig(kubeContext, namespace, cluster, authInfo, options.SwitchKubeContext)
+			if err != nil {
+				return err
+			}
+		}
 	} else {
-		dsConfig.Cluster.APIServer = &cluster.Server
-		dsConfig.Cluster.Namespace = &namespace
-		dsConfig.Cluster.CaCert = configutil.String(string(cluster.CertificateAuthorityData))
+		if dsConfig.Cluster.APIServer == nil || *dsConfig.Cluster.APIServer != cluster.Server || dsConfig.Cluster.Namespace == nil || *dsConfig.Cluster.Namespace != namespace {
+			dsConfig.Cluster = &v1.Cluster{
+				CloudProvider:             dsConfig.Cluster.CloudProvider,
+				CloudProviderDeployTarget: dsConfig.Cluster.CloudProviderDeployTarget,
+			}
 
-		dsConfig.Cluster.User = &v1.ClusterUser{
-			ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
-			ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
-			Token:      configutil.String(string(authInfo.Token)),
+			overwriteConfig.Cluster = &v1.Cluster{
+				APIServer: &cluster.Server,
+				Namespace: &namespace,
+				CaCert:    configutil.String(string(cluster.CertificateAuthorityData)),
+				User: &v1.ClusterUser{
+					ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
+					ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
+					Token:      configutil.String(string(authInfo.Token)),
+				},
+			}
+
+			dsConfig.Cluster.APIServer = overwriteConfig.Cluster.APIServer
+			dsConfig.Cluster.Namespace = overwriteConfig.Cluster.Namespace
+			dsConfig.Cluster.CaCert = overwriteConfig.Cluster.CaCert
+			dsConfig.Cluster.User = overwriteConfig.Cluster.User
+
+			saveConfig = true
 		}
 	}
 
-	return err
+	if saveConfig && options.Target == "" {
+		err := configutil.SaveConfig()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // UpdateKubeConfig adds the devspace-cloud context if necessary and switches the current context

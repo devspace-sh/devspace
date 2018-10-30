@@ -266,8 +266,6 @@ func (cmd *InitCmd) useCloudProvider() bool {
 }
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
-	overwriteConfig := configutil.GetOverwriteConfig()
-
 	addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 		DefaultValue:           "yes",
@@ -278,8 +276,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
 	log.StartWait("Logging into cloud provider " + cloudProviderSelected + "...")
-	err := cloud.Update(providerConfig, overwriteConfig, &cloud.UpdateOptions{
-		CloudProvider:     *config.Cluster.CloudProvider,
+	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
 		UseKubeContext:    addToContext,
 		SwitchKubeContext: true,
 		Target:            "",

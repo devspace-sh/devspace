@@ -35,11 +35,6 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 			return fmt.Errorf("Internal registry error: %v", err)
 		}
 
-		err = configutil.SaveConfig()
-		if err != nil {
-			return fmt.Errorf("Saving config error: %v", err)
-		}
-
 		log.Done("Internal registry started")
 	}
 

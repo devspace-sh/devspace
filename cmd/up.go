@@ -156,7 +156,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 	}
 
 	// Build image if necessary
-	mustRedeploy, err := image.BuildAll(cmd.kubectl, generatedConfig, cmd.flags.build)
+	mustRedeploy, err := image.BuildAll(cmd.kubectl, generatedConfig, cmd.flags.build, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

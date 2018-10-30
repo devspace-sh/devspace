@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/covexo/devspace/pkg/util/terminal"
 	"io"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/covexo/devspace/pkg/util/terminal"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
@@ -171,8 +172,7 @@ func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
 		}
 
 		log.StartWait("Login to cloud provider")
-		err = cloud.Update(providerConfig, config, &cloud.UpdateOptions{
-			CloudProvider:     *config.Cluster.CloudProvider,
+		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
 			UseKubeContext:    config.Cluster.APIServer == nil,
 			SwitchKubeContext: false,
 			Target:            target,
@@ -180,14 +180,6 @@ func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
 		log.StopWait()
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
-		}
-
-		if target == "" {
-			err = configutil.SaveConfig()
-			if err != nil {
-				outerError = fmt.Errorf("Error saving config: %v", err)
-				return
-			}
 		}
 	})
 

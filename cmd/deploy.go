@@ -97,7 +97,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	_, err = image.BuildAll(client, generatedConfig, true)
+	_, err = image.BuildAll(client, generatedConfig, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
