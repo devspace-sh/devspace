@@ -15,3 +15,7 @@ A clear and concise description of any alternative solutions or features you've 
 
 **Additional context**
 Add any other context or screenshots about the feature request here.
+
+
+<!-- DO NOT EDIT BELOW THIS LINE -->
+/kind feature
