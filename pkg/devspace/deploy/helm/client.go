@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -124,7 +125,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 }
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool) error {
 	config := configutil.GetConfig()
 
 	releaseName := *d.DeploymentConfig.Name
@@ -170,35 +171,65 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		values := map[interface{}]interface{}{}
 		overwriteValues := map[interface{}]interface{}{}
 
-		err := yamlutil.ReadYamlFromFile(filepath.Join(chartPath, "values.yaml"), values)
+		valuesPath := filepath.Join(chartPath, "values.yaml")
+		err := yamlutil.ReadYamlFromFile(valuesPath, values)
 		if err != nil {
-			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartPath+"values.yaml", err)
+			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", valuesPath, err)
 		}
 
-		containerValues := map[string]interface{}{}
+		if useDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
+			workdir, workdirErr := os.Getwd()
+			if workdirErr != nil {
+				log.Fatalf("Unable to determine current workdir: %s", workdirErr.Error())
+			}
+
+			overwriteValuesPath := filepath.Join(workdir, *d.DeploymentConfig.Helm.DevOverwrite)
+			err := yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
+			if err != nil {
+				return fmt.Errorf("Couldn't deploy chart, error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+			}
+		}
+
+		overwriteContainerValues := map[interface{}]interface{}{}
+		overwriteContainerValuesFromFile, containerValuesExisting := overwriteValues["containers"]
+		if containerValuesExisting {
+			overwriteContainerValues = overwriteContainerValuesFromFile.(map[interface{}]interface{})
+		}
+
 		for imageName, imageConf := range *config.Images {
-			container := map[string]interface{}{}
+			container := map[interface{}]interface{}{}
+			existingContainer, containerExists := overwriteContainerValues[imageName]
+
+			if containerExists {
+				container = existingContainer.(map[interface{}]interface{})
+			}
 			container["image"] = registry.GetImageURL(generatedConfig, imageConf, true)
 
-			containerValues[imageName] = container
+			overwriteContainerValues[imageName] = container
 		}
 
-		pullSecrets := []interface{}{}
-		existingPullSecrets, pullSecretsExisting := values["pullSecrets"]
+		overwritePullSecrets := []interface{}{}
+		overwritePullSecretsFromFile, overwritePullSecretsExisting := overwriteValues["pullSecrets"]
+		if overwritePullSecretsExisting {
+			overwritePullSecrets = overwritePullSecretsFromFile.([]interface{})
+		}
+
+		pullSecretsFromFile, pullSecretsExisting := values["pullSecrets"]
 
 		if pullSecretsExisting {
-			pullSecrets = existingPullSecrets.([]interface{})
+			existingPullSecrets := pullSecretsFromFile.([]interface{})
+			overwritePullSecrets = append(overwritePullSecrets, existingPullSecrets...)
 		}
 
 		for _, registryConf := range *config.Registries {
 			if registryConf.URL != nil {
 				registrySecretName := registry.GetRegistryAuthSecretName(*registryConf.URL)
-				pullSecrets = append(pullSecrets, registrySecretName)
+				overwritePullSecrets = append(overwritePullSecrets, registrySecretName)
 			}
 		}
 
-		overwriteValues["containers"] = containerValues
-		overwriteValues["pullSecrets"] = pullSecrets
+		overwriteValues["containers"] = overwriteContainerValues
+		overwriteValues["pullSecrets"] = overwritePullSecrets
 
 		appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
 		if err != nil {
