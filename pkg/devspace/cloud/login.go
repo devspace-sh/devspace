@@ -13,20 +13,23 @@ import (
 )
 
 // CheckAuth verifies if the user is logged into the devspace cloud and if not logs the user in
-func CheckAuth(provider *Provider, devSpaceID, target string) (string, *api.Cluster, *api.AuthInfo, error) {
+func CheckAuth(provider *Provider, devSpaceID, target string, log log.Logger) (string, string, *api.Cluster, *api.AuthInfo, error) {
 	if provider.Token == "" {
-		return Login(provider, devSpaceID, target)
+		return Login(provider, devSpaceID, target, log)
 	}
 
-	return GetClusterConfig(provider, devSpaceID, target)
+	return GetClusterConfig(provider, devSpaceID, target, log)
 }
 
 // GetClusterConfig retrieves the cluster and authconfig from the devspace cloud
-func GetClusterConfig(provider *Provider, devSpaceID, target string) (string, *api.Cluster, *api.AuthInfo, error) {
+func GetClusterConfig(provider *Provider, devSpaceID, target string, log log.Logger) (string, string, *api.Cluster, *api.AuthInfo, error) {
+	log.StartWait("Retrieving auth info from cloud provider...")
+	defer log.StopWait()
+
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", provider.Host+GetClusterConfigEndpoint, nil)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	req.Header.Set("Authorization", provider.Token)
@@ -44,47 +47,56 @@ func GetClusterConfig(provider *Provider, devSpaceID, target string) (string, *a
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	} else if resp.StatusCode == http.StatusUnauthorized {
-		return Login(provider, devSpaceID, target)
+		return Login(provider, devSpaceID, target, log)
 	} else if resp.StatusCode != http.StatusOK {
-		return "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
+		return "", "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
 	}
 
 	var objmap map[string]*json.RawMessage
 	err = json.Unmarshal(body, &objmap)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	cluster := api.NewCluster()
 	err = json.Unmarshal(*objmap["cluster"], cluster)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	authInfo := api.NewAuthInfo()
 	err = json.Unmarshal(*objmap["user"], authInfo)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	namespace := ""
 	err = json.Unmarshal(*objmap["namespace"], &namespace)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
-	return namespace, cluster, authInfo, nil
+	domain := ""
+	err = json.Unmarshal(*objmap["domain"], &domain)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+
+	return domain, namespace, cluster, authInfo, nil
 }
 
 // Login logs the user into the devspace cloud
-func Login(provider *Provider, namespace, target string) (string, *api.Cluster, *api.AuthInfo, error) {
+func Login(provider *Provider, namespace, target string, log log.Logger) (string, string, *api.Cluster, *api.AuthInfo, error) {
+	log.StartWait("Logging into cloud provider...")
+	defer log.StopWait()
+
 	ctx := context.Background()
 	tokenChannel := make(chan string)
 
@@ -96,22 +108,22 @@ func Login(provider *Provider, namespace, target string) (string, *api.Cluster, 
 
 	err := server.Shutdown(ctx)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	providerConfig, err := ParseCloudConfig()
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
 	providerConfig[provider.Name].Token = token
 
 	err = SaveCloudConfig(providerConfig)
 	if err != nil {
-		return "", nil, nil, err
+		return "", "", nil, nil, err
 	}
 
-	return GetClusterConfig(providerConfig[provider.Name], namespace, target)
+	return GetClusterConfig(providerConfig[provider.Name], namespace, target, log)
 }
 
 func startServer(redirectURI string, tokenChannel chan string) *http.Server {

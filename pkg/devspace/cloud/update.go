@@ -6,9 +6,14 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
+	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// DevSpaceURL holds the domain name of the connected devspace
+// TODO: Change this
+var DevSpaceURL = ""
 
 // UpdateOptions specifies the possible options for the update command
 type UpdateOptions struct {
@@ -18,7 +23,7 @@ type UpdateOptions struct {
 }
 
 // Update updates the cloud provider information if necessary
-func Update(providerConfig ProviderConfig, options *UpdateOptions) error {
+func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logger) error {
 	dsConfig := configutil.GetConfig()
 
 	// Don't update anything if we don't use a cloud provider
@@ -43,10 +48,13 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions) error {
 		return fmt.Errorf("Cannot deploy to target %s without a devspace. You need to run `devspace up` beforehand", options.Target)
 	}
 
-	namespace, cluster, authInfo, err := CheckAuth(provider, devSpaceID, options.Target)
+	domain, namespace, cluster, authInfo, err := CheckAuth(provider, devSpaceID, options.Target, log)
 	if err != nil {
 		return err
 	}
+
+	log.Infof("Successfully logged into %s", selectedCloudProvider)
+	DevSpaceURL = domain
 
 	err = updateDevSpaceConfig(namespace, cluster, authInfo, options)
 	if err != nil {
@@ -110,9 +118,7 @@ func updateDevSpaceConfig(namespace string, cluster *api.Cluster, authInfo *api.
 				Namespace: &namespace,
 				CaCert:    configutil.String(string(cluster.CertificateAuthorityData)),
 				User: &v1.ClusterUser{
-					ClientCert: configutil.String(string(authInfo.ClientCertificateData)),
-					ClientKey:  configutil.String(string(authInfo.ClientKeyData)),
-					Token:      configutil.String(string(authInfo.Token)),
+					Token: configutil.String(string(authInfo.Token)),
 				},
 			}
 

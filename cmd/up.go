@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	"github.com/covexo/devspace/pkg/devspace/image"
@@ -38,6 +39,7 @@ type UpCmdFlags struct {
 	container       string
 	labelSelector   string
 	namespace       string
+	config          string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -92,10 +94,18 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
 }
 
 // Run executes the command logic
 func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+
 	log.StartFileLogging()
 	var err error
 
@@ -204,6 +214,13 @@ func (cmd *UpCmd) startServices(args []string) {
 				v.Stop(nil)
 			}
 		}()
+	}
+
+	// Print domain name if we use a cloud provider
+	// TODO: Change this
+	if cloud.DevSpaceURL != "" {
+		log.Infof("Your devspace is reachable via ingress on this url %s", cloud.DevSpaceURL)
+		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
 	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())

@@ -171,13 +171,11 @@ func loadCloudConfig(config *v1.Config, target string, log log.Logger) error {
 			return
 		}
 
-		log.StartWait("Login to cloud provider")
 		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
 			UseKubeContext:    config.Cluster.APIServer == nil,
 			SwitchKubeContext: false,
 			Target:            target,
-		})
-		log.StopWait()
+		}, log)
 		if err != nil {
 			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
 		}
@@ -235,8 +233,6 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
-			log.Info("Error here")
-
 			return nil, err
 		}
 
@@ -250,8 +246,14 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 				}
 			}
 
-			if selectedPod != nil && GetPodStatus(selectedPod) == "Running" {
-				return selectedPod, nil
+			if selectedPod != nil {
+				podStatus := GetPodStatus(selectedPod)
+
+				if podStatus == "Running" {
+					return selectedPod, nil
+				} else if podStatus == "Error" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" {
+					return nil, fmt.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
+				}
 			}
 		}
 

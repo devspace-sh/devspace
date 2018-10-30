@@ -18,8 +18,11 @@ const configGitignore = `logs/
 overwrite.yaml
 `
 
+// DefaultConfigPath is the default config path to use
+const DefaultConfigPath = "/.devspace/config.yaml"
+
 // ConfigPath is the path for the main config
-var ConfigPath = "/.devspace/config.yaml"
+var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
 var OverwriteConfigPath = "/.devspace/overwrite.yaml"

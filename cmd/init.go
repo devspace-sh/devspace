@@ -275,13 +275,11 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
-	log.StartWait("Logging into cloud provider " + cloudProviderSelected + "...")
 	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
 		UseKubeContext:    addToContext,
 		SwitchKubeContext: true,
 		Target:            "",
-	})
-	log.StopWait()
+	}, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
 	}
