@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/covexo/devspace/pkg/util/terminal"
 	"io"
 	"net/http"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
-	dockerterm "github.com/docker/docker/pkg/term"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -438,7 +438,7 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 		SubResource("exec")
 
 	if tty {
-		t = setupTTY()
+		t = terminal.SetupTTY()
 	}
 
 	execRequest.VersionedParams(&k8sapi.PodExecOptions{
@@ -498,30 +498,6 @@ func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string,
 		errorChannel <- streamErr
 	}()
 	return stdinWriter, stdoutReader, stderrReader, nil
-}
-
-func setupTTY() term.TTY {
-	t := term.TTY{
-		Out: os.Stdout,
-		In:  os.Stdin,
-	}
-
-	if !t.IsTerminalIn() {
-		log.Info("Unable to use a TTY - input is not a terminal or the right kind of file")
-
-		return t
-	}
-
-	// if we get to here, the user wants to attach stdin, wants a TTY, and In is a terminal, so we
-	// can safely set t.Raw to true
-	t.Raw = true
-
-	stdin, stdout, _ := dockerterm.StdStreams()
-
-	t.In = stdin
-	t.Out = stdout
-
-	return t
 }
 
 //ExecBuffered executes a command for kubernetes and returns the output and error buffers
