@@ -56,7 +56,7 @@ func GetClusterConfig(provider *Provider, devSpaceID, target string, log log.Log
 	} else if resp.StatusCode == http.StatusUnauthorized {
 		return Login(provider, devSpaceID, target, log)
 	} else if resp.StatusCode != http.StatusOK {
-		return "", "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s", body)
+		return "", "", nil, nil, fmt.Errorf("Couldn't retrieve cluster config: %s. Status: %d", body, resp.StatusCode)
 	}
 
 	var objmap map[string]*json.RawMessage

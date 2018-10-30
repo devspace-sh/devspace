@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -110,6 +111,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// Print domain name if we use a cloud provider
+	// TODO: Change this
+	if cloud.DevSpaceURL != "" {
+		log.Infof("Your devspace is reachable via ingress on this url http://%s", cloud.DevSpaceURL)
+		log.Info("See https://devspace-cloud.com/domain-guide for more information")
+	}
+
 	log.Donef("Successfully deployed!")
 }
 
@@ -132,6 +140,8 @@ func (cmd *DeployCmd) prepareConfig() {
 			CaCert:      config.Cluster.CaCert,
 			User:        config.Cluster.User,
 		}
+
+		log.Infof("Using %s namespace for deploying", cmd.flags.Namespace)
 	}
 	if cmd.flags.KubeContext != "" {
 		config.Cluster = &v1.Cluster{
@@ -141,6 +151,8 @@ func (cmd *DeployCmd) prepareConfig() {
 			CaCert:      config.Cluster.CaCert,
 			User:        config.Cluster.User,
 		}
+
+		log.Infof("Using %s kube context for deploying", cmd.flags.KubeContext)
 	}
 	if cmd.flags.DockerTarget != "" {
 		if config.Images != nil {

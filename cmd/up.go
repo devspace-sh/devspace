@@ -219,7 +219,7 @@ func (cmd *UpCmd) startServices(args []string) {
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your devspace is reachable via ingress on this url %s", cloud.DevSpaceURL)
+		log.Infof("Your devspace is reachable via ingress on this url http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 

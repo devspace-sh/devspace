@@ -54,6 +54,10 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	}
 
 	log.Infof("Successfully logged into %s", selectedCloudProvider)
+	if options.Target != "" {
+		log.Infof("Using cloud provider target %s", options.Target)
+	}
+
 	DevSpaceURL = domain
 
 	err = updateDevSpaceConfig(namespace, cluster, authInfo, options)
