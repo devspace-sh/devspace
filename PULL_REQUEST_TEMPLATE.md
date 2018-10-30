@@ -1,8 +1,8 @@
-**What type of pull request is this?** (keep at least one, remove the others)  
-/kind bug fix  
-/king enhancement  
-/kind feature  
-/kind documentation  
+**What issue type does this pull request address?** (keep at least one, remove the others)  
+/kind bug
+/king enhancement
+/kind feature
+/kind documentation
 
 
 **What is this pull request for? Which issues does it resolve?** (use `resolves #<issue_number>` if possible)  

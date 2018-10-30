@@ -16,6 +16,7 @@ type ConfigInterface interface{}
 
 const configGitignore = `logs/
 overwrite.yaml
+generated.yaml
 `
 
 // DefaultConfigPath is the default config path to use

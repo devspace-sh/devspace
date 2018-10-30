@@ -17,5 +17,8 @@ devSpace:
     - node_modules/
 images:
   default:
-    name: covexo/devspace-cli-docs
+    name: gentele/devspace-cli-docs
+    tag: stable
+    build:
+      disabled: true
 version: v1alpha1
