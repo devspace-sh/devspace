@@ -29,7 +29,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 		} else if deployConfig.Helm != nil {
 			log.Info("Deploying " + *deployConfig.Name + " with helm")
 
-			deployClient, err = helm.New(client, deployConfig, log)
+			deployClient, err = helm.New(client, deployConfig, useDevOverwrite, log)
 			if err != nil {
 				return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 			}
@@ -37,7 +37,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 			return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 		}
 
-		err = deployClient.Deploy(generatedConfig, forceDeploy, useDevOverwrite)
+		err = deployClient.Deploy(generatedConfig, forceDeploy)
 		if err != nil {
 			return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 		}

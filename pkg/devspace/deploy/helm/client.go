@@ -2,7 +2,6 @@ package helm
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -21,16 +20,18 @@ type DeployConfig struct {
 	KubeClient       *kubernetes.Clientset
 	TillerNamespace  string
 	DeploymentConfig *v1.DeploymentConfig
+	UseDevOverwrite  bool
 	Log              log.Logger
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, useDevOverwrite bool, log log.Logger) (*DeployConfig, error) {
 	config := configutil.GetConfig()
 	return &DeployConfig{
 		KubeClient:       kubectl,
 		TillerNamespace:  *config.Tiller.Namespace,
 		DeploymentConfig: deployConfig,
+		UseDevOverwrite:  useDevOverwrite,
 		Log:              log,
 	}, nil
 }
@@ -125,7 +126,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 }
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool) error {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
 	config := configutil.GetConfig()
 
 	releaseName := *d.DeploymentConfig.Name
@@ -177,16 +178,15 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy, us
 			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", valuesPath, err)
 		}
 
-		if useDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
-			workdir, workdirErr := os.Getwd()
-			if workdirErr != nil {
-				log.Fatalf("Unable to determine current workdir: %s", workdirErr.Error())
+		if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
+			overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.DevOverwrite)
+			if err != nil {
+				return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.DevOverwrite, err)
 			}
 
-			overwriteValuesPath := filepath.Join(workdir, *d.DeploymentConfig.Helm.DevOverwrite)
-			err := yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
+			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
 			if err != nil {
-				return fmt.Errorf("Couldn't deploy chart, error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 		}
 
