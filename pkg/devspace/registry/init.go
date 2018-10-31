@@ -45,7 +45,7 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 
 	if registryMap != nil {
 		for registryName, registryConf := range registryMap {
-			if *registryConf.URL == "hub.docker.com" || *registryConf.URL == "index.docker.io" {
+			if registryConf.URL == nil || *registryConf.URL == "hub.docker.com" || *registryConf.URL == "index.docker.io" {
 				mustInitDockerHub = false
 			}
 
