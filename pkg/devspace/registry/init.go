@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -38,45 +41,88 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 		log.Done("Internal registry started")
 	}
 
+	mustInitDockerHub := true
+
 	if registryMap != nil {
-		defaultNamespace, err := configutil.GetDefaultNamespace(config)
-		if err != nil {
-			return fmt.Errorf("Cannot get default namespace: %v", err)
-		}
-
 		for registryName, registryConf := range registryMap {
-			if registryConf.Auth != nil && registryConf.Auth.Password != nil {
-				if config.DevSpace.Deployments != nil {
-					for _, deployConfig := range *config.DevSpace.Deployments {
-						username := ""
-						password := *registryConf.Auth.Password
-						email := "noreply@devspace-cloud.com"
-						registryURL := ""
+			if registryConf.URL == nil || *registryConf.URL == "hub.docker.com" || *registryConf.URL == "index.docker.io" {
+				mustInitDockerHub = false
+			}
 
-						if registryConf.Auth.Username != nil {
-							username = *registryConf.Auth.Username
-						}
-						if registryConf.URL != nil {
-							registryURL = *registryConf.URL
-						}
+			log.StartWait("Creating image pull secret for registry: " + registryName)
+			err := initRegistry(client, registryConf)
+			log.StopWait()
 
-						namespace := *deployConfig.Namespace
-						if namespace == "" {
-							namespace = defaultNamespace
-						}
-
-						log.StartWait("Creating image pull secret for registry: " + registryName)
-						err := CreatePullSecret(client, namespace, registryURL, username, password, email)
-						log.StopWait()
-
-						if err != nil {
-							return fmt.Errorf("Failed to create pull secret for registry: %v", err)
-						}
-					}
-				}
+			if err != nil {
+				return fmt.Errorf("Failed to create pull secret for registry: %v", err)
 			}
 		}
 	}
 
+	if mustInitDockerHub {
+		log.StartWait("Creating image pull secret for registry: hub.docker.com")
+		err := initRegistry(client, &v1.RegistryConfig{
+			URL: configutil.String(""),
+		})
+		log.StopWait()
+
+		if err != nil {
+			return fmt.Errorf("Failed to create pull secret for registry: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func initRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig) error {
+	config := configutil.GetConfig()
+	defaultNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+
+	registryURL := ""
+	if registryConf.URL != nil {
+		registryURL = *registryConf.URL
+	}
+
+	username := ""
+	password := ""
+
+	if registryConf.Auth == nil || registryConf.Auth.Username == nil || registryConf.Auth.Password == nil {
+		authConfig, _ := docker.GetAuthConfig(registryURL)
+
+		if authConfig != nil {
+			username = authConfig.Username
+			password = authConfig.Password
+		}
+	}
+
+	if registryConf.Auth != nil {
+		if registryConf.Auth.Username != nil {
+			username = *registryConf.Auth.Username
+		}
+
+		if registryConf.Auth.Password != nil {
+			password = *registryConf.Auth.Password
+		}
+	}
+
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			email := "noreply@devspace-cloud.com"
+
+			namespace := *deployConfig.Namespace
+			if namespace == "" {
+				namespace = defaultNamespace
+			}
+
+			err := CreatePullSecret(client, namespace, registryURL, username, password, email)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

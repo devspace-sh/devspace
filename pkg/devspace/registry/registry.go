@@ -30,6 +30,8 @@ const InternalRegistryDeploymentName = "devspace-registry-docker-registry"
 const registryAuthSecretNamePrefix = "devspace-registry-auth-"
 const registryPort = 5000
 
+var pullSecretNames = []string{}
+
 // CreatePullSecret creates an image pull secret for a registry
 func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string) error {
 	pullSecretName := GetRegistryAuthSecretName(registryURL)
@@ -72,8 +74,11 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 	}
 
 	if err != nil {
-		return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+		return fmt.Errorf("Unable to create/update image pull secret: %s", err.Error())
 	}
+
+	pullSecretNames = append(pullSecretNames, pullSecretName)
+
 	return nil
 }
 
@@ -186,4 +191,9 @@ func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) 
 	}
 
 	return registryConfig, nil
+}
+
+// GetPullSecretNames returns all names of auto-generated image pull secrets
+func GetPullSecretNames() []string {
+	return pullSecretNames
 }
