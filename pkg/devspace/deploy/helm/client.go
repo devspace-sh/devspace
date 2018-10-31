@@ -2,7 +2,6 @@ package helm
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -180,15 +179,14 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		}
 
 		if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
-			workdir, workdirErr := os.Getwd()
-			if workdirErr != nil {
-				log.Fatalf("Unable to determine current workdir: %s", workdirErr.Error())
+			overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.DevOverwrite)
+			if err != nil {
+				return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.DevOverwrite, err)
 			}
 
-			overwriteValuesPath := filepath.Join(workdir, *d.DeploymentConfig.Helm.DevOverwrite)
-			err := yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
+			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
 			if err != nil {
-				return fmt.Errorf("Couldn't deploy chart, error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 		}
 
