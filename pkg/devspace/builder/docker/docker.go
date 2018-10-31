@@ -27,6 +27,8 @@ var (
 	stdin, stdout, stderr = term.StdStreams()
 )
 
+var authConfigs = map[string]*types.AuthConfig{}
+
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	RegistryURL string
@@ -188,6 +190,9 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 
 	b.authConfig = authConfig
 
+	// Cache authConfig for GetAuthConfig
+	authConfigs[b.RegistryURL] = authConfig
+
 	return b.authConfig, nil
 }
 
@@ -218,4 +223,26 @@ func (b *Builder) PushImage() error {
 	}
 
 	return nil
+}
+
+// GetAuthConfig returns the AuthConfig for a Docker registry from the Docker credential helper
+func GetAuthConfig(registryURL string) (*types.AuthConfig, error) {
+	if registryURL == "hub.docker.com" || registryURL == "index.docker.io" {
+		registryURL = ""
+	}
+
+	authConfig, authConfigExists := authConfigs[registryURL]
+
+	if !authConfigExists {
+		dockerBuilder, err := NewBuilder(registryURL, "", "", false)
+		if err != nil {
+			return nil, err
+		}
+
+		authConfig, err = dockerBuilder.Authenticate("", "", true)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return authConfig, nil
 }
