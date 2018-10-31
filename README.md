@@ -3,6 +3,7 @@
 # DevSpace - Cloud Native Development with Kubernetes
 [![Build Status](https://travis-ci.org/covexo/devspace.svg?branch=master)](https://travis-ci.org/covexo/devspace)
 [![Go Report Card](https://goreportcard.com/badge/github.com/covexo/devspace)](https://goreportcard.com/report/github.com/covexo/devspace)
+[![Slack](http://slack.devspace-cloud.com/badge.svg)](http://slack.devspace-cloud.com/)
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/home?status=Just%20found%20out%20about%20%23DevSpace%20CLI%3A%20https%3A//github.com/covexo/devspace%0A%0AIt%20lets%20you%20build%20cloud%20native%20software%20directly%20on%20top%20of%20%23Kubernetes%20and%20%23Docker%0A%23CloudNative%20%23k8s)
 
 With a DevSpace, you can build, test and run **code directly inside any Kubernetes cluster**. You can run `devspace up` in any of your projects and the client-only DevSpace CLI will start a DevSpace within your Kubernetes cluster. Keep coding as usual and the DevSpace CLI will sync any code change directly into the containers of your DevSpace. 
