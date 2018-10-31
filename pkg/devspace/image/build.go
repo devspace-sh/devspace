@@ -63,7 +63,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 	}
 
-	dockerfilePath, err := filepath.Abs(dockerfilePath)
+	absoluteDockerfilePath, err := filepath.Abs(dockerfilePath)
 	if err != nil {
 		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
 	}
@@ -201,7 +201,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		err = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+		err = imageBuilder.BuildImage(contextPath, absoluteDockerfilePath, buildOptions)
 		if err != nil {
 			return false, fmt.Errorf("Error during image build: %v", err)
 		}
@@ -231,9 +231,6 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, dockerfilePath string, forceRebuild bool) bool {
 	mustRebuild := true
 
-	cwd, _ := os.Getwd()
-	relativeDockerfilePath := dockerfilePath[len(cwd):]
-
 	dockerfileInfo, err := os.Stat(dockerfilePath)
 	if err != nil {
 		log.Warnf("Dockerfile %s missing: %v", dockerfilePath, err)
@@ -242,10 +239,10 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 		// When user has not used -b or --build flags
 		if forceRebuild == false {
 			// only rebuild Docker image when Dockerfile has changed since latest build
-			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[relativeDockerfilePath]
+			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
 		}
 
-		runtimeConfig.DockerLatestTimestamps[relativeDockerfilePath] = dockerfileInfo.ModTime().Unix()
+		runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	}
 
 	return mustRebuild
