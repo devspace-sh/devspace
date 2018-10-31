@@ -102,7 +102,7 @@ func (d *DeployConfig) Delete() error {
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool) error {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
 	d.Log.StartWait("Loading manifests")
 	manifests, err := loadManifests(d.Manifests, d.Log)
 	if err != nil {

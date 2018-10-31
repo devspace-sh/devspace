@@ -8,5 +8,5 @@ import (
 type Interface interface {
 	Delete() error
 	Status() ([][]string, error)
-	Deploy(generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool) error
+	Deploy(generatedConfig *generated.Config, forceDeploy bool) error
 }

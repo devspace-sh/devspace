@@ -70,7 +70,7 @@ func deleteDevSpace(kubectl *kubernetes.Clientset) {
 					continue
 				}
 			} else {
-				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployHelm.New(kubectl, deployConfig, false, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue

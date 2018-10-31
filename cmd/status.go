@@ -123,7 +123,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 					continue
 				}
 			} else {
-				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployHelm.New(cmd.kubectl, deployConfig, false, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
 					continue
