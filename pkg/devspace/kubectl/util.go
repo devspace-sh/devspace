@@ -94,7 +94,7 @@ func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.L
 		} else {
 			cfg := configutil.GetConfig()
 			if cfg.Cluster.CloudProvider == nil || *cfg.Cluster.CloudProvider == "" {
-				log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + ClusterRoleBindingName + "' as described here: https://devspace.covexo.com/docs/advanced/rbac.html")
+				log.Warn("Unable to check permissions: If you run into errors, please create the ClusterRoleBinding '" + ClusterRoleBindingName + "' as described here: https://docs.devspace-cloud.com/docs/advanced/rbac.html")
 			}
 		}
 	}
