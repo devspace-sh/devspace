@@ -4,6 +4,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/juju/errors"
+
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/tools/clientcmd"
@@ -27,6 +29,9 @@ var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
 var OverwriteConfigPath = "/.devspace/overwrite.yaml"
+
+// DefaultDevspaceServiceName is the name of the initial default service
+const DefaultDevspaceServiceName = "default"
 
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
 const DefaultDevspaceDeploymentName = "devspace-default"
@@ -143,6 +148,18 @@ func SetDefaultsOnce() {
 				}
 			}
 
+			if config.DevSpace.Services != nil {
+				for index, serviceConfig := range *config.DevSpace.Services {
+					if serviceConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed service at index %d", index)
+					}
+
+					if serviceConfig.Namespace == nil {
+						serviceConfig.Namespace = String("")
+					}
+				}
+			}
+
 			if config.DevSpace.Sync != nil {
 				for _, syncPath := range *config.DevSpace.Sync {
 					if syncPath.Namespace == nil {
@@ -211,4 +228,26 @@ func GetDefaultNamespace(config *v1.Config) (string, error) {
 	}
 
 	return "default", nil
+}
+
+// GetService returns the service referenced by serviceName
+func GetService(serviceName string) (*v1.ServiceConfig, error) {
+	if config.DevSpace.Services != nil {
+		for _, service := range *config.DevSpace.Services {
+			if *service.Name == serviceName {
+				return service, nil
+			}
+		}
+	}
+	return nil, errors.New("Unable to find service: " + serviceName)
+}
+
+// AddService adds a service to the config
+func AddService(service *v1.ServiceConfig) error {
+	if config.DevSpace.Services == nil {
+		config.DevSpace.Services = &[]*v1.ServiceConfig{}
+	}
+	*config.DevSpace.Services = append(*config.DevSpace.Services, service)
+
+	return nil
 }

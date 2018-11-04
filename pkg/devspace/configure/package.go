@@ -22,6 +22,7 @@ import (
 
 // AddPackage adds a helm dependency to specified deployment
 func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) (string, string, error) {
+	packageName := args[0]
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return "", "", fmt.Errorf("Please specify the deployment via the -d flag")
@@ -59,7 +60,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	log.StartWait("Search Chart")
-	repo, version, err := helm.SearchChart(args[0], chartVersion, appVersion)
+	repo, version, err := helm.SearchChart(packageName, chartVersion, appVersion)
 	log.StopWait()
 
 	if err != nil {
@@ -139,6 +140,21 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ": {}\n"); err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	err = configutil.AddService(&v1.ServiceConfig{
+		Name: configutil.String(packageName),
+		LabelSelector: &map[string]*string{
+			"chart": configutil.String(packageName),
+		},
+	})
+	if err != nil {
+		log.Fatalf("Unable to add service to config: %v", err)
+	}
+
+	err = configutil.SaveConfig()
+	if err != nil {
+		log.Fatalf("Unable to save config: %v", err)
 	}
 
 	if skipQuestion == false {
