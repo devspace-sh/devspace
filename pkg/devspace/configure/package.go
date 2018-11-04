@@ -137,7 +137,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		}
 
 		defer f.Close()
-		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ": {}\n"); err != nil {
+		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ":\n  resources:\n    requests:\n      memory: \"0\"\n      cpu: \"0\""); err != nil {
 			log.Fatal(err)
 		}
 	}
