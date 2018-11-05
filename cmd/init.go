@@ -188,6 +188,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			cmd.configureDevSpace()
 		}
 
+		cmd.addDefaultService()
 		cmd.addDefaultPorts()
 		cmd.addDefaultSyncConfig()
 
@@ -302,6 +303,18 @@ func (cmd *InitCmd) configureDevSpace() {
 	config.Cluster.Namespace = namespace
 }
 
+func (cmd *InitCmd) addDefaultService() {
+	config := configutil.GetConfig()
+	config.DevSpace.Services = &[]*v1.ServiceConfig{
+		{
+			Name: configutil.String(configutil.DefaultDevspaceServiceName),
+			LabelSelector: &map[string]*string{
+				"devspace": configutil.String("default"),
+			},
+		},
+	}
+}
+
 func (cmd *InitCmd) addDefaultPorts() {
 	dockerfilePath := filepath.Join(cmd.workdir, "Dockerfile")
 	ports, err := dockerfile.GetPorts(dockerfilePath)
@@ -324,9 +337,7 @@ func (cmd *InitCmd) addDefaultPorts() {
 	config := configutil.GetConfig()
 	config.DevSpace.Ports = &[]*v1.PortForwardingConfig{
 		{
-			LabelSelector: &map[string]*string{
-				"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
-			},
+			Service:      configutil.String(configutil.DefaultDevspaceServiceName),
 			PortMappings: &portMappings,
 		},
 	}
@@ -355,11 +366,9 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ContainerPath: configutil.String("/app"),
-		LocalSubPath:  configutil.String("./"),
-		LabelSelector: &map[string]*string{
-			"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
-		},
+		Service:            configutil.String(configutil.DefaultDevspaceServiceName),
+		ContainerPath:      configutil.String("/app"),
+		LocalSubPath:       configutil.String("./"),
 		UploadExcludePaths: &uploadExcludePaths,
 	})
 

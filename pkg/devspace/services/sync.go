@@ -24,16 +24,38 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", *syncPath.LocalSubPath, err)
 		}
 
-		// Retrieve pod from label selector
-		labels := make([]string, 0, len(*syncPath.LabelSelector))
-		for key, value := range *syncPath.LabelSelector {
-			labels = append(labels, key+"="+*value)
+		var labelSelector map[string]*string
+		namespace := ""
+		containerName := ""
+
+		if syncPath.Service != nil {
+			service, err := configutil.GetService(*syncPath.Service)
+			if err != nil {
+				log.Fatalf("Error resolving service name: %v", err)
+			}
+
+			labelSelector = *service.LabelSelector
+			if service.Namespace != nil && *service.Namespace != "" {
+				namespace = *service.Namespace
+			}
+
+			if service.ContainerName != nil && *service.ContainerName != "" {
+				containerName = *service.ContainerName
+			}
+		} else {
+			labelSelector = *syncPath.LabelSelector
+			if syncPath.Namespace != nil && *syncPath.Namespace != "" {
+				namespace = *syncPath.Namespace
+			}
+
+			if syncPath.ContainerName != nil && *syncPath.ContainerName != "" {
+				containerName = *syncPath.ContainerName
+			}
 		}
 
-		// Init namespace
-		namespace := ""
-		if syncPath.Namespace != nil {
-			namespace = *syncPath.Namespace
+		labels := make([]string, len(labelSelector)-1)
+		for key, value := range labelSelector {
+			labels = append(labels, key+"="+*value)
 		}
 
 		log.StartWait("Waiting for pods to become running")
@@ -48,11 +70,11 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			}
 
 			container := &pod.Spec.Containers[0]
-			if syncPath.ContainerName != nil && *syncPath.ContainerName != "" {
+			if containerName != "" {
 				found := false
 
 				for _, c := range pod.Spec.Containers {
-					if c.Name == *syncPath.ContainerName {
+					if c.Name == containerName {
 						container = &c
 						found = true
 						break
@@ -60,7 +82,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 				}
 
 				if found == false {
-					log.Warnf("Couldn't start sync, because container %s wasn't found in pod %s/%s", *syncPath.ContainerName, pod.Namespace, pod.Name)
+					log.Warnf("Couldn't start sync, because container %s wasn't found in pod %s/%s", containerName, pod.Namespace, pod.Name)
 					continue
 				}
 			}
