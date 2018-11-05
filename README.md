@@ -42,8 +42,8 @@ These commands will install the DevSpace CLI and add it to the PATH environment 
 2. Run this install script:
 ```powershell
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
-mkdir "$Env:Programfiles\devspace"
-wget ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest").Content -replace ".*`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".*","`$1") -o $Env:Programfiles\devspace\devspace.exe
+md -Force "$Env:Programfiles\devspace"
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest" -UseBasicParsing).Content -replace ".*`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".*","`$1") -o $Env:Programfiles\devspace\devspace.exe
 & "$Env:Programfiles\devspace\devspace.exe" "install"
 ```
 
