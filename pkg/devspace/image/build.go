@@ -83,13 +83,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			imageTag = *imageConf.Tag
 		}
 
-		registryConf, err := registry.GetRegistryConfigFromImageConfig(imageConf)
+		imageName, registryConf, err := registry.GetRegistryConfigFromImageConfig(imageConf)
 		if err != nil {
 			return false, fmt.Errorf("GetRegistryConfigFromImageConfig failed: %v", err)
 		}
 
 		engineName := ""
-		imageName := *imageConf.Name
 
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"

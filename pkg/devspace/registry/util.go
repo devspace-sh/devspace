@@ -8,7 +8,7 @@ import (
 )
 
 // GetRegistryConfigFromImageConfig from image config returns a registry config from an image config
-func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (*v1.RegistryConfig, error) {
+func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (string, *v1.RegistryConfig, error) {
 	imageName := *imageConf.Name
 	registryConf := &v1.RegistryConfig{
 		URL:      configutil.String(""),
@@ -18,11 +18,17 @@ func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (*v1.RegistryCo
 	if imageConf.Registry != nil {
 		oldRegistryConf, err := GetRegistryConfig(imageConf)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 
 		if oldRegistryConf.URL != nil {
 			*registryConf.URL = *oldRegistryConf.URL
+		}
+		if oldRegistryConf.Insecure != nil {
+			*registryConf.Insecure = *oldRegistryConf.Insecure
+		}
+		if oldRegistryConf.Auth != nil {
+			registryConf.Auth = oldRegistryConf.Auth
 		}
 		if *registryConf.URL == "hub.docker.com" {
 			*registryConf.URL = ""
@@ -30,7 +36,7 @@ func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (*v1.RegistryCo
 	} else {
 		registryURL, err := GetRegistryFromImageName(imageName)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 
 		if len(registryURL) > 0 {
@@ -45,12 +51,12 @@ func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (*v1.RegistryCo
 		// Check if it's the official registry or not
 		ref, err := reference.ParseNormalizedNamed(*registryConf.URL + "/" + imageName)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 
 		repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 
 		if repoInfo.Index.Official == true {
@@ -58,7 +64,7 @@ func GetRegistryConfigFromImageConfig(imageConf *v1.ImageConfig) (*v1.RegistryCo
 		}
 	}
 
-	return registryConf, nil
+	return imageName, registryConf, nil
 }
 
 // GetRegistryFromImageName retrieves the registry name from an imageName

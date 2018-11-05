@@ -74,7 +74,7 @@ func (b *Builder) Authenticate(username, password string, checkCredentialsStore 
 			password = authConfig.IdentityToken
 		}
 	}
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email)
+	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email, log.GetInstance())
 }
 
 // BuildImage builds a dockerimage within a kaniko pod

@@ -56,19 +56,17 @@ func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
 	if config.Images != nil {
 		for _, imageConf := range *config.Images {
 			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
-				registryConfig, err := GetRegistryConfigFromImageConfig(imageConf)
+				_, registryConfig, err := GetRegistryConfigFromImageConfig(imageConf)
 				if err != nil {
 					return err
 				}
 
 				log.StartWait("Creating image pull secret for registry: " + *registryConfig.URL)
-				err = createPullSecretForRegistry(client, registryConfig)
+				err = createPullSecretForRegistry(client, registryConfig, log)
 				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
 				}
-
-				log.Donef("Successfully created image pull secret for registry %s", registryConfig.URL)
 			}
 		}
 	}
@@ -76,7 +74,7 @@ func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
 	return nil
 }
 
-func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig) error {
+func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
@@ -120,7 +118,7 @@ func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.
 				namespace = defaultNamespace
 			}
 
-			err := CreatePullSecret(client, namespace, registryURL, username, password, email)
+			err := CreatePullSecret(client, namespace, registryURL, username, password, email, log)
 			if err != nil {
 				return err
 			}
