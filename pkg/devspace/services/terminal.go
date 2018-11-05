@@ -34,7 +34,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	}
 
 	var service *v1.ServiceConfig
-	serviceName := ""
+	serviceName := "default"
 
 	if serviceNameOverride == "" {
 		if config.DevSpace.Terminal.Service != nil {
@@ -48,7 +48,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 		var err error
 
 		service, err = configutil.GetService(serviceName)
-		if err != nil {
+		if err != nil && serviceName != "default" {
 			log.Fatalf("Error resolving service name: %v", err)
 		}
 	}
