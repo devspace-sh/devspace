@@ -110,6 +110,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
 			k8shelm.UpgradeWait(true),
+			k8shelm.UpgradeForce(true),
 		)
 
 		if err != nil {

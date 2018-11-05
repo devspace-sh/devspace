@@ -145,7 +145,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	err = configutil.AddService(&v1.ServiceConfig{
 		Name: configutil.String(packageName),
 		LabelSelector: &map[string]*string{
-			"chart": configutil.String(packageName),
+			"app": configutil.String(packageName),
 		},
 	})
 	if err != nil {

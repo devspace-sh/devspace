@@ -56,7 +56,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	// Select pods
 	namespace := ""
 	if namespaceOverride == "" {
-		if service != nil {
+		if service != nil && service.Namespace != nil {
 			namespace = *service.Namespace
 		} else {
 			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
@@ -104,7 +104,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	// Get container name
 	containerName := pod.Spec.Containers[0].Name
 	if containerNameOverride == "" {
-		if service != nil {
+		if service != nil && service.ContainerName != nil {
 			containerName = *service.ContainerName
 		} else {
 			if config.DevSpace.Terminal.ContainerName != nil {
