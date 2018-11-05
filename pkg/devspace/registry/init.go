@@ -41,41 +41,42 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 		log.Done("Internal registry started")
 	}
 
-	mustInitDockerHub := true
-
-	if registryMap != nil {
-		for registryName, registryConf := range registryMap {
-			if registryConf.URL == nil || *registryConf.URL == "hub.docker.com" || *registryConf.URL == "index.docker.io" {
-				mustInitDockerHub = false
-			}
-
-			log.StartWait("Creating image pull secret for registry: " + registryName)
-			err := initRegistry(client, registryConf)
-			log.StopWait()
-
-			if err != nil {
-				return fmt.Errorf("Failed to create pull secret for registry: %v", err)
-			}
-		}
+	err := CreatePullSecrets(client, log)
+	if err != nil {
+		return err
 	}
 
-	if mustInitDockerHub {
-		log.StartWait("Creating image pull secret for registry: hub.docker.com")
-		err := initRegistry(client, &v1.RegistryConfig{
-			URL: configutil.String(""),
-		})
-		log.StopWait()
+	return nil
+}
 
-		if err != nil {
-			return fmt.Errorf("Failed to create pull secret for registry: %v", err)
+// CreatePullSecrets creates the image pull secrets
+func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
+	config := configutil.GetConfig()
+
+	if config.Images != nil {
+		for _, imageConf := range *config.Images {
+			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
+				_, registryConfig, err := GetRegistryConfigFromImageConfig(imageConf)
+				if err != nil {
+					return err
+				}
+
+				log.StartWait("Creating image pull secret for registry: " + *registryConfig.URL)
+				err = createPullSecretForRegistry(client, registryConfig, log)
+				log.StopWait()
+				if err != nil {
+					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
+				}
+			}
 		}
 	}
 
 	return nil
 }
 
-func initRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig) error {
+func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig, log log.Logger) error {
 	config := configutil.GetConfig()
+
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return err
@@ -117,12 +118,12 @@ func initRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig)
 				namespace = defaultNamespace
 			}
 
-			err := CreatePullSecret(client, namespace, registryURL, username, password, email)
-
+			err := CreatePullSecret(client, namespace, registryURL, username, password, email, log)
 			if err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }

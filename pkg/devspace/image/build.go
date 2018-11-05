@@ -17,9 +17,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
-	dockerregistry "github.com/docker/docker/registry"
 )
 
 // BuildAll builds all images
@@ -74,50 +72,23 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	if shouldRebuild(generatedConfig, imageConf, dockerfilePath, forceRebuild) {
+		var imageBuilder builder.Interface
 		rebuild = true
-		imageTag, randErr := randutil.GenerateRandomString(7)
-		if randErr != nil {
-			return false, fmt.Errorf("Image building failed: %s", randErr.Error())
+
+		imageTag, err := randutil.GenerateRandomString(7)
+		if err != nil {
+			return false, fmt.Errorf("Image building failed: %v", err)
 		}
 		if imageConf.Tag != nil {
 			imageTag = *imageConf.Tag
 		}
 
-		var registryConf *v1.RegistryConfig
-		var imageBuilder builder.Interface
+		imageName, registryConf, err := registry.GetRegistryConfigFromImageConfig(imageConf)
+		if err != nil {
+			return false, fmt.Errorf("GetRegistryConfigFromImageConfig failed: %v", err)
+		}
 
 		engineName := ""
-		registryURL := ""
-		imageName := *imageConf.Name
-
-		if imageConf.Registry != nil {
-			registryConf, err = registry.GetRegistryConfig(imageConf)
-			if err != nil {
-				return false, err
-			}
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-			if registryURL == "hub.docker.com" {
-				registryURL = ""
-			}
-		} else {
-			registryURL, err = GetRegistryFromImageName(*imageConf.Name)
-			if err != nil {
-				return false, err
-			}
-
-			if len(registryURL) > 0 {
-				// Crop registry Url from imageName
-				imageName = imageName[len(registryURL)+1:]
-			}
-
-			registryConf = &v1.RegistryConfig{
-				URL:      &registryURL,
-				Insecure: configutil.Bool(false),
-			}
-		}
 
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
@@ -140,7 +111,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				pullSecret = *imageConf.Build.Kaniko.PullSecret
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(registryURL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
+			imageBuilder, err = kaniko.NewBuilder(*registryConf.URL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
 				return false, fmt.Errorf("Error creating kaniko builder: %v", err)
 			}
@@ -152,7 +123,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				preferMinikube = *imageConf.Build.Docker.PreferMinikube
 			}
 
-			imageBuilder, err = docker.NewBuilder(registryURL, imageName, imageTag, preferMinikube)
+			imageBuilder, err = docker.NewBuilder(*registryConf.URL, imageName, imageTag, preferMinikube)
 			if err != nil {
 				return false, fmt.Errorf("Error creating docker client: %v", err)
 			}
@@ -173,8 +144,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 
 		displayRegistryURL := "hub.docker.com"
-		if registryURL != "" {
-			displayRegistryURL = registryURL
+		if *registryConf.URL != "" {
+			displayRegistryURL = *registryConf.URL
 		}
 
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
@@ -214,8 +185,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
-		if registryURL != "" {
-			imageName = registryURL + "/" + imageName
+		if *registryConf.URL != "" {
+			imageName = *registryConf.URL + "/" + imageName
 		}
 
 		generatedConfig.ImageTags[imageName] = imageTag
@@ -246,23 +217,4 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 	}
 
 	return mustRebuild
-}
-
-// GetRegistryFromImageName retrieves the registry name from an imageName
-func GetRegistryFromImageName(imageName string) (string, error) {
-	ref, err := reference.ParseNormalizedNamed(imageName)
-	if err != nil {
-		return "", err
-	}
-
-	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
-	if err != nil {
-		return "", err
-	}
-
-	if repoInfo.Index.Official {
-		return "", nil
-	}
-
-	return repoInfo.Index.Name, nil
 }

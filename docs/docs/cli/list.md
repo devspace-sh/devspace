@@ -15,6 +15,7 @@ Usage:
 Available Commands:
   package     Lists all added packages
   port        Lists port forwarding configuration
+  service     Lists all services
   sync        Lists sync configuration
 
 Flags:

@@ -31,6 +31,7 @@ Flags:
       --sync                    Enable code synchronization (default true)
       --tiller                  Install/upgrade tiller (default true)
       --verbose-sync            When enabled the sync will log every file change
+  -s, --service string          Service name (in config) to select pod/container for terminal
 
 Examples:
 devspace up                  # Start the devspace

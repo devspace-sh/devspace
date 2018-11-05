@@ -1,6 +1,7 @@
 version: v1alpha1
 cluster:
   cloudProvider: devspace-cloud
+# kubeContext: minikube
 devSpace:
   deployments:
   - helm:
@@ -23,4 +24,4 @@ devSpace:
     - chart/
 images:
   default:
-    name: fabian1991/devspace
+    name: yourdockername/devspace

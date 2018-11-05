@@ -48,7 +48,7 @@ devspace enter bash -l release=test
 	}
 	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name to select pod/container for terminal")
+	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pod/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")

@@ -33,7 +33,7 @@ const registryPort = 5000
 var pullSecretNames = []string{}
 
 // CreatePullSecret creates an image pull secret for a registry
-func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string) error {
+func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
 	pullSecretName := GetRegistryAuthSecretName(registryURL)
 	if registryURL == "hub.docker.com" || registryURL == "" {
 		registryURL = "https://index.docker.io/v1/"
@@ -69,12 +69,16 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 
 	if err != nil {
 		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
+		if err != nil {
+			return fmt.Errorf("Unable to create image pull secret: %s", err.Error())
+		}
+
+		log.Donef("Created image pull secret %s/%s", namespace, pullSecretName)
 	} else {
 		_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
-	}
-
-	if err != nil {
-		return fmt.Errorf("Unable to create/update image pull secret: %s", err.Error())
+		if err != nil {
+			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+		}
 	}
 
 	pullSecretNames = append(pullSecretNames, pullSecretName)

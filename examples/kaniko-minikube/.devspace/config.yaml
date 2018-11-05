@@ -28,6 +28,7 @@ images:
       kaniko:
         cache: true
     name: devspace
+    createPullSecret: true
     registry: internal
 internalRegistry:
   deploy: true
