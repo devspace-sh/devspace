@@ -95,8 +95,7 @@ func GetConfigWithoutDefaults() *v1.Config {
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
-			log.Errorf("Loading config: %v", err)
-			log.Fatal("Please run `devspace init -r` to repair your config")
+			log.Fatalf("Loading config: %v", err)
 		}
 
 		if configRaw.Version == nil || *configRaw.Version != CurrentConfigVersion {
