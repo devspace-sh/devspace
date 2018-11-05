@@ -1,0 +1,33 @@
+cluster:
+  kubeContext: minikube
+  namespace: php
+devSpace:
+  deployments:
+  - helm:
+      chartPath: ./chart
+    name: devspace-default
+  ports:
+  - labelSelector:
+      release: devspace-default
+    portMappings:
+    - localPort: 80
+      remotePort: 80
+  sync:
+  - containerPath: /var/www/html
+    labelSelector:
+      release: devspace-default
+    localSubPath: ./
+    uploadExcludePaths:
+    - Dockerfile
+    - .devspace/
+    - chart/
+images:
+  default:
+    name: devspace
+    registry: internal
+internalRegistry:
+  deploy: true
+  namespace: php
+tiller:
+  namespace: php
+version: v1alpha1
