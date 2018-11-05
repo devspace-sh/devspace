@@ -98,6 +98,7 @@ This section of the config defines a map of images that can be used in the helm 
 ### images[]
 An image is defined by:
 - `name` *string* name of the image with registry url prefixed (e.g. dockerhubname/image, gcr.io/googleprojectname/image etc.)
+- `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
 - `build` *BuildConfig* defines the build procedure for this image  
 
@@ -257,6 +258,8 @@ images:
   database:
     name: devspace-user/devspace
     registry: internal
+    # Automatically create a pull secret for this image/registry
+    createPullSecret: true
     build:
       kaniko:
         # Use kaniko within the target cluster to build the image
@@ -264,6 +267,8 @@ images:
         cache: true
   privateRegistryImage:
     name: user/test
+    # Automatically create a pull secret for this image/registry
+    createPullSecret: true
     registry: privateRegistry
 # Optional: the registries the images should be pushed to
 registries:
