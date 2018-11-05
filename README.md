@@ -23,41 +23,16 @@ This demo shows how to run `devspace up` directly from the terminal inside Visua
 
 ![DevSpace CLI Demo](docs/website/static/img/devspace-cli-demo-readme.gif)
 
-## [Quickstart](https://devspace-cloud.com/getting-started/)
-Follow this link for the [Quickstart Guide](https://devspace-cloud.com/getting-started/).
+## [Install & Quickstart Guide](https://devspace-cloud.com/getting-started/)
+Follow this link for the [Install & Quickstart Guide](https://devspace-cloud.com/getting-started/).
 
-The DevSpace CLI allows you to create a DevSpace for any existing project with just a single command:
+After installing the DevSpace CLI, you can create a DevSpace for any existing project with just a single command:
 ```
 devspace up
 ```
-Take a look at the [Getting Started Guide](https://devspace-cloud.com/getting-started/) to see how to get started with a DevSpace.
+Take a look at the [Install & Getting Started Guide](https://devspace-cloud.com/getting-started/) to see how to get started with a DevSpace.
 
 **Note:** Don't worry, you can use `devspace reset` to reset your project and go back to local development.
-
-## [Installation](https://docs.devspace-cloud.com/docs/getting-started/installation.html)
-These commands will install the DevSpace CLI and add it to the PATH environment variable. For more details, see: [Getting Started](https://devspace-cloud.com/getting-started/)
-
-### For Windows
-1. Open Powershell with **admin rights**.
-2. Run this install script:
-```powershell
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
-md -Force "$Env:Programfiles\devspace"
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest" -UseBasicParsing).Content -replace ".*`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".*","`$1") -o $Env:Programfiles\devspace\devspace.exe
-& "$Env:Programfiles\devspace\devspace.exe" "install"
-```
-
-**Note:** After running the install script, you should close and re-open your terminal window or IDE to refresh the environment variables.
-
-### For Linux
-```bash
-curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
-```
-
-### For Mac
-```bash
-curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
-```
 
 ## [Documentation](https://docs.devspace-cloud.com/docs/getting-started/quickstart.html)
 Here you can find some links to the most important pages of our documentation:
