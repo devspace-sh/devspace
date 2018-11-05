@@ -72,8 +72,15 @@ func ImageName(dockerUsername string) error {
 		})
 	}
 
+	createPullSecret := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Do you want to create a pull secret automatically for this image? (yes | no)",
+		DefaultValue:           "yes",
+		ValidationRegexPattern: "^(yes|no)$",
+	}) == "yes"
+
 	imageMap := *config.Images
 	imageMap["default"].Name = &defaultImageName
+	imageMap["default"].CreatePullSecret = &createPullSecret
 
 	return nil
 }
@@ -87,6 +94,7 @@ func InternalRegistry() error {
 	defaultImageConf, defaultImageExists := imageMap["default"]
 	if defaultImageExists {
 		defaultImageConf.Registry = configutil.String("internal")
+		defaultImageConf.CreatePullSecret = configutil.Bool(true)
 	}
 
 	overwriteRegistryMap := *overwriteConfig.Registries
