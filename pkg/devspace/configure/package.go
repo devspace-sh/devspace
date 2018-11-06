@@ -77,6 +77,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	if err != nil {
 		log.Fatal(err)
 	}
+	packageName := version.GetName()
 
 	requirementsFile := filepath.Join(chartPath, "requirements.yaml")
 	_, err = os.Stat(requirementsFile)
@@ -105,8 +106,20 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			}
 		}
 
+		for _, existingDependency := range dependenciesArr {
+			existingDependencyMap, ok := existingDependency.(map[interface{}]interface{})
+
+			if ok {
+				existingDepName := existingDependencyMap["name"]
+
+				if existingDepName == packageName {
+					log.Fatalf("Dependency %s already exists", packageName)
+				}
+			}
+		}
+
 		dependenciesArr = append(dependenciesArr, map[interface{}]interface{}{
-			"name":       version.GetName(),
+			"name":       packageName,
 			"version":    version.GetVersion(),
 			"repository": repo.URL,
 		})
@@ -125,7 +138,6 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	if err != nil {
 		log.Fatal(err)
 	}
-	packageName := version.GetName()
 
 	// Check if key already exists
 	valuesYaml := filepath.Join(chartPath, "values.yaml")
