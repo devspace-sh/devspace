@@ -113,7 +113,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 				existingDepName := existingDependencyMap["name"]
 
 				if existingDepName == packageName {
-					log.Fatalf("Dependency %s already exists", packageName)
+					log.Fatalf("Package %s already added", packageName)
 				}
 			}
 		}
@@ -196,9 +196,11 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Fatalf("Unable to save config: %v", err)
 	}
 
-	log.Donef("Successfully added package %s, you can now modify the configuration in '%s/values.yaml'\n", packageName, chartPath)
+	log.Donef("Successfully added package %s, you can now modify the configuration in '%s"+string(os.PathSeparator)+"values.yaml'", packageName, chartPath)
 
 	if skipQuestion == false {
+		log.Write("\n")
+
 		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to open the package README to see configuration options? (yes|no)",
 			DefaultValue:           "yes",
@@ -304,17 +306,19 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 				})
 			}
 
-			if clusterServices.Size() > 0 {
+			if len(serviceTableContent) > 0 {
+				log.Write("\n")
 				log.Info("The following services are now available within your DevSpace:\n")
 				log.PrintTable(serviceTableHeader, serviceTableContent)
 				log.Write("\n")
+				log.Info("Note: It may take several minutes until these services are up and running.\n         Run this command to check their status: kubectl get service")
 			}
 		}
 	}
 }
 
 // RemovePackage removes a helm dependency from a deployment
-func RemovePackage(removeAll bool, deployment string, args []string, log log.Logger) error {
+func RemovePackage(removeAll bool, deployment string, args []string) error {
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
@@ -359,7 +363,23 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 			log.Fatalf("Error parsing yaml: %v", dependencies)
 		}
 
-		if removeAll == false {
+		if removeAll {
+			yamlContents["dependencies"] = []interface{}{}
+
+			subChartPath := filepath.Join(chartPath, "charts")
+
+			err = os.RemoveAll(subChartPath)
+			if err != nil {
+				log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
+			}
+
+			err = rebuildDependencies(chartPath, yamlContents, log.GetInstance())
+			if err != nil {
+				return err
+			}
+
+			log.Done("Successfully removed all dependencies")
+		} else {
 			for key, dependency := range dependenciesArr {
 				dependencyMap, ok := dependency.(map[interface{}]interface{})
 				if ok == false {
@@ -382,7 +402,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						err = rebuildDependencies(chartPath, yamlContents, log)
+						err = rebuildDependencies(chartPath, yamlContents, log.GetInstance())
 						if err != nil {
 							return err
 						}
@@ -393,24 +413,22 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 			}
 
 			log.Donef("Successfully removed dependency %s", args[0])
-			return nil
 		}
+		log.Write("\n")
 
-		yamlContents["dependencies"] = []interface{}{}
+		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to re-deploy your DevSpace to purge unnecessary packages? (yes|no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes|no)",
+		})
 
-		subChartPath := filepath.Join(chartPath, "charts")
-
-		err = os.RemoveAll(subChartPath)
-		if err != nil {
-			log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
+		if shouldRedeploy == "yes" {
+			kubectl, err := kubectl.NewClient()
+			if err != nil {
+				log.Fatalf("Unable to create new kubectl client: %v", err)
+			}
+			redeployAferPackageChange(kubectl, deploymentConfig)
 		}
-
-		err = rebuildDependencies(chartPath, yamlContents, log)
-		if err != nil {
-			return err
-		}
-
-		log.Done("Successfully removed all dependencies")
 		return nil
 	}
 
