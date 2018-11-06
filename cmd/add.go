@@ -183,12 +183,10 @@ func init() {
 
 // RunAddPackage executes the add package command logic
 func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
-	name, chartPath, err := configure.AddPackage(cmd.packageFlags.SkipQuestion, cmd.packageFlags.AppVersion, cmd.packageFlags.ChartVersion, cmd.packageFlags.Deployment, args)
+	err := configure.AddPackage(cmd.packageFlags.SkipQuestion, cmd.packageFlags.AppVersion, cmd.packageFlags.ChartVersion, cmd.packageFlags.Deployment, args)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Donef("Successfully added %s as chart dependency, you can configure the package in '%s/values.yaml'", name, chartPath)
 }
 
 // RunAddDeployment executes the add deployment command logic

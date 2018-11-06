@@ -27,17 +27,17 @@ import (
 )
 
 // AddPackage adds a helm dependency to specified deployment
-func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string) (string, string, error) {
+func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string) error {
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
-		return "", "", fmt.Errorf("Please specify the deployment via the -d flag")
+		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
 
 	var deploymentConfig *v1.DeploymentConfig
 	for _, deployConfig := range *config.DevSpace.Deployments {
 		if deployment == "" || deployment == *deployConfig.Name {
 			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
-				return "", "", fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
+				return fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
 			}
 
 			deploymentConfig = deployConfig
@@ -184,9 +184,11 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Fatalf("Unable to save config: %v", err)
 	}
 
+	log.Donef("Successfully added package %s, you can now modify the configuration in '%s/values.yaml'\n", packageName, chartPath)
+
 	if skipQuestion == false {
 		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to open the package README? (yes|no)",
+			Question:               "Do you want to open the package README to see configuration options? (yes|no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)",
 		})
@@ -210,7 +212,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		}
 	}
 
-	return version.GetName(), *deploymentConfig.Helm.ChartPath, nil
+	return nil
 }
 
 func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig) {
