@@ -2,18 +2,14 @@ package cmd
 
 import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	"github.com/covexo/devspace/pkg/devspace/image"
-	"github.com/covexo/devspace/pkg/devspace/services"
-
-	"github.com/covexo/devspace/pkg/util/log"
-
-	"github.com/covexo/devspace/pkg/devspace/registry"
-
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/covexo/devspace/pkg/devspace/services"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -33,6 +29,7 @@ type UpCmdFlags struct {
 	sync            bool
 	deploy          bool
 	exitAfterDeploy bool
+	allyes          bool
 	switchContext   bool
 	portforwarding  bool
 	verboseSync     bool
@@ -52,6 +49,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	sync:            true,
 	switchContext:   false,
 	exitAfterDeploy: false,
+	allyes:          false,
 	deploy:          false,
 	portforwarding:  true,
 	verboseSync:     false,
@@ -92,6 +90,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.allyes, "yes", "y", cmd.flags.allyes, "Answer every questions with the default")
 	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pods/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -113,10 +112,17 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
-		initCmd := &InitCmd{
-			flags: InitCmdFlagsDefault,
+		initFlags := &InitCmdFlags{
+			reconfigure:      false,
+			overwrite:        false,
+			allyes:           cmd.flags.allyes,
+			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
+			templateRepoPath: "",
+			language:         "",
 		}
-
+		initCmd := &InitCmd{
+			flags: initFlags,
+		}
 		initCmd.Run(nil, []string{})
 
 		// Ensure that config is initialized correctly
