@@ -6,9 +6,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/deploy"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -17,12 +21,13 @@ import (
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/russross/blackfriday"
 	"github.com/skratchdot/open-golang/open"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/helm/pkg/repo"
 )
 
 // AddPackage adds a helm dependency to specified deployment
-func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) (string, string, error) {
-	packageName := args[0]
+func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string) (string, string, error) {
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return "", "", fmt.Errorf("Please specify the deployment via the -d flag")
@@ -49,7 +54,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, log, false)
+	helm, err := helmClient.NewClient(kubectl, log.GetInstance(), false)
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %v", err)
 	}
@@ -60,7 +65,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	log.StartWait("Search Chart")
-	repo, version, err := helm.SearchChart(packageName, chartVersion, appVersion)
+	repo, version, err := helm.SearchChart(args[0], chartVersion, appVersion)
 	log.StopWait()
 
 	if err != nil {
@@ -120,6 +125,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	if err != nil {
 		log.Fatal(err)
 	}
+	packageName := version.GetName()
 
 	// Check if key already exists
 	valuesYaml := filepath.Join(chartPath, "values.yaml")
@@ -130,26 +136,47 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
 	}
 
-	if _, ok := valuesYamlContents[version.GetName()]; ok == false {
+	// get default config for package
+	packageDefaults, hasPackageDefaultValues := packageDefaultMap[packageName]
+
+	if _, ok := valuesYamlContents[packageName]; ok == false {
 		f, err := os.OpenFile(valuesYaml, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		defer f.Close()
-		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ":\n  resources:\n    requests:\n      memory: \"0\"\n      cpu: \"0\""); err != nil {
+
+		packageDefaultValues := "{}"
+		if hasPackageDefaultValues && packageDefaults.values != "" {
+			packageDefaultValues = packageDefaults.values
+		}
+
+		if _, err = f.WriteString(packageComment + packageName + ":" + packageDefaultValues); err != nil {
 			log.Fatal(err)
 		}
 	}
+	serviceLabelSelector := map[string]*string{}
 
-	err = configutil.AddService(&v1.ServiceConfig{
-		Name: configutil.String(packageName),
-		LabelSelector: &map[string]*string{
-			"app": configutil.String(packageName),
-		},
-	})
-	if err != nil {
-		log.Fatalf("Unable to add service to config: %v", err)
+	packageService := &v1.ServiceConfig{
+		Name:          configutil.String(packageName),
+		LabelSelector: &serviceLabelSelector,
+	}
+
+	if hasPackageDefaultValues && len(packageDefaults.serviceSelectors) > 0 {
+		for key, value := range packageDefaults.serviceSelectors {
+			serviceLabelSelector[key] = configutil.String(value)
+		}
+	} else {
+		serviceLabelSelector["app"] = configutil.String(*deploymentConfig.Name + "-" + packageName)
+	}
+
+	_, sericeNotFoundErr := configutil.GetService(*packageService.Name)
+
+	if sericeNotFoundErr != nil {
+		err = configutil.AddService(packageService)
+		if err != nil {
+			log.Fatalf("Unable to add service to config: %v", err)
+		}
 	}
 
 	err = configutil.SaveConfig()
@@ -158,10 +185,118 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	if skipQuestion == false {
-		showReadme(chartPath, version)
+		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to open the package README? (yes|no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes|no)",
+		})
+
+		if shouldShowReadme == "yes" {
+			if repo.URL == defaultStableRepoURL {
+				open.Start("https://github.com/helm/charts/tree/master/stable/" + packageName)
+			} else {
+				showReadme(chartPath, version)
+			}
+		}
+
+		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to re-deploy your DevSpace with the added package? (yes|no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes|no)",
+		})
+
+		if shouldRedeploy == "yes" {
+			redeployAferPackageChange(kubectl, deploymentConfig)
+		}
 	}
 
 	return version.GetName(), *deploymentConfig.Helm.ChartPath, nil
+}
+
+func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig) {
+	config := configutil.GetConfig()
+	listOptions := metav1.ListOptions{}
+	deploymentNamespace := *deploymentConfig.Namespace
+
+	if deploymentNamespace == "" {
+		var err error
+
+		deploymentNamespace, err = configutil.GetDefaultNamespace(config)
+		if err != nil {
+			log.Fatal("Unable to retrieve default namespace: %v", err)
+		}
+	}
+
+	// Load generatedConfig
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
+	log.StartWait("Re-deploying DevSpace")
+
+	existingClusterServices, clusterServiceErr := kubectl.Core().Services(deploymentNamespace).List(listOptions)
+	if clusterServiceErr != nil {
+		log.Warnf("Unable to list Kubernetes services: %v", clusterServiceErr)
+	}
+
+	err = deploy.All(kubectl, generatedConfig, true, true, log.GetInstance())
+	log.StopWait()
+
+	// Save generated config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Error saving generated config: %v", err)
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Done("Successfully re-deployed DevSpace")
+
+	if clusterServiceErr == nil {
+		log.StartWait("Detecting package services")
+		clusterServices, clusterServiceErr := kubectl.Core().Services(deploymentNamespace).List(listOptions)
+		log.StopWait()
+
+		if clusterServiceErr != nil {
+			log.Warnf("Unable to list Kubernetes services: %v", clusterServiceErr)
+		} else {
+			indent := "     "
+			serviceTableHeader := []string{
+				indent,
+				"Hostname",
+				"Ports",
+			}
+			serviceTableContent := [][]string{}
+
+		OUTER:
+			for _, clusterService := range clusterServices.Items {
+				for _, existingClusterService := range existingClusterServices.Items {
+					if clusterService.GetName() == existingClusterService.GetName() {
+						continue OUTER
+					}
+				}
+				ports := []string{}
+
+				for _, servicePort := range clusterService.Spec.Ports {
+					ports = append(ports, strconv.Itoa(int(servicePort.Port)))
+				}
+
+				serviceTableContent = append(serviceTableContent, []string{
+					indent,
+					clusterService.GetName(),
+					strings.Join(ports, ", "),
+				})
+			}
+
+			if clusterServices.Size() > 0 {
+				log.Info("The following services are now available within your DevSpace:\n")
+				log.PrintTable(serviceTableHeader, serviceTableContent)
+				log.Write("\n")
+			}
+		}
+	}
 }
 
 // RemovePackage removes a helm dependency from a deployment
@@ -281,16 +416,6 @@ func rebuildDependencies(chartPath string, newYamlContents map[interface{}]inter
 }
 
 func showReadme(chartPath string, chartVersion *repo.ChartVersion) {
-	showReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to open the package README? (y|n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)",
-	})
-
-	if showReadme == "n" {
-		return
-	}
-
 	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(chartPath, "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
 	if err != nil {
 		log.Fatal(err)

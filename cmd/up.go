@@ -177,7 +177,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 	if mustRedeploy == true {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			log.Fatalf("Error saving generated config: %v", err)
 		}
 	}
 
@@ -192,7 +192,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 		// Save Config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			log.Fatalf("Error saving generated config: %v", err)
 		}
 	}
 }
