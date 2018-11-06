@@ -352,8 +352,19 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 					log.Fatalf("Error parsing yaml: %v", dependencies)
 				}
 
-				if name, ok := dependencyMap["name"]; ok {
+				if name, ok := dependencyMap["name"].(string); ok {
 					if name == args[0] {
+						chartVersion, ok := dependencyMap["version"].(string)
+
+						if ok {
+							subChartPath := filepath.Join(chartPath, "charts", name+"-"+chartVersion+".tgz")
+
+							err = os.Remove(subChartPath)
+							if err != nil {
+								log.Warnf("Unable to delete package file: %s\nError: %v", subChartPath, err)
+							}
+						}
+
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
@@ -372,6 +383,13 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 		}
 
 		yamlContents["dependencies"] = []interface{}{}
+
+		subChartPath := filepath.Join(chartPath, "charts")
+
+		err = os.RemoveAll(subChartPath)
+		if err != nil {
+			log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
+		}
 
 		err = rebuildDependencies(chartPath, yamlContents, log)
 		if err != nil {
