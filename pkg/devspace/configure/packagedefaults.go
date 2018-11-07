@@ -22,20 +22,68 @@ type packageDefault struct {
 
 var packageDefaultMap = map[string]packageDefault{
 	"mysql": packageDefault{
-		values: `` + defaultPackageResourceReset,
+		values: `
+  mysqlRootPassword: "YOUR_ROOT_PASSWORD"    # only set when first starting the mysql server
+  mysqlDatabase: "YOUR_DATABASE_NAME"
+  mysqlUser: "YOUR_USERNAME"                 # default user for the database
+  mysqlPassword: "YOUR_PASSWORD"             # only set when first starting the mysql server
+  persistence:
+    enabled: true
+    size: 3Gi` + defaultPackageResourceReset,
 	},
 	"mariadb": packageDefault{
 		serviceSelectors: map[string]string{
 			"app": "mariadb",
 		},
-		values: `` + defaultPackageResourceReset,
+		values: `
+  rootUser:
+    password: "YOUR_ROOT_PASSWORD"           # only set when first starting the mysql server
+  db:
+    name: "YOUR_DATABASE_NAME"
+    user: "YOUR_USERNAME"
+    password: "YOUR_PASSWORD"                # only set when first starting the mysql server
+  replication:
+    enabled: true
+  master:
+    persistence:
+      enabled: true
+      size: 3Gi
+  slave:
+    replicas: 1
+    persistence:
+      enabled: true
+      size: 3Gi`,
 	},
 	"influxdb": packageDefault{
 		values: `
   setDefaultUser:
     enabled: true
     user:
-      username: "admin"
-      password: "password"` + defaultPackageResourceReset,
+      username: "YOUR_USERNAME"
+      password: "YOUR_PASSWORD"              # only set when first starting the mysql server
+  persistence:
+    enabled: true
+    size: 3Gi` + defaultPackageResourceReset,
+	},
+	"mongodb": packageDefault{
+		values: `
+  mongodbRootPassword: "YOUR_ROOT_PASSWORD"  # only set when first starting the mysql server
+  mongodbDatabase: "YOUR_DATABASE_NAME"
+  mongodbUsername: "YOUR_USERNAME"
+  mongodbPassword: "YOUR_PASSWORD"           # only set when first starting the mysql server
+  mongodbDatabase:
+    enabled: true
+    user:
+      username: "YOUR_USERNAME"
+      password: "YOUR_PASSWORD"
+  persistence:
+    enabled: true
+    size: 3Gi`,
+	},
+	"redis": packageDefault{
+		values: `
+  cluster:
+    enabled: true
+    slaveCount: 1`,
 	},
 }
