@@ -89,7 +89,7 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 	}
 
 	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould the DevSpace be deleted from the DevSpace-cloud (y/n)",
+		Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
