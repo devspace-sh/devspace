@@ -115,7 +115,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		initFlags := &InitCmdFlags{
 			reconfigure:      false,
 			overwrite:        false,
-			allyes:           cmd.flags.allyes,
+			skipQuestions:    cmd.flags.allyes,
 			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 			templateRepoPath: "",
 			language:         "",
