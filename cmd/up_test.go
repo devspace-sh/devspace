@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestUpWithInternalRegistry(t *testing.T) {
+/*func TestUpWithInternalRegistry(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
 	defer resetWorkDir(t)
 
@@ -40,14 +40,14 @@ func TestUpWithInternalRegistry(t *testing.T) {
 
 	testReset(t)
 
-}
+}*/
 
-/*func TestUpWithDockerHub(t *testing.T) {
+func TestUpWithDockerHub(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
-	defer resetWorkDir()
+	defer resetWorkDir(t)
 
 	upCmdObj := UpCmd{
-		flags: &UpCmdFlags{},
+		flags: UpFlagsDefault,
 	}
 	upCmdObj.flags.sync = false
 
@@ -66,9 +66,9 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
-	testReset(t, dir)
+	testReset(t)
 
-}*/
+}
 
 var workDirBefore string
 
@@ -77,7 +77,6 @@ func createTempFolderCopy(source string, t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Debug("TempDir at " + dir)
 	err = fsutil.Copy(source, dir, true)
 	if err != nil {
 		t.Error(err)
