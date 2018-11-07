@@ -43,6 +43,9 @@ type InitCmdFlags struct {
 	addDevSpaceCloudToLocalKubernetes bool
 	namespace                         string
 	createInternalRegistry            bool
+	registryURL                       string
+	defaultImageName                  string
+	createPullSecret                  bool
 }
 
 // InitCmdFlagsDefault are the default flags for InitCmdFlags
@@ -53,6 +56,12 @@ var InitCmdFlagsDefault = &InitCmdFlags{
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 	language:         "",
+
+	cloudProvider:                     "",
+	useDevSpaceCloud:                  false,
+	addDevSpaceCloudToLocalKubernetes: false,
+	namespace:                         "",
+	createInternalRegistry:            false,
 }
 
 func init() {
@@ -433,7 +442,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	err = configure.Image(dockerUsername, cmd.flags.skipQuestions)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
