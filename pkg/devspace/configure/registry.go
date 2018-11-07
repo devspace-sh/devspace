@@ -14,8 +14,8 @@ import (
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 )
 
-// ConfigureImage configures the image name
-func ConfigureImage(dockerUsername string, skipQuestions bool) error {
+// Image configures the image name
+func Image(dockerUsername string, skipQuestions bool) error {
 	config := configutil.GetConfig()
 	registryURL := "hub.docker.com"
 

@@ -420,7 +420,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	err = configure.ConfigureImage(dockerUsername, cmd.flags.skipQuestions)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions)
 	if err != nil {
 		log.Fatal(err)
 	}
