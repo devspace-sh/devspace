@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/registry"
@@ -63,13 +64,69 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	cmd.deleteDevSpaceDeployments()
-	cmd.deleteInternalRegistry()
-	cmd.deleteTiller()
+	config := configutil.GetConfig()
+
+	if config.Cluster != nil && config.Cluster.CloudProvider != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
+		cmd.deleteCloudDevSpace()
+	} else {
+		cmd.deleteDevSpaceDeployments()
+		cmd.deleteInternalRegistry()
+		cmd.deleteTiller()
+		cmd.deleteClusterRoleBinding()
+	}
+
 	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()
-	cmd.deleteClusterRoleBinding()
 	cmd.deleteDevspaceFolder()
+}
+
+func (cmd *ResetCmd) deleteCloudDevSpace() {
+	config := configutil.GetConfig()
+	providerConfig, err := cloud.ParseCloudConfig()
+	if err != nil {
+		log.Failf("Error loading cloud config: %v", err)
+		return
+	}
+
+	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould the cloud devspace be removed (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
+
+	if shouldCloudDevSpaceRemoved {
+		// Get selected cloud provider from config
+		selectedCloudProvider := *config.Cluster.CloudProvider
+
+		if provider, ok := providerConfig[selectedCloudProvider]; ok {
+			err := cloud.DeleteDevSpace(provider, *config.Cluster.Namespace)
+			if err != nil {
+				log.Failf("Error deleting devspace: %v", err)
+			} else {
+				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
+			}
+		}
+	} else {
+		cmd.deleteCloudKubeContext()
+	}
+}
+
+func (cmd *ResetCmd) deleteCloudKubeContext() {
+	config := configutil.GetConfig()
+	shouldCloudContextRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould the cloud kube context be removed (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
+
+	if shouldCloudContextRemoved {
+		err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
+		if err != nil {
+			log.Failf("Error deleting kube context: %v", err)
+		} else {
+			log.Done("Successfully deleted kube context")
+		}
+	}
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
