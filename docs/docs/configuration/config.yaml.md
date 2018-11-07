@@ -238,12 +238,16 @@ images:
   default:
     # Image name with prefixed docker image registry
     name: grc.io/devspace-user/devspace
-    # Specifies where the docker context path is
-    contextPath: ./
-    # Specifies where the Dockerfile lies 
-    dockerfilePath: ./Dockerfile
     # Specifies how to build the image
     build:
+      # Specifies where the Dockerfile lies 
+      dockerfilePath: ./Dockerfile
+      # Specifies where the docker context path is
+      contextPath: ./
+      # use docker as build engine
+      docker:
+        # Use the minikube docker daemon if the current kubectl context is minikube
+        preferMinikube: true
       options:
         # Used for multi-stage builds
         target: development
@@ -252,9 +256,6 @@ images:
           myarg1: myvalue1
         # network mode (see [network](https://docs.docker.com/network/))
         network: bridge
-      docker:
-        # Use the minikube docker daemon, if the current kubectl context is minikube
-        preferMinikube: true
   database:
     name: devspace-user/devspace
     registry: internal
