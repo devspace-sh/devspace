@@ -15,11 +15,13 @@ import (
 )
 
 // Image configures the image name
-func Image(dockerUsername string, skipQuestions bool) error {
+func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageName string, createPullSecret bool) error {
 	config := configutil.GetConfig()
-	registryURL := "hub.docker.com"
 
-	if !skipQuestions {
+	if skipQuestions {
+		registryURL = "hub.docker.com"
+	}
+	if registryURL == "" {
 		registryURL = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
 			DefaultValue:           "hub.docker.com",
@@ -47,13 +49,12 @@ func Image(dockerUsername string, skipQuestions bool) error {
 	googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")
 	isGoogleRegistry := googleRegistryRegex.Match([]byte(registryURL))
 	isDockerHub := registryURL == "hub.docker.com"
-	defaultImageName := ""
-	createPullSecret := true
 
 	if skipQuestions {
 		defaultImageName = dockerUsername + "/devspace"
 	} else {
-		if isDockerHub {
+		if defaultImageName != "" {
+		} else if isDockerHub {
 			defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Which image name do you want to use on Docker Hub?",
 				DefaultValue:           dockerUsername + "/devspace",
@@ -80,7 +81,7 @@ func Image(dockerUsername string, skipQuestions bool) error {
 			})
 		}
 
-		createPullSecret = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)$",
