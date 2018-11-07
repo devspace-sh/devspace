@@ -173,7 +173,7 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 				continue
 			}
 			if err == io.EOF {
-				return nil, errors.Trace(fmt.Errorf("[Downstream] Stream closed unexpectedly"))
+				return nil, errors.Trace(fmt.Errorf("\n[Downstream] Stream closed unexpectedly"))
 			}
 
 			return nil, errors.Trace(err)

@@ -55,6 +55,8 @@ func init() {
 	
 	* Sync paths (sync)
 	* Forwarded ports (port)
+	* Deployment (deployment)
+	* Helm Packages (package)
 	#######################################################
 	`,
 		Args: cobra.NoArgs,

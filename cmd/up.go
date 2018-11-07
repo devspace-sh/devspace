@@ -177,7 +177,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 	if mustRedeploy == true {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			log.Fatalf("Error saving generated config: %v", err)
 		}
 	}
 
@@ -192,7 +192,7 @@ func (cmd *UpCmd) buildAndDeploy() {
 		// Save Config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			log.Fatalf("Error saving generated config: %v", err)
 		}
 	}
 }
@@ -221,7 +221,7 @@ func (cmd *UpCmd) startServices(args []string) {
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your devspace is reachable via ingress on this url http://%s", cloud.DevSpaceURL)
+		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 

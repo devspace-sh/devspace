@@ -33,7 +33,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
-		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.10.0",
+		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.11.0",
 		ServiceAccount: TillerServiceAccountName,
 	}
 

@@ -73,7 +73,7 @@ func ImageName(dockerUsername string) error {
 	}
 
 	createPullSecret := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to create a pull secret automatically for this image? (yes | no)",
+		Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
 		DefaultValue:           "yes",
 		ValidationRegexPattern: "^(yes|no)$",
 	}) == "yes"
