@@ -178,7 +178,7 @@ func (s *stdoutLogger) StopWait() {
 }
 
 // PrintTable implements logger interface
-func (d *stdoutLogger) PrintTable(header []string, values [][]string) {
+func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 	columnLengths := make([]int, len(header))
 
 	for k, v := range header {
@@ -201,29 +201,29 @@ func (d *stdoutLogger) PrintTable(header []string, values [][]string) {
 		padding := columnLengths[key] - len(value)
 
 		if padding > 0 {
-			Write([]byte(strings.Repeat(" ", padding)))
+			s.Write([]byte(strings.Repeat(" ", padding)))
 		}
 	}
 
-	Write([]byte("\n"))
+	s.Write([]byte("\n"))
 
 	if len(values) == 0 {
-		Write([]byte(" No entries found\n"))
+		s.Write([]byte(" No entries found\n"))
 	}
 
 	// Print Values
 	for _, v := range values {
 		for key, value := range v {
-			Write([]byte(" " + value + "  "))
+			s.Write([]byte(" " + value + "  "))
 
 			padding := columnLengths[key] - len(value)
 
 			if padding > 0 {
-				Write([]byte(strings.Repeat(" ", padding)))
+				s.Write([]byte(strings.Repeat(" ", padding)))
 			}
 		}
 
-		Write([]byte("\n"))
+		s.Write([]byte("\n"))
 	}
 }
 

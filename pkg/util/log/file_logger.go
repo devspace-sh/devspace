@@ -166,7 +166,7 @@ func (f *fileLogger) StopWait() {
 }
 
 // PrintTable implements logger interface
-func (d *fileLogger) PrintTable(header []string, values [][]string) {
+func (f *fileLogger) PrintTable(header []string, values [][]string) {
 	//TODO
 }
 
