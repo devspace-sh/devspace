@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -156,65 +158,73 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	cmd.buildAndDeploy()
+	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, cmd.kubectl)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if cmd.flags.exitAfterDeploy == false {
 		// Start services
-		cmd.startServices(args)
+		err = startServices(cmd.flags, cmd.kubectl, args, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
-func (cmd *UpCmd) buildAndDeploy() {
+func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) error {
 	config := configutil.GetConfig()
 
 	// Load config
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return fmt.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Build image if necessary
-	mustRedeploy, err := image.BuildAll(cmd.kubectl, generatedConfig, cmd.flags.build, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(kubectl, generatedConfig, build, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Error building image: %v", err)
 	}
 
 	// Save config if an image was built
 	if mustRedeploy == true {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving generated config: %v", err)
+			return fmt.Errorf("Error saving generated config: %v", err)
 		}
 	}
 
 	// Deploy all defined deployments
 	if config.DevSpace.Deployments != nil {
 		// Deploy all
-		err = deploy.All(cmd.kubectl, generatedConfig, mustRedeploy || cmd.flags.deploy, true, log.GetInstance())
+		err = deploy.All(kubectl, generatedConfig, mustRedeploy || shouldDeploy, true, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("Error deploying devspace: %v", err)
 		}
 
 		// Save Config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving generated config: %v", err)
+			return fmt.Errorf("Error saving generated config: %v", err)
 		}
 	}
+
+	return nil
 }
 
-func (cmd *UpCmd) startServices(args []string) {
-	if cmd.flags.portforwarding {
-		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
+func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []string, log log.Logger) error {
+	if flags.portforwarding {
+		err := services.StartPortForwarding(kubectl, log)
 		if err != nil {
-			log.Fatalf("Unable to start portforwarding: %v", err)
+			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
 	}
 
-	if cmd.flags.sync {
-		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
+	if flags.sync {
+		syncConfigs, err := services.StartSync(kubectl, flags.verboseSync, log)
 		if err != nil {
-			log.Fatalf("Unable to start sync: %v", err)
+			return fmt.Errorf("Unable to start sync: %v", err)
 		}
 
 		defer func() {
@@ -231,5 +241,5 @@ func (cmd *UpCmd) startServices(args []string) {
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
+	return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
 }
