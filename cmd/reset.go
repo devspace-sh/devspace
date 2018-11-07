@@ -89,7 +89,7 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 	}
 
 	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould the cloud devspace be removed (y/n)",
+		Question:               "\n\nShould the DevSpace be deleted from the DevSpace-cloud (y/n)",
 		DefaultValue:           "y",
 		ValidationRegexPattern: "^(y|n)$",
 	}) == "y"
@@ -104,6 +104,11 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 				log.Failf("Error deleting devspace: %v", err)
 			} else {
 				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
+
+				err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
+				if err != nil {
+					log.Failf("Error deleting kube context: %v", err)
+				}
 			}
 		}
 	} else {
