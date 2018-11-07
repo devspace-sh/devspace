@@ -159,7 +159,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if cmd.flags.exitAfterDeploy == false {
 		// Start services
-		err = startServices(cmd.flags.portforwarding, cmd.flags.sync, cmd.flags.verboseSync, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, cmd.kubectl, args)
+		err = startServices(cmd.flags, cmd.kubectl, args, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -207,16 +207,16 @@ func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) err
 	return nil
 }
 
-func startServices(portforwarding, sync, verboseSync bool, service, container, labelSelector, namespace string, kubectl *kubernetes.Clientset, args []string) error {
-	if portforwarding {
-		err := services.StartPortForwarding(kubectl, log.GetInstance())
+func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []string, log log.Logger) error {
+	if flags.portforwarding {
+		err := services.StartPortForwarding(kubectl, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
 	}
 
-	if sync {
-		syncConfigs, err := services.StartSync(kubectl, verboseSync, log.GetInstance())
+	if flags.sync {
+		syncConfigs, err := services.StartSync(kubectl, flags.verboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -235,6 +235,5 @@ func startServices(portforwarding, sync, verboseSync bool, service, container, l
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
-	services.StartTerminal(kubectl, service, container, labelSelector, namespace, args, log.GetInstance())
-	return nil
+	return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
 }
