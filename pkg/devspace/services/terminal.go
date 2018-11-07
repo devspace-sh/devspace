@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -13,7 +14,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, log log.Logger) {
+func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, log log.Logger) error {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -49,7 +50,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 
 		service, err = configutil.GetService(serviceName)
 		if err != nil && serviceName != "default" {
-			log.Fatalf("Error resolving service name: %v", err)
+			return fmt.Errorf("Error resolving service name: %v", err)
 		}
 	}
 
@@ -98,7 +99,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace)
 	log.StopWait()
 	if err != nil {
-		log.Fatalf("Cannot find running pod: %v", err)
+		return fmt.Errorf("Cannot find running pod: %v", err)
 	}
 
 	// Get container name
@@ -118,9 +119,11 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	_, _, _, terminalErr := kubectl.Exec(client, pod, containerName, command, true, nil)
 	if terminalErr != nil {
 		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
-			log.Fatalf("Unable to start terminal session: %v", terminalErr)
+			return fmt.Errorf("Unable to start terminal session: %v", terminalErr)
 		}
 	}
+
+	return nil
 }
 
 // GetNameOfFirstHelmDeployment retrieves the first helm deployment name
