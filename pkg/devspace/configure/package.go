@@ -46,17 +46,17 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	if deploymentConfig == nil {
-		log.Fatalf("Deployment %s not found", deployment)
+		return fmt.Errorf("Deployment %s not found", deployment)
 	}
 
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return fmt.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	helm, err := helmClient.NewClient(kubectl, log, false)
 	if err != nil {
-		log.Fatalf("Error initializing helm client: %v", err)
+		return fmt.Errorf("Error initializing helm client: %v", err)
 	}
 
 	if len(args) != 1 {
@@ -69,13 +69,13 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	log.StopWait()
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Done("Chart found")
 	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	packageName := version.GetName()
 
@@ -89,20 +89,20 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 
 		err = ioutil.WriteFile(requirementsFile, []byte(entry), 0600)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		yamlContents := map[interface{}]interface{}{}
 		err = yamlutil.ReadYamlFromFile(requirementsFile, yamlContents)
 		if err != nil {
-			log.Fatalf("Error parsing %s: %v", requirementsFile, err)
+			return fmt.Errorf("Error parsing %s: %v", requirementsFile, err)
 		}
 
 		dependenciesArr := []interface{}{}
 		if dependencies, ok := yamlContents["dependencies"]; ok {
 			dependenciesArr, ok = dependencies.([]interface{})
 			if ok == false {
-				log.Fatalf("Error parsing %s: Key dependencies is not an array", requirementsFile)
+				return fmt.Errorf("Error parsing %s: Key dependencies is not an array", requirementsFile)
 			}
 		}
 
@@ -113,7 +113,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 				existingDepName := existingDependencyMap["name"]
 
 				if existingDepName == packageName {
-					log.Fatalf("Package %s already added", packageName)
+					return fmt.Errorf("Package %s already added", packageName)
 				}
 			}
 		}
@@ -127,7 +127,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 
 		err = yamlutil.WriteYamlToFile(yamlContents, requirementsFile)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -136,7 +136,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	log.StopWait()
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if key already exists
@@ -145,7 +145,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 
 	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
 	if err != nil {
-		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
+		return fmt.Errorf("Error parsing %s: %v", valuesYaml, err)
 	}
 
 	// get default config for package
@@ -154,7 +154,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	if _, ok := valuesYamlContents[packageName]; ok == false {
 		f, err := os.OpenFile(valuesYaml, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer f.Close()
 
@@ -164,7 +164,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		}
 
 		if _, err = f.WriteString(packageComment + packageName + ":" + packageDefaultValues); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 	serviceLabelSelector := map[string]*string{}
@@ -187,13 +187,13 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	if sericeNotFoundErr != nil {
 		err = configutil.AddService(packageService)
 		if err != nil {
-			log.Fatalf("Unable to add service to config: %v", err)
+			return fmt.Errorf("Unable to add service to config: %v", err)
 		}
 	}
 
 	err = configutil.SaveConfig()
 	if err != nil {
-		log.Fatalf("Unable to save config: %v", err)
+		return fmt.Errorf("Unable to save config: %v", err)
 	}
 
 	log.Donef("Successfully added package %s, you can now modify the configuration in '%s"+string(os.PathSeparator)+"values.yaml'", packageName, chartPath)
@@ -211,7 +211,10 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			if repo.URL == defaultStableRepoURL {
 				open.Start("https://github.com/helm/charts/tree/master/stable/" + packageName)
 			} else {
-				showReadme(chartPath, version)
+				err = showReadme(chartPath, version)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -222,14 +225,17 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		})
 
 		if shouldRedeploy == "yes" {
-			redeployAferPackageChange(kubectl, deploymentConfig, log)
+			err = redeployAferPackageChange(kubectl, deploymentConfig, log)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) {
+func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) error {
 	config := configutil.GetConfig()
 	listOptions := metav1.ListOptions{}
 	deploymentNamespace := *deploymentConfig.Namespace
@@ -239,14 +245,14 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 
 		deploymentNamespace, err = configutil.GetDefaultNamespace(config)
 		if err != nil {
-			log.Fatal("Unable to retrieve default namespace: %v", err)
+			return fmt.Errorf("Unable to retrieve default namespace: %v", err)
 		}
 	}
 
 	// Load generatedConfig
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return fmt.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	log.StartWait("Re-deploying DevSpace")
@@ -262,11 +268,11 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 	// Save generated config
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
-		log.Fatalf("Error saving generated config: %v", err)
+		return fmt.Errorf("Error saving generated config: %v", err)
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.Done("Successfully re-deployed DevSpace")
 
@@ -315,6 +321,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 			}
 		}
 	}
+	return nil
 }
 
 // RemovePackage removes a helm dependency from a deployment
@@ -360,7 +367,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	if dependencies, ok := yamlContents["dependencies"]; ok {
 		dependenciesArr, ok := dependencies.([]interface{})
 		if ok == false {
-			log.Fatalf("Error parsing yaml: %v", dependencies)
+			return fmt.Errorf("Error parsing yaml: %v", dependencies)
 		}
 
 		if removeAll {
@@ -383,7 +390,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 			for key, dependency := range dependenciesArr {
 				dependencyMap, ok := dependency.(map[interface{}]interface{})
 				if ok == false {
-					log.Fatalf("Error parsing yaml: %v", dependencies)
+					return fmt.Errorf("Error parsing yaml: %v", dependencies)
 				}
 
 				if name, ok := dependencyMap["name"].(string); ok {
@@ -425,9 +432,13 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 		if shouldRedeploy == "yes" {
 			kubectl, err := kubectl.NewClient()
 			if err != nil {
-				log.Fatalf("Unable to create new kubectl client: %v", err)
+				return fmt.Errorf("Unable to create new kubectl client: %v", err)
 			}
-			redeployAferPackageChange(kubectl, deploymentConfig, log)
+
+			err = redeployAferPackageChange(kubectl, deploymentConfig, log)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -465,25 +476,27 @@ func rebuildDependencies(chartPath string, newYamlContents map[interface{}]inter
 	return nil
 }
 
-func showReadme(chartPath string, chartVersion *repo.ChartVersion) {
+func showReadme(chartPath string, chartVersion *repo.ChartVersion) error {
 	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(chartPath, "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	output := blackfriday.MarkdownCommon([]byte(content))
 	f, err := os.OpenFile(filepath.Join(os.TempDir(), "Readme.html"), os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	defer f.Close()
 
 	_, err = f.Write(output)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	f.Close()
 	open.Start(f.Name())
+
+	return nil
 }
