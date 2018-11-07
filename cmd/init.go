@@ -6,22 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/configure"
+	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-
 	"github.com/covexo/devspace/pkg/util/dockerfile"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
-
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
-
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +33,7 @@ type InitCmd struct {
 type InitCmdFlags struct {
 	reconfigure      bool
 	overwrite        bool
+	allyes           bool
 	templateRepoURL  string
 	templateRepoPath string
 	language         string
@@ -47,6 +43,7 @@ type InitCmdFlags struct {
 var InitCmdFlagsDefault = &InitCmdFlags{
 	reconfigure:      false,
 	overwrite:        false,
+	allyes:           false,
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 	language:         "",
@@ -92,6 +89,7 @@ YOUR_PROJECT_PATH/
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", cmd.flags.reconfigure, "Change existing configuration")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.allyes, "yes", "y", cmd.flags.allyes, "Answer every questions with the default")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
@@ -100,7 +98,6 @@ YOUR_PROJECT_PATH/
 // Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-
 	workdir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Unable to determine current workdir: %s", err.Error())
@@ -161,10 +158,11 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
-
 	if !cmd.flags.overwrite {
 		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-		if chartDirNotFound == nil {
+		if cmd.flags.allyes {
+			createChart = false
+		} else if chartDirNotFound == nil {
 			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
 				DefaultValue:           "no",
@@ -252,12 +250,14 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			return true
 		}
 	} else {
-		useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		}) == "yes"
-
+		useDevSpaceCloud := true
+		if !cmd.flags.allyes {
+			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			}) == "yes"
+		}
 		if useDevSpaceCloud {
 			cmd.loginToCloudProvider(providerConfig, cloud.DevSpaceCloudProviderName)
 			return true
@@ -268,12 +268,14 @@ func (cmd *InitCmd) useCloudProvider() bool {
 }
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
-	addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
-		DefaultValue:           "yes",
-		ValidationRegexPattern: "^(yes)|(no)$",
-	}) == "yes"
-
+	addToContext := true
+	if !cmd.flags.allyes {
+		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes)|(no)$",
+		}) == "yes"
+	}
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
