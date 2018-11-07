@@ -33,7 +33,7 @@ type InitCmd struct {
 type InitCmdFlags struct {
 	reconfigure      bool
 	overwrite        bool
-	allyes           bool
+	skipQuestions    bool
 	templateRepoURL  string
 	templateRepoPath string
 	language         string
@@ -43,7 +43,7 @@ type InitCmdFlags struct {
 var InitCmdFlagsDefault = &InitCmdFlags{
 	reconfigure:      false,
 	overwrite:        false,
-	allyes:           false,
+	skipQuestions:    false,
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 	language:         "",
@@ -89,7 +89,7 @@ YOUR_PROJECT_PATH/
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", cmd.flags.reconfigure, "Change existing configuration")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.allyes, "yes", "y", cmd.flags.allyes, "Answer every questions with the default")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.skipQuestions, "yes", "y", cmd.flags.skipQuestions, "Answer all questions with their default value")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
@@ -160,15 +160,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	createChart := cmd.flags.overwrite
 	if !cmd.flags.overwrite {
 		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
-		if cmd.flags.allyes {
-			createChart = false
-		} else if chartDirNotFound == nil {
-			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
-				DefaultValue:           "no",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
-			createChart = (*overwriteAnswer == "yes")
+		if chartDirNotFound == nil {
+			if !cmd.flags.skipQuestions {
+				createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
+					DefaultValue:           "no",
+					ValidationRegexPattern: "^(yes)|(no)$",
+				}) == "yes"
+			}
 		} else {
 			createChart = true
 		}
@@ -251,7 +250,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}
 	} else {
 		useDevSpaceCloud := true
-		if !cmd.flags.allyes {
+		if !cmd.flags.skipQuestions {
 			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 				DefaultValue:           "yes",
@@ -269,7 +268,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
 	addToContext := true
-	if !cmd.flags.allyes {
+	if !cmd.flags.skipQuestions {
 		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 			DefaultValue:           "yes",
@@ -421,7 +420,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	err = configure.ImageName(dockerUsername)
+	err = configure.ConfigureImage(dockerUsername, cmd.flags.skipQuestions)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -454,11 +453,13 @@ func (cmd *InitCmd) determineLanguage() {
 
 		log.StopWait()
 
-		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
-			DefaultValue:           detectedLang,
-			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
-		})
+		if !cmd.flags.skipQuestions {
+			cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
+				DefaultValue:           detectedLang,
+				ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
+			})
+		}
 	}
 }
 
