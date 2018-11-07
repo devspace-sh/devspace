@@ -40,6 +40,9 @@ const LoginSuccessEndpoint = "/loginSuccess"
 // GetClusterConfigEndpoint is the endpoint where to get the kubernetes context data
 const GetClusterConfigEndpoint = "/clusterConfig"
 
+// DeleteDevSpaceEndpoint deletes a DevSpace with all targets
+const DeleteDevSpaceEndpoint = "/delete"
+
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
 	Name: DevSpaceCloudProviderName,
