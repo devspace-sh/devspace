@@ -3,6 +3,8 @@ package services
 import (
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -11,7 +13,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, labelSelectorOverride string, namespaceOverride string, args []string, log log.Logger) {
+func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, log log.Logger) {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -31,11 +33,35 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, l
 		}
 	}
 
+	var service *v1.ServiceConfig
+	serviceName := "default"
+
+	if serviceNameOverride == "" {
+		if config.DevSpace.Terminal.Service != nil {
+			serviceName = *config.DevSpace.Terminal.Service
+		}
+	} else {
+		serviceName = serviceNameOverride
+	}
+
+	if serviceName != "" {
+		var err error
+
+		service, err = configutil.GetService(serviceName)
+		if err != nil && serviceName != "default" {
+			log.Fatalf("Error resolving service name: %v", err)
+		}
+	}
+
 	// Select pods
 	namespace := ""
 	if namespaceOverride == "" {
-		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
-			namespace = *config.DevSpace.Terminal.Namespace
+		if service != nil && service.Namespace != nil {
+			namespace = *service.Namespace
+		} else {
+			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
+				namespace = *config.DevSpace.Terminal.Namespace
+			}
 		}
 	} else {
 		namespace = namespaceOverride
@@ -45,13 +71,23 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, l
 	// Retrieve pod from label selector
 	if labelSelectorOverride == "" {
 		labelSelector = "release=" + GetNameOfFirstHelmDeployment()
-		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
-			labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
-			for key, value := range *config.DevSpace.Terminal.LabelSelector {
+
+		if service != nil {
+			labels := make([]string, 0, len(*service.LabelSelector)-1)
+			for key, value := range *service.LabelSelector {
 				labels = append(labels, key+"="+*value)
 			}
 
 			labelSelector = strings.Join(labels, ", ")
+		} else {
+			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
+				labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
+				for key, value := range *config.DevSpace.Terminal.LabelSelector {
+					labels = append(labels, key+"="+*value)
+				}
+
+				labelSelector = strings.Join(labels, ", ")
+			}
 		}
 	} else {
 		labelSelector = labelSelectorOverride
@@ -67,10 +103,16 @@ func StartTerminal(client *kubernetes.Clientset, containerNameOverride string, l
 
 	// Get container name
 	containerName := pod.Spec.Containers[0].Name
-	if containerNameOverride != "" {
+	if containerNameOverride == "" {
+		if service != nil && service.ContainerName != nil {
+			containerName = *service.ContainerName
+		} else {
+			if config.DevSpace.Terminal.ContainerName != nil {
+				containerName = *config.DevSpace.Terminal.ContainerName
+			}
+		}
+	} else {
 		containerName = containerNameOverride
-	} else if config.DevSpace.Terminal.ContainerName != nil {
-		containerName = *config.DevSpace.Terminal.ContainerName
 	}
 
 	_, _, _, terminalErr := kubectl.Exec(client, pod, containerName, command, true, nil)

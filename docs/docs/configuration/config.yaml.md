@@ -14,6 +14,7 @@ devSpace:
     # For this deployment we use helm as deployment method (kubectl would be also an option)
     helm:
       chartPath: ./chart
+      devOverwrite: ./chart/dev-overwrite.yaml
   sync:
   - containerPath: /app
     labelSelector:
@@ -21,6 +22,12 @@ devSpace:
     localSubPath: ./
     uploadExcludePaths:
     - .devspace/
+  portForwarding:
+  - labelSelector:
+      release: devspace-default
+    portMappings:
+    - localPort: 3000
+      remotePort: 3000
 images:
   default:
     name: mydockername/devspace
@@ -45,6 +52,7 @@ In this section, so called deployments are defined, which will be deployed to th
 ### devspace.deployments[].helm
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
 - `chartPath` *string* the path where the helm chart is laying
+- `devOverwrite` *string* the path to a files that overwrites the values.yaml when using `devspace up`
 
 ### devspace.deployments[].kubectl
 When using kubectl as deployment method, `devspace up` will use kubectl apply on the specified manifests to deploy them to the target cluster. [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl) is needed in order for this option to work.  
@@ -90,6 +98,7 @@ This section of the config defines a map of images that can be used in the helm 
 ### images[]
 An image is defined by:
 - `name` *string* name of the image with registry url prefixed (e.g. dockerhubname/image, gcr.io/googleprojectname/image etc.)
+- `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
 - `build` *BuildConfig* defines the build procedure for this image  
 
@@ -100,6 +109,7 @@ BuildConfig:
 - `docker` *DockerConfig* use the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
 - `kaniko` *KanikoConfig* build images in userspace within a build pod running inside the Kubernetes cluster 
 - `options` *BuildOptions* additional options used for building the image
+- `disabled` *bool* Optional: if true building is skipped for this image (Can be useful when using in overwrite.yaml)
 
 ### images[].build.docker
 DockerConfig:
@@ -185,7 +195,9 @@ devSpace:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
       # Use helm to deploy this chart
-      chartPath: chart/
+      chartPath: ./chart
+      # Overwrite the values.yaml with dev-values.yaml when running devspace up
+      devOverwrite: ./chart/dev-overwrite.yaml
   - name: devspace-kubectl
     kubectl: 
       manifests:
@@ -246,6 +258,8 @@ images:
   database:
     name: devspace-user/devspace
     registry: internal
+    # Automatically create a pull secret for this image/registry
+    createPullSecret: true
     build:
       kaniko:
         # Use kaniko within the target cluster to build the image
@@ -253,6 +267,8 @@ images:
         cache: true
   privateRegistryImage:
     name: user/test
+    # Automatically create a pull secret for this image/registry
+    createPullSecret: true
     registry: privateRegistry
 # Optional: the registries the images should be pushed to
 registries:

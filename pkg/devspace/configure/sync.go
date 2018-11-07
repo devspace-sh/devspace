@@ -46,7 +46,6 @@ func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsStr
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(containerPath),
 		LocalSubPath:  configutil.String(localPath),

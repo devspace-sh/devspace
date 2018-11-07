@@ -16,5 +16,5 @@ func loadConfig(config *v1.Config, path string) error {
 		return err
 	}
 
-	return yaml.Unmarshal(yamlFileContent, config)
+	return yaml.UnmarshalStrict(yamlFileContent, config)
 }

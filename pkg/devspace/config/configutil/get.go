@@ -4,6 +4,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/juju/errors"
+
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/tools/clientcmd"
@@ -16,13 +18,20 @@ type ConfigInterface interface{}
 
 const configGitignore = `logs/
 overwrite.yaml
+generated.yaml
 `
 
+// DefaultConfigPath is the default config path to use
+const DefaultConfigPath = "/.devspace/config.yaml"
+
 // ConfigPath is the path for the main config
-const ConfigPath = "/.devspace/config.yaml"
+var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
-const OverwriteConfigPath = "/.devspace/overwrite.yaml"
+var OverwriteConfigPath = "/.devspace/overwrite.yaml"
+
+// DefaultDevspaceServiceName is the name of the initial default service
+const DefaultDevspaceServiceName = "default"
 
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
 const DefaultDevspaceDeploymentName = "devspace-default"
@@ -69,6 +78,14 @@ func InitConfig() *v1.Config {
 
 // GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig() *v1.Config {
+	GetConfigWithoutDefaults()
+	SetDefaultsOnce()
+
+	return config
+}
+
+// GetConfigWithoutDefaults returns the config without setting the default values
+func GetConfigWithoutDefaults() *v1.Config {
 	getConfigOnce.Do(func() {
 		config = makeConfig()
 		overwriteConfig = makeConfig()
@@ -78,8 +95,7 @@ func GetConfig() *v1.Config {
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
-			log.Errorf("Loading config: %v", err)
-			log.Fatal("Please run `devspace init -r` to repair your config")
+			log.Fatalf("Loading config: %v", err)
 		}
 
 		if configRaw.Version == nil || *configRaw.Version != CurrentConfigVersion {
@@ -91,8 +107,6 @@ func GetConfig() *v1.Config {
 
 		Merge(&config, configRaw, false)
 		Merge(&config, overwriteConfig, true)
-
-		SetDefaultsOnce()
 	})
 
 	return config
@@ -129,6 +143,18 @@ func SetDefaultsOnce() {
 
 					if deployConfig.Helm != nil {
 						needTiller = true
+					}
+				}
+			}
+
+			if config.DevSpace.Services != nil {
+				for index, serviceConfig := range *config.DevSpace.Services {
+					if serviceConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed service at index %d", index)
+					}
+
+					if serviceConfig.Namespace == nil {
+						serviceConfig.Namespace = String("")
 					}
 				}
 			}
@@ -172,7 +198,8 @@ func SetDefaultsOnce() {
 			defaultConfig.InternalRegistry = &v1.InternalRegistryConfig{
 				Namespace: &defaultNamespace,
 			}
-			config.InternalRegistry.Namespace = &defaultNamespace
+
+			config.InternalRegistry.Namespace = defaultConfig.InternalRegistry.Namespace
 		}
 	})
 }
@@ -200,4 +227,26 @@ func GetDefaultNamespace(config *v1.Config) (string, error) {
 	}
 
 	return "default", nil
+}
+
+// GetService returns the service referenced by serviceName
+func GetService(serviceName string) (*v1.ServiceConfig, error) {
+	if config.DevSpace.Services != nil {
+		for _, service := range *config.DevSpace.Services {
+			if *service.Name == serviceName {
+				return service, nil
+			}
+		}
+	}
+	return nil, errors.New("Unable to find service: " + serviceName)
+}
+
+// AddService adds a service to the config
+func AddService(service *v1.ServiceConfig) error {
+	if config.DevSpace.Services == nil {
+		config.DevSpace.Services = &[]*v1.ServiceConfig{}
+	}
+	*config.DevSpace.Services = append(*config.DevSpace.Services, service)
+
+	return nil
 }

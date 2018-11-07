@@ -1,6 +1,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,13 +17,35 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
-	dockerregistry "github.com/docker/docker/registry"
 )
 
+// BuildAll builds all images
+func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, forceRebuild bool, log log.Logger) (bool, error) {
+	config := configutil.GetConfig()
+	re := false
+
+	for imageName, imageConf := range *config.Images {
+		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
+			log.Infof("Skipping building image %s", imageName)
+			continue
+		}
+
+		shouldRebuild, err := Build(client, generatedConfig, imageName, imageConf, forceRebuild, log)
+		if err != nil {
+			return false, err
+		}
+
+		if shouldRebuild {
+			re = true
+		}
+	}
+
+	return re, nil
+}
+
 // Build builds an image with the specified engine
-func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool) (bool, error) {
+func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageName string, imageConf *v1.ImageConfig, forceRebuild bool, log log.Logger) (bool, error) {
 	rebuild := false
 	config := configutil.GetConfig()
 	dockerfilePath := "./Dockerfile"
@@ -38,7 +61,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 	}
 
-	dockerfilePath, err := filepath.Abs(dockerfilePath)
+	absoluteDockerfilePath, err := filepath.Abs(dockerfilePath)
 	if err != nil {
 		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
 	}
@@ -49,53 +72,29 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	if shouldRebuild(generatedConfig, imageConf, dockerfilePath, forceRebuild) {
+		var imageBuilder builder.Interface
 		rebuild = true
-		imageTag, randErr := randutil.GenerateRandomString(7)
-		if randErr != nil {
-			return false, fmt.Errorf("Image building failed: %s", randErr.Error())
+
+		imageTag, err := randutil.GenerateRandomString(7)
+		if err != nil {
+			return false, fmt.Errorf("Image building failed: %v", err)
+		}
+		if imageConf.Tag != nil {
+			imageTag = *imageConf.Tag
 		}
 
-		var registryConf *v1.RegistryConfig
-		var imageBuilder builder.Interface
+		imageName, registryConf, err := registry.GetRegistryConfigFromImageConfig(imageConf)
+		if err != nil {
+			return false, fmt.Errorf("GetRegistryConfigFromImageConfig failed: %v", err)
+		}
 
 		engineName := ""
-		registryURL := ""
-		imageName := *imageConf.Name
-
-		if imageConf.Registry != nil {
-			registryConf, err = registry.GetRegistryConfig(imageConf)
-			if err != nil {
-				return false, err
-			}
-
-			if registryConf.URL != nil {
-				registryURL = *registryConf.URL
-			}
-			if registryURL == "hub.docker.com" {
-				registryURL = ""
-			}
-		} else {
-			registryURL, err = GetRegistryFromImageName(*imageConf.Name)
-			if err != nil {
-				return false, err
-			}
-
-			if len(registryURL) > 0 {
-				// Crop registry Url from imageName
-				imageName = imageName[len(registryURL)+1:]
-			}
-
-			registryConf = &v1.RegistryConfig{
-				URL:      &registryURL,
-				Insecure: configutil.Bool(false),
-			}
-		}
 
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 			engineName = "kaniko"
 			buildNamespace, err := configutil.GetDefaultNamespace(config)
 			if err != nil {
-				log.Fatalf("Error retrieving default namespace")
+				return false, errors.New("Error retrieving default namespace")
 			}
 
 			if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
@@ -112,9 +111,9 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				pullSecret = *imageConf.Build.Kaniko.PullSecret
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(registryURL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
+			imageBuilder, err = kaniko.NewBuilder(*registryConf.URL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
 			if err != nil {
-				log.Fatalf("Error creating kaniko builder: %v", err)
+				return false, fmt.Errorf("Error creating kaniko builder: %v", err)
 			}
 		} else {
 			engineName = "docker"
@@ -124,9 +123,9 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				preferMinikube = *imageConf.Build.Docker.PreferMinikube
 			}
 
-			imageBuilder, err = docker.NewBuilder(registryURL, imageName, imageTag, preferMinikube)
+			imageBuilder, err = docker.NewBuilder(*registryConf.URL, imageName, imageTag, preferMinikube)
 			if err != nil {
-				log.Fatalf("Error creating docker client: %v", err)
+				return false, fmt.Errorf("Error creating docker client: %v", err)
 			}
 		}
 
@@ -145,8 +144,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 
 		displayRegistryURL := "hub.docker.com"
-		if registryURL != "" {
-			displayRegistryURL = registryURL
+		if *registryConf.URL != "" {
+			displayRegistryURL = *registryConf.URL
 		}
 
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
@@ -154,7 +153,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.StopWait()
 
 		if err != nil {
-			log.Fatalf("Error during image registry authentication: %v", err)
+			return false, fmt.Errorf("Error during image registry authentication: %v", err)
 		}
 
 		log.Done("Authentication successful (" + displayRegistryURL + ")")
@@ -173,7 +172,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			}
 		}
 
-		err = imageBuilder.BuildImage(contextPath, dockerfilePath, buildOptions)
+		err = imageBuilder.BuildImage(contextPath, absoluteDockerfilePath, buildOptions)
 		if err != nil {
 			return false, fmt.Errorf("Error during image build: %v", err)
 		}
@@ -186,8 +185,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 
 		// Update config
-		if registryURL != "" {
-			imageName = registryURL + "/" + imageName
+		if *registryConf.URL != "" {
+			imageName = *registryConf.URL + "/" + imageName
 		}
 
 		generatedConfig.ImageTags[imageName] = imageTag
@@ -202,8 +201,8 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 
 func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, dockerfilePath string, forceRebuild bool) bool {
 	mustRebuild := true
-	dockerfileInfo, err := os.Stat(dockerfilePath)
 
+	dockerfileInfo, err := os.Stat(dockerfilePath)
 	if err != nil {
 		log.Warnf("Dockerfile %s missing: %v", dockerfilePath, err)
 		mustRebuild = false
@@ -218,23 +217,4 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, d
 	}
 
 	return mustRebuild
-}
-
-// GetRegistryFromImageName retrieves the registry name from an imageName
-func GetRegistryFromImageName(imageName string) (string, error) {
-	ref, err := reference.ParseNormalizedNamed(imageName)
-	if err != nil {
-		return "", err
-	}
-
-	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
-	if err != nil {
-		return "", err
-	}
-
-	if repoInfo.Index.Official {
-		return "", nil
-	}
-
-	return repoInfo.Index.Name, nil
 }

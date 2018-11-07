@@ -128,7 +128,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Name:      configutil.String(configutil.DefaultDevspaceDeploymentName),
 				Namespace: configutil.String(""),
 				Helm: &v1.HelmConfig{
-					ChartPath: configutil.String("./chart"),
+					ChartPath:    configutil.String("./chart"),
+					DevOverwrite: configutil.String("./chart/dev-overwrite.yaml"),
 				},
 			},
 		}
@@ -187,6 +188,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			cmd.configureDevSpace()
 		}
 
+		cmd.addDefaultService()
 		cmd.addDefaultPorts()
 		cmd.addDefaultSyncConfig()
 
@@ -217,8 +219,6 @@ func (cmd *InitCmd) initChartGenerator() {
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
-	config := configutil.GetConfig()
-	overwriteConfig := configutil.GetOverwriteConfig()
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading cloud config: %v", err)
@@ -248,21 +248,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}
 
 		if cloudProviderSelected != "no" {
-			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to add the cloud provider to the $HOME/.kube/config file? (yes | no)",
-				DefaultValue:           "yes",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			}) == "yes"
-
-			config.Cluster.CloudProvider = &cloudProviderSelected
-
-			log.StartWait("Logging into cloud provider " + providerConfig[cloudProviderSelected].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
-			log.StopWait()
-			if err != nil {
-				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
-			}
-
+			cmd.loginToCloudProvider(providerConfig, cloudProviderSelected)
 			return true
 		}
 	} else {
@@ -273,26 +259,31 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}) == "yes"
 
 		if useDevSpaceCloud {
-			addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
-				DefaultValue:           "yes",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			}) == "yes"
-
-			config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
-
-			log.StartWait("Logging into cloud provider " + providerConfig[cloud.DevSpaceCloudProviderName].Host + cloud.LoginEndpoint + "...")
-			err := cloud.Update(providerConfig, *config.Cluster.CloudProvider, overwriteConfig, addToContext, true)
-			log.StopWait()
-			if err != nil {
-				log.Fatalf("Couldn't authenticate to DevSpace Cloud: %v", err)
-			}
-
+			cmd.loginToCloudProvider(providerConfig, cloud.DevSpaceCloudProviderName)
 			return true
 		}
 	}
 
 	return false
+}
+func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
+	config := configutil.GetConfig()
+	addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
+		DefaultValue:           "yes",
+		ValidationRegexPattern: "^(yes)|(no)$",
+	}) == "yes"
+
+	config.Cluster.CloudProvider = &cloudProviderSelected
+	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
+
+	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
+		UseKubeContext:    addToContext,
+		SwitchKubeContext: true,
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
+	}
 }
 
 func (cmd *InitCmd) configureDevSpace() {
@@ -310,6 +301,18 @@ func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = namespace
+}
+
+func (cmd *InitCmd) addDefaultService() {
+	config := configutil.GetConfig()
+	config.DevSpace.Services = &[]*v1.ServiceConfig{
+		{
+			Name: configutil.String(configutil.DefaultDevspaceServiceName),
+			LabelSelector: &map[string]*string{
+				"devspace": configutil.String("default"),
+			},
+		},
+	}
 }
 
 func (cmd *InitCmd) addDefaultPorts() {
@@ -334,9 +337,7 @@ func (cmd *InitCmd) addDefaultPorts() {
 	config := configutil.GetConfig()
 	config.DevSpace.Ports = &[]*v1.PortForwardingConfig{
 		{
-			LabelSelector: &map[string]*string{
-				"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
-			},
+			Service:      configutil.String(configutil.DefaultDevspaceServiceName),
 			PortMappings: &portMappings,
 		},
 	}
@@ -365,11 +366,9 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ContainerPath: configutil.String("/app"),
-		LocalSubPath:  configutil.String("./"),
-		LabelSelector: &map[string]*string{
-			"release": configutil.String(configutil.DefaultDevspaceDeploymentName),
-		},
+		Service:            configutil.String(configutil.DefaultDevspaceServiceName),
+		ContainerPath:      configutil.String("/app"),
+		LocalSubPath:       configutil.String("./"),
 		UploadExcludePaths: &uploadExcludePaths,
 	})
 

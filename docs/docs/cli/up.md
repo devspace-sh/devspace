@@ -18,6 +18,7 @@ Usage:
 
 Flags:
   -b, --build                   Force image build
+      --config string           The devspace config file to load (default: '.devspace/config.yaml' (default "/.devspace/config.yaml")
   -c, --container string        Container name where to open the shell
   -d, --deploy                  Force chart deployment
       --exit-after-deploy       Exits the command after building the images and deploying the devspace
@@ -30,6 +31,7 @@ Flags:
       --sync                    Enable code synchronization (default true)
       --tiller                  Install/upgrade tiller (default true)
       --verbose-sync            When enabled the sync will log every file change
+  -s, --service string          Service name (in config) to select pod/container for terminal
 
 Examples:
 devspace up                  # Start the devspace

@@ -16,9 +16,10 @@ type EnterCmd struct {
 
 // EnterCmdFlags are the flags available for the enter-command
 type EnterCmdFlags struct {
-	container     string
+	service       string
 	namespace     string
 	labelSelector string
+	container     string
 }
 
 func init() {
@@ -28,7 +29,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "enter",
-		Short: "Enter your DevSpace",
+		Short: "Start a new terminal session",
 		Long: `
 #######################################################
 ################## devspace enter #####################
@@ -38,7 +39,8 @@ devspace:
 
 devspace enter
 devspace enter bash
-devspace enter -c myContainer
+devspace enter -s my-service
+devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
 #######################################################`,
@@ -46,9 +48,10 @@ devspace enter bash -l release=test
 	}
 	rootCmd.AddCommand(cobraCmd)
 
+	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pod/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
-	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 }
 
 // Run executes the command logic
@@ -61,5 +64,5 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
+	services.StartTerminal(cmd.kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 }
