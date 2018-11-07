@@ -176,6 +176,11 @@ func (s *stdoutLogger) StopWait() {
 	}
 }
 
+// PrintTable implements logger interface
+func (d *stdoutLogger) PrintTable(header []string, values [][]string) {
+	//TODO
+}
+
 func (s *stdoutLogger) Debug(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()

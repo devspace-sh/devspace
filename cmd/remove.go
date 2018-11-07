@@ -167,7 +167,7 @@ func (cmd *RemoveCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string
 
 // RunRemovePackage executes the remove package command logic
 func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
-	err := configure.RemovePackage(cmd.packageFlags.RemoveAll, cmd.packageFlags.Deployment, args)
+	err := configure.RemovePackage(cmd.packageFlags.RemoveAll, cmd.packageFlags.Deployment, args, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

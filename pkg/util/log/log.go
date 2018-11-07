@@ -150,8 +150,8 @@ func WriteColored(message string, color ct.Color) {
 }
 
 // Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
-func Write(message string) {
-	stdoutLog.Write([]byte(message))
+func Write(message []byte) {
+	stdoutLog.Write(message)
 }
 
 // PrintTable prints a table with header columns and string values
@@ -178,28 +178,28 @@ func PrintTable(header []string, values [][]string) {
 		padding := columnLengths[key] - len(value)
 
 		if padding > 0 {
-			Write(strings.Repeat(" ", padding))
+			Write([]byte(strings.Repeat(" ", padding)))
 		}
 	}
 
-	Write("\n")
+	Write([]byte("\n"))
 
 	if len(values) == 0 {
-		Write(" No entries found\n")
+		Write([]byte(" No entries found\n"))
 	}
 
 	// Print Values
 	for _, v := range values {
 		for key, value := range v {
-			Write(" " + value + "  ")
+			Write([]byte(" " + value + "  "))
 
 			padding := columnLengths[key] - len(value)
 
 			if padding > 0 {
-				Write(strings.Repeat(" ", padding))
+				Write([]byte(strings.Repeat(" ", padding)))
 			}
 		}
 
-		Write("\n")
+		Write([]byte("\n"))
 	}
 }

@@ -78,6 +78,9 @@ func (d *DiscardLogger) StartWait(message string) {}
 // StopWait implements logger interface
 func (d *DiscardLogger) StopWait() {}
 
+// PrintTable implements logger interface
+func (d *DiscardLogger) PrintTable(header []string, values [][]string) {}
+
 // With implements logger interface
 func (d *DiscardLogger) With(obj interface{}) *LoggerEntry {
 	return &LoggerEntry{

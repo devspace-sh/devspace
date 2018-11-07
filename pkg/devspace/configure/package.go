@@ -27,7 +27,7 @@ import (
 )
 
 // AddPackage adds a helm dependency to specified deployment
-func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string) error {
+func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) error {
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
@@ -54,7 +54,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, log.GetInstance(), false)
+	helm, err := helmClient.NewClient(kubectl, log, false)
 	if err != nil {
 		log.Fatalf("Error initializing helm client: %v", err)
 	}
@@ -199,7 +199,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	log.Donef("Successfully added package %s, you can now modify the configuration in '%s"+string(os.PathSeparator)+"values.yaml'", packageName, chartPath)
 
 	if skipQuestion == false {
-		log.Write("\n")
+		log.Write([]byte("\n"))
 
 		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to open the package README to see configuration options? (yes|no)",
@@ -222,14 +222,14 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		})
 
 		if shouldRedeploy == "yes" {
-			redeployAferPackageChange(kubectl, deploymentConfig)
+			redeployAferPackageChange(kubectl, deploymentConfig, log)
 		}
 	}
 
 	return nil
 }
 
-func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig) {
+func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) {
 	config := configutil.GetConfig()
 	listOptions := metav1.ListOptions{}
 	deploymentNamespace := *deploymentConfig.Namespace
@@ -256,7 +256,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 		log.Warnf("Unable to list Kubernetes services: %v", clusterServiceErr)
 	}
 
-	err = deploy.All(kubectl, generatedConfig, true, true, log.GetInstance())
+	err = deploy.All(kubectl, generatedConfig, true, true, log)
 	log.StopWait()
 
 	// Save generated config
@@ -307,10 +307,10 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 			}
 
 			if len(serviceTableContent) > 0 {
-				log.Write("\n")
+				log.Write([]byte("\n"))
 				log.Info("The following services are now available within your DevSpace:\n")
 				log.PrintTable(serviceTableHeader, serviceTableContent)
-				log.Write("\n")
+				log.Write([]byte("\n"))
 				log.Info("Note: It may take several minutes until these services are up and running.\n         Run this command to check their status: kubectl get service")
 			}
 		}
@@ -318,7 +318,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 }
 
 // RemovePackage removes a helm dependency from a deployment
-func RemovePackage(removeAll bool, deployment string, args []string) error {
+func RemovePackage(removeAll bool, deployment string, args []string, log log.Logger) error {
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
@@ -373,7 +373,7 @@ func RemovePackage(removeAll bool, deployment string, args []string) error {
 				log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
 			}
 
-			err = rebuildDependencies(chartPath, yamlContents, log.GetInstance())
+			err = rebuildDependencies(chartPath, yamlContents, log)
 			if err != nil {
 				return err
 			}
@@ -402,7 +402,7 @@ func RemovePackage(removeAll bool, deployment string, args []string) error {
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						err = rebuildDependencies(chartPath, yamlContents, log.GetInstance())
+						err = rebuildDependencies(chartPath, yamlContents, log)
 						if err != nil {
 							return err
 						}
@@ -414,7 +414,7 @@ func RemovePackage(removeAll bool, deployment string, args []string) error {
 
 			log.Donef("Successfully removed dependency %s", args[0])
 		}
-		log.Write("\n")
+		log.Write([]byte("\n"))
 
 		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to re-deploy your DevSpace to purge unnecessary packages? (yes|no)",
@@ -427,7 +427,7 @@ func RemovePackage(removeAll bool, deployment string, args []string) error {
 			if err != nil {
 				log.Fatalf("Unable to create new kubectl client: %v", err)
 			}
-			redeployAferPackageChange(kubectl, deploymentConfig)
+			redeployAferPackageChange(kubectl, deploymentConfig, log)
 		}
 		return nil
 	}

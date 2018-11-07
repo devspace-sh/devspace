@@ -183,7 +183,7 @@ func init() {
 
 // RunAddPackage executes the add package command logic
 func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddPackage(cmd.packageFlags.SkipQuestion, cmd.packageFlags.AppVersion, cmd.packageFlags.ChartVersion, cmd.packageFlags.Deployment, args)
+	err := configure.AddPackage(cmd.packageFlags.SkipQuestion, cmd.packageFlags.AppVersion, cmd.packageFlags.ChartVersion, cmd.packageFlags.Deployment, args, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
