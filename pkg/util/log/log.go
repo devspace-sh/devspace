@@ -1,8 +1,6 @@
 package log
 
 import (
-	"strings"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/daviddengcn/go-colortext"
@@ -156,50 +154,5 @@ func Write(message []byte) {
 
 // PrintTable prints a table with header columns and string values
 func PrintTable(header []string, values [][]string) {
-	columnLengths := make([]int, len(header))
-
-	for k, v := range header {
-		columnLengths[k] = len(v)
-	}
-
-	// Get maximum column length
-	for _, v := range values {
-		for key, value := range v {
-			if len(value) > columnLengths[key] {
-				columnLengths[key] = len(value)
-			}
-		}
-	}
-
-	// Print Header
-	for key, value := range header {
-		WriteColored(" "+value+"  ", ct.Green)
-
-		padding := columnLengths[key] - len(value)
-
-		if padding > 0 {
-			Write([]byte(strings.Repeat(" ", padding)))
-		}
-	}
-
-	Write([]byte("\n"))
-
-	if len(values) == 0 {
-		Write([]byte(" No entries found\n"))
-	}
-
-	// Print Values
-	for _, v := range values {
-		for key, value := range v {
-			Write([]byte(" " + value + "  "))
-
-			padding := columnLengths[key] - len(value)
-
-			if padding > 0 {
-				Write([]byte(strings.Repeat(" ", padding)))
-			}
-		}
-
-		Write([]byte("\n"))
-	}
+	stdoutLog.PrintTable(header, values)
 }

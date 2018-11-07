@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/daviddengcn/go-colortext"
@@ -178,7 +179,52 @@ func (s *stdoutLogger) StopWait() {
 
 // PrintTable implements logger interface
 func (d *stdoutLogger) PrintTable(header []string, values [][]string) {
-	//TODO
+	columnLengths := make([]int, len(header))
+
+	for k, v := range header {
+		columnLengths[k] = len(v)
+	}
+
+	// Get maximum column length
+	for _, v := range values {
+		for key, value := range v {
+			if len(value) > columnLengths[key] {
+				columnLengths[key] = len(value)
+			}
+		}
+	}
+
+	// Print Header
+	for key, value := range header {
+		WriteColored(" "+value+"  ", ct.Green)
+
+		padding := columnLengths[key] - len(value)
+
+		if padding > 0 {
+			Write([]byte(strings.Repeat(" ", padding)))
+		}
+	}
+
+	Write([]byte("\n"))
+
+	if len(values) == 0 {
+		Write([]byte(" No entries found\n"))
+	}
+
+	// Print Values
+	for _, v := range values {
+		for key, value := range v {
+			Write([]byte(" " + value + "  "))
+
+			padding := columnLengths[key] - len(value)
+
+			if padding > 0 {
+				Write([]byte(strings.Repeat(" ", padding)))
+			}
+		}
+
+		Write([]byte("\n"))
+	}
 }
 
 func (s *stdoutLogger) Debug(args ...interface{}) {
