@@ -68,7 +68,6 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	if config.Cluster != nil && config.Cluster.CloudProvider != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
 		cmd.deleteCloudDevSpace()
-		cmd.deleteCloudKubeContext()
 	} else {
 		cmd.deleteDevSpaceDeployments()
 		cmd.deleteInternalRegistry()
@@ -107,6 +106,8 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
 			}
 		}
+	} else {
+		cmd.deleteCloudKubeContext()
 	}
 }
 
