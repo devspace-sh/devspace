@@ -89,8 +89,14 @@ To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure rea
 - `excludePaths` *string array* paths to exclude files/folders from sync in .gitignore syntax
 - `downloadExcludePaths` *string array* paths to exclude files/folders from download in .gitignore syntax
 - `uploadExcludePaths` *string array* paths to exclude files/folders from upload in .gitignore syntax
+- `bandwidthLimits` *BandwidthLimits* the bandwidth limits to use for the syncpath
 
 In the example above, the entire code within the project would be synchronized with the folder `/app` inside the DevSpace, with the exception of the `node_modules/` folder.
+
+### devspace.sync[].bandwidthLimits
+Bandwidth limits for the sync path:
+- `upload` *string* kilobytes per second as upper limit to use for uploading files (e.g. 100 means 100 KByte per seconds)
+- `download` *string* kilobytes per second as upper limit to use for downloading files (e.g. 100 means 100 KByte per seconds)
 
 ## images
 This section of the config defines a map of images that can be used in the helm chart that is deployed during `devspace up`. 
@@ -233,6 +239,12 @@ devSpace:
     # Exclude node_modules from up and download
     excludePaths:
     - node_modules/
+    # Bandwidth limits for this sync path in Kbyte/s
+    bandwidthLimits:
+      # limit download speed to 100 Kbyte/s
+      download: 100
+      # limit upload speed to 1024 Kbyte/s
+      upload: 1024
 # A map of images that should be build during devspace up
 images:
   default:
