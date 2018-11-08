@@ -26,6 +26,7 @@ type DeployCmdFlags struct {
 	DockerTarget  string
 	CloudTarget   string
 	SwitchContext bool
+	SkipBuild     bool
 }
 
 func init() {
@@ -58,6 +59,7 @@ devspace deploy --cloud-target=production
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
 
 	rootCmd.AddCommand(cobraCmd)
 }
@@ -100,10 +102,12 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	// Force image build
-	_, err = image.BuildAll(client, generatedConfig, true, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
+	if cmd.flags.SkipBuild == false {
+		// Force image build
+		_, err = image.BuildAll(client, generatedConfig, true, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Force deployment of all defined deployments

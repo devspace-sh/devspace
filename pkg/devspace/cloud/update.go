@@ -52,9 +52,6 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	if dsConfig.Cluster.Namespace != nil {
 		devSpaceID = *dsConfig.Cluster.Namespace
 	}
-	if devSpaceID == "" && target != "" {
-		return fmt.Errorf("Cannot deploy to target %s without a devspace. You need to run `devspace up` beforehand", target)
-	}
 
 	domain, namespace, cluster, authInfo, err := CheckAuth(provider, devSpaceID, target, log)
 	if err != nil {
@@ -68,7 +65,7 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 
 	DevSpaceURL = domain
 
-	err = updateDevSpaceConfig(target, namespace, cluster, authInfo, options)
+	err = updateDevSpaceConfig(devSpaceID, target, namespace, cluster, authInfo, options)
 	if err != nil {
 		return err
 	}
@@ -76,7 +73,7 @@ func Update(providerConfig ProviderConfig, options *UpdateOptions, log log.Logge
 	return nil
 }
 
-func updateDevSpaceConfig(target, namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, options *UpdateOptions) error {
+func updateDevSpaceConfig(devSpaceID, target, namespace string, cluster *api.Cluster, authInfo *api.AuthInfo, options *UpdateOptions) error {
 	dsConfig := configutil.GetConfig()
 	overwriteConfig := configutil.GetOverwriteConfig()
 	saveConfig := false
@@ -143,7 +140,8 @@ func updateDevSpaceConfig(target, namespace string, cluster *api.Cluster, authIn
 		}
 	}
 
-	if saveConfig && target == "" {
+	// Either save when config has changed && devspace up or devspace deploy (with no up before)
+	if saveConfig && (target == "" || (target != "" && devSpaceID == "")) {
 		err := configutil.SaveConfig()
 		if err != nil {
 			return err
