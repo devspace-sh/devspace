@@ -19,6 +19,7 @@ type GetFromStdinParams struct {
 	DefaultValue           string
 	ValidationRegexPattern string
 	InputTerminationString string
+	IsPassword             bool
 }
 
 var defaultParams = &GetFromStdinParams{
@@ -56,7 +57,22 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 
 		for {
 			fmt.Print("> ")
-			nextLine, _ := reader.ReadString('\n')
+
+			nextLine := ""
+			if params.IsPassword {
+				for {
+					nextChar, _ := reader.ReadByte()
+					if nextChar == '\n' {
+						break
+					}
+
+					fmt.Print("\r>  ")
+					nextLine += string(nextChar)
+				}
+			} else {
+				nextLine, _ = reader.ReadString('\n')
+			}
+
 			nextLine = strings.Trim(nextLine, "\r\n ")
 
 			if strings.Compare(params.InputTerminationString, "\n") == 0 {

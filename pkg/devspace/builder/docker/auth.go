@@ -19,9 +19,9 @@ func getOfficialServer(ctx context.Context, client client.CommonAPIClient, log l
 	serverAddress := registry.IndexServer
 	if info, err := client.Info(ctx); err != nil {
 		// Only report the warning if we're in debug mode to prevent nagging during engine initialization workflows
-		log.Warnf("Warning: failed to get default registry endpoint from daemon (%v). Using system default: %s", err, serverAddress)
+		// log.Warnf("Warning: failed to get default registry endpoint from daemon (%v). Using system default: %s", err, serverAddress)
 	} else if info.IndexServerAddress == "" {
-		log.Warnf("Warning: Empty registry endpoint from daemon. Using system default: %s", serverAddress)
+		// log.Warnf("Warning: Empty registry endpoint from daemon. Using system default: %s", serverAddress)
 	} else {
 		serverAddress = info.IndexServerAddress
 	}
