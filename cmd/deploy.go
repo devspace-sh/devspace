@@ -49,7 +49,7 @@ devspace deploy --kube-context=deploy-context
 devspace deploy --config=.devspace/deploy.yaml
 devspace deploy --cloud-target=production
 #######################################################`,
-		Args: cobra.NoArgs,
+		Args: cobra.RangeArgs(0, 2),
 		Run:  cmd.Run,
 	}
 
@@ -66,6 +66,13 @@ devspace deploy --cloud-target=production
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if len(args) > 0 {
+		getCmd := &GetCmd{
+			flags: &GetCmdFlags{},
+		}
+		getCmd.Run(nil, args)
+	}
+
 	cloud.UseDeployTarget = true
 	log.StartFileLogging()
 
