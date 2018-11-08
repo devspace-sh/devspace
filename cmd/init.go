@@ -280,6 +280,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 
 	return false
 }
+
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
 	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
