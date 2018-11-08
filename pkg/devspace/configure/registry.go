@@ -57,6 +57,7 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 				Question:               "What is your docker hub password?",
 				DefaultValue:           "",
 				ValidationRegexPattern: "^.*$",
+				IsPassword:             true,
 			})
 
 			builder, err := docker.NewBuilder("", "", "", false)
