@@ -6,6 +6,7 @@ type ImageConfig struct {
 	Tag              *string      `yaml:"tag"`
 	Registry         *string      `yaml:"registry"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
+	SkipPush         *bool        `yaml:"skipPush"`
 	Build            *BuildConfig `yaml:"build"`
 }
 

@@ -100,6 +100,7 @@ An image is defined by:
 - `name` *string* name of the image with registry url prefixed (e.g. dockerhubname/image, gcr.io/googleprojectname/image etc.)
 - `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
+- `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/covexo/devspace/tree/master/examples/minikube))
 - `build` *BuildConfig* defines the build procedure for this image  
 
 ### images[].build
