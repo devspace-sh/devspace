@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/docker/docker/api/types"
@@ -12,7 +11,7 @@ import (
 	"github.com/docker/docker/registry"
 )
 
-func getOfficialServer(ctx context.Context, client client.CommonAPIClient) string {
+func getOfficialServer(ctx context.Context, client client.CommonAPIClient, log log.Logger) string {
 	// The daemon `/info` endpoint informs us of the default registry being
 	// used. This is essential in cross-platforms environment, where for
 	// example a Linux client might be interacting with a Windows daemon, hence
@@ -20,9 +19,9 @@ func getOfficialServer(ctx context.Context, client client.CommonAPIClient) strin
 	serverAddress := registry.IndexServer
 	if info, err := client.Info(ctx); err != nil {
 		// Only report the warning if we're in debug mode to prevent nagging during engine initialization workflows
-		fmt.Fprintf(log.GetInstance(), "Warning: failed to get default registry endpoint from daemon (%v). Using system default: %s\n", err, serverAddress)
+		log.Warnf("Warning: failed to get default registry endpoint from daemon (%v). Using system default: %s", err, serverAddress)
 	} else if info.IndexServerAddress == "" {
-		fmt.Fprintf(log.GetInstance(), "Warning: Empty registry endpoint from daemon. Using system default: %s\n", serverAddress)
+		log.Warnf("Warning: Empty registry endpoint from daemon. Using system default: %s", serverAddress)
 	} else {
 		serverAddress = info.IndexServerAddress
 	}
