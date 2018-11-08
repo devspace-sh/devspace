@@ -108,6 +108,16 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 				syncConfig.UploadExcludePaths = *syncPath.UploadExcludePaths
 			}
 
+			if syncPath.BandwidthLimits != nil {
+				if syncPath.BandwidthLimits.Download != nil {
+					syncConfig.DownstreamLimit = *syncPath.BandwidthLimits.Download * 1024
+				}
+
+				if syncPath.BandwidthLimits.Upload != nil {
+					syncConfig.UpstreamLimit = *syncPath.BandwidthLimits.Upload * 1024
+				}
+			}
+
 			err = syncConfig.Start()
 			if err != nil {
 				log.Fatalf("Sync error: %s", err.Error())

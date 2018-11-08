@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/juju/ratelimit"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/rjeczalik/notify"
@@ -329,8 +330,14 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 		return errors.Trace(err)
 	}
 
+	// Apply rate limit if specified
+	var uploadWriter io.Writer = u.stdinPipe
+	if u.config.UpstreamLimit > 0 {
+		uploadWriter = ratelimit.Writer(u.stdinPipe, ratelimit.NewBucketWithRate(float64(u.config.UpstreamLimit), u.config.UpstreamLimit))
+	}
+
 	// Send file through stdin to remote
-	_, err = io.Copy(u.stdinPipe, file)
+	_, err = io.Copy(uploadWriter, file)
 	if err != nil {
 		return errors.Trace(err)
 	}
