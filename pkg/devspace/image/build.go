@@ -177,12 +177,16 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			return false, fmt.Errorf("Error during image build: %v", err)
 		}
 
-		err = imageBuilder.PushImage()
-		if err != nil {
-			return false, fmt.Errorf("Error during image push: %v", err)
-		}
+		if imageConf.SkipPush == nil || *imageConf.SkipPush == false {
+			err = imageBuilder.PushImage()
+			if err != nil {
+				return false, fmt.Errorf("Error during image push: %v", err)
+			}
 
-		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+			log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+		} else {
+			log.Infof("Skip image push for %s", imageName)
+		}
 
 		// Update config
 		if *registryConf.URL != "" {
@@ -192,6 +196,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		generatedConfig.ImageTags[imageName] = imageTag
 
 		log.Done("Done building and pushing image '" + imageName + "'")
+
 	} else {
 		log.Infof("Skip building image '%s'", imageName)
 	}

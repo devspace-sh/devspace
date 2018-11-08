@@ -396,7 +396,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 
 func (cmd *InitCmd) configureRegistry() {
 	dockerUsername := ""
-	createInternalRegistryDefaultAnswer := "yes"
 
 	imageBuilder, err := docker.NewBuilder("", "", "", false)
 	if err == nil {
@@ -406,9 +405,6 @@ func (cmd *InitCmd) configureRegistry() {
 
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
-			if dockerUsername != "" {
-				createInternalRegistryDefaultAnswer = "no"
-			}
 		}
 	} else {
 		// Set default build engine to kaniko, if no docker is installed
@@ -420,26 +416,10 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	// Only deploy registry in minikube
+	// Don't push image in minikube
 	if kubectl.IsMinikube() {
-		createInternalRegistry := cmd.flags.skipQuestions || cmd.flags.createInternalRegistry
-		if !createInternalRegistry {
-			createInternalRegistryAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
-				DefaultValue:           createInternalRegistryDefaultAnswer,
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
-			createInternalRegistry = *createInternalRegistryAnswer == "yes"
-		}
-
-		if createInternalRegistry {
-			err := configure.InternalRegistry()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			return
-		}
+		cmd.defaultImage.SkipPush = configutil.Bool(true)
+		return
 	}
 
 	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
