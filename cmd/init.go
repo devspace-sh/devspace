@@ -37,6 +37,15 @@ type InitCmdFlags struct {
 	templateRepoURL  string
 	templateRepoPath string
 	language         string
+
+	cloudProvider                     string
+	useDevSpaceCloud                  bool
+	addDevSpaceCloudToLocalKubernetes bool
+	namespace                         string
+	createInternalRegistry            bool
+	registryURL                       string
+	defaultImageName                  string
+	createPullSecret                  bool
 }
 
 // InitCmdFlagsDefault are the default flags for InitCmdFlags
@@ -47,6 +56,12 @@ var InitCmdFlagsDefault = &InitCmdFlags{
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 	language:         "",
+
+	cloudProvider:                     "",
+	useDevSpaceCloud:                  false,
+	addDevSpaceCloudToLocalKubernetes: false,
+	namespace:                         "",
+	createInternalRegistry:            false,
 }
 
 func init() {
@@ -222,22 +237,22 @@ func (cmd *InitCmd) useCloudProvider() bool {
 	}
 
 	if len(providerConfig) > 1 {
-		cloudProvider := "("
+		cloudProviderOptions := "("
 
 		for name := range providerConfig {
-			if len(cloudProvider) > 1 {
-				cloudProvider += ", "
+			if len(cloudProviderOptions) > 1 {
+				cloudProviderOptions += ", "
 			}
 
-			cloudProvider += name
+			cloudProviderOptions += name
 		}
 
-		cloudProvider += ")"
-		cloudProviderSelected := ""
+		cloudProviderOptions += ")"
+		cloudProviderSelected := cmd.flags.cloudProvider
 
-		for ok := false; ok == false && cloudProviderSelected != "no"; {
+		for _, ok := providerConfig[cloudProviderSelected]; ok == false && cloudProviderSelected != "no"; {
 			cloudProviderSelected = strings.TrimSpace(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProvider,
+				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProviderOptions,
 				DefaultValue: cloud.DevSpaceCloudProviderName,
 			}))
 
@@ -249,8 +264,8 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			return true
 		}
 	} else {
-		useDevSpaceCloud := true
-		if !cmd.flags.skipQuestions {
+		useDevSpaceCloud := cmd.flags.useDevSpaceCloud || cmd.flags.skipQuestions
+		if !useDevSpaceCloud {
 			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 				DefaultValue:           "yes",
@@ -267,8 +282,8 @@ func (cmd *InitCmd) useCloudProvider() bool {
 }
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
-	addToContext := true
-	if !cmd.flags.skipQuestions {
+	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
+	if !addToContext {
 		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 			DefaultValue:           "yes",
@@ -293,11 +308,14 @@ func (cmd *InitCmd) configureDevSpace() {
 		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 	}
 
-	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           "default",
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+	namespace := &cmd.flags.namespace
+	if *namespace == "" {
+		namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which Kubernetes namespace should your application run in?",
+			DefaultValue:           "default",
+			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+		})
+	}
 
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
@@ -404,7 +422,7 @@ func (cmd *InitCmd) configureRegistry() {
 		return
 	}
 
-	err = configure.Image(dockerUsername, cmd.flags.skipQuestions)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
