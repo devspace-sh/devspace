@@ -68,6 +68,7 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 			_, err = builder.Login(dockerUsername, dockerPassword, false, true)
 			if err != nil {
 				log.Warn(err)
+				continue
 			}
 
 			break
