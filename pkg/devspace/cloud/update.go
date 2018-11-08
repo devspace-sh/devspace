@@ -23,6 +23,7 @@ var UseDeployTarget = false
 type UpdateOptions struct {
 	UseKubeContext    bool
 	SwitchKubeContext bool
+	SkipSaveConfig    bool
 }
 
 // Update updates the cloud provider information if necessary
@@ -141,7 +142,7 @@ func updateDevSpaceConfig(devSpaceID, target, namespace string, cluster *api.Clu
 	}
 
 	// Either save when config has changed && devspace up or devspace deploy (with no up before)
-	if saveConfig && (target == "" || (target != "" && devSpaceID == "")) {
+	if options.SkipSaveConfig == false && saveConfig && (target == "" || (target != "" && devSpaceID == "")) {
 		err := configutil.SaveConfig()
 		if err != nil {
 			return err

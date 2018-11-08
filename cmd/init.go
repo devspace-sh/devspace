@@ -296,6 +296,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
 		UseKubeContext:    addToContext,
 		SwitchKubeContext: true,
+		SkipSaveConfig:    true,
 	}, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
