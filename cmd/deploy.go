@@ -67,7 +67,7 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
-	cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "--branch", "master", "The git branch to checkout")
+	cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
 
 	rootCmd.AddCommand(cobraCmd)
 }
