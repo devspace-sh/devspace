@@ -39,6 +39,8 @@ type SyncConfig struct {
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
+	UpstreamLimit        int64
+	DownstreamLimit      int64
 	Verbose              bool
 
 	fileIndex *fileIndex
