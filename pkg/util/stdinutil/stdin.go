@@ -48,25 +48,26 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		fmt.Print("\n")
 
 		for {
-			inStreamFD := command.NewInStream(os.Stdin).FD()
-			oldState, err := term.SaveState(inStreamFD)
-			if err != nil {
-				log.Fatal(err)
-			}
-
 			fmt.Print("> ")
 
-			if params.IsPassword {
-				term.DisableEcho(inStreamFD, oldState)
-			}
-
 			reader := bufio.NewReader(os.Stdin)
-			nextLine, _ := reader.ReadString('\n')
-			nextLine = strings.Trim(nextLine, "\r\n ")
+			nextLine := ""
 
 			if params.IsPassword {
+				inStreamFD := command.NewInStream(os.Stdin).FD()
+				oldState, err := term.SaveState(inStreamFD)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				term.DisableEcho(inStreamFD, oldState)
+				nextLine, _ = reader.ReadString('\n')
 				term.RestoreTerminal(inStreamFD, oldState)
+			} else {
+				nextLine, _ = reader.ReadString('\n')
 			}
+
+			nextLine = strings.Trim(nextLine, "\r\n ")
 
 			if strings.Compare(params.InputTerminationString, "\n") == 0 {
 				// Assign the input value to input var
