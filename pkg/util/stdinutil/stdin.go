@@ -96,30 +96,3 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 
 	return &input
 }
-
-//AskChangeQuestion asks two questions. Do you want to change this value? If yes, what's the new value?
-func AskChangeQuestion(params *GetFromStdinParams) *string {
-	paramutil.SetDefaults(params, defaultParams)
-
-	shouldValueChangeQuestion := GetFromStdinParams{
-		Question:               params.Question + "\nThis is the current value:\n#################\n" + strings.TrimRight(params.DefaultValue, "\r\n") + "\n#################\n" + changeQuestion,
-		DefaultValue:           "no",
-		ValidationRegexPattern: "yes|no",
-	}
-
-	shouldChangeAnswer := GetFromStdin(&shouldValueChangeQuestion)
-
-	if *shouldChangeAnswer == "no" {
-		return &params.DefaultValue
-	}
-
-	newValueQuestion := GetFromStdinParams{
-		Question:               "Please enter the new value:",
-		DefaultValue:           params.DefaultValue,
-		ValidationRegexPattern: params.ValidationRegexPattern,
-		InputTerminationString: params.InputTerminationString,
-	}
-
-	newValue := GetFromStdin(&newValueQuestion)
-	return newValue
-}
