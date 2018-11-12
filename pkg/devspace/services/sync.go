@@ -16,8 +16,11 @@ import (
 // StartSync starts the syncing functionality
 func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	config := configutil.GetConfig()
-	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.DevSpace.Sync))
+	if config.DevSpace.Sync == nil {
+		return []*sync.SyncConfig{}, nil
+	}
 
+	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.DevSpace.Sync))
 	for _, syncPath := range *config.DevSpace.Sync {
 		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
 		if err != nil {
@@ -53,7 +56,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			}
 		}
 
-		labels := make([]string, len(labelSelector)-1)
+		labels := make([]string, 0, len(labelSelector)-1)
 		for key, value := range labelSelector {
 			labels = append(labels, key+"="+*value)
 		}

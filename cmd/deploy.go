@@ -105,6 +105,8 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Prepare the config
 	cmd.prepareConfig()
 
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
+
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
 	if err != nil {

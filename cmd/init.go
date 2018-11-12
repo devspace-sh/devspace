@@ -367,6 +367,10 @@ func (cmd *InitCmd) addDefaultPorts() {
 func (cmd *InitCmd) addDefaultSyncConfig() {
 	config := configutil.GetConfig()
 
+	if config.DevSpace.Sync == nil {
+		config.DevSpace.Sync = &[]*v1.SyncConfig{}
+	}
+
 	for _, syncPath := range *config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
 			return
