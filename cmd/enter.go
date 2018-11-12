@@ -20,6 +20,7 @@ type EnterCmdFlags struct {
 	namespace     string
 	labelSelector string
 	container     string
+	switchContext bool
 }
 
 func init() {
@@ -52,6 +53,7 @@ devspace enter bash -l release=test
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
+	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the devspace context")
 }
 
 // Run executes the command logic
@@ -59,7 +61,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var err error
 	log.StartFileLogging()
 
-	cmd.kubectl, err = kubectl.NewClient()
+	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}

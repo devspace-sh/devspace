@@ -15,6 +15,10 @@ import (
 func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsString string) error {
 	config := configutil.GetConfig()
 
+	if config.DevSpace.Sync == nil {
+		config.DevSpace.Sync = &[]*v1.SyncConfig{}
+	}
+
 	if selector == "" {
 		selector = "release=" + services.GetNameOfFirstHelmDeployment()
 	}

@@ -104,6 +104,10 @@ func containsPort(port string, ports []string) bool {
 func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
 	config := configutil.GetConfig()
 
+	if config.DevSpace.Ports == nil {
+		config.DevSpace.Ports = &[]*v1.PortForwardingConfig{}
+	}
+
 	// Check if we should add to existing port mapping
 	for _, v := range *config.DevSpace.Ports {
 		var selectors map[string]*string
