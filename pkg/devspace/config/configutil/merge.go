@@ -37,20 +37,12 @@ func Merge(object interface{}, overwriteObject interface{}, unifyPointers bool) 
 		var objectRef reflect.Value
 
 		if !objectPointerRef.IsNil() {
-			objectRef = reflect.ValueOf(objectPointerReal).Elem()
+			objectRef = objectPointerRef.Elem()
 		}
 
 		switch overwriteObjectKind {
 		case reflect.Slice:
-			if objectPointerRef.IsNil() {
-				objectRef.Set(reflect.New(overwriteObjectType))
-			}
-
-			for i := 0; i < overwriteObjectRef.Len(); i++ {
-				overwriteValue := overwriteObjectRef.Index(i)
-
-				objectRef.Set(reflect.Append(objectRef, overwriteValue))
-			}
+			objectRef.Set(overwriteObjectRef)
 		case reflect.Map:
 			if objectPointerRef.IsNil() {
 				objectRef.Set(overwriteObjectRef)
