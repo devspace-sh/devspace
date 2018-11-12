@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/services"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -16,11 +17,13 @@ type EnterCmd struct {
 
 // EnterCmdFlags are the flags available for the enter-command
 type EnterCmdFlags struct {
-	service       string
-	namespace     string
-	labelSelector string
-	container     string
-	switchContext bool
+	service         string
+	namespace       string
+	labelSelector   string
+	container       string
+	switchContext   bool
+	config          string
+	configOverwrite string
 }
 
 func init() {
@@ -54,10 +57,22 @@ devspace enter bash -l release=test
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the devspace context")
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
+
 	var err error
 	log.StartFileLogging()
 

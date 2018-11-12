@@ -22,10 +22,10 @@ generated.yaml
 `
 
 // DefaultConfigPath is the default config path to use
-const DefaultConfigPath = "/.devspace/config.yaml"
+const DefaultConfigPath = ".devspace/config.yaml"
 
 // DefaultOverwriteConfigPath is the default overwrite config path to use
-const DefaultOverwriteConfigPath = "/.devspace/overwrite.yaml"
+const DefaultOverwriteConfigPath = ".devspace/overwrite.yaml"
 
 // ConfigPath is the path for the main config
 var ConfigPath = DefaultConfigPath
@@ -95,6 +95,8 @@ func GetConfigWithoutDefaults() *v1.Config {
 		configRaw = makeConfig()
 		overwriteConfig = makeConfig()
 		defaultConfig = makeConfig()
+
+		log.Infof("Loading config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
 
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {

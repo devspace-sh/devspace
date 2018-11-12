@@ -137,7 +137,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		configutil.SetDefaultsOnce()
 	}
 
-	// Create kubectl client
+	// Create kubectl client and switch context if specified
 	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
