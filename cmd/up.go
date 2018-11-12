@@ -18,8 +18,7 @@ import (
 
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
-	flags   *UpCmdFlags
-	kubectl *kubernetes.Clientset
+	flags *UpCmdFlags
 }
 
 // UpCmdFlags are the flags available for the up-command
@@ -115,7 +114,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.StartFileLogging()
-	var err error
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
@@ -138,40 +137,40 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client and switch context if specified
-	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
 	// Init image registries
 	if cmd.flags.initRegistries {
-		err = registry.InitRegistries(cmd.kubectl, log.GetInstance())
+		err = registry.InitRegistries(client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Build and deploy images
-	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, cmd.kubectl)
+	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, client)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if cmd.flags.exitAfterDeploy == false {
 		// Start services
-		err = startServices(cmd.flags, cmd.kubectl, args, log.GetInstance())
+		err = startServices(cmd.flags, client, args, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

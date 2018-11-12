@@ -6,13 +6,11 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/services"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
 )
 
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
-	flags   *EnterCmdFlags
-	kubectl *kubernetes.Clientset
+	flags *EnterCmdFlags
 }
 
 // EnterCmdFlags are the flags available for the enter-command
@@ -73,15 +71,15 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
 	}
 
-	var err error
 	log.StartFileLogging()
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
-	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = services.StartTerminal(cmd.kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
+	err = services.StartTerminal(kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

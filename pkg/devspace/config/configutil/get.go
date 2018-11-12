@@ -96,8 +96,6 @@ func GetConfigWithoutDefaults() *v1.Config {
 		overwriteConfig = makeConfig()
 		defaultConfig = makeConfig()
 
-		log.Infof("Loading config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
-
 		err := loadConfig(configRaw, ConfigPath)
 		if err != nil {
 			log.Fatalf("Loading config: %v", err)
