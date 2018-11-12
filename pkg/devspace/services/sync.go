@@ -56,7 +56,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			}
 		}
 
-		labels := make([]string, len(labelSelector)-1)
+		labels := make([]string, 0, len(labelSelector)-1)
 		for key, value := range labelSelector {
 			labels = append(labels, key+"="+*value)
 		}
