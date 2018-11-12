@@ -10,7 +10,7 @@ With a DevSpace, you can build, test and run **code directly inside any Kubernet
 
 **No more waiting** for re-building images, re-deploying containers and restarting applications on every source code change. Simply edit your code with any IDE and run your code instantly inside your DevSpace.
 
-## Why use a DevSpace?
+## Why use DevSpace?
 Program inside any Kubernetes cluster (e.g. minikube, self-hosted or cloud platform) and:
 - iterate quickly: no more building and pushing images on every change, use **hot reloading** instead (e.g. with nodemon)
 - keep your existing workflow and tools: **the DevSpace CLI works with every IDE** (no plugins required)
