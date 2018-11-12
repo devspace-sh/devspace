@@ -86,8 +86,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, selector string) e
 		for _, v := range *config.DevSpace.Sync {
 			if removeAll ||
 				localPath == *v.LocalSubPath ||
-				containerPath == *v.ContainerPath ||
-				isMapEqual(labelSelectorMap, *v.LabelSelector) {
+				containerPath == *v.ContainerPath {
 				continue
 			}
 

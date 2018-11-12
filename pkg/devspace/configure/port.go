@@ -60,7 +60,7 @@ func RemovePort(removeAll bool, selector string, args []string) error {
 		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
 		for _, v := range *config.DevSpace.Ports {
-			if removeAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
+			if removeAll {
 				continue
 			}
 
