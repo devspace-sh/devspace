@@ -1,10 +1,12 @@
 package docker
 
 import (
+	"fmt"
 	"strings"
 
 	"context"
 
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
@@ -149,46 +151,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	ctx := context.Background()
-	authServer := getOfficialServer(ctx, b.client)
-	serverAddress := b.RegistryURL
-
-	if serverAddress == "" {
-		serverAddress = authServer
-	} else {
-		ref, err := reference.ParseNormalizedNamed(b.imageURL)
-		if err != nil {
-			return nil, err
-		}
-
-		repoInfo, err := registry.ParseRepositoryInfo(ref)
-		if err != nil {
-			return nil, err
-		}
-
-		if repoInfo.Index.Official {
-			serverAddress = authServer
-		}
-	}
-
-	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
-
-	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
-		authConfig.Username = strings.TrimSpace(user)
-		authConfig.Password = strings.TrimSpace(password)
-	}
-
-	response, err := b.client.RegistryLogin(ctx, *authConfig)
+	authConfig, err := b.Login(user, password, checkCredentialsStore, false)
 	if err != nil {
 		return nil, err
 	}
-
-	if response.IdentityToken != "" {
-		authConfig.Password = ""
-		authConfig.IdentityToken = response.IdentityToken
-	}
-
-	b.authConfig = authConfig
 
 	// Cache authConfig for GetAuthConfig
 	authConfigs[b.RegistryURL] = authConfig
@@ -232,7 +198,6 @@ func GetAuthConfig(registryURL string) (*types.AuthConfig, error) {
 	}
 
 	authConfig, authConfigExists := authConfigs[registryURL]
-
 	if !authConfigExists {
 		dockerBuilder, err := NewBuilder(registryURL, "", "", false)
 		if err != nil {
@@ -244,5 +209,67 @@ func GetAuthConfig(registryURL string) (*types.AuthConfig, error) {
 			return nil, err
 		}
 	}
+
 	return authConfig, nil
+}
+
+// Login logs the user into docker
+func (b *Builder) Login(user, password string, checkCredentialsStore, saveAuthConfig bool) (*types.AuthConfig, error) {
+	ctx := context.Background()
+	authServer := getOfficialServer(ctx, b.client, log.GetInstance())
+	serverAddress := b.RegistryURL
+
+	if serverAddress == "" {
+		serverAddress = authServer
+	} else {
+		ref, err := reference.ParseNormalizedNamed(b.imageURL)
+		if err != nil {
+			return nil, err
+		}
+
+		repoInfo, err := registry.ParseRepositoryInfo(ref)
+		if err != nil {
+			return nil, err
+		}
+
+		if repoInfo.Index.Official {
+			serverAddress = authServer
+		}
+	}
+
+	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
+	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
+		authConfig.Username = strings.TrimSpace(user)
+		authConfig.Password = strings.TrimSpace(password)
+	}
+
+	response, err := b.client.RegistryLogin(ctx, *authConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.IdentityToken != "" {
+		authConfig.Password = ""
+		authConfig.IdentityToken = response.IdentityToken
+	}
+
+	if saveAuthConfig {
+		configfile, err := loadDockerConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		err = configfile.GetCredentialsStore(serverAddress).Store(*authConfig)
+		if err != nil {
+			return nil, fmt.Errorf("Error saving auth info in credentials store: %v", err)
+		}
+
+		err = configfile.Save()
+		if err != nil {
+			return nil, fmt.Errorf("Error saving docker config: %v", err)
+		}
+	}
+
+	b.authConfig = authConfig
+	return b.authConfig, nil
 }

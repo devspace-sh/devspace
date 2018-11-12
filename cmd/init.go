@@ -280,6 +280,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 
 	return false
 }
+
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
 	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
@@ -296,6 +297,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
 		UseKubeContext:    addToContext,
 		SwitchKubeContext: true,
+		SkipSaveConfig:    true,
 	}, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)

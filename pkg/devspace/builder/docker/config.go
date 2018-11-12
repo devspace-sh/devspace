@@ -15,13 +15,11 @@ const dockerFileFolder = ".docker"
 
 var configDir = os.Getenv("DOCKER_CONFIG")
 
-func init() {
+func loadDockerConfig() (*configfile.ConfigFile, error) {
 	if configDir == "" {
 		configDir = filepath.Join(homedir.Get(), dockerFileFolder)
 	}
-}
 
-func loadDockerConfig() (*configfile.ConfigFile, error) {
 	return config.Load(configDir)
 }
 

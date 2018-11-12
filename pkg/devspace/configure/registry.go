@@ -43,7 +43,36 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 			dockerUsername = dockerAuthConfig.Username
 		}
 	} else if dockerUsername == "" {
-		return fmt.Errorf("Make sure you login to docker hub with: docker login")
+		log.Warn("No docker credentials were found in the credentials store")
+		log.Warn("Please make sure you have a https://hub.docker.com account")
+
+		for {
+			dockerUsername = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is your docker hub username?",
+				DefaultValue:           "",
+				ValidationRegexPattern: "^.*$",
+			})
+
+			dockerPassword := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is your docker hub password?",
+				DefaultValue:           "",
+				ValidationRegexPattern: "^.*$",
+				IsPassword:             true,
+			})
+
+			builder, err := docker.NewBuilder("", "", "", false)
+			if err != nil {
+				return err
+			}
+
+			_, err = builder.Login(dockerUsername, dockerPassword, false, true)
+			if err != nil {
+				log.Warn(err)
+				continue
+			}
+
+			break
+		}
 	}
 
 	googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")

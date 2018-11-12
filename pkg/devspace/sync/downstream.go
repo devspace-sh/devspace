@@ -165,8 +165,13 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 	overlap := ""
 	done := false
 
+	var downloadReader io.Reader = d.stdoutPipe
+	if d.config.DownstreamLimit > 0 {
+		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
+	}
+
 	for done == false {
-		n, err := d.stdoutPipe.Read(buf[:cap(buf)])
+		n, err := downloadReader.Read(buf[:cap(buf)])
 		buf = buf[:n]
 
 		if n == 0 {
