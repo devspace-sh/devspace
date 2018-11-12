@@ -25,14 +25,15 @@ type DeployCmd struct {
 
 // DeployCmdFlags holds the possible down cmd flags
 type DeployCmdFlags struct {
-	Namespace     string
-	KubeContext   string
-	Config        string
-	DockerTarget  string
-	CloudTarget   string
-	SwitchContext bool
-	SkipBuild     bool
-	GitBranch     string
+	Namespace       string
+	KubeContext     string
+	Config          string
+	ConfigOverwrite string
+	DockerTarget    string
+	CloudTarget     string
+	SwitchContext   bool
+	SkipBuild       bool
+	GitBranch       string
 }
 
 func init() {
@@ -63,6 +64,7 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.ConfigOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
@@ -163,6 +165,9 @@ func (cmd *DeployCmd) prepareConfig() {
 
 		// Don't use overwrite config if we use a different config
 		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.ConfigOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.ConfigOverwrite
 	}
 
 	// Load Config and modify it

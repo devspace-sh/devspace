@@ -40,6 +40,7 @@ type UpCmdFlags struct {
 	labelSelector   string
 	namespace       string
 	config          string
+	configOverwrite string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -98,6 +99,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
@@ -108,12 +110,16 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Don't use overwrite config if we use a different config
 		configutil.OverwriteConfigPath = ""
 	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
 
 	log.StartFileLogging()
 	var err error
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
+		log.Info("Config does not exist")
 		initFlags := &InitCmdFlags{
 			reconfigure:      false,
 			overwrite:        false,
