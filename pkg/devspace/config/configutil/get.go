@@ -54,9 +54,7 @@ var setDefaultsOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
-	workdir, _ := os.Getwd()
-
-	_, err := os.Stat(workdir + ConfigPath)
+	_, err := os.Stat(ConfigPath)
 	if os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {
