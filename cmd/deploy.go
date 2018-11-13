@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"os"
-
-	"gopkg.in/src-d/go-git.v4/plumbing"
-
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -15,7 +11,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
-	git "gopkg.in/src-d/go-git.v4"
 )
 
 // DeployCmd holds the required data for the down cmd
@@ -69,14 +64,14 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
-	cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
+	// cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
 
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if len(args) > 0 {
+	/* if len(args) > 0 {
 		directoryName := "devspace"
 		if len(args) == 2 {
 			directoryName = args[1]
@@ -97,7 +92,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 
 		log.Donef("Successfully checked out %s into %s", args[0], directoryName)
-	}
+	}*/
 
 	cloud.UseDeployTarget = true
 	log.StartFileLogging()
