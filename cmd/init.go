@@ -340,9 +340,11 @@ func (cmd *InitCmd) addDefaultPorts() {
 
 	portMappings := []*v1.PortMapping{}
 	for _, port := range ports {
+		exposedPort := port
+
 		portMappings = append(portMappings, &v1.PortMapping{
-			LocalPort:  &port,
-			RemotePort: &port,
+			LocalPort:  &exposedPort,
+			RemotePort: &exposedPort,
 		})
 	}
 
