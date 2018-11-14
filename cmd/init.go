@@ -4,7 +4,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
@@ -25,7 +24,6 @@ import (
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
-	workdir        string
 	chartGenerator *generator.ChartGenerator
 	defaultImage   *v1.ImageConfig
 }
@@ -114,12 +112,6 @@ YOUR_PROJECT_PATH/
 // Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-	workdir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	cmd.workdir = workdir
 
 	var config *v1.Config
 
@@ -172,7 +164,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	createChart := cmd.flags.overwrite
 	if !cmd.flags.overwrite {
-		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
+		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
 			if !cmd.flags.skipQuestions {
 				createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -212,6 +204,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) initChartGenerator() {
+	workdir, _ := os.Getwd()
 	templateRepoPath := cmd.flags.templateRepoPath
 
 	if len(templateRepoPath) == 0 {
@@ -224,7 +217,7 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 	cmd.chartGenerator = &generator.ChartGenerator{
 		TemplateRepo: templateRepo,
-		Path:         cmd.workdir,
+		Path:         workdir,
 	}
 }
 
@@ -336,10 +329,9 @@ func (cmd *InitCmd) addDefaultService() {
 }
 
 func (cmd *InitCmd) addDefaultPorts() {
-	dockerfilePath := filepath.Join(cmd.workdir, "Dockerfile")
-	ports, err := dockerfile.GetPorts(dockerfilePath)
+	ports, err := dockerfile.GetPorts("Dockerfile")
 	if err != nil {
-		log.Warnf("Error parsing dockerfile %s: %v", dockerfilePath, err)
+		log.Warnf("Error parsing dockerfile: %v", err)
 		return
 	}
 	if len(ports) == 0 {
@@ -375,8 +367,8 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 			return
 		}
 	}
-	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
-	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+
+	dockerignore, err := ioutil.ReadFile(".dockerignore")
 	uploadExcludePaths := []string{}
 
 	if err == nil {
