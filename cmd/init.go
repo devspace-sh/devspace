@@ -128,9 +128,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.GetConfig()
 	} else {
 		// Delete config & overwrite config
-		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
-		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
-		os.Remove(filepath.Join(workdir, generated.ConfigPath))
+		os.Remove(configutil.ConfigPath)
+		os.Remove(configutil.OverwriteConfigPath)
+		os.Remove(generated.ConfigPath)
 
 		// Create config
 		config = configutil.InitConfig()
@@ -150,9 +150,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configutil.Merge(&config, &v1.Config{
 		Version: configutil.String(configutil.CurrentConfigVersion),
-		DevSpace: &v1.DevSpaceConfig{
-			Deployments: &[]*v1.DeploymentConfig{},
-		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
 				Name: configutil.String("devspace"),
@@ -292,6 +289,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 	}
+
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
@@ -427,12 +425,12 @@ func (cmd *InitCmd) configureRegistry() {
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
 		}
-	}
 
-	// Don't push image in minikube
-	if kubectl.IsMinikube() {
-		cmd.defaultImage.SkipPush = configutil.Bool(true)
-		return
+		// Don't push image in minikube
+		if kubectl.IsMinikube() {
+			cmd.defaultImage.SkipPush = configutil.Bool(true)
+			return
+		}
 	}
 
 	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)

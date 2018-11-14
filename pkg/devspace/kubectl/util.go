@@ -28,7 +28,7 @@ func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error 
 	if defaultNamespace != "default" {
 		_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
 		if err != nil {
-			log.Infof("Create namespace %s", defaultNamespace)
+			log.Donef("Create namespace %s", defaultNamespace)
 
 			// Create release namespace
 			_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{

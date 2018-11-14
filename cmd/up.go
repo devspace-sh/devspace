@@ -247,7 +247,7 @@ func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []stri
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
+		log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
