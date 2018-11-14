@@ -1,17 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/configure"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/dockerfile"
@@ -403,22 +404,28 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 func (cmd *InitCmd) configureRegistry() {
 	dockerUsername := ""
 
-	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err == nil {
-		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
-		log.StopWait()
+	client, err := docker.NewClient(true)
+	if err != nil {
+		log.Fatalf("Cannot create docker client: %v", err)
+	}
 
-		if err == nil {
-			dockerUsername = dockerAuthConfig.Username
-		}
-	} else {
+	// Check if docker is installed
+	_, err = client.Ping(context.Background())
+	if err != nil {
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
 			Kaniko: &v1.KanikoConfig{
 				Cache:     configutil.Bool(true),
 				Namespace: configutil.String(""),
 			},
+		}
+	} else {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		log.StopWait()
+
+		if err == nil {
+			dockerUsername = dockerAuthConfig.Username
 		}
 	}
 

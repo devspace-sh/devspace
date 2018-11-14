@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/docker/docker/client"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/helm"
@@ -14,7 +15,7 @@ import (
 )
 
 // InitRegistries initializes all registries
-func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
+func InitRegistries(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, log log.Logger) error {
 	config := configutil.GetConfig()
 	registryMap := *config.Registries
 
@@ -41,7 +42,7 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 		log.Done("Internal registry started")
 	}
 
-	err := CreatePullSecrets(client, log)
+	err := CreatePullSecrets(dockerClient, client, log)
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func InitRegistries(client *kubernetes.Clientset, log log.Logger) error {
 }
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
+func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Images != nil {
@@ -62,7 +63,7 @@ func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
 				}
 
 				log.StartWait("Creating image pull secret for registry: " + *registryConfig.URL)
-				err = createPullSecretForRegistry(client, registryConfig, log)
+				err = createPullSecretForRegistry(dockerClient, client, registryConfig, log)
 				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
@@ -74,7 +75,7 @@ func CreatePullSecrets(client *kubernetes.Clientset, log log.Logger) error {
 	return nil
 }
 
-func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.RegistryConfig, log log.Logger) error {
+func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, registryConf *v1.RegistryConfig, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
@@ -91,7 +92,7 @@ func createPullSecretForRegistry(client *kubernetes.Clientset, registryConf *v1.
 	password := ""
 
 	if registryConf.Auth == nil || registryConf.Auth.Username == nil || registryConf.Auth.Password == nil {
-		authConfig, _ := docker.GetAuthConfig(registryURL)
+		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
 
 		if authConfig != nil {
 			username = authConfig.Username

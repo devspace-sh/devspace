@@ -6,6 +6,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/registry"
@@ -120,8 +121,11 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
+	// Create docker client
+	dockerClient, err := docker.NewClient(false)
+
 	// Create pull secrets and private registry if necessary
-	err = registry.InitRegistries(client, log.GetInstance())
+	err = registry.InitRegistries(dockerClient, client, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

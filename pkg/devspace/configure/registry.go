@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -29,19 +29,20 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 		})
 	}
 
+	client, err := docker.NewClient(false)
+	if err == nil {
+		return fmt.Errorf("Couldn't create docker client: %v", err)
+	}
+
 	if registryURL != "hub.docker.com" {
-		imageBuilder, err := docker.NewBuilder(registryURL, "", "", false)
-		if err == nil {
-			log.StartWait("Checking Docker credentials")
-			dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
-			log.StopWait()
-
-			if err != nil {
-				return fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", registryURL)
-			}
-
-			dockerUsername = dockerAuthConfig.Username
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, registryURL, true)
+		log.StopWait()
+		if err != nil {
+			return fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", registryURL)
 		}
+
+		dockerUsername = dockerAuthConfig.Username
 	} else if dockerUsername == "" {
 		log.Warn("No docker credentials were found in the credentials store")
 		log.Warn("Please make sure you have a https://hub.docker.com account")
@@ -60,12 +61,7 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 				IsPassword:             true,
 			})
 
-			builder, err := docker.NewBuilder("", "", "", false)
-			if err != nil {
-				return err
-			}
-
-			_, err = builder.Login(dockerUsername, dockerPassword, false, true)
+			_, err = docker.Login(client, registryURL, dockerUsername, dockerPassword, true, true)
 			if err != nil {
 				log.Warn(err)
 				continue
