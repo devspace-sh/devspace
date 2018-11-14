@@ -60,7 +60,7 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 				IsPassword:             true,
 			})
 
-			_, err = docker.Login(client, registryURL, dockerUsername, dockerPassword, true, true)
+			_, err = docker.Login(client, registryURL, dockerUsername, dockerPassword, false, true)
 			if err != nil {
 				log.Warn(err)
 				continue

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -58,12 +58,7 @@ func (b *Builder) Authenticate(username, password string, checkCredentialsStore 
 
 	email := "noreply@devspace-cloud.com"
 	if len(username) == 0 {
-		dockerBuilder, dockerBuilderErr := docker.NewBuilder(b.dockerClient, b.RegistryURL, b.ImageName, b.ImageTag)
-		if dockerBuilderErr != nil {
-			return nil, dockerBuilderErr
-		}
-
-		authConfig, err := dockerBuilder.Authenticate(username, password, true)
+		authConfig, err := docker.GetAuthConfig(b.dockerClient, b.RegistryURL, true)
 		if err != nil {
 			return nil, err
 		}
