@@ -10,11 +10,29 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 )
+
+// NewClient creates a new docker client
+func NewClient(preferMinikube bool) (client.CommonAPIClient, error) {
+	var cli client.CommonAPIClient
+	var err error
+
+	if preferMinikube {
+		cli, err = newDockerClientFromMinikube()
+	}
+	if preferMinikube == false || err != nil {
+		cli, err = newDockerClientFromEnvironment()
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cli, nil
+}
 
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)

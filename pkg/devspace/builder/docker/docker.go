@@ -1,12 +1,12 @@
 package docker
 
 import (
-	"fmt"
-	"strings"
-
 	"context"
+	"encoding/base64"
+	"encoding/json"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
+
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/docker/registry"
@@ -29,8 +29,6 @@ var (
 	stdin, stdout, stderr = term.StdStreams()
 )
 
-var authConfigs = map[string]*types.AuthConfig{}
-
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	RegistryURL string
@@ -43,21 +41,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*Builder, error) {
-	var cli client.CommonAPIClient
-	var err error
-
-	if preferMinikube {
-		cli, err = newDockerClientFromMinikube()
-	}
-	if preferMinikube == false || err != nil {
-		cli, err = newDockerClientFromEnvironment()
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func NewBuilder(client client.CommonAPIClient, registryURL, imageName, imageTag string) (*Builder, error) {
 	imageURL := imageName + ":" + imageTag
 	if registryURL != "" {
 		// Check if it's the official registry or not
@@ -81,7 +65,7 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 		ImageName:   imageName,
 		ImageTag:    imageTag,
 		imageURL:    imageURL,
-		client:      cli,
+		client:      client,
 	}, nil
 }
 
@@ -110,7 +94,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	// And canonicalize dockerfile name to a platform-independent one
-	authConfigs, _ := getAllAuthConfigs()
+	authConfigs, _ := dockerclient.GetAllAuthConfigs()
 	relDockerfile, err = archive.CanonicalTarNameForPath(relDockerfile)
 	if err != nil {
 		return err
@@ -151,13 +135,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	authConfig, err := b.Login(user, password, checkCredentialsStore, false)
+	var err error
+
+	b.authConfig, err = dockerclient.Login(b.client, b.RegistryURL, user, password, checkCredentialsStore, false)
 	if err != nil {
 		return nil, err
 	}
-
-	// Cache authConfig for GetAuthConfig
-	authConfigs[b.RegistryURL] = authConfig
 
 	return b.authConfig, nil
 }
@@ -191,85 +174,10 @@ func (b *Builder) PushImage() error {
 	return nil
 }
 
-// GetAuthConfig returns the AuthConfig for a Docker registry from the Docker credential helper
-func GetAuthConfig(registryURL string) (*types.AuthConfig, error) {
-	if registryURL == "hub.docker.com" || registryURL == "index.docker.io" {
-		registryURL = ""
-	}
-
-	authConfig, authConfigExists := authConfigs[registryURL]
-	if !authConfigExists {
-		dockerBuilder, err := NewBuilder(registryURL, "", "", false)
-		if err != nil {
-			return nil, err
-		}
-
-		authConfig, err = dockerBuilder.Authenticate("", "", true)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return authConfig, nil
-}
-
-// Login logs the user into docker
-func (b *Builder) Login(user, password string, checkCredentialsStore, saveAuthConfig bool) (*types.AuthConfig, error) {
-	ctx := context.Background()
-	authServer := getOfficialServer(ctx, b.client, log.GetInstance())
-	serverAddress := b.RegistryURL
-
-	if serverAddress == "" {
-		serverAddress = authServer
-	} else {
-		ref, err := reference.ParseNormalizedNamed(b.imageURL)
-		if err != nil {
-			return nil, err
-		}
-
-		repoInfo, err := registry.ParseRepositoryInfo(ref)
-		if err != nil {
-			return nil, err
-		}
-
-		if repoInfo.Index.Official {
-			serverAddress = authServer
-		}
-	}
-
-	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
-	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
-		authConfig.Username = strings.TrimSpace(user)
-		authConfig.Password = strings.TrimSpace(password)
-	}
-
-	response, err := b.client.RegistryLogin(ctx, *authConfig)
+func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
+	buf, err := json.Marshal(authConfig)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	if response.IdentityToken != "" {
-		authConfig.Password = ""
-		authConfig.IdentityToken = response.IdentityToken
-	}
-
-	if saveAuthConfig {
-		configfile, err := loadDockerConfig()
-		if err != nil {
-			return nil, err
-		}
-
-		err = configfile.GetCredentialsStore(serverAddress).Store(*authConfig)
-		if err != nil {
-			return nil, fmt.Errorf("Error saving auth info in credentials store: %v", err)
-		}
-
-		err = configfile.Save()
-		if err != nil {
-			return nil, fmt.Errorf("Error saving docker config: %v", err)
-		}
-	}
-
-	b.authConfig = authConfig
-	return b.authConfig, nil
+	return base64.URLEncoding.EncodeToString(buf), nil
 }

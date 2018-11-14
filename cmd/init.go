@@ -1,17 +1,17 @@
 package cmd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/configure"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/dockerfile"
@@ -24,7 +24,6 @@ import (
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
-	workdir        string
 	chartGenerator *generator.ChartGenerator
 	defaultImage   *v1.ImageConfig
 }
@@ -113,12 +112,6 @@ YOUR_PROJECT_PATH/
 // Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
-	workdir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	cmd.workdir = workdir
 
 	var config *v1.Config
 
@@ -127,9 +120,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.GetConfig()
 	} else {
 		// Delete config & overwrite config
-		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
-		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
-		os.Remove(filepath.Join(workdir, generated.ConfigPath))
+		os.Remove(configutil.ConfigPath)
+		os.Remove(configutil.OverwriteConfigPath)
+		os.Remove(generated.ConfigPath)
 
 		// Create config
 		config = configutil.InitConfig()
@@ -149,9 +142,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configutil.Merge(&config, &v1.Config{
 		Version: configutil.String(configutil.CurrentConfigVersion),
-		DevSpace: &v1.DevSpaceConfig{
-			Deployments: &[]*v1.DeploymentConfig{},
-		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
 				Name: configutil.String("devspace"),
@@ -174,7 +164,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	createChart := cmd.flags.overwrite
 	if !cmd.flags.overwrite {
-		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
+		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
 			if !cmd.flags.skipQuestions {
 				createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -214,6 +204,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) initChartGenerator() {
+	workdir, _ := os.Getwd()
 	templateRepoPath := cmd.flags.templateRepoPath
 
 	if len(templateRepoPath) == 0 {
@@ -226,7 +217,7 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 	cmd.chartGenerator = &generator.ChartGenerator{
 		TemplateRepo: templateRepo,
-		Path:         cmd.workdir,
+		Path:         workdir,
 	}
 }
 
@@ -291,6 +282,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 			ValidationRegexPattern: "^(yes)|(no)$",
 		}) == "yes"
 	}
+
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
 
@@ -337,10 +329,9 @@ func (cmd *InitCmd) addDefaultService() {
 }
 
 func (cmd *InitCmd) addDefaultPorts() {
-	dockerfilePath := filepath.Join(cmd.workdir, "Dockerfile")
-	ports, err := dockerfile.GetPorts(dockerfilePath)
+	ports, err := dockerfile.GetPorts("Dockerfile")
 	if err != nil {
-		log.Warnf("Error parsing dockerfile %s: %v", dockerfilePath, err)
+		log.Warnf("Error parsing dockerfile: %v", err)
 		return
 	}
 	if len(ports) == 0 {
@@ -376,8 +367,8 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 			return
 		}
 	}
-	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
-	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+
+	dockerignore, err := ioutil.ReadFile(".dockerignore")
 	uploadExcludePaths := []string{}
 
 	if err == nil {
@@ -403,16 +394,14 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 func (cmd *InitCmd) configureRegistry() {
 	dockerUsername := ""
 
-	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err == nil {
-		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
-		log.StopWait()
+	client, err := docker.NewClient(true)
+	if err != nil {
+		log.Fatalf("Cannot create docker client: %v", err)
+	}
 
-		if err == nil {
-			dockerUsername = dockerAuthConfig.Username
-		}
-	} else {
+	// Check if docker is installed
+	_, err = client.Ping(context.Background())
+	if err != nil {
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
 			Kaniko: &v1.KanikoConfig{
@@ -420,12 +409,20 @@ func (cmd *InitCmd) configureRegistry() {
 				Namespace: configutil.String(""),
 			},
 		}
-	}
+	} else {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		log.StopWait()
 
-	// Don't push image in minikube
-	if kubectl.IsMinikube() {
-		cmd.defaultImage.SkipPush = configutil.Bool(true)
-		return
+		if err == nil {
+			dockerUsername = dockerAuthConfig.Username
+		}
+
+		// Don't push image in minikube
+		if kubectl.IsMinikube() {
+			cmd.defaultImage.SkipPush = configutil.Bool(true)
+			return
+		}
 	}
 
 	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)

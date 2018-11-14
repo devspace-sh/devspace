@@ -7,6 +7,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/registry"
@@ -155,7 +156,12 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Init image registries
 	if cmd.flags.initRegistries {
-		err = registry.InitRegistries(client, log.GetInstance())
+		dockerClient, err := docker.NewClient(false)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -241,7 +247,7 @@ func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []stri
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
+		log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 

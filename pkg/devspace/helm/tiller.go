@@ -39,7 +39,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
 	if err != nil {
-		log.Infof("Create namespace %s", tillerNamespace)
+		log.Donef("Create namespace %s", tillerNamespace)
 
 		// Create tiller namespace
 		_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{

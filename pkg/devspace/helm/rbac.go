@@ -68,7 +68,7 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 			// Create namespaces if they are not there already
 			_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
 			if err != nil {
-				log.Infof("Create namespace %s", *appNamespace)
+				log.Donef("Create namespace %s", *appNamespace)
 
 				_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{

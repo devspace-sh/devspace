@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -14,6 +14,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -31,10 +32,11 @@ type Builder struct {
 
 	allowInsecureRegistry bool
 	kubectl               *kubernetes.Clientset
+	dockerClient          client.CommonAPIClient
 }
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
 		RegistryURL:           registryURL,
 		PullSecretName:        pullSecretName,
@@ -44,6 +46,7 @@ func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, 
 		BuildNamespace:        buildNamespace,
 		allowInsecureRegistry: allowInsecureRegistry,
 		kubectl:               kubectl,
+		dockerClient:          dockerClient,
 	}, nil
 }
 
@@ -54,17 +57,12 @@ func (b *Builder) Authenticate(username, password string, checkCredentialsStore 
 	}
 
 	email := "noreply@devspace-cloud.com"
-
 	if len(username) == 0 {
-		dockerBuilder, dockerBuilderErr := docker.NewBuilder(b.RegistryURL, b.ImageName, b.ImageTag, false)
-		if dockerBuilderErr != nil {
-			return nil, dockerBuilderErr
-		}
-
-		authConfig, err := dockerBuilder.Authenticate(username, password, true)
+		authConfig, err := docker.GetAuthConfig(b.dockerClient, b.RegistryURL, true)
 		if err != nil {
 			return nil, err
 		}
+
 		username = authConfig.Username
 		email = authConfig.Email
 
@@ -74,6 +72,7 @@ func (b *Builder) Authenticate(username, password string, checkCredentialsStore 
 			password = authConfig.IdentityToken
 		}
 	}
+
 	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email, log.GetInstance())
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
@@ -111,7 +112,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				pullSecret = *imageConf.Build.Kaniko.PullSecret
 			}
 
-			imageBuilder, err = kaniko.NewBuilder(*registryConf.URL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, client, allowInsecurePush)
+			dockerClient, err := dockerclient.NewClient(false)
+			if err != nil {
+				return false, fmt.Errorf("Error creating docker client: %v", err)
+			}
+
+			imageBuilder, err = kaniko.NewBuilder(*registryConf.URL, pullSecret, imageName, imageTag, (*generatedConfig).ImageTags[imageName], buildNamespace, dockerClient, client, allowInsecurePush)
 			if err != nil {
 				return false, fmt.Errorf("Error creating kaniko builder: %v", err)
 			}
@@ -123,9 +129,14 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 				preferMinikube = *imageConf.Build.Docker.PreferMinikube
 			}
 
-			imageBuilder, err = docker.NewBuilder(*registryConf.URL, imageName, imageTag, preferMinikube)
+			dockerClient, err := dockerclient.NewClient(preferMinikube)
 			if err != nil {
 				return false, fmt.Errorf("Error creating docker client: %v", err)
+			}
+
+			imageBuilder, err = docker.NewBuilder(dockerClient, *registryConf.URL, imageName, imageTag)
+			if err != nil {
+				return false, fmt.Errorf("Error creating docker builder: %v", err)
 			}
 		}
 

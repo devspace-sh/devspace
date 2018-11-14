@@ -23,7 +23,8 @@ func loadDockerConfig() (*configfile.ConfigFile, error) {
 	return config.Load(configDir)
 }
 
-func getAllAuthConfigs() (map[string]types.AuthConfig, error) {
+// GetAllAuthConfigs returns every auth config found in the docker config
+func GetAllAuthConfigs() (map[string]types.AuthConfig, error) {
 	config, err := loadDockerConfig()
 	if err != nil {
 		return nil, err
