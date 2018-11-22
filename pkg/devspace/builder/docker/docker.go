@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 
 	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 
@@ -84,6 +87,18 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		return err
 	}
 
+	var dockerfileCtx *os.File
+
+	// Dockerfile is out of context
+	if err == nil && strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
+		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
+		dockerfileCtx, err = os.Open(dockerfilePath)
+		if err != nil {
+			return errors.Errorf("unable to open Dockerfile: %v", err)
+		}
+		defer dockerfileCtx.Close()
+	}
+
 	excludes, err := build.ReadDockerignore(contextDir)
 	if err != nil {
 		return err
@@ -107,6 +122,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	})
 	if err != nil {
 		return err
+	}
+
+	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context
+	if dockerfileCtx != nil && buildCtx != nil {
+		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Setup an upload progress bar

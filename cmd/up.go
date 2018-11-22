@@ -29,6 +29,7 @@ type UpCmdFlags struct {
 	initRegistries  bool
 	build           bool
 	sync            bool
+	terminal        bool
 	deploy          bool
 	exitAfterDeploy bool
 	allyes          bool
@@ -50,6 +51,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistries:  true,
 	build:           false,
 	sync:            true,
+	terminal:        true,
 	switchContext:   false,
 	exitAfterDeploy: false,
 	allyes:          false,
@@ -90,6 +92,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
@@ -251,5 +254,15 @@ func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []stri
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
-	return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
+	config := configutil.GetConfig()
+
+	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
+		return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
+	} else if config.DevSpace != nil && ((flags.portforwarding && config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0) || (flags.sync && config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0)) {
+		log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+
+		<-make(chan bool)
+	}
+
+	return nil
 }

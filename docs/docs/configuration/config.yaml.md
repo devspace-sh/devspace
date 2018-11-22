@@ -71,6 +71,7 @@ These services can be referenced within other config options (e.g. terminal, por
 
 ### devspace.terminal
 In this section options are defined, what should happen when devspace up or devspace enter try to open a terminal. By default, devspace will select pods with the labels `release=devspace-default` and try to start a bash or sh terminal in the container.
+- `disabled` *bool* if true no terminal will be opened on `devspace up` and `devspace enter`
 - `service` *string* DevSpace service to start the terminal for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
@@ -217,6 +218,9 @@ devSpace:
     resourceType: pod
   # terminal options for devspace up and devspace enter
   terminal:
+    # if you don't want devspace to automatically open a terminal for 
+    # you set disabled to true
+    disabled: false
     # define the service to start the terminal for
     service: default
     # Alternative to using a service is to 

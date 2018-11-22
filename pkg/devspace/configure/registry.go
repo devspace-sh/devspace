@@ -106,7 +106,7 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 
 		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
-			DefaultValue:           "no",
+			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)$",
 		}) == "yes"
 	}
