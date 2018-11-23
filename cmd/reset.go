@@ -125,7 +125,7 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 	}
 
 	shouldCloudDevSpaceRemoved := cmd.flags.deleteFromDevSpaceCloud
-	if !shouldCloudDevSpaceRemoved || cmd.flags.skipQuestionsWithGivenAnswers {
+	if !shouldCloudDevSpaceRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
 		shouldCloudDevSpaceRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
 			DefaultValue:           "y",
@@ -158,7 +158,7 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 func (cmd *ResetCmd) deleteCloudKubeContext() {
 	config := configutil.GetConfig()
 	shouldCloudContextRemoved := cmd.flags.removeCloudContext
-	if !shouldCloudContextRemoved || cmd.flags.skipQuestionsWithGivenAnswers {
+	if !shouldCloudContextRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
 		shouldCloudContextRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "\n\nShould the cloud kube context be removed (y/n)",
 			DefaultValue:           "y",
@@ -185,7 +185,7 @@ func (cmd *ResetCmd) deleteInternalRegistry() {
 
 	if config.InternalRegistry != nil {
 		shouldRegistryRemoved := cmd.flags.removeRegistry
-		if !shouldRegistryRemoved || cmd.flags.skipQuestionsWithGivenAnswers {
+		if !shouldRegistryRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
 			shouldRegistryRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "\n\nShould the internal registry be removed? (y/n)",
 				DefaultValue:           "y",
@@ -219,7 +219,7 @@ func (cmd *ResetCmd) deleteTiller() {
 
 	if config.Tiller != nil {
 		shouldRemoveTiller := cmd.flags.removeTiller
-		if !shouldRemoveTiller || cmd.flags.skipQuestionsWithGivenAnswers {
+		if !shouldRemoveTiller && !cmd.flags.skipQuestionsWithGivenAnswers {
 			shouldRemoveTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "\n\nShould the tiller server be removed? (y/n)",
 				DefaultValue:           "y",
@@ -253,7 +253,7 @@ func (cmd *ResetCmd) deleteDeploymentFiles() {
 					_, err := os.Stat(absChartPath)
 					if os.IsNotExist(err) == false {
 						deleteChart := cmd.flags.deleteChart
-						if !deleteChart || cmd.flags.skipQuestionsWithGivenAnswers {
+						if !deleteChart && !cmd.flags.skipQuestionsWithGivenAnswers {
 							deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 								Question:               "\n\nShould the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
 								DefaultValue:           "y",
@@ -289,7 +289,7 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerfilePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerfile := cmd.flags.deleteDockerfile
-			if !deleteDockerfile || cmd.flags.skipQuestionsWithGivenAnswers {
+			if !deleteDockerfile && !cmd.flags.skipQuestionsWithGivenAnswers {
 				deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 					Question:               "\n\nShould " + dockerfilePath + " be removed? (y/n)",
 					DefaultValue:           "y",
@@ -317,7 +317,7 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerIgnorePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerIgnore := cmd.flags.deleteDockerIgnore
-			if !deleteDockerIgnore || cmd.flags.skipQuestionsWithGivenAnswers {
+			if !deleteDockerIgnore && !cmd.flags.skipQuestionsWithGivenAnswers {
 				deleteDockerIgnore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 					Question:               "\n\nShould " + absDockerIgnorePath + " be removed? (y/n)",
 					DefaultValue:           "y",
@@ -338,7 +338,7 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err == nil {
 		deleteRoleBinding := cmd.flags.deleteRoleBinding
-		if !deleteRoleBinding || cmd.flags.skipQuestionsWithGivenAnswers {
+		if !deleteRoleBinding && !cmd.flags.skipQuestionsWithGivenAnswers {
 			deleteRoleBinding = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
 				DefaultValue:           "y",
@@ -362,7 +362,7 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 
 func (cmd *ResetCmd) deleteDevspaceFolder() {
 	deleteDevspaceFolder := cmd.flags.deleteDevspaceFolder
-	if !deleteDevspaceFolder || cmd.flags.skipQuestionsWithGivenAnswers {
+	if !deleteDevspaceFolder && !cmd.flags.skipQuestionsWithGivenAnswers {
 		deleteDevspaceFolder = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "\n\nShould the .devspace folder be removed? (y/n)",
 			DefaultValue:           "y",
