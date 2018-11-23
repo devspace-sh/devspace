@@ -43,7 +43,6 @@ type InitCmdFlags struct {
 	useDevSpaceCloud                  bool
 	addDevSpaceCloudToLocalKubernetes bool
 	namespace                         string
-	createInternalRegistry            bool
 	registryURL                       string
 	defaultImageName                  string
 	createPullSecret                  bool
@@ -62,7 +61,6 @@ var InitCmdFlagsDefault = &InitCmdFlags{
 	useDevSpaceCloud:                  false,
 	addDevSpaceCloudToLocalKubernetes: false,
 	namespace:                         "",
-	createInternalRegistry:            false,
 }
 
 func init() {
