@@ -427,7 +427,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions || cmd.flags.skipQuestionsWithGivenAnswers, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
