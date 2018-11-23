@@ -15,7 +15,7 @@ import (
 )
 
 /*The internal registry is not supported in the init command.
- However, it is still supported if written in the config.yaml .
+However, it is still supported if written in the config.yaml .
 And it should work, which is why it is tested here. */
 func TestUpWithInternalRegistry(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
@@ -37,8 +37,31 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	}()
 
 	upCmdObj.Run(nil, []string{})
-	log.StopFileLogging()
 
+	log.StartFileLogging()
+	listCmdObj := ListCmd{
+		flags: &ListCmdFlags{},
+	}
+	listCmdObj.RunListPort(nil, nil)
+	listCmdObj.RunListService(nil, nil)
+	listCmdObj.RunListSync(nil, nil)
+	listCmdObj.RunListPackage(nil, nil)
+
+	logFile, err := os.Open(log.Logdir + "default.log")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	data := make([]byte, 10000)
+	count, err := logFile.Read(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	t.Logf("read %d bytes: %q\n", count, data[:count])
+	assert.Contains(t, string(data[:count]), "pod    release=devspace-test-cmd-up-private-registry   3000:3000", "No PortForwarding")
+	assert.Contains(t, string(data[:count]), "No services are configured. Run `devspace add service` to add new service", "A service appeared despite not configured")
+	assert.Contains(t, string(data[:count]), "release=devspace-test-cmd-up-private-registry   ./           /app", "No Sync")
+	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
 	//testReset(t)
 
 }
