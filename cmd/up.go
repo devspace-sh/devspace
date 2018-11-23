@@ -45,11 +45,11 @@ type UpCmdFlags struct {
 
 	//These flags are for testing only. They are passed to the init-command.
 	skipQuestionsWithGivenAnswers     bool
+	language                          string
 	cloudProvider                     string
 	useDevSpaceCloud                  bool
 	addDevSpaceCloudToLocalKubernetes bool
 	namespaceInit                     string
-	createInternalRegistry            bool
 	registryURL                       string
 	defaultImageName                  string
 	createPullSecret                  bool
@@ -74,11 +74,11 @@ var UpFlagsDefault = &UpCmdFlags{
 	labelSelector:   "",
 
 	skipQuestionsWithGivenAnswers:     false,
+	language:                          "",
 	cloudProvider:                     "",
 	useDevSpaceCloud:                  false,
 	addDevSpaceCloudToLocalKubernetes: false,
 	namespaceInit:                     "",
-	createInternalRegistry:            false,
 	registryURL:                       "",
 	defaultImageName:                  "",
 	createPullSecret:                  false,
@@ -149,14 +149,13 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			skipQuestions:    cmd.flags.allyes,
 			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 			templateRepoPath: "",
-			language:         "",
 
 			skipQuestionsWithGivenAnswers:     cmd.flags.skipQuestionsWithGivenAnswers,
+			language:                          cmd.flags.language,
 			cloudProvider:                     cmd.flags.cloudProvider,
 			useDevSpaceCloud:                  cmd.flags.useDevSpaceCloud,
 			addDevSpaceCloudToLocalKubernetes: cmd.flags.addDevSpaceCloudToLocalKubernetes,
 			namespace:                         cmd.flags.namespaceInit,
-			createInternalRegistry:            cmd.flags.createInternalRegistry,
 			registryURL:                       cmd.flags.registryURL,
 			defaultImageName:                  cmd.flags.defaultImageName,
 			createPullSecret:                  cmd.flags.createPullSecret,
