@@ -179,6 +179,8 @@ func (s *stdoutLogger) StopWait() {
 
 // PrintTable implements logger interface
 func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
+	tableAsString := ""
+
 	columnLengths := make([]int, len(header))
 
 	for k, v := range header {
@@ -197,6 +199,7 @@ func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 	// Print Header
 	for key, value := range header {
 		WriteColored(" "+value+"  ", ct.Green)
+		tableAsString = tableAsString + " " + value + "  "
 
 		padding := columnLengths[key] - len(value)
 
@@ -208,6 +211,7 @@ func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 	s.Write([]byte("\n"))
 
 	if len(values) == 0 {
+		tableAsString = tableAsString + " No entries found\n"
 		s.Write([]byte(" No entries found\n"))
 	}
 
@@ -215,16 +219,21 @@ func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 	for _, v := range values {
 		for key, value := range v {
 			s.Write([]byte(" " + value + "  "))
+			tableAsString = tableAsString + " " + value + "  "
 
 			padding := columnLengths[key] - len(value)
 
 			if padding > 0 {
 				s.Write([]byte(strings.Repeat(" ", padding)))
+				tableAsString = tableAsString + strings.Repeat(" ", padding)
 			}
 		}
 
 		s.Write([]byte("\n"))
+		tableAsString = tableAsString + "\n"
 	}
+
+	s.writeMessageToFileLogger(infoFn, tableAsString)
 }
 
 func (s *stdoutLogger) Debug(args ...interface{}) {
