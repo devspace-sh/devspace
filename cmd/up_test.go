@@ -62,11 +62,45 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	assert.Contains(t, string(data[:count]), "No services are configured. Run `devspace add service` to add new service", "A service appeared despite not configured")
 	assert.Contains(t, string(data[:count]), "release=devspace-test-cmd-up-private-registry   ./           /app", "No Sync")
 	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
-	//testReset(t)
+
+	resetCmdObj := ResetCmd{
+		flags: &ResetCmdFlags{
+			skipQuestionsWithGivenAnswers: true,
+			deleteFromDevSpaceCloud:       false,
+			removeCloudContext:            false,
+			removeTiller:                  false,
+			deleteChart:                   false,
+			removeRegistry:                false,
+			deleteDockerfile:              false,
+			deleteDockerIgnore:            false,
+			deleteRoleBinding:             false,
+			deleteDevspaceFolder:          false,
+		},
+	}
+	resetCmdObj.Run(nil, []string{})
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Stat(path.Join(dir, "Dockerfile"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".dockerignore"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".devspace"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "chart"))
+	assert.Equal(t, false, os.IsNotExist(err))
+
+	_, err = os.Stat(path.Join(dir, "index.js"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "package.json"))
+	assert.Equal(t, false, os.IsNotExist(err))
 
 }
 
-func TestUpWithDockerHub(t *testing.T) {
+/*func TestUpWithDockerHub(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
 	defer resetWorkDir(t)
 
@@ -92,7 +126,7 @@ func TestUpWithDockerHub(t *testing.T) {
 
 	testReset(t)
 
-}
+}*/
 
 var workDirBefore string
 
@@ -118,9 +152,9 @@ func resetWorkDir(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	os.Remove(tmpDir)
-
 	os.Chdir(workDirBefore)
+
+	os.Remove(tmpDir)
 }
 
 func testReset(t *testing.T) {
