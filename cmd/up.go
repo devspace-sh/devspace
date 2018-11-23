@@ -42,6 +42,17 @@ type UpCmdFlags struct {
 	namespace       string
 	config          string
 	configOverwrite string
+
+	//These flags are for testing only. They are passed to the init-command.
+	skipQuestionsWithGivenAnswers     bool
+	cloudProvider                     string
+	useDevSpaceCloud                  bool
+	addDevSpaceCloudToLocalKubernetes bool
+	namespaceInit                     string
+	createInternalRegistry            bool
+	registryURL                       string
+	defaultImageName                  string
+	createPullSecret                  bool
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -61,6 +72,16 @@ var UpFlagsDefault = &UpCmdFlags{
 	container:       "",
 	namespace:       "",
 	labelSelector:   "",
+
+	skipQuestionsWithGivenAnswers:     false,
+	cloudProvider:                     "",
+	useDevSpaceCloud:                  false,
+	addDevSpaceCloudToLocalKubernetes: false,
+	namespaceInit:                     "",
+	createInternalRegistry:            false,
+	registryURL:                       "",
+	defaultImageName:                  "",
+	createPullSecret:                  false,
 }
 
 func init() {
@@ -129,6 +150,16 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 			templateRepoPath: "",
 			language:         "",
+
+			skipQuestionsWithGivenAnswers:     cmd.flags.skipQuestionsWithGivenAnswers,
+			cloudProvider:                     cmd.flags.cloudProvider,
+			useDevSpaceCloud:                  cmd.flags.useDevSpaceCloud,
+			addDevSpaceCloudToLocalKubernetes: cmd.flags.addDevSpaceCloudToLocalKubernetes,
+			namespace:                         cmd.flags.namespaceInit,
+			createInternalRegistry:            cmd.flags.createInternalRegistry,
+			registryURL:                       cmd.flags.registryURL,
+			defaultImageName:                  cmd.flags.defaultImageName,
+			createPullSecret:                  cmd.flags.createPullSecret,
 		}
 		initCmd := &InitCmd{
 			flags: initFlags,
