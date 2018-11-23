@@ -37,6 +37,8 @@ type InitCmdFlags struct {
 	templateRepoPath string
 	language         string
 
+	//These flags are for testing only
+	skipQuestionsWithGivenAnswers     bool
 	cloudProvider                     string
 	useDevSpaceCloud                  bool
 	addDevSpaceCloudToLocalKubernetes bool
@@ -163,7 +165,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
-	if !cmd.flags.overwrite {
+	if !cmd.flags.overwrite || cmd.flags.skipQuestionsWithGivenAnswers {
 		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
 			if !cmd.flags.skipQuestions {
@@ -256,7 +258,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}
 	} else {
 		useDevSpaceCloud := cmd.flags.useDevSpaceCloud || cmd.flags.skipQuestions
-		if !useDevSpaceCloud {
+		if !useDevSpaceCloud || cmd.flags.skipQuestionsWithGivenAnswers {
 			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 				DefaultValue:           "yes",
@@ -275,7 +277,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
 	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
-	if !addToContext {
+	if !addToContext || cmd.flags.skipQuestionsWithGivenAnswers {
 		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 			DefaultValue:           "yes",
