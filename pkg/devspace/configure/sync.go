@@ -15,6 +15,10 @@ import (
 func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsString string) error {
 	config := configutil.GetConfig()
 
+	if config.DevSpace.Sync == nil {
+		config.DevSpace.Sync = &[]*v1.SyncConfig{}
+	}
+
 	if selector == "" {
 		selector = "release=" + services.GetNameOfFirstHelmDeployment()
 	}
@@ -82,8 +86,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, selector string) e
 		for _, v := range *config.DevSpace.Sync {
 			if removeAll ||
 				localPath == *v.LocalSubPath ||
-				containerPath == *v.ContainerPath ||
-				isMapEqual(labelSelectorMap, *v.LabelSelector) {
+				containerPath == *v.ContainerPath {
 				continue
 			}
 

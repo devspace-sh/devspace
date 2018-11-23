@@ -35,10 +35,15 @@ type ResetCmdFlags struct {
 	deleteDockerIgnore      bool
 	deleteRoleBinding       bool
 	deleteDevspaceFolder    bool
+
+	config          string
+	configOverwrite string
 }
 
 func init() {
-	cmd := &ResetCmd{}
+	cmd := &ResetCmd{
+		flags: &ResetCmdFlags{},
+	}
 
 	cobraCmd := &cobra.Command{
 		Use:   "reset",
@@ -63,11 +68,26 @@ command: devspace down
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
+
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
+
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
+
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 	var err error
 
 	// Create kubectl client

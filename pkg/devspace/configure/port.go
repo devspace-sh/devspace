@@ -60,7 +60,7 @@ func RemovePort(removeAll bool, selector string, args []string) error {
 		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
 
 		for _, v := range *config.DevSpace.Ports {
-			if removeAll || isMapEqual(labelSelectorMap, *v.LabelSelector) {
+			if removeAll {
 				continue
 			}
 
@@ -103,6 +103,10 @@ func containsPort(port string, ports []string) bool {
 
 func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
 	config := configutil.GetConfig()
+
+	if config.DevSpace.Ports == nil {
+		config.DevSpace.Ports = &[]*v1.PortForwardingConfig{}
+	}
 
 	// Check if we should add to existing port mapping
 	for _, v := range *config.DevSpace.Ports {

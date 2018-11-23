@@ -19,6 +19,8 @@ type DownCmd struct {
 
 // DownCmdFlags holds the possible down cmd flags
 type DownCmdFlags struct {
+	config          string
+	configOverwrite string
 }
 
 func init() {
@@ -40,12 +42,28 @@ your project, use: devspace reset
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
+
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
+
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
+
 	log.StartFileLogging()
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
+
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())

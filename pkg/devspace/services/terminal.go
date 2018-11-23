@@ -99,7 +99,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace)
 	log.StopWait()
 	if err != nil {
-		return fmt.Errorf("Cannot find running pod: %v", err)
+		return fmt.Errorf("Error starting terminal: Cannot find running pod: %v", err)
 	}
 
 	// Get container name

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/juju/ratelimit"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 )
@@ -164,8 +165,13 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 	overlap := ""
 	done := false
 
+	var downloadReader io.Reader = d.stdoutPipe
+	if d.config.DownstreamLimit > 0 {
+		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
+	}
+
 	for done == false {
-		n, err := d.stdoutPipe.Read(buf[:cap(buf)])
+		n, err := downloadReader.Read(buf[:cap(buf)])
 		buf = buf[:n]
 
 		if n == 0 {
@@ -438,8 +444,14 @@ func (d *downstream) downloadArchive(tarSize int64) (string, error) {
 
 	defer tempFile.Close()
 
+	// Apply rate limit if specified
+	var downloadReader io.Reader = d.stdoutPipe
+	if d.config.DownstreamLimit > 0 {
+		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
+	}
+
 	// Write From stdout to temp file
-	bytesRead, err := io.CopyN(tempFile, d.stdoutPipe, tarSize)
+	bytesRead, err := io.CopyN(tempFile, downloadReader, tarSize)
 	if err != nil {
 		return "", errors.Trace(err)
 	}

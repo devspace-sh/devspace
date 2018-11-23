@@ -12,11 +12,9 @@ import (
 // SaveConfig writes the data of a config to its yaml file
 func SaveConfig() error {
 	// Don't save custom config files
-	if ConfigPath != DefaultConfigPath {
+	if ConfigPath != DefaultConfigPath || OverwriteConfigPath != DefaultOverwriteConfigPath {
 		return nil
 	}
-
-	workdir, _ := os.Getwd()
 
 	// default and overwrite values
 	configToIgnore := makeConfig()
@@ -42,7 +40,7 @@ func SaveConfig() error {
 		return err
 	}
 
-	configDir := filepath.Dir(workdir + ConfigPath)
+	configDir := filepath.Dir(ConfigPath)
 	os.MkdirAll(configDir, os.ModePerm)
 
 	// Check if .gitignore exists
@@ -51,7 +49,7 @@ func SaveConfig() error {
 		fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 	}
 
-	writeErr := ioutil.WriteFile(workdir+ConfigPath, configYaml, os.ModePerm)
+	writeErr := ioutil.WriteFile(ConfigPath, configYaml, os.ModePerm)
 	if writeErr != nil {
 		return writeErr
 	}
@@ -62,7 +60,7 @@ func SaveConfig() error {
 			return err
 		}
 
-		return ioutil.WriteFile(workdir+OverwriteConfigPath, overwriteConfigYaml, os.ModePerm)
+		return ioutil.WriteFile(OverwriteConfigPath, overwriteConfigYaml, os.ModePerm)
 	}
 
 	return nil

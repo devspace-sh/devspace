@@ -44,4 +44,11 @@ type SyncConfig struct {
 	ExcludePaths         *[]string           `yaml:"excludePaths"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`
+	BandwidthLimits      *BandwidthLimits    `yaml:"bandwidthLimits,omitempty"`
+}
+
+// BandwidthLimits defines the struct for specifying the sync bandwidth limits
+type BandwidthLimits struct {
+	Download *int64 `yaml:"download,omitempty"`
+	Upload   *int64 `yaml:"upload,omitempty"`
 }

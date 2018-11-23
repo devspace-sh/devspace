@@ -7,6 +7,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/registry"
@@ -18,8 +19,7 @@ import (
 
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
-	flags   *UpCmdFlags
-	kubectl *kubernetes.Clientset
+	flags *UpCmdFlags
 }
 
 // UpCmdFlags are the flags available for the up-command
@@ -29,6 +29,7 @@ type UpCmdFlags struct {
 	initRegistries  bool
 	build           bool
 	sync            bool
+	terminal        bool
 	deploy          bool
 	exitAfterDeploy bool
 	allyes          bool
@@ -40,6 +41,7 @@ type UpCmdFlags struct {
 	labelSelector   string
 	namespace       string
 	config          string
+	configOverwrite string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -49,6 +51,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistries:  true,
 	build:           false,
 	sync:            true,
+	terminal:        true,
 	switchContext:   false,
 	exitAfterDeploy: false,
 	allyes:          false,
@@ -89,6 +92,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
@@ -98,6 +102,7 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
@@ -108,9 +113,12 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Don't use overwrite config if we use a different config
 		configutil.OverwriteConfigPath = ""
 	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
 
 	log.StartFileLogging()
-	var err error
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
@@ -131,41 +139,46 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		configutil.SetDefaultsOnce()
 	}
 
-	// Create kubectl client
-	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	// Create kubectl client and switch context if specified
+	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
 	// Init image registries
 	if cmd.flags.initRegistries {
-		err = registry.InitRegistries(cmd.kubectl, log.GetInstance())
+		dockerClient, err := docker.NewClient(false)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Build and deploy images
-	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, cmd.kubectl)
+	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, client)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if cmd.flags.exitAfterDeploy == false {
 		// Start services
-		err = startServices(cmd.flags, cmd.kubectl, args, log.GetInstance())
+		err = startServices(cmd.flags, client, args, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -237,9 +250,19 @@ func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []stri
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
+		log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
-	return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
+	config := configutil.GetConfig()
+
+	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
+		return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
+	} else if config.DevSpace != nil && ((flags.portforwarding && config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0) || (flags.sync && config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0)) {
+		log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+
+		<-make(chan bool)
+	}
+
+	return nil
 }
