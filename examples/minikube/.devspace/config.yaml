@@ -26,7 +26,4 @@ devSpace:
 images:
   default:
     name: devspace
-    createPullSecret: true
-    registry: internal
-internalRegistry:
-  deploy: true
+    skipPush: true

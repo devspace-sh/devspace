@@ -22,13 +22,16 @@ generated.yaml
 `
 
 // DefaultConfigPath is the default config path to use
-const DefaultConfigPath = "/.devspace/config.yaml"
+const DefaultConfigPath = ".devspace/config.yaml"
+
+// DefaultOverwriteConfigPath is the default overwrite config path to use
+const DefaultOverwriteConfigPath = ".devspace/overwrite.yaml"
 
 // ConfigPath is the path for the main config
 var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
-var OverwriteConfigPath = "/.devspace/overwrite.yaml"
+var OverwriteConfigPath = DefaultOverwriteConfigPath
 
 // DefaultDevspaceServiceName is the name of the initial default service
 const DefaultDevspaceServiceName = "default"
@@ -51,9 +54,7 @@ var setDefaultsOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists
 func ConfigExists() (bool, error) {
-	workdir, _ := os.Getwd()
-
-	_, err := os.Stat(workdir + ConfigPath)
+	_, err := os.Stat(ConfigPath)
 	if os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {

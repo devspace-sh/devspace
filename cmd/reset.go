@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/registry"
@@ -19,11 +20,20 @@ import (
 
 // ResetCmd holds the needed command information
 type ResetCmd struct {
+	flags   *ResetCmdFlags
 	kubectl *kubernetes.Clientset
 }
 
+// ResetCmdFlags holds the possible reset cmd flags
+type ResetCmdFlags struct {
+	config          string
+	configOverwrite string
+}
+
 func init() {
-	cmd := &ResetCmd{}
+	cmd := &ResetCmd{
+		flags: &ResetCmdFlags{},
+	}
 
 	cobraCmd := &cobra.Command{
 		Use:   "reset",
@@ -48,11 +58,26 @@ command: devspace down
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
+
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
+
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
+
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 	var err error
 
 	// Create kubectl client
@@ -63,13 +88,74 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	cmd.deleteDevSpaceDeployments()
-	cmd.deleteInternalRegistry()
-	cmd.deleteTiller()
+	config := configutil.GetConfig()
+
+	if config.Cluster != nil && config.Cluster.CloudProvider != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
+		cmd.deleteCloudDevSpace()
+	} else {
+		cmd.deleteDevSpaceDeployments()
+		cmd.deleteInternalRegistry()
+		cmd.deleteTiller()
+		cmd.deleteClusterRoleBinding()
+	}
+
 	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()
-	cmd.deleteClusterRoleBinding()
 	cmd.deleteDevspaceFolder()
+}
+
+func (cmd *ResetCmd) deleteCloudDevSpace() {
+	config := configutil.GetConfig()
+	providerConfig, err := cloud.ParseCloudConfig()
+	if err != nil {
+		log.Failf("Error loading cloud config: %v", err)
+		return
+	}
+
+	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
+
+	if shouldCloudDevSpaceRemoved {
+		// Get selected cloud provider from config
+		selectedCloudProvider := *config.Cluster.CloudProvider
+
+		if provider, ok := providerConfig[selectedCloudProvider]; ok {
+			err := cloud.DeleteDevSpace(provider, *config.Cluster.Namespace)
+			if err != nil {
+				log.Failf("Error deleting devspace: %v", err)
+			} else {
+				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
+
+				err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
+				if err != nil {
+					log.Failf("Error deleting kube context: %v", err)
+				}
+			}
+		}
+	} else {
+		cmd.deleteCloudKubeContext()
+	}
+}
+
+func (cmd *ResetCmd) deleteCloudKubeContext() {
+	config := configutil.GetConfig()
+	shouldCloudContextRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould the cloud kube context be removed (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
+
+	if shouldCloudContextRemoved {
+		err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
+		if err != nil {
+			log.Failf("Error deleting kube context: %v", err)
+		} else {
+			log.Done("Successfully deleted kube context")
+		}
+	}
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {

@@ -33,13 +33,13 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 	tillerOptions := &helminstaller.Options{
 		Namespace:      tillerNamespace,
 		MaxHistory:     10,
-		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.10.0",
+		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.11.0",
 		ServiceAccount: TillerServiceAccountName,
 	}
 
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
 	if err != nil {
-		log.Infof("Create namespace %s", tillerNamespace)
+		log.Donef("Create namespace %s", tillerNamespace)
 
 		// Create tiller namespace
 		_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{

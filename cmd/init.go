@@ -1,27 +1,22 @@
 package cmd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/configure"
+	"github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-
 	"github.com/covexo/devspace/pkg/util/dockerfile"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
-
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/util/log"
-
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +24,6 @@ import (
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags          *InitCmdFlags
-	workdir        string
 	chartGenerator *generator.ChartGenerator
 	defaultImage   *v1.ImageConfig
 }
@@ -38,18 +32,35 @@ type InitCmd struct {
 type InitCmdFlags struct {
 	reconfigure      bool
 	overwrite        bool
+	skipQuestions    bool
 	templateRepoURL  string
 	templateRepoPath string
 	language         string
+
+	cloudProvider                     string
+	useDevSpaceCloud                  bool
+	addDevSpaceCloudToLocalKubernetes bool
+	namespace                         string
+	createInternalRegistry            bool
+	registryURL                       string
+	defaultImageName                  string
+	createPullSecret                  bool
 }
 
 // InitCmdFlagsDefault are the default flags for InitCmdFlags
 var InitCmdFlagsDefault = &InitCmdFlags{
 	reconfigure:      false,
 	overwrite:        false,
+	skipQuestions:    false,
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 	language:         "",
+
+	cloudProvider:                     "",
+	useDevSpaceCloud:                  false,
+	addDevSpaceCloudToLocalKubernetes: false,
+	namespace:                         "",
+	createInternalRegistry:            false,
 }
 
 func init() {
@@ -92,6 +103,7 @@ YOUR_PROJECT_PATH/
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", cmd.flags.reconfigure, "Change existing configuration")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.skipQuestions, "yes", "y", cmd.flags.skipQuestions, "Answer all questions with their default value")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
@@ -101,13 +113,6 @@ YOUR_PROJECT_PATH/
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
-	workdir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-
-	cmd.workdir = workdir
-
 	var config *v1.Config
 
 	configExists, _ := configutil.ConfigExists()
@@ -115,9 +120,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.GetConfig()
 	} else {
 		// Delete config & overwrite config
-		os.Remove(filepath.Join(workdir, configutil.ConfigPath))
-		os.Remove(filepath.Join(workdir, configutil.OverwriteConfigPath))
-		os.Remove(filepath.Join(workdir, generated.ConfigPath))
+		os.Remove(configutil.ConfigPath)
+		os.Remove(configutil.OverwriteConfigPath)
+		os.Remove(generated.ConfigPath)
 
 		// Create config
 		config = configutil.InitConfig()
@@ -137,9 +142,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configutil.Merge(&config, &v1.Config{
 		Version: configutil.String(configutil.CurrentConfigVersion),
-		DevSpace: &v1.DevSpaceConfig{
-			Deployments: &[]*v1.DeploymentConfig{},
-		},
 		Images: &map[string]*v1.ImageConfig{
 			"default": &v1.ImageConfig{
 				Name: configutil.String("devspace"),
@@ -161,16 +163,16 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
-
 	if !cmd.flags.overwrite {
-		_, chartDirNotFound := os.Stat(cmd.workdir + "/chart")
+		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
-			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
-				DefaultValue:           "no",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
-			createChart = (*overwriteAnswer == "yes")
+			if !cmd.flags.skipQuestions {
+				createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Do you want to overwrite the existing files in /chart? (yes | no)",
+					DefaultValue:           "no",
+					ValidationRegexPattern: "^(yes)|(no)$",
+				}) == "yes"
+			}
 		} else {
 			createChart = true
 		}
@@ -202,6 +204,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) initChartGenerator() {
+	workdir, _ := os.Getwd()
 	templateRepoPath := cmd.flags.templateRepoPath
 
 	if len(templateRepoPath) == 0 {
@@ -214,7 +217,7 @@ func (cmd *InitCmd) initChartGenerator() {
 	}
 	cmd.chartGenerator = &generator.ChartGenerator{
 		TemplateRepo: templateRepo,
-		Path:         cmd.workdir,
+		Path:         workdir,
 	}
 }
 
@@ -225,22 +228,22 @@ func (cmd *InitCmd) useCloudProvider() bool {
 	}
 
 	if len(providerConfig) > 1 {
-		cloudProvider := "("
+		cloudProviderOptions := "("
 
 		for name := range providerConfig {
-			if len(cloudProvider) > 1 {
-				cloudProvider += ", "
+			if len(cloudProviderOptions) > 1 {
+				cloudProviderOptions += ", "
 			}
 
-			cloudProvider += name
+			cloudProviderOptions += name
 		}
 
-		cloudProvider += ")"
-		cloudProviderSelected := ""
+		cloudProviderOptions += ")"
+		cloudProviderSelected := cmd.flags.cloudProvider
 
-		for ok := false; ok == false && cloudProviderSelected != "no"; {
+		for _, ok := providerConfig[cloudProviderSelected]; ok == false && cloudProviderSelected != "no"; {
 			cloudProviderSelected = strings.TrimSpace(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProvider,
+				Question:     "Do you want to use a cloud provider? (no to skip) " + cloudProviderOptions,
 				DefaultValue: cloud.DevSpaceCloudProviderName,
 			}))
 
@@ -252,12 +255,14 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			return true
 		}
 	} else {
-		useDevSpaceCloud := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		}) == "yes"
-
+		useDevSpaceCloud := cmd.flags.useDevSpaceCloud || cmd.flags.skipQuestions
+		if !useDevSpaceCloud {
+			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
+				DefaultValue:           "yes",
+				ValidationRegexPattern: "^(yes)|(no)$",
+			}) == "yes"
+		}
 		if useDevSpaceCloud {
 			cmd.loginToCloudProvider(providerConfig, cloud.DevSpaceCloudProviderName)
 			return true
@@ -266,13 +271,17 @@ func (cmd *InitCmd) useCloudProvider() bool {
 
 	return false
 }
+
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
-	addToContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
-		DefaultValue:           "yes",
-		ValidationRegexPattern: "^(yes)|(no)$",
-	}) == "yes"
+	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
+	if !addToContext {
+		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
+			DefaultValue:           "yes",
+			ValidationRegexPattern: "^(yes)|(no)$",
+		}) == "yes"
+	}
 
 	config.Cluster.CloudProvider = &cloudProviderSelected
 	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
@@ -280,6 +289,7 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
 		UseKubeContext:    addToContext,
 		SwitchKubeContext: true,
+		SkipSaveConfig:    true,
 	}, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
@@ -292,11 +302,14 @@ func (cmd *InitCmd) configureDevSpace() {
 		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 	}
 
-	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           "default",
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
+	namespace := &cmd.flags.namespace
+	if *namespace == "" {
+		namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which Kubernetes namespace should your application run in?",
+			DefaultValue:           "default",
+			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
+		})
+	}
 
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
@@ -316,10 +329,9 @@ func (cmd *InitCmd) addDefaultService() {
 }
 
 func (cmd *InitCmd) addDefaultPorts() {
-	dockerfilePath := filepath.Join(cmd.workdir, "Dockerfile")
-	ports, err := dockerfile.GetPorts(dockerfilePath)
+	ports, err := dockerfile.GetPorts("Dockerfile")
 	if err != nil {
-		log.Warnf("Error parsing dockerfile %s: %v", dockerfilePath, err)
+		log.Warnf("Error parsing dockerfile: %v", err)
 		return
 	}
 	if len(ports) == 0 {
@@ -328,9 +340,11 @@ func (cmd *InitCmd) addDefaultPorts() {
 
 	portMappings := []*v1.PortMapping{}
 	for _, port := range ports {
+		exposedPort := port
+
 		portMappings = append(portMappings, &v1.PortMapping{
-			LocalPort:  &port,
-			RemotePort: &port,
+			LocalPort:  &exposedPort,
+			RemotePort: &exposedPort,
 		})
 	}
 
@@ -346,13 +360,17 @@ func (cmd *InitCmd) addDefaultPorts() {
 func (cmd *InitCmd) addDefaultSyncConfig() {
 	config := configutil.GetConfig()
 
+	if config.DevSpace.Sync == nil {
+		config.DevSpace.Sync = &[]*v1.SyncConfig{}
+	}
+
 	for _, syncPath := range *config.DevSpace.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
 			return
 		}
 	}
-	dockerignoreFile := filepath.Join(cmd.workdir, ".dockerignore")
-	dockerignore, err := ioutil.ReadFile(dockerignoreFile)
+
+	dockerignore, err := ioutil.ReadFile(".dockerignore")
 	uploadExcludePaths := []string{}
 
 	if err == nil {
@@ -377,21 +395,15 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 
 func (cmd *InitCmd) configureRegistry() {
 	dockerUsername := ""
-	createInternalRegistryDefaultAnswer := "yes"
 
-	imageBuilder, err := docker.NewBuilder("", "", "", false)
-	if err == nil {
-		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := imageBuilder.Authenticate("", "", true)
-		log.StopWait()
+	client, err := docker.NewClient(true)
+	if err != nil {
+		log.Fatalf("Cannot create docker client: %v", err)
+	}
 
-		if err == nil {
-			dockerUsername = dockerAuthConfig.Username
-			if dockerUsername != "" {
-				createInternalRegistryDefaultAnswer = "no"
-			}
-		}
-	} else {
+	// Check if docker is installed
+	_, err = client.Ping(context.Background())
+	if err != nil {
 		// Set default build engine to kaniko, if no docker is installed
 		cmd.defaultImage.Build = &v1.BuildConfig{
 			Kaniko: &v1.KanikoConfig{
@@ -399,27 +411,23 @@ func (cmd *InitCmd) configureRegistry() {
 				Namespace: configutil.String(""),
 			},
 		}
-	}
+	} else {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		log.StopWait()
 
-	// Only deploy registry in minikube
-	if kubectl.IsMinikube() {
-		createInternalRegistry := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Should we create a private registry within your Kubernetes cluster for you? (yes | no)",
-			DefaultValue:           createInternalRegistryDefaultAnswer,
-			ValidationRegexPattern: "^(yes)|(no)$",
-		})
+		if err == nil {
+			dockerUsername = dockerAuthConfig.Username
+		}
 
-		if *createInternalRegistry == "yes" {
-			err := configure.InternalRegistry()
-			if err != nil {
-				log.Fatal(err)
-			}
-
+		// Don't push image in minikube
+		if kubectl.IsMinikube() {
+			cmd.defaultImage.SkipPush = configutil.Bool(true)
 			return
 		}
 	}
 
-	err = configure.ImageName(dockerUsername)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -452,11 +460,13 @@ func (cmd *InitCmd) determineLanguage() {
 
 		log.StopWait()
 
-		cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
-			DefaultValue:           detectedLang,
-			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
-		})
+		if !cmd.flags.skipQuestions {
+			cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
+				DefaultValue:           detectedLang,
+				ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
+			})
+		}
 	}
 }
 

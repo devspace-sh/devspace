@@ -153,8 +153,8 @@ func (cmd *ListCmd) RunListPackage(cobraCmd *cobra.Command, args []string) {
 func (cmd *ListCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.Services) == 0 {
-		log.Write("No services are configured. Run `devspace add service` to add new service\n")
+	if config.DevSpace.Services == nil || len(*config.DevSpace.Services) == 0 {
+		log.Info("No services are configured. Run `devspace add service` to add new service\n")
 		return
 	}
 
@@ -211,8 +211,8 @@ func (cmd *ListCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.Sync) == 0 {
-		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+	if config.DevSpace.Sync == nil || len(*config.DevSpace.Sync) == 0 {
+		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return
 	}
 
@@ -270,8 +270,8 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.Ports) == 0 {
-		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
+	if config.DevSpace.Ports == nil || len(*config.DevSpace.Ports) == 0 {
+		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
 

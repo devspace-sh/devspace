@@ -1,27 +1,25 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
-	"github.com/covexo/devspace/pkg/devspace/services"
-
-	"github.com/covexo/devspace/pkg/util/log"
-
-	"github.com/covexo/devspace/pkg/devspace/registry"
-
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/covexo/devspace/pkg/devspace/services"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
 
 // UpCmd is a struct that defines a command call for "up"
 type UpCmd struct {
-	flags   *UpCmdFlags
-	kubectl *kubernetes.Clientset
+	flags *UpCmdFlags
 }
 
 // UpCmdFlags are the flags available for the up-command
@@ -31,8 +29,10 @@ type UpCmdFlags struct {
 	initRegistries  bool
 	build           bool
 	sync            bool
+	terminal        bool
 	deploy          bool
 	exitAfterDeploy bool
+	allyes          bool
 	switchContext   bool
 	portforwarding  bool
 	verboseSync     bool
@@ -41,6 +41,7 @@ type UpCmdFlags struct {
 	labelSelector   string
 	namespace       string
 	config          string
+	configOverwrite string
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -50,8 +51,10 @@ var UpFlagsDefault = &UpCmdFlags{
 	initRegistries:  true,
 	build:           false,
 	sync:            true,
+	terminal:        true,
 	switchContext:   false,
 	exitAfterDeploy: false,
+	allyes:          false,
 	deploy:          false,
 	portforwarding:  true,
 	verboseSync:     false,
@@ -89,14 +92,17 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.allyes, "yes", "y", cmd.flags.allyes, "Answer every questions with the default")
 	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pods/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
@@ -107,108 +113,131 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Don't use overwrite config if we use a different config
 		configutil.OverwriteConfigPath = ""
 	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
 
 	log.StartFileLogging()
-	var err error
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
-		initCmd := &InitCmd{
-			flags: InitCmdFlagsDefault,
+		initFlags := &InitCmdFlags{
+			reconfigure:      false,
+			overwrite:        false,
+			skipQuestions:    cmd.flags.allyes,
+			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
+			templateRepoPath: "",
+			language:         "",
 		}
-
+		initCmd := &InitCmd{
+			flags: initFlags,
+		}
 		initCmd.Run(nil, []string{})
 
 		// Ensure that config is initialized correctly
 		configutil.SetDefaultsOnce()
 	}
 
-	// Create kubectl client
-	cmd.kubectl, err = kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	// Create kubectl client and switch context if specified
+	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(cmd.kubectl, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
 	// Init image registries
 	if cmd.flags.initRegistries {
-		err = registry.InitRegistries(cmd.kubectl, log.GetInstance())
+		dockerClient, err := docker.NewClient(false)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Build and deploy images
-	cmd.buildAndDeploy()
+	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, client)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if cmd.flags.exitAfterDeploy == false {
 		// Start services
-		cmd.startServices(args)
+		err = startServices(cmd.flags, client, args, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
-func (cmd *UpCmd) buildAndDeploy() {
+func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) error {
 	config := configutil.GetConfig()
 
 	// Load config
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return fmt.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Build image if necessary
-	mustRedeploy, err := image.BuildAll(cmd.kubectl, generatedConfig, cmd.flags.build, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(kubectl, generatedConfig, build, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Error building image: %v", err)
 	}
 
 	// Save config if an image was built
 	if mustRedeploy == true {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			return fmt.Errorf("Error saving generated config: %v", err)
 		}
 	}
 
 	// Deploy all defined deployments
 	if config.DevSpace.Deployments != nil {
 		// Deploy all
-		err = deploy.All(cmd.kubectl, generatedConfig, mustRedeploy || cmd.flags.deploy, true, log.GetInstance())
+		err = deploy.All(kubectl, generatedConfig, mustRedeploy || shouldDeploy, true, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("Error deploying devspace: %v", err)
 		}
 
 		// Save Config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving config: %v", err)
+			return fmt.Errorf("Error saving generated config: %v", err)
 		}
 	}
+
+	return nil
 }
 
-func (cmd *UpCmd) startServices(args []string) {
-	if cmd.flags.portforwarding {
-		err := services.StartPortForwarding(cmd.kubectl, log.GetInstance())
+func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []string, log log.Logger) error {
+	if flags.portforwarding {
+		err := services.StartPortForwarding(kubectl, log)
 		if err != nil {
-			log.Fatalf("Unable to start portforwarding: %v", err)
+			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
 	}
 
-	if cmd.flags.sync {
-		syncConfigs, err := services.StartSync(cmd.kubectl, cmd.flags.verboseSync, log.GetInstance())
+	if flags.sync {
+		syncConfigs, err := services.StartSync(kubectl, flags.verboseSync, log)
 		if err != nil {
-			log.Fatalf("Unable to start sync: %v", err)
+			return fmt.Errorf("Unable to start sync: %v", err)
 		}
 
 		defer func() {
@@ -221,9 +250,19 @@ func (cmd *UpCmd) startServices(args []string) {
 	// Print domain name if we use a cloud provider
 	// TODO: Change this
 	if cloud.DevSpaceURL != "" {
-		log.Infof("Your devspace is reachable via ingress on this url http://%s", cloud.DevSpaceURL)
+		log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
 		log.Info("See https://devspace-cloud.com/domain-guide for more information")
 	}
 
-	services.StartTerminal(cmd.kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, log.GetInstance())
+	config := configutil.GetConfig()
+
+	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
+		return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
+	} else if config.DevSpace != nil && ((flags.portforwarding && config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0) || (flags.sync && config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0)) {
+		log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+
+		<-make(chan bool)
+	}
+
+	return nil
 }

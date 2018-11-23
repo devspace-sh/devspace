@@ -613,6 +613,14 @@
   revision = "22422dad46e14561a0854ad42497a75af9b61909"
 
 [[projects]]
+  digest = "1:190ff84d9b2ed6589088f178cba8edb4b8ecb334df4572421fb016be1ac20463"
+  name = "github.com/juju/ratelimit"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "59fac5042749a5afb9af70e813da1dd5474f0167"
+  version = "1.0.1"
+
+[[projects]]
   digest = "1:ae5f4d0779a45e2cb3075d8b3ece6c623e171407f4aac83521392ff06d188871"
   name = "github.com/kevinburke/ssh_config"
   packages = ["."]
@@ -1861,6 +1869,7 @@
     "github.com/docker/go-connections/tlsconfig",
     "github.com/foomo/htpasswd",
     "github.com/juju/errors",
+    "github.com/juju/ratelimit",
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",
     "github.com/pkg/errors",

@@ -59,8 +59,20 @@ When using kubectl as deployment method, `devspace up` will use kubectl apply on
 - `cmdPath` *string* Optional: the path to the kubectl executable
 - `manifests` *string array* glob patterns where the kubernetes yaml files lie (e.g. kube/* or kube/pod.yaml)
 
+### devspace.services[]
+To define resource selectors as DevSpace services:
+- `name` *string* the name of the DevSpace service
+- `namespace` *string* the namespace where to select the pods from
+- `labelSelector` *map[string]string* a key value map with the labels to select from (default: release: devspace-default)
+- `portMappings` *PortMapping array* 
+- `containerName` *string* name of the container to select within the selected pod
+- `resouceType` *string* Kubernetes resouce type to select (currently only `pod` is available)
+These services can be referenced within other config options (e.g. terminal, ports and sync).
+
 ### devspace.terminal
 In this section options are defined, what should happen when devspace up or devspace enter try to open a terminal. By default, devspace will select pods with the labels `release=devspace-default` and try to start a bash or sh terminal in the container.
+- `disabled` *bool* if true no terminal will be opened on `devspace up` and `devspace enter`
+- `service` *string* DevSpace service to start the terminal for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
 - `containerName` *string* the name of the container to connect to within the selected pod (default is the first defined container)  
@@ -68,8 +80,10 @@ In this section options are defined, what should happen when devspace up or devs
 
 ### devspace.ports
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
+- `service` *string* DevSpace service to start port forwarding for (use either service OR namespace, labelSelector, resourceType)
 - `namespace` *string* the namespace where to select the pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select from (default: release: devspace-default)
+- `resouceType` *string* Kubernetes resouce type to select (currently only `pod` is available)
 - `portMappings` *PortMapping array* 
 
 ### devspace.ports[].portMappings[]
@@ -81,16 +95,23 @@ In the example above, you could open `localhost:8080` inside your browser to see
 
 ### devspace.sync[]
 To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure real-time code synchronizations. A sync config consists of the following:
-- `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
+- `service` *string* DevSpace service to start the sync for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select the pods from
+- `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
 - `containerName` *string* the name of the container within the pod to sync to (default: the first specified container in the pod)
 - `localSubPath` *string* relative path to the folder that should be synced (default: path to your local project root)
 - `containerPath` *string* absolute path within the container
 - `excludePaths` *string array* paths to exclude files/folders from sync in .gitignore syntax
 - `downloadExcludePaths` *string array* paths to exclude files/folders from download in .gitignore syntax
 - `uploadExcludePaths` *string array* paths to exclude files/folders from upload in .gitignore syntax
+- `bandwidthLimits` *BandwidthLimits* the bandwidth limits to use for the syncpath
 
 In the example above, the entire code within the project would be synchronized with the folder `/app` inside the DevSpace, with the exception of the `node_modules/` folder.
+
+### devspace.sync[].bandwidthLimits
+Bandwidth limits for the sync path:
+- `upload` *string* kilobytes per second as upper limit to use for uploading files (e.g. 100 means 100 KByte per seconds)
+- `download` *string* kilobytes per second as upper limit to use for downloading files (e.g. 100 means 100 KByte per seconds)
 
 ## images
 This section of the config defines a map of images that can be used in the helm chart that is deployed during `devspace up`. 
@@ -100,6 +121,7 @@ An image is defined by:
 - `name` *string* name of the image with registry url prefixed (e.g. dockerhubname/image, gcr.io/googleprojectname/image etc.)
 - `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
+- `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/covexo/devspace/tree/master/examples/minikube))
 - `build` *BuildConfig* defines the build procedure for this image  
 
 ### images[].build
@@ -178,19 +200,41 @@ cluster:
   # Use this namespace as default namespace
   namespace: devspace
 devSpace:
+  # defines services of this DevSpace = pod selector
+  services:
+    # name of the service
+  - name: default
+    # namespace where to find the service (pod)
+    # uses default deployment namespace if not specified
+    namespace: my-namespace
+    # map of labels for selecting the service pod
+    labelSelector:
+      devspace: default
+    # container name for selecting one container of a pod 
+    # (optional, uses first container if not specified)
+    containerName: main-container
+    # Kubernetes resource type (currently, only pod is supported)
+    # (optional, uses pod if not specified)
+    resourceType: pod
   # terminal options for devspace up and devspace enter
   terminal:
-    # the container name within the selected release pod to open a terminal connection to (is also a flag in `devspace up -c CONTAINER`)
-    containerName: default
+    # if you don't want devspace to automatically open a terminal for 
+    # you set disabled to true
+    disabled: false
+    # define the service to start the terminal for
+    service: default
+    # Alternative to using a service is to 
+    # specify namespace, labelSelector and containerName individually
+    # Example:
+  # namespace: my-namespace
+  # labelSelector:
+  #   devspace: default
+  # containerName: main-container
     # the command to execute within the container when using `devspace up` or `devspace enter`
     command:
     - sh
     - -c
     - bash
-    # Label selector to select the correct pods
-    labelSelector:
-      release: devspace-default
-  # What to deploy within your project
   deployments:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
@@ -207,11 +251,15 @@ devSpace:
       - kube/additional/*
   # Automatically forwarded ports on `devspace up` (same functionality as running manually kubectl port-forward)
   portForwarding:
-    # Map of key value matchLabel selectors
-  - labelSelector:
-      release: devspace-default
-    # optional namespace where to select the pods from
-    namespace: my-namespace
+    # define the service to start port forwarding for
+  - service: default
+    # Alternative to using a service is to 
+    # specify namespace, labelSelector and resourceType individually
+    # Example:
+  # namespace: my-namespace
+  # labelSelector:
+  #   devspace: default
+  # resourceType: pod
     # Array of port mappings
     portMappings:
       # The local machine port
@@ -221,11 +269,15 @@ devSpace:
     - localPort: 8080
       remotePort: 80
   sync:
-    # Currently only resource type pod is supported
-  - labelSelector:
-      release: devspace-default
-    # The container within the pod to sync to
-    containerName: default
+    # define the service to start the sync for
+  - service: default
+    # Alternative to using a service is to 
+    # specify namespace, labelSelector and containerName individually
+    # Example:
+  # namespace: my-namespace
+  # labelSelector:
+  #   devspace: default
+  # containerName: main-container
     # Sync the complete local project path
     localSubPath: ./
     # Into the remote container path /app
@@ -233,17 +285,27 @@ devSpace:
     # Exclude node_modules from up and download
     excludePaths:
     - node_modules/
+    # Bandwidth limits for this sync path in Kbyte/s
+    bandwidthLimits:
+      # limit download speed to 100 Kbyte/s
+      download: 100
+      # limit upload speed to 1024 Kbyte/s
+      upload: 1024
 # A map of images that should be build during devspace up
 images:
   default:
     # Image name with prefixed docker image registry
     name: grc.io/devspace-user/devspace
-    # Specifies where the docker context path is
-    contextPath: ./
-    # Specifies where the Dockerfile lies 
-    dockerfilePath: ./Dockerfile
     # Specifies how to build the image
     build:
+      # Specifies where the Dockerfile lies 
+      dockerfilePath: ./Dockerfile
+      # Specifies where the docker context path is
+      contextPath: ./
+      # use docker as build engine
+      docker:
+        # Use the minikube docker daemon if the current kubectl context is minikube
+        preferMinikube: true
       options:
         # Used for multi-stage builds
         target: development
@@ -252,9 +314,6 @@ images:
           myarg1: myvalue1
         # network mode (see [network](https://docs.docker.com/network/))
         network: bridge
-      docker:
-        # Use the minikube docker daemon, if the current kubectl context is minikube
-        preferMinikube: true
   database:
     name: devspace-user/devspace
     registry: internal

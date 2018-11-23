@@ -169,6 +169,11 @@ func (f *fileLogger) StopWait() {
 	// Noop operation
 }
 
+// PrintTable implements logger interface
+func (f *fileLogger) PrintTable(header []string, values [][]string) {
+	//TODO
+}
+
 func (f *fileLogger) With(obj interface{}) *LoggerEntry {
 	return &LoggerEntry{
 		logger: f,
