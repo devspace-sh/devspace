@@ -6,6 +6,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -66,8 +68,8 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	resetCmdObj := ResetCmd{
 		flags: &ResetCmdFlags{
 			skipQuestionsWithGivenAnswers: true,
-			deleteFromDevSpaceCloud:       false,
-			removeCloudContext:            false,
+			deleteFromDevSpaceCloud:       true,
+			removeCloudContext:            true,
 			removeTiller:                  false,
 			deleteChart:                   false,
 			removeRegistry:                false,
@@ -97,6 +99,11 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	assert.Equal(t, false, os.IsNotExist(err))
 	_, err = os.Stat(path.Join(dir, "package.json"))
 	assert.Equal(t, false, os.IsNotExist(err))
+
+	assert.Equal(t, true, helm.IsTillerDeployed(resetCmdObj.kubectl), "Tiller deleted")
+	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
+	_, err = resetCmdObj.kubectl.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
+	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
 
 }
 
