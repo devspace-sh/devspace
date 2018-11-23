@@ -14,7 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-/*func TestUpWithInternalRegistry(t *testing.T) {
+/*The internal registry is not supported in the init command.
+ However, it is still supported if written in the config.yaml .
+And it should work, which is why it is tested here. */
+func TestUpWithInternalRegistry(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
 	defer resetWorkDir(t)
 
@@ -22,9 +25,7 @@ import (
 		flags: UpFlagsDefault,
 	}
 	upCmdObj.flags.sync = false
-
-	mockStdin("exit\\\\n")
-	defer cleanUpMockedStdin()
+	upCmdObj.flags.exitAfterDeploy = true
 
 	defer func() {
 		client, err := kubectl.NewClient()
@@ -38,9 +39,9 @@ import (
 	upCmdObj.Run(nil, []string{})
 	log.StopFileLogging()
 
-	testReset(t)
+	//testReset(t)
 
-}*/
+}
 
 func TestUpWithDockerHub(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
