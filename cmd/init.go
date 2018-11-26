@@ -294,6 +294,8 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
 	}
+
+	log.Write([]byte("\n"))
 }
 
 func (cmd *InitCmd) configureDevSpace() {
