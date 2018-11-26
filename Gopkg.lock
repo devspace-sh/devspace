@@ -111,7 +111,7 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:9453458ba06a7b4b5a6cb522b479f449b4d9387bcf33f9a7e3fdb834569d7a40"
+  digest = "1:2aaf2cc045d0219bba79655e4df795b973168c310574669cb75786684f7287d3"
   name = "github.com/bmatcuk/doublestar"
   packages = ["."]
   pruneopts = "UT"
@@ -187,7 +187,7 @@
   revision = "83389a148052d74ac602f5f1d62f86ff2f3c4aa5"
 
 [[projects]]
-  digest = "1:ffc2c4996d342178394513e9866703fa8cc3154f1ae0e855c9716036abccf3ff"
+  digest = "1:5554aa6778ee3128d438eff483b2fdacf85f4c157abaafbead51af87d38264cb"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -759,7 +759,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:c1072f27d5b8be1032af14ed7776f475bc58d35723a753c4b92c953d92e3eb33"
+  digest = "1:6d4d9067e639d96a804ee9a30fa89c7233c5c5edbfe736072ff00d48c97bccc4"
   name = "github.com/otiai10/copy"
   packages = ["."]
   pruneopts = "UT"
@@ -1597,7 +1597,7 @@
   version = "kubernetes-1.10.0"
 
 [[projects]]
-  digest = "1:7ae7497bb0f95b9f0d3d5876cb4140645773697c4f7ec12621da7ddc369d784f"
+  digest = "1:dabd439d62fbe939504ccb2ec6783d91412cdfc83e204731c16623a8d750d529"
   name = "k8s.io/helm"
   packages = [
     "cmd/helm/installer",
@@ -1641,7 +1641,7 @@
   revision = "e3762e86a74c878ffed47484592986685639c2cd"
 
 [[projects]]
-  digest = "1:a93d65b059d465cd84ba089b8daf6fbacf3beeb0e78fa1a4cf0585398795b37c"
+  digest = "1:96dd0316331274d35050f78288957e6d04bd5594457ea1f7c24f463d19b7d793"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/events",
