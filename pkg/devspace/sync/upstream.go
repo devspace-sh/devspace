@@ -56,9 +56,9 @@ func (u *upstream) startShell() error {
 		u.stdoutPipe = stdoutReader
 		u.stderrPipe = stderrReader
 
-		go func() {
-			pipeStream(os.Stderr, u.stderrPipe)
-		}()
+		//go func() {
+		//	pipeStream(os.Stderr, u.stderrPipe)
+		//}()
 	} else {
 		var err error
 
@@ -132,7 +132,6 @@ func (u *upstream) mainLoop() error {
 		}
 
 		err := u.applyChanges(changes)
-
 		if err != nil {
 			return err
 		}

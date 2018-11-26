@@ -3,27 +3,24 @@ package kubectl
 import (
 	"bytes"
 	"io"
+	"net/http"
 	"os"
 
 	"github.com/covexo/devspace/pkg/util/terminal"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/transport/spdy"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	k8sapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
 )
 
-// ExecStream executes a command and streams the output to the given streams
-func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+// ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
+func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
-
-	kubeconfig, err := GetClientConfig()
-	if err != nil {
-		return err
-	}
 
 	execRequest := client.Core().RESTClient().Post().
 		Resource("pods").
@@ -63,7 +60,7 @@ func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, 
 		TTY:       t.Raw,
 	}, legacyscheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(kubeconfig, "POST", execRequest.URL())
+	exec, err := remotecommand.NewSPDYExecutorForTransports(transport, upgrader, "POST", execRequest.URL())
 	if err != nil {
 		return err
 	}
@@ -73,6 +70,21 @@ func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, 
 	}
 
 	return t.Safe(fn)
+}
+
+// ExecStream executes a command and streams the output to the given streams
+func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	kubeconfig, err := GetClientConfig()
+	if err != nil {
+		return err
+	}
+
+	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	return ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container, command, tty, stdin, stdout, stderr)
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
