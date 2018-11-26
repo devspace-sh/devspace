@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/covexo/devspace/pkg/util/terminal"
@@ -12,7 +13,7 @@ import (
 
 const waitInterval = time.Millisecond * 150
 
-var tty = terminal.SetupTTY()
+var tty = terminal.SetupTTY(os.Stdin, os.Stdout)
 
 type loadingText struct {
 	Stream  io.Writer

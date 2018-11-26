@@ -1,16 +1,11 @@
 package kubectl
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"sync"
 	"time"
-
-	"github.com/covexo/devspace/pkg/util/terminal"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
@@ -25,12 +20,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
-	k8sapi "k8s.io/kubernetes/pkg/apis/core"
 	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
-	"k8s.io/kubernetes/pkg/kubectl/util/term"
 	"k8s.io/kubernetes/pkg/printers"
 	describe "k8s.io/kubernetes/pkg/printers/internalversion"
 	"k8s.io/kubernetes/pkg/util/node"
@@ -378,9 +369,19 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 
 // ForwardPorts forwards the specified ports from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	config, err := GetClientConfig()
+	fw, err := NewPortForwarder(kubectlClient, pod, ports, stopChan, readyChan)
 	if err != nil {
 		return err
+	}
+
+	return fw.ForwardPorts()
+}
+
+// NewPortForwarder creates a new port forwarder object
+func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+	config, err := GetClientConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	execRequest := kubectlClient.Core().RESTClient().Post().
@@ -391,121 +392,15 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
 	fw, err := portforward.New(dialer, ports, stopChan, readyChan, logFile, logFile)
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return fw.ForwardPorts()
-}
-
-//Exec executes a command for kubectl
-func Exec(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, errorChannel chan<- error) (io.WriteCloser, io.ReadCloser, io.ReadCloser, error) {
-	var t term.TTY
-
-	kubeconfig, err := GetClientConfig()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	execRequest := kubectlClient.Core().RESTClient().Post().
-		Resource("pods").
-		Name(pod.Name).
-		Namespace(pod.Namespace).
-		SubResource("exec")
-
-	if tty {
-		t = terminal.SetupTTY()
-	}
-
-	execRequest.VersionedParams(&k8sapi.PodExecOptions{
-		Container: container,
-		Command:   command,
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       t.Raw,
-	}, legacyscheme.ParameterCodec)
-
-	exec, err := remotecommand.NewSPDYExecutor(kubeconfig, "POST", execRequest.URL())
-
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	if tty {
-		var sizeQueue remotecommand.TerminalSizeQueue
-
-		if t.Raw {
-			// this call spawns a goroutine to monitor/update the terminal size
-			sizeQueue = t.MonitorSize(t.GetSize())
-		}
-
-		fn := func() error {
-			return exec.Stream(remotecommand.StreamOptions{
-				Stdin:             os.Stdin,
-				Stdout:            os.Stdout,
-				Stderr:            os.Stderr,
-				Tty:               t.Raw,
-				TerminalSizeQueue: sizeQueue,
-			})
-		}
-
-		if err := t.Safe(fn); err != nil {
-			return nil, nil, nil, err
-		}
-
-		return nil, nil, nil, nil
-	}
-	stdinReader, stdinWriter, _ := os.Pipe()
-	stdoutReader, stdoutWriter, _ := os.Pipe()
-	stderrReader, stderrWriter, _ := os.Pipe()
-
-	go func() {
-		streamErr := exec.Stream(remotecommand.StreamOptions{
-			Stdin:  stdinReader,
-			Stdout: stdoutWriter,
-			Stderr: stderrWriter,
-			Tty:    tty,
-		})
-		stdinWriter.Close()
-		stdoutWriter.Close()
-		stderrWriter.Close()
-
-		errorChannel <- streamErr
-	}()
-	return stdinWriter, stdoutReader, stderrReader, nil
-}
-
-//ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func ExecBuffered(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
-	_, stdout, stderr, execErr := Exec(kubectlClient, pod, container, command, false, nil)
-
-	if execErr != nil {
-		return nil, nil, execErr
-	}
-	stdoutBuffer := &bytes.Buffer{}
-	stderrBuffer := &bytes.Buffer{}
-
-	streamDone := &sync.WaitGroup{}
-	streamDone.Add(2)
-
-	go func() {
-		io.Copy(stdoutBuffer, stdout)
-		streamDone.Done()
-	}()
-
-	go func() {
-		io.Copy(stderrBuffer, stderr)
-		streamDone.Done()
-	}()
-	streamDone.Wait()
-
-	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), nil
+	return fw, nil
 }

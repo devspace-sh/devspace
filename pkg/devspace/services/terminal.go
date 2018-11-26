@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -116,7 +117,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 		containerName = containerNameOverride
 	}
 
-	_, _, _, terminalErr := kubectl.Exec(client, pod, containerName, command, true, nil)
+	terminalErr := kubectl.ExecStream(client, pod, containerName, command, true, os.Stdin, os.Stdout, os.Stderr)
 	if terminalErr != nil {
 		if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
 			return fmt.Errorf("Unable to start terminal session: %v", terminalErr)

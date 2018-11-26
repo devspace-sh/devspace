@@ -41,15 +41,20 @@ func (u *upstream) start() error {
 
 func (u *upstream) startShell() error {
 	if u.config.testing == false {
-		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
+		stdinReader, stdinWriter, _ := os.Pipe()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
-		if err != nil {
-			return errors.Trace(err)
-		}
+		go func() {
+			err := kubectl.ExecStream(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
+			if err != nil {
+				u.config.Error(err)
+			}
+		}()
 
-		u.stdinPipe = stdinPipe
-		u.stdoutPipe = stdoutPipe
-		u.stderrPipe = stderrPipe
+		u.stdinPipe = stdinWriter
+		u.stdoutPipe = stdoutReader
+		u.stderrPipe = stderrReader
 
 		go func() {
 			pipeStream(os.Stderr, u.stderrPipe)

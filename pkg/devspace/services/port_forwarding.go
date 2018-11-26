@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/portforward"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -14,10 +15,11 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
+func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portforward.PortForwarder, error) {
 	config := configutil.GetConfig()
-
 	if config.DevSpace.Ports != nil {
+		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.DevSpace.Ports))
+
 		for _, portForwarding := range *config.DevSpace.Ports {
 			if portForwarding.ResourceType == nil || *portForwarding.ResourceType == "pod" {
 				var labelSelector map[string]*string
@@ -50,7 +52,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 				log.StopWait()
 
 				if err != nil {
-					return fmt.Errorf("Unable to list devspace pods: %s", err.Error())
+					return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {
 					ports := make([]string, len(*portForwarding.PortMappings))
 
@@ -59,11 +61,15 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 					}
 
 					readyChan := make(chan struct{})
+					pf, err := kubectl.NewPortForwarder(client, pod, ports, make(chan struct{}), readyChan)
+					if err != nil {
+						log.Fatalf("Error starting port forwarding: %v", err)
+					}
 
 					go func() {
-						err := kubectl.ForwardPorts(client, pod, ports, make(chan struct{}), readyChan)
+						err := pf.ForwardPorts()
 						if err != nil {
-							log.Errorf("Error starting port forwarding: %v", err)
+							log.Errorf("Error forwarding ports: %v", err)
 						}
 					}()
 
@@ -71,15 +77,19 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) error {
 					select {
 					case <-readyChan:
 						log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
+
+						portforwarder = append(portforwarder, pf)
 					case <-time.After(20 * time.Second):
-						return fmt.Errorf("Timeout waiting for port forwarding to start")
+						return nil, fmt.Errorf("Timeout waiting for port forwarding to start")
 					}
 				}
 			} else {
 				log.Warn("Currently only pod resource type is supported for portforwarding")
 			}
 		}
+
+		return portforwarder, nil
 	}
 
-	return nil
+	return nil, nil
 }

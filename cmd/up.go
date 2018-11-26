@@ -228,10 +228,16 @@ func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) err
 
 func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []string, log log.Logger) error {
 	if flags.portforwarding {
-		err := services.StartPortForwarding(kubectl, log)
+		portForwarder, err := services.StartPortForwarding(kubectl, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
+
+		defer func() {
+			for _, v := range portForwarder {
+				v.Close()
+			}
+		}()
 	}
 
 	if flags.sync {

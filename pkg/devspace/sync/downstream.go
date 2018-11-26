@@ -41,15 +41,20 @@ func (d *downstream) start() error {
 
 func (d *downstream) startShell() error {
 	if d.config.testing == false {
-		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, nil)
+		stdinReader, stdinWriter, _ := os.Pipe()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
-		if err != nil {
-			return errors.Trace(err)
-		}
+		go func() {
+			err := kubectl.ExecStream(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
+			if err != nil {
+				d.config.Error(errors.Trace(err))
+			}
+		}()
 
-		d.stdinPipe = stdinPipe
-		d.stdoutPipe = stdoutPipe
-		d.stderrPipe = stderrPipe
+		d.stdinPipe = stdinWriter
+		d.stdoutPipe = stdoutReader
+		d.stderrPipe = stderrReader
 	} else {
 		var err error
 
