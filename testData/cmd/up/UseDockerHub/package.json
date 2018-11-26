@@ -1,0 +1,17 @@
+{
+  "name": "my-app",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.16.4"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.4"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon node index.js"
+  }
+}
