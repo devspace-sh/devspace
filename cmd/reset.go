@@ -24,20 +24,8 @@ type ResetCmd struct {
 	kubectl *kubernetes.Clientset
 }
 
-// ResetCmdFlags are the flags available for the reset-command
+// ResetCmdFlags holds the possible reset cmd flags
 type ResetCmdFlags struct {
-	//These flags are for testing only
-	skipQuestionsWithGivenAnswers bool
-	deleteFromDevSpaceCloud       bool
-	removeCloudContext            bool
-	removeTiller                  bool
-	deleteChart                   bool
-	removeRegistry                bool
-	deleteDockerfile              bool
-	deleteDockerIgnore            bool
-	deleteRoleBinding             bool
-	deleteDevspaceFolder          bool
-
 	config          string
 	configOverwrite string
 }
@@ -124,14 +112,11 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 		return
 	}
 
-	shouldCloudDevSpaceRemoved := cmd.flags.deleteFromDevSpaceCloud
-	if !shouldCloudDevSpaceRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
-		shouldCloudDevSpaceRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-	}
+	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
 
 	if shouldCloudDevSpaceRemoved {
 		// Get selected cloud provider from config
@@ -157,14 +142,11 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 
 func (cmd *ResetCmd) deleteCloudKubeContext() {
 	config := configutil.GetConfig()
-	shouldCloudContextRemoved := cmd.flags.removeCloudContext
-	if !shouldCloudContextRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
-		shouldCloudContextRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould the cloud kube context be removed (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-	}
+	shouldCloudContextRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould the cloud kube context be removed (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
 
 	if shouldCloudContextRemoved {
 		err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
@@ -184,14 +166,11 @@ func (cmd *ResetCmd) deleteInternalRegistry() {
 	config := configutil.GetConfig()
 
 	if config.InternalRegistry != nil {
-		shouldRegistryRemoved := cmd.flags.removeRegistry
-		if !shouldRegistryRemoved && !cmd.flags.skipQuestionsWithGivenAnswers {
-			shouldRegistryRemoved = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "\n\nShould the internal registry be removed? (y/n)",
-				DefaultValue:           "y",
-				ValidationRegexPattern: "^(y|n)$",
-			}) == "y"
-		}
+		shouldRegistryRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "\n\nShould the internal registry be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
 
 		if shouldRegistryRemoved {
 			isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
@@ -218,14 +197,11 @@ func (cmd *ResetCmd) deleteTiller() {
 	config := configutil.GetConfig()
 
 	if config.Tiller != nil {
-		shouldRemoveTiller := cmd.flags.removeTiller
-		if !shouldRemoveTiller && !cmd.flags.skipQuestionsWithGivenAnswers {
-			shouldRemoveTiller = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "\n\nShould the tiller server be removed? (y/n)",
-				DefaultValue:           "y",
-				ValidationRegexPattern: "^(y|n)$",
-			}) == "y"
-		}
+		shouldRemoveTiller := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "\n\nShould the tiller server be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
 
 		if shouldRemoveTiller {
 			log.StartWait("Deleting tiller")
@@ -252,14 +228,11 @@ func (cmd *ResetCmd) deleteDeploymentFiles() {
 				if err == nil {
 					_, err := os.Stat(absChartPath)
 					if os.IsNotExist(err) == false {
-						deleteChart := cmd.flags.deleteChart
-						if !deleteChart && !cmd.flags.skipQuestionsWithGivenAnswers {
-							deleteChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-								Question:               "\n\nShould the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
-								DefaultValue:           "y",
-								ValidationRegexPattern: "^(y|n)$",
-							}) == "y"
-						}
+						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+							Question:               "\n\nShould the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
+							DefaultValue:           "y",
+							ValidationRegexPattern: "^(y|n)$",
+						}) == "y"
 
 						if deleteChart {
 							os.RemoveAll(absChartPath)
@@ -288,14 +261,11 @@ func (cmd *ResetCmd) deleteImageFiles() {
 
 		_, err = os.Stat(absDockerfilePath)
 		if os.IsNotExist(err) == false {
-			deleteDockerfile := cmd.flags.deleteDockerfile
-			if !deleteDockerfile && !cmd.flags.skipQuestionsWithGivenAnswers {
-				deleteDockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "\n\nShould " + dockerfilePath + " be removed? (y/n)",
-					DefaultValue:           "y",
-					ValidationRegexPattern: "^(y|n)$",
-				}) == "y"
-			}
+			deleteDockerfile := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "\n\nShould " + dockerfilePath + " be removed? (y/n)",
+				DefaultValue:           "y",
+				ValidationRegexPattern: "^(y|n)$",
+			}) == "y"
 
 			if deleteDockerfile {
 				os.Remove(absDockerfilePath)
@@ -316,14 +286,11 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		absDockerIgnorePath := filepath.Join(absContextPath, ".dockerignore")
 		_, err = os.Stat(absDockerIgnorePath)
 		if os.IsNotExist(err) == false {
-			deleteDockerIgnore := cmd.flags.deleteDockerIgnore
-			if !deleteDockerIgnore && !cmd.flags.skipQuestionsWithGivenAnswers {
-				deleteDockerIgnore = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "\n\nShould " + absDockerIgnorePath + " be removed? (y/n)",
-					DefaultValue:           "y",
-					ValidationRegexPattern: "^(y|n)$",
-				}) == "y"
-			}
+			deleteDockerIgnore := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:               "\n\nShould " + absDockerIgnorePath + " be removed? (y/n)",
+				DefaultValue:           "y",
+				ValidationRegexPattern: "^(y|n)$",
+			}) == "y"
 
 			if deleteDockerIgnore {
 				os.Remove(absDockerIgnorePath)
@@ -337,14 +304,11 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 	clusterRoleBindingName := kubectl.ClusterRoleBindingName
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err == nil {
-		deleteRoleBinding := cmd.flags.deleteRoleBinding
-		if !deleteRoleBinding && !cmd.flags.skipQuestionsWithGivenAnswers {
-			deleteRoleBinding = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
-				DefaultValue:           "y",
-				ValidationRegexPattern: "^(y|n)$",
-			}) == "y"
-		}
+		deleteRoleBinding := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
+			DefaultValue:           "y",
+			ValidationRegexPattern: "^(y|n)$",
+		}) == "y"
 
 		if deleteRoleBinding {
 			log.StartWait("Deleting cluster role bindings")
@@ -361,14 +325,11 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 }
 
 func (cmd *ResetCmd) deleteDevspaceFolder() {
-	deleteDevspaceFolder := cmd.flags.deleteDevspaceFolder
-	if !deleteDevspaceFolder && !cmd.flags.skipQuestionsWithGivenAnswers {
-		deleteDevspaceFolder = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould the .devspace folder be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-	}
+	deleteDevspaceFolder := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "\n\nShould the .devspace folder be removed? (y/n)",
+		DefaultValue:           "y",
+		ValidationRegexPattern: "^(y|n)$",
+	}) == "y"
 
 	if deleteDevspaceFolder {
 		os.RemoveAll(".devspace")

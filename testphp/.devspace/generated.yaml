@@ -1,6 +1,0 @@
-chartHashs:
-  ./chart: f1c6475d9eef1e45f1972062b927076ac8599bff35d349a82ed17e7e9c570ff9
-dockerLatestTimestamps:
-  C:\Users\covexo\go\src\github.com\covexo\devspace\testphp\Dockerfile: 1540826863
-imageTags:
-  10.105.109.189:5000/devspace: xTdAFfp

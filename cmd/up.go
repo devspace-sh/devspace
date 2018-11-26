@@ -42,17 +42,6 @@ type UpCmdFlags struct {
 	namespace       string
 	config          string
 	configOverwrite string
-
-	//These flags are for testing only. They are passed to the init-command.
-	skipQuestionsWithGivenAnswers     bool
-	language                          string
-	cloudProvider                     string
-	useDevSpaceCloud                  bool
-	addDevSpaceCloudToLocalKubernetes bool
-	namespaceInit                     string
-	registryURL                       string
-	defaultImageName                  string
-	createPullSecret                  bool
 }
 
 //UpFlagsDefault are the default flags for UpCmdFlags
@@ -72,16 +61,6 @@ var UpFlagsDefault = &UpCmdFlags{
 	container:       "",
 	namespace:       "",
 	labelSelector:   "",
-
-	skipQuestionsWithGivenAnswers:     false,
-	language:                          "",
-	cloudProvider:                     "",
-	useDevSpaceCloud:                  false,
-	addDevSpaceCloudToLocalKubernetes: false,
-	namespaceInit:                     "",
-	registryURL:                       "",
-	defaultImageName:                  "",
-	createPullSecret:                  false,
 }
 
 func init() {
@@ -149,16 +128,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 			skipQuestions:    cmd.flags.allyes,
 			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 			templateRepoPath: "",
-
-			skipQuestionsWithGivenAnswers:     cmd.flags.skipQuestionsWithGivenAnswers,
-			language:                          cmd.flags.language,
-			cloudProvider:                     cmd.flags.cloudProvider,
-			useDevSpaceCloud:                  cmd.flags.useDevSpaceCloud,
-			addDevSpaceCloudToLocalKubernetes: cmd.flags.addDevSpaceCloudToLocalKubernetes,
-			namespace:                         cmd.flags.namespaceInit,
-			registryURL:                       cmd.flags.registryURL,
-			defaultImageName:                  cmd.flags.defaultImageName,
-			createPullSecret:                  cmd.flags.createPullSecret,
+			language:         "",
 		}
 		initCmd := &InitCmd{
 			flags: initFlags,

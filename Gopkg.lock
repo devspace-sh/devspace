@@ -814,14 +814,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  pruneopts = "UT"
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:b6221ec0f8903b556e127c449e7106b63e6867170c2d10a7c058623d086f2081"
   name = "github.com/prometheus/client_golang"
   packages = ["prometheus"]
@@ -979,14 +971,6 @@
   pruneopts = "UT"
   revision = "f187355171c936ac84a82793659ebb4936bc1c23"
   version = "v1.3.0"
-
-[[projects]]
-  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  pruneopts = "UT"
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
 
 [[projects]]
   digest = "1:ebabd8967efa341b15e51b329eb5b7ebc69b573fb4adb4ac2433fa532edcadbc"
@@ -1881,7 +1865,6 @@
     "github.com/skratchdot/open-golang/open",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
-    "github.com/stretchr/testify/assert",
     "gopkg.in/src-d/enry.v1",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/yaml.v2",

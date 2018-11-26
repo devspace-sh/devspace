@@ -37,12 +37,11 @@ type InitCmdFlags struct {
 	templateRepoPath string
 	language         string
 
-	//These flags are for testing only
-	skipQuestionsWithGivenAnswers     bool
 	cloudProvider                     string
 	useDevSpaceCloud                  bool
 	addDevSpaceCloudToLocalKubernetes bool
 	namespace                         string
+	createInternalRegistry            bool
 	registryURL                       string
 	defaultImageName                  string
 	createPullSecret                  bool
@@ -61,6 +60,7 @@ var InitCmdFlagsDefault = &InitCmdFlags{
 	useDevSpaceCloud:                  false,
 	addDevSpaceCloudToLocalKubernetes: false,
 	namespace:                         "",
+	createInternalRegistry:            false,
 }
 
 func init() {
@@ -163,7 +163,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.initChartGenerator()
 
 	createChart := cmd.flags.overwrite
-	if !cmd.flags.overwrite && !cmd.flags.skipQuestionsWithGivenAnswers {
+	if !cmd.flags.overwrite {
 		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
 			if !cmd.flags.skipQuestions {
@@ -256,7 +256,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}
 	} else {
 		useDevSpaceCloud := cmd.flags.useDevSpaceCloud || cmd.flags.skipQuestions
-		if !useDevSpaceCloud && !cmd.flags.skipQuestionsWithGivenAnswers {
+		if !useDevSpaceCloud {
 			useDevSpaceCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:               "Do you want to use the DevSpace Cloud? (free ready-to-use Kubernetes) (yes | no)",
 				DefaultValue:           "yes",
@@ -275,7 +275,7 @@ func (cmd *InitCmd) useCloudProvider() bool {
 func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
 	config := configutil.GetConfig()
 	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
-	if !addToContext && !cmd.flags.skipQuestionsWithGivenAnswers {
+	if !addToContext {
 		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
 			DefaultValue:           "yes",
@@ -427,7 +427,7 @@ func (cmd *InitCmd) configureRegistry() {
 		}
 	}
 
-	err = configure.Image(dockerUsername, cmd.flags.skipQuestions || cmd.flags.skipQuestionsWithGivenAnswers, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
+	err = configure.Image(dockerUsername, cmd.flags.skipQuestions, cmd.flags.registryURL, cmd.flags.defaultImageName, cmd.flags.createPullSecret)
 	if err != nil {
 		log.Fatal(err)
 	}
