@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -107,17 +108,39 @@ func TestUpWithInternalRegistry(t *testing.T) {
 
 }
 
-/*func TestUpWithDockerHub(t *testing.T) {
+func TestUpWithDockerHub(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
 	defer resetWorkDir(t)
 
 	upCmdObj := UpCmd{
-		flags: UpFlagsDefault,
-	}
-	upCmdObj.flags.sync = false
+		flags: &UpCmdFlags{
+			tiller:          true,
+			open:            "cmd",
+			initRegistries:  true,
+			build:           false,
+			sync:            true,
+			terminal:        true,
+			switchContext:   false,
+			exitAfterDeploy: false,
+			allyes:          false,
+			deploy:          false,
+			portforwarding:  true,
+			verboseSync:     false,
+			container:       "",
+			namespace:       "",
+			labelSelector:   "",
 
-	mockStdin("exit\\\\n")
-	defer cleanUpMockedStdin()
+			skipQuestionsWithGivenAnswers:     true,
+			language:                          "javascript",
+			cloudProvider:                     cloud.DevSpaceCloudProviderName,
+			useDevSpaceCloud:                  true,
+			addDevSpaceCloudToLocalKubernetes: true,
+			namespaceInit:                     "test-cmd-up-dockerhub",
+			registryURL:                       "hub.docker.com",
+			defaultImageName:                  "devspace",
+			createPullSecret:                  true,
+		},
+	}
 
 	defer func() {
 		client, err := kubectl.NewClient()
@@ -125,15 +148,77 @@ func TestUpWithInternalRegistry(t *testing.T) {
 			t.Error(err)
 		}
 		propagationPolicy := metav1.DeletePropagationForeground
-		client.Core().Namespaces().Delete("217b737767c3420e68e6c3b659eb46bb", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Core().Namespaces().Delete("test-cmd-up-dockerhub", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}()
 
 	upCmdObj.Run(nil, []string{})
-	log.StopFileLogging()
 
-	testReset(t)
+	log.StartFileLogging()
+	listCmdObj := ListCmd{
+		flags: &ListCmdFlags{},
+	}
+	listCmdObj.RunListPort(nil, nil)
+	listCmdObj.RunListService(nil, nil)
+	listCmdObj.RunListSync(nil, nil)
+	listCmdObj.RunListPackage(nil, nil)
 
-}*/
+	logFile, err := os.Open(log.Logdir + "default.log")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	data := make([]byte, 10000)
+	count, err := logFile.Read(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	t.Logf("read %d bytes: %q\n", count, data[:count])
+	assert.Contains(t, string(data[:count]), "pod    release=devspace-test-cmd-up-private-registry   3000:3000", "No PortForwarding")
+	assert.Contains(t, string(data[:count]), "No services are configured. Run `devspace add service` to add new service", "A service appeared despite not configured")
+	assert.Contains(t, string(data[:count]), "release=devspace-test-cmd-up-private-registry   ./           /app", "No Sync")
+	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
+
+	resetCmdObj := ResetCmd{
+		flags: &ResetCmdFlags{
+			skipQuestionsWithGivenAnswers: true,
+			deleteFromDevSpaceCloud:       true,
+			removeCloudContext:            true,
+			removeTiller:                  false,
+			deleteChart:                   false,
+			removeRegistry:                false,
+			deleteDockerfile:              false,
+			deleteDockerIgnore:            false,
+			deleteRoleBinding:             false,
+			deleteDevspaceFolder:          false,
+		},
+	}
+	resetCmdObj.Run(nil, []string{})
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Stat(path.Join(dir, "Dockerfile"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".dockerignore"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".devspace"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "chart"))
+	assert.Equal(t, false, os.IsNotExist(err))
+
+	_, err = os.Stat(path.Join(dir, "index.js"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "package.json"))
+	assert.Equal(t, false, os.IsNotExist(err))
+
+	assert.Equal(t, true, helm.IsTillerDeployed(resetCmdObj.kubectl), "Tiller deleted")
+	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
+	_, err = resetCmdObj.kubectl.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
+	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
+
+}
 
 var workDirBefore string
 
@@ -162,30 +247,6 @@ func resetWorkDir(t *testing.T) {
 	os.Chdir(workDirBefore)
 
 	os.Remove(tmpDir)
-}
-
-func testReset(t *testing.T) {
-	resetCmdObj := ResetCmd{}
-	resetCmdObj.Run(nil, []string{})
-
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = os.Stat(path.Join(dir, "Dockerfile"))
-	assert.Equal(t, true, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, ".dockerignore"))
-	assert.Equal(t, true, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, ".devspace"))
-	assert.Equal(t, true, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, "chart"))
-	assert.Equal(t, true, os.IsNotExist(err))
-
-	_, err = os.Stat(path.Join(dir, "index.js"))
-	assert.Equal(t, false, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, "package.json"))
-	assert.Equal(t, false, os.IsNotExist(err))
 }
 
 var tmpfile *os.File
