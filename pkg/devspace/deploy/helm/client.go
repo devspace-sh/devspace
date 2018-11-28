@@ -142,7 +142,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 	// Get HelmClient
 	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error creating helm client: %v", err)
 	}
 
 	// Check if redeploying is necessary
