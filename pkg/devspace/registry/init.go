@@ -110,7 +110,7 @@ func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *ku
 		}
 	}
 
-	if config.DevSpace.Deployments != nil {
+	if config.DevSpace.Deployments != nil && username != "" && password != "" {
 		for _, deployConfig := range *config.DevSpace.Deployments {
 			email := "noreply@devspace-cloud.com"
 
