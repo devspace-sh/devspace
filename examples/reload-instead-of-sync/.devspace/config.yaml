@@ -1,0 +1,19 @@
+version: v1alpha1
+cluster:
+  cloudProvider: devspace-cloud
+devSpace:
+  autoReload:
+    paths:
+    - ./**
+  deployments:
+  - name: devspace-default
+    kubectl:
+      manifests: 
+      - kube/**
+  terminal:
+    disabled: true
+    labelSelector:
+      release: devspace-default
+images:
+  default:
+    name: fabian1991/devspace

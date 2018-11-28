@@ -295,25 +295,23 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 
 	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
 		return services.StartTerminal(client, flags.service, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
-	} else if config.DevSpace != nil && ((flags.portforwarding && config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0) || (flags.sync && config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0)) {
-		log.Info("Will now try to attach to a running devspace pod...")
-
-		// Start attaching to a running devspace pod
-		err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
-		if err != nil {
-			// If it's a reload error we return that so we can rebuild & redeploy
-			if _, ok := err.(*reloadError); ok {
-				return err
-			}
-
-			log.Infof("Couldn't attach to a running devspace pod: %v", err)
-		}
-
-		log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
-		return <-exitChan
 	}
 
-	return nil
+	log.Info("Will now try to attach to a running devspace pod...")
+
+	// Start attaching to a running devspace pod
+	err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
+	if err != nil {
+		// If it's a reload error we return that so we can rebuild & redeploy
+		if _, ok := err.(*reloadError); ok {
+			return err
+		}
+
+		log.Infof("Couldn't attach to a running devspace pod: %v", err)
+	}
+
+	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+	return <-exitChan
 }
 
 type reloadError struct {

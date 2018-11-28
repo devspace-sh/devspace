@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: devspace
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        release: devspace-default
+    spec:
+      containers:
+      - name: default
+        image: fabian1991/devspace

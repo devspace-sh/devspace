@@ -1,0 +1,5 @@
+chartHashs: {}
+dockerLatestTimestamps:
+  ./Dockerfile: 1543411337
+imageTags:
+  fabian1991/devspace: 9LCpwdd
