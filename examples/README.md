@@ -6,9 +6,11 @@ This folder contains several examples how to use the devspace cli for various us
 |:------|:----------:|:----------:|:----------:|:-------------|
 | [`quickstart`](https://github.com/covexo/devspace/tree/master/examples/quickstart) | docker | remote registry | helm | Simple nodejs example how to use devspace with helm |
 | [`quickstart-kubectl`](https://github.com/covexo/devspace/tree/master/examples/quickstart-kubectl) | docker | remote registry | kubectl | Simple nodejs example how to use devspace with kubectl apply |
-| [`minikube`](https://github.com/covexo/devspace/tree/master/examples/minikube) | minikube-docker | local registry | helm | Minikube example with local registry |
-| [`offline-development`](https://github.com/covexo/devspace/tree/master/examples/offline-development) | minikube-docker | local registry | helm | Example how to develop without internet connection |
+| [`minikube`](https://github.com/covexo/devspace/tree/master/examples/minikube) | minikube-docker | no registry | helm | Minikube example with local registry |
+| [`offline-development`](https://github.com/covexo/devspace/tree/master/examples/offline-development) | minikube-docker | no registry | helm | Example how to develop without internet connection |
 | [`php-mysql-example`](https://github.com/covexo/devspace/tree/master/examples/php-mysql-example) | docker | remote registry | helm | Example how to easily deploy php and mysql |
 | [`microservices`](https://github.com/covexo/devspace/tree/master/examples/microservices) | docker | remote registry | helm & kubectl | Example with simple nodejs and php application that interact |
 | [`kaniko`](https://github.com/covexo/devspace/tree/master/examples/kaniko) | kaniko | remote registry | helm | Example how to use kaniko instead of docker |
 | [`kaniko-minikube`](https://github.com/covexo/devspace/tree/master/examples/kaniko-minikube) | kaniko | local registry | helm | Example how to use kaniko locally instead of docker |
+| [`reload-instead-of-sync`](https://github.com/covexo/devspace/tree/master/examples/reload-instead-of-sync) | docker | remote registry | kubectl | Example how to use devspace to redeploy on every change instead of hot reloading |
+| [`no-terminal`](https://github.com/covexo/devspace/tree/master/examples/no-terminal) | docker | remote registry | kubectl | Example how to use devspace without opening a terminal and instead attach after devspace up |

@@ -2,12 +2,13 @@ package v1
 
 //ImageConfig defines the image specification
 type ImageConfig struct {
-	Name             *string      `yaml:"name"`
-	Tag              *string      `yaml:"tag"`
-	Registry         *string      `yaml:"registry"`
-	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
-	SkipPush         *bool        `yaml:"skipPush"`
-	Build            *BuildConfig `yaml:"build"`
+	Name             *string           `yaml:"name"`
+	Tag              *string           `yaml:"tag"`
+	Registry         *string           `yaml:"registry"`
+	CreatePullSecret *bool             `yaml:"createPullSecret,omitempty"`
+	SkipPush         *bool             `yaml:"skipPush"`
+	AutoReload       *AutoReloadConfig `yaml:"autoReload"`
+	Build            *BuildConfig      `yaml:"build"`
 }
 
 //BuildConfig defines the build process for an image
