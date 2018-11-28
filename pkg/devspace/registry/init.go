@@ -91,7 +91,7 @@ func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *ku
 	username := ""
 	password := ""
 
-	if registryConf.Auth == nil || registryConf.Auth.Username == nil || registryConf.Auth.Password == nil {
+	if dockerClient != nil && (registryConf.Auth == nil || registryConf.Auth.Username == nil || registryConf.Auth.Password == nil) {
 		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
 
 		if authConfig != nil {
