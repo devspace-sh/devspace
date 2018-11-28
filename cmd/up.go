@@ -166,7 +166,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.flags.initRegistries {
 		dockerClient, err := docker.NewClient(false)
 		if err != nil {
-			log.Info(err)
 			dockerClient = nil
 		}
 
