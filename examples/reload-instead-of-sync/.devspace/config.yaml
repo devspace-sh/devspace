@@ -1,6 +1,7 @@
 version: v1alpha1
 cluster:
   cloudProvider: devspace-cloud
+  # kubeContext: minikube
 devSpace:
   autoReload:
     paths:
@@ -16,4 +17,4 @@ devSpace:
       release: devspace-default
 images:
   default:
-    name: fabian1991/devspace
+    name: yourdockerusername/devspace

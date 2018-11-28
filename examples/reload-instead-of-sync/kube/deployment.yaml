@@ -11,4 +11,4 @@ spec:
     spec:
       containers:
       - name: default
-        image: fabian1991/devspace
+        image: yourdockerusername/devspace
