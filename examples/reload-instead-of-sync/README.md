@@ -1,4 +1,4 @@
-# Quickstart kubectl example
+# Reload instead of sync example
 
 This example shows you how to develop a go application with devspace with reloading the build & deploy pipeline instead of hot reloading
 

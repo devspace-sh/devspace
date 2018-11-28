@@ -1,4 +1,4 @@
-# Quickstart example
+# No Terminal example
 
 This example shows you how to develop a small node express application with devspace without interacting in the remote container.
 
