@@ -125,6 +125,8 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
+		log.Write([]byte("\n"))
+
 		initFlags := &InitCmdFlags{
 			reconfigure:      false,
 			overwrite:        false,
