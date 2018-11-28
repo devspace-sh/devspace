@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -62,7 +63,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 		}
 
 		log.StartWait("Waiting for pods to become running")
-		pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace)
+		pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace, time.Second*120)
 		log.StopWait()
 		if err != nil {
 			return nil, fmt.Errorf("Unable to list devspace pods: %v", err)

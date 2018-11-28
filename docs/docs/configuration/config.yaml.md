@@ -46,8 +46,13 @@ Defines the DevSpace including everything related to terminal, portForwarding, s
 In this section, so called deployments are defined, which will be deployed to the target cluster on `devspace up`.
 - `name` *string* the name of the deployment (if using helm as deployment method, also the release name)
 - `namespace` *string* the namespace to deploy to
+- `autoReload` *AutoReloadConfig* auto reload configuration
 - `helm` *HelmConfig* if set, helm will be used as deployment method
 - `kubectl` *KubectlConfig* if set, kubectl apply will be used as deployment method
+
+### devspace.deployments[].autoReload
+By default devspace will reload the build and deploy process on certain changes (when helm is chosen on changes to the chart path, when kubectl on changes to the manifest paths), in this section this behaviour can be disabled
+- `disabled` *bool* if true devspace does not reload the pipeline on kubectl manifest or helm chart changes
 
 ### devspace.deployments[].helm
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
@@ -71,12 +76,16 @@ These services can be referenced within other config options (e.g. terminal, por
 
 ### devspace.terminal
 In this section options are defined, what should happen when devspace up or devspace enter try to open a terminal. By default, devspace will select pods with the labels `release=devspace-default` and try to start a bash or sh terminal in the container.
-- `disabled` *bool* if true no terminal will be opened on `devspace up` and `devspace enter`
+- `disabled` *bool* if true no terminal will be opened on `devspace up` and devspace will try to attach to the pod instead (On failure sync & port forwarding continues)
 - `service` *string* DevSpace service to start the terminal for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
 - `containerName` *string* the name of the container to connect to within the selected pod (default is the first defined container)  
 - `command` *string array* the default command that is executed when entering a pod with devspace up or devspace enter (default is: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])  
+
+### devspace.autoReload
+In this section paths can be specified that should be watched by devspace for changes. If any change occurs the build and deploy pipeline is reexecuted
+- `paths` *string array* path globs which devspace should watch for changes (e.g. `config/**`, `.env`, `node/package*` etc.)
 
 ### devspace.ports
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
@@ -122,7 +131,12 @@ An image is defined by:
 - `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
 - `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/covexo/devspace/tree/master/examples/minikube))
+- `autoReload` *AutoReloadConfig* auto reload configuration
 - `build` *BuildConfig* defines the build procedure for this image  
+
+### images[].autoReload
+By default devspace will reload the build and deploy process if the specified dockerfile is changed, in this section this behaviour can be disabled
+- `disabled` *bool* if true devspace does not reload the pipeline on dockerfile changes
 
 ### images[].build
 BuildConfig:
@@ -235,6 +249,12 @@ devSpace:
     - sh
     - -c
     - bash
+  # Auto reload specifies on which paths the devspace up command should listen for changes. On change the command will rebuild and redeploy
+  autoReload:
+    paths:
+    - package.json
+    - config/**
+    - php/php.ini
   deployments:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
@@ -243,6 +263,10 @@ devSpace:
       # Overwrite the values.yaml with dev-values.yaml when running devspace up
       devOverwrite: ./chart/dev-overwrite.yaml
   - name: devspace-kubectl
+    namespace: kubectl-deployment
+    autoReload:
+      # do not rebuild and redeploy on changes to these manifests
+      disabled: true
     kubectl: 
       manifests:
       # Use kubectl apply to deploy these manifests during `devspace up`. Devspace will also automatically append  
@@ -302,6 +326,9 @@ images:
       dockerfilePath: ./Dockerfile
       # Specifies where the docker context path is
       contextPath: ./
+      # uncomment to not rebuild and redeploy on changes to the dockerfile
+      # autoReload:
+      #  disabled: true
       # use docker as build engine
       docker:
         # Use the minikube docker daemon if the current kubectl context is minikube

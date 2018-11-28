@@ -191,7 +191,7 @@ func IsMinikube() bool {
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string) (*k8sv1.Pod, error) {
+func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	config := configutil.GetConfig()
 
 	if namespace == "" {
@@ -203,9 +203,7 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 		namespace = defaultNamespace
 	}
 
-	maxWaiting := 120 * time.Second
 	waitingInterval := 1 * time.Second
-
 	for maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 

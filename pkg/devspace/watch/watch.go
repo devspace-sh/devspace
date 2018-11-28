@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
@@ -39,6 +41,59 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 	}
 
 	return watcher, nil
+}
+
+// GetPaths retrieves the watch paths from the config object
+func GetPaths() []string {
+	paths := make([]string, 0, 1)
+	config := configutil.GetConfig()
+
+	// Add the deploy manifest paths
+	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
+		for _, deployConf := range *config.DevSpace.Deployments {
+			if deployConf.AutoReload != nil && deployConf.AutoReload.Disabled != nil && *deployConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
+				chartPath := *deployConf.Helm.ChartPath
+				if chartPath[len(chartPath)-1] != '/' {
+					chartPath += "/"
+				}
+
+				paths = append(paths, chartPath+"**")
+			} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
+				for _, manifestPath := range *deployConf.Kubectl.Manifests {
+					paths = append(paths, *manifestPath)
+				}
+			}
+		}
+	}
+
+	// Add the dockerfile paths
+	if config.Images != nil {
+		for _, imageConf := range *config.Images {
+			if imageConf.AutoReload != nil && imageConf.AutoReload.Disabled != nil && *imageConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			dockerfilePath := "./Dockerfile"
+			if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
+				dockerfilePath = *imageConf.Build.DockerfilePath
+			}
+
+			paths = append(paths, dockerfilePath)
+		}
+	}
+
+	// Add the additional paths
+	if config.DevSpace != nil && config.DevSpace.AutoReload != nil && config.DevSpace.AutoReload.Paths != nil {
+		for _, path := range *config.DevSpace.AutoReload.Paths {
+			paths = append(paths, *path)
+		}
+	}
+
+	return paths
 }
 
 // Start starts the watching process every second

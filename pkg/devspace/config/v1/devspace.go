@@ -3,10 +3,16 @@ package v1
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
 	Terminal    *Terminal                `yaml:"terminal"`
+	AutoReload  *AutoReloadPathsConfig   `yaml:"autoReload,omitempty"`
 	Services    *[]*ServiceConfig        `yaml:"services,omitempty"`
 	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Ports       *[]*PortForwardingConfig `yaml:"ports"`
 	Sync        *[]*SyncConfig           `yaml:"sync"`
+}
+
+// AutoReloadPathsConfig defines the struct for auto reloading devspace with additional paths
+type AutoReloadPathsConfig struct {
+	Paths *[]*string `yaml:"paths,omitempty"`
 }
 
 // ServiceConfig defines the ports for a port forwarding to a DevSpace

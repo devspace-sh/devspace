@@ -65,11 +65,9 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 		return err
 	}
 
-	fn := func() error {
+	return t.Safe(func() error {
 		return exec.Stream(streamOptions)
-	}
-
-	return t.Safe(fn)
+	})
 }
 
 // ExecStream executes a command and streams the output to the given streams
