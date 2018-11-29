@@ -63,7 +63,7 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.ConfigOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
-	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
 	// cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
 

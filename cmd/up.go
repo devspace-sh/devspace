@@ -55,7 +55,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:           false,
 	sync:            true,
 	terminal:        true,
-	switchContext:   false,
+	switchContext:   true,
 	exitAfterDeploy: false,
 	allyes:          false,
 	deploy:          false,
