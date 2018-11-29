@@ -3,7 +3,6 @@ package helm
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -126,15 +125,23 @@ func upgradeTiller(kubectlClient *kubernetes.Clientset, tillerOptions *helminsta
 }
 
 // IsTillerDeployed determines if we could connect to a tiller server
-func IsTillerDeployed(kubectlClient *kubernetes.Clientset) bool {
+func IsTillerDeployed(client *kubernetes.Clientset) bool {
 	config := configutil.GetConfig()
 	tillerNamespace := *config.Tiller.Namespace
-	deployment, err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	deployment, err := client.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
 
 	if deployment == nil {
+		return false
+	}
+
+	// Check if we have a broken deployment
+	if deployment.Status.ReadyReplicas != deployment.Status.Replicas {
+		// Delete the tiller deployment
+		DeleteTiller(client)
+
 		return false
 	}
 
@@ -146,27 +153,20 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 	config := configutil.GetConfig()
 
 	tillerNamespace := *config.Tiller.Namespace
-	errs := make([]error, 0, 1)
 	propagationPolicy := metav1.DeletePropagationForeground
 
-	err := kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
+	// Delete deployment
+	kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
-	if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-		errs = append(errs, err)
-	}
 
-	err = kubectlClient.CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-	if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-		errs = append(errs, err)
-	}
+	// Delete service
+	kubectlClient.CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 	// Only delete service accounts and roles in non cloud-provider environments
 	if config.Cluster.CloudProvider == nil || *config.Cluster.CloudProvider == "" {
-		err = kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-			errs = append(errs, err)
-		}
+		// Delete serviceaccount
+		kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 		appNamespaces := []*string{
 			&tillerNamespace,
@@ -195,38 +195,13 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset) error {
 		}
 
 		for _, appNamespace := range appNamespaces {
-			err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-				errs = append(errs, err)
-			}
+			kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+			kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-			err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-				errs = append(errs, err)
-			}
-
-			err = kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-				errs = append(errs, err)
-			}
-
-			err = kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			if err != nil && strings.HasSuffix(err.Error(), "not found") == false {
-				errs = append(errs, err)
-			}
+			kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+			kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 		}
 	}
 
-	// Merge errors
-	errorText := ""
-
-	for _, value := range errs {
-		errorText += value.Error() + "\n"
-	}
-
-	if errorText == "" {
-		return nil
-	}
-
-	return errors.New(errorText)
+	return nil
 }
