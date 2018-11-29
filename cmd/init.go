@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
@@ -294,6 +295,8 @@ func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cl
 	if err != nil {
 		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
 	}
+
+	log.Write([]byte("\n"))
 }
 
 func (cmd *InitCmd) configureDevSpace() {
@@ -401,17 +404,42 @@ func (cmd *InitCmd) configureRegistry() {
 		log.Fatalf("Cannot create docker client: %v", err)
 	}
 
+	useKaniko := false
+
 	// Check if docker is installed
-	_, err = client.Ping(context.Background())
-	if err != nil {
-		// Set default build engine to kaniko, if no docker is installed
-		cmd.defaultImage.Build = &v1.BuildConfig{
-			Kaniko: &v1.KanikoConfig{
-				Cache:     configutil.Bool(true),
-				Namespace: configutil.String(""),
-			},
+	for {
+		_, err = client.Ping(context.Background())
+		if err != nil {
+			// Check if docker cli is installed
+			dockerCliErr := exec.Command("docker").Run()
+			if dockerCliErr == nil {
+				useKaniko = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question:               "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
+					DefaultValue:           "no",
+					ValidationRegexPattern: "^(yes)|(no)$",
+				}) == "yes"
+
+				if useKaniko == false {
+					continue
+				}
+			}
+
+			// We use kaniko
+			useKaniko = true
+
+			// Set default build engine to kaniko, if no docker is installed
+			cmd.defaultImage.Build = &v1.BuildConfig{
+				Kaniko: &v1.KanikoConfig{
+					Cache:     configutil.Bool(true),
+					Namespace: configutil.String(""),
+				},
+			}
 		}
-	} else {
+
+		break
+	}
+
+	if useKaniko == false {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
 		log.StopWait()

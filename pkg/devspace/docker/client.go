@@ -37,7 +37,7 @@ func NewClient(preferMinikube bool) (client.CommonAPIClient, error) {
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting docker client: %s", err)
+		return nil, fmt.Errorf("Couldn't create docker client: %s", err)
 	}
 
 	cli.NegotiateAPIVersion(context.Background())

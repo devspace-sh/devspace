@@ -39,15 +39,41 @@ A [.devspace/config.yaml](#) contains any public/shared configuration for runnin
 
 **Note: You can easily re-configure your DevSpace by running `devspace init -r`.**
 
+## cluster
+The `cluster` field specifies:
+- `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
+- `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
+- `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
+- `apiServer` *string* Kubernetes API-Server URL
+- `caCert` *string* CaCert for the Kubernetes API-Server in PEM format
+- `user`  *ClusterUser*  
+
+### cluster.user
+ClusterUser:
+- `clientCert` *string* (PEM format)
+- `clientKey` *string* (PEM format)  
+- `token` *string* Token string for service accounts
+
 ## devspace
-Defines the DevSpace including everything related to terminal, portForwarding, sync, and deployments.
+Defines the DevSpace including everything related to terminal, portForwarding, sync, and deployments:
+- `deployments` *DeploymentConfig array* the deployments to deploy to the target cluster
+- `services` *ServiceConfig array* DevSpace services that define common labelSelectors to use to select the correct pods
+- `terminal` *TerminalConfig* terminal configuration to use for devspace up/devspace enter
+- `autoReload` *AutoReloadConfig* additional paths to watch for changes to reload the build and deploy pipeline
+- `ports` *PortConfig array* the ports that should be forwarded by devspace from the cluster to localhost
+- `sync` *SyncConfig array* the paths that should be synced between your local machine and the remote containers
 
 ### devspace.deployments[]
 In this section, so called deployments are defined, which will be deployed to the target cluster on `devspace up`.
 - `name` *string* the name of the deployment (if using helm as deployment method, also the release name)
 - `namespace` *string* the namespace to deploy to
+- `autoReload` *AutoReloadConfig* auto reload configuration
 - `helm` *HelmConfig* if set, helm will be used as deployment method
 - `kubectl` *KubectlConfig* if set, kubectl apply will be used as deployment method
+
+### devspace.deployments[].autoReload
+By default devspace will reload the build and deploy process on certain changes (when helm is chosen on changes to the chart path, when kubectl on changes to the manifest paths), in this section this behaviour can be disabled
+- `disabled` *bool* if true devspace does not reload the pipeline on kubectl manifest or helm chart changes
 
 ### devspace.deployments[].helm
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
@@ -56,7 +82,6 @@ When specifying helm as deployment method, `devspace up` will deploy the specifi
 
 ### devspace.deployments[].kubectl
 When using kubectl as deployment method, `devspace up` will use kubectl apply on the specified manifests to deploy them to the target cluster. [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl) is needed in order for this option to work.  
-- `cmdPath` *string* Optional: the path to the kubectl executable
 - `manifests` *string array* glob patterns where the kubernetes yaml files lie (e.g. kube/* or kube/pod.yaml)
 
 ### devspace.services[]
@@ -64,19 +89,22 @@ To define resource selectors as DevSpace services:
 - `name` *string* the name of the DevSpace service
 - `namespace` *string* the namespace where to select the pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select from (default: release: devspace-default)
-- `portMappings` *PortMapping array* 
 - `containerName` *string* name of the container to select within the selected pod
 - `resouceType` *string* Kubernetes resouce type to select (currently only `pod` is available)
 These services can be referenced within other config options (e.g. terminal, ports and sync).
 
 ### devspace.terminal
 In this section options are defined, what should happen when devspace up or devspace enter try to open a terminal. By default, devspace will select pods with the labels `release=devspace-default` and try to start a bash or sh terminal in the container.
-- `disabled` *bool* if true no terminal will be opened on `devspace up` and `devspace enter`
+- `disabled` *bool* if true no terminal will be opened on `devspace up` and devspace will try to attach to the pod instead (On failure sync & port forwarding continues)
 - `service` *string* DevSpace service to start the terminal for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
 - `containerName` *string* the name of the container to connect to within the selected pod (default is the first defined container)  
 - `command` *string array* the default command that is executed when entering a pod with devspace up or devspace enter (default is: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])  
+
+### devspace.autoReload
+In this section paths can be specified that should be watched by devspace for changes. If any change occurs the build and deploy pipeline is reexecuted
+- `paths` *string array* path globs which devspace should watch for changes (e.g. `config/**`, `.env`, `node/package*` etc.)
 
 ### devspace.ports
 To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
@@ -109,7 +137,7 @@ To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure rea
 In the example above, the entire code within the project would be synchronized with the folder `/app` inside the DevSpace, with the exception of the `node_modules/` folder.
 
 ### devspace.sync[].bandwidthLimits
-Bandwidth limits for the sync path:
+Bandwidth limits to use for syncing:
 - `upload` *string* kilobytes per second as upper limit to use for uploading files (e.g. 100 means 100 KByte per seconds)
 - `download` *string* kilobytes per second as upper limit to use for downloading files (e.g. 100 means 100 KByte per seconds)
 
@@ -122,16 +150,21 @@ An image is defined by:
 - `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
 - `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/covexo/devspace/tree/master/examples/minikube))
+- `autoReload` *AutoReloadConfig* auto reload configuration
 - `build` *BuildConfig* defines the build procedure for this image  
 
+### images[].autoReload
+By default devspace will reload the build and deploy process if the specified dockerfile is changed, in this section this behaviour can be disabled
+- `disabled` *bool* if true devspace does not reload the pipeline on dockerfile changes
+
 ### images[].build
-BuildConfig:
+BuildConfig by default docker is used to build images:
 - `dockerfilePath` *string* specifies the path where the dockerfile lies (default: ./Dockerfile)
 - `contextPath` *string* specifies the context path for docker (default: ./)
 - `docker` *DockerConfig* use the local Docker daemon or a Docker daemon running inside a Minikube cluster (if `preferMinikube` == true)
 - `kaniko` *KanikoConfig* build images in userspace within a build pod running inside the Kubernetes cluster 
 - `options` *BuildOptions* additional options used for building the image
-- `disabled` *bool* Optional: if true building is skipped for this image (Can be useful when using in overwrite.yaml)
+- `disabled` *bool* Optional: if true building is skipped for this image (Can be useful when using in overwrite.yaml for users who don't have docker installed)
 
 ### images[].build.docker
 DockerConfig:
@@ -155,37 +188,22 @@ This section of the config defines a map of image registries. Use this only if y
 ### registries[]
 ImageRegistry:
 - `url` *string* the url of the registry (format: myregistry.com:port)
-- `insecure` *bool* flag to allow pushing to registries without HTTPS
-- `auth` *RegistryAuth* credentials for pushing to / pulling from the registry
+- `insecure` *bool* optional: flag to allow pushing to registries without HTTPS
+- `auth` *RegistryAuth* optional: credentials for pushing to / pulling from the registry (devspace automatically tries to find them in the docker credentials store)
 
 ### registries[].auth
 RegistryAuth:
 - `username` *string* the user that should be used for pushing and pulling from the registry
 - `password` *string* the password should be used for pushing and pulling from the registry
 
-### internalRegistry
+## internalRegistry
 If devspace should deploy an internal registry for you, you can define it in this section. This is only tested with minikube and enables full offline development:
 - `deploy` *bool* if the internal registry should be automatically deployed
-- `namespace` *string* the namespace where to deploy the internal registry
+- `namespace` *string* optional: the namespace where to deploy the internal registry
 
-### tiller
+## tiller
 In this section you can define additional settings for connecting to the tiller server (if helm should be used for deployment)
-- `namespace` *string* the namespace where the tiller is running (if tiller is not found, it will be deployed automatically)
-
-## cluster
-The `cluster` field specifies:
-- `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
-- `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
-- `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
-- `apiServer` *string* Kubernetes API-Server URL
-- `caCert` *string* CaCert for the Kubernetes API-Server in PEM format
-- `user`  *ClusterUser*  
-
-### cluster.user
-ClusterUser:
-- `clientCert` *string* (PEM format)
-- `clientKey` *string* (PEM format)  
-- `token` *string* Token string for service accounts
+- `namespace` *string* optional: the namespace where the tiller is running (if tiller is not found, it will be deployed automatically)
 
 # Full annotated config.yaml
 
@@ -235,6 +253,12 @@ devSpace:
     - sh
     - -c
     - bash
+  # Auto reload specifies on which paths the devspace up command should listen for changes. On change the command will rebuild and redeploy
+  autoReload:
+    paths:
+    - package.json
+    - config/**
+    - php/php.ini
   deployments:
   - name: devspace-default # this is also the release name, when using helm as deployment method
     helm:
@@ -243,6 +267,10 @@ devSpace:
       # Overwrite the values.yaml with dev-values.yaml when running devspace up
       devOverwrite: ./chart/dev-overwrite.yaml
   - name: devspace-kubectl
+    namespace: kubectl-deployment
+    autoReload:
+      # do not rebuild and redeploy on changes to these manifests
+      disabled: true
     kubectl: 
       manifests:
       # Use kubectl apply to deploy these manifests during `devspace up`. Devspace will also automatically append  
@@ -302,6 +330,9 @@ images:
       dockerfilePath: ./Dockerfile
       # Specifies where the docker context path is
       contextPath: ./
+      # uncomment to not rebuild and redeploy on changes to the dockerfile
+      # autoReload:
+      #  disabled: true
       # use docker as build engine
       docker:
         # Use the minikube docker daemon if the current kubectl context is minikube

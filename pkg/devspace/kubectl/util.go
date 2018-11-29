@@ -15,7 +15,7 @@ import (
 )
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
-const ClusterRoleBindingName = "devspace-users"
+const ClusterRoleBindingName = "devspace-user"
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
 func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error {

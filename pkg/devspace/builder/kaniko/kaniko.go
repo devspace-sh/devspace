@@ -2,6 +2,7 @@ package kaniko
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -224,14 +225,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure", "--skip-tls-verify")
 		}
 
-		stdin, stdout, stderr, execErr := kubectl.Exec(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
-		stdin.Close()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
-		if execErr != nil {
-			return fmt.Errorf("Failed to start image building: %s", execErr.Error())
-		}
+		go func() {
+			exitChannel <- kubectl.ExecStream(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, nil, stdoutWriter, stderrWriter)
+		}()
 
-		lastKanikoOutput := formatKanikoOutput(stdout, stderr)
+		lastKanikoOutput := formatKanikoOutput(stdoutReader, stderrReader)
 		exitError := <-exitChannel
 
 		log.StopWait()

@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/covexo/devspace/pkg/devspace/watch"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -52,7 +55,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	build:           false,
 	sync:            true,
 	terminal:        true,
-	switchContext:   false,
+	switchContext:   true,
 	exitAfterDeploy: false,
 	allyes:          false,
 	deploy:          false,
@@ -122,6 +125,8 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {
+		log.Write([]byte("\n"))
+
 		initFlags := &InitCmdFlags{
 			reconfigure:      false,
 			overwrite:        false,
@@ -161,7 +166,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.flags.initRegistries {
 		dockerClient, err := docker.NewClient(false)
 		if err != nil {
-			log.Fatal(err)
+			dockerClient = nil
 		}
 
 		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
@@ -171,21 +176,13 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	err = buildAndDeploy(cmd.flags.build, cmd.flags.deploy, client)
+	err = buildAndDeploy(client, cmd.flags, args)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	if cmd.flags.exitAfterDeploy == false {
-		// Start services
-		err = startServices(cmd.flags, client, args, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 }
 
-func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) error {
+func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []string) error {
 	config := configutil.GetConfig()
 
 	// Load config
@@ -195,7 +192,7 @@ func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) err
 	}
 
 	// Build image if necessary
-	mustRedeploy, err := image.BuildAll(kubectl, generatedConfig, build, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, flags.build, log.GetInstance())
 	if err != nil {
 		return fmt.Errorf("Error building image: %v", err)
 	}
@@ -211,7 +208,7 @@ func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) err
 	// Deploy all defined deployments
 	if config.DevSpace.Deployments != nil {
 		// Deploy all
-		err = deploy.All(kubectl, generatedConfig, mustRedeploy || shouldDeploy, true, log.GetInstance())
+		err = deploy.All(client, generatedConfig, mustRedeploy || flags.deploy, true, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error deploying devspace: %v", err)
 		}
@@ -223,19 +220,43 @@ func buildAndDeploy(build, shouldDeploy bool, kubectl *kubernetes.Clientset) err
 		}
 	}
 
-	return nil
-}
-
-func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []string, log log.Logger) error {
-	if flags.portforwarding {
-		err := services.StartPortForwarding(kubectl, log)
+	// Start services
+	if flags.exitAfterDeploy == false {
+		// Start services
+		err = startServices(client, flags, args, log.GetInstance())
 		if err != nil {
-			return fmt.Errorf("Unable to start portforwarding: %v", err)
+			// Check if we should reload
+			if _, ok := err.(*reloadError); ok {
+				// Force building & redeploying
+				flags.build = true
+				flags.deploy = true
+
+				return buildAndDeploy(client, flags, args)
+			}
+
+			return err
 		}
 	}
 
+	return nil
+}
+
+func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []string, log log.Logger) error {
+	if flags.portforwarding {
+		portForwarder, err := services.StartPortForwarding(client, log)
+		if err != nil {
+			return fmt.Errorf("Unable to start portforwarding: %v", err)
+		}
+
+		defer func() {
+			for _, v := range portForwarder {
+				v.Close()
+			}
+		}()
+	}
+
 	if flags.sync {
-		syncConfigs, err := services.StartSync(kubectl, flags.verboseSync, log)
+		syncConfigs, err := services.StartSync(client, flags.verboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -255,14 +276,49 @@ func startServices(flags *UpCmdFlags, kubectl *kubernetes.Clientset, args []stri
 	}
 
 	config := configutil.GetConfig()
+	exitChan := make(chan error)
+	autoReloadPaths := watch.GetPaths()
 
-	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
-		return services.StartTerminal(kubectl, flags.service, flags.container, flags.labelSelector, flags.namespace, args, log)
-	} else if config.DevSpace != nil && ((flags.portforwarding && config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0) || (flags.sync && config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0)) {
-		log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+	// Start watcher if we have at least one auto reload path
+	if len(autoReloadPaths) > 0 {
+		watcher, err := watch.New(autoReloadPaths, func() error {
+			log.Info("Change detected, will reload in 2 seconds")
+			time.Sleep(time.Second * 2)
 
-		<-make(chan bool)
+			exitChan <- &reloadError{}
+			return nil
+		}, log)
+		if err != nil {
+			return err
+		}
+
+		watcher.Start()
 	}
 
-	return nil
+	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
+		return services.StartTerminal(client, flags.service, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
+	}
+
+	log.Info("Will now try to attach to a running devspace pod...")
+
+	// Start attaching to a running devspace pod
+	err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
+	if err != nil {
+		// If it's a reload error we return that so we can rebuild & redeploy
+		if _, ok := err.(*reloadError); ok {
+			return err
+		}
+
+		log.Infof("Couldn't attach to a running devspace pod: %v", err)
+	}
+
+	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+	return <-exitChan
+}
+
+type reloadError struct {
+}
+
+func (r *reloadError) Error() string {
+	return ""
 }
