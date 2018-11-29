@@ -39,6 +39,21 @@ A [.devspace/config.yaml](#) contains any public/shared configuration for runnin
 
 **Note: You can easily re-configure your DevSpace by running `devspace init -r`.**
 
+## cluster
+The `cluster` field specifies:
+- `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
+- `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
+- `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
+- `apiServer` *string* Kubernetes API-Server URL
+- `caCert` *string* CaCert for the Kubernetes API-Server in PEM format
+- `user`  *ClusterUser*  
+
+### cluster.user
+ClusterUser:
+- `clientCert` *string* (PEM format)
+- `clientKey` *string* (PEM format)  
+- `token` *string* Token string for service accounts
+
 ## devspace
 Defines the DevSpace including everything related to terminal, portForwarding, sync, and deployments.
 
@@ -177,29 +192,14 @@ RegistryAuth:
 - `username` *string* the user that should be used for pushing and pulling from the registry
 - `password` *string* the password should be used for pushing and pulling from the registry
 
-### internalRegistry
+## internalRegistry
 If devspace should deploy an internal registry for you, you can define it in this section. This is only tested with minikube and enables full offline development:
 - `deploy` *bool* if the internal registry should be automatically deployed
 - `namespace` *string* the namespace where to deploy the internal registry
 
-### tiller
+## tiller
 In this section you can define additional settings for connecting to the tiller server (if helm should be used for deployment)
 - `namespace` *string* the namespace where the tiller is running (if tiller is not found, it will be deployed automatically)
-
-## cluster
-The `cluster` field specifies:
-- `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
-- `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
-- `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
-- `apiServer` *string* Kubernetes API-Server URL
-- `caCert` *string* CaCert for the Kubernetes API-Server in PEM format
-- `user`  *ClusterUser*  
-
-### cluster.user
-ClusterUser:
-- `clientCert` *string* (PEM format)
-- `clientKey` *string* (PEM format)  
-- `token` *string* Token string for service accounts
 
 # Full annotated config.yaml
 
