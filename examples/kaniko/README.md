@@ -130,7 +130,7 @@ To deploy the application to the target cluster simply run `devspace up`. The ou
 root@devspace-default-864d677f99-t5488:/go/src/app# 
 ```
 
-The command created a new kubernetes namespace for you in the devspace-cloud and built your Dockerfile with a kaniko build pod and pushed it to the target docker registry. Afterwards, it deployed the chart in the `chart` folder to that namespace. It also created a new kubectl context for you. If you want to access kubernetes resources via kubectl in the devspace-cloud you can simply change your kubectl context via `devspace up --switch-context`. Now you can check the running pods via `kubectl get po`.
+The command created a new kubernetes namespace for you in the devspace-cloud and built your Dockerfile with a kaniko build pod and pushed it to the target docker registry. Afterwards, it deployed the chart in the `chart` folder to that namespace. It also created a new kubectl context for you. You can check the running pods via `kubectl get po`.
 
 Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/kaniko` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 8080 was forwarded to your local port 8080.  
 

@@ -107,7 +107,7 @@ Hello World!
 Hello World!
 ```
 
-The command built your Dockerfile and pushed it to the target docker registry. Afterwards, it created a new kubernetes namespace for you and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. If you want to access kubernetes resources via kubectl in the devspace-cloud you can simply change your kubectl context via `devspace up --switch-context`. Now you can check the running pods via `kubectl get po`.
+The command built your Dockerfile and pushed it to the target docker registry. Afterwards, it created a new kubernetes namespace for you and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. You can check the running pods via `kubectl get po`.
 
 Furthermore it watches all files in the example for changes, which will trigger on change an automatic rebuild & redeploy.
 
