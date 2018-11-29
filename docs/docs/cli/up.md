@@ -27,7 +27,7 @@ Flags:
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
   -n, --namespace string        Namespace where to select pods
       --portforwarding          Enable port forwarding (default true)
-      --switch-context          Switch kubectl context to the devspace context
+      --switch-context          Switch kubectl context to the devspace context (default true)
       --sync                    Enable code synchronization (default true)
       --tiller                  Install/upgrade tiller (default true)
       --verbose-sync            When enabled the sync will log every file change
@@ -36,5 +36,4 @@ Flags:
 Examples:
 devspace up                  # Start the devspace
 devspace up bash             # Execute bash command after deploying
-devspace up --switch-context # Change kubectl context to devspace context that is used
 ```

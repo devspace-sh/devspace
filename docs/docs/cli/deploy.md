@@ -15,7 +15,7 @@ Flags:
   -h, --help                   help for deploy
       --kube-context string    The kubernetes context to use for deployment
       --namespace string       The namespace to deploy to
-      --switch-context         Switches the kube context to the deploy context
+      --switch-context         Switches the kube context to the deploy context (default true)
 
 Examples:
 
