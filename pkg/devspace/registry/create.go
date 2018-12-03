@@ -35,7 +35,7 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 	values := map[interface{}]interface{}{}
 
 	// Deploy the registry
-	_, err := helm.InstallChartByName(InternalRegistryName, registryReleaseNamespace, "stable/docker-registry", "", &values)
+	_, err := helm.InstallChartByName(InternalRegistryName, registryReleaseNamespace, "stable/docker-registry", "", &values, true)
 	if err != nil {
 		return fmt.Errorf("Unable to initialize docker registry: %s", err.Error())
 	}
