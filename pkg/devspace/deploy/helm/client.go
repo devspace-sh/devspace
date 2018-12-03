@@ -235,7 +235,12 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		overwriteValues["containers"] = overwriteContainerValues
 		overwriteValues["pullSecrets"] = overwritePullSecrets
 
-		appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues)
+		wait := true
+		if d.DeploymentConfig.Helm.Wait != nil && *d.DeploymentConfig.Helm.Wait == false {
+			wait = *d.DeploymentConfig.Helm.Wait
+		}
+
+		appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues, wait)
 		if err != nil {
 			return fmt.Errorf("Unable to deploy helm chart: %v", err)
 		}
