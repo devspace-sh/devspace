@@ -1,8 +1,6 @@
 package log
 
 import (
-	"strings"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/daviddengcn/go-colortext"
@@ -11,6 +9,9 @@ import (
 var stdoutLog = &stdoutLogger{
 	level: logrus.DebugLevel,
 }
+
+// Discard is a logger implementation that just discards every log statement
+var Discard = DiscardLogger{}
 
 // StartWait prints a wait message until StopWait is called
 func StartWait(message string) {
@@ -147,56 +148,11 @@ func WriteColored(message string, color ct.Color) {
 }
 
 // Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
-func Write(message string) {
-	stdoutLog.Write([]byte(message))
+func Write(message []byte) {
+	stdoutLog.Write(message)
 }
 
 // PrintTable prints a table with header columns and string values
 func PrintTable(header []string, values [][]string) {
-	columnLengths := make([]int, len(header))
-
-	for k, v := range header {
-		columnLengths[k] = len(v)
-	}
-
-	// Get maximum column length
-	for _, v := range values {
-		for key, value := range v {
-			if len(value) > columnLengths[key] {
-				columnLengths[key] = len(value)
-			}
-		}
-	}
-
-	// Print Header
-	for key, value := range header {
-		WriteColored(" "+value+"  ", ct.Green)
-
-		padding := columnLengths[key] - len(value)
-
-		if padding > 0 {
-			Write(strings.Repeat(" ", padding))
-		}
-	}
-
-	Write("\n")
-
-	if len(values) == 0 {
-		Write(" No entries found\n")
-	}
-
-	// Print Values
-	for _, v := range values {
-		for key, value := range v {
-			Write(" " + value + "  ")
-
-			padding := columnLengths[key] - len(value)
-
-			if padding > 0 {
-				Write(strings.Repeat(" ", padding))
-			}
-		}
-
-		Write("\n")
-	}
+	stdoutLog.PrintTable(header, values)
 }

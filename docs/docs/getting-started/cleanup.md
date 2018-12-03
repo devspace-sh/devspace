@@ -1,5 +1,5 @@
 ---
-title: 4. Cleanup
+title: 4. Removing DevSpace
 ---
 
 ## devspace down

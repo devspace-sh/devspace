@@ -90,9 +90,9 @@ func ExtractSingleFileToStringTarGz(archivepath, fileToExtract string) (string, 
 
 		name := header.Name
 		if name == fileToExtract {
-			if header.Typeflag != tar.TypeReg {
-				return "", fmt.Errorf("%s is a directory and not a file", fileToExtract)
-			}
+			//if header.Typeflag != tar.TypeReg {
+			//	return "", fmt.Errorf("%s is a directory and not a file", fileToExtract)
+			//}
 
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(tarReader)

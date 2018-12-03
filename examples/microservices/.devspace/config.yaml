@@ -1,0 +1,48 @@
+version: v1alpha1
+cluster:
+  cloudProvider: devspace-cloud
+# kubeContext: minikube
+devSpace:
+  terminal:
+    labelSelector:
+      release: devspace-node
+  deployments:
+  - name: devspace-node
+    kubectl:
+      manifests:
+      - node/kube/*
+  - name: devspace-php
+    helm:
+      chartPath: php/chart
+  ports:
+  - labelSelector:
+      release: devspace-node
+    portMappings:
+    - localPort: 3000
+      remotePort: 3000
+  sync:
+  - containerPath: /app
+    labelSelector:
+      release: devspace-node
+    localSubPath: ./node
+    uploadExcludePaths:
+    - Dockerfile
+    - kube/
+  - containerPath: /var/www/html
+    labelSelector:
+      release: devspace-php
+    localSubPath: ./php
+    uploadExcludePaths:
+    - Dockerfile
+    - chart/
+images:
+  node:
+    name: yourdockeruser/node
+    build:
+      dockerfilePath: node/Dockerfile
+      contextPath: node/
+  php:
+    name: yourdockeruser/php
+    build:
+      dockerfilePath: php/Dockerfile
+      contextPath: php/

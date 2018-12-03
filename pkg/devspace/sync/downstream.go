@@ -14,8 +14,9 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/juju/ratelimit"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 )
 
 type downstream struct {
@@ -40,15 +41,20 @@ func (d *downstream) start() error {
 
 func (d *downstream) startShell() error {
 	if d.config.testing == false {
-		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, nil)
+		stdinReader, stdinWriter, _ := os.Pipe()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
-		if err != nil {
-			return errors.Trace(err)
-		}
+		go func() {
+			err := kubectl.ExecStream(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
+			if err != nil {
+				d.config.Error(errors.Trace(err))
+			}
+		}()
 
-		d.stdinPipe = stdinPipe
-		d.stdoutPipe = stdoutPipe
-		d.stderrPipe = stderrPipe
+		d.stdinPipe = stdinWriter
+		d.stdoutPipe = stdoutReader
+		d.stderrPipe = stderrReader
 	} else {
 		var err error
 
@@ -109,7 +115,6 @@ func (d *downstream) mainLoop() error {
 		}
 
 		amountChanges := len(createFiles) + len(removeFiles)
-
 		if lastAmountChanges > 0 && amountChanges == lastAmountChanges {
 			err = d.applyChanges(createFiles, removeFiles)
 			if err != nil {
@@ -148,6 +153,144 @@ func (d *downstream) cloneFileMap() map[string]*fileInformation {
 	}
 
 	return mapClone
+}
+
+func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]*fileInformation, error) {
+	createFiles := make([]*fileInformation, 0, 128)
+	destPathFound := false
+
+	// Write find command to stdin pipe
+	cmd := getFindCommand(d.config.DestPath)
+	_, err := d.stdinPipe.Write([]byte(cmd))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	buf := make([]byte, 0, 512)
+	overlap := ""
+	done := false
+
+	var downloadReader io.Reader = d.stdoutPipe
+	if d.config.DownstreamLimit > 0 {
+		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
+	}
+
+	for done == false {
+		n, err := downloadReader.Read(buf[:cap(buf)])
+		buf = buf[:n]
+
+		if n == 0 {
+			if err == nil {
+				continue
+			}
+			if err == io.EOF {
+				return nil, errors.Trace(fmt.Errorf("\n[Downstream] Stream closed unexpectedly"))
+			}
+
+			return nil, errors.Trace(err)
+		}
+
+		// Error reading from stdout
+		if err != nil && err != io.EOF {
+			return nil, errors.Trace(err)
+		}
+
+		done, overlap, err = d.parseLines(string(buf), overlap, &createFiles, removeFiles, &destPathFound)
+		if err != nil {
+			if _, ok := err.(parsingError); ok {
+				time.Sleep(time.Second * 4)
+				return d.collectChanges(removeFiles)
+			}
+
+			// No trace here because it could be a parsing error
+			return nil, errors.Trace(err)
+		}
+	}
+
+	if destPathFound == false {
+		return nil, errors.New("DestPath not found, find command did not execute correctly")
+	}
+
+	return createFiles, nil
+}
+
+func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation, destPathFound *bool) (bool, string, error) {
+	lines := strings.Split(buffer, "\n")
+
+	for index, element := range lines {
+		line := ""
+
+		if index == 0 {
+			if len(lines) > 1 {
+				line = overlap + element
+			} else {
+				overlap += element
+			}
+		} else if index == len(lines)-1 {
+			overlap = element
+		} else {
+			line = element
+		}
+
+		if line == EndAck || overlap == EndAck {
+			return true, overlap, nil
+		} else if line == ErrorAck || overlap == ErrorAck {
+			return true, "", parsingError{
+				msg: "Parsing Error",
+			}
+		} else if line != "" {
+			destPath, err := d.evaluateFile(line, createFiles, removeFiles)
+			if destPath {
+				*destPathFound = destPath
+			}
+
+			if err != nil {
+				return true, "", errors.Trace(err)
+			}
+		}
+	}
+
+	return false, overlap, nil
+}
+
+func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) (bool, error) {
+	d.config.fileIndex.fileMapMutex.Lock()
+	defer d.config.fileIndex.fileMapMutex.Unlock()
+
+	fileInformation, err := parseFileInformation(fileline, d.config.DestPath)
+
+	// Error parsing line
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	// No file found
+	if fileInformation == nil {
+		return true, nil
+	}
+
+	// File found don't delete it
+	delete(removeFiles, fileInformation.Name)
+
+	// Update mode, gid & uid if exists
+	if d.config.fileIndex.fileMap[fileInformation.Name] != nil {
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
+		d.config.fileIndex.fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
+	}
+
+	// Exclude symlinks
+	if fileInformation.IsSymbolicLink {
+		// Add them to the fileMap though
+		d.config.fileIndex.fileMap[fileInformation.Name] = fileInformation
+	}
+
+	// Should we download the file / folder?
+	if shouldDownload(fileInformation, d.config) {
+		*createFiles = append(*createFiles, fileInformation)
+	}
+
+	return false, nil
 }
 
 func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles map[string]*fileInformation) error {
@@ -306,8 +449,14 @@ func (d *downstream) downloadArchive(tarSize int64) (string, error) {
 
 	defer tempFile.Close()
 
+	// Apply rate limit if specified
+	var downloadReader io.Reader = d.stdoutPipe
+	if d.config.DownstreamLimit > 0 {
+		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
+	}
+
 	// Write From stdout to temp file
-	bytesRead, err := io.CopyN(tempFile, d.stdoutPipe, tarSize)
+	bytesRead, err := io.CopyN(tempFile, downloadReader, tarSize)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -383,130 +532,4 @@ func (d *downstream) createFolders(createFolders []*fileInformation) {
 			}
 		}
 	}
-}
-
-func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]*fileInformation, error) {
-	createFiles := make([]*fileInformation, 0, 128)
-
-	// Write find command to stdin pipe
-	cmd := getFindCommand(d.config.DestPath)
-	_, err := d.stdinPipe.Write([]byte(cmd))
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	buf := make([]byte, 0, 512)
-	overlap := ""
-	done := false
-
-	for done == false {
-		n, err := d.stdoutPipe.Read(buf[:cap(buf)])
-		buf = buf[:n]
-
-		if n == 0 {
-			if err == nil {
-				continue
-			}
-
-			if err == io.EOF {
-				return nil, errors.Trace(fmt.Errorf("[Downstream] Stream closed unexpectedly"))
-			}
-
-			return nil, errors.Trace(err)
-		}
-
-		// Error reading from stdout
-		if err != nil && err != io.EOF {
-			return nil, errors.Trace(err)
-		}
-
-		done, overlap, err = d.parseLines(string(buf), overlap, &createFiles, removeFiles)
-		if err != nil {
-			if _, ok := err.(parsingError); ok {
-				time.Sleep(time.Second * 4)
-				return d.collectChanges(removeFiles)
-			}
-
-			// No trace here because it could be a parsing error
-			return nil, errors.Trace(err)
-		}
-	}
-
-	return createFiles, nil
-}
-
-func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) (bool, string, error) {
-	lines := strings.Split(buffer, "\n")
-
-	for index, element := range lines {
-		line := ""
-
-		if index == 0 {
-			if len(lines) > 1 {
-				line = overlap + element
-			} else {
-				overlap += element
-			}
-		} else if index == len(lines)-1 {
-			overlap = element
-		} else {
-			line = element
-		}
-
-		if line == EndAck || overlap == EndAck {
-			return true, overlap, nil
-		} else if line == ErrorAck || overlap == ErrorAck {
-			return true, "", parsingError{
-				msg: "Parsing Error",
-			}
-		} else if line != "" {
-			err := d.evaluateFile(line, createFiles, removeFiles)
-
-			if err != nil {
-				return true, "", errors.Trace(err)
-			}
-		}
-	}
-
-	return false, overlap, nil
-}
-
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) error {
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
-
-	fileInformation, err := parseFileInformation(fileline, d.config.DestPath)
-
-	// Error parsing line
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// No file found
-	if fileInformation == nil {
-		return nil
-	}
-
-	// File found don't delete it
-	delete(removeFiles, fileInformation.Name)
-
-	// Update mode, gid & uid if exists
-	if d.config.fileIndex.fileMap[fileInformation.Name] != nil {
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
-	}
-
-	// Exclude symlinks
-	if fileInformation.IsSymbolicLink {
-		// Add them to the fileMap though
-		d.config.fileIndex.fileMap[fileInformation.Name] = fileInformation
-	}
-
-	// Should we download the file / folder?
-	if shouldDownload(fileInformation, d.config) {
-		*createFiles = append(*createFiles, fileInformation)
-	}
-
-	return nil
 }

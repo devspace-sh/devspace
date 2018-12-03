@@ -1,36 +1,18 @@
 package cmd
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	"k8s.io/helm/pkg/repo"
-
-	"github.com/covexo/devspace/pkg/util/stdinutil"
-	"github.com/covexo/devspace/pkg/util/tar"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
-
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/russross/blackfriday"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
 // AddCmd holds the information needed for the add command
 type AddCmd struct {
-	flags        *AddCmdFlags
-	syncFlags    *addSyncCmdFlags
-	portFlags    *addPortCmdFlags
-	packageFlags *addPackageFlags
-	dsConfig     *v1.DevSpaceConfig
+	flags           *AddCmdFlags
+	syncFlags       *addSyncCmdFlags
+	portFlags       *addPortCmdFlags
+	packageFlags    *addPackageFlags
+	deploymentFlags *addDeploymentFlags
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -43,25 +25,35 @@ type addSyncCmdFlags struct {
 	LocalPath     string
 	ContainerPath string
 	ExcludedPaths string
+	Namespace     string
 }
 
 type addPortCmdFlags struct {
 	ResourceType string
 	Selector     string
+	Namespace    string
 }
 
 type addPackageFlags struct {
 	AppVersion   string
 	ChartVersion string
 	SkipQuestion bool
+	Deployment   string
+}
+
+type addDeploymentFlags struct {
+	Namespace string
+	Manifests string
+	Chart     string
 }
 
 func init() {
 	cmd := &AddCmd{
-		flags:        &AddCmdFlags{},
-		syncFlags:    &addSyncCmdFlags{},
-		portFlags:    &addPortCmdFlags{},
-		packageFlags: &addPackageFlags{},
+		flags:           &AddCmdFlags{},
+		syncFlags:       &addSyncCmdFlags{},
+		portFlags:       &addPortCmdFlags{},
+		packageFlags:    &addPackageFlags{},
+		deploymentFlags: &addDeploymentFlags{},
 	}
 
 	addCmd := &cobra.Command{
@@ -105,6 +97,7 @@ func init() {
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LocalPath, "local", "", "Relative local path")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
 
@@ -128,6 +121,7 @@ func init() {
 	}
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
@@ -147,7 +141,7 @@ func init() {
 	devspace add package
 	devspace add package mysql
 	devspace add package mysql --app-version=5.7.14
-	devspace add package mysql --chart-version=0.10.3
+	devspace add package mysql --chart-version=0.10.3 -d devspace-default
 	#######################################################
 	`,
 		Run: cmd.RunAddPackage,
@@ -155,341 +149,68 @@ func init() {
 
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.AppVersion, "app-version", "", "App version")
 	addPackageCmd.Flags().StringVar(&cmd.packageFlags.ChartVersion, "chart-version", "", "Chart version")
+	addPackageCmd.Flags().StringVarP(&cmd.packageFlags.Deployment, "deployment", "d", "", "The deployment name to use")
 	addPackageCmd.Flags().BoolVar(&cmd.packageFlags.SkipQuestion, "skip-question", false, "Skips the question to show the readme in a browser")
 
 	addCmd.AddCommand(addPackageCmd)
+
+	addDeploymentCmd := &cobra.Command{
+		Use:   "deployment",
+		Short: "Add a deployment",
+		Long: ` 
+	#######################################################
+	############# devspace add deployment #################
+	#######################################################
+	Add a new deployment (kubernetes manifests or 
+	helm chart) to your devspace, that will be deployed
+	
+	Examples:
+	devspace add deployment my-deployment --chart=chart/
+	devspace add deployment my-deployment --manifests=kube/pod.yaml
+	devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
+	#######################################################
+	`,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddDeployment,
+	}
+
+	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Namespace, "namespace", "", "The namespace to use for deploying")
+	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Manifests, "manifests", "", "The kubernetes manifests to deploy (glob pattern are allowed, comma separated)")
+	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Chart, "chart", "", "The helm chart to deploy")
+
+	addCmd.AddCommand(addDeploymentCmd)
 }
 
 // RunAddPackage executes the add package command logic
 func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
-	kubectl, err := kubectl.NewClient()
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
-	}
-
-	helm, err := helmClient.NewClient(kubectl, false)
-	if err != nil {
-		log.Fatalf("Error initializing helm client: %v", err)
-	}
-
-	if len(args) != 1 {
-		helm.PrintAllAvailableCharts()
-		return
-	}
-
-	log.StartWait("Search Chart")
-	repo, version, err := helm.SearchChart(args[0], cmd.packageFlags.ChartVersion, cmd.packageFlags.AppVersion)
-	log.StopWait()
-
+	err := configure.AddPackage(cmd.packageFlags.SkipQuestion, cmd.packageFlags.AppVersion, cmd.packageFlags.ChartVersion, cmd.packageFlags.Deployment, args, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Done("Chart found")
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	requirementsFile := filepath.Join(cwd, "chart", "requirements.yaml")
-	_, err = os.Stat(requirementsFile)
-	if os.IsNotExist(err) {
-		entry := "dependencies:\n" +
-			"- name: \"" + version.GetName() + "\"\n" +
-			"  version: \"" + version.GetVersion() + "\"\n" +
-			"  repository: \"" + repo.URL + "\"\n"
-
-		err = ioutil.WriteFile(requirementsFile, []byte(entry), 0600)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		yamlContents := map[interface{}]interface{}{}
-		err = yamlutil.ReadYamlFromFile(requirementsFile, yamlContents)
-		if err != nil {
-			log.Fatalf("Error parsing %s: %v", requirementsFile, err)
-		}
-
-		dependenciesArr := []interface{}{}
-		if dependencies, ok := yamlContents["dependencies"]; ok {
-			dependenciesArr, ok = dependencies.([]interface{})
-			if ok == false {
-				log.Fatalf("Error parsing %s: Key dependencies is not an array", requirementsFile)
-			}
-		}
-
-		dependenciesArr = append(dependenciesArr, map[interface{}]interface{}{
-			"name":       version.GetName(),
-			"version":    version.GetVersion(),
-			"repository": repo.URL,
-		})
-		yamlContents["dependencies"] = dependenciesArr
-
-		err = yamlutil.WriteYamlToFile(yamlContents, requirementsFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	log.StartWait("Update chart dependencies")
-	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
-	log.StopWait()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Check if key already exists
-	valuesYaml := filepath.Join(cwd, "chart", "values.yaml")
-	valuesYamlContents := map[interface{}]interface{}{}
-
-	err = yamlutil.ReadYamlFromFile(valuesYaml, valuesYamlContents)
-	if err != nil {
-		log.Fatalf("Error parsing %s: %v", valuesYaml, err)
-	}
-
-	if _, ok := valuesYamlContents[version.GetName()]; ok == false {
-		f, err := os.OpenFile(valuesYaml, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer f.Close()
-		if _, err = f.WriteString("\n# Here you can specify the subcharts values (for more information see: https://github.com/helm/helm/blob/master/docs/chart_template_guide/subcharts_and_globals.md#overriding-values-from-a-parent-chart)\n" + version.GetName() + ": {}\n"); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	log.Donef("Successfully added %s as chart dependency, you can configure the package in 'chart/values.yaml'", version.GetName())
-	cmd.showReadme(version)
 }
 
-func (cmd *AddCmd) showReadme(chartVersion *repo.ChartVersion) {
-	cwd, err := os.Getwd()
+// RunAddDeployment executes the add deployment command logic
+func (cmd *AddCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) {
+	err := configure.AddDeployment(args[0], cmd.deploymentFlags.Namespace, cmd.deploymentFlags.Manifests, cmd.deploymentFlags.Chart)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if cmd.packageFlags.SkipQuestion {
-		return
-	}
-
-	showReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "Do you want to open the package README? (y|n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)",
-	})
-
-	if showReadme == "n" {
-		return
-	}
-
-	content, err := tar.ExtractSingleFileToStringTarGz(filepath.Join(cwd, "chart", "charts", chartVersion.GetName()+"-"+chartVersion.GetVersion()+".tgz"), chartVersion.GetName()+"/README.md")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	output := blackfriday.MarkdownCommon([]byte(content))
-	f, err := os.OpenFile(filepath.Join(os.TempDir(), "Readme.html"), os.O_RDWR|os.O_CREATE, 0600)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer f.Close()
-
-	_, err = f.Write(output)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	f.Close()
-	open.Start(f.Name())
+	log.Donef("Successfully added %s as new deployment", args[0])
 }
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
-
-	if cmd.syncFlags.Selector == "" {
-		cmd.syncFlags.Selector = "release=" + *config.DevSpace.Release.Name
-	}
-
-	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
-
+	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.Selector, cmd.syncFlags.ExcludedPaths)
 	if err != nil {
-		log.Fatalf("Error parsing selectors: %s", err.Error())
-	}
-
-	excludedPaths := make([]string, 0, 0)
-
-	if cmd.syncFlags.ExcludedPaths != "" {
-		excludedPathStrings := strings.Split(cmd.syncFlags.ExcludedPaths, ",")
-
-		for _, v := range excludedPathStrings {
-			excludedPath := strings.TrimSpace(v)
-			excludedPaths = append(excludedPaths, excludedPath)
-		}
-	}
-
-	workdir, err := os.Getwd()
-
-	if err != nil {
-		log.Fatalf("Unable to determine current workdir: %s", err.Error())
-	}
-	cmd.syncFlags.LocalPath = strings.TrimPrefix(cmd.syncFlags.LocalPath, workdir)
-	cmd.syncFlags.LocalPath = "./" + strings.TrimPrefix(cmd.syncFlags.LocalPath, "./")
-
-	if cmd.syncFlags.ContainerPath[0] != '/' {
-		log.Fatal("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash.")
-	}
-
-	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
-		ResourceType:  configutil.String(cmd.syncFlags.ResourceType),
-		LabelSelector: &labelSelectorMap,
-		ContainerPath: configutil.String(cmd.syncFlags.ContainerPath),
-		LocalSubPath:  configutil.String(cmd.syncFlags.LocalPath),
-		ExcludePaths:  &excludedPaths,
-	})
-
-	config.DevSpace.Sync = &syncConfig
-
-	err = configutil.SaveConfig()
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		log.Fatalf("Error adding sync path: %v", err)
 	}
 }
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
-
-	if cmd.portFlags.Selector == "" {
-		cmd.portFlags.Selector = "release=" + *config.DevSpace.Release.Name
-	}
-
-	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
-
+	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.Selector, args)
 	if err != nil {
-		log.Fatalf("Error parsing selectors: %s", err.Error())
+		log.Fatal(err)
 	}
-
-	portMappings, err := parsePortMappings(args[0])
-
-	if err != nil {
-		log.Fatalf("Error parsing port mappings: %s", err.Error())
-	}
-
-	cmd.insertOrReplacePortMapping(labelSelectorMap, portMappings)
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
-	}
-}
-
-func (cmd *AddCmd) insertOrReplacePortMapping(labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
-	config := configutil.GetConfig(false)
-
-	// Check if we should add to existing port mapping
-	for _, v := range *config.DevSpace.PortForwarding {
-		var selectors map[string]*string
-
-		if v.LabelSelector != nil {
-			selectors = *v.LabelSelector
-		} else {
-			selectors = map[string]*string{}
-		}
-
-		if *v.ResourceType == cmd.portFlags.ResourceType && isMapEqual(selectors, labelSelectorMap) {
-			portMap := append(*v.PortMappings, portMappings...)
-
-			v.PortMappings = &portMap
-
-			return
-		}
-	}
-	portMap := append(*config.DevSpace.PortForwarding, &v1.PortForwardingConfig{
-		ResourceType:  configutil.String(cmd.portFlags.ResourceType),
-		LabelSelector: &labelSelectorMap,
-		PortMappings:  &portMappings,
-	})
-
-	config.DevSpace.PortForwarding = &portMap
-}
-
-func isMapEqual(map1 map[string]*string, map2 map[string]*string) bool {
-	if len(map1) != len(map2) {
-		return false
-	}
-
-	for k, v := range map1 {
-		if *map2[k] != *v {
-			return false
-		}
-	}
-
-	return true
-}
-
-func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
-	portMappings := make([]*v1.PortMapping, 0, 1)
-	portMappingsSplitted := strings.Split(portMappingsString, ",")
-
-	for _, v := range portMappingsSplitted {
-		portMapping := strings.Split(v, ":")
-
-		if len(portMapping) != 1 && len(portMapping) != 2 {
-			return nil, fmt.Errorf("Error parsing port mapping: %s", v)
-		}
-
-		portMappingStruct := &v1.PortMapping{}
-		firstPort, err := strconv.Atoi(portMapping[0])
-
-		if err != nil {
-			return nil, err
-		}
-
-		if len(portMapping) == 1 {
-			portMappingStruct.LocalPort = &firstPort
-
-			portMappingStruct.RemotePort = portMappingStruct.LocalPort
-		} else {
-			portMappingStruct.LocalPort = &firstPort
-
-			secondPort, err := strconv.Atoi(portMapping[1])
-
-			if err != nil {
-				return nil, err
-			}
-			portMappingStruct.RemotePort = &secondPort
-		}
-
-		portMappings = append(portMappings, portMappingStruct)
-	}
-
-	return portMappings, nil
-}
-
-func parseSelectors(selectorString string) (map[string]*string, error) {
-	selectorMap := make(map[string]*string)
-
-	if selectorString == "" {
-		return selectorMap, nil
-	}
-
-	selectors := strings.Split(selectorString, ",")
-
-	for _, v := range selectors {
-		keyValue := strings.Split(v, "=")
-
-		if len(keyValue) != 2 {
-			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
-		}
-		selector := strings.TrimSpace(keyValue[1])
-		selectorMap[strings.TrimSpace(keyValue[0])] = &selector
-	}
-
-	return selectorMap, nil
 }

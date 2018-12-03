@@ -56,18 +56,16 @@ func (p parsingError) Error() string {
 }
 
 func getFindCommand(destPath string) string {
-	return "mkdir -p '" + destPath + "' && find -L '" + destPath + "' -exec stat -c \"%n///%s,%Y,%f,%a,%u,%g\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo \"" + ErrorAck + "\"\n"
+	return "mkdir -p '" + destPath + "' && find -L '" + destPath + "' -exec stat -c \"%n///%s,%Y,%f,%a,%u,%g\" {} + 2>/dev/null && echo -n \"" + EndAck + "\" || echo -n \"" + ErrorAck + "\"\n"
 }
 
 func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo := fileInformation{}
 
 	t := strings.Split(fileline, "///")
-
 	if len(t) != 2 {
 		return nil, errors.New("[Downstream] Wrong fileline: " + fileline)
 	}
-
 	if len(t[0]) <= len(destPath) {
 		return nil, nil
 	}
@@ -75,13 +73,11 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.Name = t[0][len(destPath):]
 
 	t = strings.Split(t[1], ",")
-
 	if len(t) != 6 {
 		return nil, errors.New("[Downstream] Wrong fileline: " + fileline)
 	}
 
 	size, err := strconv.Atoi(t[0])
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -89,7 +85,6 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.Size = int64(size)
 
 	mTime, err := strconv.Atoi(t[1])
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -97,7 +92,6 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.Mtime = int64(mTime)
 
 	rawMode, err := strconv.ParseUint(t[2], 16, 32) // Parse hex string into uint64
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -107,7 +101,6 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.IsDirectory = (rawMode & IsDirectory) == IsDirectory
 
 	mode, err := strconv.ParseInt(t[3], 8, 32)
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -115,7 +108,6 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.RemoteMode = mode
 
 	uid, err := strconv.Atoi(t[4])
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -123,7 +115,6 @@ func parseFileInformation(fileline, destPath string) (*fileInformation, error) {
 	fileinfo.RemoteUID = uid
 
 	gid, err := strconv.Atoi(t[5])
-
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

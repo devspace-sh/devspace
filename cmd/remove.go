@@ -1,26 +1,17 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/spf13/cobra"
 )
 
 // RemoveCmd holds the information needed for the remove command
 type RemoveCmd struct {
-	syncFlags    *removeSyncCmdFlags
-	portFlags    *removePortCmdFlags
-	packageFlags *removePackageCmdFlags
-	workdir      string
+	syncFlags       *removeSyncCmdFlags
+	portFlags       *removePortCmdFlags
+	packageFlags    *removePackageCmdFlags
+	deploymentFlags *removeDeploymentCmdFlags
 }
 
 type removeSyncCmdFlags struct {
@@ -36,14 +27,20 @@ type removePortCmdFlags struct {
 }
 
 type removePackageCmdFlags struct {
+	RemoveAll  bool
+	Deployment string
+}
+
+type removeDeploymentCmdFlags struct {
 	RemoveAll bool
 }
 
 func init() {
 	cmd := &RemoveCmd{
-		syncFlags:    &removeSyncCmdFlags{},
-		portFlags:    &removePortCmdFlags{},
-		packageFlags: &removePackageCmdFlags{},
+		syncFlags:       &removeSyncCmdFlags{},
+		portFlags:       &removePortCmdFlags{},
+		packageFlags:    &removePackageCmdFlags{},
+		deploymentFlags: &removeDeploymentCmdFlags{},
 	}
 
 	removeCmd := &cobra.Command{
@@ -58,6 +55,8 @@ func init() {
 	
 	* Sync paths (sync)
 	* Forwarded ports (port)
+	* Deployment (deployment)
+	* Helm Packages (package)
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -113,7 +112,6 @@ func init() {
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
-
 	removePackageCmd := &cobra.Command{
 		Use:   "package",
 		Short: "Removes forwarded ports from a devspace",
@@ -123,6 +121,7 @@ func init() {
 	#######################################################
 	Removes a package from the devspace:
 	devspace remove package mysql
+	devspace remove package mysql -d devspace-default
 	#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -130,92 +129,45 @@ func init() {
 	}
 
 	removePackageCmd.Flags().BoolVar(&cmd.packageFlags.RemoveAll, "all", false, "Remove all packages")
+	removePackageCmd.Flags().StringVarP(&cmd.packageFlags.Deployment, "deployment", "d", "", "The deployment name to use")
 	removeCmd.AddCommand(removePackageCmd)
+
+	removeDeploymentCmd := &cobra.Command{
+		Use:   "deployment",
+		Short: "Removes one or all deployments from the devspace",
+		Long: `
+	#######################################################
+	############ devspace remove deployment ###############
+	#######################################################
+	Removes one or all deployments from a devspace:
+	devspace remove deployment devspace-default
+	devspace remove deployment --all
+	#######################################################
+	`,
+		Args: cobra.MaximumNArgs(1),
+		Run:  cmd.RunRemoveDeployment,
+	}
+
+	removeDeploymentCmd.Flags().BoolVar(&cmd.deploymentFlags.RemoveAll, "all", false, "Remove all deployments")
+	removeCmd.AddCommand(removeDeploymentCmd)
+}
+
+// RunRemoveDeployment executes the specified deployment
+func (cmd *RemoveCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) {
+	name := ""
+	if len(args) > 0 {
+		name = args[0]
+	}
+
+	err := configure.RemoveDeployment(cmd.deploymentFlags.RemoveAll, name)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // RunRemovePackage executes the remove package command logic
 func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if len(args) == 0 && cmd.packageFlags.RemoveAll == false {
-		log.Fatal("You need to specify a package name or the --all flag")
-	}
-
-	requirementsPath := filepath.Join(cwd, "chart", "requirements.yaml")
-	yamlContents := map[interface{}]interface{}{}
-
-	err = yamlutil.ReadYamlFromFile(requirementsPath, yamlContents)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if dependencies, ok := yamlContents["dependencies"]; ok {
-		dependenciesArr, ok := dependencies.([]interface{})
-		if ok == false {
-			log.Fatalf("Error parsing yaml: %v", dependencies)
-		}
-
-		if cmd.packageFlags.RemoveAll == false {
-			for key, dependency := range dependenciesArr {
-				dependencyMap, ok := dependency.(map[interface{}]interface{})
-				if ok == false {
-					log.Fatalf("Error parsing yaml: %v", dependencies)
-				}
-
-				if name, ok := dependencyMap["name"]; ok {
-					if name == args[0] {
-						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
-						yamlContents["dependencies"] = dependenciesArr
-
-						cmd.rebuildDependencies(yamlContents)
-						break
-					}
-				}
-			}
-
-			log.Donef("Successfully removed dependency %s", args[0])
-			return
-		}
-
-		yamlContents["dependencies"] = []interface{}{}
-
-		cmd.rebuildDependencies(yamlContents)
-		log.Done("Successfully removed all dependencies")
-		return
-	}
-
-	log.Done("No dependencies found")
-}
-
-func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interface{}) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(cwd, "chart", "requirements.yaml"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Rebuild dependencies
-	kubectl, err := kubectl.NewClient()
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
-	}
-
-	helm, err := helmClient.NewClient(kubectl, false)
-	if err != nil {
-		log.Fatalf("Error initializing helm client: %v", err)
-	}
-
-	log.StartWait("Update chart dependencies")
-	err = helm.UpdateDependencies(filepath.Join(cwd, "chart"))
-	log.StopWait()
-
+	err := configure.RemovePackage(cmd.packageFlags.RemoveAll, cmd.packageFlags.Deployment, args, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -223,99 +175,16 @@ func (cmd *RemoveCmd) rebuildDependencies(newYamlContents map[interface{}]interf
 
 // RunRemoveSync executes the remove sync command logic
 func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
-	labelSelectorMap, err := parseSelectors(cmd.syncFlags.Selector)
-
+	err := configure.RemoveSyncPath(cmd.syncFlags.RemoveAll, cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Selector)
 	if err != nil {
-		log.Fatalf("Error parsing selectors: %s", err.Error())
-	}
-
-	if len(labelSelectorMap) == 0 && cmd.syncFlags.RemoveAll == false && cmd.syncFlags.LocalPath == "" && cmd.syncFlags.ContainerPath == "" {
-		log.Errorf("You have to specify at least one of the supported flags")
-		cobraCmd.Help()
-
-		return
-	}
-
-	newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
-
-	for _, v := range *config.DevSpace.Sync {
-		if cmd.syncFlags.RemoveAll ||
-			cmd.syncFlags.LocalPath == *v.LocalSubPath ||
-			cmd.syncFlags.ContainerPath == *v.ContainerPath ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
-		}
-
-		newSyncPaths = append(newSyncPaths, v)
-	}
-
-	config.DevSpace.Sync = &newSyncPaths
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		log.Fatal(err)
 	}
 }
 
 // RunRemovePort executes the remove port command logic
 func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
-
-	labelSelectorMap, err := parseSelectors(cmd.portFlags.Selector)
-
+	err := configure.RemovePort(cmd.portFlags.RemoveAll, cmd.portFlags.Selector, args)
 	if err != nil {
-		log.Fatalf("Error parsing selectors: %s", err.Error())
+		log.Fatal(err)
 	}
-
-	argPorts := ""
-
-	if len(args) == 1 {
-		argPorts = args[0]
-	}
-
-	if len(labelSelectorMap) == 0 && cmd.portFlags.RemoveAll == false && argPorts == "" {
-		log.Errorf("You have to specify at least one of the supported flags")
-		cobraCmd.Help()
-
-		return
-	}
-
-	ports := strings.Split(argPorts, ",")
-	newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.PortForwarding)-1)
-
-OUTER:
-	for _, v := range *config.DevSpace.PortForwarding {
-		if cmd.portFlags.RemoveAll ||
-			isMapEqual(labelSelectorMap, *v.LabelSelector) {
-			continue
-		}
-
-		for _, pm := range *v.PortMappings {
-			if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
-				continue OUTER
-			}
-		}
-
-		newPortForwards = append(newPortForwards, v)
-	}
-
-	config.DevSpace.PortForwarding = &newPortForwards
-
-	err = configutil.SaveConfig()
-
-	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
-	}
-}
-
-func containsPort(port string, ports []string) bool {
-	for _, v := range ports {
-		if strings.TrimSpace(v) == port {
-			return true
-		}
-	}
-
-	return false
 }

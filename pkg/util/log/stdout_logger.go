@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/daviddengcn/go-colortext"
@@ -91,7 +92,7 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 
 		fnInformation.stream.Write([]byte(message))
 
-		if s.loadingText != nil {
+		if s.loadingText != nil && fnType != fatalFn {
 			s.loadingText.Start()
 		}
 	}
@@ -173,6 +174,56 @@ func (s *stdoutLogger) StopWait() {
 	if s.loadingText != nil {
 		s.loadingText.Stop()
 		s.loadingText = nil
+	}
+}
+
+// PrintTable implements logger interface
+func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
+	columnLengths := make([]int, len(header))
+
+	for k, v := range header {
+		columnLengths[k] = len(v)
+	}
+
+	// Get maximum column length
+	for _, v := range values {
+		for key, value := range v {
+			if len(value) > columnLengths[key] {
+				columnLengths[key] = len(value)
+			}
+		}
+	}
+
+	// Print Header
+	for key, value := range header {
+		WriteColored(" "+value+"  ", ct.Green)
+
+		padding := columnLengths[key] - len(value)
+
+		if padding > 0 {
+			s.Write([]byte(strings.Repeat(" ", padding)))
+		}
+	}
+
+	s.Write([]byte("\n"))
+
+	if len(values) == 0 {
+		s.Write([]byte(" No entries found\n"))
+	}
+
+	// Print Values
+	for _, v := range values {
+		for key, value := range v {
+			s.Write([]byte(" " + value + "  "))
+
+			padding := columnLengths[key] - len(value)
+
+			if padding > 0 {
+				s.Write([]byte(strings.Repeat(" ", padding)))
+			}
+		}
+
+		s.Write([]byte("\n"))
 	}
 }
 

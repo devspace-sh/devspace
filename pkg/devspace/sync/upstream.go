@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/juju/ratelimit"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/rjeczalik/notify"
 )
 
@@ -40,19 +41,24 @@ func (u *upstream) start() error {
 
 func (u *upstream) startShell() error {
 	if u.config.testing == false {
-		stdinPipe, stdoutPipe, stderrPipe, err := kubectl.Exec(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, nil)
-
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		u.stdinPipe = stdinPipe
-		u.stdoutPipe = stdoutPipe
-		u.stderrPipe = stderrPipe
+		stdinReader, stdinWriter, _ := os.Pipe()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
 		go func() {
-			pipeStream(os.Stderr, u.stderrPipe)
+			err := kubectl.ExecStream(u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
+			if err != nil {
+				u.config.Error(err)
+			}
 		}()
+
+		u.stdinPipe = stdinWriter
+		u.stdoutPipe = stdoutReader
+		u.stderrPipe = stderrReader
+
+		//go func() {
+		//	pipeStream(os.Stderr, u.stderrPipe)
+		//}()
 	} else {
 		var err error
 
@@ -126,7 +132,6 @@ func (u *upstream) mainLoop() error {
 		}
 
 		err := u.applyChanges(changes)
-
 		if err != nil {
 			return err
 		}
@@ -329,8 +334,14 @@ func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles ma
 		return errors.Trace(err)
 	}
 
+	// Apply rate limit if specified
+	var uploadWriter io.Writer = u.stdinPipe
+	if u.config.UpstreamLimit > 0 {
+		uploadWriter = ratelimit.Writer(u.stdinPipe, ratelimit.NewBucketWithRate(float64(u.config.UpstreamLimit), u.config.UpstreamLimit))
+	}
+
 	// Send file through stdin to remote
-	_, err = io.Copy(u.stdinPipe, file)
+	_, err = io.Copy(uploadWriter, file)
 	if err != nil {
 		return errors.Trace(err)
 	}

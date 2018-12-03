@@ -1,10 +1,13 @@
 package cmd
 
 import (
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/deploy"
+	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
+	deployKubectl "github.com/covexo/devspace/pkg/devspace/deploy/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 )
@@ -16,6 +19,8 @@ type DownCmd struct {
 
 // DownCmdFlags holds the possible down cmd flags
 type DownCmdFlags struct {
+	config          string
+	configOverwrite string
 }
 
 func init() {
@@ -37,37 +42,67 @@ your project, use: devspace reset
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
+
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
+
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the down command logic
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
+	if configutil.ConfigPath != cmd.flags.config {
+		configutil.ConfigPath = cmd.flags.config
+
+		// Don't use overwrite config if we use a different config
+		configutil.OverwriteConfigPath = ""
+	}
+	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
+		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+	}
+
 	log.StartFileLogging()
+	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
-	config := configutil.GetConfig(false)
-
-	releaseName := *config.DevSpace.Release.Name
 	kubectl, err := kubectl.NewClient()
-
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
-	client, err := helmClient.NewClient(kubectl, false)
+	deleteDevSpace(kubectl)
+}
 
-	if err != nil {
-		log.Fatalf("Unable to initialize helm client: %s", err.Error())
-	}
+func deleteDevSpace(kubectl *kubernetes.Clientset) {
+	config := configutil.GetConfig()
 
-	log.StartWait("Deleting release " + releaseName)
-	res, err := client.DeleteRelease(releaseName, true)
-	log.StopWait()
+	if config.DevSpace.Deployments != nil {
+		for _, deployConfig := range *config.DevSpace.Deployments {
+			var err error
+			var deployClient deploy.Interface
 
-	if res != nil && res.Info != "" {
-		log.Donef("Successfully deleted release %s: %s", releaseName, res.Info)
-	} else if err != nil {
-		log.Donef("Error deleting release %s: %s", releaseName, err.Error())
-	} else {
-		log.Donef("Successfully deleted release %s", releaseName)
+			// Delete kubectl engine
+			if deployConfig.Kubectl != nil {
+				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create kubectl deploy config: %v", err)
+					continue
+				}
+			} else {
+				deployClient, err = deployHelm.New(kubectl, deployConfig, false, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create helm deploy config: %v", err)
+					continue
+				}
+			}
+
+			log.StartWait("Deleting deployment %s" + *deployConfig.Name)
+			err = deployClient.Delete()
+			log.StopWait()
+			if err != nil {
+				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
+			}
+
+			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
+		}
 	}
 }

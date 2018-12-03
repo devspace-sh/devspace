@@ -7,7 +7,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/envutil"
 	"github.com/covexo/devspace/pkg/util/log"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/clients/helm"
+	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 
@@ -18,10 +18,9 @@ import (
 // InstallCmd is a struct that defines a command call for "install"
 type InstallCmd struct {
 	flags    *InstallCmdFlags
-	helm     *helmClient.HelmClientWrapper
+	helm     *helmClient.ClientWrapper
 	kubectl  *kubernetes.Clientset
 	dsConfig *v1.DevSpaceConfig
-	workdir  string
 }
 
 // InstallCmdFlags are the flags available for the install-command

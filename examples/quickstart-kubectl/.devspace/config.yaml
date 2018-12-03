@@ -1,0 +1,29 @@
+version: v1alpha1
+cluster:
+  cloudProvider: devspace-cloud
+# kubeContext: minikube
+devSpace:
+  deployments:
+  - name: devspace-default
+    kubectl:
+      manifests:
+      - kube/*
+  ports:
+  - labelSelector:
+      release: devspace-default
+    portMappings:
+    - localPort: 3000
+      remotePort: 3000
+  sync:
+  - containerPath: /app
+    labelSelector:
+      release: devspace-default
+    localSubPath: ./
+    uploadExcludePaths:
+    - Dockerfile
+    - .devspace/
+    - chart/
+    - vendor/
+images:
+  default:
+    name: yourdockername/quickstart

@@ -13,8 +13,7 @@ import (
 
 // ListCmd holds the information needed for the list command
 type ListCmd struct {
-	flags   *ListCmdFlags
-	workdir string
+	flags *ListCmdFlags
 }
 
 // ListCmdFlags holds the possible flags for the list command
@@ -83,7 +82,7 @@ func init() {
 	#######################################################
 	############### devspace list package #################
 	#######################################################
-	Lists the packages that were added to the devspace
+	Lists the packages that were added to the DevSpace
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -91,6 +90,22 @@ func init() {
 	}
 
 	listCmd.AddCommand(listPackageCmd)
+
+	listServiceCmd := &cobra.Command{
+		Use:   "service",
+		Short: "Lists all services",
+		Long: `
+	#######################################################
+	############### devspace list service #################
+	#######################################################
+	Lists the service that are defined in the DevSpace
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunListService,
+	}
+
+	listCmd.AddCommand(listServiceCmd)
 }
 
 // RunListPackage runs the list sync command logic
@@ -134,17 +149,75 @@ func (cmd *ListCmd) RunListPackage(cobraCmd *cobra.Command, args []string) {
 	log.PrintTable(headerColumnNames, values)
 }
 
-// RunListSync runs the list sync command logic
-func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+// RunListService runs the list service command logic
+func (cmd *ListCmd) RunListService(cobraCmd *cobra.Command, args []string) {
+	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.Sync) == 0 {
-		log.Write("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+	if config.DevSpace.Services == nil || len(*config.DevSpace.Services) == 0 {
+		log.Info("No services are configured. Run `devspace add service` to add new service\n")
 		return
 	}
 
 	headerColumnNames := []string{
+		"Name",
+		"Namespace",
 		"Type",
+		"Selector",
+		"Container",
+	}
+
+	services := make([][]string, 0, len(*config.DevSpace.Services))
+
+	// Transform values into string arrays
+	for _, value := range *config.DevSpace.Services {
+		selector := ""
+		for k, v := range *value.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
+			}
+
+			selector += k + "=" + *v
+		}
+
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
+		// TODO: should we skip this error?
+		namespace, _ := configutil.GetDefaultNamespace(config)
+		if value.Namespace != nil {
+			namespace = *value.Namespace
+		}
+
+		containerName := ""
+		if value.ContainerName != nil {
+			containerName = *value.ContainerName
+		}
+
+		services = append(services, []string{
+			*value.Name,
+			namespace,
+			resourceType,
+			selector,
+			containerName,
+		})
+	}
+
+	log.PrintTable(headerColumnNames, services)
+}
+
+// RunListSync runs the list sync command logic
+func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
+	config := configutil.GetConfig()
+
+	if config.DevSpace.Sync == nil || len(*config.DevSpace.Sync) == 0 {
+		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+		return
+	}
+
+	headerColumnNames := []string{
+		"Service",
 		"Selector",
 		"Local Path",
 		"Container Path",
@@ -155,16 +228,20 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 	// Transform values into string arrays
 	for _, value := range *config.DevSpace.Sync {
+		service := ""
 		selector := ""
 
-		for k, v := range *value.LabelSelector {
-			if len(selector) > 0 {
-				selector += ", "
+		if value.Service != nil {
+			service = *value.Service
+		} else {
+			for k, v := range *value.LabelSelector {
+				if len(selector) > 0 {
+					selector += ", "
+				}
+
+				selector += k + "=" + *v
 			}
-
-			selector += k + "=" + *v
 		}
-
 		excludedPaths := ""
 
 		if value.ExcludePaths != nil {
@@ -176,8 +253,9 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 				excludedPaths += v
 			}
 		}
+
 		syncPaths = append(syncPaths, []string{
-			*value.ResourceType,
+			service,
 			selector,
 			*value.LocalSubPath,
 			*value.ContainerPath,
@@ -190,35 +268,40 @@ func (cmd *ListCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 // RunListPort runs the list port command logic
 func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
-	config := configutil.GetConfig(false)
+	config := configutil.GetConfig()
 
-	if len(*config.DevSpace.PortForwarding) == 0 {
-		log.Write("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
+	if config.DevSpace.Ports == nil || len(*config.DevSpace.Ports) == 0 {
+		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
 
 	headerColumnNames := []string{
+		"Service",
 		"Type",
 		"Selector",
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(*config.DevSpace.PortForwarding))
+	portForwards := make([][]string, 0, len(*config.DevSpace.Ports))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.PortForwarding {
+	for _, value := range *config.DevSpace.Ports {
+		service := ""
 		selector := ""
 
-		for k, v := range *value.LabelSelector {
-			if len(selector) > 0 {
-				selector += ", "
-			}
+		if value.Service != nil {
+			service = *value.Service
+		} else {
+			for k, v := range *value.LabelSelector {
+				if len(selector) > 0 {
+					selector += ", "
+				}
 
-			selector += k + "=" + *v
+				selector += k + "=" + *v
+			}
 		}
 
 		portMappings := ""
-
 		for _, v := range *value.PortMappings {
 			if len(portMappings) > 0 {
 				portMappings += ", "
@@ -227,8 +310,14 @@ func (cmd *ListCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
 		}
 
+		resourceType := "pod"
+		if value.ResourceType != nil {
+			resourceType = *value.ResourceType
+		}
+
 		portForwards = append(portForwards, []string{
-			*value.ResourceType,
+			service,
+			resourceType,
 			selector,
 			portMappings,
 		})

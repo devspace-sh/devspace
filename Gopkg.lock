@@ -127,13 +127,6 @@
   revision = "c2ac4ecc959316e616c37fd95143e972811bd12e"
 
 [[projects]]
-  digest = "1:46dc582e7aebd8aa4976253b0ea66e49bc439dab54541831562bbd13312ed02c"
-  name = "github.com/covexo/yamlq"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ee51b09a773c7e7e4e32168cbec4d47a014161b4"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -620,6 +613,14 @@
   revision = "22422dad46e14561a0854ad42497a75af9b61909"
 
 [[projects]]
+  digest = "1:190ff84d9b2ed6589088f178cba8edb4b8ecb334df4572421fb016be1ac20463"
+  name = "github.com/juju/ratelimit"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "59fac5042749a5afb9af70e813da1dd5474f0167"
+  version = "1.0.1"
+
+[[projects]]
   digest = "1:ae5f4d0779a45e2cb3075d8b3ece6c623e171407f4aac83521392ff06d188871"
   name = "github.com/kevinburke/ssh_config"
   packages = ["."]
@@ -861,12 +862,11 @@
   revision = "41c1bbb0804a2994dae69502a8c76e7c456ad45e"
 
 [[projects]]
-  digest = "1:8f4b365e527c00e2ba6b25a4c41ee7b84078c375fba83c971e54d2f0582df279"
+  digest = "1:4293d7afbe7f9a4255b7f3fce291652eae1e08b105c88222505adc5075e0cb55"
   name = "github.com/rjeczalik/notify"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8"
-  version = "v0.9.1"
+  revision = "629144ba06a1c6af28c1e42c228e3d42594ce081"
 
 [[projects]]
   digest = "1:b36a0ede02c4c2aef7df7f91cbbb7bb88a98b5d253509d4f997dda526e50c88c"
@@ -1832,7 +1832,6 @@
     "github.com/badgerodon/penv",
     "github.com/blang/semver",
     "github.com/bmatcuk/doublestar",
-    "github.com/covexo/yamlq",
     "github.com/daviddengcn/go-colortext",
     "github.com/docker/cli/cli/command",
     "github.com/docker/cli/cli/command/image/build",
@@ -1853,6 +1852,7 @@
     "github.com/docker/go-connections/tlsconfig",
     "github.com/foomo/htpasswd",
     "github.com/juju/errors",
+    "github.com/juju/ratelimit",
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",
     "github.com/pkg/errors",
@@ -1870,11 +1870,14 @@
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1beta1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/client-go/transport/spdy",

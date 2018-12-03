@@ -8,10 +8,10 @@ import (
 )
 
 func loadConfig(config *v1.Config, path string) error {
-	yamlFileContent, err := ioutil.ReadFile(workdir + path)
-
+	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(yamlFileContent, config)
+
+	return yaml.UnmarshalStrict(yamlFileContent, config)
 }

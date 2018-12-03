@@ -2,18 +2,20 @@ package kaniko
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
+	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
-	"github.com/covexo/devspace/pkg/devspace/clients/kubectl"
+	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 	"github.com/covexo/devspace/pkg/util/ignoreutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -22,41 +24,46 @@ import (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	RegistryURL    string
-	ImageName      string
-	ImageTag       string
-	BuildNamespace string
+	RegistryURL      string
+	PullSecretName   string
+	ImageName        string
+	ImageTag         string
+	PreviousImageTag string
+	BuildNamespace   string
 
 	allowInsecureRegistry bool
 	kubectl               *kubernetes.Clientset
+	dockerClient          client.CommonAPIClient
 }
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(registryURL, imageName, imageTag, buildNamespace string, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
 		RegistryURL:           registryURL,
+		PullSecretName:        pullSecretName,
 		ImageName:             imageName,
 		ImageTag:              imageTag,
+		PreviousImageTag:      lastImageTag,
 		BuildNamespace:        buildNamespace,
 		allowInsecureRegistry: allowInsecureRegistry,
 		kubectl:               kubectl,
+		dockerClient:          dockerClient,
 	}, nil
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
 func (b *Builder) Authenticate(username, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+	if b.PullSecretName != "" {
+		return nil, nil
+	}
+
 	email := "noreply@devspace-cloud.com"
-
 	if len(username) == 0 {
-		dockerBuilder, dockerBuilderErr := docker.NewBuilder(b.RegistryURL, b.ImageName, b.ImageTag, false)
-		if dockerBuilderErr != nil {
-			return nil, dockerBuilderErr
-		}
-
-		authConfig, err := dockerBuilder.Authenticate(username, password, true)
+		authConfig, err := docker.GetAuthConfig(b.dockerClient, b.RegistryURL, true)
 		if err != nil {
 			return nil, err
 		}
+
 		username = authConfig.Username
 		email = authConfig.Email
 
@@ -66,12 +73,17 @@ func (b *Builder) Authenticate(username, password string, checkCredentialsStore 
 			password = authConfig.IdentityToken
 		}
 	}
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email)
+
+	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email, log.GetInstance())
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
 	pullSecretName := registry.GetRegistryAuthSecretName(b.RegistryURL)
+	if b.PullSecretName != "" {
+		pullSecretName = b.PullSecretName
+	}
+
 	randString, _ := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
 	buildPod := &k8sv1.Pod{
@@ -85,7 +97,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			Containers: []k8sv1.Container{
 				{
 					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:debug-60bdda4c49b699f5a21545cc8a050a5f3953223f",
+					Image:           "gcr.io/kaniko-project/executor:debug-5ac29a97734170a0547fea33b348dc7c328e2f8a",
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
 					Command: []string{
 						"/busybox/sleep",
@@ -205,18 +217,22 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--single-snapshot",
 		}
 
+		if !options.NoCache {
+			kanikoBuildCmd = append(kanikoBuildCmd, "--cache=true", "--cache-repo="+b.PreviousImageTag)
+		}
+
 		if b.allowInsecureRegistry {
-			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure-skip-tls-verify")
+			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure", "--skip-tls-verify")
 		}
 
-		stdin, stdout, stderr, execErr := kubectl.Exec(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, exitChannel)
-		stdin.Close()
+		stdoutReader, stdoutWriter, _ := os.Pipe()
+		stderrReader, stderrWriter, _ := os.Pipe()
 
-		if execErr != nil {
-			return fmt.Errorf("Failed to start image building: %s", execErr.Error())
-		}
+		go func() {
+			exitChannel <- kubectl.ExecStream(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, nil, stdoutWriter, stderrWriter)
+		}()
 
-		lastKanikoOutput := formatKanikoOutput(stdout, stderr)
+		lastKanikoOutput := formatKanikoOutput(stdoutReader, stderrReader)
 		exitError := <-exitChannel
 
 		log.StopWait()

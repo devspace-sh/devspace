@@ -1,9 +1,14 @@
 package docker
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"context"
+	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"
@@ -39,21 +44,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*Builder, error) {
-	var cli client.CommonAPIClient
-	var err error
-
-	if preferMinikube {
-		cli, err = newDockerClientFromMinikube()
-	}
-	if preferMinikube == false || err != nil {
-		cli, err = newDockerClientFromEnvironment()
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func NewBuilder(client client.CommonAPIClient, registryURL, imageName, imageTag string) (*Builder, error) {
 	imageURL := imageName + ":" + imageTag
 	if registryURL != "" {
 		// Check if it's the official registry or not
@@ -77,7 +68,7 @@ func NewBuilder(registryURL, imageName, imageTag string, preferMinikube bool) (*
 		ImageName:   imageName,
 		ImageTag:    imageTag,
 		imageURL:    imageURL,
-		client:      cli,
+		client:      client,
 	}, nil
 }
 
@@ -96,6 +87,18 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		return err
 	}
 
+	var dockerfileCtx *os.File
+
+	// Dockerfile is out of context
+	if err == nil && strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
+		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
+		dockerfileCtx, err = os.Open(dockerfilePath)
+		if err != nil {
+			return errors.Errorf("unable to open Dockerfile: %v", err)
+		}
+		defer dockerfileCtx.Close()
+	}
+
 	excludes, err := build.ReadDockerignore(contextDir)
 	if err != nil {
 		return err
@@ -106,7 +109,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	// And canonicalize dockerfile name to a platform-independent one
-	authConfigs, _ := getAllAuthConfigs()
+	authConfigs, _ := dockerclient.GetAllAuthConfigs()
 	relDockerfile, err = archive.CanonicalTarNameForPath(relDockerfile)
 	if err != nil {
 		return err
@@ -119,6 +122,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	})
 	if err != nil {
 		return err
+	}
+
+	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context
+	if dockerfileCtx != nil && buildCtx != nil {
+		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Setup an upload progress bar
@@ -147,46 +158,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	ctx := context.Background()
-	authServer := getOfficialServer(ctx, b.client)
-	serverAddress := b.RegistryURL
+	var err error
 
-	if serverAddress == "" {
-		serverAddress = authServer
-	} else {
-		ref, err := reference.ParseNormalizedNamed(b.imageURL)
-		if err != nil {
-			return nil, err
-		}
-
-		repoInfo, err := registry.ParseRepositoryInfo(ref)
-		if err != nil {
-			return nil, err
-		}
-
-		if repoInfo.Index.Official {
-			serverAddress = authServer
-		}
-	}
-
-	authConfig, err := getDefaultAuthConfig(b.client, checkCredentialsStore, serverAddress, serverAddress == authServer)
-
-	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
-		authConfig.Username = strings.TrimSpace(user)
-		authConfig.Password = strings.TrimSpace(password)
-	}
-
-	response, err := b.client.RegistryLogin(ctx, *authConfig)
+	b.authConfig, err = dockerclient.Login(b.client, b.RegistryURL, user, password, checkCredentialsStore, false)
 	if err != nil {
 		return nil, err
 	}
-
-	if response.IdentityToken != "" {
-		authConfig.Password = ""
-		authConfig.IdentityToken = response.IdentityToken
-	}
-
-	b.authConfig = authConfig
 
 	return b.authConfig, nil
 }
@@ -218,4 +195,12 @@ func (b *Builder) PushImage() error {
 	}
 
 	return nil
+}
+
+func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
+	buf, err := json.Marshal(authConfig)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(buf), nil
 }

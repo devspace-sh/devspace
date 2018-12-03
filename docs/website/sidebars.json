@@ -2,14 +2,11 @@
   "docs": {
     "Getting Started": [
       "getting-started/quickstart",
-      "getting-started/installation",
-      "getting-started/start",
-      "getting-started/coding",
-      "getting-started/cleanup",
       "getting-started/faq"
     ],
     "Commands": [
       "cli/init",
+      "cli/deploy",
       "cli/up",
       "cli/enter",
       "cli/down",
@@ -24,10 +21,10 @@
       "cli/status"
     ],
     "Configuration": [
-      "configuration/dockerfile",
-      "configuration/chart",
       "configuration/config.yaml",
-      "configuration/overwrite.yaml"
+      "configuration/overwrite.yaml",
+      "configuration/dockerfile",
+      "configuration/chart"
     ],
     "Advanced": [
       "advanced/logs",
