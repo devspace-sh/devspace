@@ -12,5 +12,5 @@ This folder contains several examples how to use the devspace cli for various us
 | [`microservices`](https://github.com/covexo/devspace/tree/master/examples/microservices) | docker | remote registry | helm & kubectl | Example with simple nodejs and php application that interact |
 | [`kaniko`](https://github.com/covexo/devspace/tree/master/examples/kaniko) | kaniko | remote registry | helm | Example how to use kaniko instead of docker |
 | [`kaniko-minikube`](https://github.com/covexo/devspace/tree/master/examples/kaniko-minikube) | kaniko | local registry | helm | Example how to use kaniko locally instead of docker |
-| [`reload-instead-of-sync`](https://github.com/covexo/devspace/tree/master/examples/reload-instead-of-sync) | docker | remote registry | kubectl | Example how to use devspace to redeploy on every change instead of hot reloading |
+| [`reload-instead-of-sync`](https://github.com/covexo/devspace/tree/master/examples/reload-instead-of-sync) | docker | remote registry | kubectl | Example how to use devspace to redeploy on changes instead of hot reloading |
 | [`no-terminal`](https://github.com/covexo/devspace/tree/master/examples/no-terminal) | docker | remote registry | kubectl | Example how to use devspace without opening a terminal and instead attach after devspace up |

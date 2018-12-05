@@ -12,6 +12,7 @@ type DeploymentConfig struct {
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
 	ChartPath    *string `yaml:"chartPath,omitempty"`
+	Wait         *bool   `yaml:"wait,omitempty"`
 	DevOverwrite *string `yaml:"devOverwrite,omitempty"`
 }
 
