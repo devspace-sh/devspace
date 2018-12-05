@@ -29,6 +29,5 @@ devSpace:
     - node_modules/
 images:
   default:
-    createPullSecret: true
     name: floriankutz/devspace
 version: v1alpha1

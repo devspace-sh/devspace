@@ -12,7 +12,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/juju/errors"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -105,7 +104,7 @@ And it should work, which is why it is tested here. */
 
 }*/
 
-func TestUpWithDockerHub(t *testing.T) {
+func TestUpWithGivenConfig(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
 	defer resetWorkDir(t)
 
@@ -185,10 +184,10 @@ func TestUpWithDockerHub(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.True(t, helm.IsTillerDeployed(kubectlClient), "Tiller deleted")
-	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
+	assert.True(t, helm.IsTillerDeployed(kubectlClient), "Tiller not deleted")
+	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Internal Registry not deleted")
 	_, err = kubectlClient.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
-	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
+	assert.NotNil(t, err, "Role Binding in Minikube. We don't work with Minikube")
 
 }
 
@@ -219,35 +218,4 @@ func resetWorkDir(t *testing.T) {
 	os.Chdir(workDirBefore)
 
 	os.Remove(tmpDir)
-}
-
-var tmpfile *os.File
-var oldStdin *os.File
-
-func mockStdin(inputString string) error {
-	//Code from https://stackoverflow.com/a/46365584 (modified)
-	input := []byte(inputString)
-	var err error
-	tmpfile, err = ioutil.TempFile("", "testGetFromStdin")
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if _, err := tmpfile.Write(input); err != nil {
-		return errors.Trace(err)
-	}
-
-	if _, err := tmpfile.Seek(0, 0); err != nil {
-		return errors.Trace(err)
-	}
-
-	oldStdin = os.Stdin
-	os.Stdin = tmpfile
-
-	return nil
-}
-
-func cleanUpMockedStdin() {
-	os.Remove(tmpfile.Name())
-	os.Stdin = oldStdin
 }
