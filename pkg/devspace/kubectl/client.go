@@ -229,7 +229,7 @@ func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace
 
 				if podStatus == "Running" {
 					return selectedPod, nil
-				} else if podStatus == "Error" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" {
+				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
 					return nil, fmt.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
 				}
 			}
