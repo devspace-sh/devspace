@@ -1,6 +1,6 @@
 chartHashs:
-  ./chart: 9db5e2a66a8e559b2a80d62cf552e763b09844822a910efcc5642d82eb7d34a0
+  ./chart: c30c7b9e4bd16aa7e094162d8628178ab0d80af9b86d78dd8a8884e26db3fbcd
 dockerLatestTimestamps:
-  ./Dockerfile: 1540384680
+  ./Dockerfile: 1543497808
 imageTags:
-  10.98.232.121:5000/devspace: hPEip10
+  10.98.86.69:5000/devspace: gbdoqU3

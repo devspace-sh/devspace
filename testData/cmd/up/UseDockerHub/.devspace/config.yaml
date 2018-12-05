@@ -1,6 +1,6 @@
 cluster:
-  kubeContext: minikube
-  namespace: test-devspace-up-internal-registry
+  cloudProvider: devspace-cloud
+  cloudProviderDeployTarget: production
 devSpace:
   deployments:
   - helm:
@@ -29,9 +29,6 @@ devSpace:
     - node_modules/
 images:
   default:
-    name: devspace
-    skipPush: true
-    registry: internal
-internalRegistry:
-  deploy: true
+    createPullSecret: true
+    name: floriankutz/devspace
 version: v1alpha1

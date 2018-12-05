@@ -20,8 +20,93 @@ import (
 /*The internal registry is not supported in the init command.
 However, it is still supported if written in the config.yaml .
 And it should work, which is why it is tested here. */
-func TestUpWithInternalRegistry(t *testing.T) {
+/*func TestUpWithInternalRegistry(t *testing.T) {
 	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseInternalRegistry"), t)
+	defer resetWorkDir(t)
+
+	upCmdObj := UpCmd{
+		flags: UpFlagsDefault,
+	}
+	upCmdObj.flags.exitAfterDeploy = true
+
+	defer func() {
+		client, err := kubectl.NewClient()
+		if err != nil {
+			t.Error(err)
+		}
+		propagationPolicy := metav1.DeletePropagationForeground
+		client.Core().Namespaces().Delete("test-cmd-up-private-registry", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	}()
+
+	upCmdObj.Run(nil, []string{})
+
+	log.StartFileLogging()
+	listCmdObj := ListCmd{
+		flags: &ListCmdFlags{},
+	}
+	listCmdObj.RunListPort(nil, nil)
+	listCmdObj.RunListSync(nil, nil)
+	listCmdObj.RunListPackage(nil, nil)
+
+	logFile, err := os.Open(log.Logdir + "default.log")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	data := make([]byte, 10000)
+	count, err := logFile.Read(data)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("read %d bytes: %q\n", count, data[:count])
+	assert.Contains(t, string(data[:count]), "3000:3000, 9229:9229", "No js-PortForwarding")
+	assert.Contains(t, string(data[:count]), "./           /app", "No Sync")
+	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
+
+	resetCmdObj := ResetCmd{}
+	resetCmdObj.kubectl, err = kubectl.NewClient()
+	if err != nil {
+		t.Error(err)
+	}
+
+	resetCmdObj.deleteDevSpaceDeployments()
+	resetCmdObj.deleteInternalRegistry()
+	resetCmdObj.deleteTiller()
+	resetCmdObj.deleteClusterRoleBinding()
+
+	downCmdObj := DownCmd{
+		flags: &DownCmdFlags{},
+	}
+	downCmdObj.Run(nil, nil)
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Stat(path.Join(dir, "Dockerfile"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".dockerignore"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, ".devspace"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "chart"))
+	assert.Equal(t, false, os.IsNotExist(err))
+
+	_, err = os.Stat(path.Join(dir, "index.js"))
+	assert.Equal(t, false, os.IsNotExist(err))
+	_, err = os.Stat(path.Join(dir, "package.json"))
+	assert.Equal(t, false, os.IsNotExist(err))
+
+	assert.Equal(t, false, helm.IsTillerDeployed(resetCmdObj.kubectl), "Tiller deleted")
+	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
+	_, err = resetCmdObj.kubectl.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
+	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
+
+}*/
+
+func TestUpWithDockerHub(t *testing.T) {
+	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
 	defer resetWorkDir(t)
 
 	upCmdObj := UpCmd{
@@ -46,7 +131,6 @@ func TestUpWithInternalRegistry(t *testing.T) {
 		flags: &ListCmdFlags{},
 	}
 	listCmdObj.RunListPort(nil, nil)
-	listCmdObj.RunListService(nil, nil)
 	listCmdObj.RunListSync(nil, nil)
 	listCmdObj.RunListPackage(nil, nil)
 
@@ -58,29 +142,24 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	data := make([]byte, 10000)
 	count, err := logFile.Read(data)
 	if err != nil {
-		log.Fatal(err)
+		t.Error(err)
 	}
 	t.Logf("read %d bytes: %q\n", count, data[:count])
-	assert.Contains(t, string(data[:count]), "pod    release=devspace-test-cmd-up-private-registry   3000:3000", "No PortForwarding")
-	assert.Contains(t, string(data[:count]), "No services are configured. Run `devspace add service` to add new service", "A service appeared despite not configured")
-	assert.Contains(t, string(data[:count]), "release=devspace-test-cmd-up-private-registry   ./           /app", "No Sync")
+	assert.Contains(t, string(data[:count]), "3000:3000, 9229:9229", "No js-PortForwarding")
+	assert.Contains(t, string(data[:count]), "./           /app", "No Sync")
 	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
 
-	resetCmdObj := ResetCmd{
-		flags: &ResetCmdFlags{
-			skipQuestionsWithGivenAnswers: true,
-			deleteFromDevSpaceCloud:       true,
-			removeCloudContext:            true,
-			removeTiller:                  false,
-			deleteChart:                   false,
-			removeRegistry:                false,
-			deleteDockerfile:              false,
-			deleteDockerIgnore:            false,
-			deleteRoleBinding:             false,
-			deleteDevspaceFolder:          false,
-		},
+	config := configutil.GetConfig()
+	providerConfig, err := cloud.ParseCloudConfig()
+	if err != nil {
+		t.Error(err)
 	}
-	resetCmdObj.Run(nil, []string{})
+	provider, ok := providerConfig[*config.Cluster.CloudProvider]
+	assert.True(t, ok, "Cloudprovider not ok")
+	err = cloud.DeleteDevSpace(provider, *config.Cluster.Namespace)
+	if err != nil {
+		t.Error(err)
+	}
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -101,122 +180,15 @@ func TestUpWithInternalRegistry(t *testing.T) {
 	_, err = os.Stat(path.Join(dir, "package.json"))
 	assert.Equal(t, false, os.IsNotExist(err))
 
-	assert.Equal(t, true, helm.IsTillerDeployed(resetCmdObj.kubectl), "Tiller deleted")
-	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
-	_, err = resetCmdObj.kubectl.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
-	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
-
-}
-
-func TestUpWithDockerHub(t *testing.T) {
-	createTempFolderCopy(path.Join(fsutil.GetCurrentGofileDir(), "..", "testData", "cmd", "up", "UseDockerHub"), t)
-	defer resetWorkDir(t)
-
-	upCmdObj := UpCmd{
-		flags: &UpCmdFlags{
-			tiller:          true,
-			open:            "cmd",
-			initRegistries:  true,
-			build:           false,
-			sync:            true,
-			terminal:        true,
-			switchContext:   false,
-			exitAfterDeploy: false,
-			allyes:          false,
-			deploy:          false,
-			portforwarding:  true,
-			verboseSync:     false,
-			container:       "",
-			namespace:       "",
-			labelSelector:   "",
-
-			skipQuestionsWithGivenAnswers:     true,
-			language:                          "javascript",
-			cloudProvider:                     cloud.DevSpaceCloudProviderName,
-			useDevSpaceCloud:                  true,
-			addDevSpaceCloudToLocalKubernetes: true,
-			namespaceInit:                     "test-cmd-up-dockerhub",
-			registryURL:                       "hub.docker.com",
-			defaultImageName:                  "devspace",
-			createPullSecret:                  true,
-		},
-	}
-
-	defer func() {
-		client, err := kubectl.NewClient()
-		if err != nil {
-			t.Error(err)
-		}
-		propagationPolicy := metav1.DeletePropagationForeground
-		client.Core().Namespaces().Delete("test-cmd-up-dockerhub", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-	}()
-
-	upCmdObj.Run(nil, []string{})
-
-	log.StartFileLogging()
-	listCmdObj := ListCmd{
-		flags: &ListCmdFlags{},
-	}
-	listCmdObj.RunListPort(nil, nil)
-	listCmdObj.RunListService(nil, nil)
-	listCmdObj.RunListSync(nil, nil)
-	listCmdObj.RunListPackage(nil, nil)
-
-	logFile, err := os.Open(log.Logdir + "default.log")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	data := make([]byte, 10000)
-	count, err := logFile.Read(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	t.Logf("read %d bytes: %q\n", count, data[:count])
-	assert.Contains(t, string(data[:count]), "pod    release=devspace-test-cmd-up-private-registry   3000:3000", "No PortForwarding")
-	assert.Contains(t, string(data[:count]), "No services are configured. Run `devspace add service` to add new service", "A service appeared despite not configured")
-	assert.Contains(t, string(data[:count]), "release=devspace-test-cmd-up-private-registry   ./           /app", "No Sync")
-	assert.Contains(t, string(data[:count]), "No entries found", "A package appeared despite not configured")
-
-	resetCmdObj := ResetCmd{
-		flags: &ResetCmdFlags{
-			skipQuestionsWithGivenAnswers: true,
-			deleteFromDevSpaceCloud:       true,
-			removeCloudContext:            true,
-			removeTiller:                  false,
-			deleteChart:                   false,
-			removeRegistry:                false,
-			deleteDockerfile:              false,
-			deleteDockerIgnore:            false,
-			deleteRoleBinding:             false,
-			deleteDevspaceFolder:          false,
-		},
-	}
-	resetCmdObj.Run(nil, []string{})
-
-	dir, err := os.Getwd()
+	kubectlClient, err := kubectl.NewClient()
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = os.Stat(path.Join(dir, "Dockerfile"))
-	assert.Equal(t, false, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, ".dockerignore"))
-	assert.Equal(t, false, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, ".devspace"))
-	assert.Equal(t, false, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, "chart"))
-	assert.Equal(t, false, os.IsNotExist(err))
-
-	_, err = os.Stat(path.Join(dir, "index.js"))
-	assert.Equal(t, false, os.IsNotExist(err))
-	_, err = os.Stat(path.Join(dir, "package.json"))
-	assert.Equal(t, false, os.IsNotExist(err))
-
-	assert.Equal(t, true, helm.IsTillerDeployed(resetCmdObj.kubectl), "Tiller deleted")
-	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
-	_, err = resetCmdObj.kubectl.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
-	assert.NotNil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
+	assert.True(t, helm.IsTillerDeployed(kubectlClient), "Tiller deleted")
+	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Internal Registry deleted")
+	_, err = kubectlClient.RbacV1beta1().ClusterRoleBindings().Get(kubectl.ClusterRoleBindingName, metav1.GetOptions{})
+	assert.Nil(t, configutil.GetConfig().InternalRegistry, "Role Binding in Minikube")
 
 }
 
