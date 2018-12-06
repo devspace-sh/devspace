@@ -159,7 +159,7 @@ func (cmd *ResetCmd) deleteCloudKubeContext() {
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
-	deleteDevSpace(cmd.kubectl)
+	deleteDevSpace(cmd.kubectl, nil)
 }
 
 func (cmd *ResetCmd) deleteInternalRegistry() {
