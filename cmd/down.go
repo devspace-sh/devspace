@@ -46,7 +46,7 @@ your project, use: devspace reset
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVarP(&cmd.flags.config, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
+	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
 	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml')")
 
