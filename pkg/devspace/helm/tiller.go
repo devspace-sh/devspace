@@ -86,7 +86,13 @@ func createTiller(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config, till
 	}
 
 	// Create the deployment
-	return helminstaller.Install(kubectlClient, tillerOptions)
+	err = helminstaller.Install(kubectlClient, tillerOptions)
+	if err != nil {
+		return err
+	}
+
+	log.Donef("Created deployment %s in %s", TillerDeploymentName, tillerOptions.Namespace)
+	return nil
 }
 
 func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset) error {
