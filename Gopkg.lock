@@ -637,6 +637,13 @@
   revision = "785c4956069227e430929ac27bfa26af2ff25dfb"
 
 [[projects]]
+  digest = "1:5d44d06262dd965f9db909ca181e6fabb0c1437c3e77cfe6aa52961f8cbc4f16"
+  name = "github.com/machinebox/graphql"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3a92531802258604bd12793465c2e28bc4b2fc85"
+
+[[projects]]
   digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
   name = "github.com/magiconair/properties"
   packages = ["."]
@@ -1853,6 +1860,7 @@
     "github.com/foomo/htpasswd",
     "github.com/juju/errors",
     "github.com/juju/ratelimit",
+    "github.com/machinebox/graphql",
     "github.com/mitchellh/go-homedir",
     "github.com/otiai10/copy",
     "github.com/pkg/errors",
@@ -1871,6 +1879,7 @@
     "k8s.io/api/rbac/v1beta1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/util/httpstream",
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",

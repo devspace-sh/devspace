@@ -223,6 +223,8 @@ func (cmd *InitCmd) initChartGenerator() {
 }
 
 func (cmd *InitCmd) useCloudProvider() bool {
+	config := configutil.GetConfig()
+
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading cloud config: %v", err)
@@ -252,7 +254,8 @@ func (cmd *InitCmd) useCloudProvider() bool {
 		}
 
 		if cloudProviderSelected != "no" {
-			cmd.loginToCloudProvider(providerConfig, cloudProviderSelected)
+			config.Cluster.CloudProvider = &cloudProviderSelected
+
 			return true
 		}
 	} else {
@@ -265,38 +268,13 @@ func (cmd *InitCmd) useCloudProvider() bool {
 			}) == "yes"
 		}
 		if useDevSpaceCloud {
-			cmd.loginToCloudProvider(providerConfig, cloud.DevSpaceCloudProviderName)
+			config.Cluster.CloudProvider = configutil.String(cloud.DevSpaceCloudProviderName)
+
 			return true
 		}
 	}
 
 	return false
-}
-
-func (cmd *InitCmd) loginToCloudProvider(providerConfig cloud.ProviderConfig, cloudProviderSelected string) {
-	config := configutil.GetConfig()
-	addToContext := cmd.flags.skipQuestions || cmd.flags.addDevSpaceCloudToLocalKubernetes
-	if !addToContext {
-		addToContext = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to add the DevSpace Cloud to the $HOME/.kube/config file? (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		}) == "yes"
-	}
-
-	config.Cluster.CloudProvider = &cloudProviderSelected
-	config.Cluster.CloudProviderDeployTarget = configutil.String(cloud.DefaultDeployTarget)
-
-	err := cloud.Update(providerConfig, &cloud.UpdateOptions{
-		UseKubeContext:    addToContext,
-		SwitchKubeContext: true,
-		SkipSaveConfig:    true,
-	}, log.GetInstance())
-	if err != nil {
-		log.Fatalf("Couldn't authenticate to %s: %v", cloudProviderSelected, err)
-	}
-
-	log.Write([]byte("\n"))
 }
 
 func (cmd *InitCmd) configureDevSpace() {

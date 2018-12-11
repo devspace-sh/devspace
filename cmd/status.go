@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
@@ -75,6 +76,12 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 		"INFO",
 	}
 	config := configutil.GetConfig()
+
+	// Configure cloud provider
+	err = cloud.Configure(true, true, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
 
 	cmd.kubectl, err = kubectl.NewClient()
 	if err != nil {

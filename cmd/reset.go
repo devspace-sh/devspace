@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -80,6 +82,12 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 	var err error
 
+	// Configure cloud provider
+	err = cloud.Configure(true, true, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
+
 	// Create kubectl client
 	if cmd.kubectl == nil {
 		cmd.kubectl, err = kubectl.NewClient()
@@ -123,7 +131,18 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 		selectedCloudProvider := *config.Cluster.CloudProvider
 
 		if provider, ok := providerConfig[selectedCloudProvider]; ok {
-			err := cloud.DeleteDevSpace(provider, *config.Cluster.Namespace)
+			// Get devspace id
+			generatedConfig, err := generated.LoadConfig()
+			if err != nil {
+				log.Failf("Error getting generatedConfig: %v", err)
+				return
+			}
+			if generatedConfig.Cloud == nil {
+				log.Info("Didn't remove devspace since there is no cloud devspace configured")
+				return
+			}
+
+			err = provider.DeleteDevSpace(generatedConfig.Cloud.DevSpaceID)
 			if err != nil {
 				log.Failf("Error deleting devspace: %v", err)
 			} else {

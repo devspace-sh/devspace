@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
@@ -68,6 +69,12 @@ func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
+	// Configure cloud provider
+	err := cloud.Configure(true, true, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
+
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
@@ -126,7 +133,7 @@ func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 				}
 			}
 
-			log.StartWait("Deleting deployment %s" + *deployConfig.Name)
+			log.StartWait("Deleting deployment " + *deployConfig.Name)
 			err = deployClient.Delete()
 			log.StopWait()
 			if err != nil {

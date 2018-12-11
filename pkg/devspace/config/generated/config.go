@@ -13,6 +13,25 @@ type Config struct {
 	ChartHashs             map[string]string `yaml:"chartHashs"`
 	DockerLatestTimestamps map[string]int64  `yaml:"dockerLatestTimestamps"`
 	ImageTags              map[string]string `yaml:"imageTags"`
+	Cloud                  *CloudConfig      `yaml:"cloud,omitempty"`
+}
+
+// DevSpaceTargetConfig holds the information to connect to a devspace target
+type DevSpaceTargetConfig struct {
+	Namespace           string
+	ServiceAccountToken string
+	CaCert              string
+	Server              string
+
+	Domain *string
+}
+
+// CloudConfig holds the information to authenticate with the cloud provider
+type CloudConfig struct {
+	DevSpaceID   int                              `yaml:"devSpaceID"`
+	ProviderName string                           `yaml:"providerName"`
+	Name         string                           `yaml:"name"`
+	Targets      map[string]*DevSpaceTargetConfig `yaml:"targets"`
 }
 
 // ConfigPath is the relative generated config path

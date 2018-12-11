@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/devspace/services"
@@ -73,6 +74,12 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
+
+	// Configure cloud provider
+	err := cloud.Configure(true, true, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
 
 	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {

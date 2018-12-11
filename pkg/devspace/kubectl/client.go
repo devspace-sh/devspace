@@ -9,9 +9,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,19 +54,9 @@ func GetClientConfig() (*rest.Config, error) {
 }
 
 func getClientConfig(switchContext bool) (*rest.Config, error) {
-	var err error
-
 	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
-	}
-
-	// Update devspace cloud cluster config
-	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		err = loadCloudConfig(config, log.GetInstance())
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// Use kube config if desired
@@ -140,28 +128,6 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 	kubeConfig.CurrentContext = "devspace"
 
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
-}
-
-func loadCloudConfig(config *v1.Config, log log.Logger) error {
-	var outerError error
-
-	loadCloudConfigOnce.Do(func() {
-		providerConfig, err := cloud.ParseCloudConfig()
-		if err != nil {
-			outerError = fmt.Errorf("Couldn't load cloud provider config: %v", err)
-			return
-		}
-
-		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
-			UseKubeContext:    config.Cluster.APIServer == nil,
-			SwitchKubeContext: false,
-		}, log)
-		if err != nil {
-			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
-		}
-	})
-
-	return outerError
 }
 
 // IsMinikube returns true if the Kubernetes cluster is a minikube

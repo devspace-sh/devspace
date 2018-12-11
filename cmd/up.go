@@ -150,6 +150,12 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 		configutil.SetDefaultsOnce()
 	}
 
+	// Configure cloud provider
+	err := cloud.Configure(true, false, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
+
 	// Create kubectl client and switch context if specified
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
@@ -274,14 +280,18 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		}()
 	}
 
+	config := configutil.GetConfig()
+
 	// Print domain name if we use a cloud provider
-	// TODO: Change this
-	if cloud.DevSpaceURL != "" {
-		log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
-		log.Info("See https://devspace-cloud.com/domain-guide for more information")
+	cloudTarget := configutil.GetCurrentCloudTarget(config)
+	if cloudTarget != nil {
+		generatedConfig, _ := generated.LoadConfig()
+		if generatedConfig != nil && generatedConfig.Cloud != nil && generatedConfig.Cloud.Targets != nil && generatedConfig.Cloud.Targets[*cloudTarget] != nil && generatedConfig.Cloud.Targets[*cloudTarget].Domain != nil {
+			log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", *generatedConfig.Cloud.Targets[*cloudTarget].Domain)
+			log.Info("See https://devspace-cloud.com/domain-guide for more information")
+		}
 	}
 
-	config := configutil.GetConfig()
 	exitChan := make(chan error)
 	autoReloadPaths := watch.GetPaths()
 

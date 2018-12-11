@@ -1,44 +1,36 @@
 package cloud
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
+	"context"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
+	"github.com/machinebox/graphql"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+type managerDeleteDevSpaceMutation struct {
+	ManagerDeleteDevSpace bool `json:"manager_deleteDevSpace"`
+}
+
 // DeleteDevSpace deletes the devspace from the cloud provider
-func DeleteDevSpace(provider *Provider, devSpaceID string) error {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", provider.Host+DeleteDevSpaceEndpoint, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", provider.Token)
-
-	if devSpaceID != "" {
-		q := req.URL.Query()
-		if devSpaceID != "" {
-			q.Add("namespace", devSpaceID)
+func (p *Provider) DeleteDevSpace(devSpaceID int) error {
+	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
+	req := graphql.NewRequest(`
+		mutation($devSpaceID: Int!) {
+			manager_deleteDevSpace(devSpaceID: $devSpaceID)
 		}
-		req.URL.RawQuery = q.Encode()
-	}
+	`)
 
-	resp, err := client.Do(req)
+	req.Var("devSpaceID", devSpaceID)
+	req.Header.Set("Authorization", p.Token)
+
+	ctx := context.Background()
+	response := managerDeleteDevSpaceMutation{}
+
+	// Run the graphql request
+	err := graphQlClient.Run(ctx, req, &response)
 	if err != nil {
 		return err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	} else if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("You are not allowed to delete devspace %s", devSpaceID)
-	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Couldn't delete devspace %s: %s. Status: %d", devSpaceID, body, resp.StatusCode)
 	}
 
 	return nil

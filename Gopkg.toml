@@ -1,4 +1,8 @@
 [[constraint]]
+  name = "github.com/machinebox/graphql"
+  revision = "3a92531802258604bd12793465c2e28bc4b2fc85"
+
+[[constraint]]
   name = "github.com/juju/ratelimit"
   version = "v1.0.1"
 

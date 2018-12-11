@@ -4,11 +4,12 @@ import (
 	"os"
 	"sync"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/juju/errors"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 )
@@ -20,6 +21,9 @@ const configGitignore = `logs/
 overwrite.yaml
 generated.yaml
 `
+
+// DefaultCloudTarget is the default cloud target to use
+const DefaultCloudTarget = "dev"
 
 // DefaultConfigPath is the default config path to use
 const DefaultConfigPath = ".devspace/config.yaml"
@@ -205,6 +209,28 @@ func SetDefaultsOnce() {
 	})
 }
 
+// GetService returns the service referenced by serviceName
+func GetService(serviceName string) (*v1.ServiceConfig, error) {
+	if config.DevSpace.Services != nil {
+		for _, service := range *config.DevSpace.Services {
+			if *service.Name == serviceName {
+				return service, nil
+			}
+		}
+	}
+	return nil, errors.New("Unable to find service: " + serviceName)
+}
+
+// AddService adds a service to the config
+func AddService(service *v1.ServiceConfig) error {
+	if config.DevSpace.Services == nil {
+		config.DevSpace.Services = &[]*v1.ServiceConfig{}
+	}
+	*config.DevSpace.Services = append(*config.DevSpace.Services, service)
+
+	return nil
+}
+
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
 func GetDefaultNamespace(config *v1.Config) (string, error) {
 	if config.Cluster != nil && config.Cluster.Namespace != nil {
@@ -230,24 +256,15 @@ func GetDefaultNamespace(config *v1.Config) (string, error) {
 	return "default", nil
 }
 
-// GetService returns the service referenced by serviceName
-func GetService(serviceName string) (*v1.ServiceConfig, error) {
-	if config.DevSpace.Services != nil {
-		for _, service := range *config.DevSpace.Services {
-			if *service.Name == serviceName {
-				return service, nil
-			}
-		}
+// GetCurrentCloudTarget retrieves the current cloud target from the config
+func GetCurrentCloudTarget(config *v1.Config) *string {
+	if config.Cluster == nil || config.Cluster.CloudProvider == nil || *config.Cluster.CloudProvider == "" {
+		return nil
 	}
-	return nil, errors.New("Unable to find service: " + serviceName)
-}
 
-// AddService adds a service to the config
-func AddService(service *v1.ServiceConfig) error {
-	if config.DevSpace.Services == nil {
-		config.DevSpace.Services = &[]*v1.ServiceConfig{}
+	if config.Cluster.CloudTarget == nil {
+		return String(DefaultCloudTarget)
 	}
-	*config.DevSpace.Services = append(*config.DevSpace.Services, service)
 
-	return nil
+	return config.Cluster.CloudTarget
 }

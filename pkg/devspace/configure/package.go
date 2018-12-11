@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
@@ -31,6 +32,12 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
+	}
+
+	// Configure cloud provider
+	err := cloud.Configure(true, true, log)
+	if err != nil {
+		return err
 	}
 
 	var deploymentConfig *v1.DeploymentConfig
@@ -329,6 +336,12 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	config := configutil.GetConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
+	}
+
+	// Configure cloud provider
+	err := cloud.Configure(true, true, log)
+	if err != nil {
+		return err
 	}
 
 	var deploymentConfig *v1.DeploymentConfig

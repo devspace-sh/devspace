@@ -72,36 +72,18 @@ devspace deploy https://github.com/covexo/devspace --branch test
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
-	/* if len(args) > 0 {
-		directoryName := "devspace"
-		if len(args) == 2 {
-			directoryName = args[1]
-		}
-
-		_, err := git.PlainClone(directoryName, false, &git.CloneOptions{
-			URL:           args[0],
-			Progress:      os.Stdout,
-			ReferenceName: plumbing.ReferenceName(cmd.flags.GitBranch),
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = os.Chdir(directoryName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Donef("Successfully checked out %s into %s", args[0], directoryName)
-	}*/
-
-	cloud.UseDeployTarget = true
 	log.StartFileLogging()
 
 	// Prepare the config
 	cmd.prepareConfig()
 
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
+
+	// Configure cloud provider
+	err := cloud.Configure(true, false, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
@@ -151,10 +133,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Print domain name if we use a cloud provider
-	// TODO: Change this
-	if cloud.DevSpaceURL != "" {
-		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
-		log.Info("See https://devspace-cloud.com/domain-guide for more information")
+	config := configutil.GetConfig()
+	cloudTarget := configutil.GetCurrentCloudTarget(config)
+	if cloudTarget != nil {
+		if generatedConfig != nil && generatedConfig.Cloud != nil && generatedConfig.Cloud.Targets != nil && generatedConfig.Cloud.Targets[*cloudTarget] != nil && generatedConfig.Cloud.Targets[*cloudTarget].Domain != nil {
+			log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", *generatedConfig.Cloud.Targets[*cloudTarget].Domain)
+			log.Info("See https://devspace-cloud.com/domain-guide for more information")
+		}
 	}
 
 	log.Donef("Successfully deployed!")

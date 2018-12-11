@@ -3,6 +3,7 @@ package v1
 //Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
 	CloudProvider             *string      `yaml:"cloudProvider,omitempty"`
+	CloudTarget               *string      `yaml:"cloudTarget,omitempty"`
 	CloudProviderDeployTarget *string      `yaml:"cloudProviderDeployTarget,omitempty"`
 	KubeContext               *string      `yaml:"kubeContext,omitempty"`
 	Namespace                 *string      `yaml:"namespace,omitempty"`
