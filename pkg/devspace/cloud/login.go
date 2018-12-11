@@ -10,6 +10,12 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+// LoginEndpoint is the cloud endpoint that will log you in
+const LoginEndpoint = "/login"
+
+// LoginSuccessEndpoint is the url redirected to after successful login
+const LoginSuccessEndpoint = "/loginSuccess"
+
 // EnsureLoggedIn checks if the user is logged into a certain cloud provider and if not loggs the user in
 func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log.Logger) error {
 	// Let's check if we are logged in first

@@ -9,9 +9,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// DefaultDeployTarget is the default deployment target that is written to the config.yaml during the init process
-const DefaultDeployTarget = "production"
-
 // DevSpaceCloudConfigPath holds the path to the cloud config file
 const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
 
@@ -23,12 +20,6 @@ type ProviderConfig map[string]*Provider
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
 const DevSpaceCloudProviderName = "devspace-cloud"
-
-// LoginEndpoint is the cloud endpoint that will log you in
-const LoginEndpoint = "/login"
-
-// LoginSuccessEndpoint is the url redirected to after successful login
-const LoginSuccessEndpoint = "/loginSuccess"
 
 // GraphqlEndpoint is the endpoint where to execute graphql requests
 const GraphqlEndpoint = "/v1alpha1/graphql"

@@ -24,9 +24,9 @@ type devSpaceTargetConfigQuery struct {
 				ClustersByclusterid *struct {
 					CaCert string
 					Server string
-				} `json: "clustersByclusterid"`
-			} `json: "kubecontextsBykubecontextid"`
-		} `json: "deploymenttargetssBydevspaceid"`
+				} `json:"clustersByclusterid"`
+			} `json:"kubecontextsBykubecontextid"`
+		} `json:"deploymenttargetssBydevspaceid"`
 	} `json:"DevSpaces_by_pk"`
 }
 
