@@ -317,6 +317,10 @@ func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = namespace
+
+	config.Tiller = &v1.TillerConfig{
+		Namespace: namespace,
+	}
 }
 
 func (cmd *InitCmd) addDefaultService() {

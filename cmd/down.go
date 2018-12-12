@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
@@ -21,6 +23,7 @@ type DownCmd struct {
 type DownCmdFlags struct {
 	config          string
 	configOverwrite string
+	deployment      string
 }
 
 func init() {
@@ -43,8 +46,9 @@ your project, use: devspace reset
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
+	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
+	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
 }
@@ -69,14 +73,41 @@ func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
-	deleteDevSpace(kubectl)
+	deployments := []string{}
+	if cmd.flags.deployment != "" {
+		deployments = strings.Split(cmd.flags.deployment, ",")
+		for index := range deployments {
+			deployments[index] = strings.TrimSpace(deployments[index])
+		}
+	}
+
+	deleteDevSpace(kubectl, deployments)
 }
 
-func deleteDevSpace(kubectl *kubernetes.Clientset) {
+func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 	config := configutil.GetConfig()
+	if deployments != nil && len(deployments) == 0 {
+		deployments = nil
+	}
 
 	if config.DevSpace.Deployments != nil {
 		for _, deployConfig := range *config.DevSpace.Deployments {
+			// Check if we should skip deleting deployment
+			if deployments != nil {
+				found := false
+
+				for _, value := range deployments {
+					if value == *deployConfig.Name {
+						found = true
+						break
+					}
+				}
+
+				if found == false {
+					continue
+				}
+			}
+
 			var err error
 			var deployClient deploy.Interface
 
