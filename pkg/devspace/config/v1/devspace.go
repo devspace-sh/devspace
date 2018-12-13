@@ -37,6 +37,7 @@ type PortForwardingConfig struct {
 type PortMapping struct {
 	LocalPort  *int `yaml:"localPort"`
 	RemotePort *int `yaml:"remotePort"`
+	BindAddress *string `yaml:"bindAddress"`
 }
 
 // SyncConfig defines the paths for a SyncFolder

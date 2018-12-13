@@ -81,7 +81,12 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 	for true {
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
+			//log.Error("test")
 			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
+
+			if(err != nil) {
+				log.Error(err)
+			}
 			if err == nil && tunnel != nil {
 				break
 			}
@@ -94,6 +99,8 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 			time.Sleep(tunnelCheckInterval)
 		}
 
+		log.Error(tunnel.Local)
+
 		helmOptions := []k8shelm.Option{
 			k8shelm.Host("127.0.0.1:" + strconv.Itoa(tunnel.Local)),
 			k8shelm.ConnectTimeout(int64(5 * time.Second)),
@@ -102,6 +109,10 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		client = k8shelm.NewClient(helmOptions...)
 
 		_, err = client.ListReleases(k8shelm.ReleaseListLimit(1))
+		
+		if(err != nil) {
+			log.Error(err)
+		}
 		if err == nil {
 			break
 		}

@@ -95,6 +95,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		cmd.deleteDevSpaceDeployments()
 		cmd.deleteInternalRegistry()
+		log.Error("deleting tiller")
 		cmd.deleteTiller()
 		cmd.deleteClusterRoleBinding()
 	}

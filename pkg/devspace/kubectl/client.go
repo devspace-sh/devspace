@@ -21,9 +21,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
-	"k8s.io/kubernetes/pkg/printers"
-	describe "k8s.io/kubernetes/pkg/printers/internalversion"
+	clientset "k8s.io/client-go/kubernetes"
+	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
+	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
 	"k8s.io/kubernetes/pkg/util/node"
 )
 
@@ -332,7 +332,7 @@ func DescribePod(namespace, name string) (string, error) {
 
 	podDescriber := &describe.PodDescriber{newKubectl}
 
-	return podDescriber.Describe(namespace, name, printers.DescriberSettings{ShowEvents: true})
+	return podDescriber.Describe(namespace, name, describeSettings.DescriberSettings{ShowEvents: true})
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
