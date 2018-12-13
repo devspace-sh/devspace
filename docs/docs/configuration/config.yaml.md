@@ -79,7 +79,7 @@ By default devspace will reload the build and deploy process on certain changes 
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
 - `chartPath` *string* the path where the helm chart is laying
 - `wait` *bool* wait till everything is ready after deployment (default: true)
-- `devOverwrite` *string* the path to a files that overwrites the values.yaml when using `devspace up`
+- `overwrite` *string* the path to a file that overwrites the values.yaml 
 
 ### devspace.deployments[].kubectl
 When using kubectl as deployment method, `devspace up` will use kubectl apply on the specified manifests to deploy them to the target cluster. [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl) is needed in order for this option to work.  
