@@ -179,6 +179,9 @@ func init() {
 	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Chart, "chart", "", "The helm chart to deploy")
 
 	addCmd.AddCommand(addDeploymentCmd)
+
+	// Add cloud commands
+	addCmd.AddCommand(addCloud)
 }
 
 // RunAddPackage executes the add package command logic

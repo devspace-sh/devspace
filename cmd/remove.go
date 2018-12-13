@@ -150,6 +150,9 @@ func init() {
 
 	removeDeploymentCmd.Flags().BoolVar(&cmd.deploymentFlags.RemoveAll, "all", false, "Remove all deployments")
 	removeCmd.AddCommand(removeDeploymentCmd)
+
+	// Add remove cloud cmd
+	removeCmd.AddCommand(removeCloud)
 }
 
 // RunRemoveDeployment executes the specified deployment
