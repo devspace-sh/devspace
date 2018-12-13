@@ -34,7 +34,6 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 		MaxHistory:     10,
 		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.11.0",
 		ServiceAccount: TillerServiceAccountName,
-		AutoMountServiceAccountToken: true,
 	}
 
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})

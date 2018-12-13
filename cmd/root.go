@@ -19,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Long: `With a DevSpace you can program, build and execute cloud-native applications
 	 directly inside a Kubernetes cluster. Start your DevSpace now with:
 
-	devspace madness`,
+	devspace up`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

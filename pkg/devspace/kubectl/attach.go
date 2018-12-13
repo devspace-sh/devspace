@@ -27,7 +27,6 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 		SubResource("attach")
 
 	if tty {
-		
 		t = terminal.SetupTTY(stdin, stdout)
 
 		if t.Raw {
@@ -43,7 +42,6 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 			TerminalSizeQueue: sizeQueue,
 		}
 	} else {
-		log.Error("this is not tty")
 		streamOptions = remotecommand.StreamOptions{
 			Stdin:  stdin,
 			Stdout: stdout,
@@ -65,7 +63,6 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 	}
 
 	return t.Safe(func() error {
-		log.Error("exec stream")
 		return exec.Stream(streamOptions)
 	})
 }
