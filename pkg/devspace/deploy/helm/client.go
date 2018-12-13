@@ -188,8 +188,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 			if err != nil {
 				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
-		}
-		if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
+		} else if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
 			overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.DevOverwrite)
 			if err != nil {
 				return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.DevOverwrite, err)
