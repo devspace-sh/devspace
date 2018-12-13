@@ -365,9 +365,10 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 	})
 }
 
-// ForwardPorts forwards the specified ports from the cluster to the local machine
-func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	fw, err := NewPortForwarder(kubectlClient, pod, ports, stopChan, readyChan)
+
+// ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
+func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+	fw, err := NewPortForwarder(kubectlClient, pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
 	}
@@ -375,8 +376,8 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 	return fw.ForwardPorts()
 }
 
-// NewPortForwarder creates a new port forwarder object
-func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+// NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
+func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
 	config, err := GetClientConfig()
 	if err != nil {
 		return nil, err
@@ -395,7 +396,9 @@ func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports
 
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, logFile, logFile)
+	
+	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, logFile, logFile)
+
 	if err != nil {
 		return nil, err
 	}

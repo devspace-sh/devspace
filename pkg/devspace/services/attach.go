@@ -50,6 +50,7 @@ func StartAttach(client *kubernetes.Clientset, serviceNameOverride, containerNam
 	go func() {
 		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, containerName, true, nil, os.Stdout, os.Stderr)
 		if err != nil {
+			log.Error(err)
 			if _, ok := err.(kubectlExec.CodeExitError); ok == false {
 				interrupt <- fmt.Errorf("Unable to start attach session: %v", err)
 				return
