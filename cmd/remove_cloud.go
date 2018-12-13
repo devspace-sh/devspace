@@ -71,7 +71,11 @@ func (cmd *RemoveCloudCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args 
 		}
 
 		parts := strings.Split(u.Hostname(), ".")
-		providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
+		if len(parts) >= 2 {
+			providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
+		} else {
+			providerName = u.Hostname()
+		}
 	}
 
 	// Get provider configuration

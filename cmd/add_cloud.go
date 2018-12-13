@@ -71,7 +71,11 @@ func (cmd *AddCloudCmd) RunAddCloudProvider(cobraCmd *cobra.Command, args []stri
 		}
 
 		parts := strings.Split(u.Hostname(), ".")
-		providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
+		if len(parts) >= 2 {
+			providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
+		} else {
+			providerName = u.Hostname()
+		}
 	}
 
 	// Get provider configuration
