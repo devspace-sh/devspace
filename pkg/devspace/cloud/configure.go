@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -169,10 +170,14 @@ func updateKubeConfig(contextName string, targetConfig *generated.DevSpaceTarget
 	if err != nil {
 		return err
 	}
+	caCert, err := base64.StdEncoding.DecodeString(targetConfig.CaCert)
+	if err != nil {
+		return err
+	}
 
 	cluster := api.NewCluster()
 	cluster.Server = targetConfig.Server
-	cluster.CertificateAuthorityData = []byte(targetConfig.CaCert)
+	cluster.CertificateAuthorityData = caCert
 
 	authInfo := api.NewAuthInfo()
 	authInfo.Token = targetConfig.ServiceAccountToken
