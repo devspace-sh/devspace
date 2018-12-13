@@ -103,7 +103,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		client = k8shelm.NewClient(helmOptions...)
 
 		_, err = client.ListReleases(k8shelm.ReleaseListLimit(1))
-		
+
 		if err == nil {
 			break
 		}

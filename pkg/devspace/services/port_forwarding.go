@@ -59,7 +59,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 
 					for index, value := range *portForwarding.PortMappings {
 						ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
-						if(value.BindAddress == nil) {
+						if value.BindAddress == nil {
 							addresses[index] = "127.0.0.1"
 						} else {
 							addresses[index] = *value.BindAddress
@@ -67,8 +67,6 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 					}
 
 					readyChan := make(chan struct{})
-
-					
 
 					pf, err := kubectl.NewPortForwarder(client, pod, ports, addresses, make(chan struct{}), readyChan)
 					if err != nil {

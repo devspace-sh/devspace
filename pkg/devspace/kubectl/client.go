@@ -16,14 +16,14 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	clientset "k8s.io/client-go/kubernetes"
-	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
+	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	"k8s.io/kubernetes/pkg/util/node"
 )
 
@@ -365,7 +365,6 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 	})
 }
 
-
 // ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
 func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
 	fw, err := NewPortForwarder(kubectlClient, pod, ports, addresses, stopChan, readyChan)
@@ -396,7 +395,7 @@ func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports
 
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	
+
 	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, logFile, logFile)
 
 	if err != nil {
