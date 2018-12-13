@@ -178,7 +178,17 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 			return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", valuesPath, err)
 		}
 
-		if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
+		if d.DeploymentConfig.Helm.Overwrite != nil {
+			overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.Overwrite)
+			if err != nil {
+				return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.Overwrite, err)
+			}
+
+			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
+			if err != nil {
+				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
+			}
+		} else if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
 			overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.DevOverwrite)
 			if err != nil {
 				return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.DevOverwrite, err)
