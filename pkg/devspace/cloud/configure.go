@@ -15,6 +15,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// DevSpaceNameValidationRegEx is the devsapace name validation regex
+var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-z0-9]{3,32}$")
+
 // Configure will alter the cluster configuration in the config
 func Configure(useKubeContext, dry bool, log log.Logger) error {
 	dsConfig := configutil.GetConfig()
@@ -60,12 +63,13 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 		}
 
 		devSpaceName := filepath.Base(dir)
-		reg, err := regexp.Compile("[^a-zA-Z0-9]+")
-		if err != nil {
-			return errors.Wrap(err, "cloud configure")
-		}
+		reg := regexp.MustCompile("[^a-zA-Z0-9]+")
 
 		devSpaceName = reg.ReplaceAllString(devSpaceName, "")
+		if DevSpaceNameValidationRegEx.MatchString(devSpaceName) == false {
+			devSpaceName = "devspace"
+		}
+
 		devSpaceID, err := provider.CreateDevSpace(devSpaceName)
 		if err != nil {
 			return err
