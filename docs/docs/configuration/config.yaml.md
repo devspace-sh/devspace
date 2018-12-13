@@ -43,6 +43,7 @@ A [.devspace/config.yaml](#) contains any public/shared configuration for runnin
 The `cluster` field specifies:
 - `kubeContext` *string* the kubernetes context to use (if omitted and apiServer is not defined the current kubectl context is used)
 - `cloudProvider` *string* the cloud provider to use to automatically create a devspace namespace (currently only 'devspace-cloud' is supported)
+- `cloudTarget` *string* the cloud target to use (default: "dev")
 - `namespace` *string* the default namespace that should be used (will override the namespace in the kubernetes context)
 - `apiServer` *string* Kubernetes API-Server URL
 - `caCert` *string* CaCert for the Kubernetes API-Server in PEM format

@@ -4,7 +4,7 @@ package v1
 type Cluster struct {
 	CloudProvider             *string      `yaml:"cloudProvider,omitempty"`
 	CloudTarget               *string      `yaml:"cloudTarget,omitempty"`
-	CloudProviderDeployTarget *string      `yaml:"cloudProviderDeployTarget,omitempty"`
+	CloudProviderDeployTarget *string      `yaml:"cloudProviderDeployTarget,omitempty"` // DEPRECATED
 	KubeContext               *string      `yaml:"kubeContext,omitempty"`
 	Namespace                 *string      `yaml:"namespace,omitempty"`
 	APIServer                 *string      `yaml:"apiServer,omitempty"`
