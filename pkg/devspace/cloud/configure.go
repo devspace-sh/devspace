@@ -28,6 +28,9 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 		return nil
 	}
 
+	log.StartWait("Retrieving cloud context...")
+	defer log.StopWait()
+
 	// Get provider configuration
 	providerConfig, err := ParseCloudConfig()
 	if err != nil {

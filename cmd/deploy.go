@@ -195,7 +195,7 @@ func (cmd *DeployCmd) prepareConfig() {
 		}
 	}
 	if cmd.flags.CloudTarget != "" {
-		config.Cluster.CloudProviderDeployTarget = &cmd.flags.CloudTarget
+		config.Cluster.CloudTarget = &cmd.flags.CloudTarget
 	}
 
 	// Set defaults now
