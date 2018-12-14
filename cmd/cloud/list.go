@@ -1,29 +1,13 @@
-package cmd
+package cloud
 
 import (
 	"strconv"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
+	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
-
-var listCloud = &cobra.Command{
-	Use:   "cloud",
-	Short: "List cloud provider specifics",
-	Long: `
-#######################################################
-############### devspace list cloud ###################
-#######################################################
-You can list devspaces or devspace targets:
-
-* devspace list cloud devspaces
-* devspace list cloud targets
-#######################################################
-`,
-	Args: cobra.NoArgs,
-}
 
 // ListCloudCmd holds the information for the devspace add cloud commands
 type ListCloudCmd struct {
@@ -46,6 +30,22 @@ func init() {
 	cmd := &ListCloudCmd{
 		DevSpacesFlags: &ListCloudDevspacesFlags{},
 		TargetsFlags:   &ListCloudTargetsFlags{},
+	}
+
+	listCloud := &cobra.Command{
+		Use:   "list",
+		Short: "List cloud provider specifics",
+		Long: `
+	#######################################################
+	############### devspace cloud list ###################
+	#######################################################
+	You can list devspaces or devspace targets:
+	
+	* devspace cloud list devspaces
+	* devspace cloud list targets
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
 	}
 
 	listCloudDevSpaces := &cobra.Command{
@@ -73,14 +73,14 @@ func init() {
 		Short: "Lists all devspace targets",
 		Long: `
 	#######################################################
-	########### devspace list cloud targets ###############
+	########### devspace cloud list targets ###############
 	#######################################################
 	List all cloud targets
 
 	Example:
-	devspace list cloud targets
-	devspace list cloud targets --name=dev
-	devspace list cloud targets --devspace-id=1
+	devspace cloud list targets
+	devspace cloud list targets --name=dev
+	devspace cloud list targets --devspace-id=1
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -90,11 +90,13 @@ func init() {
 	listCloudTargets.Flags().StringVar(&cmd.TargetsFlags.Name, "name", "", "Target name to show (default: all)")
 	listCloudTargets.Flags().StringVar(&cmd.TargetsFlags.DevSpaceID, "devspace-id", "", "DevSpace id to use")
 	listCloud.AddCommand(listCloudTargets)
+
+	Cmd.AddCommand(listCloud)
 }
 
 // RunListCloudDevspaces executes the devspace list cloud devspaces functionality
 func (cmd *ListCloudCmd) RunListCloudDevspaces(cobraCmd *cobra.Command, args []string) {
-	provider, err := cloud.GetCurrentProvider(log.GetInstance())
+	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}
@@ -110,7 +112,7 @@ func (cmd *ListCloudCmd) RunListCloudDevspaces(cobraCmd *cobra.Command, args []s
 
 // RunListCloudTargets executes the devspace list cloud targets functionality
 func (cmd *ListCloudCmd) RunListCloudTargets(cobraCmd *cobra.Command, args []string) {
-	provider, err := cloud.GetCurrentProvider(log.GetInstance())
+	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}

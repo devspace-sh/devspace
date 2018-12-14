@@ -108,6 +108,8 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 			break
 		}
 
+		log.Info(err)
+
 		tunnel.Close()
 
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval

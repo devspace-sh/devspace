@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/covexo/devspace/cmd/cloud"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -181,7 +182,7 @@ func init() {
 	addCmd.AddCommand(addDeploymentCmd)
 
 	// Add cloud commands
-	addCmd.AddCommand(addCloud)
+	addCmd.AddCommand(cloud.Cmd)
 }
 
 // RunAddPackage executes the add package command logic

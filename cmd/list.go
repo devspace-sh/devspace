@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	cloudCmd "github.com/covexo/devspace/cmd/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
@@ -108,7 +109,7 @@ func init() {
 	listCmd.AddCommand(listServiceCmd)
 
 	// Add cloud commands
-	listCmd.AddCommand(listCloud)
+	listCmd.AddCommand(cloudCmd.Cmd)
 }
 
 // RunListPackage runs the list sync command logic

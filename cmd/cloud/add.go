@@ -1,29 +1,14 @@
-package cmd
+package cloud
 
 import (
 	"net/url"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
+	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
-
-var addCloud = &cobra.Command{
-	Use:   "cloud",
-	Short: "Add cloud provider specifics",
-	Long: `
-#######################################################
-################ devspace add cloud ###################
-#######################################################
-You can add a cloud provider with:
-
-* devspace add cloud provider 
-#######################################################
-`,
-	Args: cobra.NoArgs,
-}
 
 // AddCloudCmd holds the information for the devspace add cloud commands
 type AddCloudCmd struct {
@@ -40,17 +25,32 @@ func init() {
 		ProviderFlags: &AddCloudProviderFlags{},
 	}
 
+	addCloud := &cobra.Command{
+		Use:   "add",
+		Short: "Add cloud provider specifics",
+		Long: `
+	#######################################################
+	################ devspace cloud add ###################
+	#######################################################
+	You can add a cloud provider with:
+	
+	* devspace cloud add provider 
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
+	}
+
 	addCloudProvider := &cobra.Command{
 		Use:   "provider",
 		Short: "Adds a new cloud provider to the configuration",
 		Long: `
 	#######################################################
-	########### devspace add cloud provider ###############
+	########### devspace cloud add provider ###############
 	#######################################################
 	Add a new cloud provider.
 
 	Example:
-	devspace add cloud provider http://cli.devspace-cloud.com
+	devspace cloud add provider http://cli.devspace-cloud.com
 	#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -59,6 +59,8 @@ func init() {
 
 	addCloudProvider.Flags().StringVar(&cmd.ProviderFlags.Name, "name", "", "Cloud provider name to use")
 	addCloud.AddCommand(addCloudProvider)
+
+	Cmd.AddCommand(addCloud)
 }
 
 // RunAddCloudProvider executes the devspace add cloud provider functionality
@@ -79,17 +81,17 @@ func (cmd *AddCloudCmd) RunAddCloudProvider(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get provider configuration
-	providerConfig, err := cloud.ParseCloudConfig()
+	providerConfig, err := cloudpkg.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
 
-	providerConfig[providerName] = &cloud.Provider{
+	providerConfig[providerName] = &cloudpkg.Provider{
 		Name: providerName,
 		Host: args[0],
 	}
 
-	err = cloud.SaveCloudConfig(providerConfig)
+	err = cloudpkg.SaveCloudConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
 	}

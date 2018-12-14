@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	cloudCmd "github.com/covexo/devspace/cmd/cloud"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -152,7 +153,7 @@ func init() {
 	removeCmd.AddCommand(removeDeploymentCmd)
 
 	// Add remove cloud cmd
-	removeCmd.AddCommand(removeCloud)
+	removeCmd.AddCommand(cloudCmd.Cmd)
 }
 
 // RunRemoveDeployment executes the specified deployment

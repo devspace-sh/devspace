@@ -1,31 +1,16 @@
-package cmd
+package cloud
 
 import (
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
+	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
-
-var removeCloud = &cobra.Command{
-	Use:   "cloud",
-	Short: "Remove cloud provider specifics",
-	Long: `
-#######################################################
-############### devspace remove cloud #################
-#######################################################
-You can remove a cloud provider with:
-
-* devspace remove cloud provider 
-#######################################################
-`,
-	Args: cobra.NoArgs,
-}
 
 // RemoveCloudCmd holds the information for the devspace remove cloud commands
 type RemoveCloudCmd struct {
@@ -50,17 +35,32 @@ func init() {
 		DevSpaceFlags: &RemoveCloudDevSpaceFlags{},
 	}
 
+	removeCloud := &cobra.Command{
+		Use:   "remove",
+		Short: "Remove cloud provider specifics",
+		Long: `
+	#######################################################
+	############### devspace cloud remove #################
+	#######################################################
+	You can remove a cloud provider with:
+	
+	* devspace cloud remove provider 
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
+	}
+
 	removeCloudProvider := &cobra.Command{
 		Use:   "provider",
 		Short: "Removes a cloud provider from the configuration",
 		Long: `
 	#######################################################
-	######### devspace remove cloud provider ##############
+	######### devspace cloud remove provider ##############
 	#######################################################
 	Removes a cloud provider.
 
 	Example:
-	devspace remove cloud provider http://cli.devspace-cloud.com
+	devspace cloud remove provider http://cli.devspace-cloud.com
 	#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -75,14 +75,14 @@ func init() {
 		Short: "Removes a cloud devspace",
 		Long: `
 	#######################################################
-	######### devspace remove cloud devspace ##############
+	######### devspace cloud remove devspace ##############
 	#######################################################
 	Removes a cloud devspace.
 
 	Example:
-	devspace remove cloud devspace
-	devspace remove cloud devspace --devspace-id=1
-	devspace remove cloud devspace --all
+	devspace cloud remove devspace
+	devspace cloud remove devspace --devspace-id=1
+	devspace cloud remove devspace --all
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -92,11 +92,13 @@ func init() {
 	removeCloudDevSpace.Flags().StringVar(&cmd.DevSpaceFlags.DevSpaceID, "devspace-id", "", "DevSpace id to use")
 	removeCloudDevSpace.Flags().BoolVar(&cmd.DevSpaceFlags.All, "all", false, "Delete all devspaces")
 	removeCloud.AddCommand(removeCloudDevSpace)
+
+	Cmd.AddCommand(removeCloud)
 }
 
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
 func (cmd *RemoveCloudCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) {
-	provider, err := cloud.GetCurrentProvider(log.GetInstance())
+	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}
@@ -164,7 +166,7 @@ func (cmd *RemoveCloudCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args 
 	}
 
 	// Get provider configuration
-	providerConfig, err := cloud.ParseCloudConfig()
+	providerConfig, err := cloudpkg.ParseCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
@@ -175,7 +177,7 @@ func (cmd *RemoveCloudCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args 
 
 	delete(providerConfig, providerName)
 
-	err = cloud.SaveCloudConfig(providerConfig)
+	err = cloudpkg.SaveCloudConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
 	}
