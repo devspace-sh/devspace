@@ -17,7 +17,7 @@ import (
 )
 
 // DevSpaceNameValidationRegEx is the devsapace name validation regex
-var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-z0-9]{3,32}$")
+var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9-]{3,32}$")
 
 // Configure will alter the cluster configuration in the config
 func Configure(useKubeContext, dry bool, log log.Logger) error {
