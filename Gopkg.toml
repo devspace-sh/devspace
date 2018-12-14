@@ -9,7 +9,7 @@
 [[constraint]]
   name = "github.com/docker/docker"
   source = "https://github.com/moby/moby"
-  revision = "f711f2bdc356143a44a760285f1e2fa8e204917d"
+  revision = "62d80835abe3f7bc54c70f5e7bad638eaf3596be"
 
 [[constraint]]
   name = "github.com/docker/cli"
