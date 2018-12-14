@@ -106,6 +106,9 @@ func init() {
 	}
 
 	listCmd.AddCommand(listServiceCmd)
+
+	// Add cloud commands
+	listCmd.AddCommand(listCloud)
 }
 
 // RunListPackage runs the list sync command logic

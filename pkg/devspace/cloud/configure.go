@@ -19,32 +19,51 @@ import (
 // DevSpaceNameValidationRegEx is the devsapace name validation regex
 var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9-]{3,32}$")
 
-// Configure will alter the cluster configuration in the config
-func Configure(useKubeContext, dry bool, log log.Logger) error {
+// GetCurrentProvider returns the current specified cloud provider
+func GetCurrentProvider(log log.Logger) (*Provider, error) {
 	dsConfig := configutil.GetConfig()
 
 	// Don't update or configure anything if we don't use a cloud provider
 	if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
-		return nil
+		return nil, nil
 	}
 
-	log.StartWait("Retrieving cloud context...")
+	log.StartWait("Logging into cloud provider...")
 	defer log.StopWait()
 
 	// Get provider configuration
 	providerConfig, err := ParseCloudConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Ensure user is logged in
 	err = EnsureLoggedIn(providerConfig, *dsConfig.Cluster.CloudProvider, log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Get provider config
 	provider := providerConfig[*dsConfig.Cluster.CloudProvider]
+
+	return provider, nil
+}
+
+// Configure will alter the cluster configuration in the config
+func Configure(useKubeContext, dry bool, log log.Logger) error {
+	dsConfig := configutil.GetConfig()
+
+	// Get provider and login
+	provider, err := GetCurrentProvider(log)
+	if err != nil {
+		return err
+	}
+	if provider == nil {
+		return nil
+	}
+
+	log.StartWait("Retrieving cloud context...")
+	defer log.StopWait()
 
 	// Get generated config
 	generatedConfig, err := generated.LoadConfig()

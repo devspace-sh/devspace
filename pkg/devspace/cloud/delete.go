@@ -14,6 +14,19 @@ type managerDeleteDevSpaceMutation struct {
 
 // DeleteDevSpace deletes the devspace from the cloud provider
 func (p *Provider) DeleteDevSpace(devSpaceID int) error {
+	// Delete kube contexts first
+	targetConfigs, err := p.GetDevSpaceTargetConfigs(devSpaceID)
+	if err != nil {
+		return err
+	}
+
+	for _, targetConfig := range targetConfigs {
+		err = DeleteKubeContext(targetConfig.Namespace)
+		if err != nil {
+			return err
+		}
+	}
+
 	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
 	req := graphql.NewRequest(`
 		mutation($devSpaceID: Int!) {
@@ -28,7 +41,7 @@ func (p *Provider) DeleteDevSpace(devSpaceID int) error {
 	response := managerDeleteDevSpaceMutation{}
 
 	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
+	err = graphQlClient.Run(ctx, req, &response)
 	if err != nil {
 		return err
 	}
@@ -37,14 +50,14 @@ func (p *Provider) DeleteDevSpace(devSpaceID int) error {
 }
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
-func DeleteKubeContext(devSpaceID string) error {
+func DeleteKubeContext(namespace string) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
 
 	hasChanged := false
-	kubeContext := DevSpaceKubeContextName + "-" + devSpaceID
+	kubeContext := DevSpaceKubeContextName + "-" + namespace
 
 	if _, ok := config.Clusters[kubeContext]; ok {
 		delete(config.Clusters, kubeContext)

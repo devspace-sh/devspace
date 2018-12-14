@@ -18,6 +18,7 @@ type Config struct {
 
 // DevSpaceTargetConfig holds the information to connect to a devspace target
 type DevSpaceTargetConfig struct {
+	TargetName          string
 	Namespace           string
 	ServiceAccountToken string
 	CaCert              string

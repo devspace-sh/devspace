@@ -145,34 +145,9 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 			err = provider.DeleteDevSpace(generatedConfig.Cloud.DevSpaceID)
 			if err != nil {
 				log.Failf("Error deleting devspace: %v", err)
-			} else {
-				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
-
-				err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
-				if err != nil {
-					log.Failf("Error deleting kube context: %v", err)
-				}
 			}
-		}
-	} else {
-		cmd.deleteCloudKubeContext()
-	}
-}
 
-func (cmd *ResetCmd) deleteCloudKubeContext() {
-	config := configutil.GetConfig()
-	shouldCloudContextRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould the cloud kube context be removed (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	if shouldCloudContextRemoved {
-		err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
-		if err != nil {
-			log.Failf("Error deleting kube context: %v", err)
-		} else {
-			log.Done("Successfully deleted kube context")
+			log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
 		}
 	}
 }

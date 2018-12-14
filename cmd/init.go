@@ -134,8 +134,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Name:      configutil.String(configutil.DefaultDevspaceDeploymentName),
 				Namespace: configutil.String(""),
 				Helm: &v1.HelmConfig{
-					ChartPath:    configutil.String("./chart"),
-					DevOverwrite: configutil.String("./chart/dev-overwrite.yaml"),
+					ChartPath: configutil.String("./chart"),
+					Overwrite: configutil.String("./chart/dev-overwrite.yaml"),
 				},
 			},
 		}
