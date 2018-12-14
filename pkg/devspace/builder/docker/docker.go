@@ -110,15 +110,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 	// And canonicalize dockerfile name to a platform-independent one
 	authConfigs, _ := dockerclient.GetAllAuthConfigs()
-	relDockerfile, err = archive.CanonicalTarNameForPath(relDockerfile)
-	if err != nil {
-		return err
-	}
+
+	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
 
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
 	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
 		ExcludePatterns: excludes,
-		ChownOpts:       &idtools.IDPair{UID: 0, GID: 0},
+		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
 		return err
