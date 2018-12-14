@@ -88,5 +88,10 @@ func RemoveDeployment(removeAll bool, name string) error {
 		config.DevSpace.Deployments = &newDeployments
 	}
 
+	err := configutil.SaveConfig()
+	if err != nil {
+		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+	}
+
 	return nil
 }
