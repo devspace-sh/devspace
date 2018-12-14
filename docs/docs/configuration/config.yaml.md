@@ -120,6 +120,7 @@ To access applications running inside a DevSpace, the DevSpace CLI allows to con
 PortMapping:
 - `localPort` *string* the local port on the machine 
 - `remotePort` *string* the remote pod port
+- `bindAddress` *string* the address to bind to, optional - binds to localhost only if not present, use `0.0.0.0` for all interfaces
 
 In the example above, you could open `localhost:8080` inside your browser to see the output of the application listening on port 80 within your DevSpace.
 
