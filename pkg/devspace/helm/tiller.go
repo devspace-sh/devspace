@@ -30,10 +30,11 @@ repositories:
 func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrade bool) error {
 	tillerNamespace := *config.Tiller.Namespace
 	tillerOptions := &helminstaller.Options{
-		Namespace:      tillerNamespace,
-		MaxHistory:     10,
-		ImageSpec:      "gcr.io/kubernetes-helm/tiller:v2.12.0",
-		ServiceAccount: TillerServiceAccountName,
+		Namespace:                    tillerNamespace,
+		MaxHistory:                   10,
+		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.0",
+		ServiceAccount:               TillerServiceAccountName,
+		AutoMountServiceAccountToken: true,
 	}
 
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
