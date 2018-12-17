@@ -127,7 +127,7 @@
   name = "github.com/Nvveen/Gotty"
   source = "https://github.com/ijc25/Gotty.git"
   revision = "a8b993ba6abdb0e0c12b0125c603323a71c7790c"
-  
+
 [prune]
   go-tests = true
   unused-packages = true

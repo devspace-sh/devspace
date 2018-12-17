@@ -953,15 +953,15 @@
   revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
 
 [[projects]]
-  digest = "1:6a4a11ba764a56d2758899ec6f3848d24698d48442ebce85ee7a3f63284526cd"
+  digest = "1:d707dbc1330c0ed177d4642d6ae102d5e2c847ebd0eb84562d0dc4f024531cfc"
   name = "github.com/spf13/afero"
   packages = [
     ".",
     "mem",
   ]
   pruneopts = "UT"
-  revision = "d40851caa0d747393da1ffb28f7f9d8b4eeffebd"
-  version = "v1.1.2"
+  revision = "a5d6946387efe7d64d09dcba68cdd523dc1273a3"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:08d65904057412fc0270fc4812a1c90c594186819243160dc779a402d4b6d0bc"
@@ -1109,7 +1109,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7a9d92fa5c5d60cf985bff5c764212d390b45f463722152d094f4ebc8e7e647a"
+  digest = "1:644d5952e8a7a5b366fdf27e31fa624fc483558f4381358f26d1274ca361151b"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -1124,7 +1124,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "610586996380ceef02dd726cc09df7e00a3f8e56"
+  revision = "e147a9138326bc0e9d4e179541ffd8af41cff8a9"
 
 [[projects]]
   branch = "master"
@@ -1142,7 +1142,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0d539810be960f22381c660cd82f96c2092da780c5967444736300572e6b9540"
+  digest = "1:858be0d8876c26607117088ab36dce4febfb5f4bfbaa5e02e40feae4cb0d8066"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -1150,7 +1150,7 @@
     "windows/registry",
   ]
   pruneopts = "UT"
-  revision = "73d4af5aa059c8c2dfcf25aad4efd6ce7bc9adc1"
+  revision = "4d1cda033e0619309c606fc686de3adcf599539e"
 
 [[projects]]
   digest = "1:28756bf526c1af662d24519f2fa7abca7237bebb06e3e02941b2b6e5b6ceb7b9"
