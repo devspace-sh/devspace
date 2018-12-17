@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -17,7 +18,7 @@ import (
 )
 
 // DevSpaceNameValidationRegEx is the devsapace name validation regex
-var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9-]{3,32}$")
+var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,32}[a-zA-Z0-9]$")
 
 // GetCurrentProvider returns the current specified cloud provider
 func GetCurrentProvider(log log.Logger) (*Provider, error) {
@@ -86,9 +87,12 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 		}
 
 		devSpaceName := filepath.Base(dir)
-		reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+		devSpaceName = strings.TrimSpace(devSpaceName)
 
-		devSpaceName = reg.ReplaceAllString(devSpaceName, "")
+		devSpaceName = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(devSpaceName, "-")
+		devSpaceName = regexp.MustCompile("-+").ReplaceAllString(devSpaceName, "-")
+		devSpaceName = strings.Trim(devSpaceName, "-")
+
 		if DevSpaceNameValidationRegEx.MatchString(devSpaceName) == false {
 			devSpaceName = "devspace"
 		}
