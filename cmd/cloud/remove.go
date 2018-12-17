@@ -134,7 +134,7 @@ func (cmd *RemoveCloudCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args 
 	devSpaceID, err := strconv.Atoi(cmd.DevSpaceFlags.DevSpaceID)
 	if err != nil {
 		if generatedConfig.Cloud == nil {
-			log.Fatal("No devspace id provided. Please use --devspace-id to specify the devspace id")
+			log.Fatal("No devspace id provided. Please use --id to specify the devspace id")
 		}
 
 		devSpaceID = generatedConfig.Cloud.DevSpaceID

@@ -129,7 +129,7 @@ func (cmd *ListCloudCmd) RunListCloudTargets(cobraCmd *cobra.Command, args []str
 	devSpaceID, err := strconv.Atoi(cmd.TargetsFlags.DevSpaceID)
 	if err != nil {
 		if generatedConfig.Cloud == nil {
-			log.Fatal("No devspace id provided. Please use --devspace-id to specify the devspace id")
+			log.Fatal("No devspace id provided. Please use --id to specify the devspace id")
 		}
 
 		devSpaceID = generatedConfig.Cloud.DevSpaceID
