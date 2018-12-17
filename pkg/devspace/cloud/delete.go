@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/machinebox/graphql"
@@ -23,7 +24,7 @@ func (p *Provider) DeleteDevSpace(devSpaceID int) error {
 	for _, targetConfig := range targetConfigs {
 		err = DeleteKubeContext(targetConfig.Namespace)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error deleting kube context: %v", err)
 		}
 	}
 

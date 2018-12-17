@@ -81,7 +81,7 @@ func init() {
 
 	Example:
 	devspace cloud remove devspace
-	devspace cloud remove devspace --devspace-id=1
+	devspace cloud remove devspace --id=1
 	devspace cloud remove devspace --all
 	#######################################################
 	`,
@@ -89,7 +89,7 @@ func init() {
 		Run:  cmd.RunRemoveCloudDevSpace,
 	}
 
-	removeCloudDevSpace.Flags().StringVar(&cmd.DevSpaceFlags.DevSpaceID, "devspace-id", "", "DevSpace id to use")
+	removeCloudDevSpace.Flags().StringVar(&cmd.DevSpaceFlags.DevSpaceID, "id", "", "DevSpace id to use")
 	removeCloudDevSpace.Flags().BoolVar(&cmd.DevSpaceFlags.All, "all", false, "Delete all devspaces")
 	removeCloud.AddCommand(removeCloudDevSpace)
 
@@ -140,9 +140,21 @@ func (cmd *RemoveCloudCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args 
 		devSpaceID = generatedConfig.Cloud.DevSpaceID
 	}
 
+	log.StartWait("Delete devspace")
+	defer log.StopWait()
+
 	err = provider.DeleteDevSpace(devSpaceID)
 	if err != nil {
 		log.Fatalf("Error deleting devspace: %v", err)
+	}
+
+	if generatedConfig.Cloud != nil && generatedConfig.Cloud.DevSpaceID == devSpaceID {
+		generatedConfig.Cloud = nil
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Donef("Deleted devspace %d", devSpaceID)

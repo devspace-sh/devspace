@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/covexo/devspace/cmd/cloud"
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
 	"github.com/covexo/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
@@ -25,7 +27,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if upgrade.GetVersion() != "" {
+	if upgrade.GetVersion() != "" && strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
 		rootCmd.Version = upgrade.GetVersion()
 		newerVersion, err := upgrade.CheckForNewerVersion()
 
@@ -42,6 +44,8 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.AddCommand(cloud.Cmd)
+
 	cobra.OnInitialize(initConfig)
 }
 

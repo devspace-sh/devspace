@@ -80,7 +80,7 @@ func init() {
 	Example:
 	devspace cloud list targets
 	devspace cloud list targets --name=dev
-	devspace cloud list targets --devspace-id=1
+	devspace cloud list targets --id=1
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -88,7 +88,7 @@ func init() {
 	}
 
 	listCloudTargets.Flags().StringVar(&cmd.TargetsFlags.Name, "name", "", "Target name to show (default: all)")
-	listCloudTargets.Flags().StringVar(&cmd.TargetsFlags.DevSpaceID, "devspace-id", "", "DevSpace id to use")
+	listCloudTargets.Flags().StringVar(&cmd.TargetsFlags.DevSpaceID, "id", "", "DevSpace id to use")
 	listCloud.AddCommand(listCloudTargets)
 
 	Cmd.AddCommand(listCloud)

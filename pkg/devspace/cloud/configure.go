@@ -118,9 +118,13 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 			return errors.New("No devspace target configured")
 		}
 
-		err = provider.CreateDevSpaceTarget(generatedConfig.Cloud.DevSpaceID, *target)
+		// Check if it is there remotely
+		_, err := provider.GetDevSpaceTargetConfig(generatedConfig.Cloud.DevSpaceID, *target)
 		if err != nil {
-			return errors.Wrap(err, "cloud configure")
+			err = provider.CreateDevSpaceTarget(generatedConfig.Cloud.DevSpaceID, *target)
+			if err != nil {
+				return errors.Wrap(err, "cloud configure")
+			}
 		}
 	}
 
