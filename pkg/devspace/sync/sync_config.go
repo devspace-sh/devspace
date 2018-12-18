@@ -304,7 +304,7 @@ func (s *SyncConfig) initialSync() error {
 
 func (s *SyncConfig) diffServerClient(absPath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation, dontSend bool) error {
 	relativePath := getRelativeFromFullPath(absPath, s.WatchPath)
-	stat, err := os.Lstat(absPath)
+	stat, err := os.Stat(absPath)
 
 	// We skip files that are suddenly not there anymore
 	if err != nil {
@@ -312,19 +312,6 @@ func (s *SyncConfig) diffServerClient(absPath string, sendChanges *[]*fileInform
 	}
 
 	delete(downloadChanges, relativePath)
-
-	// Retrieve the real stat instead of the symlink one
-	if stat.Mode()&os.ModeSymlink != 0 {
-		stat, err = s.upstream.AddSymlink(absPath)
-		if err != nil {
-			return err
-		}
-		if stat == nil {
-			return nil
-		}
-
-		s.Logf("Symlink at %s", absPath)
-	}
 
 	// Exclude changes on the upload exclude list
 	if s.uploadIgnoreMatcher != nil {
@@ -343,6 +330,25 @@ func (s *SyncConfig) diffServerClient(absPath string, sendChanges *[]*fileInform
 			s.fileIndex.fileMapMutex.Unlock()
 
 			dontSend = true
+		}
+	}
+
+	// Check for symlinks
+	if dontSend == false {
+		// Retrieve the real stat instead of the symlink one
+		lstat, err := os.Lstat(absPath)
+		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+			stat, err = s.upstream.AddSymlink(relativePath, absPath)
+			if err != nil {
+				return err
+			}
+			if stat == nil {
+				return nil
+			}
+
+			s.Logf("Symlink at %s", absPath)
+		} else if err != nil {
+			return nil
 		}
 	}
 

@@ -184,34 +184,11 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*fi
 }
 
 func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relativePath, fullpath string) (*fileInformation, error) {
-	stat, err := os.Lstat(fullpath)
+	stat, err := os.Stat(fullpath)
 
 	// File / Folder exist -> Create File or Folder
 	// if File / Folder does not exist, we create a new remove change
 	if err == nil {
-		// Is symbolic link
-		if stat.Mode()&os.ModeSymlink != 0 {
-			_, symlinkExists := s.upstream.symlinks[fullpath]
-
-			// Add symlink to map
-			stat, err = s.upstream.AddSymlink(fullpath)
-			if err != nil {
-				return nil, errors.Trace(err)
-			}
-			if stat == nil {
-				return nil, nil
-			}
-
-			// Only crawl if symlink wasn't there before and it is a directory
-			if symlinkExists == false && stat.IsDir() {
-				// Crawl all linked files & folders
-				err = s.upstream.symlinks[fullpath].Crawl()
-				if err != nil {
-					return nil, errors.Trace(err)
-				}
-			}
-		}
-
 		// Exclude changes on the upload exclude list
 		if s.uploadIgnoreMatcher != nil {
 			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
@@ -228,6 +205,32 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 
 				return nil, nil
 			}
+		}
+
+		// Check if symbolic link
+		lstat, err := os.Lstat(fullpath)
+		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+			_, symlinkExists := s.upstream.symlinks[fullpath]
+
+			// Add symlink to map
+			stat, err = s.upstream.AddSymlink(relativePath, fullpath)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+			if stat == nil {
+				return nil, nil
+			}
+
+			// Only crawl if symlink wasn't there before and it is a directory
+			if symlinkExists == false && stat.IsDir() {
+				// Crawl all linked files & folders
+				err = s.upstream.symlinks[fullpath].Crawl()
+				if err != nil {
+					return nil, errors.Trace(err)
+				}
+			}
+		} else if err != nil {
+			return nil, nil
 		}
 
 		if shouldUpload(relativePath, stat, s, false) {
@@ -255,7 +258,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 	return nil, nil
 }
 
-func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
+func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error) {
 	// Get real path
 	targetPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
@@ -269,9 +272,16 @@ func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
 		return nil, nil // fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
 	}
 
-	// Check if we run into a recursive symlink
+	// Check if we already added the symlink
 	if _, ok := u.symlinks[absPath]; ok {
 		return stat, nil
+	}
+
+	// Check if symlink is ignored
+	if u.config.ignoreMatcher != nil {
+		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+			return nil, nil
+		}
 	}
 
 	symlink, err := NewSymlink(u, absPath, targetPath, stat.IsDir())
