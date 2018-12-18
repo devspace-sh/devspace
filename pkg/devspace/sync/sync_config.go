@@ -323,7 +323,7 @@ func (s *SyncConfig) diffServerClient(absPath string, sendChanges *[]*fileInform
 			return nil
 		}
 
-		log.Infof("Symlink at %s", absPath)
+		s.Logf("Symlink at %s", absPath)
 	}
 
 	// Exclude changes on the upload exclude list

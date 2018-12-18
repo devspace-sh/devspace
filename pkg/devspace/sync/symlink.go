@@ -3,6 +3,7 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/watch"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -55,6 +56,8 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) 
 	}
 
 	symlink.watcher = watcher
+
+	symlink.watcher.PollInterval = time.Millisecond * 500
 	symlink.watcher.Start()
 
 	return symlink, nil

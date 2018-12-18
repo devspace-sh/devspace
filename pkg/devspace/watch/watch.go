@@ -14,10 +14,11 @@ type Callback func(changed []string, deleted []string) error
 
 // Watcher is the struct that contains the watching information
 type Watcher struct {
-	Paths    []string
-	FileMap  map[string]os.FileInfo
-	Callback Callback
-	Log      log.Logger
+	Paths        []string
+	PollInterval time.Duration
+	FileMap      map[string]os.FileInfo
+	Callback     Callback
+	Log          log.Logger
 
 	started       bool
 	startedMutext sync.Mutex
@@ -27,11 +28,12 @@ type Watcher struct {
 // New watches a given glob paths array for changes
 func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 	watcher := &Watcher{
-		Paths:    paths,
-		Callback: callback,
-		FileMap:  make(map[string]os.FileInfo),
-		Log:      log,
-		stopChan: make(chan bool),
+		Paths:        paths,
+		PollInterval: time.Second,
+		Callback:     callback,
+		FileMap:      make(map[string]os.FileInfo),
+		Log:          log,
+		stopChan:     make(chan bool),
 	}
 
 	// Initialize filemap
@@ -63,7 +65,7 @@ func (w *Watcher) Start() {
 			select {
 			case <-w.stopChan:
 				break Outer
-			case <-time.After(time.Second):
+			case <-time.After(w.PollInterval):
 				changed, deleted, err := w.Update()
 				if err != nil {
 					w.Log.Errorf("Error during watcher update: %v", err)
