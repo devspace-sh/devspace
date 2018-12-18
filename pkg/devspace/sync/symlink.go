@@ -103,6 +103,5 @@ func (s *Symlink) Crawl() error {
 
 // Stop stops watching on the watching path
 func (s *Symlink) Stop() {
-	log.Infof("Stop symlink at %s", s.SymlinkPath)
 	s.watcher.Stop()
 }
