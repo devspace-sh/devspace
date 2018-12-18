@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	"github.com/juju/errors"
@@ -60,7 +59,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 	baseName := path.Dir(outFileName)
 
 	// Check if newer file is there and then don't override?
-	stat, err := os.Lstat(outFileName)
+	stat, err := os.Stat(outFileName)
 
 	if err == nil {
 		if roundMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {
@@ -220,24 +219,7 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileIn
 		return nil
 	}
 
-	// We skip symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
-		// Resolve link
-		target, err := filepath.EvalSymlinks(absFilepath)
-		if err != nil {
-			config.Logf("[Upstream] Couldn't evaluate symlink file %s: %s\n", absFilepath, err)
-			return nil
-		}
-
-		stat, err = os.Lstat(target)
-		if err != nil {
-			config.Logf("[Upstream] Couldn't stat symlink target %s -> %s: %v\n", absFilepath, target, err)
-			return nil
-		}
-	}
-
 	fileInformation := createFileInformationFromStat(relativePath, stat, config)
-
 	if stat.IsDir() {
 		// Recursively tar folder
 		return tarFolder(basePath, fileInformation, writtenFiles, stat, tw, config)

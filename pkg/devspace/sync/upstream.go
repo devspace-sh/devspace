@@ -263,7 +263,7 @@ func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
 		return nil, nil // fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
 	}
 
-	stat, err := os.Lstat(targetPath)
+	stat, err := os.Stat(targetPath)
 	if err != nil {
 		u.config.Logf("Warning: stating symlink %s: %v", targetPath, err)
 		return nil, nil // fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
