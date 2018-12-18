@@ -23,7 +23,7 @@ func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k
 }
 
 func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string, testing bool) error {
-	stat, err := os.Stat(LocalPath)
+	stat, err := os.Lstat(LocalPath)
 
 	if err != nil {
 		return errors.Trace(err)

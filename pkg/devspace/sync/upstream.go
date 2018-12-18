@@ -1,10 +1,12 @@
 package sync
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +23,16 @@ type upstream struct {
 	interrupt chan bool
 	config    *SyncConfig
 
+	symlinks map[string]*Symlink
+
 	stdinPipe  io.WriteCloser
 	stdoutPipe io.ReadCloser
 	stderrPipe io.ReadCloser
 }
 
 func (u *upstream) start() error {
-	u.events = make(chan notify.EventInfo, 6000) // High buffer size so we don't miss any fsevents if there are a lot of changes
+	u.events = make(chan notify.EventInfo, 5000) // High buffer size so we don't miss any fsevents if there are a lot of changes
+	u.symlinks = make(map[string]*Symlink)
 	u.interrupt = make(chan bool, 1)
 
 	err := u.startShell()
@@ -118,7 +123,12 @@ func (u *upstream) mainLoop() error {
 					}
 				}
 
-				changes = append(changes, u.getfileInformationFromEvent(events)...)
+				fileInformations, err := u.getfileInformationFromEvent(events)
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				changes = append(changes, fileInformations...)
 			case <-time.After(time.Millisecond * 600):
 				break
 			}
@@ -133,12 +143,12 @@ func (u *upstream) mainLoop() error {
 
 		err := u.applyChanges(changes)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 	}
 }
 
-func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fileInformation {
+func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*fileInformation, error) {
 	u.config.fileIndex.fileMapMutex.Lock()
 	defer u.config.fileIndex.fileMapMutex.Unlock()
 
@@ -155,7 +165,10 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fil
 			relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
 
 			// Determine what kind of change we got (Create or Remove)
-			newChange := evaluateChange(u.config, fileMap, relativePath, fullpath)
+			newChange, err := evaluateChange(u.config, fileMap, relativePath, fullpath)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
 
 			if newChange != nil {
 				changes = append(changes, newChange)
@@ -163,15 +176,35 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) []*fil
 		}
 	}
 
-	return changes
+	return changes, nil
 }
 
-func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relativePath, fullpath string) *fileInformation {
-	stat, err := os.Stat(fullpath)
+func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relativePath, fullpath string) (*fileInformation, error) {
+	stat, err := os.Lstat(fullpath)
 
 	// File / Folder exist -> Create File or Folder
 	// if File / Folder does not exist, we create a new remove change
 	if err == nil {
+		// Is symbolic link
+		if stat.Mode()&os.ModeSymlink != 0 {
+			_, symlinkExists := s.upstream.symlinks[fullpath]
+
+			// Add symlink to map
+			stat, err = s.upstream.AddSymlink(fullpath)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			// Only crawl if symlink wasn't there before
+			if symlinkExists == false {
+				// Crawl all linked files & folders
+				err = s.upstream.symlinks[fullpath].Crawl()
+				if err != nil {
+					return nil, errors.Trace(err)
+				}
+			}
+		}
+
 		// Exclude changes on the upload exclude list
 		if s.uploadIgnoreMatcher != nil {
 			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
@@ -186,7 +219,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 					}
 				}
 
-				return nil
+				return nil, nil
 			}
 		}
 
@@ -197,18 +230,58 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 				Mtime:       roundMtime(stat.ModTime()),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
-			}
+			}, nil
 		}
 	} else {
+		// Remove symlinks
+		s.upstream.RemoveSymlinks(fullpath)
+
+		// Check if we should remove path remote
 		if shouldRemoveRemote(relativePath, s) {
 			// New Remove Task
 			return &fileInformation{
 				Name: relativePath,
-			}
+			}, nil
 		}
 	}
 
-	return nil
+	return nil, nil
+}
+
+func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
+	// Get real path
+	targetPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
+	}
+
+	stat, err := os.Lstat(targetPath)
+	if err != nil {
+		return nil, fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
+	}
+
+	// Check if we run into a recursive symlink
+	if _, ok := u.symlinks[absPath]; ok {
+		return stat, nil
+	}
+
+	symlink, err := NewSymlink(u, absPath, targetPath, stat.IsDir())
+	if err != nil {
+		return nil, fmt.Errorf("Cannot create symlink object for %s: %v", absPath, err)
+	}
+
+	u.symlinks[absPath] = symlink
+
+	return stat, nil
+}
+
+func (u *upstream) RemoveSymlinks(absPath string) {
+	for key, symlink := range u.symlinks {
+		if strings.Index(key, absPath) == 0 {
+			symlink.Stop()
+			delete(u.symlinks, key)
+		}
+	}
 }
 
 func (u *upstream) applyChanges(changes []*fileInformation) error {

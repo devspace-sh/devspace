@@ -59,7 +59,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 	baseName := path.Dir(outFileName)
 
 	// Check if newer file is there and then don't override?
-	stat, err := os.Stat(outFileName)
+	stat, err := os.Lstat(outFileName)
 
 	if err == nil {
 		if roundMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {

@@ -155,7 +155,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	}
 
 	// Only delete if mtime and size did not change
-	stat, err := os.Stat(absFilepath)
+	stat, err := os.Lstat(absFilepath)
 	if err != nil {
 		if os.IsNotExist(err) == false {
 			s.Logf("Skip %s because stat returned %v", absFilepath, err)
