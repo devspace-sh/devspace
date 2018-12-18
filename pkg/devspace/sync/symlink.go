@@ -76,15 +76,6 @@ func (s *Symlink) rewritePath(path string) string {
 
 // Crawl resolves the symlink and sends an event for each file in the target path
 func (s *Symlink) Crawl() error {
-	if s.IsDir == false {
-		s.upstream.events <- &symlinkEvent{
-			event: notify.Create,
-			path:  s.rewritePath(s.TargetPath),
-		}
-
-		return nil
-	}
-
 	return filepath.Walk(s.TargetPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

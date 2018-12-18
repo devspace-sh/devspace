@@ -15,6 +15,7 @@ import (
 	"github.com/juju/ratelimit"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/rjeczalik/notify"
 )
 
@@ -194,15 +195,20 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
+			if stat == nil {
+				return nil, nil
+			}
 
-			// Only crawl if symlink wasn't there before
-			if symlinkExists == false {
+			// Only crawl if symlink wasn't there before and it is a directory
+			if symlinkExists == false && stat.IsDir() {
 				// Crawl all linked files & folders
 				err = s.upstream.symlinks[fullpath].Crawl()
 				if err != nil {
 					return nil, errors.Trace(err)
 				}
 			}
+
+			log.Infof("Symlink created/changed at %s", fullpath)
 		}
 
 		// Exclude changes on the upload exclude list
@@ -252,12 +258,14 @@ func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
 	// Get real path
 	targetPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
+		u.config.Logf("Warning: resolving symlink of %s: %v", absPath, err)
+		return nil, nil // fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
 	}
 
 	stat, err := os.Lstat(targetPath)
 	if err != nil {
-		return nil, fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
+		u.config.Logf("Warning: stating symlink %s: %v", targetPath, err)
+		return nil, nil // fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
 	}
 
 	// Check if we run into a recursive symlink
@@ -277,7 +285,9 @@ func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
 
 func (u *upstream) RemoveSymlinks(absPath string) {
 	for key, symlink := range u.symlinks {
-		if strings.Index(key, absPath) == 0 {
+		if key == absPath || strings.Index(strings.Replace(key, "\\", "/", -1)+"/", strings.Replace(absPath, "\\", "/", -1)) == 0 {
+			log.Infof("Symlink deleted at %s", key)
+
 			symlink.Stop()
 			delete(u.symlinks, key)
 		}
@@ -285,38 +295,30 @@ func (u *upstream) RemoveSymlinks(absPath string) {
 }
 
 func (u *upstream) applyChanges(changes []*fileInformation) error {
-	var files []*fileInformation
+	var creates []*fileInformation
+	var removes []*fileInformation
 
-	for index, element := range changes {
+	// First we cluster changes into remove and create changes
+	for _, element := range changes {
 		// We determine if a change is a remove or create change by setting
 		// the mtime to 0 in the fileinformation for remove changes
 		if element.Mtime > 0 {
-			files = append(files, element)
-
-			// Look ahead
-			if len(changes) <= index+1 || changes[index+1].Mtime == 0 {
-				err := u.applyCreates(files)
-
-				if err != nil {
-					return errors.Trace(err)
-				}
-
-				files = make([]*fileInformation, 0, 10)
-			}
+			creates = append(creates, element)
 		} else {
-			files = append(files, element)
-
-			// Look ahead
-			if len(changes) <= index+1 || changes[index+1].Mtime > 0 {
-				err := u.applyRemoves(files)
-
-				if err != nil {
-					return errors.Trace(err)
-				}
-
-				files = make([]*fileInformation, 0, 10)
-			}
+			removes = append(removes, element)
 		}
+	}
+
+	// Apply removes
+	err := u.applyRemoves(removes)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Apply creates
+	err = u.applyCreates(creates)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	u.config.Logf("[Upstream] Successfully processed %d change(s)", len(changes))
@@ -348,7 +350,7 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 	}
 
 	// Print changes
-	if u.config.Verbose {
+	if u.config.Verbose || len(writtenFiles) <= 3 {
 		for _, c := range writtenFiles {
 			if c.IsDirectory {
 				u.config.Logf("[Upstream] Create Folder %s", c.Name)
@@ -471,7 +473,7 @@ func (u *upstream) applyRemoves(files []*fileInformation) error {
 				}
 
 				// Print changes
-				if u.config.Verbose {
+				if u.config.Verbose || len(files) <= 3 {
 					u.config.Logf("[Upstream] Remove %s", relativePath)
 				}
 			}
