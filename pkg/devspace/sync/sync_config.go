@@ -433,6 +433,10 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 func (s *SyncConfig) Stop(fatalError error) {
 	s.stopOnce.Do(func() {
 		if s.upstream != nil && s.upstream.interrupt != nil {
+			for _, symlink := range s.upstream.symlinks {
+				symlink.Stop()
+			}
+
 			close(s.upstream.interrupt)
 
 			if s.upstream.stdinPipe != nil {

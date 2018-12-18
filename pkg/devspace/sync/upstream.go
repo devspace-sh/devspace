@@ -15,7 +15,6 @@ import (
 	"github.com/juju/ratelimit"
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/rjeczalik/notify"
 )
 
@@ -108,7 +107,11 @@ func (u *upstream) mainLoop() error {
 			select {
 			case <-u.interrupt:
 				return nil
-			case event := <-u.events:
+			case event, ok := <-u.events:
+				if ok == false {
+					return nil
+				}
+
 				events := make([]notify.EventInfo, 0, 10)
 				events = append(events, event)
 
@@ -207,8 +210,6 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 					return nil, errors.Trace(err)
 				}
 			}
-
-			log.Infof("Symlink created/changed at %s", fullpath)
 		}
 
 		// Exclude changes on the upload exclude list
@@ -285,9 +286,7 @@ func (u *upstream) AddSymlink(absPath string) (os.FileInfo, error) {
 
 func (u *upstream) RemoveSymlinks(absPath string) {
 	for key, symlink := range u.symlinks {
-		if key == absPath || strings.Index(strings.Replace(key, "\\", "/", -1)+"/", strings.Replace(absPath, "\\", "/", -1)) == 0 {
-			log.Infof("Symlink deleted at %s", key)
-
+		if key == absPath || strings.Index(filepath.ToSlash(key)+"/", filepath.ToSlash(absPath)) == 0 {
 			symlink.Stop()
 			delete(u.symlinks, key)
 		}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/watch"
@@ -283,15 +284,19 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 
 	config := configutil.GetConfig()
 	exitChan := make(chan error)
-	autoReloadPaths := watch.GetPaths()
+	autoReloadPaths := GetPaths()
 
 	// Start watcher if we have at least one auto reload path
 	if len(autoReloadPaths) > 0 {
-		watcher, err := watch.New(autoReloadPaths, func() error {
-			log.Info("Change detected, will reload in 2 seconds")
-			time.Sleep(time.Second * 2)
+		var once sync.Once
+		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
+			once.Do(func() {
+				log.Info("Change detected, will reload in 2 seconds")
+				time.Sleep(time.Second * 2)
 
-			exitChan <- &reloadError{}
+				exitChan <- &reloadError{}
+			})
+
 			return nil
 		}, log)
 		if err != nil {
@@ -299,6 +304,7 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		}
 
 		watcher.Start()
+		defer watcher.Stop()
 	}
 
 	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
@@ -320,6 +326,59 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
 	return <-exitChan
+}
+
+// GetPaths retrieves the watch paths from the config object
+func GetPaths() []string {
+	paths := make([]string, 0, 1)
+	config := configutil.GetConfig()
+
+	// Add the deploy manifest paths
+	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
+		for _, deployConf := range *config.DevSpace.Deployments {
+			if deployConf.AutoReload != nil && deployConf.AutoReload.Disabled != nil && *deployConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
+				chartPath := *deployConf.Helm.ChartPath
+				if chartPath[len(chartPath)-1] != '/' {
+					chartPath += "/"
+				}
+
+				paths = append(paths, chartPath+"**")
+			} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
+				for _, manifestPath := range *deployConf.Kubectl.Manifests {
+					paths = append(paths, *manifestPath)
+				}
+			}
+		}
+	}
+
+	// Add the dockerfile paths
+	if config.Images != nil {
+		for _, imageConf := range *config.Images {
+			if imageConf.AutoReload != nil && imageConf.AutoReload.Disabled != nil && *imageConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			dockerfilePath := "./Dockerfile"
+			if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
+				dockerfilePath = *imageConf.Build.DockerfilePath
+			}
+
+			paths = append(paths, dockerfilePath)
+		}
+	}
+
+	// Add the additional paths
+	if config.DevSpace != nil && config.DevSpace.AutoReload != nil && config.DevSpace.AutoReload.Paths != nil {
+		for _, path := range *config.DevSpace.AutoReload.Paths {
+			paths = append(paths, *path)
+		}
+	}
+
+	return paths
 }
 
 type reloadError struct {

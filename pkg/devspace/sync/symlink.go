@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/watch"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/rjeczalik/notify"
 )
 
@@ -29,7 +31,7 @@ type Symlink struct {
 
 	IsDir bool
 
-	events   chan notify.EventInfo
+	watcher  *watch.Watcher
 	upstream *upstream
 }
 
@@ -41,33 +43,39 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) 
 		IsDir:       isDir,
 		upstream:    upstream,
 	}
-	watchPath := targetPath
 
+	watchPath := filepath.ToSlash(targetPath)
 	if isDir {
-		watchPath += "/..."
-		symlink.events = make(chan notify.EventInfo, 100)
-	} else {
-		symlink.events = make(chan notify.EventInfo, 10)
+		watchPath += "/**"
 	}
 
-	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-	err := notify.Watch(watchPath, symlink.events, notify.All)
+	watcher, err := watch.New([]string{watchPath}, symlink.handleChange, log.Discard)
 	if err != nil {
 		return nil, err
 	}
 
-	go symlink.loop()
+	symlink.watcher = watcher
+	symlink.watcher.Start()
 
 	return symlink, nil
 }
 
-func (s *Symlink) loop() {
-	for event := range s.events {
+func (s *Symlink) handleChange(changed []string, deleted []string) error {
+	for _, path := range changed {
 		s.upstream.events <- &symlinkEvent{
-			event: event.Event(),
-			path:  s.rewritePath(event.Path()),
+			path:  s.rewritePath(path),
+			event: notify.Create,
 		}
 	}
+
+	for _, path := range deleted {
+		s.upstream.events <- &symlinkEvent{
+			path:  s.rewritePath(path),
+			event: notify.Remove,
+		}
+	}
+
+	return nil
 }
 
 func (s *Symlink) rewritePath(path string) string {
@@ -92,6 +100,6 @@ func (s *Symlink) Crawl() error {
 
 // Stop stops watching on the watching path
 func (s *Symlink) Stop() {
-	notify.Stop(s.events)
-	close(s.events)
+	log.Infof("Stop symlink at %s", s.SymlinkPath)
+	s.watcher.Stop()
 }
