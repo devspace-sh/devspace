@@ -85,7 +85,6 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 
 	err = <-interrupt
 	upgradeRoundTripper.Close()
-
 	return err
 }
 
