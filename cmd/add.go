@@ -13,6 +13,8 @@ type AddCmd struct {
 	portFlags       *addPortCmdFlags
 	packageFlags    *addPackageFlags
 	deploymentFlags *addDeploymentFlags
+	imageFlags      *addImageFlags
+	serviceFlags    *addServiceFlags
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -47,6 +49,19 @@ type addDeploymentFlags struct {
 	Chart     string
 }
 
+type addImageFlags struct {
+	Name           string
+	Tag            string
+	ContextPath    string
+	DockerfilePath string
+	BuildEngine    string
+}
+
+type addServiceFlags struct {
+	LabelSelector string
+	Namespace     string
+}
+
 func init() {
 	cmd := &AddCmd{
 		flags:           &AddCmdFlags{},
@@ -54,6 +69,8 @@ func init() {
 		portFlags:       &addPortCmdFlags{},
 		packageFlags:    &addPackageFlags{},
 		deploymentFlags: &addDeploymentFlags{},
+		imageFlags:      &addImageFlags{},
+		serviceFlags:    &addServiceFlags{},
 	}
 
 	addCmd := &cobra.Command{
@@ -179,6 +196,59 @@ func init() {
 	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Chart, "chart", "", "The helm chart to deploy")
 
 	addCmd.AddCommand(addDeploymentCmd)
+
+	addImageCmd := &cobra.Command{
+		Use:   "image",
+		Short: "Add an image",
+		Long: ` 
+	#######################################################
+	############# devspace add image ######################
+	#######################################################
+	Add a new image to your devspace
+	
+	Examples:
+	devspace add image my-image --name=mmustermann/devspaceimage2
+	devspace add image my-image --name=mmustermann/devspaceimage2 --tag=alpine
+	devspace add image my-image --name=mmustermann/devspaceimage2 --context=C:/Path/To/Context
+	devspace add image my-image --name=mmustermann/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
+	devspace add image my-image --name=mmustermann/devspaceimage2 --buildengine=docker
+	devspace add image my-image --name=mmustermann/devspaceimage2 --buildengine=kaniko
+	#######################################################
+	`,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddImage,
+	}
+
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.Name, "name", "", "The name of the image")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.Tag, "tag", "", "The tag of the image")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.ContextPath, "context", "", "The path of the images' context")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
+
+	addCmd.AddCommand(addImageCmd)
+
+	addServiceCmd := &cobra.Command{
+		Use:   "service",
+		Short: "Add a service",
+		Long: ` 
+	#######################################################
+	############# devspace add service ####################
+	#######################################################
+	Add a new service to your devspace
+	
+	Examples:
+	devspace add service my-service --namespace=my-namespace
+	devspace add service my-service --labelSelector=environment=production,tier=frontend
+	#######################################################
+	`,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddService,
+	}
+
+	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.Namespace, "namespace", "", "The namespace of the service")
+	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "labelSelector", "", "The label selector of the service")
+
+	addCmd.AddCommand(addServiceCmd)
 }
 
 // RunAddPackage executes the add package command logic
@@ -213,4 +283,30 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// RunAddImage executes the add image command logic
+func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
+	if cmd.imageFlags.Name == "" {
+		log.Fatal(`Missing required parameter "name"`)
+		return
+	}
+
+	err := configure.AddImage(args[0], cmd.imageFlags.Name, cmd.imageFlags.Tag, cmd.imageFlags.ContextPath, cmd.imageFlags.DockerfilePath, cmd.imageFlags.BuildEngine)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added image %s", args[0])
+}
+
+// RunAddService executes the add image command logic
+func (cmd *AddCmd) RunAddService(cobraCmd *cobra.Command, args []string) {
+
+	err := configure.AddService(args[0], cmd.serviceFlags.LabelSelector, cmd.serviceFlags.Namespace)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added new service %v", args[0])
 }
