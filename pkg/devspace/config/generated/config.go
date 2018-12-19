@@ -10,9 +10,10 @@ import (
 
 // Config specifies the runtime config struct
 type Config struct {
-	ChartHashs             map[string]string `yaml:"chartHashs"`
-	DockerLatestTimestamps map[string]int64  `yaml:"dockerLatestTimestamps"`
-	ImageTags              map[string]string `yaml:"imageTags"`
+	ChartHashs           map[string]string `yaml:"chartHashs"`
+	DockerfileTimestamps map[string]int64  `yaml:"dockerfileTimestamps"`
+	DockerContextPaths   map[string]string `yaml:"dockerContextPaths"`
+	ImageTags            map[string]string `yaml:"imageTags"`
 }
 
 // ConfigPath is the relative generated config path
@@ -25,9 +26,10 @@ func LoadConfig() (*Config, error) {
 	data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
 	if err != nil {
 		return &Config{
-			DockerLatestTimestamps: make(map[string]int64),
-			ImageTags:              make(map[string]string),
-			ChartHashs:             make(map[string]string),
+			DockerfileTimestamps: make(map[string]int64),
+			DockerContextPaths:   make(map[string]string),
+			ImageTags:            make(map[string]string),
+			ChartHashs:           make(map[string]string),
 		}, nil
 	}
 
@@ -40,8 +42,11 @@ func LoadConfig() (*Config, error) {
 	if config.ChartHashs == nil {
 		config.ChartHashs = make(map[string]string)
 	}
-	if config.DockerLatestTimestamps == nil {
-		config.DockerLatestTimestamps = make(map[string]int64)
+	if config.DockerfileTimestamps == nil {
+		config.DockerfileTimestamps = make(map[string]int64)
+	}
+	if config.DockerContextPaths == nil {
+		config.DockerContextPaths = make(map[string]string)
 	}
 	if config.ImageTags == nil {
 		config.ImageTags = make(map[string]string)

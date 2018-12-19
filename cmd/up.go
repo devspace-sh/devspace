@@ -234,10 +234,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []stri
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
-				// Force building & redeploying
-				flags.build = true
-				flags.deploy = true
-
+				// Trigger rebuild & redeploy
 				return buildAndDeploy(client, flags, args)
 			}
 
