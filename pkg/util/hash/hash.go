@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -42,7 +43,9 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 
 	// Fix the source path to work with long path names. This is a no-op
 	// on platforms other than Windows.
-	srcPath = longpath.AddPrefix(srcPath)
+	if runtime.GOOS == "windows" {
+		srcPath = longpath.AddPrefix(srcPath)
+	}
 
 	pm, err := fileutils.NewPatternMatcher(excludePatterns)
 	if err != nil {

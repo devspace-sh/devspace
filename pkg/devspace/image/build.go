@@ -247,7 +247,7 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 
 	hash, err := hash.DirectoryExcludes(contextDir, excludes)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
 	}
 
 	// When user has not used -b or --build flags
