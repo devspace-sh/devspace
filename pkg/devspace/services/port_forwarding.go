@@ -47,7 +47,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 					labels = append(labels, key+"="+*value)
 				}
 
-				log.StartWait("Waiting for pods to become running")
+				log.StartWait("Port-Forwarding: Waiting for pods...")
 				pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace, time.Second*120)
 				log.StopWait()
 

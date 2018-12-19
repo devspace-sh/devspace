@@ -45,7 +45,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	}
 
 	// Get first running pod
-	log.StartWait("Waiting for pods to become running")
+	log.StartWait("Terminal: Waiting for pods...")
 	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace, time.Second*120)
 	log.StopWait()
 	if err != nil {

@@ -16,9 +16,12 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/covexo/devspace/pkg/util/hash"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/archive"
 )
 
 // BuildAll builds all images
@@ -62,17 +65,21 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 	}
 
-	absoluteDockerfilePath, err := filepath.Abs(dockerfilePath)
-	if err != nil {
-		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
-	}
+	if needRebuild, err := shouldRebuild(generatedConfig, imageConf, contextPath, dockerfilePath, forceRebuild); needRebuild || err != nil {
+		if err != nil {
+			return false, fmt.Errorf("Error during shouldRebuild check: %v", err)
+		}
 
-	contextPath, err = filepath.Abs(contextPath)
-	if err != nil {
-		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
-	}
+		absoluteDockerfilePath, err := filepath.Abs(dockerfilePath)
+		if err != nil {
+			return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
+		}
 
-	if shouldRebuild(generatedConfig, imageConf, dockerfilePath, forceRebuild) {
+		contextPath, err = filepath.Abs(contextPath)
+		if err != nil {
+			return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
+		}
+
 		var imageBuilder builder.Interface
 		rebuild = true
 
@@ -159,18 +166,19 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			displayRegistryURL = *registryConf.URL
 		}
 
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
-		_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
-		log.StopWait()
+		if imageConf.SkipPush == nil || *imageConf.SkipPush == false {
+			log.StartWait("Authenticating (" + displayRegistryURL + ")")
+			_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
+			log.StopWait()
 
-		if err != nil {
-			return false, fmt.Errorf("Error during image registry authentication: %v", err)
+			if err != nil {
+				return false, fmt.Errorf("Error during image registry authentication: %v", err)
+			}
+
+			log.Done("Authentication successful (" + displayRegistryURL + ")")
 		}
 
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
-
 		buildOptions := &types.ImageBuildOptions{}
-
 		if imageConf.Build != nil && imageConf.Build.Options != nil {
 			if imageConf.Build.Options.BuildArgs != nil {
 				buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
@@ -215,22 +223,42 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	return rebuild, nil
 }
 
-func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, dockerfilePath string, forceRebuild bool) bool {
+func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, contextPath, dockerfilePath string, forceRebuild bool) (bool, error) {
 	mustRebuild := true
 
+	// Get dockerfile timestamp
 	dockerfileInfo, err := os.Stat(dockerfilePath)
 	if err != nil {
-		log.Warnf("Dockerfile %s missing: %v", dockerfilePath, err)
-		mustRebuild = false
-	} else {
-		// When user has not used -b or --build flags
-		if forceRebuild == false {
-			// only rebuild Docker image when Dockerfile has changed since latest build
-			mustRebuild = dockerfileInfo.ModTime().Unix() != runtimeConfig.DockerLatestTimestamps[dockerfilePath]
-		}
-
-		runtimeConfig.DockerLatestTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
+		return false, fmt.Errorf("Dockerfile %s missing: %v", dockerfilePath, err)
 	}
 
-	return mustRebuild
+	// Hash context path
+	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
+	if err != nil {
+		return false, err
+	}
+
+	excludes, err := build.ReadDockerignore(contextDir)
+	if err != nil {
+		return false, fmt.Errorf("Error reading .dockerignore: %v", err)
+	}
+
+	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+
+	hash, err := hash.DirectoryExcludes(contextDir, excludes)
+	if err != nil {
+		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
+	}
+
+	// When user has not used -b or --build flags
+	if forceRebuild == false {
+		// only rebuild Docker image when Dockerfile or context has changed since latest build
+		mustRebuild = runtimeConfig.DockerfileTimestamps[dockerfilePath] != dockerfileInfo.ModTime().Unix() || runtimeConfig.DockerContextPaths[contextPath] != hash
+	}
+
+	runtimeConfig.DockerfileTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
+	runtimeConfig.DockerContextPaths[contextPath] = hash
+
+	return mustRebuild, nil
 }

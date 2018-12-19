@@ -318,16 +318,20 @@ func (u *upstream) applyChanges(changes []*fileInformation) error {
 		}
 	}
 
-	// Apply removes
-	err := u.applyRemoves(removes)
-	if err != nil {
-		return errors.Trace(err)
+	if len(removes) > 0 {
+		// Apply removes
+		err := u.applyRemoves(removes)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
-	// Apply creates
-	err = u.applyCreates(creates)
-	if err != nil {
-		return errors.Trace(err)
+	if len(creates) > 0 {
+		// Apply creates
+		err := u.applyCreates(creates)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	u.config.Logf("[Upstream] Successfully processed %d change(s)", len(changes))
