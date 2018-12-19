@@ -166,18 +166,19 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 			displayRegistryURL = *registryConf.URL
 		}
 
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
-		_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
-		log.StopWait()
+		if imageConf.SkipPush == nil || *imageConf.SkipPush == false {
+			log.StartWait("Authenticating (" + displayRegistryURL + ")")
+			_, err = imageBuilder.Authenticate(username, password, len(username) == 0)
+			log.StopWait()
 
-		if err != nil {
-			return false, fmt.Errorf("Error during image registry authentication: %v", err)
+			if err != nil {
+				return false, fmt.Errorf("Error during image registry authentication: %v", err)
+			}
+
+			log.Done("Authentication successful (" + displayRegistryURL + ")")
 		}
 
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
-
 		buildOptions := &types.ImageBuildOptions{}
-
 		if imageConf.Build != nil && imageConf.Build.Options != nil {
 			if imageConf.Build.Options.BuildArgs != nil {
 				buildOptions.BuildArgs = *imageConf.Build.Options.BuildArgs
