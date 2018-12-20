@@ -217,6 +217,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			"--single-snapshot",
 		}
 
+		log.Infof("Add BuildArgs")
+		for key, value := range options.BuildArgs {
+			log.Infof("BuildArg $%v %v", key, *value)
+			newKanikoArg := fmt.Sprintf("%v=%v", key, *value)
+			kanikoBuildCmd = append(kanikoBuildCmd, "--build-arg", newKanikoArg)
+		}
+
 		if !options.NoCache {
 			kanikoBuildCmd = append(kanikoBuildCmd, "--cache=true", "--cache-repo="+b.PreviousImageTag)
 		}
