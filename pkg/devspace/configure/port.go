@@ -16,6 +16,10 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	var labelSelectorMap map[string]*string
 	var err error
 
+	if labelSelector != "" && serviceName != "" {
+		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
+	}
+
 	if labelSelector == "" {
 		config := configutil.GetConfig()
 
@@ -149,6 +153,12 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 			return
 		}
 	}
+
+	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
+	if serviceName != "" {
+		labelSelectorMap = nil
+	}
+
 	portMap := append(*config.DevSpace.Ports, &v1.PortForwardingConfig{
 		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,

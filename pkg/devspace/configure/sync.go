@@ -22,6 +22,10 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	var labelSelectorMap map[string]*string
 	var err error
 
+	if labelSelector != "" && serviceName != "" {
+		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
+	}
+
 	if labelSelector == "" {
 		config := configutil.GetConfig()
 
@@ -69,6 +73,11 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 	if containerPath[0] != '/' {
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
+	}
+
+	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
+	if serviceName != "" {
+		labelSelectorMap = nil
 	}
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
