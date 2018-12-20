@@ -94,6 +94,10 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 			}
 		}
 
+		if kubeConfig.Contexts[activeContext] == nil {
+			return nil, fmt.Errorf("Active Context doesn't exist")
+		}
+
 		// Change context namespace
 		if config.Cluster != nil && config.Cluster.Namespace != nil {
 			kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace
