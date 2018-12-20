@@ -210,7 +210,6 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 }
 
 func getServiceWithName(services []*v1.ServiceConfig, name string) *v1.ServiceConfig {
-
 	for _, service := range services {
 		if *service.Name == name {
 			return service
@@ -218,5 +217,4 @@ func getServiceWithName(services []*v1.ServiceConfig, name string) *v1.ServiceCo
 	}
 
 	return nil
-
 }

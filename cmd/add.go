@@ -121,7 +121,7 @@ func init() {
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
-	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Service, "service", "", "The kubernetes service")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Service, "service", "", "The devspace config service")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")
@@ -145,7 +145,7 @@ func init() {
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
-	addPortCmd.Flags().StringVar(&cmd.portFlags.Service, "service", "", "The kubernetes service")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.Service, "service", "", "The devspace config service")
 
 	addCmd.AddCommand(addPortCmd)
 
