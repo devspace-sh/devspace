@@ -85,6 +85,8 @@ func init() {
 	
 	* Sync paths (sync)
 	* Forwarded ports (port)
+	* Docker images  (image)
+	* Kubernetes Service (service)
 	#######################################################
 	`,
 		Args: cobra.NoArgs,

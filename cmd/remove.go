@@ -71,6 +71,8 @@ func init() {
 	* Forwarded ports (port)
 	* Deployment (deployment)
 	* Helm Packages (package)
+	* Docker Images (image)
+	* Kubernetes Services (service)
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
