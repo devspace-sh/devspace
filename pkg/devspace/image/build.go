@@ -215,7 +215,6 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		generatedConfig.ImageTags[imageName] = imageTag
 
 		log.Done("Done building and pushing image '" + imageName + "'")
-
 	} else {
 		log.Infof("Skip building image '%s'", imageName)
 	}

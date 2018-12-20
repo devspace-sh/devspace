@@ -314,7 +314,7 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		return services.StartTerminal(client, flags.service, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
 	}
 
-	log.Info("Will now try to attach to a running devspace pod...")
+	log.Info("Will now try to print the logs of a running devspace pod...")
 
 	// Start attaching to a running devspace pod
 	err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
@@ -324,7 +324,7 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 			return err
 		}
 
-		log.Infof("Couldn't attach to a running devspace pod: %v", err)
+		log.Infof("Couldn't print logs of running devspace pod: %v", err)
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
