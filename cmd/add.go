@@ -264,6 +264,8 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added the package")
 }
 
 // RunAddDeployment executes the add deployment command logic
@@ -282,6 +284,8 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}
+
+	log.Donef("Successfully added sync between local path %v and container path %v", cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath)
 }
 
 // RunAddPort executes the add port command logic
@@ -290,11 +294,12 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added port %v", args[0])
 }
 
 // RunAddImage executes the add image command logic
 func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
-
 	err := configure.AddImage(args[0], cmd.imageFlags.Name, cmd.imageFlags.Tag, cmd.imageFlags.ContextPath, cmd.imageFlags.DockerfilePath, cmd.imageFlags.BuildEngine)
 	if err != nil {
 		log.Fatal(err)
@@ -305,7 +310,6 @@ func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
 
 // RunAddService executes the add image command logic
 func (cmd *AddCmd) RunAddService(cobraCmd *cobra.Command, args []string) {
-
 	err := configure.AddService(args[0], cmd.serviceFlags.LabelSelector, cmd.serviceFlags.Namespace)
 	if err != nil {
 		log.Fatal(err)
