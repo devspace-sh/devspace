@@ -244,6 +244,7 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 
 	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+	excludes = append(excludes, ".devspace/")
 
 	hash, err := hash.DirectoryExcludes(contextDir, excludes)
 	if err != nil {

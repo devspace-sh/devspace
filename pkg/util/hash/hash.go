@@ -2,7 +2,9 @@ package hash
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
@@ -137,9 +139,18 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 		}
 		seen[relFilePath] = true
 
-		size := strconv.FormatInt(f.Size(), 10)
-		mTime := strconv.FormatInt(f.ModTime().UnixNano(), 10)
-		io.WriteString(hash, filePath+";"+size+";"+mTime)
+		if f.IsDir() {
+			// Path is enough
+			io.WriteString(hash, filePath)
+		} else {
+			// Check file change
+			checksum, err := hashFileCRC32(filePath, 0xedb88320)
+			if err != nil {
+				return nil
+			}
+
+			io.WriteString(hash, filePath+";"+checksum)
+		}
 
 		return nil
 	})
@@ -149,4 +160,38 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+func hashFileCRC32(filePath string, polynomial uint32) (string, error) {
+	//Initialize an empty return string now in case an error has to be returned
+	var returnCRC32String string
+
+	//Open the fhe file located at the given path and check for errors
+	file, err := os.Open(filePath)
+	if err != nil {
+		return returnCRC32String, err
+	}
+
+	//Tell the program to close the file when the function returns
+	defer file.Close()
+
+	//Create the table with the given polynomial
+	tablePolynomial := crc32.MakeTable(polynomial)
+
+	//Open a new hash interface to write the file to
+	hash := crc32.New(tablePolynomial)
+
+	//Copy the file in the interface
+	if _, err := io.Copy(hash, file); err != nil {
+		return returnCRC32String, err
+	}
+
+	//Generate the hash
+	hashInBytes := hash.Sum(nil)[:]
+
+	//Encode the hash to a string
+	returnCRC32String = hex.EncodeToString(hashInBytes)
+
+	//Return the output
+	return returnCRC32String, nil
 }
