@@ -11,24 +11,24 @@ import (
 )
 
 // AddPort adds a port to the config
-func AddPort(namespace, selector string, args []string) error {
+func AddPort(namespace, labelSelector string, args []string) error {
 
 	var labelSelectorMap map[string]*string
 	var err error
 
-	if selector == "" {
+	if labelSelector == "" {
 		config := configutil.GetConfig()
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
-			selector = "release=" + services.GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
 		}
 	}
 
 	if labelSelectorMap == nil {
-		labelSelectorMap, err = parseSelectors(selector)
+		labelSelectorMap, err = parseSelectors(labelSelector)
 		if err != nil {
 			return fmt.Errorf("Error parsing selectors: %s", err.Error())
 		}
@@ -50,10 +50,10 @@ func AddPort(namespace, selector string, args []string) error {
 }
 
 // RemovePort removes a port from the config
-func RemovePort(removeAll bool, selector string, args []string) error {
+func RemovePort(removeAll bool, labelSelector string, args []string) error {
 	config := configutil.GetConfig()
 
-	labelSelectorMap, err := parseSelectors(selector)
+	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {
 		return fmt.Errorf("Error parsing selectors: %s", err.Error())
 	}

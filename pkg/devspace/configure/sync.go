@@ -12,7 +12,7 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsString string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Sync == nil {
@@ -22,19 +22,19 @@ func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsStr
 	var labelSelectorMap map[string]*string
 	var err error
 
-	if selector == "" {
+	if labelSelector == "" {
 		config := configutil.GetConfig()
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
-			selector = "release=" + services.GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
 		}
 	}
 
 	if labelSelectorMap == nil {
-		labelSelectorMap, err = parseSelectors(selector)
+		labelSelectorMap, err = parseSelectors(labelSelector)
 		if err != nil {
 			return fmt.Errorf("Error parsing selectors: %s", err.Error())
 		}
@@ -80,9 +80,9 @@ func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsStr
 }
 
 // RemoveSyncPath removes a sync path from the config
-func RemoveSyncPath(removeAll bool, localPath, containerPath, selector string) error {
+func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
 	config := configutil.GetConfig()
-	labelSelectorMap, err := parseSelectors(selector)
+	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
 		return fmt.Errorf("Error parsing selectors: %v", err)
@@ -132,8 +132,8 @@ func parseSelectors(selectorString string) (map[string]*string, error) {
 		if len(keyValue) != 2 {
 			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
 		}
-		selector := strings.TrimSpace(keyValue[1])
-		selectorMap[strings.TrimSpace(keyValue[0])] = &selector
+		labelSelector := strings.TrimSpace(keyValue[1])
+		selectorMap[strings.TrimSpace(keyValue[0])] = &labelSelector
 	}
 
 	return selectorMap, nil

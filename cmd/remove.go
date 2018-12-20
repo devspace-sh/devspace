@@ -17,15 +17,15 @@ type RemoveCmd struct {
 }
 
 type removeSyncCmdFlags struct {
-	Selector      string
+	LabelSelector string
 	LocalPath     string
 	ContainerPath string
 	RemoveAll     bool
 }
 
 type removePortCmdFlags struct {
-	Selector  string
-	RemoveAll bool
+	LabelSelector string
+	RemoveAll     bool
 }
 
 type removePackageCmdFlags struct {
@@ -92,7 +92,7 @@ func init() {
 	How to use:
 	devspace remove sync --local=app
 	devspace remove sync --container=/app
-	devspace remove sync --selector=release=test
+	devspace remove sync --label-selector=release=test
 	devspace remove sync --all
 	#######################################################
 	`,
@@ -102,7 +102,7 @@ func init() {
 
 	removeCmd.AddCommand(removeSyncCmd)
 
-	removeSyncCmd.Flags().StringVar(&cmd.syncFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	removeSyncCmd.Flags().StringVar(&cmd.syncFlags.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	removeSyncCmd.Flags().StringVar(&cmd.syncFlags.LocalPath, "local", "", "Relative local path to remove")
 	removeSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path to remove")
 	removeSyncCmd.Flags().BoolVar(&cmd.syncFlags.RemoveAll, "all", false, "Remove all configured sync paths")
@@ -116,7 +116,7 @@ func init() {
 	#######################################################
 	Removes port mappings from the devspace configuration:
 	devspace remove port 8080,3000
-	devspace remove port --selector=release=test
+	devspace remove port --label-selector=release=test
 	devspace remove port --all
 	#######################################################
 	`,
@@ -124,7 +124,7 @@ func init() {
 		Run:  cmd.RunRemovePort,
 	}
 
-	removePortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	removePortCmd.Flags().StringVar(&cmd.portFlags.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	removePortCmd.Flags().BoolVar(&cmd.portFlags.RemoveAll, "all", false, "Remove all configured ports")
 
 	removeCmd.AddCommand(removePortCmd)
@@ -199,7 +199,7 @@ func init() {
 	
 	Examples:
 	devspace remove service my-service
-	devspace remove service --namespace=my-namespace --labelSelector=environment=production,tier=frontend
+	devspace remove service --namespace=my-namespace --label-selector=environment=production,tier=frontend
 	devspace remove service --all
 	#######################################################
 	`,
@@ -209,7 +209,7 @@ func init() {
 
 	removeServiceCmd.Flags().BoolVar(&cmd.serviceFlags.RemoveAll, "all", false, "Remove all services")
 	removeServiceCmd.Flags().StringVar(&cmd.serviceFlags.Namespace, "namespace", "", "Namespace of the service")
-	removeServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "labelselector", "", "Labelselector of the service")
+	removeServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "label-selector", "", "Label-selector of the service")
 	removeCmd.AddCommand(removeServiceCmd)
 }
 
@@ -236,7 +236,7 @@ func (cmd *RemoveCmd) RunRemovePackage(cobraCmd *cobra.Command, args []string) {
 
 // RunRemoveSync executes the remove sync command logic
 func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.RemoveSyncPath(cmd.syncFlags.RemoveAll, cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Selector)
+	err := configure.RemoveSyncPath(cmd.syncFlags.RemoveAll, cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.LabelSelector)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func (cmd *RemoveCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 
 // RunRemovePort executes the remove port command logic
 func (cmd *RemoveCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
-	err := configure.RemovePort(cmd.portFlags.RemoveAll, cmd.portFlags.Selector, args)
+	err := configure.RemovePort(cmd.portFlags.RemoveAll, cmd.portFlags.LabelSelector, args)
 	if err != nil {
 		log.Fatal(err)
 	}

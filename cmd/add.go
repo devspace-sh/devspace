@@ -23,7 +23,7 @@ type AddCmdFlags struct {
 
 type addSyncCmdFlags struct {
 	ResourceType  string
-	Selector      string
+	LabelSelector string
 	LocalPath     string
 	ContainerPath string
 	ExcludedPaths string
@@ -31,9 +31,9 @@ type addSyncCmdFlags struct {
 }
 
 type addPortCmdFlags struct {
-	ResourceType string
-	Selector     string
-	Namespace    string
+	ResourceType  string
+	LabelSelector string
+	Namespace     string
 }
 
 type addPackageFlags struct {
@@ -114,7 +114,7 @@ func init() {
 	addCmd.AddCommand(addSyncCmd)
 
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ResourceType, "resource-type", "pod", "Selected resource type")
-	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LocalPath, "local", "", "Relative local path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
@@ -141,7 +141,7 @@ func init() {
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
-	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
 
 	addCmd.AddCommand(addPortCmd)
 
@@ -240,7 +240,7 @@ func init() {
 	
 	Examples:
 	devspace add service my-service --namespace=my-namespace
-	devspace add service my-service --labelSelector=environment=production,tier=frontend
+	devspace add service my-service --label-selector=environment=production,tier=frontend
 	#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -248,7 +248,7 @@ func init() {
 	}
 
 	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.Namespace, "namespace", "", "The namespace of the service")
-	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "labelSelector", "", "The label selector of the service")
+	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "label-selector", "", "The label-selector of the service")
 
 	addCmd.AddCommand(addServiceCmd)
 }
@@ -273,7 +273,7 @@ func (cmd *AddCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.Selector, cmd.syncFlags.ExcludedPaths)
+	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.LabelSelector, cmd.syncFlags.ExcludedPaths)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}
@@ -281,7 +281,7 @@ func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.Selector, args)
+	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.LabelSelector, args)
 	if err != nil {
 		log.Fatal(err)
 	}
