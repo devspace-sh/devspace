@@ -29,6 +29,11 @@ func AddImage(nameInConfig string, name string, tag string, contextPath string, 
 		log.Errorf("BuildEngine %v unknown. Please select one of docker|kaniko", buildEngine)
 	}
 
+	if config.Images == nil {
+		images := make(map[string]*v1.ImageConfig)
+		config.Images = &images
+	}
+
 	(*config.Images)[nameInConfig] = imageConfig
 
 	err := configutil.SaveConfig()
@@ -49,7 +54,7 @@ func RemoveImage(removeAll bool, names []string) error {
 
 	newImageList := make(map[string]*v1.ImageConfig)
 
-	if !removeAll {
+	if !removeAll && config.Images != nil {
 
 	ImagesLoop:
 		for nameInConfig, imageConfig := range *config.Images {

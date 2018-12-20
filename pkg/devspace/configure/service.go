@@ -33,7 +33,11 @@ func AddService(name string, labelSelector string, namespace string) error {
 		}
 	}
 
-	if *config.DevSpace.Services == nil {
+	if config.DevSpace == nil {
+		config.DevSpace = &v1.DevSpaceConfig{}
+	}
+
+	if config.DevSpace.Services == nil {
 		emptyServiceList := make([]*v1.ServiceConfig, 0)
 		config.DevSpace.Services = &emptyServiceList
 	}

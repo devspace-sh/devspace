@@ -15,6 +15,10 @@ import (
 func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
 	config := configutil.GetConfig()
 
+	if config.DevSpace == nil {
+		config.DevSpace = &v1.DevSpaceConfig{}
+	}
+
 	if config.DevSpace.Sync == nil {
 		config.DevSpace.Sync = &[]*v1.SyncConfig{}
 	}
