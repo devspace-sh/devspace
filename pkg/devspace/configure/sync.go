@@ -12,7 +12,7 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, serviceName string, excludedPathsString string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Sync == nil {
@@ -27,7 +27,17 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, serviceName
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
-			labelSelectorMap = *services[0].LabelSelector
+
+			var service *v1.ServiceConfig
+			if serviceName != "" {
+				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				if service == nil {
+					return fmt.Errorf("no service with name %v exists", serviceName)
+				}
+			} else {
+				service = services[0]
+			}
+			labelSelectorMap = *service.LabelSelector
 		} else {
 			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
 		}
@@ -67,6 +77,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, serviceName
 		LocalSubPath:  configutil.String(localPath),
 		ExcludePaths:  &excludedPaths,
 		Namespace:     &namespace,
+		Service:       &serviceName,
 	})
 
 	config.DevSpace.Sync = &syncConfig

@@ -231,6 +231,7 @@ func init() {
 	addImageCmd.Flags().StringVar(&cmd.imageFlags.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
 	addImageCmd.Flags().StringVar(&cmd.imageFlags.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
 
+	addImageCmd.MarkFlagRequired("name")
 	addCmd.AddCommand(addImageCmd)
 
 	addServiceCmd := &cobra.Command{
@@ -293,10 +294,6 @@ func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 
 // RunAddImage executes the add image command logic
 func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
-	if cmd.imageFlags.Name == "" {
-		log.Fatal(`Missing required parameter "name"`)
-		return
-	}
 
 	err := configure.AddImage(args[0], cmd.imageFlags.Name, cmd.imageFlags.Tag, cmd.imageFlags.ContextPath, cmd.imageFlags.DockerfilePath, cmd.imageFlags.BuildEngine)
 	if err != nil {
