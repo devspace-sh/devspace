@@ -28,12 +28,14 @@ type addSyncCmdFlags struct {
 	ContainerPath string
 	ExcludedPaths string
 	Namespace     string
+	Service       string
 }
 
 type addPortCmdFlags struct {
 	ResourceType  string
 	LabelSelector string
 	Namespace     string
+	Service       string
 }
 
 type addPackageFlags struct {
@@ -119,6 +121,7 @@ func init() {
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Service, "service", "", "The devspace config service")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")
@@ -142,6 +145,7 @@ func init() {
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.Service, "service", "", "The devspace config service")
 
 	addCmd.AddCommand(addPortCmd)
 
@@ -227,6 +231,7 @@ func init() {
 	addImageCmd.Flags().StringVar(&cmd.imageFlags.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
 	addImageCmd.Flags().StringVar(&cmd.imageFlags.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
 
+	addImageCmd.MarkFlagRequired("name")
 	addCmd.AddCommand(addImageCmd)
 
 	addServiceCmd := &cobra.Command{
@@ -259,6 +264,8 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added the package")
 }
 
 // RunAddDeployment executes the add deployment command logic
@@ -273,27 +280,26 @@ func (cmd *AddCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.LabelSelector, cmd.syncFlags.ExcludedPaths)
+	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.LabelSelector, cmd.syncFlags.ExcludedPaths, cmd.syncFlags.Service)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}
+
+	log.Donef("Successfully added sync between local path %v and container path %v", cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath)
 }
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.LabelSelector, args)
+	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.LabelSelector, cmd.portFlags.Service, args)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added port %v", args[0])
 }
 
 // RunAddImage executes the add image command logic
 func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
-	if cmd.imageFlags.Name == "" {
-		log.Fatal(`Missing required parameter "name"`)
-		return
-	}
-
 	err := configure.AddImage(args[0], cmd.imageFlags.Name, cmd.imageFlags.Tag, cmd.imageFlags.ContextPath, cmd.imageFlags.DockerfilePath, cmd.imageFlags.BuildEngine)
 	if err != nil {
 		log.Fatal(err)
@@ -304,7 +310,6 @@ func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
 
 // RunAddService executes the add image command logic
 func (cmd *AddCmd) RunAddService(cobraCmd *cobra.Command, args []string) {
-
 	err := configure.AddService(args[0], cmd.serviceFlags.LabelSelector, cmd.serviceFlags.Namespace)
 	if err != nil {
 		log.Fatal(err)

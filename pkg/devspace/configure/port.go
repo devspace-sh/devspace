@@ -11,17 +11,31 @@ import (
 )
 
 // AddPort adds a port to the config
-func AddPort(namespace, labelSelector string, args []string) error {
+func AddPort(namespace, labelSelector, serviceName string, args []string) error {
 
 	var labelSelectorMap map[string]*string
 	var err error
+
+	if labelSelector != "" && serviceName != "" {
+		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
+	}
 
 	if labelSelector == "" {
 		config := configutil.GetConfig()
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
-			labelSelectorMap = *services[0].LabelSelector
+
+			var service *v1.ServiceConfig
+			if serviceName != "" {
+				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				if service == nil {
+					return fmt.Errorf("no service with name %v exists", serviceName)
+				}
+			} else {
+				service = services[0]
+			}
+			labelSelectorMap = *service.LabelSelector
 		} else {
 			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
 		}
@@ -39,7 +53,7 @@ func AddPort(namespace, labelSelector string, args []string) error {
 		return fmt.Errorf("Error parsing port mappings: %s", err.Error())
 	}
 
-	insertOrReplacePortMapping(namespace, labelSelectorMap, portMappings)
+	insertOrReplacePortMapping(namespace, labelSelectorMap, serviceName, portMappings)
 
 	err = configutil.SaveConfig()
 	if err != nil {
@@ -114,7 +128,7 @@ func containsPort(port string, ports []string) bool {
 	return false
 }
 
-func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, portMappings []*v1.PortMapping) {
+func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, serviceName string, portMappings []*v1.PortMapping) {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Ports == nil {
@@ -131,7 +145,7 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 			selectors = map[string]*string{}
 		}
 
-		if isMapEqual(selectors, labelSelectorMap) {
+		if areLabelMapsEqual(selectors, labelSelectorMap) {
 			portMap := append(*v.PortMappings, portMappings...)
 
 			v.PortMappings = &portMap
@@ -139,28 +153,21 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 			return
 		}
 	}
+
+	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
+	if serviceName != "" {
+		labelSelectorMap = nil
+	}
+
 	portMap := append(*config.DevSpace.Ports, &v1.PortForwardingConfig{
 		ResourceType:  nil,
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 		Namespace:     &namespace,
+		Service:       &serviceName,
 	})
 
 	config.DevSpace.Ports = &portMap
-}
-
-func isMapEqual(map1 map[string]*string, map2 map[string]*string) bool {
-	if len(map1) != len(map2) {
-		return false
-	}
-
-	for k, v := range map1 {
-		if *map2[k] != *v {
-			return false
-		}
-	}
-
-	return true
 }
 
 func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
@@ -200,4 +207,14 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 	}
 
 	return portMappings, nil
+}
+
+func getServiceWithName(services []*v1.ServiceConfig, name string) *v1.ServiceConfig {
+	for _, service := range services {
+		if *service.Name == name {
+			return service
+		}
+	}
+
+	return nil
 }

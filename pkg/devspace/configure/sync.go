@@ -12,7 +12,7 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Sync == nil {
@@ -22,12 +22,26 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	var labelSelectorMap map[string]*string
 	var err error
 
+	if labelSelector != "" && serviceName != "" {
+		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
+	}
+
 	if labelSelector == "" {
 		config := configutil.GetConfig()
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
-			labelSelectorMap = *services[0].LabelSelector
+
+			var service *v1.ServiceConfig
+			if serviceName != "" {
+				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				if service == nil {
+					return fmt.Errorf("no service with name %v exists", serviceName)
+				}
+			} else {
+				service = services[0]
+			}
+			labelSelectorMap = *service.LabelSelector
 		} else {
 			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
 		}
@@ -61,12 +75,18 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
+	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
+	if serviceName != "" {
+		labelSelectorMap = nil
+	}
+
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(containerPath),
 		LocalSubPath:  configutil.String(localPath),
 		ExcludePaths:  &excludedPaths,
 		Namespace:     &namespace,
+		Service:       &serviceName,
 	})
 
 	config.DevSpace.Sync = &syncConfig
