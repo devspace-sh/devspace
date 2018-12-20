@@ -12,7 +12,7 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, serviceName string, excludedPathsString string) error {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Sync == nil {
