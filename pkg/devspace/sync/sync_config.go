@@ -302,9 +302,9 @@ func (s *SyncConfig) initialSync() error {
 	return nil
 }
 
-func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation, dontSend bool) error {
-	relativePath := getRelativeFromFullPath(filepath, s.WatchPath)
-	stat, err := os.Lstat(filepath)
+func (s *SyncConfig) diffServerClient(absPath string, sendChanges *[]*fileInformation, downloadChanges map[string]*fileInformation, dontSend bool) error {
+	relativePath := getRelativeFromFullPath(absPath, s.WatchPath)
+	stat, err := os.Stat(absPath)
 
 	// We skip files that are suddenly not there anymore
 	if err != nil {
@@ -333,8 +333,27 @@ func (s *SyncConfig) diffServerClient(filepath string, sendChanges *[]*fileInfor
 		}
 	}
 
+	// Check for symlinks
+	if dontSend == false {
+		// Retrieve the real stat instead of the symlink one
+		lstat, err := os.Lstat(absPath)
+		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+			stat, err = s.upstream.AddSymlink(relativePath, absPath)
+			if err != nil {
+				return err
+			}
+			if stat == nil {
+				return nil
+			}
+
+			s.Logf("Symlink at %s", absPath)
+		} else if err != nil {
+			return nil
+		}
+	}
+
 	if stat.IsDir() {
-		return s.diffDir(filepath, stat, sendChanges, downloadChanges, dontSend)
+		return s.diffDir(absPath, stat, sendChanges, downloadChanges, dontSend)
 	}
 
 	if dontSend == false {
@@ -420,6 +439,10 @@ func (s *SyncConfig) sendChangesToUpstream(changes []*fileInformation) {
 func (s *SyncConfig) Stop(fatalError error) {
 	s.stopOnce.Do(func() {
 		if s.upstream != nil && s.upstream.interrupt != nil {
+			for _, symlink := range s.upstream.symlinks {
+				symlink.Stop()
+			}
+
 			close(s.upstream.interrupt)
 
 			if s.upstream.stdinPipe != nil {

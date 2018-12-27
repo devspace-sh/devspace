@@ -47,7 +47,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 					labels = append(labels, key+"="+*value)
 				}
 
-				log.StartWait("Waiting for pods to become running")
+				log.StartWait("Port-Forwarding: Waiting for pods...")
 				pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace, time.Second*120)
 				log.StopWait()
 
@@ -55,13 +55,20 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 					return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
 				} else if pod != nil {
 					ports := make([]string, len(*portForwarding.PortMappings))
+					addresses := make([]string, len(*portForwarding.PortMappings))
 
 					for index, value := range *portForwarding.PortMappings {
 						ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
+						if value.BindAddress == nil {
+							addresses[index] = "127.0.0.1"
+						} else {
+							addresses[index] = *value.BindAddress
+						}
 					}
 
 					readyChan := make(chan struct{})
-					pf, err := kubectl.NewPortForwarder(client, pod, ports, make(chan struct{}), readyChan)
+
+					pf, err := kubectl.NewPortForwarder(client, pod, ports, addresses, make(chan struct{}), readyChan)
 					if err != nil {
 						log.Fatalf("Error starting port forwarding: %v", err)
 					}

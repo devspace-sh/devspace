@@ -13,6 +13,7 @@ type DeploymentConfig struct {
 type HelmConfig struct {
 	ChartPath    *string `yaml:"chartPath,omitempty"`
 	Wait         *bool   `yaml:"wait,omitempty"`
+	Override     *string `yaml:"override,omitempty"`
 	DevOverwrite *string `yaml:"devOverwrite,omitempty"`
 }
 

@@ -82,6 +82,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
 			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
+
 			if err == nil && tunnel != nil {
 				break
 			}
@@ -102,6 +103,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		client = k8shelm.NewClient(helmOptions...)
 
 		_, err = client.ListReleases(k8shelm.ReleaseListLimit(1))
+
 		if err == nil {
 			break
 		}

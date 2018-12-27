@@ -15,7 +15,7 @@ type AutoReloadPathsConfig struct {
 	Paths *[]*string `yaml:"paths,omitempty"`
 }
 
-// ServiceConfig defines the ports for a port forwarding to a DevSpace
+// ServiceConfig defines the kubernetes services that belong to the devspace
 type ServiceConfig struct {
 	Name          *string             `yaml:"name,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
@@ -35,8 +35,9 @@ type PortForwardingConfig struct {
 
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
-	LocalPort  *int `yaml:"localPort"`
-	RemotePort *int `yaml:"remotePort"`
+	LocalPort   *int    `yaml:"localPort"`
+	RemotePort  *int    `yaml:"remotePort"`
+	BindAddress *string `yaml:"bindAddress"`
 }
 
 // SyncConfig defines the paths for a SyncFolder

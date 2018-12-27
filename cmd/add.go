@@ -13,6 +13,8 @@ type AddCmd struct {
 	portFlags       *addPortCmdFlags
 	packageFlags    *addPackageFlags
 	deploymentFlags *addDeploymentFlags
+	imageFlags      *addImageFlags
+	serviceFlags    *addServiceFlags
 }
 
 // AddCmdFlags holds the possible flags for the add command
@@ -21,17 +23,19 @@ type AddCmdFlags struct {
 
 type addSyncCmdFlags struct {
 	ResourceType  string
-	Selector      string
+	LabelSelector string
 	LocalPath     string
 	ContainerPath string
 	ExcludedPaths string
 	Namespace     string
+	Service       string
 }
 
 type addPortCmdFlags struct {
-	ResourceType string
-	Selector     string
-	Namespace    string
+	ResourceType  string
+	LabelSelector string
+	Namespace     string
+	Service       string
 }
 
 type addPackageFlags struct {
@@ -47,6 +51,19 @@ type addDeploymentFlags struct {
 	Chart     string
 }
 
+type addImageFlags struct {
+	Name           string
+	Tag            string
+	ContextPath    string
+	DockerfilePath string
+	BuildEngine    string
+}
+
+type addServiceFlags struct {
+	LabelSelector string
+	Namespace     string
+}
+
 func init() {
 	cmd := &AddCmd{
 		flags:           &AddCmdFlags{},
@@ -54,6 +71,8 @@ func init() {
 		portFlags:       &addPortCmdFlags{},
 		packageFlags:    &addPackageFlags{},
 		deploymentFlags: &addDeploymentFlags{},
+		imageFlags:      &addImageFlags{},
+		serviceFlags:    &addServiceFlags{},
 	}
 
 	addCmd := &cobra.Command{
@@ -68,6 +87,8 @@ func init() {
 	
 	* Sync paths (sync)
 	* Forwarded ports (port)
+	* Docker images  (image)
+	* Kubernetes Service (service)
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -95,11 +116,12 @@ func init() {
 	addCmd.AddCommand(addSyncCmd)
 
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ResourceType, "resource-type", "pod", "Selected resource type")
-	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.LocalPath, "local", "", "Relative local path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.syncFlags.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
+	addSyncCmd.Flags().StringVar(&cmd.syncFlags.Service, "service", "", "The devspace config service")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")
@@ -122,7 +144,8 @@ func init() {
 
 	addPortCmd.Flags().StringVar(&cmd.portFlags.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.portFlags.Namespace, "namespace", "", "Namespace to use")
-	addPortCmd.Flags().StringVar(&cmd.portFlags.Selector, "selector", "", "Comma separated key=value selector list (e.g. release=test)")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
+	addPortCmd.Flags().StringVar(&cmd.portFlags.Service, "service", "", "The devspace config service")
 
 	addCmd.AddCommand(addPortCmd)
 
@@ -179,6 +202,60 @@ func init() {
 	addDeploymentCmd.Flags().StringVar(&cmd.deploymentFlags.Chart, "chart", "", "The helm chart to deploy")
 
 	addCmd.AddCommand(addDeploymentCmd)
+
+	addImageCmd := &cobra.Command{
+		Use:   "image",
+		Short: "Add an image",
+		Long: ` 
+	#######################################################
+	############# devspace add image ######################
+	#######################################################
+	Add a new image to your devspace
+	
+	Examples:
+	devspace add image my-image --name=dockeruser/devspaceimage2
+	devspace add image my-image --name=dockeruser/devspaceimage2 --tag=alpine
+	devspace add image my-image --name=dockeruser/devspaceimage2 --context=C:/Path/To/Context
+	devspace add image my-image --name=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
+	devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=docker
+	devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=kaniko
+	#######################################################
+	`,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddImage,
+	}
+
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.Name, "name", "", "The name of the image")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.Tag, "tag", "", "The tag of the image")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.ContextPath, "context", "", "The path of the images' context")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
+	addImageCmd.Flags().StringVar(&cmd.imageFlags.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
+
+	addImageCmd.MarkFlagRequired("name")
+	addCmd.AddCommand(addImageCmd)
+
+	addServiceCmd := &cobra.Command{
+		Use:   "service",
+		Short: "Add a service",
+		Long: ` 
+	#######################################################
+	############# devspace add service ####################
+	#######################################################
+	Add a new service to your devspace
+	
+	Examples:
+	devspace add service my-service --namespace=my-namespace
+	devspace add service my-service --label-selector=environment=production,tier=frontend
+	#######################################################
+	`,
+		Args: cobra.ExactArgs(1),
+		Run:  cmd.RunAddService,
+	}
+
+	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.Namespace, "namespace", "", "The namespace of the service")
+	addServiceCmd.Flags().StringVar(&cmd.serviceFlags.LabelSelector, "label-selector", "", "The label-selector of the service")
+
+	addCmd.AddCommand(addServiceCmd)
 }
 
 // RunAddPackage executes the add package command logic
@@ -187,6 +264,8 @@ func (cmd *AddCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added the package")
 }
 
 // RunAddDeployment executes the add deployment command logic
@@ -201,16 +280,40 @@ func (cmd *AddCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) {
 
 // RunAddSync executes the add sync command logic
 func (cmd *AddCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.Selector, cmd.syncFlags.ExcludedPaths)
+	err := configure.AddSyncPath(cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath, cmd.syncFlags.Namespace, cmd.syncFlags.LabelSelector, cmd.syncFlags.ExcludedPaths, cmd.syncFlags.Service)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}
+
+	log.Donef("Successfully added sync between local path %v and container path %v", cmd.syncFlags.LocalPath, cmd.syncFlags.ContainerPath)
 }
 
 // RunAddPort executes the add port command logic
 func (cmd *AddCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.Selector, args)
+	err := configure.AddPort(cmd.portFlags.Namespace, cmd.portFlags.LabelSelector, cmd.portFlags.Service, args)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully added port %v", args[0])
+}
+
+// RunAddImage executes the add image command logic
+func (cmd *AddCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
+	err := configure.AddImage(args[0], cmd.imageFlags.Name, cmd.imageFlags.Tag, cmd.imageFlags.ContextPath, cmd.imageFlags.DockerfilePath, cmd.imageFlags.BuildEngine)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added image %s", args[0])
+}
+
+// RunAddService executes the add image command logic
+func (cmd *AddCmd) RunAddService(cobraCmd *cobra.Command, args []string) {
+	err := configure.AddService(args[0], cmd.serviceFlags.LabelSelector, cmd.serviceFlags.Namespace)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Donef("Successfully added new service %v", args[0])
 }

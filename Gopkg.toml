@@ -9,11 +9,11 @@
 [[constraint]]
   name = "github.com/docker/docker"
   source = "https://github.com/moby/moby"
-  revision = "71cd53e4a197b303c6ba086bd584ffd67a884281"
+  revision = "62d80835abe3f7bc54c70f5e7bad638eaf3596be"
 
 [[constraint]]
   name = "github.com/docker/cli"
-  version = "v18.06.1-ce"
+  version = "v18.09"
 
 [[constraint]]
   name = "github.com/rhysd/go-github-selfupdate"
@@ -61,7 +61,7 @@
 
 [[constraint]]
   name = "k8s.io/helm"
-  version = "v2.10.0"
+  version = "v2.12.0"
 
 [[constraint]]
   name = "github.com/foomo/htpasswd"
@@ -75,33 +75,37 @@
   name = "github.com/badgerodon/penv"
   revision = "7a4c6d64fa119b52afe2eb3f0801886bd8785318"
 
+[[override]]  
+ name = "github.com/prometheus/client_golang"
+ version = "0.9.2"
+
 [[override]]
  name = "github.com/docker/go-metrics"
- revision = "d466d4f6fd960e01820085bd7e1a24426ee7ef18"
+ revision = "399ea8c73916000c64c2c76e8da00ca82f8387ab"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.0"
+  version = "v10.0.0"
 
 [[override]]
   name = "k8s.io/kubernetes"
-  revision = "ba92f7aebfda56086efd08a6b231c6b60a297d2d"
+  revision = "ddf47ac13c1a9483ea035a79cd7c10005ff21a6d"
 
 [[override]]
   name = "k8s.io/api"
-  revision = "12444147eb1150aa5c80d2aae532cbc5b7be73d0"
+  revision = "89a74a8d264df0e993299876a8cde88379b940ee"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  revision = "e386b2658ed20923da8cc9250e552f082899a1ee"
+  revision = "2b1284ed4c93a43499e781493253e2ac5959c4fd"
 
 [[override]]
   name = "k8s.io/apiserver"
-  revision = "2a84596e9aad63b1c1d47491d506a64465b5e2fc"
+  revision = "9caa0299108fbdf51d3d9b8e8956834ae84dac75"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  revision = "f584b16eb23bd2a3fd292a027d698d95db427c5d"
+  revision = "20c909e7c8c3fec1a0e345b1d4e57f1c1623c368"
 
 [[override]]
   name = "github.com/russross/blackfriday"
@@ -119,7 +123,7 @@
   name = "github.com/Nvveen/Gotty"
   source = "https://github.com/ijc25/Gotty.git"
   revision = "a8b993ba6abdb0e0c12b0125c603323a71c7790c"
-  
+
 [prune]
   go-tests = true
   unused-packages = true

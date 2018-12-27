@@ -10,8 +10,10 @@ import (
 
 // Config specifies the runtime config struct
 type Config struct {
-	ChartHashs             map[string]string `yaml:"chartHashs"`
-	DockerLatestTimestamps map[string]int64  `yaml:"dockerLatestTimestamps"`
+	HelmOverrideTimestamps map[string]int64  `yaml:"helmOverrideTimestamps"`
+	HelmChartHashs         map[string]string `yaml:"helmChartHashs"`
+	DockerfileTimestamps   map[string]int64  `yaml:"dockerfileTimestamps"`
+	DockerContextPaths     map[string]string `yaml:"dockerContextPaths"`
 	ImageTags              map[string]string `yaml:"imageTags"`
 }
 
@@ -25,9 +27,11 @@ func LoadConfig() (*Config, error) {
 	data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
 	if err != nil {
 		return &Config{
-			DockerLatestTimestamps: make(map[string]int64),
+			DockerfileTimestamps:   make(map[string]int64),
+			DockerContextPaths:     make(map[string]string),
 			ImageTags:              make(map[string]string),
-			ChartHashs:             make(map[string]string),
+			HelmChartHashs:         make(map[string]string),
+			HelmOverrideTimestamps: make(map[string]int64),
 		}, nil
 	}
 
@@ -37,11 +41,17 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	if config.ChartHashs == nil {
-		config.ChartHashs = make(map[string]string)
+	if config.HelmChartHashs == nil {
+		config.HelmChartHashs = make(map[string]string)
 	}
-	if config.DockerLatestTimestamps == nil {
-		config.DockerLatestTimestamps = make(map[string]int64)
+	if config.HelmOverrideTimestamps == nil {
+		config.HelmOverrideTimestamps = make(map[string]int64)
+	}
+	if config.DockerfileTimestamps == nil {
+		config.DockerfileTimestamps = make(map[string]int64)
+	}
+	if config.DockerContextPaths == nil {
+		config.DockerContextPaths = make(map[string]string)
 	}
 	if config.ImageTags == nil {
 		config.ImageTags = make(map[string]string)

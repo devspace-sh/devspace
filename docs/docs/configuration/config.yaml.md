@@ -14,7 +14,7 @@ devSpace:
     # For this deployment we use helm as deployment method (kubectl would be also an option)
     helm:
       chartPath: ./chart
-      devOverwrite: ./chart/dev-overwrite.yaml
+      override: ./chart/dev-overwrite.yaml
   sync:
   - containerPath: /app
     labelSelector:
@@ -79,7 +79,7 @@ By default devspace will reload the build and deploy process on certain changes 
 When specifying helm as deployment method, `devspace up` will deploy the specified chart in the target cluster. If no tiller server is found, it will also attempt to deploy a tiller server. 
 - `chartPath` *string* the path where the helm chart is laying
 - `wait` *bool* wait till everything is ready after deployment (default: true)
-- `devOverwrite` *string* the path to a files that overwrites the values.yaml when using `devspace up`
+- `override` *string* the path to a values.yaml file that overrides values
 
 ### devspace.deployments[].kubectl
 When using kubectl as deployment method, `devspace up` will use kubectl apply on the specified manifests to deploy them to the target cluster. [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl) is needed in order for this option to work.  
@@ -119,6 +119,7 @@ To access applications running inside a DevSpace, the DevSpace CLI allows to con
 PortMapping:
 - `localPort` *string* the local port on the machine 
 - `remotePort` *string* the remote pod port
+- `bindAddress` *string* the address to bind to, optional - binds to localhost only if not present, use `0.0.0.0` for all interfaces
 
 In the example above, you could open `localhost:8080` inside your browser to see the output of the application listening on port 80 within your DevSpace.
 
@@ -268,7 +269,7 @@ devSpace:
       # Don't wait till everything is ready
       # wait: false
       # Overwrite the values.yaml with dev-values.yaml when running devspace up
-      devOverwrite: ./chart/dev-overwrite.yaml
+      override: ./chart/dev-overwrite.yaml
   - name: devspace-kubectl
     namespace: kubectl-deployment
     autoReload:

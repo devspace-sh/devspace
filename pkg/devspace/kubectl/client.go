@@ -16,14 +16,14 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
-	"k8s.io/kubernetes/pkg/printers"
-	describe "k8s.io/kubernetes/pkg/printers/internalversion"
+	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
+	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	"k8s.io/kubernetes/pkg/util/node"
 )
 
@@ -92,6 +92,10 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 					return nil, fmt.Errorf("Error saving kube config: %v", err)
 				}
 			}
+		}
+
+		if kubeConfig.Contexts[activeContext] == nil {
+			return nil, fmt.Errorf("Active Context doesn't exist")
 		}
 
 		// Change context namespace
@@ -332,7 +336,7 @@ func DescribePod(namespace, name string) (string, error) {
 
 	podDescriber := &describe.PodDescriber{newKubectl}
 
-	return podDescriber.Describe(namespace, name, printers.DescriberSettings{ShowEvents: true})
+	return podDescriber.Describe(namespace, name, describeSettings.DescriberSettings{ShowEvents: true})
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
@@ -365,9 +369,9 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 	})
 }
 
-// ForwardPorts forwards the specified ports from the cluster to the local machine
-func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	fw, err := NewPortForwarder(kubectlClient, pod, ports, stopChan, readyChan)
+// ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
+func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+	fw, err := NewPortForwarder(kubectlClient, pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
 	}
@@ -375,8 +379,8 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 	return fw.ForwardPorts()
 }
 
-// NewPortForwarder creates a new port forwarder object
-func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+// NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
+func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
 	config, err := GetClientConfig()
 	if err != nil {
 		return nil, err
@@ -395,7 +399,9 @@ func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports
 
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
-	fw, err := portforward.New(dialer, ports, stopChan, readyChan, logFile, logFile)
+
+	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, logFile, logFile)
+
 	if err != nil {
 		return nil, err
 	}

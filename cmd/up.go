@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/watch"
@@ -35,6 +36,7 @@ type UpCmdFlags struct {
 	terminal        bool
 	deploy          bool
 	exitAfterDeploy bool
+	skipPipeline    bool
 	allyes          bool
 	switchContext   bool
 	portforwarding  bool
@@ -57,6 +59,7 @@ var UpFlagsDefault = &UpCmdFlags{
 	terminal:        true,
 	switchContext:   true,
 	exitAfterDeploy: false,
+	skipPipeline:    false,
 	allyes:          false,
 	deploy:          false,
 	portforwarding:  true,
@@ -94,6 +97,8 @@ Starts and connects your DevSpace:
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Force image build")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+
+	cobraCmd.Flags().BoolVarP(&cmd.flags.skipPipeline, "skip-pipeline", "x", cmd.flags.skipPipeline, "Skips build & deployment and only starts sync, portforwarding & terminal")
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
 	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
@@ -191,52 +196,51 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []string) error {
 	config := configutil.GetConfig()
 
-	// Load config
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("Error loading generated.yaml: %v", err)
-	}
-
-	// Build image if necessary
-	mustRedeploy, err := image.BuildAll(client, generatedConfig, flags.build, log.GetInstance())
-	if err != nil {
-		return fmt.Errorf("Error building image: %v", err)
-	}
-
-	// Save config if an image was built
-	if mustRedeploy == true {
-		err := generated.SaveConfig(generatedConfig)
+	if flags.skipPipeline == false {
+		// Load config
+		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
-			return fmt.Errorf("Error saving generated config: %v", err)
-		}
-	}
-
-	// Deploy all defined deployments
-	if config.DevSpace.Deployments != nil {
-		// Deploy all
-		err = deploy.All(client, generatedConfig, mustRedeploy || flags.deploy, true, log.GetInstance())
-		if err != nil {
-			return fmt.Errorf("Error deploying devspace: %v", err)
+			return fmt.Errorf("Error loading generated.yaml: %v", err)
 		}
 
-		// Save Config
-		err = generated.SaveConfig(generatedConfig)
+		// Build image if necessary
+		mustRedeploy, err := image.BuildAll(client, generatedConfig, flags.build, log.GetInstance())
 		if err != nil {
-			return fmt.Errorf("Error saving generated config: %v", err)
+			return fmt.Errorf("Error building image: %v", err)
+		}
+
+		// Save config if an image was built
+		if mustRedeploy == true {
+			err := generated.SaveConfig(generatedConfig)
+			if err != nil {
+				return fmt.Errorf("Error saving generated config: %v", err)
+			}
+		}
+
+		// Deploy all defined deployments
+		if config.DevSpace.Deployments != nil {
+			// Deploy all
+			err = deploy.All(client, generatedConfig, mustRedeploy || flags.deploy, true, log.GetInstance())
+			if err != nil {
+				return fmt.Errorf("Error deploying devspace: %v", err)
+			}
+
+			// Save Config
+			err = generated.SaveConfig(generatedConfig)
+			if err != nil {
+				return fmt.Errorf("Error saving generated config: %v", err)
+			}
 		}
 	}
 
 	// Start services
 	if flags.exitAfterDeploy == false {
 		// Start services
-		err = startServices(client, flags, args, log.GetInstance())
+		err := startServices(client, flags, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
-				// Force building & redeploying
-				flags.build = true
-				flags.deploy = true
-
+				// Trigger rebuild & redeploy
 				return buildAndDeploy(client, flags, args)
 			}
 
@@ -283,15 +287,19 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 
 	config := configutil.GetConfig()
 	exitChan := make(chan error)
-	autoReloadPaths := watch.GetPaths()
+	autoReloadPaths := GetPaths()
 
-	// Start watcher if we have at least one auto reload path
-	if len(autoReloadPaths) > 0 {
-		watcher, err := watch.New(autoReloadPaths, func() error {
-			log.Info("Change detected, will reload in 2 seconds")
-			time.Sleep(time.Second * 2)
+	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
+	if flags.skipPipeline == false && len(autoReloadPaths) > 0 {
+		var once sync.Once
+		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
+			once.Do(func() {
+				log.Info("Change detected, will reload in 2 seconds")
+				time.Sleep(time.Second * 2)
 
-			exitChan <- &reloadError{}
+				exitChan <- &reloadError{}
+			})
+
 			return nil
 		}, log)
 		if err != nil {
@@ -299,13 +307,14 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		}
 
 		watcher.Start()
+		defer watcher.Stop()
 	}
 
 	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
 		return services.StartTerminal(client, flags.service, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
 	}
 
-	log.Info("Will now try to attach to a running devspace pod...")
+	log.Info("Will now try to print the logs of a running devspace pod...")
 
 	// Start attaching to a running devspace pod
 	err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
@@ -315,11 +324,64 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 			return err
 		}
 
-		log.Infof("Couldn't attach to a running devspace pod: %v", err)
+		log.Infof("Couldn't print logs of running devspace pod: %v", err)
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
 	return <-exitChan
+}
+
+// GetPaths retrieves the watch paths from the config object
+func GetPaths() []string {
+	paths := make([]string, 0, 1)
+	config := configutil.GetConfig()
+
+	// Add the deploy manifest paths
+	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
+		for _, deployConf := range *config.DevSpace.Deployments {
+			if deployConf.AutoReload != nil && deployConf.AutoReload.Disabled != nil && *deployConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
+				chartPath := *deployConf.Helm.ChartPath
+				if chartPath[len(chartPath)-1] != '/' {
+					chartPath += "/"
+				}
+
+				paths = append(paths, chartPath+"**")
+			} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
+				for _, manifestPath := range *deployConf.Kubectl.Manifests {
+					paths = append(paths, *manifestPath)
+				}
+			}
+		}
+	}
+
+	// Add the dockerfile paths
+	if config.Images != nil {
+		for _, imageConf := range *config.Images {
+			if imageConf.AutoReload != nil && imageConf.AutoReload.Disabled != nil && *imageConf.AutoReload.Disabled == true {
+				continue
+			}
+
+			dockerfilePath := "./Dockerfile"
+			if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
+				dockerfilePath = *imageConf.Build.DockerfilePath
+			}
+
+			paths = append(paths, dockerfilePath)
+		}
+	}
+
+	// Add the additional paths
+	if config.DevSpace != nil && config.DevSpace.AutoReload != nil && config.DevSpace.AutoReload.Paths != nil {
+		for _, path := range *config.DevSpace.AutoReload.Paths {
+			paths = append(paths, *path)
+		}
+	}
+
+	return paths
 }
 
 type reloadError struct {
