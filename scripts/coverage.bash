@@ -6,7 +6,7 @@
 # This script will generate coverage.txt
 set -e
 
-GO111MODULE=on
+export GO111MODULE=on
 
 # Test if we can build the program
 go build main.go

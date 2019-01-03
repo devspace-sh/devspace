@@ -6,7 +6,8 @@
 
 set -e
 
-GO111MODULE=on
+export GO111MODULE=on
+
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
 VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
