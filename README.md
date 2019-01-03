@@ -65,9 +65,9 @@ You are more than welcome to open issues in this project to:
 
 ### Contributing Code
 This project is mainly written in Golang. To contribute code,
-1. Check-out the project: `git clone https://github.com/covexo/devspace && cd devspace`
-2. Install the dependencies: `dep ensure -v` (requires [Installing Dep](https://golang.github.io/dep/docs/installation.html))
-3. Make changes to the code (add new dependencies to the Gopkg.toml)
+1. Ensure you are running golang version 1.11.4 or greater for go module support.
+2. Check-out the project: `git clone https://github.com/covexo/devspace && cd devspace`
+3. Make changes to the code (dependencies are downloaded when you run any go command such as `go build`)
 4. Build the project, e.g. via `go build -o devspace.exe`
 
 ## License
