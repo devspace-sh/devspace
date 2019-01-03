@@ -7,11 +7,9 @@ jobs:
   - stage: test
     go_import_path: github.com/covexo/devspace
     install:
-      - go get -u github.com/golang/dep/...
-      - dep ensure -v
       - npm install -g codeclimate-test-reporter
     os: linux
-    go: 1.10.3
+    go: 1.11.4
     cache:
       directories:
         - ./vendor
@@ -20,7 +18,7 @@ jobs:
       - ./scripts/coverage.bash
     after_success:
       - codeclimate-test-reporter < coverage.txt
-  - go: 1.10.3
+  - go: 1.11.4
     os: osx
     stage: deploy
     go_import_path: github.com/covexo/devspace

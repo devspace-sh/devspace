@@ -32,10 +32,6 @@ fi
 
 mkdir -p "${DEVSPACE_ROOT}/release"
 
-## Install dep
-go get -u github.com/golang/dep/...
-dep ensure -v
-
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
     NAME="devspace-${OS}-${ARCH}"
