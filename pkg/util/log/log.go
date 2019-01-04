@@ -11,7 +11,7 @@ var stdoutLog = &stdoutLogger{
 }
 
 // Discard is a logger implementation that just discards every log statement
-var Discard = DiscardLogger{}
+var Discard = &DiscardLogger{}
 
 // StartWait prints a wait message until StopWait is called
 func StartWait(message string) {

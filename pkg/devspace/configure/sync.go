@@ -12,20 +12,50 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsString string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
 	config := configutil.GetConfig()
+
+	if config.DevSpace == nil {
+		config.DevSpace = &v1.DevSpaceConfig{}
+	}
 
 	if config.DevSpace.Sync == nil {
 		config.DevSpace.Sync = &[]*v1.SyncConfig{}
 	}
 
-	if selector == "" {
-		selector = "release=" + services.GetNameOfFirstHelmDeployment()
+	var labelSelectorMap map[string]*string
+	var err error
+
+	if labelSelector != "" && serviceName != "" {
+		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
 	}
 
-	labelSelectorMap, err := parseSelectors(selector)
-	if err != nil {
-		return fmt.Errorf("Error parsing selectors: %s", err.Error())
+	if labelSelector == "" {
+		config := configutil.GetConfig()
+
+		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
+			services := *config.DevSpace.Services
+
+			var service *v1.ServiceConfig
+			if serviceName != "" {
+				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				if service == nil {
+					return fmt.Errorf("no service with name %v exists", serviceName)
+				}
+			} else {
+				service = services[0]
+			}
+			labelSelectorMap = *service.LabelSelector
+		} else {
+			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
+		}
+	}
+
+	if labelSelectorMap == nil {
+		labelSelectorMap, err = parseSelectors(labelSelector)
+		if err != nil {
+			return fmt.Errorf("Error parsing selectors: %s", err.Error())
+		}
 	}
 
 	excludedPaths := make([]string, 0, 0)
@@ -49,12 +79,18 @@ func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsStr
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
+	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
+	if serviceName != "" {
+		labelSelectorMap = nil
+	}
+
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: configutil.String(containerPath),
 		LocalSubPath:  configutil.String(localPath),
 		ExcludePaths:  &excludedPaths,
 		Namespace:     &namespace,
+		Service:       &serviceName,
 	})
 
 	config.DevSpace.Sync = &syncConfig
@@ -68,9 +104,9 @@ func AddSyncPath(localPath, containerPath, namespace, selector, excludedPathsStr
 }
 
 // RemoveSyncPath removes a sync path from the config
-func RemoveSyncPath(removeAll bool, localPath, containerPath, selector string) error {
+func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
 	config := configutil.GetConfig()
-	labelSelectorMap, err := parseSelectors(selector)
+	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
 		return fmt.Errorf("Error parsing selectors: %v", err)
@@ -86,7 +122,8 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, selector string) e
 		for _, v := range *config.DevSpace.Sync {
 			if removeAll ||
 				localPath == *v.LocalSubPath ||
-				containerPath == *v.ContainerPath {
+				containerPath == *v.ContainerPath ||
+				areLabelMapsEqual(labelSelectorMap, *v.LabelSelector) {
 				continue
 			}
 
@@ -119,9 +156,23 @@ func parseSelectors(selectorString string) (map[string]*string, error) {
 		if len(keyValue) != 2 {
 			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
 		}
-		selector := strings.TrimSpace(keyValue[1])
-		selectorMap[strings.TrimSpace(keyValue[0])] = &selector
+		labelSelector := strings.TrimSpace(keyValue[1])
+		selectorMap[strings.TrimSpace(keyValue[0])] = &labelSelector
 	}
 
 	return selectorMap, nil
+}
+
+func areLabelMapsEqual(map1 map[string]*string, map2 map[string]*string) bool {
+	if len(map1) != len(map2) {
+		return false
+	}
+
+	for map1Index, map1Value := range map1 {
+		if map2Value, map2Contains := map2[map1Index]; !map2Contains || *map2Value != *map1Value {
+			return false
+		}
+	}
+
+	return true
 }

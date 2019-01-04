@@ -183,7 +183,7 @@ func writeTar(files []*fileInformation, config *SyncConfig) (string, map[string]
 
 // TODO: Error handling if files are not there
 func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileInformation, tw *tar.Writer, config *SyncConfig) error {
-	filepath := path.Join(basePath, relativePath)
+	absFilepath := path.Join(basePath, relativePath)
 
 	if writtenFiles[relativePath] != nil {
 		return nil
@@ -211,22 +211,15 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileIn
 		return nil
 	}
 
-	stat, err := os.Lstat(filepath)
+	stat, err := os.Stat(absFilepath)
 
 	// We skip files that are suddenly not there anymore
 	if err != nil {
-		config.Logf("[Upstream] Couldn't stat file %s: %s\n", filepath, err.Error())
-
-		return nil
-	}
-
-	// We skip symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
+		config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
 		return nil
 	}
 
 	fileInformation := createFileInformationFromStat(relativePath, stat, config)
-
 	if stat.IsDir() {
 		// Recursively tar folder
 		return tarFolder(basePath, fileInformation, writtenFiles, stat, tw, config)

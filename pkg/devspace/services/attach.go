@@ -45,7 +45,7 @@ func StartAttach(client *kubernetes.Clientset, serviceNameOverride, containerNam
 		return err
 	}
 
-	log.Infof("Attaching to pod %s/%s...", pod.Name, containerName)
+	log.Infof("Printing logs of pod %s/%s...", pod.Name, containerName)
 
 	go func() {
 		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, containerName, true, nil, os.Stdout, os.Stderr)

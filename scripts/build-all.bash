@@ -6,6 +6,8 @@
 
 set -e
 
+export GO111MODULE=on
+
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
 VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
 COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
@@ -31,10 +33,6 @@ if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
 fi
 
 mkdir -p "${DEVSPACE_ROOT}/release"
-
-## Install dep
-go get -u github.com/golang/dep/...
-dep ensure -v
 
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
