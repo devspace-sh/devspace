@@ -93,7 +93,15 @@ func InitConfig() *v1.Config {
 	return config
 }
 
-// GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
+// GetBaseConfig returns the config unmerged with potential overwrites
+func GetBaseConfig() *v1.Config {
+	GetConfigWithoutDefaults(false)
+	SetDefaultsOnce()
+
+	return config
+}
+
+// GetConfig returns the config merged with all potential overwrite files
 func GetConfig() *v1.Config {
 	GetConfigWithoutDefaults(true)
 	SetDefaultsOnce()
@@ -159,8 +167,13 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 			}
 		}
 
+		// Check if version key is defined
+		if configRaw.Version == nil {
+			log.Fatalf("The version key is missing in your config. Current config version is %s", CurrentConfigVersion)
+		}
+
 		// Check config version
-		if configRaw.Version == nil || *configRaw.Version != CurrentConfigVersion {
+		if *configRaw.Version != CurrentConfigVersion {
 			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
 		}
 

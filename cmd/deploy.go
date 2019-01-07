@@ -157,7 +157,7 @@ func (cmd *DeployCmd) prepareConfig() {
 	}
 
 	// Load Config and modify it
-	config := configutil.GetConfigWithoutDefaults()
+	config := configutil.GetConfigWithoutDefaults(true)
 
 	if cmd.flags.Namespace != "" {
 		config.Cluster = &v1.Cluster{
