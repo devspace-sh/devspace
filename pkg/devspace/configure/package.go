@@ -12,7 +12,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -35,7 +35,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	// Configure cloud provider
-	err := cloud.Configure(true, true, log)
+	err := cloud.Configure(false, log)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	}
 
 	// Configure cloud provider
-	err := cloud.Configure(true, true, log)
+	err := cloud.Configure(false, log)
 	if err != nil {
 		return err
 	}

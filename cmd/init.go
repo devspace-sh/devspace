@@ -10,7 +10,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/generator"
@@ -121,6 +121,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.GetConfig()
 	} else {
 		// Delete config & overwrite config
+		os.Remove(configutil.DefaultConfigsPath)
 		os.Remove(configutil.ConfigPath)
 		os.Remove(configutil.OverwriteConfigPath)
 		os.Remove(generated.ConfigPath)
@@ -156,7 +157,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Auth: &v1.RegistryAuth{},
 			},
 		},
-	}, true)
+	})
 
 	imageMap := *config.Images
 	cmd.defaultImage = imageMap["default"]

@@ -11,7 +11,8 @@ import (
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 )
 
 //ConfigInterface defines the pattern of every config
@@ -25,6 +26,9 @@ generated.yaml
 // DefaultCloudTarget is the default cloud target to use
 const DefaultCloudTarget = "dev"
 
+// DefaultConfigsPath is the default configs path to use
+const DefaultConfigsPath = ".devspace/configs.yaml"
+
 // DefaultConfigPath is the default config path to use
 const DefaultConfigPath = ".devspace/config.yaml"
 
@@ -36,6 +40,9 @@ var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
 var OverwriteConfigPath = DefaultOverwriteConfigPath
+
+// LoadedConfig is the config that was loaded from the configs file
+var LoadedConfig string
 
 // DefaultDevspaceServiceName is the name of the initial default service
 const DefaultDevspaceServiceName = "default"
@@ -49,16 +56,21 @@ const CurrentConfigVersion = "v1alpha1"
 // Global config vars
 var config *v1.Config          // merged config
 var configRaw *v1.Config       // config from .devspace/config.yaml
-var overwriteConfig *v1.Config // overwrite config from .devspace/config.yaml
+var overwriteConfig *v1.Config // overwrite config from .devspace/overwrite.yaml
 var defaultConfig *v1.Config   // default config values
 
 // Thread-safety helper
 var getConfigOnce sync.Once
 var setDefaultsOnce sync.Once
 
-// ConfigExists checks whether the yaml file for the config exists
+// ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
 func ConfigExists() (bool, error) {
-	_, err := os.Stat(ConfigPath)
+	_, err := os.Stat(DefaultConfigsPath)
+	if err == nil {
+		return true, nil // configs.yaml found
+	}
+
+	_, err = os.Stat(ConfigPath)
 	if os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {
@@ -83,45 +95,101 @@ func InitConfig() *v1.Config {
 
 // GetConfig returns the config merged from .devspace/config.yaml and .devspace/overwrite.yaml
 func GetConfig() *v1.Config {
-	GetConfigWithoutDefaults()
+	GetConfigWithoutDefaults(true)
 	SetDefaultsOnce()
 
 	return config
 }
 
 // GetConfigWithoutDefaults returns the config without setting the default values
-func GetConfigWithoutDefaults() *v1.Config {
+func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 	getConfigOnce.Do(func() {
+		var configDefinition *v1.ConfigDefinition
+
 		config = makeConfig()
-		overwriteConfig = makeConfig()
 		configRaw = makeConfig()
 		overwriteConfig = makeConfig()
 		defaultConfig = makeConfig()
 
-		err := loadConfig(configRaw, ConfigPath)
-		if err != nil {
-			log.Fatalf("Loading config: %v", err)
+		// Check if configs.yaml exists
+		_, err := os.Stat(DefaultConfigsPath)
+		if err == nil {
+			configs := v1.Configs{}
+
+			// Get generated config
+			generatedConfig, err := generated.LoadConfig()
+			if err != nil {
+				log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
+			}
+
+			err = loadConfigs(&configs, DefaultConfigsPath)
+			if err != nil {
+				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
+			}
+
+			if generatedConfig.ActiveConfig == nil || *generatedConfig.ActiveConfig == "" {
+				// check if default config exists
+				if configs["default"] == nil {
+					if len(configs) == 0 {
+						log.Fatalf("No config found in %s", DefaultConfigsPath)
+					}
+
+					for name := range configs {
+						LoadedConfig = name
+						break
+					}
+				} else {
+					LoadedConfig = "default"
+				}
+			}
+
+			configDefinition = configs[LoadedConfig]
+			if configDefinition.Config == nil {
+				log.Fatalf("config key not defined in config %s", LoadedConfig)
+			}
+
+			configRaw, err = loadConfigFromWrapper(configDefinition.Config)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			err = loadConfig(configRaw, ConfigPath)
+			if err != nil {
+				log.Fatalf("Loading config: %v", err)
+			}
 		}
 
+		// Check config version
 		if configRaw.Version == nil || *configRaw.Version != CurrentConfigVersion {
 			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
 		}
 
-		//ignore error as overwrite.yaml is optional
-		loadConfig(overwriteConfig, OverwriteConfigPath)
+		Merge(&config, deepCopy(configRaw))
 
-		Merge(&config, configRaw, false)
-		Merge(&config, overwriteConfig, true)
+		// Check if we should load overwrites
+		if loadOverwrites {
+			if configDefinition == nil {
+				//ignore error as overwrite.yaml is optional
+				loadConfig(overwriteConfig, OverwriteConfigPath)
+
+				Merge(&config, overwriteConfig)
+				return
+			}
+
+			if configDefinition.Overwrites != nil && len(*configDefinition.Overwrites) > 0 {
+				for index, configWrapper := range *configDefinition.Overwrites {
+					overwriteConfig, err := loadConfigFromWrapper(configWrapper)
+					if err != nil {
+						log.Fatalf("Error loading overwrite config at index %d: %v", index, err)
+					}
+
+					Merge(&config, overwriteConfig)
+				}
+			}
+		}
 	})
 
 	return config
-}
-
-// GetOverwriteConfig returns the config retrieved from .devspace/overwrite.yaml
-func GetOverwriteConfig() *v1.Config {
-	GetConfig()
-
-	return overwriteConfig
 }
 
 // SetDefaultsOnce ensures that specific values are set in the config

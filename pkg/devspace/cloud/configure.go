@@ -9,7 +9,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -51,7 +51,7 @@ func GetCurrentProvider(log log.Logger) (*Provider, error) {
 }
 
 // Configure will alter the cluster configuration in the config
-func Configure(useKubeContext, dry bool, log log.Logger) error {
+func Configure(createDevSpace bool, log log.Logger) error {
 	dsConfig := configutil.GetConfig()
 
 	// Get provider and login
@@ -77,7 +77,7 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 
 	// Check if we have to create devspace
 	if generatedConfig.Cloud == nil || generatedConfig.Cloud.ProviderName != *dsConfig.Cluster.CloudProvider {
-		if dry {
+		if createDevSpace == false {
 			return errors.New("No devspace configured")
 		}
 
@@ -118,7 +118,7 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 
 	targetConfig := generatedConfig.Cloud.Targets[*target]
 	if targetConfig == nil {
-		if dry {
+		if createDevSpace == false {
 			return errors.New("No devspace target configured")
 		}
 
@@ -144,7 +144,7 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 	}
 
 	// Configure devspace config
-	err = updateDevSpaceConfig(useKubeContext, dsConfig, generatedConfig.Cloud.Targets[*target])
+	err = updateDevSpaceConfig(dsConfig, generatedConfig.Cloud.Targets[*target])
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func Configure(useKubeContext, dry bool, log log.Logger) error {
 	return nil
 }
 
-func updateDevSpaceConfig(useKubeContext bool, dsConfig *v1.Config, targetConfig *generated.DevSpaceTargetConfig) error {
+func updateDevSpaceConfig(dsConfig *v1.Config, targetConfig *generated.DevSpaceTargetConfig) error {
 	// Update tiller if needed
 	if dsConfig.Tiller != nil && dsConfig.Tiller.Namespace != nil {
 		*dsConfig.Tiller.Namespace = targetConfig.Namespace
@@ -162,6 +162,9 @@ func updateDevSpaceConfig(useKubeContext bool, dsConfig *v1.Config, targetConfig
 	if dsConfig.InternalRegistry != nil && dsConfig.InternalRegistry.Namespace != nil {
 		*dsConfig.InternalRegistry.Namespace = targetConfig.Namespace
 	}
+
+	// Check if we should use the kubecontext by checking if an api server is specified in the config
+	useKubeContext := dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || dsConfig.Cluster.APIServer == nil
 
 	// Exchange cluster information
 	if useKubeContext {

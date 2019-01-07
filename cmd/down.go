@@ -70,7 +70,7 @@ func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	// Configure cloud provider
-	err := cloud.Configure(true, true, log.GetInstance())
+	err := cloud.Configure(false, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
@@ -80,7 +80,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	// Configure cloud provider
-	err := cloud.Configure(true, false, log.GetInstance())
+	err := cloud.Configure(true, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}

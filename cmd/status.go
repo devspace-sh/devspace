@@ -78,7 +78,7 @@ func (cmd *StatusCmd) RunStatus(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	// Configure cloud provider
-	err = cloud.Configure(true, true, log.GetInstance())
+	err = cloud.Configure(false, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}

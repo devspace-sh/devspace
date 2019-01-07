@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// splitConfigs removes the config options defined in overwriteConfig that are not defined in configRaw and returns the result as a first return value
-// additionally splitConfigs returns a second config map only containing the overwriteConfig values
-func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig interface{}) (interface{}, interface{}, error) {
+// Split removes the config options defined in overwriteConfig that are not defined in configRaw and returns the result as a first return value
+// additionally Split returns a second config map only containing the overwriteConfig values
+func Split(config interface{}, configRaw interface{}, overwriteConfig interface{}) (interface{}, interface{}, error) {
 	object, isObjectNil := getPointerValue(config)
 
 	objectType := reflect.TypeOf(object)
@@ -50,7 +50,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 
 			if val != nil {
 				//to remove nil values
-				_, val, err = splitConfigs(val, val, val)
+				_, val, err = Split(val, val, val)
 
 				if err != nil {
 					return nil, nil, err
@@ -64,7 +64,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 
 			if val != nil {
 				//to remove nil values
-				_, val, err = splitConfigs(val, val, val)
+				_, val, err = Split(val, val, val)
 
 				if err != nil {
 					return nil, nil, err
@@ -97,7 +97,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 
 			var err error
 
-			val, overwriteVal, err = splitConfigs(
+			val, overwriteVal, err = Split(
 				val,
 				valRaw,
 				overwriteVal,
@@ -184,7 +184,7 @@ func splitConfigs(config interface{}, configRaw interface{}, overwriteConfig int
 						overwriteFieldValueClean = overwriteFieldValue
 					}
 				} else {
-					fieldValueClean, overwriteFieldValueClean, err = splitConfigs(
+					fieldValueClean, overwriteFieldValueClean, err = Split(
 						fieldValue,
 						fieldRawValue,
 						overwriteFieldValue,

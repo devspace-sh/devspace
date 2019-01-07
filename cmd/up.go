@@ -156,7 +156,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Configure cloud provider
-	err := cloud.Configure(true, false, log.GetInstance())
+	err := cloud.Configure(true, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}

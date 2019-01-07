@@ -16,6 +16,7 @@ type Config struct {
 	DockerContextPaths     map[string]string `yaml:"dockerContextPaths"`
 	ImageTags              map[string]string `yaml:"imageTags"`
 	Cloud                  *CloudConfig      `yaml:"cloud,omitempty"`
+	ActiveConfig           *string           `yaml:"activeConfig,omitempty"`
 }
 
 // DevSpaceTargetConfig holds the information to connect to a devspace target

@@ -19,15 +19,14 @@ func SaveConfig() error {
 	// default and overwrite values
 	configToIgnore := makeConfig()
 
-	Merge(&configToIgnore, defaultConfig, true)
-	Merge(&configToIgnore, overwriteConfig, true)
+	Merge(&configToIgnore, defaultConfig)
+	Merge(&configToIgnore, overwriteConfig)
 
 	// generates config without default and overwrite values
-	configMapRaw, _, err := splitConfigs(config, configRaw, configToIgnore)
+	configMapRaw, _, err := Split(config, configRaw, configToIgnore)
 
 	// generates overwriteConfig
-	_, overwriteMapRaw, err := splitConfigs(config, configRaw, overwriteConfig)
-
+	_, overwriteMapRaw, err := Split(config, configRaw, overwriteConfig)
 	if err != nil {
 		return err
 	}
