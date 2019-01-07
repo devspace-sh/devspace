@@ -79,7 +79,6 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
 	}
 
-	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 	var err error
 
 	// Configure cloud provider

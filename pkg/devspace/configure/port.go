@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/services"
 )
 
 // AddPort adds a port to the config
 func AddPort(namespace, labelSelector, serviceName string, args []string) error {
-
 	var labelSelectorMap map[string]*string
 	var err error
 
@@ -21,7 +20,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	}
 
 	if labelSelector == "" {
-		config := configutil.GetConfig()
+		config := configutil.GetBaseConfig()
 
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
@@ -55,7 +54,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 
 	insertOrReplacePortMapping(namespace, labelSelectorMap, serviceName, portMappings)
 
-	err = configutil.SaveConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -65,7 +64,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 
 // RemovePort removes a port from the config
 func RemovePort(removeAll bool, labelSelector string, args []string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {
@@ -109,7 +108,7 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 
 		config.DevSpace.Ports = &newPortForwards
 
-		err = configutil.SaveConfig()
+		err = configutil.SaveBaseConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %s", err.Error())
 		}

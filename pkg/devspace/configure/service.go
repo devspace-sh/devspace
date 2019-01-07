@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/services"
 )
 
 //AddService adds an image to the devspace
 func AddService(name string, labelSelector string, namespace string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	var labelSelectorMap map[string]*string
 	var err error
@@ -50,7 +50,7 @@ func AddService(name string, labelSelector string, namespace string) error {
 
 	config.DevSpace.Services = &servicesConfig
 
-	err = configutil.SaveConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -60,7 +60,7 @@ func AddService(name string, labelSelector string, namespace string) error {
 
 //RemoveService removes a service from the devspace
 func RemoveService(removeAll bool, name string, labelSelector string, namespace string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -87,7 +87,7 @@ func RemoveService(removeAll bool, name string, labelSelector string, namespace 
 
 		config.DevSpace.Services = &newServicesPaths
 
-		err = configutil.SaveConfig()
+		err = configutil.SaveBaseConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %v", err)
 		}

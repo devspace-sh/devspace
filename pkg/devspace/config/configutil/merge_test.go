@@ -6,30 +6,6 @@ import (
 	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 )
 
-func TestMultipleMerge(t *testing.T) {
-	imageName := "default"
-
-	object1 := makeConfig()
-	object1.Images = nil
-
-	object2 := makeConfig()
-	(*object2.Images)[imageName] = &v1.ImageConfig{
-		Name: &imageName,
-	}
-
-	object3 := makeConfig()
-	(*object2.Images)[imageName] = &v1.ImageConfig{
-		Name: String("newDefault"),
-	}
-
-	Merge(&object1, object2)
-	Merge(&object1, object3)
-
-	if (*object2.Images)[imageName] == nil || (*object2.Images)[imageName].Name != &imageName {
-		t.Fatal("Merge changed object2")
-	}
-}
-
 func TestSimpleMerge(t *testing.T) {
 	apiServer := String("testApiServer")
 	deployment1 := String("testDeployment1")

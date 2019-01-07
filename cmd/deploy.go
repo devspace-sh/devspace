@@ -77,8 +77,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Prepare the config
 	cmd.prepareConfig()
 
-	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
-
 	// Configure cloud provider
 	err := cloud.Configure(true, log.GetInstance())
 	if err != nil {

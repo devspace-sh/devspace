@@ -29,7 +29,7 @@ import (
 
 // AddPackage adds a helm dependency to specified deployment
 func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
@@ -198,7 +198,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		}
 	}
 
-	err = configutil.SaveConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Unable to save config: %v", err)
 	}

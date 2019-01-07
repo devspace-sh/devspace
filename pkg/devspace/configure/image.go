@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
 //AddImage adds an image to the devspace
 func AddImage(nameInConfig string, name string, tag string, contextPath string, dockerfilePath, buildEngine string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	imageConfig := &v1.ImageConfig{
 		Name: &name,
@@ -36,7 +36,7 @@ func AddImage(nameInConfig string, name string, tag string, contextPath string, 
 
 	(*config.Images)[nameInConfig] = imageConfig
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -46,7 +46,7 @@ func AddImage(nameInConfig string, name string, tag string, contextPath string, 
 
 //RemoveImage removes an image from the devspace
 func RemoveImage(removeAll bool, names []string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	if len(names) == 0 && removeAll == false {
 		return fmt.Errorf("You have to specify at least one image")
@@ -70,7 +70,7 @@ func RemoveImage(removeAll bool, names []string) error {
 
 	config.Images = &newImageList
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %v", err)
 	}

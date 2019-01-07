@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 )
 
 // AddDeployment adds a new deployment to the config
@@ -18,7 +18,7 @@ func AddDeployment(name, namespace, manifests, chart string) error {
 		return errors.New("The --manifests flag and --chart flag cannot be used together")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	if config.DevSpace.Deployments != nil {
 		for _, deployConfig := range *config.DevSpace.Deployments {
@@ -60,7 +60,7 @@ func AddDeployment(name, namespace, manifests, chart string) error {
 
 	config.DevSpace.Deployments = &deployments
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -74,7 +74,7 @@ func RemoveDeployment(removeAll bool, name string) error {
 		return errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	if config.DevSpace.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
@@ -88,7 +88,7 @@ func RemoveDeployment(removeAll bool, name string) error {
 		config.DevSpace.Deployments = &newDeployments
 	}
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}

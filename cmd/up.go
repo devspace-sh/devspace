@@ -132,7 +132,6 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.StartFileLogging()
-	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
 
 	configExists, _ := configutil.ConfigExists()
 	if !configExists {

@@ -18,11 +18,6 @@ import (
 //ConfigInterface defines the pattern of every config
 type ConfigInterface interface{}
 
-const configGitignore = `logs/
-overwrite.yaml
-generated.yaml
-`
-
 // DefaultCloudTarget is the default cloud target to use
 const DefaultCloudTarget = "dev"
 
@@ -35,7 +30,7 @@ const DefaultConfigPath = ".devspace/config.yaml"
 // DefaultOverwriteConfigPath is the default overwrite config path to use
 const DefaultOverwriteConfigPath = ".devspace/overwrite.yaml"
 
-// ConfigPath is the path for the main config
+// ConfigPath is the path for the main config or if a configs.yaml is there the config to load
 var ConfigPath = DefaultConfigPath
 
 // OverwriteConfigPath specifies where the override.yaml lies
@@ -135,6 +130,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
 			}
 
+			// Get config to load
 			if generatedConfig.ActiveConfig == nil || *generatedConfig.ActiveConfig == "" {
 				// check if default config exists
 				if configs["default"] == nil {
@@ -149,6 +145,13 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				} else {
 					LoadedConfig = "default"
 				}
+			} else {
+				LoadedConfig = *generatedConfig.ActiveConfig
+			}
+
+			// Check if we should override loadedconfig
+			if ConfigPath != DefaultConfigPath {
+				LoadedConfig = ConfigPath
 			}
 
 			configDefinition = configs[LoadedConfig]
@@ -183,13 +186,14 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		if loadOverwrites {
 			if configDefinition == nil {
 				//ignore error as overwrite.yaml is optional
-				loadConfig(overwriteConfig, OverwriteConfigPath)
-
-				Merge(&config, overwriteConfig)
-				return
-			}
-
-			if configDefinition.Overwrites != nil && len(*configDefinition.Overwrites) > 0 {
+				err := loadConfig(overwriteConfig, OverwriteConfigPath)
+				if err != nil {
+					Merge(&config, overwriteConfig)
+					log.Infof("Loaded config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
+				} else {
+					log.Infof("Loaded config %s", ConfigPath)
+				}
+			} else if configDefinition.Overwrites != nil {
 				for index, configWrapper := range *configDefinition.Overwrites {
 					overwriteConfig, err := loadConfigFromWrapper(configWrapper)
 					if err != nil {
@@ -198,6 +202,16 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 
 					Merge(&config, overwriteConfig)
 				}
+
+				log.Infof("Loaded config %s from %s with %d overwrites", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overwrites))
+			} else {
+				log.Infof("Loaded config %s from %s without overwrites", LoadedConfig, DefaultConfigsPath)
+			}
+		} else {
+			if configDefinition == nil {
+				log.Infof("Loaded config %s", ConfigPath)
+			} else {
+				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 			}
 		}
 	})

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
@@ -16,11 +17,17 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/generator"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/dockerfile"
+	"github.com/covexo/devspace/pkg/util/fsutil"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/spf13/cobra"
 )
+
+const configGitignore = `logs/
+overwrite.yaml
+generated.yaml
+`
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
@@ -92,7 +99,7 @@ YOUR_PROJECT_PATH/
 |
 |-- .devspace/
 |   |-- .gitignore
-|   |-- cluster.yaml
+|   |-- generated.yaml
 |   |-- config.yaml
 
 #######################################################
@@ -118,7 +125,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	configExists, _ := configutil.ConfigExists()
 	if configExists && cmd.flags.reconfigure == false {
-		config = configutil.GetConfig()
+		config = configutil.GetBaseConfig()
 	} else {
 		// Delete config & overwrite config
 		os.Remove(configutil.DefaultConfigsPath)
@@ -198,9 +205,17 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		cmd.configureRegistry()
 
-		err := configutil.SaveConfig()
+		err := configutil.SaveBaseConfig()
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
+		}
+
+		configDir := filepath.Dir(configutil.ConfigPath)
+
+		// Check if .gitignore exists
+		_, err = os.Stat(filepath.Join(configDir, ".gitignore"))
+		if os.IsNotExist(err) {
+			fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 		}
 	}
 }

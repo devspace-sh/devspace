@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/services"
 )
 
 // AddSyncPath adds a new sync path to the config
 func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
 	if config.DevSpace == nil {
 		config.DevSpace = &v1.DevSpaceConfig{}
@@ -31,8 +31,6 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	}
 
 	if labelSelector == "" {
-		config := configutil.GetConfig()
-
 		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
 			services := *config.DevSpace.Services
 
@@ -95,7 +93,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 	config.DevSpace.Sync = &syncConfig
 
-	err = configutil.SaveConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -105,7 +103,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 // RemoveSyncPath removes a sync path from the config
 func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -132,7 +130,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 
 		config.DevSpace.Sync = &newSyncPaths
 
-		err = configutil.SaveConfig()
+		err = configutil.SaveBaseConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %v", err)
 		}
