@@ -31,6 +31,13 @@ func SaveBaseConfig() error {
 
 	savePath := ConfigPath
 
+	// Convert to string
+	configMap, _ := configMapRaw.(map[interface{}]interface{})
+	configYaml, err := yaml.Marshal(configMap)
+	if err != nil {
+		return err
+	}
+
 	// Check if we have to save to configs.yaml
 	if LoadedConfig != "" {
 		configs := v1.Configs{}
@@ -45,9 +52,11 @@ func SaveBaseConfig() error {
 
 		// We have to save the config in the configs.yaml
 		if configDefinition.Config.Data != nil {
-			saveMap, ok := configMapRaw.(*v1.Config)
-			if ok == false {
-				return fmt.Errorf("Error converting config. configMap is not of type *v1.Config")
+			saveMap := &v1.Config{}
+
+			err := yaml.UnmarshalStrict(configYaml, saveMap)
+			if err != nil {
+				return err
 			}
 
 			configDefinition.Config.Data = saveMap
@@ -66,12 +75,6 @@ func SaveBaseConfig() error {
 
 		// Save config in save path
 		savePath = *configDefinition.Config.Path
-	}
-
-	configMap, _ := configMapRaw.(map[interface{}]interface{})
-	configYaml, err := yaml.Marshal(configMap)
-	if err != nil {
-		return err
 	}
 
 	configDir := filepath.Dir(ConfigPath)

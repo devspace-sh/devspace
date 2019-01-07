@@ -2,12 +2,12 @@ package v1
 
 //DevSpaceConfig defines the devspace deployment
 type DevSpaceConfig struct {
-	Terminal    *Terminal                `yaml:"terminal"`
+	Terminal    *Terminal                `yaml:"terminal,omitempty"`
 	AutoReload  *AutoReloadPathsConfig   `yaml:"autoReload,omitempty"`
 	Services    *[]*ServiceConfig        `yaml:"services,omitempty"`
 	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Ports       *[]*PortForwardingConfig `yaml:"ports"`
-	Sync        *[]*SyncConfig           `yaml:"sync"`
+	Ports       *[]*PortForwardingConfig `yaml:"ports,omitempty"`
+	Sync        *[]*SyncConfig           `yaml:"sync,omitempty"`
 }
 
 // AutoReloadPathsConfig defines the struct for auto reloading devspace with additional paths
@@ -21,7 +21,7 @@ type ServiceConfig struct {
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	ResourceType  *string             `yaml:"resourceType,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector"`
-	ContainerName *string             `yaml:"containerName"`
+	ContainerName *string             `yaml:"containerName,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -29,7 +29,7 @@ type PortForwardingConfig struct {
 	Service       *string             `yaml:"service,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	ResourceType  *string             `yaml:"resourceType,omitempty"`
-	LabelSelector *map[string]*string `yaml:"labelSelector"`
+	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
 	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
 
@@ -37,20 +37,20 @@ type PortForwardingConfig struct {
 type PortMapping struct {
 	LocalPort   *int    `yaml:"localPort"`
 	RemotePort  *int    `yaml:"remotePort"`
-	BindAddress *string `yaml:"bindAddress"`
+	BindAddress *string `yaml:"bindAddress,omitempty"`
 }
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
 	Service              *string             `yaml:"service,omitempty"`
 	Namespace            *string             `yaml:"namespace,omitempty"`
-	LabelSelector        *map[string]*string `yaml:"labelSelector"`
+	LabelSelector        *map[string]*string `yaml:"labelSelector,omitempty"`
 	ContainerName        *string             `yaml:"containerName,omitempty"`
-	LocalSubPath         *string             `yaml:"localSubPath"`
-	ContainerPath        *string             `yaml:"containerPath"`
-	ExcludePaths         *[]string           `yaml:"excludePaths"`
-	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths"`
-	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths"`
+	LocalSubPath         *string             `yaml:"localSubPath,omitempty"`
+	ContainerPath        *string             `yaml:"containerPath,omitempty"`
+	ExcludePaths         *[]string           `yaml:"excludePaths,omitempty"`
+	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths,omitempty"`
+	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths,omitempty"`
 	BandwidthLimits      *BandwidthLimits    `yaml:"bandwidthLimits,omitempty"`
 }
 

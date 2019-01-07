@@ -4,9 +4,9 @@ package v1
 type Terminal struct {
 	Disabled      *bool               `yaml:"disabled,omitempty"`
 	Service       *string             `yaml:"service,omitempty"`
-	ResourceType  *string             `yaml:"resourceType"`
-	LabelSelector *map[string]*string `yaml:"labelSelector"`
-	Namespace     *string             `yaml:"namespace"`
-	ContainerName *string             `yaml:"containerName"`
-	Command       *[]*string          `yaml:"command"`
+	ResourceType  *string             `yaml:"resourceType,omitempty"`
+	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
+	Namespace     *string             `yaml:"namespace,omitempty"`
+	ContainerName *string             `yaml:"containerName,omitempty"`
+	Command       *[]*string          `yaml:"command,omitempty"`
 }
