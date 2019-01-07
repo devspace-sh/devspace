@@ -14,17 +14,18 @@ func loadConfigFromWrapper(configWrapper *v1.ConfigWrapper) (*v1.Config, error) 
 		return nil, fmt.Errorf("path & data are both defined in config %s. Only choose one", LoadedConfig)
 	}
 
+	// Config that will be returned
+	returnConfig := makeConfig()
+
 	// Load from path
 	if configWrapper.Path != nil {
-		returnConfig := makeConfig()
-
 		err := loadConfig(returnConfig, *configWrapper.Path)
 		if err != nil {
 			return nil, fmt.Errorf("Loading config: %v", err)
 		}
-
-		return returnConfig, nil
+	} else {
+		Merge(&returnConfig, configWrapper.Data)
 	}
 
-	return configWrapper.Data, nil
+	return returnConfig, nil
 }
