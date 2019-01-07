@@ -125,7 +125,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
 			}
 
-			err = loadConfigs(&configs, DefaultConfigsPath)
+			err = LoadConfigs(&configs, DefaultConfigsPath)
 			if err != nil {
 				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
 			}

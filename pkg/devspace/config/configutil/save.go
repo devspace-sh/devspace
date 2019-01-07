@@ -21,7 +21,6 @@ func SaveBaseConfig() error {
 	configToIgnore := makeConfig()
 
 	Merge(&configToIgnore, defaultConfig)
-	Merge(&configToIgnore, overwriteConfig)
 
 	// generates config without default and overwrite values
 	configMapRaw, _, err := Split(config, configRaw, configToIgnore)
@@ -43,7 +42,7 @@ func SaveBaseConfig() error {
 		configs := v1.Configs{}
 
 		// Load configs
-		err = loadConfigs(&configs, DefaultConfigsPath)
+		err = LoadConfigs(&configs, DefaultConfigsPath)
 		if err != nil {
 			return fmt.Errorf("Error loading %s: %v", DefaultConfigsPath, err)
 		}

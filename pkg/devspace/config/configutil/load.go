@@ -16,7 +16,7 @@ func loadConfig(config *v1.Config, path string) error {
 	return yaml.UnmarshalStrict(yamlFileContent, config)
 }
 
-func loadConfigs(configs *v1.Configs, path string) error {
+func LoadConfigs(configs *v1.Configs, path string) error {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
