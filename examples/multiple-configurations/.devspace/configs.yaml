@@ -1,0 +1,84 @@
+# This config is used by default you can change the used config by running `devspace use config node`
+default:
+  config:
+    # You can either specify the config directly in this file with the data key or use the path key that points to another yaml containing the configuration 
+    data:
+      version: v1alpha1
+      cluster:
+        kubeContext: minikube
+      devSpace:
+        terminal:
+          disabled: true
+        deployments:
+        - name: devspace-node
+          kubectl:
+            manifests:
+            - node/kube/*
+        - name: devspace-php
+          helm:
+            chartPath: php/chart
+      images:
+        node:
+          name: ms-node
+          skipPush: true
+          build:
+            dockerfilePath: node/Dockerfile
+            contextPath: node/
+        php:
+          name: ms-php
+          skipPush: true
+          build:
+            dockerfilePath: php/Dockerfile
+            contextPath: php/
+# Config to use when we want to develop the node microservice
+node:
+  config:
+    path: .devspace/config.yaml
+  overwrites:
+  - data:
+      devSpace:
+        terminal:
+          labelSelector:
+            release: devspace-node
+        deployments:
+        - name: devspace-node
+          kubectl:
+            manifests:
+            - node/kube/*
+        - name: devspace-php
+          helm:
+            chartPath: php/chart
+        ports:
+        - labelSelector:
+            release: devspace-node
+          portMappings:
+          - localPort: 3000
+            remotePort: 3000
+        sync:
+        - containerPath: /app
+          labelSelector:
+            release: devspace-node
+          localSubPath: ./node
+          uploadExcludePaths:
+          - Dockerfile
+          - kube/
+# Config to use when we want to develop the php microservice
+php:
+  config:
+    path: .devspace/config.yaml
+  overwrites:
+  - data:
+      ports:
+      - labelSelector:
+          release: devspace-php
+        portMappings:
+        - localPort: 3000
+          remotePort: 80
+      sync:
+      - containerPath: /var/www/html
+        labelSelector:
+          release: devspace-php
+        localSubPath: ./php
+        uploadExcludePaths:
+        - Dockerfile
+        - chart/

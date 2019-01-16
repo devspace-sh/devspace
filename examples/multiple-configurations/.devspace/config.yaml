@@ -1,0 +1,28 @@
+version: v1alpha1
+cluster:
+  kubeContext: minikube
+devSpace:
+  terminal:
+    labelSelector:
+      release: devspace-node
+  deployments:
+  - name: devspace-node
+    kubectl:
+      manifests:
+      - node/kube/*
+  - name: devspace-php
+    helm:
+      chartPath: php/chart
+images:
+  node:
+    name: ms-node
+    skipPush: true
+    build:
+      dockerfilePath: node/Dockerfile
+      contextPath: node/
+  php:
+    name: ms-php
+    skipPush: true
+    build:
+      dockerfilePath: php/Dockerfile
+      contextPath: php/

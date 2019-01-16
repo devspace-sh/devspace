@@ -16,6 +16,7 @@ func loadConfig(config *v1.Config, path string) error {
 	return yaml.UnmarshalStrict(yamlFileContent, config)
 }
 
+// LoadConfigs loads all the configs from the .devspace/configs.yaml
 func LoadConfigs(configs *v1.Configs, path string) error {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
