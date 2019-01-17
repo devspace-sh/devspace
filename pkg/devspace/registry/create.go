@@ -8,7 +8,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/foomo/htpasswd"
 	k8sv1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 		}
 	}
 
-	values := map[interface{}]interface{}{}
+	values := map[string]interface{}{}
 
 	// Deploy the registry
 	_, err := helm.InstallChartByName(InternalRegistryName, registryReleaseNamespace, "stable/docker-registry", "", &values, true)

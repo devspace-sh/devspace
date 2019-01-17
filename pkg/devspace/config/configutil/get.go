@@ -1,9 +1,12 @@
 package configutil
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 
+	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/juju/errors"
@@ -23,6 +26,9 @@ const DefaultCloudTarget = "dev"
 
 // DefaultConfigsPath is the default configs path to use
 const DefaultConfigsPath = ".devspace/configs.yaml"
+
+// DefaultVarsPath is the default vars path to use if no configs.yaml is present
+const DefaultVarsPath = ".devspace/vars.yaml"
 
 // DefaultConfigPath is the default config path to use
 const DefaultConfigPath = ".devspace/config.yaml"
@@ -114,16 +120,16 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		overwriteConfig = makeConfig()
 		defaultConfig = makeConfig()
 
+		// Get generated config
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
+		}
+
 		// Check if configs.yaml exists
-		_, err := os.Stat(DefaultConfigsPath)
+		_, err = os.Stat(DefaultConfigsPath)
 		if err == nil {
 			configs := v1.Configs{}
-
-			// Get generated config
-			generatedConfig, err := generated.LoadConfig()
-			if err != nil {
-				log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
-			}
 
 			err = LoadConfigs(&configs, DefaultConfigsPath)
 			if err != nil {
@@ -159,12 +165,46 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				log.Fatalf("config key not defined in config %s", LoadedConfig)
 			}
 
+			// Ask questions
+			if configDefinition.Vars != nil {
+				vars, err := loadVarsFromWrapper(configDefinition.Vars)
+				if err != nil {
+					log.Fatalf("Error loading vars: %v", err)
+				}
+
+				err = askQuestions(generatedConfig, vars)
+				if err != nil {
+					log.Fatalf("Error filling vars: %v", err)
+				}
+			}
+
+			// Load config
 			configRaw, err = loadConfigFromWrapper(configDefinition.Config)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else {
-			err = loadConfig(configRaw, ConfigPath)
+			_, err := os.Stat(DefaultVarsPath)
+			if err == nil {
+				vars := []*v1.Variable{}
+				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
+				if err != nil {
+					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
+				}
+
+				err = yaml.UnmarshalStrict(yamlFileContent, vars)
+				if err != nil {
+					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
+				}
+
+				// Ask questions
+				err = askQuestions(generatedConfig, vars)
+				if err != nil {
+					log.Fatalf("Error filling vars: %v", err)
+				}
+			}
+
+			err = loadConfigFromPath(configRaw, ConfigPath)
 			if err != nil {
 				log.Fatalf("Loading config: %v", err)
 			}
@@ -186,7 +226,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		if loadOverwrites {
 			if configDefinition == nil {
 				//ignore error as overwrite.yaml is optional
-				err := loadConfig(overwriteConfig, OverwriteConfigPath)
+				err := loadConfigFromPath(overwriteConfig, OverwriteConfigPath)
 				if err != nil {
 					Merge(&config, overwriteConfig)
 					log.Infof("Loaded config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
@@ -302,6 +342,32 @@ func SetDefaultsOnce() {
 			config.InternalRegistry.Namespace = defaultConfig.InternalRegistry.Namespace
 		}
 	})
+}
+
+func askQuestions(generatedConfig *generated.Config, vars []*v1.Variable) error {
+	changed := false
+
+	for idx, variable := range vars {
+		if variable.Name == nil {
+			return fmt.Errorf("Name required for variable with index %d", idx)
+		}
+
+		if _, ok := generatedConfig.Vars[*variable.Name]; ok {
+			continue
+		}
+
+		generatedConfig.Vars[*variable.Name] = AskQuestion(variable)
+		changed = true
+	}
+
+	if changed {
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetService returns the service referenced by serviceName

@@ -4,19 +4,21 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 // Config specifies the runtime config struct
 type Config struct {
-	HelmOverrideTimestamps map[string]int64  `yaml:"helmOverrideTimestamps"`
-	HelmChartHashs         map[string]string `yaml:"helmChartHashs"`
-	DockerfileTimestamps   map[string]int64  `yaml:"dockerfileTimestamps"`
-	DockerContextPaths     map[string]string `yaml:"dockerContextPaths"`
-	ImageTags              map[string]string `yaml:"imageTags"`
-	Cloud                  *CloudConfig      `yaml:"cloud,omitempty"`
-	ActiveConfig           *string           `yaml:"activeConfig,omitempty"`
+	HelmOverrideTimestamps map[string]int64       `yaml:"helmOverrideTimestamps"`
+	HelmChartHashs         map[string]string      `yaml:"helmChartHashs"`
+	DockerfileTimestamps   map[string]int64       `yaml:"dockerfileTimestamps"`
+	DockerContextPaths     map[string]string      `yaml:"dockerContextPaths"`
+	ImageTags              map[string]string      `yaml:"imageTags"`
+	Cloud                  *CloudConfig           `yaml:"cloud,omitempty"`
+	ActiveConfig           *string                `yaml:"activeConfig,omitempty"`
+	Vars                   map[string]interface{} `yaml:"vars,omitempty"`
 }
 
 // DevSpaceTargetConfig holds the information to connect to a devspace target
@@ -41,44 +43,57 @@ type CloudConfig struct {
 // ConfigPath is the relative generated config path
 var ConfigPath = "/.devspace/generated.yaml"
 
+var loadedConfig *Config
+var loadedConfigOnce sync.Once
+
 // LoadConfig loads the config from the filesystem
 func LoadConfig() (*Config, error) {
-	workdir, _ := os.Getwd()
+	var err error
 
-	data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
-	if err != nil {
-		return &Config{
-			DockerfileTimestamps:   make(map[string]int64),
-			DockerContextPaths:     make(map[string]string),
-			ImageTags:              make(map[string]string),
-			HelmChartHashs:         make(map[string]string),
-			HelmOverrideTimestamps: make(map[string]int64),
-		}, nil
-	}
+	loadedConfigOnce.Do(func() {
+		workdir, _ := os.Getwd()
 
-	config := &Config{}
-	err = yaml.Unmarshal(data, config)
-	if err != nil {
-		return nil, err
-	}
+		data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
+		if err != nil {
+			loadedConfig = &Config{
+				DockerfileTimestamps:   make(map[string]int64),
+				DockerContextPaths:     make(map[string]string),
+				ImageTags:              make(map[string]string),
+				HelmChartHashs:         make(map[string]string),
+				HelmOverrideTimestamps: make(map[string]int64),
+				Vars:                   make(map[string]interface{}),
+			}
 
-	if config.HelmChartHashs == nil {
-		config.HelmChartHashs = make(map[string]string)
-	}
-	if config.HelmOverrideTimestamps == nil {
-		config.HelmOverrideTimestamps = make(map[string]int64)
-	}
-	if config.DockerfileTimestamps == nil {
-		config.DockerfileTimestamps = make(map[string]int64)
-	}
-	if config.DockerContextPaths == nil {
-		config.DockerContextPaths = make(map[string]string)
-	}
-	if config.ImageTags == nil {
-		config.ImageTags = make(map[string]string)
-	}
+			return
+		}
 
-	return config, nil
+		loadedConfig = &Config{}
+		err = yaml.Unmarshal(data, loadedConfig)
+		if err != nil {
+			return
+		}
+
+		if loadedConfig.HelmChartHashs == nil {
+			loadedConfig.HelmChartHashs = make(map[string]string)
+		}
+		if loadedConfig.HelmOverrideTimestamps == nil {
+			loadedConfig.HelmOverrideTimestamps = make(map[string]int64)
+		}
+		if loadedConfig.DockerfileTimestamps == nil {
+			loadedConfig.DockerfileTimestamps = make(map[string]int64)
+		}
+		if loadedConfig.DockerContextPaths == nil {
+			loadedConfig.DockerContextPaths = make(map[string]string)
+		}
+		if loadedConfig.ImageTags == nil {
+			loadedConfig.ImageTags = make(map[string]string)
+		}
+		if loadedConfig.ImageTags == nil {
+			loadedConfig.Vars = make(map[string]interface{})
+		}
+	})
+
+	return loadedConfig, err
 }
 
 // SaveConfig saves the config to the filesystem

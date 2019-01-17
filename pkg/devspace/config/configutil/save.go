@@ -51,14 +51,7 @@ func SaveBaseConfig() error {
 
 		// We have to save the config in the configs.yaml
 		if configDefinition.Config.Data != nil {
-			saveMap := &v1.Config{}
-
-			err := yaml.UnmarshalStrict(configYaml, saveMap)
-			if err != nil {
-				return err
-			}
-
-			configDefinition.Config.Data = saveMap
+			configDefinition.Config.Data = configMap
 			configYaml, err := yaml.Marshal(configs)
 			if err != nil {
 				return err
