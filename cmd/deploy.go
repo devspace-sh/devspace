@@ -64,7 +64,6 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
-	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
 	// cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
 
 	rootCmd.AddCommand(cobraCmd)
@@ -116,16 +115,22 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	if cmd.flags.SkipBuild == false {
-		// Force image build
-		_, err = image.BuildAll(client, generatedConfig, true, log.GetInstance())
+	// Force image build
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Save config if an image was built
+	if mustRedeploy == true {
+		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error saving generated config: %v", err)
 		}
 	}
 
 	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, true, false, log.GetInstance())
+	err = deploy.All(client, generatedConfig, mustRedeploy, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -100,8 +100,6 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		overwriteValues = unmarshalledValues
 	}
 
-	var release *hapi_release5.Release
-
 	if releaseExists {
 		waitOption := k8shelm.UpgradeWait(wait)
 
@@ -116,33 +114,39 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		)
 
 		if err != nil {
-			return nil, err
+			// Delete release and redeploy
+			if strings.Index(err.Error(), "cannot re-use a name that is still in use") != -1 {
+				// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
+				_, err := helmClientWrapper.DeleteRelease(releaseName, true)
+				if err != nil {
+					return nil, fmt.Errorf("Error deleting release %s: %v", releaseName, err)
+				}
+			} else {
+				return nil, err
+			}
+		} else {
+			return upgradeResponse.GetRelease(), nil
 		}
-
-		release = upgradeResponse.GetRelease()
-	} else {
-		waitOption := k8shelm.InstallWait(wait)
-
-		installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
-			chart,
-			releaseNamespace,
-			k8shelm.InstallTimeout(deploymentTimeout),
-			k8shelm.ValueOverrides(overwriteValues),
-			k8shelm.ReleaseName(releaseName),
-			k8shelm.InstallReuseName(true),
-			waitOption,
-		)
-
-		if err != nil {
-			// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
-			helmClientWrapper.DeleteRelease(releaseName, true)
-
-			return nil, err
-		}
-
-		release = installResponse.GetRelease()
 	}
-	return release, nil
+
+	waitOption := k8shelm.InstallWait(wait)
+	installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
+		chart,
+		releaseNamespace,
+		k8shelm.InstallTimeout(deploymentTimeout),
+		k8shelm.ValueOverrides(overwriteValues),
+		k8shelm.ReleaseName(releaseName),
+		k8shelm.InstallReuseName(true),
+		waitOption,
+	)
+	if err != nil {
+		// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
+		helmClientWrapper.DeleteRelease(releaseName, true)
+
+		return nil, err
+	}
+
+	return installResponse.GetRelease(), nil
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
