@@ -98,7 +98,7 @@ func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 
 	if config.DevSpace.Deployments != nil {
 		// Reverse them
-		for i := len(*config.DevSpace.Deployments); i >= 0; i-- {
+		for i := len(*config.DevSpace.Deployments) - 1; i >= 0; i-- {
 			deployConfig := (*config.DevSpace.Deployments)[i]
 
 			// Check if we should skip deleting deployment
