@@ -13,7 +13,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/hash"
@@ -259,6 +259,21 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 
 	runtimeConfig.DockerfileTimestamps[dockerfilePath] = dockerfileInfo.ModTime().Unix()
 	runtimeConfig.DockerContextPaths[contextPath] = hash
+
+	// Check if there is an image tag for this image
+	imageName, registryConf, err := registry.GetRegistryConfigFromImageConfig(imageConf)
+	if err != nil {
+		return false, fmt.Errorf("GetRegistryConfigFromImageConfig failed: %v", err)
+	}
+
+	// Update config
+	if *registryConf.URL != "" {
+		imageName = *registryConf.URL + "/" + imageName
+	}
+
+	if _, ok := runtimeConfig.ImageTags[imageName]; ok == false {
+		return true, nil
+	}
 
 	return mustRebuild, nil
 }
