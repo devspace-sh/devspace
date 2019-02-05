@@ -125,7 +125,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		return nil, err
 	}
 
-	helmHomePath := homeDir + "/.devspace/helm"
+	helmHomePath := homeDir + "/.helm"
 	repoPath := helmHomePath + "/repository"
 	repoFile := repoPath + "/repositories.yaml"
 	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath

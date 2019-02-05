@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +32,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, config *v1.Config, upgrad
 	tillerOptions := &helminstaller.Options{
 		Namespace:                    tillerNamespace,
 		MaxHistory:                   10,
-		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.0",
+		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.3",
 		ServiceAccount:               TillerServiceAccountName,
 		AutoMountServiceAccountToken: true,
 	}
