@@ -22,7 +22,7 @@ devSpace:
     localSubPath: ./
     uploadExcludePaths:
     - .devspace/
-  portForwarding:
+  ports:
   - labelSelector:
       release: devspace-default
     portMappings:
@@ -282,7 +282,7 @@ devSpace:
       - kube/pod.yaml
       - kube/additional/*
   # Automatically forwarded ports on `devspace up` (same functionality as running manually kubectl port-forward)
-  portForwarding:
+  ports:
     # define the service to start port forwarding for
   - service: default
     # Alternative to using a service is to 
