@@ -32,7 +32,7 @@ func createRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, int
 		}
 	}
 
-	values := map[string]interface{}{}
+	values := map[interface{}]interface{}{}
 
 	// Deploy the registry
 	_, err := helm.InstallChartByName(InternalRegistryName, registryReleaseNamespace, "stable/docker-registry", "", &values, true)

@@ -11,13 +11,14 @@ import (
 
 // Config specifies the runtime config struct
 type Config struct {
+	ActiveConfig *string `yaml:"activeConfig,omitempty"`
+
 	HelmOverrideTimestamps map[string]int64       `yaml:"helmOverrideTimestamps"`
 	HelmChartHashs         map[string]string      `yaml:"helmChartHashs"`
 	DockerfileTimestamps   map[string]int64       `yaml:"dockerfileTimestamps"`
 	DockerContextPaths     map[string]string      `yaml:"dockerContextPaths"`
 	ImageTags              map[string]string      `yaml:"imageTags"`
 	Cloud                  *CloudConfig           `yaml:"cloud,omitempty"`
-	ActiveConfig           *string                `yaml:"activeConfig,omitempty"`
 	Vars                   map[string]interface{} `yaml:"vars,omitempty"`
 }
 

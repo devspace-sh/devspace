@@ -14,7 +14,6 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/helm/pkg/chartutil"
 )
 
 // DeployConfig holds the information necessary to deploy via helm
@@ -205,8 +204,8 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	releaseNamespace := *d.DeploymentConfig.Namespace
 	chartPath := *d.DeploymentConfig.Helm.ChartPath
 
-	values := map[string]interface{}{}
-	overwriteValues := map[string]interface{}{}
+	values := map[interface{}]interface{}{}
+	overwriteValues := map[interface{}]interface{}{}
 
 	valuesPath := filepath.Join(chartPath, "values.yaml")
 	err := yamlutil.ReadYamlFromFile(valuesPath, values)
@@ -239,7 +238,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.OverrideValues != nil {
-		chartutil.Values(overwriteValues).MergeInto(chartutil.Values(*d.DeploymentConfig.Helm.OverrideValues))
+		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.OverrideValues)
 	}
 
 	// Set containers and pull secrets values
@@ -262,7 +261,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	return nil
 }
 
-func getContainerValues(overwriteValues map[string]interface{}, config *v1.Config, generatedConfig *generated.Config) map[interface{}]interface{} {
+func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config) map[interface{}]interface{} {
 	overwriteContainerValues := map[interface{}]interface{}{}
 	overwriteContainerValuesFromFile, containerValuesExisting := overwriteValues["containers"]
 	if containerValuesExisting {
@@ -284,7 +283,7 @@ func getContainerValues(overwriteValues map[string]interface{}, config *v1.Confi
 	return overwriteContainerValues
 }
 
-func getPullSecrets(values, overwriteValues map[string]interface{}, config *v1.Config) []interface{} {
+func getPullSecrets(values, overwriteValues map[interface{}]interface{}, config *v1.Config) []interface{} {
 	overwritePullSecrets := []interface{}{}
 	overwritePullSecretsFromFile, overwritePullSecretsExisting := overwriteValues["pullSecrets"]
 	if overwritePullSecretsExisting {
