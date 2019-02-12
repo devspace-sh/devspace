@@ -1,47 +1,19 @@
 package registry
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/docker/docker/client"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/helm"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
 
 // InitRegistries initializes all registries
 func InitRegistries(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, log log.Logger) error {
-	config := configutil.GetConfig()
-	registryMap := *config.Registries
-
-	if config.InternalRegistry != nil && config.InternalRegistry.Deploy != nil && *config.InternalRegistry.Deploy == true {
-		registryConf, regConfExists := registryMap["internal"]
-		if !regConfExists {
-			return errors.New("Registry config not found for internal registry")
-		}
-
-		log.StartWait("Initializing helm client")
-		helm, err := helm.NewClient(client, log, false)
-		log.StopWait()
-		if err != nil {
-			return fmt.Errorf("Error initializing helm client: %v", err)
-		}
-
-		log.StartWait("Initializing internal registry")
-		err = InitInternalRegistry(client, helm, config.InternalRegistry, registryConf)
-		log.StopWait()
-		if err != nil {
-			return fmt.Errorf("Internal registry error: %v", err)
-		}
-
-		log.Done("Internal registry started")
-	}
-
 	err := CreatePullSecrets(dockerClient, client, log)
 	if err != nil {
 		return err

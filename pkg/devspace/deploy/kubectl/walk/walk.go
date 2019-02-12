@@ -1,7 +1,7 @@
-package kubectl
+package walk
 
 // ReplaceFn defines the replace function
-type ReplaceFn func(value string) string
+type ReplaceFn func(value string) interface{}
 
 // MatchFn defines the match function
 type MatchFn func(key, value string) bool

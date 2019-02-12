@@ -2,9 +2,9 @@ package cloud
 
 import (
 	"encoding/base64"
-	"os"
-	"path/filepath"
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -12,13 +12,12 @@ import (
 	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// DevSpaceNameValidationRegEx is the devsapace name validation regex
-var DevSpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,32}[a-zA-Z0-9]$")
+// SpaceNameValidationRegEx is the sapace name validation regex
+var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
 // GetCurrentProvider returns the current specified cloud provider
 func GetCurrentProvider(log log.Logger) (*Provider, error) {
@@ -50,8 +49,8 @@ func GetCurrentProvider(log log.Logger) (*Provider, error) {
 	return provider, nil
 }
 
-// Configure will alter the cluster configuration in the config
-func Configure(createDevSpace bool, log log.Logger) error {
+// Configure will alter the cluster configuration in the generated config
+func Configure(log log.Logger) error {
 	dsConfig := configutil.GetConfig()
 
 	// Get provider and login
@@ -75,145 +74,118 @@ func Configure(createDevSpace bool, log log.Logger) error {
 	// Save generated config later
 	defer generated.SaveConfig(generatedConfig)
 
-	// Check if we have to create devspace
-	if generatedConfig.Cloud == nil || generatedConfig.Cloud.ProviderName != *dsConfig.Cluster.CloudProvider {
-		if createDevSpace == false {
-			return errors.New("No devspace configured")
-		}
+	// Get current active config
+	activeConfig := generatedConfig.GetActive()
 
-		dir, err := os.Getwd()
-		if err != nil {
-			return errors.Wrap(err, "cloud configure")
-		}
-
-		devSpaceName := filepath.Base(dir)
-		devSpaceName = strings.TrimSpace(devSpaceName)
-
-		devSpaceName = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(devSpaceName, "-")
-		devSpaceName = regexp.MustCompile("-+").ReplaceAllString(devSpaceName, "-")
-		devSpaceName = strings.Trim(devSpaceName, "-")
-
-		if DevSpaceNameValidationRegEx.MatchString(devSpaceName) == false {
-			devSpaceName = "devspace"
-		}
-
-		devSpaceID, err := provider.CreateDevSpace(devSpaceName)
-		if err != nil {
-			return err
-		}
-
-		generatedConfig.Cloud = &generated.CloudConfig{
-			DevSpaceID:   devSpaceID,
-			ProviderName: *dsConfig.Cluster.CloudProvider,
-			Name:         devSpaceName,
-			Targets:      make(map[string]*generated.DevSpaceTargetConfig),
-		}
+	// Check if there is a space configured
+	if activeConfig.SpaceID == nil || *activeConfig.SpaceID == "" {
+		return fmt.Errorf("No space for current config %s exists.\n Please run `devspace use space [NAME]` to use an existing space for the configuration or run `devspace create space [NAME]` to create a new space", generatedConfig.ActiveConfig)
 	}
 
-	// Check if we have to create devspace target
-	target := configutil.GetCurrentCloudTarget(dsConfig)
-	if target == nil {
-		return errors.New("No cloud target specified")
+	// Update space configuration
+	splitted := strings.Split(*activeConfig.SpaceID, ":")
+	if len(splitted) != 2 {
+		return fmt.Errorf("Malformed space id: %s. Please delete .devspace/generated.yaml and retry", *activeConfig.SpaceID)
+	}
+	if splitted[0] != provider.Name {
+		return fmt.Errorf("Provider name for current config %s does not match between config (Provider name: %s) and configured space (Provider name: %s).\n Please run `devspace use space [NAME] --provider=%s` to use an existing space for the configuration or run `devspace create space [NAME] --provider=%s` to create a new space", splitted[0], *dsConfig.Cluster.CloudProvider, splitted[0], *dsConfig.Cluster.CloudProvider, *dsConfig.Cluster.CloudProvider)
 	}
 
-	targetConfig := generatedConfig.Cloud.Targets[*target]
-	if targetConfig == nil {
-		if createDevSpace == false {
-			return errors.New("No devspace target configured")
-		}
-
-		// Check if it is there remotely
-		_, err := provider.GetDevSpaceTargetConfig(generatedConfig.Cloud.DevSpaceID, *target)
-		if err != nil {
-			err = provider.CreateDevSpaceTarget(generatedConfig.Cloud.DevSpaceID, *target)
-			if err != nil {
-				return errors.Wrap(err, "cloud configure")
-			}
-		}
-	}
-
-	newTargetConfig, err := provider.GetDevSpaceTargetConfig(generatedConfig.Cloud.DevSpaceID, *target)
-	if err != nil {
-		log.Warnf("Couldn't retrieve devspace target config: %v", err)
-	}
-	if targetConfig == nil && newTargetConfig == nil {
-		return errors.New("Couldn't retrieve devspace target config")
-	}
-	if newTargetConfig != nil {
-		generatedConfig.Cloud.Targets[*target] = newTargetConfig
-	}
-
-	// Configure devspace config
-	err = updateDevSpaceConfig(dsConfig, generatedConfig.Cloud.Targets[*target])
+	// Convert id from string to int
+	spaceID, err := strconv.Atoi(splitted[1])
 	if err != nil {
 		return err
 	}
 
-	return nil
+	spaceConfig, err := provider.GetSpace(spaceID)
+	if err != nil {
+		if _, ok := generatedConfig.Spaces[*activeConfig.SpaceID]; ok == false {
+			return fmt.Errorf("Couldn't get space config for space id %d: %v", spaceID, err)
+		}
+
+		spaceConfig = generatedConfig.Spaces[*activeConfig.SpaceID]
+		log.Warnf("Couldn't get space %s: %v", spaceConfig.Name, err)
+	} else {
+		generatedConfig.Spaces[*activeConfig.SpaceID] = spaceConfig
+	}
+
+	return updateDevSpaceConfig(dsConfig, spaceConfig)
 }
 
-func updateDevSpaceConfig(dsConfig *v1.Config, targetConfig *generated.DevSpaceTargetConfig) error {
-	// Update tiller if needed
-	if dsConfig.Tiller != nil && dsConfig.Tiller.Namespace != nil {
-		*dsConfig.Tiller.Namespace = targetConfig.Namespace
+// ConfigureWithSpaceName configures the environment with the given space name
+func ConfigureWithSpaceName(spaceName string, log log.Logger) error {
+	dsConfig := configutil.GetConfig()
+
+	// Get provider and login
+	provider, err := GetCurrentProvider(log)
+	if err != nil {
+		return err
+	}
+	if provider == nil {
+		return nil
 	}
 
-	// Update registry namespace if needed
-	if dsConfig.InternalRegistry != nil && dsConfig.InternalRegistry.Namespace != nil {
-		*dsConfig.InternalRegistry.Namespace = targetConfig.Namespace
+	log.StartWait("Retrieving cloud context...")
+	defer log.StopWait()
+
+	spaceConfig, err := provider.GetSpaceByName(spaceName)
+	if err != nil {
+		return fmt.Errorf("Couldn't get space config for space %s: %v", spaceName, err)
 	}
 
+	return updateDevSpaceConfig(dsConfig, spaceConfig)
+}
+
+func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfig) error {
 	// Check if we should use the kubecontext by checking if an api server is specified in the config
 	useKubeContext := dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || dsConfig.Cluster.APIServer == nil
 
 	// Exchange cluster information
 	if useKubeContext {
-		kubeContext := DevSpaceKubeContextName + "-" + targetConfig.Namespace
+		kubeContext := DevSpaceKubeContextName + "-" + spaceConfig.Namespace
 		dsConfig.Cluster = &v1.Cluster{
 			CloudProvider: dsConfig.Cluster.CloudProvider,
-			CloudTarget:   dsConfig.Cluster.CloudTarget,
 		}
 
-		dsConfig.Cluster.Namespace = &targetConfig.Namespace
+		dsConfig.Cluster.Namespace = &spaceConfig.Namespace
 		dsConfig.Cluster.KubeContext = &kubeContext
 
-		err := updateKubeConfig(kubeContext, targetConfig)
+		err := updateKubeConfig(kubeContext, spaceConfig)
 		if err != nil {
 			return err
 		}
 	} else {
 		dsConfig.Cluster = &v1.Cluster{
 			CloudProvider: dsConfig.Cluster.CloudProvider,
-			CloudTarget:   dsConfig.Cluster.CloudTarget,
 		}
 
-		dsConfig.Cluster.APIServer = &targetConfig.Server
-		dsConfig.Cluster.Namespace = &targetConfig.Namespace
-		dsConfig.Cluster.CaCert = &targetConfig.CaCert
+		dsConfig.Cluster.APIServer = &spaceConfig.Server
+		dsConfig.Cluster.Namespace = &spaceConfig.Namespace
+		dsConfig.Cluster.CaCert = &spaceConfig.CaCert
 		dsConfig.Cluster.User = &v1.ClusterUser{
-			Token: &targetConfig.ServiceAccountToken,
+			Token: &spaceConfig.ServiceAccountToken,
 		}
 	}
 
 	return nil
 }
 
-func updateKubeConfig(contextName string, targetConfig *generated.DevSpaceTargetConfig) error {
+func updateKubeConfig(contextName string, spaceConfig *generated.SpaceConfig) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
-	caCert, err := base64.StdEncoding.DecodeString(targetConfig.CaCert)
+	caCert, err := base64.StdEncoding.DecodeString(spaceConfig.CaCert)
 	if err != nil {
 		return err
 	}
 
 	cluster := api.NewCluster()
-	cluster.Server = targetConfig.Server
+	cluster.Server = spaceConfig.Server
 	cluster.CertificateAuthorityData = caCert
 
 	authInfo := api.NewAuthInfo()
-	authInfo.Token = targetConfig.ServiceAccountToken
+	authInfo.Token = spaceConfig.ServiceAccountToken
 
 	config.Clusters[contextName] = cluster
 	config.AuthInfos[contextName] = authInfo
@@ -222,7 +194,7 @@ func updateKubeConfig(contextName string, targetConfig *generated.DevSpaceTarget
 	context := api.NewContext()
 	context.Cluster = contextName
 	context.AuthInfo = contextName
-	context.Namespace = targetConfig.Namespace
+	context.Namespace = spaceConfig.Namespace
 
 	config.Contexts[contextName] = context
 

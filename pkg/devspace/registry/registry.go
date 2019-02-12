@@ -6,16 +6,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/helm"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,64 +91,6 @@ func GetRegistryAuthSecretName(registryURL string) string {
 	return registryAuthSecretNamePrefix + hex.EncodeToString(registryHash[:])
 }
 
-// InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistryConfig, registryConfig *v1.RegistryConfig) error {
-	registryReleaseNamespace := *internalRegistry.Namespace
-
-	// Check if registry already exists
-	registryDeployment, err := kubectl.ExtensionsV1beta1().Deployments(registryReleaseNamespace).Get(InternalRegistryDeploymentName, metav1.GetOptions{})
-	if err != nil {
-		err = createRegistry(kubectl, helm, internalRegistry, registryConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Get the registry url
-	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, InternalRegistryName+"-docker-registry")
-	if err != nil {
-		return err
-	}
-
-	// Update config values
-	registryConfig.URL = configutil.String(serviceHostname)
-	registryConfig.Insecure = configutil.Bool(true)
-
-	// Wait for registry if it is not ready yet
-	if registryDeployment == nil || registryDeployment.Status.Replicas == 0 || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
-		// Wait till registry is started
-		err = waitForRegistry(registryReleaseNamespace, InternalRegistryDeploymentName, kubectl)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, client *kubernetes.Clientset) error {
-	registryWaitingTime := 2 * 60 * time.Second
-	registryCheckInverval := 5 * time.Second
-
-	log.StartWait("Waiting for internal registry to start")
-	defer log.StopWait()
-
-	for registryWaitingTime > 0 {
-		registryDeployment, err := client.ExtensionsV1beta1().Deployments(registryNamespace).Get(registryReleaseDeploymentName, metav1.GetOptions{})
-		if err != nil {
-			continue
-		}
-		if registryDeployment.Status.ReadyReplicas == registryDeployment.Status.Replicas {
-			return nil
-		}
-
-		time.Sleep(registryCheckInverval)
-		registryWaitingTime = registryWaitingTime - registryCheckInverval
-	}
-
-	return errors.New("Internal registry start waiting time timed out")
-}
-
 // GetImageURL returns the image (optional with tag)
 func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
 	image := *imageConfig.Name
@@ -177,7 +117,7 @@ func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig,
 		if imageConfig.Tag != nil {
 			image = image + ":" + *imageConfig.Tag
 		} else {
-			image = image + ":" + generatedConfig.ImageTags[fullImageName]
+			image = image + ":" + generatedConfig.GetActive().ImageTags[fullImageName]
 		}
 	}
 

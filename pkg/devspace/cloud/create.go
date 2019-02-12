@@ -1,13 +1,16 @@
 package cloud
 
-import (
-	"context"
-	"errors"
-	"fmt"
+// CreateSpace creates a new space and returns the space id
+func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int, error) {
+	panic("unimplemented")
+}
 
-	"github.com/machinebox/graphql"
-)
+// CreateProject creates a new project and returns the project id
+func (p *Provider) CreateProject(name string, clusterID int) (int, error) {
+	panic("unimplemented")
+}
 
+/*
 type managerCreateDevSpaceMutation struct {
 	ManagerCreateDevSpace *struct {
 		DevSpaceID int
@@ -79,4 +82,4 @@ func (p *Provider) CreateDevSpaceTarget(devSpaceID int, target string) error {
 	}
 
 	return nil
-}
+}*/

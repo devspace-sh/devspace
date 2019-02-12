@@ -158,7 +158,6 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
 	golang.org/x/net v0.0.0-20181217023233-e147a9138326 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
 	golang.org/x/sys v0.0.0-20181213200352-4d1cda033e06 // indirect
@@ -166,6 +165,7 @@ require (
 	google.golang.org/appengine v1.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.17.0 // indirect
+	gopkg.in/AlecAivazis/survey.v1 v1.8.2
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/dancannon/gorethink.v3 v3.0.5 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect

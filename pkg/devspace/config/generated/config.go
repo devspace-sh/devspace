@@ -9,36 +9,40 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// DefaultConfigName is the default
+const DefaultConfigName = "default"
+
 // Config specifies the runtime config struct
 type Config struct {
-	ActiveConfig *string `yaml:"activeConfig,omitempty"`
+	ActiveConfig string                     `yaml:"activeConfig,omitempty"`
+	Configs      map[string]*DevSpaceConfig `yaml:"configs,omitempty"`
+	// Key is ProviderName:SpaceID
+	Spaces map[string]*SpaceConfig `yaml:"space,omitempty"`
+}
 
+// DevSpaceConfig holds all the information specific to a certain config
+type DevSpaceConfig struct {
 	HelmOverrideTimestamps map[string]int64       `yaml:"helmOverrideTimestamps"`
 	HelmChartHashs         map[string]string      `yaml:"helmChartHashs"`
 	DockerfileTimestamps   map[string]int64       `yaml:"dockerfileTimestamps"`
 	DockerContextPaths     map[string]string      `yaml:"dockerContextPaths"`
 	ImageTags              map[string]string      `yaml:"imageTags"`
-	Cloud                  *CloudConfig           `yaml:"cloud,omitempty"`
 	Vars                   map[string]interface{} `yaml:"vars,omitempty"`
+	// ProviderName:SpaceID
+	SpaceID *string `yaml:"spaceID,omitempty"`
 }
 
-// DevSpaceTargetConfig holds the information to connect to a devspace target
-type DevSpaceTargetConfig struct {
-	TargetName          string
-	Namespace           string
-	ServiceAccountToken string
-	CaCert              string
-	Server              string
-
-	Domain *string
-}
-
-// CloudConfig holds the information to authenticate with the cloud provider
-type CloudConfig struct {
-	DevSpaceID   int                              `yaml:"devSpaceID"`
-	ProviderName string                           `yaml:"providerName"`
-	Name         string                           `yaml:"name"`
-	Targets      map[string]*DevSpaceTargetConfig `yaml:"targets"`
+// SpaceConfig holds the information about a space in the cloud
+type SpaceConfig struct {
+	SpaceID             int     `yaml:"spaceID"`
+	ProviderName        string  `yaml:"providerName"`
+	Name                string  `yaml:"name"`
+	Namespace           string  `yaml:"namespace"`
+	Created             string  `yaml:"created"`
+	ServiceAccountToken string  `yaml:"serviceAccountToken"`
+	CaCert              string  `yaml:"caCert"`
+	Server              string  `yaml:"server"`
+	Domain              *string `yaml:"domain"`
 }
 
 // ConfigPath is the relative generated config path
@@ -57,44 +61,72 @@ func LoadConfig() (*Config, error) {
 		data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
 		if err != nil {
 			loadedConfig = &Config{
-				DockerfileTimestamps:   make(map[string]int64),
-				DockerContextPaths:     make(map[string]string),
-				ImageTags:              make(map[string]string),
-				HelmChartHashs:         make(map[string]string),
-				HelmOverrideTimestamps: make(map[string]int64),
-				Vars:                   make(map[string]interface{}),
+				ActiveConfig: DefaultConfigName,
+				Configs:      make(map[string]*DevSpaceConfig),
+				Spaces:       make(map[string]*SpaceConfig),
+			}
+		} else {
+			loadedConfig = &Config{}
+			err = yaml.Unmarshal(data, loadedConfig)
+			if err != nil {
+				return
 			}
 
-			return
+			if loadedConfig.ActiveConfig == "" {
+				loadedConfig.ActiveConfig = DefaultConfigName
+			}
+			if loadedConfig.Configs == nil {
+				loadedConfig.Configs = make(map[string]*DevSpaceConfig)
+			}
+			if loadedConfig.Spaces == nil {
+				loadedConfig.Spaces = make(map[string]*SpaceConfig)
+			}
 		}
 
-		loadedConfig = &Config{}
-		err = yaml.Unmarshal(data, loadedConfig)
-		if err != nil {
-			return
-		}
-
-		if loadedConfig.HelmChartHashs == nil {
-			loadedConfig.HelmChartHashs = make(map[string]string)
-		}
-		if loadedConfig.HelmOverrideTimestamps == nil {
-			loadedConfig.HelmOverrideTimestamps = make(map[string]int64)
-		}
-		if loadedConfig.DockerfileTimestamps == nil {
-			loadedConfig.DockerfileTimestamps = make(map[string]int64)
-		}
-		if loadedConfig.DockerContextPaths == nil {
-			loadedConfig.DockerContextPaths = make(map[string]string)
-		}
-		if loadedConfig.ImageTags == nil {
-			loadedConfig.ImageTags = make(map[string]string)
-		}
-		if loadedConfig.ImageTags == nil {
-			loadedConfig.Vars = make(map[string]interface{})
-		}
+		InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
 	})
 
 	return loadedConfig, err
+}
+
+// GetActive returns the currently active devspace config
+func (config *Config) GetActive() *DevSpaceConfig {
+	return config.Configs[config.ActiveConfig]
+}
+
+// InitDevSpaceConfig verifies a given config name is set
+func InitDevSpaceConfig(config *Config, configName string) {
+	if _, ok := config.Configs[configName]; ok == false {
+		config.Configs[configName] = &DevSpaceConfig{
+			DockerfileTimestamps:   make(map[string]int64),
+			DockerContextPaths:     make(map[string]string),
+			ImageTags:              make(map[string]string),
+			HelmChartHashs:         make(map[string]string),
+			HelmOverrideTimestamps: make(map[string]int64),
+			Vars:                   make(map[string]interface{}),
+		}
+
+		return
+	}
+
+	if config.Configs[configName].DockerfileTimestamps == nil {
+		config.Configs[configName].DockerfileTimestamps = make(map[string]int64)
+	}
+	if config.Configs[configName].DockerContextPaths == nil {
+		config.Configs[configName].DockerContextPaths = make(map[string]string)
+	}
+	if config.Configs[configName].ImageTags == nil {
+		config.Configs[configName].ImageTags = make(map[string]string)
+	}
+	if config.Configs[configName].HelmChartHashs == nil {
+		config.Configs[configName].HelmChartHashs = make(map[string]string)
+	}
+	if config.Configs[configName].HelmOverrideTimestamps == nil {
+		config.Configs[configName].HelmOverrideTimestamps = make(map[string]int64)
+	}
+	if config.Configs[configName].Vars == nil {
+		config.Configs[configName].Vars = make(map[string]interface{})
+	}
 }
 
 // SaveConfig saves the config to the filesystem

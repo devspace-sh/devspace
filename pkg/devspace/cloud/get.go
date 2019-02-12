@@ -1,13 +1,48 @@
 package cloud
 
-import (
-	"context"
-	"fmt"
+import "github.com/covexo/devspace/pkg/devspace/config/generated"
 
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/machinebox/graphql"
-)
+// Project is the type that holds the project information
+type Project struct {
+	ProjectID int
+	ClusterID int
+	Name      string
+}
 
+// Cluster is the type that holds the cluster information
+type Cluster struct {
+	ClusterID int
+	OwnerID   *int
+	Server    string
+	CaCert    string
+}
+
+// GetClusters returns all clusters accessable by the user
+func (p *Provider) GetClusters() ([]*Cluster, error) {
+	panic("unimplemented")
+}
+
+// GetProjects returns all projects by the user
+func (p *Provider) GetProjects() ([]*Project, error) {
+	panic("unimplemented")
+}
+
+// GetSpaces returns all spaces by the user
+func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
+	panic("unimplemented")
+}
+
+// GetSpace returns a specific space by id
+func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
+	panic("unimplemented")
+}
+
+// GetSpaceByName returns a space by name
+func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, error) {
+	panic("unimplemented")
+}
+
+/*
 // DevSpaceConfig holds the information of a devspace
 type DevSpaceConfig struct {
 	DevSpaceID int
@@ -15,29 +50,8 @@ type DevSpaceConfig struct {
 	Created    string
 }
 
-type devSpaceTargetConfigQuery struct {
-	DevSpacesByPK *struct {
-		DeploymenttargetssBydevspaceid []struct {
-			TargetName                  string
-			KubecontextsBykubecontextid *struct {
-				Namespace           string
-				Domain              *string
-				ServiceAccountToken string
-				ClustersByclusterid *struct {
-					CaCert string
-					Server string
-				} `json:"clustersByclusterid"`
-			} `json:"kubecontextsBykubecontextid"`
-		} `json:"deploymenttargetssBydevspaceid"`
-	} `json:"DevSpaces_by_pk"`
-}
-
-type devSpaceConfigQuery struct {
-	DevSpaces []*DevSpaceConfig
-}
-
 // GetDevSpaces returns all devspaces owned by the user
-func (p *Provider) GetDevSpaces() ([]*DevSpaceConfig, error) {
+func (p *Provider) GetSpaces() ([]*DevSpaceConfig, error) {
 	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
 	req := graphql.NewRequest(`
 		query {
@@ -167,4 +181,4 @@ func (p *Provider) GetDevSpaceTargetConfigs(devSpaceID int) ([]*generated.DevSpa
 	}
 
 	return targets, nil
-}
+}*/

@@ -11,13 +11,13 @@ import (
 
 // PrintDevSpaces prints the users devspaces
 func (p *Provider) PrintDevSpaces(name string) error {
-	devspaces, err := p.GetDevSpaces()
+	devspaces, err := p.GetSpaces()
 	if err != nil {
 		return fmt.Errorf("Error retrieving devspaces: %v", err)
 	}
 
 	headerColumnNames := []string{
-		"DevSpaceID",
+		"SpaceID",
 		"Name",
 		"Created",
 	}
@@ -31,7 +31,7 @@ func (p *Provider) PrintDevSpaces(name string) error {
 			}
 
 			values = append(values, []string{
-				strconv.Itoa(devspace.DevSpaceID),
+				strconv.Itoa(devspace.SpaceID),
 				devspace.Name,
 				created.String(),
 			})

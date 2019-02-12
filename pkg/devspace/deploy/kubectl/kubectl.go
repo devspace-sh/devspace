@@ -9,8 +9,9 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
@@ -109,8 +110,9 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		return err
 	}
 
+	activeConfig := generatedConfig.GetActive()
 	for _, manifest := range manifests {
-		replaceManifest(manifest, generatedConfig.ImageTags)
+		replaceManifest(manifest, activeConfig.ImageTags)
 	}
 
 	joinedManifests, err := joinManifests(manifests)
@@ -164,9 +166,9 @@ func replaceManifest(manifest Manifest, tags map[string]string) {
 		return false
 	}
 
-	replace := func(value string) string {
+	replace := func(value string) interface{} {
 		return value + ":" + tags[value]
 	}
 
-	Walk(map[interface{}]interface{}(manifest), match, replace)
+	walk.Walk(map[interface{}]interface{}(manifest), match, replace)
 }

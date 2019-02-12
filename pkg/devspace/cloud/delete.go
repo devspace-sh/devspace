@@ -1,14 +1,11 @@
 package cloud
 
-import (
-	"context"
-	"fmt"
+// DeleteSpace deletes a space with the given id
+func (p *Provider) DeleteSpace(spaceID int) error {
+	panic("unimplemented")
+}
 
-	"github.com/covexo/devspace/pkg/util/kubeconfig"
-	"github.com/machinebox/graphql"
-	"k8s.io/client-go/tools/clientcmd"
-)
-
+/*
 type managerDeleteDevSpaceMutation struct {
 	ManagerDeleteDevSpace bool `json:"manager_deleteDevSpace"`
 }
@@ -96,3 +93,4 @@ func DeleteKubeContext(namespace string) error {
 
 	return nil
 }
+*/

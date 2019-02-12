@@ -115,6 +115,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 	getConfigOnce.Do(func() {
 		var configDefinition *v1.ConfigDefinition
 
+		// Init configs
 		config = makeConfig()
 		configRaw = makeConfig()
 		overwriteConfig = makeConfig()
@@ -131,15 +132,16 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		if err == nil {
 			configs := v1.Configs{}
 
+			// Get configs
 			err = LoadConfigs(&configs, DefaultConfigsPath)
 			if err != nil {
 				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
 			}
 
 			// Get config to load
-			if generatedConfig.ActiveConfig == nil || *generatedConfig.ActiveConfig == "" {
+			if generatedConfig.ActiveConfig == "" {
 				// check if default config exists
-				if configs["default"] == nil {
+				if configs[generated.DefaultConfigName] == nil {
 					if len(configs) == 0 {
 						log.Fatalf("No config found in %s", DefaultConfigsPath)
 					}
@@ -149,10 +151,10 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 						break
 					}
 				} else {
-					LoadedConfig = "default"
+					LoadedConfig = generated.DefaultConfigName
 				}
 			} else {
-				LoadedConfig = *generatedConfig.ActiveConfig
+				LoadedConfig = generatedConfig.ActiveConfig
 			}
 
 			// Check if we should override loadedconfig
@@ -160,6 +162,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				LoadedConfig = ConfigPath
 			}
 
+			// Get real config definition
 			configDefinition = configs[LoadedConfig]
 			if configDefinition.Config == nil {
 				log.Fatalf("config key not defined in config %s", LoadedConfig)
@@ -262,15 +265,8 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 // SetDefaultsOnce ensures that specific values are set in the config
 func SetDefaultsOnce() {
 	setDefaultsOnce.Do(func() {
-		defaultNamespace, err := GetDefaultNamespace(config)
-		if err != nil {
-			log.Fatalf("Error retrieving default namespace: %v", err)
-		}
-
 		// Initialize Namespaces
 		if config.DevSpace != nil {
-			needTiller := config.InternalRegistry != nil
-
 			if config.DevSpace.Deployments != nil {
 				for index, deployConfig := range *config.DevSpace.Deployments {
 					if deployConfig.Name == nil {
@@ -279,10 +275,6 @@ func SetDefaultsOnce() {
 
 					if deployConfig.Namespace == nil {
 						deployConfig.Namespace = String("")
-					}
-
-					if deployConfig.Helm != nil {
-						needTiller = true
 					}
 				}
 			}
@@ -314,14 +306,6 @@ func SetDefaultsOnce() {
 					}
 				}
 			}
-
-			if needTiller && config.Tiller == nil {
-				defaultConfig.Tiller = &v1.TillerConfig{
-					Namespace: &defaultNamespace,
-				}
-
-				config.Tiller = defaultConfig.Tiller
-			}
 		}
 
 		if config.Images != nil {
@@ -333,30 +317,23 @@ func SetDefaultsOnce() {
 				}
 			}
 		}
-
-		if config.InternalRegistry != nil {
-			defaultConfig.InternalRegistry = &v1.InternalRegistryConfig{
-				Namespace: &defaultNamespace,
-			}
-
-			config.InternalRegistry.Namespace = defaultConfig.InternalRegistry.Namespace
-		}
 	})
 }
 
 func askQuestions(generatedConfig *generated.Config, vars []*v1.Variable) error {
 	changed := false
+	activeConfig := generatedConfig.GetActive()
 
 	for idx, variable := range vars {
 		if variable.Name == nil {
 			return fmt.Errorf("Name required for variable with index %d", idx)
 		}
 
-		if _, ok := generatedConfig.Vars[*variable.Name]; ok {
+		if _, ok := activeConfig.Vars[*variable.Name]; ok {
 			continue
 		}
 
-		generatedConfig.Vars[*variable.Name] = AskQuestion(variable)
+		activeConfig.Vars[*variable.Name] = AskQuestion(variable)
 		changed = true
 	}
 
@@ -415,17 +392,4 @@ func GetDefaultNamespace(config *v1.Config) (string, error) {
 	}
 
 	return "default", nil
-}
-
-// GetCurrentCloudTarget retrieves the current cloud target from the config
-func GetCurrentCloudTarget(config *v1.Config) *string {
-	if config.Cluster == nil || config.Cluster.CloudProvider == nil || *config.Cluster.CloudProvider == "" {
-		return nil
-	}
-
-	if config.Cluster.CloudTarget == nil {
-		return String(DefaultCloudTarget)
-	}
-
-	return config.Cluster.CloudTarget
 }

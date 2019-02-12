@@ -21,18 +21,24 @@ type DeployConfig struct {
 	KubeClient       *kubernetes.Clientset
 	TillerNamespace  string
 	DeploymentConfig *v1.DeploymentConfig
-	UseDevOverwrite  bool
 	Log              log.Logger
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, useDevOverwrite bool, log log.Logger) (*DeployConfig, error) {
+func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	config := configutil.GetConfig()
+	tillerNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return nil, err
+	}
+	if deployConfig.Helm.TillerNamespace != nil && *deployConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = *deployConfig.Helm.TillerNamespace
+	}
+
 	return &DeployConfig{
 		KubeClient:       kubectl,
-		TillerNamespace:  *config.Tiller.Namespace,
+		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
-		UseDevOverwrite:  useDevOverwrite,
 		Log:              log,
 	}, nil
 }
@@ -40,13 +46,13 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, useDe
 // Delete deletes the release
 func (d *DeployConfig) Delete() error {
 	// Delete with helm engine
-	isDeployed := helm.IsTillerDeployed(d.KubeClient)
+	isDeployed := helm.IsTillerDeployed(d.KubeClient, d.TillerNamespace)
 	if isDeployed == false {
 		return nil
 	}
 
 	// Get HelmClient
-	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
 	if err != nil {
 		return err
 	}
@@ -64,7 +70,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 	var values [][]string
 
 	// Get HelmClient
-	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +146,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 		return fmt.Errorf("Error hashing chart directory: %v", err)
 	}
 
+	// Check if override is unequal to nil
 	if d.DeploymentConfig.Helm.Override != nil {
 		stat, err := os.Stat(*d.DeploymentConfig.Helm.Override)
 		if err != nil {
@@ -151,13 +158,16 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 	}
 
 	// Get HelmClient
-	helmClient, err := helm.NewClient(d.KubeClient, d.Log, false)
+	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
 	if err != nil {
 		return fmt.Errorf("Error creating helm client: %v", err)
 	}
 
+	// Get active config
+	activeConfig := generatedConfig.GetActive()
+
 	// Check if redeploying is necessary
-	reDeploy := forceDeploy || generatedConfig.HelmChartHashs[chartPath] != hash || (overrideTimestamp != 0 && generatedConfig.HelmOverrideTimestamps[overridePath] != overrideTimestamp)
+	reDeploy := forceDeploy || activeConfig.HelmChartHashs[chartPath] != hash || (overrideTimestamp != 0 && activeConfig.HelmOverrideTimestamps[overridePath] != overrideTimestamp)
 	if reDeploy == false {
 		releases, err := helmClient.Client.ListReleases()
 		if err != nil {
@@ -182,10 +192,9 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 			return err
 		}
 
-		generatedConfig.HelmChartHashs[chartPath] = hash
-
+		activeConfig.HelmChartHashs[chartPath] = hash
 		if overrideTimestamp != 0 {
-			generatedConfig.HelmOverrideTimestamps[overridePath] = overrideTimestamp
+			activeConfig.HelmOverrideTimestamps[overridePath] = overrideTimestamp
 		}
 	} else {
 		d.Log.Infof("Skipping chart %s", chartPath)
@@ -200,6 +209,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	config := configutil.GetConfig()
 
+	// Get release information
 	releaseName := *d.DeploymentConfig.Name
 	releaseNamespace := *d.DeploymentConfig.Namespace
 	chartPath := *d.DeploymentConfig.Helm.ChartPath
@@ -218,16 +228,6 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.Override)
 		if err != nil {
 			return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.Override, err)
-		}
-
-		err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)
-		if err != nil {
-			d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
-		}
-	} else if d.UseDevOverwrite && d.DeploymentConfig.Helm.DevOverwrite != nil {
-		overwriteValuesPath, err := filepath.Abs(*d.DeploymentConfig.Helm.DevOverwrite)
-		if err != nil {
-			return fmt.Errorf("Error retrieving absolute path from %s: %v", *d.DeploymentConfig.Helm.DevOverwrite, err)
 		}
 
 		err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValues)

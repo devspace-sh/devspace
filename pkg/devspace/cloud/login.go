@@ -16,6 +16,38 @@ const LoginEndpoint = "/login"
 // LoginSuccessEndpoint is the url redirected to after successful login
 const LoginSuccessEndpoint = "/loginSuccess"
 
+// LoginWithToken loggs the user in with the given token
+func LoginWithToken(providerConfig ProviderConfig, cloudProvider, token string) error {
+	// Let's check if we are logged in first
+	provider, ok := providerConfig[cloudProvider]
+	if ok == false {
+		cloudProviders := ""
+		for name := range providerConfig {
+			cloudProviders += name + " "
+		}
+
+		return fmt.Errorf("Cloud provider not found! Did you run `devspace add cloud provider [url]`? Existing cloud providers: %s", cloudProviders)
+	}
+
+	if provider.Token == "" {
+		provider.Token = token
+
+		// Check if we got access
+		_, err := provider.GetSpaces()
+		if err != nil {
+			return fmt.Errorf("Access denied for token %s: %v", token, err)
+		}
+
+		// Save config
+		err = SaveCloudConfig(providerConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // EnsureLoggedIn checks if the user is logged into a certain cloud provider and if not loggs the user in
 func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log.Logger) error {
 	// Let's check if we are logged in first

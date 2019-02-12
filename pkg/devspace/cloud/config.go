@@ -34,7 +34,7 @@ type Provider struct {
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
 	Name: DevSpaceCloudProviderName,
-	Host: "http://cli.devspace-cloud.com",
+	Host: "https://staging.api.devspace.cloud",
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations

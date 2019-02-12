@@ -3,82 +3,68 @@ package configutil
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
-
 	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func varReplaceFn(m map[interface{}]interface{}) interface{} {
-	for k, v := range m {
-		key := k.(string)
-		value, ok := v.(string)
-		if ok == false {
-			return nil
+// VarMatchRegex is the regex to check if a value matches the devspace var format
+var VarMatchRegex = regexp.MustCompile("^\\$\\{[^\\}]+\\}$")
+
+// VarEnvPrefix is the prefix environment variables should have in order to use them
+const VarEnvPrefix = "DEVSPACE_VAR_"
+
+func varReplaceFn(value string) interface{} {
+	varName := strings.TrimSpace(value[2 : len(value)-1])
+	retString := ""
+
+	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
+		retString = os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
+
+		// Check if we can convert val
+		if retString == "true" {
+			return true
+		} else if retString == "false" {
+			return false
+		} else if i, err := strconv.Atoi(retString); err == nil {
+			return i
 		}
 
-		if key == "fromEnv" {
-			val := os.Getenv(value)
-
-			// Check if we can convert val
-			if val == "true" {
-				return true
-			} else if val == "false" {
-				return false
-			} else if i, err := strconv.Atoi(val); err == nil {
-				return i
-			}
-
-			return val
-		} else if key == "fromVar" {
-			generatedConfig, err := generated.LoadConfig()
-			if err != nil {
-				log.Fatalf("Error reading generated config: %v", err)
-			}
-
-			if configVal, ok := generatedConfig.Vars[value]; ok {
-				return configVal
-			}
-
-			generatedConfig.Vars[value] = AskQuestion(&v1.Variable{
-				Question: String("Please enter a value for " + value),
-			})
-
-			err = generated.SaveConfig(generatedConfig)
-			if err != nil {
-				log.Fatalf("Error saving generated config: %v", err)
-			}
-
-			return generatedConfig.Vars[value]
-		}
+		return retString
 	}
 
-	return nil
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error reading generated config: %v", err)
+	}
+
+	currentConfig := generatedConfig.GetActive()
+	if configVal, ok := currentConfig.Vars[value]; ok {
+		return configVal
+	}
+
+	currentConfig.Vars[varName] = AskQuestion(&v1.Variable{
+		Question: String("Please enter a value for " + varName),
+	})
+
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Error saving generated config: %v", err)
+	}
+
+	return currentConfig.Vars[value]
 }
 
-func varMatchFn(m map[interface{}]interface{}) bool {
-	if len(m) != 1 {
-		return false
-	}
-
-	for k, v := range m {
-		key := k.(string)
-		_, ok := v.(string)
-		if ok == false {
-			return false
-		}
-
-		if key == "fromEnv" || key == "fromVar" {
-			return true
-		}
-	}
-
-	return false
+func varMatchFn(key, value string) bool {
+	return VarMatchRegex.MatchString(value)
 }
 
 // AskQuestion asks the user a question depending on the variable options
@@ -162,7 +148,7 @@ func resolveVars(yamlFileContent []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	Walk(rawConfig, varMatchFn, varReplaceFn)
+	walk.Walk(rawConfig, varMatchFn, varReplaceFn)
 
 	out, err := yaml.Marshal(rawConfig)
 	if err != nil {
