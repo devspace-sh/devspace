@@ -9,8 +9,8 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
-// PrintDevSpaces prints the users devspaces
-func (p *Provider) PrintDevSpaces(name string) error {
+// PrintSpaces prints the users spaces
+func (p *Provider) PrintSpaces(name string) error {
 	devspaces, err := p.GetSpaces()
 	if err != nil {
 		return fmt.Errorf("Error retrieving devspaces: %v", err)

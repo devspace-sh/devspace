@@ -32,8 +32,28 @@ type syncStatus struct {
 	TotalChanges int
 }
 
+type syncCmd struct{}
+
+func newSyncCmd() *cobra.Command {
+	cmd := &syncCmd{}
+
+	return &cobra.Command{
+		Use:   "sync",
+		Short: "Shows the sync status",
+		Long: `
+	#######################################################
+	################ devspace status sync #################
+	#######################################################
+	Shows the devspace sync status
+	#######################################################
+	`,
+		Args: cobra.NoArgs,
+		Run:  cmd.RunStatusSync,
+	}
+}
+
 // RunStatusSync executes the devspace status sync commad logic
-func (cmd *StatusCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
+func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	// Read syncLog
 	cwd, err := os.Getwd()
 	if err != nil {

@@ -35,7 +35,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	// Configure cloud provider
-	err := cloud.Configure(false, log)
+	err := cloud.Configure(log)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,15 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		return fmt.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	helm, err := helmClient.NewClient(kubectl, log, false)
+	tillerNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+	if deploymentConfig.Helm != nil && deploymentConfig.Helm.TillerNamespace != nil && *deploymentConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = *deploymentConfig.Helm.TillerNamespace
+	}
+
+	helm, err := helmClient.NewClient(tillerNamespace, log, false)
 	if err != nil {
 		return fmt.Errorf("Error initializing helm client: %v", err)
 	}
@@ -269,7 +277,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 		log.Warnf("Unable to list Kubernetes services: %v", clusterServiceErr)
 	}
 
-	err = deploy.All(kubectl, generatedConfig, true, true, log)
+	err = deploy.All(kubectl, generatedConfig, true, log)
 	log.StopWait()
 
 	// Save generated config
@@ -339,7 +347,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	}
 
 	// Configure cloud provider
-	err := cloud.Configure(false, log)
+	err := cloud.Configure(log)
 	if err != nil {
 		return err
 	}
@@ -358,6 +366,15 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 
 	if deploymentConfig == nil {
 		return fmt.Errorf("Deployment %s not found", deployment)
+	}
+
+	// Get tiller namespace
+	tillerNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+	if deploymentConfig.Helm != nil && deploymentConfig.Helm.TillerNamespace != nil && *deploymentConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = *deploymentConfig.Helm.TillerNamespace
 	}
 
 	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
@@ -393,7 +410,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 				log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
 			}
 
-			err = rebuildDependencies(chartPath, yamlContents, log)
+			err = rebuildDependencies(tillerNamespace, chartPath, yamlContents, log)
 			if err != nil {
 				return err
 			}
@@ -422,7 +439,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						err = rebuildDependencies(chartPath, yamlContents, log)
+						err = rebuildDependencies(tillerNamespace, chartPath, yamlContents, log)
 						if err != nil {
 							return err
 						}
@@ -461,19 +478,14 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	return nil
 }
 
-func rebuildDependencies(chartPath string, newYamlContents map[interface{}]interface{}, log log.Logger) error {
+func rebuildDependencies(tillerNamespace string, chartPath string, newYamlContents map[interface{}]interface{}, log log.Logger) error {
 	err := yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(chartPath, "requirements.yaml"))
 	if err != nil {
 		return err
 	}
 
 	// Rebuild dependencies
-	kubectl, err := kubectl.NewClient()
-	if err != nil {
-		return fmt.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	helm, err := helmClient.NewClient(kubectl, log, false)
+	helm, err := helmClient.NewClient(tillerNamespace, log, false)
 	if err != nil {
 		return fmt.Errorf("Error initializing helm client: %v", err)
 	}

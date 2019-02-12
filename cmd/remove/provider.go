@@ -1,11 +1,10 @@
-package add
+package remove
 
 import (
 	"net/url"
 	"strings"
 
 	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
-
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -17,30 +16,30 @@ type providerCmd struct {
 func newProviderCmd() *cobra.Command {
 	cmd := &providerCmd{}
 
-	addProviderCmd := &cobra.Command{
+	providerCmd := &cobra.Command{
 		Use:   "provider",
-		Short: "Adds a new cloud provider to the configuration",
+		Short: "Removes a cloud provider from the configuration",
 		Long: `
 	#######################################################
-	############## devspace add provider ##################
+	############ devspace remove provider #################
 	#######################################################
-	Add a new cloud provider.
+	Removes a cloud provider.
 
 	Example:
-	devspace add provider https://app.devspace.cloud
+	devspace remove provider https://app.devspace.cloud
 	#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunAddProvider,
+		Run:  cmd.RunRemoveCloudProvider,
 	}
 
-	addProviderCmd.Flags().StringVar(&cmd.Name, "name", "", "Cloud provider name to use")
+	providerCmd.Flags().StringVar(&cmd.Name, "name", "", "Cloud provider name to use")
 
-	return addProviderCmd
+	return providerCmd
 }
 
-// RunAddProvider executes the devspace add provider functionality
-func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
+// RunRemoveCloudProvider executes the devspace remove cloud provider functionality
+func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) {
 	providerName := cmd.Name
 	if providerName == "" {
 		u, err := url.Parse(args[0])
@@ -62,15 +61,16 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
 
-	providerConfig[providerName] = &cloudpkg.Provider{
-		Name: providerName,
-		Host: args[0],
+	if _, ok := providerConfig[providerName]; ok == false {
+		log.Failf("Couldn't find cloud provider %s", providerName)
 	}
+
+	delete(providerConfig, providerName)
 
 	err = cloudpkg.SaveCloudConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
 	}
 
-	log.Donef("Successfully added cloud provider %s", providerName)
+	log.Donef("Successfully removed cloud provider %s", providerName)
 }

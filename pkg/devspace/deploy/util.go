@@ -12,7 +12,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool, log log.Logger) error {
+func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceDeploy bool, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.DevSpace.Deployments != nil {
@@ -30,7 +30,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 			} else if deployConfig.Helm != nil {
 				log.Info("Deploying " + *deployConfig.Name + " with helm")
 
-				deployClient, err = helm.New(client, deployConfig, useDevOverwrite, log)
+				deployClient, err = helm.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}

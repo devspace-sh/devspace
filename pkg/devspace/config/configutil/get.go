@@ -65,20 +65,20 @@ var getConfigOnce sync.Once
 var setDefaultsOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
-func ConfigExists() (bool, error) {
+func ConfigExists() bool {
+	// Check configs.yaml
 	_, err := os.Stat(DefaultConfigsPath)
 	if err == nil {
-		return true, nil // configs.yaml found
+		return true // configs.yaml found
 	}
 
+	// Check normal config.yaml
 	_, err = os.Stat(ConfigPath)
-	if os.IsNotExist(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
+	if err != nil {
+		return false
 	}
 
-	return true, nil
+	return true // Normal config file found
 }
 
 // InitConfig initializes the config objects
