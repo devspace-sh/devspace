@@ -8,10 +8,13 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/ptr"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configs"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/versions"
+	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -51,8 +54,8 @@ func varReplaceFn(value string) interface{} {
 		return configVal
 	}
 
-	currentConfig.Vars[varName] = AskQuestion(&v1.Variable{
-		Question: String("Please enter a value for " + varName),
+	currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
+		Question: ptr.String("Please enter a value for " + varName),
 	})
 
 	err = generated.SaveConfig(generatedConfig)
@@ -68,7 +71,7 @@ func varMatchFn(key, value string) bool {
 }
 
 // AskQuestion asks the user a question depending on the variable options
-func AskQuestion(variable *v1.Variable) interface{} {
+func AskQuestion(variable *configs.Variable) interface{} {
 	params := &stdinutil.GetFromStdinParams{}
 
 	if variable == nil {
@@ -102,36 +105,58 @@ func AskQuestion(variable *v1.Variable) interface{} {
 	return configVal
 }
 
-func loadConfigFromPath(config *v1.Config, path string) error {
+func loadConfigFromPath(path string) (*latest.Config, error) {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := resolveVars(yamlFileContent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return yaml.UnmarshalStrict(out, config)
+	oldConfig := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(out, oldConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	newConfig, err := versions.Parse(oldConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return newConfig, nil
 }
 
-func loadConfigFromInterface(config *v1.Config, m map[interface{}]interface{}) error {
+func loadConfigFromInterface(m map[interface{}]interface{}) (*latest.Config, error) {
 	yamlFileContent, err := yaml.Marshal(m)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := resolveVars(yamlFileContent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return yaml.UnmarshalStrict(out, config)
+	oldConfig := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(out, oldConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	newConfig, err := versions.Parse(oldConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return newConfig, nil
 }
 
 // LoadConfigs loads all the configs from the .devspace/configs.yaml
-func LoadConfigs(configs *v1.Configs, path string) error {
+func LoadConfigs(configs *configs.Configs, path string) error {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

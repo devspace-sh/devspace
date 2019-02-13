@@ -8,7 +8,8 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
-	"k8s.io/api/core/v1"
+	"github.com/covexo/devspace/pkg/util/ptr"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -52,7 +53,7 @@ func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.L
 	if err != nil {
 		clusterConfig, _ := GetClientConfig()
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
-			username := configutil.String("")
+			username := ptr.String("")
 
 			log.StartWait("Checking gcloud account")
 			gcloudOutput, gcloudErr := exec.Command("gcloud", "config", "list", "account", "--format", "value(core.account)").Output()

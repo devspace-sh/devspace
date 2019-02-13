@@ -32,19 +32,19 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 		namespace := ""
 		containerName := ""
 
-		if syncPath.Service != nil {
-			service, err := configutil.GetService(*syncPath.Service)
+		if syncPath.Selector != nil {
+			selector, err := configutil.GetSelector(*syncPath.Selector)
 			if err != nil {
-				log.Fatalf("Error resolving service name: %v", err)
+				log.Fatalf("Error resolving selector name: %v", err)
 			}
 
-			labelSelector = *service.LabelSelector
-			if service.Namespace != nil && *service.Namespace != "" {
-				namespace = *service.Namespace
+			labelSelector = *selector.LabelSelector
+			if selector.Namespace != nil && *selector.Namespace != "" {
+				namespace = *selector.Namespace
 			}
 
-			if service.ContainerName != nil && *service.ContainerName != "" {
-				containerName = *service.ContainerName
+			if selector.ContainerName != nil && *selector.ContainerName != "" {
+				containerName = *selector.ContainerName
 			}
 		} else {
 			labelSelector = *syncPath.LabelSelector

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/util/log"
 )
 

@@ -13,10 +13,10 @@ import (
 )
 
 // StartAttach starts attaching to the first pod devspace finds or does nothing
-func StartAttach(client *kubernetes.Clientset, serviceNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, interrupt chan error, log log.Logger) error {
+func StartAttach(client *kubernetes.Clientset, selectorNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, interrupt chan error, log log.Logger) error {
 	config := configutil.GetConfig()
 
-	service, namespace, labelSelector, err := getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride, namespaceOverride)
+	selector, namespace, labelSelector, err := getSelectorNamespaceLabelSelector(selectorNameOverride, labelSelectorOverride, namespaceOverride)
 	if err != nil {
 		return err
 	}
@@ -29,8 +29,8 @@ func StartAttach(client *kubernetes.Clientset, serviceNameOverride, containerNam
 	// Get container name
 	containerName := pod.Spec.Containers[0].Name
 	if containerNameOverride == "" {
-		if service != nil && service.ContainerName != nil {
-			containerName = *service.ContainerName
+		if selector != nil && selector.ContainerName != nil {
+			containerName = *selector.ContainerName
 		} else {
 			if config.DevSpace.Terminal.ContainerName != nil {
 				containerName = *config.DevSpace.Terminal.ContainerName

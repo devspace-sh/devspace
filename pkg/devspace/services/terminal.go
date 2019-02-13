@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
@@ -19,7 +19,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, interrupt chan error, log log.Logger) error {
+func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, interrupt chan error, log log.Logger) error {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -39,7 +39,7 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 		}
 	}
 
-	service, namespace, labelSelector, err := getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride, namespaceOverride)
+	selector, namespace, labelSelector, err := getSelectorNamespaceLabelSelector(selectorNameOverride, labelSelectorOverride, namespaceOverride)
 	if err != nil {
 		return err
 	}
@@ -55,8 +55,8 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	// Get container name
 	containerName := pod.Spec.Containers[0].Name
 	if containerNameOverride == "" {
-		if service != nil && service.ContainerName != nil {
-			containerName = *service.ContainerName
+		if selector != nil && selector.ContainerName != nil {
+			containerName = *selector.ContainerName
 		} else {
 			if config.DevSpace.Terminal.ContainerName != nil {
 				containerName = *config.DevSpace.Terminal.ContainerName
@@ -88,25 +88,25 @@ func StartTerminal(client *kubernetes.Clientset, serviceNameOverride, containerN
 	return err
 }
 
-func getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride, namespaceOverride string) (*v1.ServiceConfig, string, string, error) {
+func getSelectorNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride, namespaceOverride string) (*v1.SelectorConfig, string, string, error) {
 	config := configutil.GetConfig()
 
-	var service *v1.ServiceConfig
-	serviceName := "default"
+	var selector *v1.SelectorConfig
+	selectorName := "default"
 
 	if serviceNameOverride == "" {
-		if config.DevSpace.Terminal.Service != nil {
-			serviceName = *config.DevSpace.Terminal.Service
+		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Selector != nil {
+			selectorName = *config.DevSpace.Terminal.Selector
 		}
 	} else {
-		serviceName = serviceNameOverride
+		selectorName = serviceNameOverride
 	}
 
-	if serviceName != "" {
+	if selectorName != "" {
 		var err error
 
-		service, err = configutil.GetService(serviceName)
-		if err != nil && serviceName != "default" {
+		selector, err = configutil.GetSelector(selectorName)
+		if err != nil && selectorName != "default" {
 			return nil, "", "", fmt.Errorf("Error resolving service name: %v", err)
 		}
 	}
@@ -114,8 +114,8 @@ func getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride
 	// Select pods
 	namespace := ""
 	if namespaceOverride == "" {
-		if service != nil && service.Namespace != nil {
-			namespace = *service.Namespace
+		if selector != nil && selector.Namespace != nil {
+			namespace = *selector.Namespace
 		} else {
 			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
 				namespace = *config.DevSpace.Terminal.Namespace
@@ -130,9 +130,9 @@ func getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride
 	if labelSelectorOverride == "" {
 		labelSelector = "release=" + GetNameOfFirstHelmDeployment()
 
-		if service != nil {
-			labels := make([]string, 0, len(*service.LabelSelector)-1)
-			for key, value := range *service.LabelSelector {
+		if selector != nil {
+			labels := make([]string, 0, len(*selector.LabelSelector)-1)
+			for key, value := range *selector.LabelSelector {
 				labels = append(labels, key+"="+*value)
 			}
 
@@ -151,7 +151,7 @@ func getServiceNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride
 		labelSelector = labelSelectorOverride
 	}
 
-	return service, namespace, labelSelector, nil
+	return selector, namespace, labelSelector, nil
 }
 
 type upgraderWrapper struct {

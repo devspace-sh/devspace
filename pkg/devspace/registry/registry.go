@@ -4,29 +4,19 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// InternalRegistryName is the name of the release used to deploy the internal registry
-const InternalRegistryName = "devspace-registry"
-
-// InternalRegistryDeploymentName is the name of the kubernetes deployment
-const InternalRegistryDeploymentName = "devspace-registry-docker-registry"
-
 const registryAuthSecretNamePrefix = "devspace-registry-auth-"
-const registryPort = 5000
 
 var pullSecretNames = []string{}
 
@@ -91,50 +81,16 @@ func GetRegistryAuthSecretName(registryURL string) string {
 	return registryAuthSecretNamePrefix + hex.EncodeToString(registryHash[:])
 }
 
-// GetImageURL returns the image (optional with tag)
-func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
+// GetImageWithTag returns the image (optional with tag)
+func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig) string {
 	image := *imageConfig.Name
-	registryURL := ""
-
-	if imageConfig.Registry != nil {
-		registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
-		if registryConfErr != nil {
-			log.Fatal(registryConfErr)
-		}
-
-		registryURL = *registryConfig.URL
-		if registryURL != "" && registryURL != "hub.docker.com" {
-			image = registryURL + "/" + image
-		}
-	}
-
-	fullImageName := *imageConfig.Name
-	if registryURL != "" {
-		fullImageName = registryURL + "/" + fullImageName
-	}
-
-	if includingLatestTag {
-		if imageConfig.Tag != nil {
-			image = image + ":" + *imageConfig.Tag
-		} else {
-			image = image + ":" + generatedConfig.GetActive().ImageTags[fullImageName]
-		}
+	if imageConfig.Tag != nil {
+		image = image + ":" + *imageConfig.Tag
+	} else {
+		image = image + ":" + generatedConfig.GetActive().ImageTags[image]
 	}
 
 	return image
-}
-
-// GetRegistryConfig returns the registry config for an image or an error if the registry is not defined
-func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
-	config := configutil.GetConfig()
-	registryName := *imageConfig.Registry
-	registryMap := *config.Registries
-	registryConfig, registryFound := registryMap[registryName]
-	if !registryFound {
-		return nil, errors.New("Unable to find registry: " + registryName)
-	}
-
-	return registryConfig, nil
 }
 
 // GetPullSecretNames returns all names of auto-generated image pull secrets

@@ -14,8 +14,9 @@ import (
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configs"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 )
 
 //ConfigInterface defines the pattern of every config
@@ -51,18 +52,13 @@ const DefaultDevspaceServiceName = "default"
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
 const DefaultDevspaceDeploymentName = "devspace-default"
 
-// CurrentConfigVersion has the value of the current config version
-const CurrentConfigVersion = "v1alpha1"
-
 // Global config vars
-var config *v1.Config          // merged config
-var configRaw *v1.Config       // config from .devspace/config.yaml
-var overwriteConfig *v1.Config // overwrite config from .devspace/overwrite.yaml
-var defaultConfig *v1.Config   // default config values
+var config *latest.Config    // merged config
+var configRaw *latest.Config // config from .devspace/config.yaml
 
 // Thread-safety helper
 var getConfigOnce sync.Once
-var setDefaultsOnce sync.Once
+var validateOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
 func ConfigExists() bool {
@@ -82,44 +78,39 @@ func ConfigExists() bool {
 }
 
 // InitConfig initializes the config objects
-func InitConfig() *v1.Config {
+func InitConfig() *latest.Config {
 	getConfigOnce.Do(func() {
-		config = makeConfig()
-		overwriteConfig = makeConfig()
-		configRaw = makeConfig()
-		overwriteConfig = makeConfig()
-		defaultConfig = makeConfig()
+		config = latest.New().(*latest.Config)
+		configRaw = latest.New().(*latest.Config)
 	})
 
 	return config
 }
 
 // GetBaseConfig returns the config unmerged with potential overwrites
-func GetBaseConfig() *v1.Config {
+func GetBaseConfig() *latest.Config {
 	GetConfigWithoutDefaults(false)
-	SetDefaultsOnce()
+	ValidateOnce()
 
 	return config
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig() *v1.Config {
+func GetConfig() *latest.Config {
 	GetConfigWithoutDefaults(true)
-	SetDefaultsOnce()
+	ValidateOnce()
 
 	return config
 }
 
 // GetConfigWithoutDefaults returns the config without setting the default values
-func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
+func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 	getConfigOnce.Do(func() {
-		var configDefinition *v1.ConfigDefinition
+		var configDefinition *configs.ConfigDefinition
 
 		// Init configs
-		config = makeConfig()
-		configRaw = makeConfig()
-		overwriteConfig = makeConfig()
-		defaultConfig = makeConfig()
+		config = latest.New().(*latest.Config)
+		configRaw = latest.New().(*latest.Config)
 
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
@@ -130,7 +121,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		// Check if configs.yaml exists
 		_, err = os.Stat(DefaultConfigsPath)
 		if err == nil {
-			configs := v1.Configs{}
+			configs := configs.Configs{}
 
 			// Get configs
 			err = LoadConfigs(&configs, DefaultConfigsPath)
@@ -189,7 +180,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		} else {
 			_, err := os.Stat(DefaultVarsPath)
 			if err == nil {
-				vars := []*v1.Variable{}
+				vars := []*configs.Variable{}
 				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
 				if err != nil {
 					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
@@ -207,20 +198,10 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 				}
 			}
 
-			err = loadConfigFromPath(configRaw, ConfigPath)
+			configRaw, err = loadConfigFromPath(ConfigPath)
 			if err != nil {
 				log.Fatalf("Loading config: %v", err)
 			}
-		}
-
-		// Check if version key is defined
-		if configRaw.Version == nil {
-			log.Fatalf("The version key is missing in your config. Current config version is %s", CurrentConfigVersion)
-		}
-
-		// Check config version
-		if *configRaw.Version != CurrentConfigVersion {
-			log.Fatal("Your config is out of date. Please run `devspace init -r` to update your config")
 		}
 
 		Merge(&config, deepCopy(configRaw))
@@ -229,7 +210,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 		if loadOverwrites {
 			if configDefinition == nil {
 				//ignore error as overwrite.yaml is optional
-				err := loadConfigFromPath(overwriteConfig, OverwriteConfigPath)
+				overwriteConfig, err := loadConfigFromPath(OverwriteConfigPath)
 				if err != nil {
 					Merge(&config, overwriteConfig)
 					log.Infof("Loaded config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
@@ -262,57 +243,22 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *v1.Config {
 	return config
 }
 
-// SetDefaultsOnce ensures that specific values are set in the config
-func SetDefaultsOnce() {
-	setDefaultsOnce.Do(func() {
-		// Initialize Namespaces
+// ValidateOnce ensures that specific values are set in the config
+func ValidateOnce() {
+	validateOnce.Do(func() {
 		if config.DevSpace != nil {
 			if config.DevSpace.Deployments != nil {
 				for index, deployConfig := range *config.DevSpace.Deployments {
 					if deployConfig.Name == nil {
 						log.Fatalf("Error in config: Unnamed deployment at index %d", index)
 					}
-
-					if deployConfig.Namespace == nil {
-						deployConfig.Namespace = String("")
-					}
 				}
 			}
 
-			if config.DevSpace.Services != nil {
-				for index, serviceConfig := range *config.DevSpace.Services {
-					if serviceConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed service at index %d", index)
-					}
-
-					if serviceConfig.Namespace == nil {
-						serviceConfig.Namespace = String("")
-					}
-				}
-			}
-
-			if config.DevSpace.Sync != nil {
-				for _, syncPath := range *config.DevSpace.Sync {
-					if syncPath.Namespace == nil {
-						syncPath.Namespace = String("")
-					}
-				}
-			}
-
-			if config.DevSpace.Ports != nil {
-				for _, portForwarding := range *config.DevSpace.Ports {
-					if portForwarding.Namespace == nil {
-						portForwarding.Namespace = String("")
-					}
-				}
-			}
-		}
-
-		if config.Images != nil {
-			for _, buildConfig := range *config.Images {
-				if buildConfig.Build != nil && buildConfig.Build.Kaniko != nil {
-					if buildConfig.Build.Kaniko.Namespace == nil {
-						buildConfig.Build.Kaniko.Namespace = String("")
+			if config.DevSpace.Selectors != nil {
+				for index, selectorConfig := range *config.DevSpace.Selectors {
+					if selectorConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed selector at index %d", index)
 					}
 				}
 			}
@@ -320,7 +266,7 @@ func SetDefaultsOnce() {
 	})
 }
 
-func askQuestions(generatedConfig *generated.Config, vars []*v1.Variable) error {
+func askQuestions(generatedConfig *generated.Config, vars []*configs.Variable) error {
 	changed := false
 	activeConfig := generatedConfig.GetActive()
 
@@ -347,30 +293,20 @@ func askQuestions(generatedConfig *generated.Config, vars []*v1.Variable) error 
 	return nil
 }
 
-// GetService returns the service referenced by serviceName
-func GetService(serviceName string) (*v1.ServiceConfig, error) {
-	if config.DevSpace.Services != nil {
-		for _, service := range *config.DevSpace.Services {
-			if *service.Name == serviceName {
-				return service, nil
+// GetSelector returns the service referenced by serviceName
+func GetSelector(selectorName string) (*latest.SelectorConfig, error) {
+	if config.DevSpace.Selectors != nil {
+		for _, selector := range *config.DevSpace.Selectors {
+			if *selector.Name == selectorName {
+				return selector, nil
 			}
 		}
 	}
-	return nil, errors.New("Unable to find service: " + serviceName)
-}
-
-// AddService adds a service to the config
-func AddService(service *v1.ServiceConfig) error {
-	if config.DevSpace.Services == nil {
-		config.DevSpace.Services = &[]*v1.ServiceConfig{}
-	}
-	*config.DevSpace.Services = append(*config.DevSpace.Services, service)
-
-	return nil
+	return nil, errors.New("Unable to find selector: " + selectorName)
 }
 
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
-func GetDefaultNamespace(config *v1.Config) (string, error) {
+func GetDefaultNamespace(config *latest.Config) (string, error) {
 	if config.Cluster != nil && config.Cluster.Namespace != nil {
 		return *config.Cluster.Namespace, nil
 	}

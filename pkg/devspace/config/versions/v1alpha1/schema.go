@@ -12,7 +12,16 @@ func (c *Config) GetVersion() string {
 
 // New creates a new config object
 func New() config.Config {
-	return &Config{}
+	return &Config{
+		Cluster: &Cluster{
+			User: &ClusterUser{},
+		},
+		DevSpace: &DevSpaceConfig{
+			Terminal: &Terminal{},
+		},
+		Images:     &map[string]*ImageConfig{},
+		Registries: &map[string]*RegistryConfig{},
+	}
 }
 
 // Config defines the configuration

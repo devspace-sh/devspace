@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 )
 
 // AddDeployment adds a new deployment to the config

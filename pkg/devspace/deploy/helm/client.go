@@ -7,7 +7,7 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/hash"

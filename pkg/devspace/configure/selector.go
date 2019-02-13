@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/services"
 )
 
-//AddService adds an image to the devspace
-func AddService(name string, labelSelector string, namespace string) error {
+// AddSelector adds a selector
+func AddSelector(name string, labelSelector string, namespace string) error {
 	config := configutil.GetBaseConfig()
 
 	var labelSelectorMap map[string]*string

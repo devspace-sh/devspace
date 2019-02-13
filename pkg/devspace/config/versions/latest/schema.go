@@ -12,7 +12,11 @@ func (c *Config) GetVersion() string {
 
 // New creates a new config object
 func New() config.Config {
-	return &Config{}
+	return &Config{
+		Cluster:  &Cluster{},
+		DevSpace: &DevSpaceConfig{},
+		Images:   &map[string]*ImageConfig{},
+	}
 }
 
 // Config defines the configuration
@@ -134,6 +138,7 @@ type ImageConfig struct {
 	Name             *string           `yaml:"name"`
 	Tag              *string           `yaml:"tag,omitempty"`
 	CreatePullSecret *bool             `yaml:"createPullSecret,omitempty"`
+	Insecure         *bool             `yaml:"insecure,omitempty"`
 	SkipPush         *bool             `yaml:"skipPush,omitempty"`
 	AutoReload       *AutoReloadConfig `yaml:"autoReload,omitempty"`
 	Build            *BuildConfig      `yaml:"build,omitempty"`

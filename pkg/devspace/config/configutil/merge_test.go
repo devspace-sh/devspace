@@ -3,21 +3,22 @@ package configutil
 import (
 	"testing"
 
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/covexo/devspace/pkg/util/ptr"
 )
 
 func TestSimpleMerge(t *testing.T) {
-	apiServer := String("testApiServer")
-	deployment1 := String("testDeployment1")
-	deployment2 := String("testDeployment2")
-	version := String("testVersion")
+	apiServer := ptr.String("testApiServer")
+	deployment1 := ptr.String("testDeployment1")
+	deployment2 := ptr.String("testDeployment2")
+	version := ptr.String("testVersion")
 
 	object1 := &v1.Config{
-		Version: String("oldVersion"),
+		Version: ptr.String("oldVersion"),
 		DevSpace: &v1.DevSpaceConfig{
 			Deployments: &[]*v1.DeploymentConfig{
 				&v1.DeploymentConfig{
-					Name: String("oldDeployment"),
+					Name: ptr.String("oldDeployment"),
 				},
 			},
 		},

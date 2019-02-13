@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	"github.com/covexo/devspace/pkg/devspace/config/configs"
+	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -18,9 +19,7 @@ func SaveBaseConfig() error {
 	}
 
 	// default and overwrite values
-	configToIgnore := makeConfig()
-
-	Merge(&configToIgnore, defaultConfig)
+	configToIgnore := latest.New()
 
 	// generates config without default and overwrite values
 	configMapRaw, _, err := Split(config, configRaw, configToIgnore)
@@ -39,7 +38,7 @@ func SaveBaseConfig() error {
 
 	// Check if we have to save to configs.yaml
 	if LoadedConfig != "" {
-		configs := v1.Configs{}
+		configs := configs.Configs{}
 
 		// Load configs
 		err = LoadConfigs(&configs, DefaultConfigsPath)

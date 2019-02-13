@@ -7,7 +7,6 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
@@ -29,13 +28,13 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.C
 	if config.Images != nil {
 		for _, imageConf := range *config.Images {
 			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
-				_, registryConfig, err := GetRegistryConfigFromImageConfig(imageConf)
+				registryURL, err := GetRegistryFromImageName(*imageConf.Name)
 				if err != nil {
 					return err
 				}
 
-				log.StartWait("Creating image pull secret for registry: " + *registryConfig.URL)
-				err = createPullSecretForRegistry(dockerClient, client, registryConfig, log)
+				log.StartWait("Creating image pull secret for registry: " + registryURL)
+				err = createPullSecretForRegistry(dockerClient, client, registryURL, log)
 				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
@@ -47,38 +46,20 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.C
 	return nil
 }
 
-func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, registryConf *v1.RegistryConfig, log log.Logger) error {
+func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, registryURL string, log log.Logger) error {
 	config := configutil.GetConfig()
-
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return err
 	}
 
-	registryURL := ""
-	if registryConf.URL != nil {
-		registryURL = *registryConf.URL
-	}
+	username, password := "", ""
 
-	username := ""
-	password := ""
-
-	if dockerClient != nil && (registryConf.Auth == nil || registryConf.Auth.Username == nil || registryConf.Auth.Password == nil) {
+	if dockerClient != nil {
 		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
-
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password
-		}
-	}
-
-	if registryConf.Auth != nil {
-		if registryConf.Auth.Username != nil {
-			username = *registryConf.Auth.Username
-		}
-
-		if registryConf.Auth.Password != nil {
-			password = *registryConf.Auth.Password
 		}
 	}
 

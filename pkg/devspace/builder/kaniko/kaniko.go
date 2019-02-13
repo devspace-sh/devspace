@@ -24,10 +24,8 @@ import (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	RegistryURL      string
 	PullSecretName   string
 	ImageName        string
-	ImageTag         string
 	PreviousImageTag string
 	BuildNamespace   string
 
@@ -37,12 +35,10 @@ type Builder struct {
 }
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
-		RegistryURL:           registryURL,
 		PullSecretName:        pullSecretName,
-		ImageName:             imageName,
-		ImageTag:              imageTag,
+		ImageName:             imageName + ":" + imageTag,
 		PreviousImageTag:      lastImageTag,
 		BuildNamespace:        buildNamespace,
 		allowInsecureRegistry: allowInsecureRegistry,
@@ -52,34 +48,44 @@ func NewBuilder(registryURL, pullSecretName, imageName, imageTag, lastImageTag, 
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
-func (b *Builder) Authenticate(username, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+func (b *Builder) Authenticate() (*types.AuthConfig, error) {
+	username, password := "", ""
+
 	if b.PullSecretName != "" {
 		return nil, nil
 	}
 
-	email := "noreply@devspace-cloud.com"
-	if len(username) == 0 {
-		authConfig, err := docker.GetAuthConfig(b.dockerClient, b.RegistryURL, true)
-		if err != nil {
-			return nil, err
-		}
-
-		username = authConfig.Username
-		email = authConfig.Email
-
-		if authConfig.Password != "" {
-			password = authConfig.Password
-		} else {
-			password = authConfig.IdentityToken
-		}
+	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, b.RegistryURL, username, password, email, log.GetInstance())
+	email := "noreply@devspace-cloud.com"
+	authConfig, err := docker.GetAuthConfig(b.dockerClient, registryURL, true)
+	if err != nil {
+		return nil, err
+	}
+
+	username = authConfig.Username
+	email = authConfig.Email
+
+	if authConfig.Password != "" {
+		password = authConfig.Password
+	} else {
+		password = authConfig.IdentityToken
+	}
+
+	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, log.GetInstance())
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
-	pullSecretName := registry.GetRegistryAuthSecretName(b.RegistryURL)
+	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	if err != nil {
+		return err
+	}
+
+	pullSecretName := registry.GetRegistryAuthSecretName(registryURL)
 	if b.PullSecretName != "" {
 		pullSecretName = b.PullSecretName
 	}
@@ -147,7 +153,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 	intr := interrupt.New(nil, deleteBuildPod)
 
-	err := intr.Run(func() error {
+	err = intr.Run(func() error {
 		buildPodCreated, buildPodCreateErr := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
 
 		if buildPodCreateErr != nil {
@@ -202,11 +208,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 
 		log.StartWait("Building container image")
 
-		imageDestination := b.ImageName + ":" + b.ImageTag
-
-		if b.RegistryURL != "" {
-			imageDestination = strings.TrimSuffix(b.RegistryURL, "/") + "/" + imageDestination
-		}
+		imageDestination := b.ImageName
 		containerBuildPath := "/src"
 		exitChannel := make(chan error)
 		kanikoBuildCmd := []string{

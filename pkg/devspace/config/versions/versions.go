@@ -5,8 +5,8 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/versions/config"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/util"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/v1alpha1"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var versionLoader = map[string]config.New{
@@ -26,11 +26,15 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
-	// Load config
+	// Load config strict
 	latestConfig := versionLoadFunc()
-	err := util.Convert(data, latestConfig)
+	out, err := yaml.Marshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("Error converting config: %v", err)
+		return nil, err
+	}
+	err = yaml.UnmarshalStrict(out, latestConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Error loading config: %v", err)
 	}
 
 	// Upgrade config to latest

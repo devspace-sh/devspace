@@ -12,9 +12,7 @@ import (
 
 // GetRegistryEndpoint retrieves the correct registry url
 func GetRegistryEndpoint(client client.CommonAPIClient, registryURL string) (bool, string, error) {
-	ctx := context.Background()
-	authServer := getOfficialServer(ctx, client)
-
+	authServer := getOfficialServer(context.Background(), client)
 	if registryURL == "" || registryURL == "hub.docker.com" {
 		registryURL = authServer
 	}

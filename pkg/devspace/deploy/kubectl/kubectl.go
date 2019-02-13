@@ -11,7 +11,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
 
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/util/log"
 )
 

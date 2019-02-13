@@ -25,15 +25,15 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 				var labelSelector map[string]*string
 				namespace := ""
 
-				if portForwarding.Service != nil {
-					service, err := configutil.GetService(*portForwarding.Service)
+				if portForwarding.Selector != nil {
+					selector, err := configutil.GetSelector(*portForwarding.Selector)
 					if err != nil {
 						log.Fatalf("Error resolving service name: %v", err)
 					}
 
-					labelSelector = *service.LabelSelector
-					if service.Namespace != nil && *service.Namespace != "" {
-						namespace = *service.Namespace
+					labelSelector = *selector.LabelSelector
+					if selector.Namespace != nil && *selector.Namespace != "" {
+						namespace = *selector.Namespace
 					}
 				} else {
 					labelSelector = *portForwarding.LabelSelector
