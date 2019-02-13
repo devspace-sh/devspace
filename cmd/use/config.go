@@ -1,9 +1,9 @@
 package use
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configs"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +34,7 @@ func newConfigCmd() *cobra.Command {
 
 // RunUseConfig executes the devspace use config command logic
 func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
-	configs := v1.Configs{}
+	configs := configs.Configs{}
 	err := configutil.LoadConfigs(&configs, configutil.DefaultConfigsPath)
 	if err != nil {
 		log.Fatalf("Cannot load %s: %v", configutil.DefaultConfigsPath, err)

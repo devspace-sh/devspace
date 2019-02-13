@@ -1,6 +1,7 @@
 package generated
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -147,4 +148,22 @@ func SaveConfig(config *Config) error {
 	}
 
 	return ioutil.WriteFile(configPath, data, 0666)
+}
+
+// GetSpaceConfig returns the cloud config from a DevSpaceConfig
+func GetSpaceConfig(generatedConfig *Config, name string) (*SpaceConfig, error) {
+	config, ok := generatedConfig.Configs[name]
+	if ok == false {
+		return nil, fmt.Errorf("Config %s not found", name)
+	}
+	if config.SpaceID == nil {
+		return nil, fmt.Errorf("No space configured for config %s", name)
+	}
+
+	spaceConfig, ok := generatedConfig.Spaces[*config.SpaceID]
+	if ok == false {
+		return nil, fmt.Errorf("Space with id %s couldn't be found in generated.yaml", *config.SpaceID)
+	}
+
+	return spaceConfig, nil
 }

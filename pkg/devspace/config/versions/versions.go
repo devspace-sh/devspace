@@ -6,6 +6,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/versions/config"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/v1alpha1"
+	"github.com/covexo/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -52,6 +53,9 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	if ok == false {
 		return nil, fmt.Errorf("Error converting config, latest config is not the latest version")
 	}
+
+	// Update version to latest
+	latestConfigConverted.Version = ptr.String(latest.Version)
 
 	return latestConfigConverted, nil
 }

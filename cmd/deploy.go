@@ -53,7 +53,7 @@ devspace deploy --config=.devspace/deploy.yaml
 devspace deploy --cloud-target=production
 devspace deploy https://github.com/covexo/devspace --branch test
 #######################################################`,
-		Args: cobra.RangeArgs(0, 2),
+		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.Run,
 	}
 
@@ -76,10 +76,19 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Prepare the config
 	cmd.prepareConfig()
 
-	// Configure cloud provider
-	err := cloud.Configure(true, log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
+	// Check if there is a space configured
+	if len(args) > 0 {
+		// Configure cloud provider
+		err := cloud.ConfigureWithSpaceName(args[0], log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to configure cloud provider: %v", err)
+		}
+	} else {
+		// Configure cloud provider
+		err := cloud.Configure(log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to configure cloud provider: %v", err)
+		}
 	}
 
 	// Create kubectl client
@@ -130,18 +139,19 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, mustRedeploy, false, log.GetInstance())
+	err = deploy.All(client, generatedConfig, mustRedeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Print domain name if we use a cloud provider
 	config := configutil.GetConfig()
-	cloudTarget := configutil.GetCurrentCloudTarget(config)
-	if cloudTarget != nil {
-		if generatedConfig != nil && generatedConfig.Cloud != nil && generatedConfig.Cloud.Targets != nil && generatedConfig.Cloud.Targets[*cloudTarget] != nil && generatedConfig.Cloud.Targets[*cloudTarget].Domain != nil {
-			log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", *generatedConfig.Cloud.Targets[*cloudTarget].Domain)
-			log.Info("See https://devspace-cloud.com/domain-guide for more information")
+	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
+		if generatedConfig != nil {
+			spaceConfig, err := generated.GetSpaceConfig(generatedConfig, generatedConfig.ActiveConfig)
+			if err == nil && spaceConfig.Domain != nil {
+				log.Infof("Your DevSpace is now reachable via ingress on this URL: https://%s", *spaceConfig.Domain)
+			}
 		}
 	}
 
@@ -197,10 +207,7 @@ func (cmd *DeployCmd) prepareConfig() {
 			}
 		}
 	}
-	if cmd.flags.CloudTarget != "" {
-		config.Cluster.CloudTarget = &cmd.flags.CloudTarget
-	}
 
 	// Set defaults now
-	configutil.SetDefaultsOnce()
+	configutil.ValidateOnce()
 }

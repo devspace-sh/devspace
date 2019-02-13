@@ -17,6 +17,7 @@ import (
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/ptr"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/covexo/devspace/pkg/util/tar"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
@@ -182,28 +183,31 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			return err
 		}
 	}
-	serviceLabelSelector := map[string]*string{}
 
-	packageService := &v1.ServiceConfig{
-		Name:          configutil.String(packageName),
+	serviceLabelSelector := map[string]*string{}
+	packageService := &v1.SelectorConfig{
+		Name:          ptr.String(packageName),
 		LabelSelector: &serviceLabelSelector,
 	}
 
 	if hasPackageDefaultValues && len(packageDefaults.serviceSelectors) > 0 {
 		for key, value := range packageDefaults.serviceSelectors {
-			serviceLabelSelector[key] = configutil.String(value)
+			serviceLabelSelector[key] = ptr.String(value)
 		}
 	} else {
-		serviceLabelSelector["app"] = configutil.String(*deploymentConfig.Name + "-" + packageName)
+		serviceLabelSelector["app"] = ptr.String(*deploymentConfig.Name + "-" + packageName)
 	}
 
-	_, sericeNotFoundErr := configutil.GetService(*packageService.Name)
-
-	if sericeNotFoundErr != nil {
-		err = configutil.AddService(packageService)
-		if err != nil {
-			return fmt.Errorf("Unable to add service to config: %v", err)
+	_, err = configutil.GetSelector(*packageService.Name)
+	if err != nil {
+		if config.DevSpace.Selectors == nil {
+			config.DevSpace.Selectors = &[]*v1.SelectorConfig{}
 		}
+
+		configSelectors := *config.DevSpace.Selectors
+		configSelectors = append(configSelectors, packageService)
+
+		config.DevSpace.Selectors = &configSelectors
 	}
 
 	err = configutil.SaveBaseConfig()

@@ -22,12 +22,12 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	if labelSelector == "" {
 		config := configutil.GetBaseConfig()
 
-		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
-			services := *config.DevSpace.Services
+		if config.DevSpace != nil && config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
+			services := *config.DevSpace.Selectors
 
-			var service *v1.ServiceConfig
+			var service *v1.SelectorConfig
 			if serviceName != "" {
-				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				service = getServiceWithName(*config.DevSpace.Selectors, serviceName)
 				if service == nil {
 					return fmt.Errorf("no service with name %v exists", serviceName)
 				}
@@ -163,7 +163,7 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 		Namespace:     &namespace,
-		Service:       &serviceName,
+		Selector:      &serviceName,
 	})
 
 	config.DevSpace.Ports = &portMap
@@ -208,7 +208,7 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 	return portMappings, nil
 }
 
-func getServiceWithName(services []*v1.ServiceConfig, name string) *v1.ServiceConfig {
+func getServiceWithName(services []*v1.SelectorConfig, name string) *v1.SelectorConfig {
 	for _, service := range services {
 		if *service.Name == name {
 			return service

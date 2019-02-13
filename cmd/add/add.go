@@ -18,7 +18,7 @@ func NewAddCmd() *cobra.Command {
 	}
 
 	addCmd.AddCommand(newSyncCmd())
-	addCmd.AddCommand(newServiceCmd())
+	addCmd.AddCommand(newSelectorCmd())
 	addCmd.AddCommand(newProviderCmd())
 	addCmd.AddCommand(newPortCmd())
 	addCmd.AddCommand(newPackageCmd())

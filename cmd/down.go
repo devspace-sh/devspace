@@ -69,7 +69,7 @@ func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	// Configure cloud provider
-	err := cloud.Configure(false, log.GetInstance())
+	err := cloud.Configure(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}
@@ -128,7 +128,7 @@ func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 					continue
 				}
 			} else {
-				deployClient, err = deployHelm.New(kubectl, deployConfig, false, log.GetInstance())
+				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue

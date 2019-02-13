@@ -6,34 +6,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type servicesCmd struct{}
+type selectorsCmd struct{}
 
-func newServicesCmd() *cobra.Command {
-	cmd := &servicesCmd{}
+func newSelectorsCmd() *cobra.Command {
+	cmd := &selectorsCmd{}
 
-	servicesCmd := &cobra.Command{
-		Use:   "services",
-		Short: "Lists all services",
+	selectorsCmd := &cobra.Command{
+		Use:   "selectors",
+		Short: "Lists all selectors",
 		Long: `
 	#######################################################
-	############## devspace list services #################
+	############# devspace list selectors #################
 	#######################################################
-	Lists the services that are defined in the DevSpace
+	Lists the selectors that are defined in the DevSpace
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListService,
 	}
 
-	return servicesCmd
+	return selectorsCmd
 }
 
 // RunListService runs the list service command logic
-func (cmd *servicesCmd) RunListService(cobraCmd *cobra.Command, args []string) {
+func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Services == nil || len(*config.DevSpace.Services) == 0 {
-		log.Info("No services are configured. Run `devspace add service` to add new service\n")
+	if config.DevSpace.Selectors == nil || len(*config.DevSpace.Selectors) == 0 {
+		log.Info("No selectors are configured. Run `devspace add selector` to add new selector\n")
 		return
 	}
 
@@ -41,14 +41,14 @@ func (cmd *servicesCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 		"Name",
 		"Namespace",
 		"Type",
-		"Selector",
+		"Label Selector",
 		"Container",
 	}
 
-	services := make([][]string, 0, len(*config.DevSpace.Services))
+	selectors := make([][]string, 0, len(*config.DevSpace.Selectors))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.Services {
+	for _, value := range *config.DevSpace.Selectors {
 		selector := ""
 		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
@@ -74,7 +74,7 @@ func (cmd *servicesCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 			containerName = *value.ContainerName
 		}
 
-		services = append(services, []string{
+		selectors = append(selectors, []string{
 			*value.Name,
 			namespace,
 			resourceType,
@@ -83,5 +83,5 @@ func (cmd *servicesCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(headerColumnNames, services)
+	log.PrintTable(headerColumnNames, selectors)
 }

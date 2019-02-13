@@ -9,7 +9,7 @@ import (
 )
 
 // AddSelector adds a selector
-func AddSelector(name string, labelSelector string, namespace string) error {
+func AddSelector(name string, labelSelector string, namespace string, save bool) error {
 	config := configutil.GetBaseConfig()
 
 	var labelSelectorMap map[string]*string
@@ -18,8 +18,8 @@ func AddSelector(name string, labelSelector string, namespace string) error {
 	if labelSelector == "" {
 		config := configutil.GetConfig()
 
-		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
-			services := *config.DevSpace.Services
+		if config.DevSpace != nil && config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
+			services := *config.DevSpace.Selectors
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
 			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
@@ -37,29 +37,31 @@ func AddSelector(name string, labelSelector string, namespace string) error {
 		config.DevSpace = &v1.DevSpaceConfig{}
 	}
 
-	if config.DevSpace.Services == nil {
-		emptyServiceList := make([]*v1.ServiceConfig, 0)
-		config.DevSpace.Services = &emptyServiceList
+	if config.DevSpace.Selectors == nil {
+		emptyServiceList := make([]*v1.SelectorConfig, 0)
+		config.DevSpace.Selectors = &emptyServiceList
 	}
 
-	servicesConfig := append(*config.DevSpace.Services, &v1.ServiceConfig{
+	servicesConfig := append(*config.DevSpace.Selectors, &v1.SelectorConfig{
 		LabelSelector: &labelSelectorMap,
 		Namespace:     &namespace,
 		Name:          &name,
 	})
 
-	config.DevSpace.Services = &servicesConfig
+	config.DevSpace.Selectors = &servicesConfig
 
-	err = configutil.SaveBaseConfig()
-	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+	if save {
+		err = configutil.SaveBaseConfig()
+		if err != nil {
+			return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		}
 	}
 
 	return nil
 }
 
-//RemoveService removes a service from the devspace
-func RemoveService(removeAll bool, name string, labelSelector string, namespace string) error {
+//RemoveSelector removes a service from the devspace
+func RemoveSelector(removeAll bool, name string, labelSelector string, namespace string) error {
 	config := configutil.GetBaseConfig()
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
@@ -68,13 +70,13 @@ func RemoveService(removeAll bool, name string, labelSelector string, namespace 
 	}
 
 	if len(labelSelectorMap) == 0 && removeAll == false && name == "" && namespace == "" {
-		return fmt.Errorf("You have to specify at least one of the supported flags or specify the services' name")
+		return fmt.Errorf("You have to specify at least one of the supported flags or specify the selectors' name")
 	}
 
-	if config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
-		newServicesPaths := make([]*v1.ServiceConfig, 0, len(*config.DevSpace.Services)-1)
+	if config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
+		newServicesPaths := make([]*v1.SelectorConfig, 0, len(*config.DevSpace.Selectors)-1)
 
-		for _, v := range *config.DevSpace.Services {
+		for _, v := range *config.DevSpace.Selectors {
 			if removeAll ||
 				(name == *v.Name && name != "") ||
 				(namespace == *v.Namespace && namespace != "") ||
@@ -85,7 +87,7 @@ func RemoveService(removeAll bool, name string, labelSelector string, namespace 
 			newServicesPaths = append(newServicesPaths, v)
 		}
 
-		config.DevSpace.Services = &newServicesPaths
+		config.DevSpace.Selectors = &newServicesPaths
 
 		err = configutil.SaveBaseConfig()
 		if err != nil {

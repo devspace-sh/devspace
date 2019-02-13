@@ -38,8 +38,8 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	headerColumnNames := []string{
-		"Service",
 		"Selector",
+		"Label Selector",
 		"Local Path",
 		"Container Path",
 		"Excluded Paths",
@@ -52,8 +52,8 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		service := ""
 		selector := ""
 
-		if value.Service != nil {
-			service = *value.Service
+		if value.Selector != nil {
+			service = *value.Selector
 		} else {
 			for k, v := range *value.LabelSelector {
 				if len(selector) > 0 {

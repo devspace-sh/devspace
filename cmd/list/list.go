@@ -19,7 +19,7 @@ func NewListCmd() *cobra.Command {
 
 	listCmd.AddCommand(newSyncCmd())
 	listCmd.AddCommand(newSpacesCmd())
-	listCmd.AddCommand(newServicesCmd())
+	listCmd.AddCommand(newSelectorsCmd())
 	listCmd.AddCommand(newPortsCmd())
 	listCmd.AddCommand(newPackagesCmd())
 

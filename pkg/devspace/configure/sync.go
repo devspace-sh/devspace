@@ -9,6 +9,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/services"
+	"github.com/covexo/devspace/pkg/util/ptr"
 )
 
 // AddSyncPath adds a new sync path to the config
@@ -31,12 +32,12 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	}
 
 	if labelSelector == "" {
-		if config.DevSpace != nil && config.DevSpace.Services != nil && len(*config.DevSpace.Services) > 0 {
-			services := *config.DevSpace.Services
+		if config.DevSpace != nil && config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
+			services := *config.DevSpace.Selectors
 
-			var service *v1.ServiceConfig
+			var service *v1.SelectorConfig
 			if serviceName != "" {
-				service = getServiceWithName(*config.DevSpace.Services, serviceName)
+				service = getServiceWithName(*config.DevSpace.Selectors, serviceName)
 				if service == nil {
 					return fmt.Errorf("no service with name %v exists", serviceName)
 				}
@@ -84,11 +85,11 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
 		LabelSelector: &labelSelectorMap,
-		ContainerPath: configutil.String(containerPath),
-		LocalSubPath:  configutil.String(localPath),
+		ContainerPath: ptr.String(containerPath),
+		LocalSubPath:  ptr.String(localPath),
 		ExcludePaths:  &excludedPaths,
 		Namespace:     &namespace,
-		Service:       &serviceName,
+		Selector:      &serviceName,
 	})
 
 	config.DevSpace.Sync = &syncConfig
