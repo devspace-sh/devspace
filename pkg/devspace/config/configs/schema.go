@@ -1,4 +1,4 @@
-package v1
+package configs
 
 // Configs is the map that specifies all configs
 type Configs map[string]*ConfigDefinition
@@ -20,4 +20,12 @@ type ConfigWrapper struct {
 type VarsWrapper struct {
 	Path *string      `yaml:"path,omitempty"`
 	Data *[]*Variable `yaml:"data,omitempty"`
+}
+
+// Variable describes the var definition
+type Variable struct {
+	Name         *string `yaml:"name"`
+	Default      *string `yaml:"default,omitempty"`
+	Question     *string `yaml:"question,omitempty"`
+	RegexPattern *string `yaml:"regexPattern,omitempty"`
 }

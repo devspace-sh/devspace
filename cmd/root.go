@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/covexo/devspace/cmd/cloud"
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
 	"github.com/covexo/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
@@ -44,7 +43,12 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(cloud.Cmd)
+	rootCmd.AddCommand(add.NewAddCmd())
+	rootCmd.AddCommand(create.NewCreateCmd())
+	rootCmd.AddCommand(list.NewListCmd())
+	rootCmd.AddCommand(remove.NewRemoveCmd())
+	rootCmd.AddCommand(status.NewStatusCmd())
+	rootCmd.AddCommand(use.NewUseCmd())
 
 	cobra.OnInitialize(initConfig)
 }
