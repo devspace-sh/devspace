@@ -11,7 +11,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/generator"

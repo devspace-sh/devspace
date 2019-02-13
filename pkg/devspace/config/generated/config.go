@@ -22,14 +22,19 @@ type Config struct {
 
 // DevSpaceConfig holds all the information specific to a certain config
 type DevSpaceConfig struct {
-	HelmOverrideTimestamps map[string]int64       `yaml:"helmOverrideTimestamps"`
-	HelmChartHashs         map[string]string      `yaml:"helmChartHashs"`
-	DockerfileTimestamps   map[string]int64       `yaml:"dockerfileTimestamps"`
-	DockerContextPaths     map[string]string      `yaml:"dockerContextPaths"`
-	ImageTags              map[string]string      `yaml:"imageTags"`
-	Vars                   map[string]interface{} `yaml:"vars,omitempty"`
+	Deployments          map[string]*DeploymentConfig `yaml:"deployments"`
+	DockerfileTimestamps map[string]int64             `yaml:"dockerfileTimestamps"`
+	DockerContextPaths   map[string]string            `yaml:"dockerContextPaths"`
+	ImageTags            map[string]string            `yaml:"imageTags"`
+	Vars                 map[string]interface{}       `yaml:"vars,omitempty"`
 	// ProviderName:SpaceID
 	SpaceID *string `yaml:"spaceID,omitempty"`
+}
+
+// DeploymentConfig holds the information about a specific deployment
+type DeploymentConfig struct {
+	HelmOverrideTimestamps map[string]int64 `yaml:"helmOverrideTimestamps"`
+	HelmChartHash          string           `yaml:"helmChartHash"`
 }
 
 // SpaceConfig holds the information about a space in the cloud
@@ -98,12 +103,11 @@ func (config *Config) GetActive() *DevSpaceConfig {
 func InitDevSpaceConfig(config *Config, configName string) {
 	if _, ok := config.Configs[configName]; ok == false {
 		config.Configs[configName] = &DevSpaceConfig{
-			DockerfileTimestamps:   make(map[string]int64),
-			DockerContextPaths:     make(map[string]string),
-			ImageTags:              make(map[string]string),
-			HelmChartHashs:         make(map[string]string),
-			HelmOverrideTimestamps: make(map[string]int64),
-			Vars:                   make(map[string]interface{}),
+			DockerfileTimestamps: make(map[string]int64),
+			DockerContextPaths:   make(map[string]string),
+			ImageTags:            make(map[string]string),
+			Deployments:          make(map[string]*DeploymentConfig),
+			Vars:                 make(map[string]interface{}),
 		}
 
 		return
@@ -118,11 +122,8 @@ func InitDevSpaceConfig(config *Config, configName string) {
 	if config.Configs[configName].ImageTags == nil {
 		config.Configs[configName].ImageTags = make(map[string]string)
 	}
-	if config.Configs[configName].HelmChartHashs == nil {
-		config.Configs[configName].HelmChartHashs = make(map[string]string)
-	}
-	if config.Configs[configName].HelmOverrideTimestamps == nil {
-		config.Configs[configName].HelmOverrideTimestamps = make(map[string]int64)
+	if config.Configs[configName].Deployments == nil {
+		config.Configs[configName].Deployments = make(map[string]*DeploymentConfig)
 	}
 	if config.Configs[configName].Vars == nil {
 		config.Configs[configName].Vars = make(map[string]interface{})
