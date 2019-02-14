@@ -22,9 +22,8 @@ type DownCmd struct {
 
 // DownCmdFlags holds the possible down cmd flags
 type DownCmdFlags struct {
-	config          string
-	configOverwrite string
-	deployment      string
+	config     string
+	deployment string
 }
 
 func init() {
@@ -49,7 +48,6 @@ your project, use: devspace reset
 
 	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
-	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
 }
@@ -58,18 +56,21 @@ your project, use: devspace reset
 func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
 	}
-	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	log.StartFileLogging()
 
 	// Configure cloud provider
-	err := cloud.Configure(log.GetInstance())
+	err = cloud.Configure(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}
@@ -96,10 +97,10 @@ func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 		deployments = nil
 	}
 
-	if config.DevSpace.Deployments != nil {
+	if config.Deployments != nil {
 		// Reverse them
-		for i := len(*config.DevSpace.Deployments) - 1; i >= 0; i-- {
-			deployConfig := (*config.DevSpace.Deployments)[i]
+		for i := len(*config.Deployments) - 1; i >= 0; i-- {
+			deployConfig := (*config.Deployments)[i]
 
 			// Check if we should skip deleting deployment
 			if deployments != nil {

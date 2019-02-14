@@ -2,7 +2,6 @@ package remove
 
 import (
 	"strconv"
-	"strings"
 
 	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -48,6 +47,12 @@ func newSpaceCmd() *cobra.Command {
 
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
 func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var provider *cloudpkg.Provider
 
 	providerMap, err := cloudpkg.ParseCloudConfig()
@@ -62,7 +67,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		}
 	} else {
 		// Load provider
-		if configutil.ConfigExists() {
+		if configExists {
 			provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
 			if err != nil {
 				log.Fatalf("Error getting cloud context: %v", err)
@@ -126,24 +131,11 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			log.Fatal(err)
 		}
 
-		if generatedConfig.GetActive().SpaceID == nil {
+		if generatedConfig.Space == nil {
 			log.Fatal("Please provide a space name or id for this command")
 		}
 
-		splitted := strings.Split(*generatedConfig.GetActive().SpaceID, ":")
-		if len(splitted) != 2 {
-			log.Fatalf("Wrong space id format: %s", *generatedConfig.GetActive().SpaceID)
-		}
-
-		spaceID, err := strconv.Atoi(splitted[1])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		space, err = provider.GetSpace(spaceID)
-		if err != nil {
-			log.Fatalf("Error retrieving space: %v", err)
-		}
+		space = generatedConfig.Space
 	}
 
 	// Delete space remotely
@@ -152,7 +144,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		log.Fatalf("Error deleting space: %v", err)
 	}
 
-	if configutil.ConfigExists() {
+	if configExists {
 		// Get current space
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
@@ -160,14 +152,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		}
 
 		// Remove space from generated config
-		spaceID := provider.Name + ":" + strconv.Itoa(space.SpaceID)
-
-		delete(generatedConfig.Spaces, spaceID)
-		for _, config := range generatedConfig.Configs {
-			if config.SpaceID != nil && *config.SpaceID == spaceID {
-				config.SpaceID = nil
-			}
-		}
+		generatedConfig.Space = nil
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

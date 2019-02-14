@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -36,7 +37,16 @@ func newImageCmd() *cobra.Command {
 
 // RunRemoveImage executes the remove image command logic
 func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) {
-	err := configure.RemoveImage(cmd.RemoveAll, args)
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	err = configure.RemoveImage(cmd.RemoveAll, args)
 	if err != nil {
 		log.Fatal(err)
 	}

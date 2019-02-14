@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -45,12 +46,21 @@ func newSelectorCmd() *cobra.Command {
 
 // RunRemoveSelector executes the remove service command logic
 func (cmd *selectorCmd) RunRemoveSelector(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	var serviceName string
 	if len(args) > 0 {
 		serviceName = args[0]
 	}
 
-	err := configure.RemoveSelector(cmd.RemoveAll, serviceName, cmd.LabelSelector, cmd.Namespace)
+	err = configure.RemoveSelector(cmd.RemoveAll, serviceName, cmd.LabelSelector, cmd.Namespace)
 	if err != nil {
 		log.Fatal(err)
 	}

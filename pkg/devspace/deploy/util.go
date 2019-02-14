@@ -12,7 +12,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceDeploy bool, log log.Logger) error {
+func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Deployments != nil {
@@ -38,7 +38,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig, forceDeploy)
+			err = deployClient.Deploy(generatedConfig, forceDeploy, isDev)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}

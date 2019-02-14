@@ -23,13 +23,11 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	flags *UpCmdFlags
+	flags *DevCmdFlags
 }
 
 // DevCmdFlags are the flags available for the up-command
 type DevCmdFlags struct {
-	tiller          bool
-	open            string
 	initRegistries  bool
 	build           bool
 	sync            bool
@@ -37,11 +35,10 @@ type DevCmdFlags struct {
 	deploy          bool
 	exitAfterDeploy bool
 	skipPipeline    bool
-	allyes          bool
 	switchContext   bool
 	portforwarding  bool
 	verboseSync     bool
-	service         string
+	selector        string
 	container       string
 	labelSelector   string
 	namespace       string
@@ -51,16 +48,13 @@ type DevCmdFlags struct {
 
 // DevFlagsDefault are the default flags for DevCmdFlags
 var DevFlagsDefault = &DevCmdFlags{
-	tiller:          true,
-	open:            "cmd",
 	initRegistries:  true,
 	build:           false,
 	sync:            true,
 	terminal:        true,
-	switchContext:   true,
+	switchContext:   false,
 	exitAfterDeploy: false,
 	skipPipeline:    false,
-	allyes:          false,
 	deploy:          false,
 	portforwarding:  true,
 	verboseSync:     false,
@@ -92,7 +86,6 @@ Starts and connects your DevSpace:
 	}
 	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.tiller, "tiller", cmd.flags.tiller, "Install/upgrade tiller")
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Force image build")
@@ -105,57 +98,38 @@ Starts and connects your DevSpace:
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal")
-	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pods/container for terminal")
+	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal (true or false)")
+	cobraCmd.Flags().StringVarP(&cmd.flags.selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods for terminal")
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.allyes, "yes", "y", cmd.flags.allyes, "Answer every questions with the default")
 
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
-func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
-	}
-	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
 	}
 
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	// Start file logging
 	log.StartFileLogging()
 
-	configExists, _ := configutil.ConfigExists()
-	if !configExists {
-		log.Write([]byte("\n"))
-
-		initFlags := &InitCmdFlags{
-			reconfigure:      false,
-			overwrite:        false,
-			skipQuestions:    cmd.flags.allyes,
-			templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
-			templateRepoPath: "",
-			language:         "",
-		}
-		initCmd := &InitCmd{
-			flags: initFlags,
-		}
-		initCmd.Run(nil, []string{})
-
-		// Ensure that config is initialized correctly
-		configutil.SetDefaultsOnce()
-	}
-
 	// Configure cloud provider
-	err := cloud.Configure(true, log.GetInstance())
+	err = cloud.Configure(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}
@@ -198,7 +172,7 @@ func (cmd *UpCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []string) error {
+func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []string) error {
 	config := configutil.GetConfig()
 
 	if flags.skipPipeline == false {
@@ -209,7 +183,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []stri
 		}
 
 		// Build image if necessary
-		mustRedeploy, err := image.BuildAll(client, generatedConfig, flags.build, log.GetInstance())
+		mustRedeploy, err := image.BuildAll(client, generatedConfig, true, flags.build, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
@@ -223,7 +197,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []stri
 		}
 
 		// Deploy all defined deployments
-		if config.DevSpace.Deployments != nil {
+		if config.Deployments != nil {
 			// Deploy all
 			err = deploy.All(client, generatedConfig, mustRedeploy || flags.deploy, true, log.GetInstance())
 			if err != nil {
@@ -256,7 +230,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *UpCmdFlags, args []stri
 	return nil
 }
 
-func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []string, log log.Logger) error {
+func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []string, log log.Logger) error {
 	if flags.portforwarding {
 		portForwarder, err := services.StartPortForwarding(client, log)
 		if err != nil {
@@ -283,15 +257,12 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		}()
 	}
 
+	// Print domain name if we use a cloud provider and space
 	config := configutil.GetConfig()
-
-	// Print domain name if we use a cloud provider
-	cloudTarget := configutil.GetCurrentCloudTarget(config)
-	if cloudTarget != nil {
+	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
 		generatedConfig, _ := generated.LoadConfig()
-		if generatedConfig != nil && generatedConfig.Cloud != nil && generatedConfig.Cloud.Targets != nil && generatedConfig.Cloud.Targets[*cloudTarget] != nil && generatedConfig.Cloud.Targets[*cloudTarget].Domain != nil {
-			log.Infof("Your DevSpace is now reachable via ingress on this URL: http://%s", *generatedConfig.Cloud.Targets[*cloudTarget].Domain)
-			log.Info("See https://devspace-cloud.com/domain-guide for more information")
+		if generatedConfig != nil && generatedConfig.Space != nil && generatedConfig.Space.Domain != nil {
+			log.Infof("The Space is now reachable via ingress on this URL: https://%s", *generatedConfig.Space.Domain)
 		}
 	}
 
@@ -319,14 +290,14 @@ func startServices(client *kubernetes.Clientset, flags *UpCmdFlags, args []strin
 		defer watcher.Stop()
 	}
 
-	if flags.terminal && (config.DevSpace == nil || config.DevSpace.Terminal == nil || config.DevSpace.Terminal.Disabled == nil || *config.DevSpace.Terminal.Disabled == false) {
-		return services.StartTerminal(client, flags.service, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
+	if flags.terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
+		return services.StartTerminal(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
 	}
 
 	log.Info("Will now try to print the logs of a running devspace pod...")
 
 	// Start attaching to a running devspace pod
-	err := services.StartAttach(client, flags.service, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
+	err := services.StartAttach(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
 		if _, ok := err.(*reloadError); ok {
@@ -346,47 +317,49 @@ func GetPaths() []string {
 	config := configutil.GetConfig()
 
 	// Add the deploy manifest paths
-	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
-		for _, deployConf := range *config.DevSpace.Deployments {
-			if deployConf.AutoReload != nil && deployConf.AutoReload.Disabled != nil && *deployConf.AutoReload.Disabled == true {
-				continue
-			}
+	if config.Dev != nil && config.Dev.AutoReload != nil {
+		if config.Dev.AutoReload.Deployments != nil && config.Deployments != nil {
+			for _, deployName := range *config.Dev.AutoReload.Deployments {
+				for _, deployConf := range *config.Deployments {
+					if *deployName == *deployConf.Name {
+						if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
+							chartPath := *deployConf.Helm.ChartPath
+							if chartPath[len(chartPath)-1] != '/' {
+								chartPath += "/"
+							}
 
-			if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
-				chartPath := *deployConf.Helm.ChartPath
-				if chartPath[len(chartPath)-1] != '/' {
-					chartPath += "/"
-				}
-
-				paths = append(paths, chartPath+"**")
-			} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
-				for _, manifestPath := range *deployConf.Kubectl.Manifests {
-					paths = append(paths, *manifestPath)
+							paths = append(paths, chartPath+"**")
+						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
+							for _, manifestPath := range *deployConf.Kubectl.Manifests {
+								paths = append(paths, *manifestPath)
+							}
+						}
+					}
 				}
 			}
 		}
-	}
 
-	// Add the dockerfile paths
-	if config.Images != nil {
-		for _, imageConf := range *config.Images {
-			if imageConf.AutoReload != nil && imageConf.AutoReload.Disabled != nil && *imageConf.AutoReload.Disabled == true {
-				continue
+		// Add the dockerfile paths
+		if config.Dev.AutoReload.Images != nil && config.Images != nil {
+			for _, imageName := range *config.Dev.AutoReload.Images {
+				for imageConfName, imageConf := range *config.Images {
+					if *imageName == imageConfName {
+						dockerfilePath := "./Dockerfile"
+						if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
+							dockerfilePath = *imageConf.Build.DockerfilePath
+						}
+
+						paths = append(paths, dockerfilePath)
+					}
+				}
 			}
-
-			dockerfilePath := "./Dockerfile"
-			if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
-				dockerfilePath = *imageConf.Build.DockerfilePath
-			}
-
-			paths = append(paths, dockerfilePath)
 		}
-	}
 
-	// Add the additional paths
-	if config.DevSpace != nil && config.DevSpace.AutoReload != nil && config.DevSpace.AutoReload.Paths != nil {
-		for _, path := range *config.DevSpace.AutoReload.Paths {
-			paths = append(paths, *path)
+		// Add the additional paths
+		if config.Dev.AutoReload.Paths != nil {
+			for _, path := range *config.Dev.AutoReload.Paths {
+				paths = append(paths, *path)
+			}
 		}
 	}
 

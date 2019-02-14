@@ -34,8 +34,17 @@ func newConfigCmd() *cobra.Command {
 
 // RunUseConfig executes the devspace use config command logic
 func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	configs := configs.Configs{}
-	err := configutil.LoadConfigs(&configs, configutil.DefaultConfigsPath)
+	err = configutil.LoadConfigs(&configs, configutil.DefaultConfigsPath)
 	if err != nil {
 		log.Fatalf("Cannot load %s: %v", configutil.DefaultConfigsPath, err)
 	}

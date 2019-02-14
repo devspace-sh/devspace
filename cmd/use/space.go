@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -41,6 +42,15 @@ func newSpaceCmd() *cobra.Command {
 
 // RunUseDevSpace executes the functionality devspace cloud use devspace
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	if cmd.ID != "" && len(args) > 0 {
 		log.Fatalf("Please only specify either --id or name")
 	}
@@ -111,10 +121,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	generatedConfigSpaceID := provider.Name + ":" + strconv.Itoa(spaceConfig.SpaceID)
-
-	generatedConfig.GetActive().SpaceID = &generatedConfigSpaceID
-	generatedConfig.Spaces[generatedConfigSpaceID] = spaceConfig
+	generatedConfig.Space = spaceConfig
 
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {

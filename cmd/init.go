@@ -119,13 +119,18 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.InitConfig()
 
 		// Set intial deployments
-		config.DevSpace.Deployments = &[]*latest.DeploymentConfig{
+		config.Deployments = &[]*latest.DeploymentConfig{
 			{
 				Name: ptr.String(configutil.DefaultDevspaceDeploymentName),
 				Helm: &latest.HelmConfig{
 					ChartPath: ptr.String("./chart"),
 				},
 			},
+		}
+
+		// Auto reload configuration
+		config.Dev.AutoReload = &latest.AutoReloadConfig{
+			Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
 		}
 	}
 
@@ -240,7 +245,7 @@ func (cmd *InitCmd) configureDevSpace() {
 
 func (cmd *InitCmd) addDefaultSelector() {
 	config := configutil.GetConfig()
-	config.DevSpace.Selectors = &[]*latest.SelectorConfig{
+	config.Dev.Selectors = &[]*latest.SelectorConfig{
 		{
 			Name: ptr.String(configutil.DefaultDevspaceServiceName),
 			LabelSelector: &map[string]*string{
@@ -265,7 +270,7 @@ func (cmd *InitCmd) addDefaultPorts() {
 	}
 
 	config := configutil.GetConfig()
-	config.DevSpace.Ports = &[]*latest.PortForwardingConfig{
+	config.Dev.Ports = &[]*latest.PortForwardingConfig{
 		{
 			Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
 			PortMappings: &portMappings,
@@ -276,11 +281,11 @@ func (cmd *InitCmd) addDefaultPorts() {
 func (cmd *InitCmd) addDefaultSyncConfig() {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Sync == nil {
-		config.DevSpace.Sync = &[]*latest.SyncConfig{}
+	if config.Dev.Sync == nil {
+		config.Dev.Sync = &[]*latest.SyncConfig{}
 	}
 
-	for _, syncPath := range *config.DevSpace.Sync {
+	for _, syncPath := range *config.Dev.Sync {
 		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
 			return
 		}
@@ -299,14 +304,14 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		}
 	}
 
-	syncConfig := append(*config.DevSpace.Sync, &latest.SyncConfig{
+	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
 		Selector:           ptr.String(configutil.DefaultDevspaceServiceName),
 		ContainerPath:      ptr.String("/app"),
 		LocalSubPath:       ptr.String("./"),
 		UploadExcludePaths: &uploadExcludePaths,
 	})
 
-	config.DevSpace.Sync = &syncConfig
+	config.Dev.Sync = &syncConfig
 }
 
 func (cmd *InitCmd) configureImage() {

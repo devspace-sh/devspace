@@ -15,7 +15,7 @@ import (
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConf *latest.ImageConfig, imageTag string) (builder.Interface, error) {
+func CreateBuilder(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConf *latest.ImageConfig, imageTag string, isDev bool) (builder.Interface, error) {
 	config := configutil.GetConfig()
 	var imageBuilder builder.Interface
 
@@ -44,7 +44,12 @@ func CreateBuilder(client *kubernetes.Clientset, generatedConfig *generated.Conf
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
-		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Name, imageTag, generatedConfig.GetActive().ImageTags[*imageConf.Name], buildNamespace, dockerClient, client, allowInsecurePush)
+		lastImageTag := generatedConfig.GetActive().Deploy.ImageTags[*imageConf.Name]
+		if isDev {
+			lastImageTag = generatedConfig.GetActive().Dev.ImageTags[*imageConf.Name]
+		}
+
+		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Name, imageTag, lastImageTag, buildNamespace, dockerClient, client, allowInsecurePush)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
 		}

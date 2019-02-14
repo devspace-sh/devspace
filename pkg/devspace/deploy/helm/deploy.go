@@ -15,10 +15,13 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy bool) error {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
 	releaseName := *d.DeploymentConfig.Name
 	chartPath := *d.DeploymentConfig.Helm.ChartPath
-	activeConfig := generatedConfig.GetActive()
+	activeConfig := generatedConfig.GetActive().Deploy
+	if isDev {
+		activeConfig = generatedConfig.GetActive().Dev
+	}
 
 	// Check if the chart directory has changed
 	hash, err := hash.Directory(chartPath)
@@ -76,7 +79,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 
 	// Check if re-deployment is necessary
 	if reDeploy {
-		err = d.internalDeploy(generatedConfig, helmClient)
+		err = d.internalDeploy(generatedConfig, helmClient, isDev)
 		if err != nil {
 			return err
 		}
@@ -100,7 +103,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, forceDeploy boo
 	return nil
 }
 
-func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.ClientWrapper) error {
+func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.ClientWrapper, isDev bool) error {
 	d.Log.StartWait("Deploying helm chart")
 	defer d.Log.StopWait()
 
@@ -144,7 +147,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	// Set containers and pull secrets values
-	overwriteValues["containers"] = getContainerValues(overwriteValues, config, generatedConfig)
+	overwriteValues["containers"] = getContainerValues(overwriteValues, config, generatedConfig, isDev)
 	overwriteValues["pullSecrets"] = getPullSecrets(values, overwriteValues, config)
 
 	wait := true
@@ -163,7 +166,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	return nil
 }
 
-func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config) map[interface{}]interface{} {
+func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) map[interface{}]interface{} {
 	overwriteContainerValues := map[interface{}]interface{}{}
 	overwriteContainerValuesFromFile, containerValuesExisting := overwriteValues["containers"]
 	if containerValuesExisting {
@@ -178,7 +181,7 @@ func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.
 			container = existingContainer.(map[interface{}]interface{})
 		}
 
-		container["image"] = registry.GetImageWithTag(generatedConfig, imageConf)
+		container["image"] = registry.GetImageWithTag(generatedConfig, imageConf, isDev)
 		overwriteContainerValues[imageName] = container
 	}
 

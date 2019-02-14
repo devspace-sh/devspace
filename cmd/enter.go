@@ -16,13 +16,12 @@ type EnterCmd struct {
 
 // EnterCmdFlags are the flags available for the enter-command
 type EnterCmdFlags struct {
-	service         string
-	namespace       string
-	labelSelector   string
-	container       string
-	switchContext   bool
-	config          string
-	configOverwrite string
+	selector      string
+	namespace     string
+	labelSelector string
+	container     string
+	switchContext bool
+	config        string
 }
 
 func init() {
@@ -42,7 +41,7 @@ devspace:
 
 devspace enter
 devspace enter bash
-devspace enter -s my-service
+devspace enter -s my-selector
 devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
@@ -51,41 +50,45 @@ devspace enter bash -l release=test
 	}
 	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().StringVarP(&cmd.flags.service, "service", "s", "", "Service name (in config) to select pod/container for terminal")
+	cobraCmd.Flags().StringVarP(&cmd.flags.selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
-	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", true, "Switch kubectl context to the devspace context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the devspace context")
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 }
 
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
 	}
-	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
+
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	log.StartFileLogging()
 
 	// Configure cloud provider
-	err := cloud.Configure(log.GetInstance())
+	err = cloud.Configure(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to configure cloud provider: %v", err)
 	}
 
+	// Get kubectl client
 	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = services.StartTerminal(kubectl, cmd.flags.service, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, make(chan error), log.GetInstance())
+	// Start terminal
+	err = services.StartTerminal(kubectl, cmd.flags.selector, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, args, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

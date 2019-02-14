@@ -17,13 +17,13 @@ func newSpaceCmd() *cobra.Command {
 	cmd := &spaceCmd{}
 
 	return &cobra.Command{
-		Use:   "space",
-		Short: "Shows the space status",
+		Use:   "devspace",
+		Short: "Shows the devspace status",
 		Long: `
 	#######################################################
-	############### devspace status space #################
+	############# devspace status devspace ################
 	#######################################################
-	Shows the space status
+	Shows the devspace status
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -33,7 +33,15 @@ func newSpaceCmd() *cobra.Command {
 
 // RunStatus executes the devspace status command logic
 func (cmd *spaceCmd) RunSpaceStatus(cobraCmd *cobra.Command, args []string) {
-	var err error
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	var values [][]string
 	var headerValues = []string{
 		"TYPE",
@@ -54,8 +62,8 @@ func (cmd *spaceCmd) RunSpaceStatus(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
-	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
 			var deployClient deploy.Interface
 
 			// Delete kubectl engine

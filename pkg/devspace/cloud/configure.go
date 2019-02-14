@@ -87,7 +87,7 @@ func Configure(log log.Logger) error {
 		generatedConfig.Space = spaceConfig
 	}
 
-	return updateDevSpaceConfig(dsConfig, spaceConfig)
+	return updateDevSpaceConfig(dsConfig, spaceConfig, log)
 }
 
 // ConfigureWithSpaceName configures the environment temporarily with the given space name
@@ -111,10 +111,12 @@ func ConfigureWithSpaceName(spaceName string, log log.Logger) error {
 		return fmt.Errorf("Couldn't get space config for space %s: %v", spaceName, err)
 	}
 
-	return updateDevSpaceConfig(dsConfig, spaceConfig)
+	return updateDevSpaceConfig(dsConfig, spaceConfig, log)
 }
 
-func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfig) error {
+func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfig, log log.Logger) error {
+	log.Infof("Using space %s", spaceConfig.Name)
+
 	// Check if we should use the kubecontext by checking if an api server is specified in the config
 	useKubeContext := dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || dsConfig.Cluster.APIServer == nil
 

@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -36,12 +37,21 @@ func newDeploymentCmd() *cobra.Command {
 
 // RunRemoveDeployment executes the specified deployment
 func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	name := ""
 	if len(args) > 0 {
 		name = args[0]
 	}
 
-	err := configure.RemoveDeployment(cmd.RemoveAll, name)
+	err = configure.RemoveDeployment(cmd.RemoveAll, name)
 	if err != nil {
 		log.Fatal(err)
 	}

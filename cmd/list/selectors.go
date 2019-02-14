@@ -32,7 +32,7 @@ func newSelectorsCmd() *cobra.Command {
 func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Selectors == nil || len(*config.DevSpace.Selectors) == 0 {
+	if config.Dev.Selectors == nil || len(*config.Dev.Selectors) == 0 {
 		log.Info("No selectors are configured. Run `devspace add selector` to add new selector\n")
 		return
 	}
@@ -40,15 +40,14 @@ func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) 
 	headerColumnNames := []string{
 		"Name",
 		"Namespace",
-		"Type",
 		"Label Selector",
 		"Container",
 	}
 
-	selectors := make([][]string, 0, len(*config.DevSpace.Selectors))
+	selectors := make([][]string, 0, len(*config.Dev.Selectors))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.Selectors {
+	for _, value := range *config.Dev.Selectors {
 		selector := ""
 		for k, v := range *value.LabelSelector {
 			if len(selector) > 0 {
@@ -56,11 +55,6 @@ func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) 
 			}
 
 			selector += k + "=" + *v
-		}
-
-		resourceType := "pod"
-		if value.ResourceType != nil {
-			resourceType = *value.ResourceType
 		}
 
 		// TODO: should we skip this error?
@@ -77,7 +71,6 @@ func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) 
 		selectors = append(selectors, []string{
 			*value.Name,
 			namespace,
-			resourceType,
 			selector,
 			containerName,
 		})

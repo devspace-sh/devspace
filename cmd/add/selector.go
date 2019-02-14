@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -40,7 +41,16 @@ func newSelectorCmd() *cobra.Command {
 
 // RunAddSelector executes the add selector command logic
 func (cmd *selectorCmd) RunAddSelector(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddSelector(args[0], cmd.LabelSelector, cmd.Namespace, true)
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	err = configure.AddSelector(args[0], cmd.LabelSelector, cmd.Namespace, true)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -46,7 +47,16 @@ func newSyncCmd() *cobra.Command {
 
 // RunRemoveSync executes the remove sync command logic
 func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	err = configure.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
 	if err != nil {
 		log.Fatal(err)
 	}

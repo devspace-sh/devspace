@@ -21,11 +21,17 @@ type Config struct {
 
 // DevSpaceConfig holds all the information specific to a certain config
 type DevSpaceConfig struct {
+	Dev    CacheConfig            `yaml:"dev,omitempty"`
+	Deploy CacheConfig            `yaml:"deploy,omitempty"`
+	Vars   map[string]interface{} `yaml:"vars,omitempty"`
+}
+
+// CacheConfig holds the information if things have to be redeployed or rebuild
+type CacheConfig struct {
 	Deployments          map[string]*DeploymentConfig `yaml:"deployments"`
 	DockerfileTimestamps map[string]int64             `yaml:"dockerfileTimestamps"`
 	DockerContextPaths   map[string]string            `yaml:"dockerContextPaths"`
 	ImageTags            map[string]string            `yaml:"imageTags"`
-	Vars                 map[string]interface{}       `yaml:"vars,omitempty"`
 }
 
 // DeploymentConfig holds the information about a specific deployment
@@ -96,27 +102,47 @@ func (config *Config) GetActive() *DevSpaceConfig {
 func InitDevSpaceConfig(config *Config, configName string) {
 	if _, ok := config.Configs[configName]; ok == false {
 		config.Configs[configName] = &DevSpaceConfig{
-			DockerfileTimestamps: make(map[string]int64),
-			DockerContextPaths:   make(map[string]string),
-			ImageTags:            make(map[string]string),
-			Deployments:          make(map[string]*DeploymentConfig),
-			Vars:                 make(map[string]interface{}),
+			Dev: CacheConfig{
+				Deployments:          make(map[string]*DeploymentConfig),
+				DockerfileTimestamps: make(map[string]int64),
+				DockerContextPaths:   make(map[string]string),
+				ImageTags:            make(map[string]string),
+			},
+			Deploy: CacheConfig{
+				Deployments:          make(map[string]*DeploymentConfig),
+				DockerfileTimestamps: make(map[string]int64),
+				DockerContextPaths:   make(map[string]string),
+				ImageTags:            make(map[string]string),
+			},
+			Vars: make(map[string]interface{}),
 		}
 
 		return
 	}
 
-	if config.Configs[configName].DockerfileTimestamps == nil {
-		config.Configs[configName].DockerfileTimestamps = make(map[string]int64)
+	if config.Configs[configName].Dev.DockerfileTimestamps == nil {
+		config.Configs[configName].Dev.DockerfileTimestamps = make(map[string]int64)
 	}
-	if config.Configs[configName].DockerContextPaths == nil {
-		config.Configs[configName].DockerContextPaths = make(map[string]string)
+	if config.Configs[configName].Deploy.DockerfileTimestamps == nil {
+		config.Configs[configName].Deploy.DockerfileTimestamps = make(map[string]int64)
 	}
-	if config.Configs[configName].ImageTags == nil {
-		config.Configs[configName].ImageTags = make(map[string]string)
+	if config.Configs[configName].Dev.DockerContextPaths == nil {
+		config.Configs[configName].Dev.DockerContextPaths = make(map[string]string)
 	}
-	if config.Configs[configName].Deployments == nil {
-		config.Configs[configName].Deployments = make(map[string]*DeploymentConfig)
+	if config.Configs[configName].Deploy.DockerContextPaths == nil {
+		config.Configs[configName].Deploy.DockerContextPaths = make(map[string]string)
+	}
+	if config.Configs[configName].Dev.ImageTags == nil {
+		config.Configs[configName].Dev.ImageTags = make(map[string]string)
+	}
+	if config.Configs[configName].Deploy.ImageTags == nil {
+		config.Configs[configName].Deploy.ImageTags = make(map[string]string)
+	}
+	if config.Configs[configName].Dev.Deployments == nil {
+		config.Configs[configName].Dev.Deployments = make(map[string]*DeploymentConfig)
+	}
+	if config.Configs[configName].Deploy.Deployments == nil {
+		config.Configs[configName].Deploy.Deployments = make(map[string]*DeploymentConfig)
 	}
 	if config.Configs[configName].Vars == nil {
 		config.Configs[configName].Vars = make(map[string]interface{})

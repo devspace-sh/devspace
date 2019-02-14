@@ -34,22 +34,21 @@ func newPortsCmd() *cobra.Command {
 func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Ports == nil || len(*config.DevSpace.Ports) == 0 {
+	if config.Dev.Ports == nil || len(*config.Dev.Ports) == 0 {
 		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
 
 	headerColumnNames := []string{
-		"Service",
-		"Type",
 		"Selector",
+		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(*config.DevSpace.Ports))
+	portForwards := make([][]string, 0, len(*config.Dev.Ports))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.Ports {
+	for _, value := range *config.Dev.Ports {
 		service := ""
 		selector := ""
 
@@ -74,14 +73,8 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
 		}
 
-		resourceType := "pod"
-		if value.ResourceType != nil {
-			resourceType = *value.ResourceType
-		}
-
 		portForwards = append(portForwards, []string{
 			service,
-			resourceType,
 			selector,
 			portMappings,
 		})

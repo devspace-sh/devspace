@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/configure"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -52,7 +53,16 @@ func newSyncCmd() *cobra.Command {
 
 // RunAddSync executes the add sync command logic
 func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
-	err := configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths, cmd.Service)
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	err = configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths, cmd.Service)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}

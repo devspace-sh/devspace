@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/juju/errors"
+	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -150,7 +152,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			// Get real config definition
 			configDefinition = configs[LoadedConfig]
 			if configDefinition.Config == nil {
-				log.Fatalf("config key not defined in config %s", LoadedConfig)
+				log.Fatalf("config %s cannot be found", LoadedConfig)
 			}
 
 			// Ask questions
@@ -284,6 +286,46 @@ func askQuestions(generatedConfig *generated.Config, vars []*configs.Variable) e
 	}
 
 	return nil
+}
+
+// SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
+func SetDevSpaceRoot() (bool, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false, err
+	}
+
+	originalCwd := cwd
+	homedir, err := homedir.Dir()
+	if err != nil {
+		return false, err
+	}
+
+	lastLength := 0
+	for len(cwd) != lastLength {
+		if cwd != homedir {
+			_, err := os.Stat(filepath.Join(cwd, ".devspace"))
+			if err == nil {
+				// Change working directory
+				err = os.Chdir(cwd)
+				if err != nil {
+					return false, err
+				}
+
+				// Notify user that we are not using the current working directory
+				if originalCwd != cwd {
+					log.Infof("Using devspace config in %s/.devspace", filepath.ToSlash(cwd))
+				}
+
+				return true, nil
+			}
+		}
+
+		lastLength = len(cwd)
+		cwd = filepath.Dir(cwd)
+	}
+
+	return false, nil
 }
 
 // GetSelector returns the service referenced by serviceName

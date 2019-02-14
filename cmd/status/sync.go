@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -54,6 +55,15 @@ func newSyncCmd() *cobra.Command {
 
 // RunStatusSync executes the devspace status sync commad logic
 func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	// Read syncLog
 	cwd, err := os.Getwd()
 	if err != nil {

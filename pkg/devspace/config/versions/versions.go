@@ -19,7 +19,8 @@ var versionLoader = map[string]config.New{
 func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
-		return nil, fmt.Errorf("Error parsing config: version not found")
+		// This is needed because overrides usually don't have versions
+		data["version"] = latest.Version
 	}
 
 	versionLoadFunc, ok := versionLoader[version]

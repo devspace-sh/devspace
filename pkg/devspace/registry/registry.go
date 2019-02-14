@@ -82,12 +82,16 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // GetImageWithTag returns the image (optional with tag)
-func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig) string {
+func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) string {
 	image := *imageConfig.Name
 	if imageConfig.Tag != nil {
 		image = image + ":" + *imageConfig.Tag
 	} else {
-		image = image + ":" + generatedConfig.GetActive().ImageTags[image]
+		if isDev {
+			image = image + ":" + generatedConfig.GetActive().Dev.ImageTags[image]
+		} else {
+			image = image + ":" + generatedConfig.GetActive().Deploy.ImageTags[image]
+		}
 	}
 
 	return image

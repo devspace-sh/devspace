@@ -32,7 +32,7 @@ func newSyncCmd() *cobra.Command {
 func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Sync == nil || len(*config.DevSpace.Sync) == 0 {
+	if config.Dev.Sync == nil || len(*config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return
 	}
@@ -45,10 +45,10 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		"Excluded Paths",
 	}
 
-	syncPaths := make([][]string, 0, len(*config.DevSpace.Sync))
+	syncPaths := make([][]string, 0, len(*config.Dev.Sync))
 
 	// Transform values into string arrays
-	for _, value := range *config.DevSpace.Sync {
+	for _, value := range *config.Dev.Sync {
 		service := ""
 		selector := ""
 

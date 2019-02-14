@@ -21,15 +21,12 @@ type DeployCmd struct {
 
 // DeployCmdFlags holds the possible down cmd flags
 type DeployCmdFlags struct {
-	Namespace       string
-	KubeContext     string
-	Config          string
-	ConfigOverwrite string
-	DockerTarget    string
-	CloudTarget     string
-	SwitchContext   bool
-	SkipBuild       bool
-	GitBranch       string
+	Namespace     string
+	KubeContext   string
+	Config        string
+	DockerTarget  string
+	SwitchContext bool
+	SkipBuild     bool
 }
 
 func init() {
@@ -49,9 +46,6 @@ Deploys the devspace to a target cluster:
 devspace deploy --namespace=deploy
 devspace deploy --namespace=deploy --docker-target=production
 devspace deploy --kube-context=deploy-context
-devspace deploy --config=.devspace/deploy.yaml
-devspace deploy --cloud-target=production
-devspace deploy https://github.com/covexo/devspace --branch test
 #######################################################`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.Run,
@@ -60,17 +54,24 @@ devspace deploy https://github.com/covexo/devspace --branch test
 	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.ConfigOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
-	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
-	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
-	// cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
+	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	// Start file logging
 	log.StartFileLogging()
 
 	// Prepare the config
@@ -125,7 +126,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -139,7 +140,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, mustRedeploy, log.GetInstance())
+	err = deploy.All(client, generatedConfig, false, mustRedeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -147,11 +148,9 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Print domain name if we use a cloud provider
 	config := configutil.GetConfig()
 	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
-		if generatedConfig != nil {
-			spaceConfig, err := generated.GetSpaceConfig(generatedConfig, generatedConfig.ActiveConfig)
-			if err == nil && spaceConfig.Domain != nil {
-				log.Infof("Your DevSpace is now reachable via ingress on this URL: https://%s", *spaceConfig.Domain)
-			}
+		generatedConfig, _ := generated.LoadConfig()
+		if generatedConfig != nil && generatedConfig.Space != nil && generatedConfig.Space.Domain != nil {
+			log.Infof("The Space is now reachable via ingress on this URL: https://%s", *generatedConfig.Space.Domain)
 		}
 	}
 
@@ -161,12 +160,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 func (cmd *DeployCmd) prepareConfig() {
 	if configutil.ConfigPath != cmd.flags.Config {
 		configutil.ConfigPath = cmd.flags.Config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
-	}
-	if configutil.OverwriteConfigPath != cmd.flags.ConfigOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.ConfigOverwrite
 	}
 
 	// Load Config and modify it

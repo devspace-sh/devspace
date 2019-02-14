@@ -6,16 +6,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/deploy"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/ptr"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
@@ -23,8 +18,6 @@ import (
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/russross/blackfriday"
 	"github.com/skratchdot/open-golang/open"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/helm/pkg/repo"
 )
 
@@ -57,10 +50,10 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		return fmt.Errorf("Deployment %s not found", deployment)
 	}
 
-	kubectl, err := kubectl.NewClient()
+	/*kubectl, err := kubectl.NewClient()
 	if err != nil {
 		return fmt.Errorf("Unable to create new kubectl client: %v", err)
-	}
+	}*/
 
 	tillerNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
@@ -237,7 +230,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			}
 		}
 
-		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		/*shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to re-deploy your DevSpace with the added package? (yes|no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)",
@@ -248,13 +241,13 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			if err != nil {
 				return err
 			}
-		}
+		}*/
 	}
 
 	return nil
 }
 
-func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) error {
+/* func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) error {
 	config := configutil.GetConfig()
 	listOptions := metav1.ListOptions{}
 	deploymentNamespace := *deploymentConfig.Namespace
@@ -341,7 +334,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 		}
 	}
 	return nil
-}
+}*/
 
 // RemovePackage removes a helm dependency from a deployment
 func RemovePackage(removeAll bool, deployment string, args []string, log log.Logger) error {
@@ -457,7 +450,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 		}
 		log.Write([]byte("\n"))
 
-		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		/*shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to re-deploy your DevSpace to purge unnecessary packages? (yes|no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)",
@@ -473,7 +466,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 			if err != nil {
 				return err
 			}
-		}
+		}*/
 		return nil
 	}
 

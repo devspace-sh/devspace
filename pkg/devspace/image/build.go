@@ -62,7 +62,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	// Check if rebuild is needed
-	needRebuild, err := shouldRebuild(generatedConfig, imageConf, contextPath, dockerfilePath, forceRebuild)
+	needRebuild, err := shouldRebuild(generatedConfig, imageConf, contextPath, dockerfilePath, forceRebuild, isDev)
 	if err != nil {
 		return false, fmt.Errorf("Error during shouldRebuild check: %v", err)
 	}
@@ -92,7 +92,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	// Create builder
-	imageBuilder, err := CreateBuilder(client, generatedConfig, imageConf, imageTag)
+	imageBuilder, err := CreateBuilder(client, generatedConfig, imageConf, imageTag, isDev)
 	if err != nil {
 		return false, err
 	}
@@ -176,13 +176,17 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	// Update config
-	generatedConfig.GetActive().ImageTags[imageName] = imageTag
+	if isDev {
+		generatedConfig.GetActive().Dev.ImageTags[imageName] = imageTag
+	} else {
+		generatedConfig.GetActive().Deploy.ImageTags[imageName] = imageTag
+	}
 
 	log.Done("Done building and pushing image '" + imageName + "'")
 	return true, nil
 }
 
-func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, contextPath, dockerfilePath string, forceRebuild bool) (bool, error) {
+func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, contextPath, dockerfilePath string, forceRebuild, isDev bool) (bool, error) {
 	mustRebuild := true
 
 	// Get dockerfile timestamp
@@ -212,7 +216,10 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 	}
 
 	// When user has not used -b or --build flags
-	activeConfig := runtimeConfig.GetActive()
+	activeConfig := runtimeConfig.GetActive().Deploy
+	if isDev {
+		activeConfig = runtimeConfig.GetActive().Dev
+	}
 
 	if forceRebuild == false {
 		// only rebuild Docker image when Dockerfile or context has changed since latest build

@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/covexo/devspace/cmd/add"
+	"github.com/covexo/devspace/cmd/create"
+	"github.com/covexo/devspace/cmd/list"
+	"github.com/covexo/devspace/cmd/remove"
+	"github.com/covexo/devspace/cmd/status"
+	"github.com/covexo/devspace/cmd/use"
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
 	"github.com/covexo/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
