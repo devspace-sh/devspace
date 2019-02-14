@@ -3,12 +3,14 @@ package kaniko
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
+	"github.com/covexo/devspace/pkg/devspace/builder"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	synctool "github.com/covexo/devspace/pkg/devspace/sync"
 	"github.com/covexo/devspace/pkg/util/ignoreutil"
@@ -79,7 +81,19 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
+	var err error
+
+	// Check if we should overwrite entrypoint
+	if entrypoint != nil && len(*entrypoint) > 0 {
+		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		if err != nil {
+			return err
+		}
+
+		defer os.RemoveAll(filepath.Dir(dockerfilePath))
+	}
+
 	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
 	if err != nil {
 		return err
@@ -193,16 +207,17 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		buildContainer := &buildPod.Spec.Containers[0]
 
 		log.StartWait("Uploading files to build container")
+
 		err := synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, contextPath, "/src", ignoreRules)
-
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %s", err.Error())
 		}
+
 		err = synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, dockerfilePath, "/src", ignoreRules)
-
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %s", err.Error())
 		}
+
 		log.StopWait()
 		log.Done("Uploaded files to container")
 

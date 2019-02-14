@@ -15,8 +15,8 @@ import (
 func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceDeploy bool, log log.Logger) error {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
 			var deployClient Interface
 			var err error
 

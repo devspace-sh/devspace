@@ -31,7 +31,7 @@ import (
 // AddPackage adds a helm dependency to specified deployment
 func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) error {
 	config := configutil.GetBaseConfig()
-	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
+	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
 
@@ -42,7 +42,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	}
 
 	var deploymentConfig *v1.DeploymentConfig
-	for _, deployConfig := range *config.DevSpace.Deployments {
+	for _, deployConfig := range *config.Deployments {
 		if deployment == "" || deployment == *deployConfig.Name {
 			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
 				return fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
@@ -200,14 +200,14 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 
 	_, err = configutil.GetSelector(*packageService.Name)
 	if err != nil {
-		if config.DevSpace.Selectors == nil {
-			config.DevSpace.Selectors = &[]*v1.SelectorConfig{}
+		if config.Dev.Selectors == nil {
+			config.Dev.Selectors = &[]*v1.SelectorConfig{}
 		}
 
-		configSelectors := *config.DevSpace.Selectors
+		configSelectors := *config.Dev.Selectors
 		configSelectors = append(configSelectors, packageService)
 
-		config.DevSpace.Selectors = &configSelectors
+		config.Dev.Selectors = &configSelectors
 	}
 
 	err = configutil.SaveBaseConfig()
@@ -346,7 +346,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 // RemovePackage removes a helm dependency from a deployment
 func RemovePackage(removeAll bool, deployment string, args []string, log log.Logger) error {
 	config := configutil.GetConfig()
-	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
+	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
 
@@ -357,7 +357,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	}
 
 	var deploymentConfig *v1.DeploymentConfig
-	for _, deployConfig := range *config.DevSpace.Deployments {
+	for _, deployConfig := range *config.Deployments {
 		if deployment == "" || deployment == *deployConfig.Name {
 			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
 				return fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)

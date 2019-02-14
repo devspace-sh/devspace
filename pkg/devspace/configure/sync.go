@@ -16,12 +16,11 @@ import (
 func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
 	config := configutil.GetBaseConfig()
 
-	if config.DevSpace == nil {
-		config.DevSpace = &v1.DevSpaceConfig{}
+	if config.Dev == nil {
+		config.Dev = &v1.DevConfig{}
 	}
-
-	if config.DevSpace.Sync == nil {
-		config.DevSpace.Sync = &[]*v1.SyncConfig{}
+	if config.Dev.Sync == nil {
+		config.Dev.Sync = &[]*v1.SyncConfig{}
 	}
 
 	var labelSelectorMap map[string]*string
@@ -32,12 +31,12 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	}
 
 	if labelSelector == "" {
-		if config.DevSpace != nil && config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
-			services := *config.DevSpace.Selectors
+		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
+			services := *config.Dev.Selectors
 
 			var service *v1.SelectorConfig
 			if serviceName != "" {
-				service = getServiceWithName(*config.DevSpace.Selectors, serviceName)
+				service = getServiceWithName(*config.Dev.Selectors, serviceName)
 				if service == nil {
 					return fmt.Errorf("no service with name %v exists", serviceName)
 				}
@@ -83,7 +82,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		labelSelectorMap = nil
 	}
 
-	syncConfig := append(*config.DevSpace.Sync, &v1.SyncConfig{
+	syncConfig := append(*config.Dev.Sync, &v1.SyncConfig{
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: ptr.String(containerPath),
 		LocalSubPath:  ptr.String(localPath),
@@ -92,7 +91,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		Selector:      &serviceName,
 	})
 
-	config.DevSpace.Sync = &syncConfig
+	config.Dev.Sync = &syncConfig
 
 	err = configutil.SaveBaseConfig()
 	if err != nil {
@@ -115,10 +114,10 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 		return fmt.Errorf("You have to specify at least one of the supported flags")
 	}
 
-	if config.DevSpace.Sync != nil && len(*config.DevSpace.Sync) > 0 {
-		newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.DevSpace.Sync)-1)
+	if config.Dev.Sync != nil && len(*config.Dev.Sync) > 0 {
+		newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.Dev.Sync)-1)
 
-		for _, v := range *config.DevSpace.Sync {
+		for _, v := range *config.Dev.Sync {
 			if removeAll ||
 				localPath == *v.LocalSubPath ||
 				containerPath == *v.ContainerPath ||
@@ -129,7 +128,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		config.DevSpace.Sync = &newSyncPaths
+		config.Dev.Sync = &newSyncPaths
 
 		err = configutil.SaveBaseConfig()
 		if err != nil {

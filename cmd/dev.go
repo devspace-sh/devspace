@@ -21,13 +21,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// UpCmd is a struct that defines a command call for "up"
-type UpCmd struct {
+// DevCmd is a struct that defines a command call for "up"
+type DevCmd struct {
 	flags *UpCmdFlags
 }
 
-// UpCmdFlags are the flags available for the up-command
-type UpCmdFlags struct {
+// DevCmdFlags are the flags available for the up-command
+type DevCmdFlags struct {
 	tiller          bool
 	open            string
 	initRegistries  bool
@@ -49,8 +49,8 @@ type UpCmdFlags struct {
 	configOverwrite string
 }
 
-//UpFlagsDefault are the default flags for UpCmdFlags
-var UpFlagsDefault = &UpCmdFlags{
+// DevFlagsDefault are the default flags for DevCmdFlags
+var DevFlagsDefault = &DevCmdFlags{
 	tiller:          true,
 	open:            "cmd",
 	initRegistries:  true,
@@ -70,20 +70,20 @@ var UpFlagsDefault = &UpCmdFlags{
 }
 
 func init() {
-	cmd := &UpCmd{
-		flags: UpFlagsDefault,
+	cmd := &DevCmd{
+		flags: DevFlagsDefault,
 	}
 
 	cobraCmd := &cobra.Command{
-		Use:   "up",
+		Use:   "dev",
 		Short: "Starts your DevSpace",
 		Long: `
 #######################################################
 #################### devspace up ######################
 #######################################################
 Starts and connects your DevSpace:
-1. Builds your Docker images (if any Dockerfile has changed)
-2. Deploys your application via helm or kubectl
+1. Builds your Docker images and override entrypoints if specified
+2. Deploys the deployments via helm or kubectl
 3. Forwards container ports to the local computer
 4. Starts the sync client
 5. Enters the container shell

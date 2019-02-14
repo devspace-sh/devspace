@@ -2,10 +2,9 @@ package cloud
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -74,45 +73,24 @@ func Configure(log log.Logger) error {
 	// Save generated config later
 	defer generated.SaveConfig(generatedConfig)
 
-	// Get current active config
-	activeConfig := generatedConfig.GetActive()
-
 	// Check if there is a space configured
-	if activeConfig.SpaceID == nil || *activeConfig.SpaceID == "" {
-		return fmt.Errorf("No space for current config %s exists.\n Please run `devspace use space [NAME]` to use an existing space for the configuration or run `devspace create space [NAME]` to create a new space", generatedConfig.ActiveConfig)
+	if generatedConfig.Space == nil {
+		return errors.New("No space configured.\n Please run `devspace use space [NAME]` to use an existing space or run `devspace create space [NAME]` to create a new space")
 	}
 
-	// Update space configuration
-	splitted := strings.Split(*activeConfig.SpaceID, ":")
-	if len(splitted) != 2 {
-		return fmt.Errorf("Malformed space id: %s. Please delete .devspace/generated.yaml and retry", *activeConfig.SpaceID)
-	}
-	if splitted[0] != provider.Name {
-		return fmt.Errorf("Provider name for current config %s does not match between config (Provider name: %s) and configured space (Provider name: %s).\n Please run `devspace use space [NAME] --provider=%s` to use an existing space for the configuration or run `devspace create space [NAME] --provider=%s` to create a new space", splitted[0], *dsConfig.Cluster.CloudProvider, splitted[0], *dsConfig.Cluster.CloudProvider, *dsConfig.Cluster.CloudProvider)
-	}
-
-	// Convert id from string to int
-	spaceID, err := strconv.Atoi(splitted[1])
+	// Refresh space configuration
+	spaceConfig, err := provider.GetSpace(generatedConfig.Space.SpaceID)
 	if err != nil {
-		return err
-	}
-
-	spaceConfig, err := provider.GetSpace(spaceID)
-	if err != nil {
-		if _, ok := generatedConfig.Spaces[*activeConfig.SpaceID]; ok == false {
-			return fmt.Errorf("Couldn't get space config for space id %d: %v", spaceID, err)
-		}
-
-		spaceConfig = generatedConfig.Spaces[*activeConfig.SpaceID]
+		spaceConfig = generatedConfig.Space
 		log.Warnf("Couldn't get space %s: %v", spaceConfig.Name, err)
 	} else {
-		generatedConfig.Spaces[*activeConfig.SpaceID] = spaceConfig
+		generatedConfig.Space = spaceConfig
 	}
 
 	return updateDevSpaceConfig(dsConfig, spaceConfig)
 }
 
-// ConfigureWithSpaceName configures the environment with the given space name
+// ConfigureWithSpaceName configures the environment temporarily with the given space name
 func ConfigureWithSpaceName(spaceName string, log log.Logger) error {
 	dsConfig := configutil.GetConfig()
 

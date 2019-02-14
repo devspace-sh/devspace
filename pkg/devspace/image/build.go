@@ -21,7 +21,7 @@ import (
 )
 
 // BuildAll builds all images
-func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, forceRebuild bool, log log.Logger) (bool, error) {
+func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	config := configutil.GetConfig()
 	re := false
 
@@ -31,7 +31,7 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, f
 			continue
 		}
 
-		shouldRebuild, err := Build(client, generatedConfig, imageConf, forceRebuild, log)
+		shouldRebuild, err := Build(client, generatedConfig, imageName, imageConf, isDev, forceRebuild, log)
 		if err != nil {
 			return false, err
 		}
@@ -45,7 +45,7 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, f
 }
 
 // Build builds an image with the specified engine
-func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConf *v1.ImageConfig, forceRebuild bool, log log.Logger) (bool, error) {
+func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConfigName string, imageConf *v1.ImageConfig, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
 	imageName := *imageConf.Name
@@ -67,7 +67,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		return false, fmt.Errorf("Error during shouldRebuild check: %v", err)
 	}
 	if needRebuild == false {
-		log.Infof("Skip building image '%s'", *imageConf.Name)
+		log.Infof("Skip building image '%s'", imageConfigName)
 		return false, nil
 	}
 
@@ -115,6 +115,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		displayRegistryURL = registryURL
 	}
 
+	// Authenticate
 	if imageConf.SkipPush == nil || *imageConf.SkipPush == false {
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = imageBuilder.Authenticate()
@@ -127,6 +128,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		log.Done("Authentication successful (" + displayRegistryURL + ")")
 	}
 
+	// Buildoptions
 	buildOptions := &types.ImageBuildOptions{}
 	if imageConf.Build != nil && imageConf.Build.Options != nil {
 		if imageConf.Build.Options.BuildArgs != nil {
@@ -140,8 +142,23 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		}
 	}
 
+	// Check if we should overwrite entrypoint
+	var entrypoint *[]*string
+	if isDev {
+		config := configutil.GetConfig()
+
+		if config.Dev != nil && config.Dev.OverrideImages != nil {
+			for _, imageOverrideConfig := range *config.Dev.OverrideImages {
+				if *imageOverrideConfig.Name == imageConfigName {
+					entrypoint = imageOverrideConfig.Entrypoint
+					break
+				}
+			}
+		}
+	}
+
 	// Build Image
-	err = imageBuilder.BuildImage(contextPath, absoluteDockerfilePath, buildOptions)
+	err = imageBuilder.BuildImage(contextPath, absoluteDockerfilePath, buildOptions, entrypoint)
 	if err != nil {
 		return false, fmt.Errorf("Error during image build: %v", err)
 	}

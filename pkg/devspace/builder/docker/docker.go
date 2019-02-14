@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/builder"
 	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 
@@ -50,7 +51,7 @@ func NewBuilder(client client.CommonAPIClient, imageName, imageTag string) (*Bui
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
 	if options == nil {
 		options = &types.ImageBuildOptions{}
 	}
@@ -95,6 +96,23 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	})
 	if err != nil {
 		return err
+	}
+
+	// Check if we should overwrite entrypoint
+	if entrypoint != nil && len(*entrypoint) > 0 {
+		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		if err != nil {
+			return err
+		}
+
+		// We will add it to the build context
+		dockerfileCtx, err = os.Open(dockerfilePath)
+		if err != nil {
+			return errors.Errorf("unable to open Dockerfile: %v", err)
+		}
+
+		defer dockerfileCtx.Close()
+		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 	}
 
 	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context

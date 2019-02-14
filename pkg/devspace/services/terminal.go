@@ -23,7 +23,7 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 	var command []string
 	config := configutil.GetConfig()
 
-	if len(args) == 0 && (config.DevSpace.Terminal.Command == nil || len(*config.DevSpace.Terminal.Command) == 0) {
+	if len(args) == 0 && (config.Dev.Terminal.Command == nil || len(*config.Dev.Terminal.Command) == 0) {
 		command = []string{
 			"sh",
 			"-c",
@@ -33,7 +33,7 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 		if len(args) > 0 {
 			command = args
 		} else {
-			for _, cmd := range *config.DevSpace.Terminal.Command {
+			for _, cmd := range *config.Dev.Terminal.Command {
 				command = append(command, *cmd)
 			}
 		}
@@ -58,8 +58,8 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 		if selector != nil && selector.ContainerName != nil {
 			containerName = *selector.ContainerName
 		} else {
-			if config.DevSpace.Terminal.ContainerName != nil {
-				containerName = *config.DevSpace.Terminal.ContainerName
+			if config.Dev.Terminal.ContainerName != nil {
+				containerName = *config.Dev.Terminal.ContainerName
 			}
 		}
 	} else {
@@ -95,8 +95,8 @@ func getSelectorNamespaceLabelSelector(serviceNameOverride, labelSelectorOverrid
 	selectorName := "default"
 
 	if serviceNameOverride == "" {
-		if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Selector != nil {
-			selectorName = *config.DevSpace.Terminal.Selector
+		if config.Dev.Terminal != nil && config.Dev.Terminal.Selector != nil {
+			selectorName = *config.Dev.Terminal.Selector
 		}
 	} else {
 		selectorName = serviceNameOverride
@@ -117,8 +117,8 @@ func getSelectorNamespaceLabelSelector(serviceNameOverride, labelSelectorOverrid
 		if selector != nil && selector.Namespace != nil {
 			namespace = *selector.Namespace
 		} else {
-			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.Namespace != nil {
-				namespace = *config.DevSpace.Terminal.Namespace
+			if config.Dev.Terminal != nil && config.Dev.Terminal.Namespace != nil {
+				namespace = *config.Dev.Terminal.Namespace
 			}
 		}
 	} else {
@@ -138,9 +138,9 @@ func getSelectorNamespaceLabelSelector(serviceNameOverride, labelSelectorOverrid
 
 			labelSelector = strings.Join(labels, ", ")
 		} else {
-			if config.DevSpace.Terminal != nil && config.DevSpace.Terminal.LabelSelector != nil {
-				labels := make([]string, 0, len(*config.DevSpace.Terminal.LabelSelector))
-				for key, value := range *config.DevSpace.Terminal.LabelSelector {
+			if config.Dev.Terminal != nil && config.Dev.Terminal.LabelSelector != nil {
+				labels := make([]string, 0, len(*config.Dev.Terminal.LabelSelector))
+				for key, value := range *config.Dev.Terminal.LabelSelector {
 					labels = append(labels, key+"="+*value)
 				}
 
@@ -202,8 +202,8 @@ func getUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error) {
 func GetNameOfFirstHelmDeployment() string {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Deployments != nil {
-		for _, deploymentConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deploymentConfig := range *config.Deployments {
 			if deploymentConfig.Helm != nil {
 				return *deploymentConfig.Name
 			}

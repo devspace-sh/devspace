@@ -17,12 +17,12 @@ import (
 // StartSync starts the syncing functionality
 func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	config := configutil.GetConfig()
-	if config.DevSpace.Sync == nil {
+	if config.Dev.Sync == nil {
 		return []*sync.SyncConfig{}, nil
 	}
 
-	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.DevSpace.Sync))
-	for _, syncPath := range *config.DevSpace.Sync {
+	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.Dev.Sync))
+	for _, syncPath := range *config.Dev.Sync {
 		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", *syncPath.LocalSubPath, err)

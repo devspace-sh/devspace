@@ -7,24 +7,25 @@ const Version string = "v1alpha2"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
-	return *c.Version
+	return Version
 }
 
 // New creates a new config object
 func New() config.Config {
 	return &Config{
-		Cluster:  &Cluster{},
-		DevSpace: &DevSpaceConfig{},
-		Images:   &map[string]*ImageConfig{},
+		Cluster: &Cluster{},
+		Dev:     &DevConfig{},
+		Images:  &map[string]*ImageConfig{},
 	}
 }
 
 // Config defines the configuration
 type Config struct {
-	Version  *string                  `yaml:"version"`
-	DevSpace *DevSpaceConfig          `yaml:"devSpace,omitempty"`
-	Images   *map[string]*ImageConfig `yaml:"images,omitempty"`
-	Cluster  *Cluster                 `yaml:"cluster,omitempty"`
+	Version     *string                  `yaml:"version"`
+	Cluster     *Cluster                 `yaml:"cluster,omitempty"`
+	Dev         *DevConfig               `yaml:"dev,omitempty"`
+	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Images      *map[string]*ImageConfig `yaml:"images,omitempty"`
 }
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster
@@ -46,11 +47,10 @@ type ClusterUser struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name       *string           `yaml:"name"`
-	Namespace  *string           `yaml:"namespace,omitempty"`
-	AutoReload *AutoReloadConfig `yaml:"autoReload,omitempty"`
-	Helm       *HelmConfig       `yaml:"helm,omitempty"`
-	Kubectl    *KubectlConfig    `yaml:"kubectl,omitempty"`
+	Name      *string        `yaml:"name"`
+	Namespace *string        `yaml:"namespace,omitempty"`
+	Helm      *HelmConfig    `yaml:"helm,omitempty"`
+	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
@@ -68,24 +68,27 @@ type KubectlConfig struct {
 	Manifests *[]*string `yaml:"manifests,omitempty"`
 }
 
-// AutoReloadConfig defines the struct for auto reloading deployments and images
+// DevConfig defines the devspace deployment
+type DevConfig struct {
+	Terminal       *Terminal                `yaml:"terminal,omitempty"`
+	AutoReload     *AutoReloadConfig        `yaml:"autoReload,omitempty"`
+	OverrideImages *[]*ImageOverrideConfig  `yaml:"overrideImages,omitempty"`
+	Selectors      *[]*SelectorConfig       `yaml:"selectors,omitempty"`
+	Ports          *[]*PortForwardingConfig `yaml:"ports,omitempty"`
+	Sync           *[]*SyncConfig           `yaml:"sync,omitempty"`
+}
+
+// ImageOverrideConfig holds information about what parts of the image config are overwritten during devspace dev
+type ImageOverrideConfig struct {
+	Name       *string    `yaml:"name"`
+	Entrypoint *[]*string `yaml:"entrypoint"`
+}
+
+// AutoReloadConfig defines the struct for auto reloading devspace with additional paths
 type AutoReloadConfig struct {
-	Disabled *bool `yaml:"disabled,omitempty"`
-}
-
-//DevSpaceConfig defines the devspace deployment
-type DevSpaceConfig struct {
-	Terminal    *Terminal                `yaml:"terminal,omitempty"`
-	AutoReload  *AutoReloadPathsConfig   `yaml:"autoReload,omitempty"`
-	Selectors   *[]*SelectorConfig       `yaml:"selectors,omitempty"`
-	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Ports       *[]*PortForwardingConfig `yaml:"ports,omitempty"`
-	Sync        *[]*SyncConfig           `yaml:"sync,omitempty"`
-}
-
-// AutoReloadPathsConfig defines the struct for auto reloading devspace with additional paths
-type AutoReloadPathsConfig struct {
-	Paths *[]*string `yaml:"paths,omitempty"`
+	Paths       *[]*string `yaml:"paths,omitempty"`
+	Deployments *[]*string `yaml:"deployments,omitempty"`
+	Images      *[]*string `yaml:"images,omitempty"`
 }
 
 // SelectorConfig defines the selectors that belong to the devspace
@@ -101,7 +104,6 @@ type SelectorConfig struct {
 type PortForwardingConfig struct {
 	Selector      *string             `yaml:"selector,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
-	ResourceType  *string             `yaml:"resourceType,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
 	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
@@ -135,13 +137,12 @@ type BandwidthLimits struct {
 
 // ImageConfig defines the image specification
 type ImageConfig struct {
-	Name             *string           `yaml:"name"`
-	Tag              *string           `yaml:"tag,omitempty"`
-	CreatePullSecret *bool             `yaml:"createPullSecret,omitempty"`
-	Insecure         *bool             `yaml:"insecure,omitempty"`
-	SkipPush         *bool             `yaml:"skipPush,omitempty"`
-	AutoReload       *AutoReloadConfig `yaml:"autoReload,omitempty"`
-	Build            *BuildConfig      `yaml:"build,omitempty"`
+	Name             *string      `yaml:"name"`
+	Tag              *string      `yaml:"tag,omitempty"`
+	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
+	Insecure         *bool        `yaml:"insecure,omitempty"`
+	SkipPush         *bool        `yaml:"skipPush,omitempty"`
+	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
 //BuildConfig defines the build process for an image
@@ -166,7 +167,7 @@ type DockerConfig struct {
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty"`
 }
 
-//BuildOptions defines options for building Docker images
+// BuildOptions defines options for building Docker images
 type BuildOptions struct {
 	BuildArgs *map[string]*string `yaml:"buildArgs,omitempty"`
 	Target    *string             `yaml:"target,omitempty"`
@@ -177,7 +178,6 @@ type BuildOptions struct {
 type Terminal struct {
 	Disabled      *bool               `yaml:"disabled,omitempty"`
 	Selector      *string             `yaml:"selector,omitempty"`
-	ResourceType  *string             `yaml:"resourceType,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	ContainerName *string             `yaml:"containerName,omitempty"`

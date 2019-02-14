@@ -14,7 +14,7 @@ import (
 // SaveBaseConfig writes the data of a config to its yaml file
 func SaveBaseConfig() error {
 	// Don't save custom config files
-	if ConfigPath != DefaultConfigPath || OverwriteConfigPath != DefaultOverwriteConfigPath {
+	if ConfigPath != DefaultConfigPath {
 		return nil
 	}
 

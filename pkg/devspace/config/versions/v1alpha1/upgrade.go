@@ -6,6 +6,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/versions/config"
 	next "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/util"
+	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/ptr"
 )
 
@@ -17,53 +18,136 @@ func (c *Config) Upgrade() (config.Config, error) {
 		return nil, err
 	}
 
-	// Convert helm devOverwrites and override
+	// Convert deployments
 	if c.DevSpace != nil && c.DevSpace.Deployments != nil {
-		for idx, deploy := range *c.DevSpace.Deployments {
-			if deploy.Helm != nil {
+		newConfigDeployments := []*next.DeploymentConfig{}
+
+		for _, deploy := range *c.DevSpace.Deployments {
+			newDeployment := &next.DeploymentConfig{
+				Name:      deploy.Name,
+				Namespace: deploy.Namespace,
+			}
+
+			// Add auto reload
+			if deploy.AutoReload == nil || deploy.AutoReload.Disabled == nil || *deploy.AutoReload.Disabled {
+				if nextConfig.Dev == nil {
+					nextConfig.Dev = &next.DevConfig{}
+				}
+				if nextConfig.Dev.AutoReload == nil {
+					nextConfig.Dev.AutoReload = &next.AutoReloadConfig{}
+				}
+				if nextConfig.Dev.AutoReload.Deployments == nil {
+					nextConfig.Dev.AutoReload.Deployments = &[]*string{}
+				}
+
+				(*nextConfig.Dev.AutoReload.Deployments) = append((*nextConfig.Dev.AutoReload.Deployments), deploy.Name)
+			}
+
+			// Convert kubectl
+			if deploy.Kubectl != nil {
+				newDeployment.Kubectl = &next.KubectlConfig{
+					CmdPath:   deploy.Kubectl.CmdPath,
+					Manifests: deploy.Kubectl.Manifests,
+				}
+			} else if deploy.Helm != nil {
+				newDeployment.Helm = &next.HelmConfig{
+					ChartPath:      deploy.Helm.ChartPath,
+					Wait:           deploy.Helm.Wait,
+					OverrideValues: deploy.Helm.OverrideValues,
+				}
+
 				if deploy.Helm.DevOverwrite != nil {
-					(*nextConfig.DevSpace.Deployments)[idx].Helm.Overrides = &[]*string{deploy.Helm.DevOverwrite}
+					newDeployment.Helm.Overrides = &[]*string{deploy.Helm.DevOverwrite}
 				}
 				if deploy.Helm.Override != nil {
-					(*nextConfig.DevSpace.Deployments)[idx].Helm.Overrides = &[]*string{deploy.Helm.Override}
+					newDeployment.Helm.Overrides = &[]*string{deploy.Helm.Override}
 				}
 			}
+
+			newConfigDeployments = append(newConfigDeployments, newDeployment)
 		}
+
+		nextConfig.Deployments = &newConfigDeployments
 	}
 
-	// Convert services
+	// Fill dev config
+	if nextConfig.Dev == nil {
+		nextConfig.Dev = &next.DevConfig{}
+	}
+
+	// Convert devspace to dev
 	if c.DevSpace != nil {
 		// Convert sync paths
 		if c.DevSpace.Sync != nil {
-			for idx, sync := range *c.DevSpace.Sync {
-				if sync.Service != nil {
-					(*nextConfig.DevSpace.Sync)[idx].Selector = sync.Service
+			newSyncPaths := []*next.SyncConfig{}
+
+			for _, sync := range *c.DevSpace.Sync {
+				newSyncPaths = append(newSyncPaths, &next.SyncConfig{
+					Selector:             sync.Service,
+					Namespace:            sync.Namespace,
+					LabelSelector:        sync.LabelSelector,
+					LocalSubPath:         sync.LocalSubPath,
+					ContainerName:        sync.ContainerName,
+					ContainerPath:        sync.ContainerPath,
+					ExcludePaths:         sync.ExcludePaths,
+					DownloadExcludePaths: sync.DownloadExcludePaths,
+					UploadExcludePaths:   sync.UploadExcludePaths,
+				})
+
+				if sync.BandwidthLimits != nil {
+					newSyncPaths[len(newSyncPaths)-1].BandwidthLimits = &next.BandwidthLimits{
+						Download: sync.BandwidthLimits.Download,
+						Upload:   sync.BandwidthLimits.Upload,
+					}
 				}
 			}
+
+			nextConfig.Dev.Sync = &newSyncPaths
 		}
 
 		// Convert ports
 		if c.DevSpace.Ports != nil {
-			for idx, port := range *c.DevSpace.Ports {
-				if port.Service != nil {
-					(*nextConfig.DevSpace.Ports)[idx].Selector = port.Service
+			newPorts := []*next.PortForwardingConfig{}
+
+			for _, port := range *c.DevSpace.Ports {
+				newPorts = append(newPorts, &next.PortForwardingConfig{
+					Selector:      port.Service,
+					Namespace:     port.Namespace,
+					LabelSelector: port.LabelSelector,
+				})
+
+				if port.PortMappings != nil {
+					newPortMappings := []*next.PortMapping{}
+
+					for _, portMapping := range *port.PortMappings {
+						newPortMappings = append(newPortMappings, &next.PortMapping{
+							LocalPort:   portMapping.LocalPort,
+							RemotePort:  portMapping.RemotePort,
+							BindAddress: portMapping.BindAddress,
+						})
+					}
+
+					newPorts[len(newPorts)-1].PortMappings = &newPortMappings
 				}
 			}
+
+			nextConfig.Dev.Ports = &newPorts
 		}
 
 		// Convert terminal
 		if c.DevSpace.Terminal != nil {
-			if c.DevSpace.Terminal.Service != nil {
-				nextConfig.DevSpace.Terminal.Selector = c.DevSpace.Terminal.Service
+			nextConfig.Dev.Terminal = &next.Terminal{
+				Disabled:      c.DevSpace.Terminal.Disabled,
+				Selector:      c.DevSpace.Terminal.Service,
+				LabelSelector: c.DevSpace.Terminal.LabelSelector,
+				Namespace:     c.DevSpace.Terminal.Namespace,
+				ContainerName: c.DevSpace.Terminal.ContainerName,
+				Command:       c.DevSpace.Terminal.Command,
 			}
 		}
 
 		// Convert services
 		if c.DevSpace.Services != nil {
-			if nextConfig.DevSpace == nil {
-				nextConfig.DevSpace = &next.DevSpaceConfig{}
-			}
-
 			selectors := []*next.SelectorConfig{}
 
 			// Convert each service
@@ -77,7 +161,7 @@ func (c *Config) Upgrade() (config.Config, error) {
 				})
 			}
 
-			nextConfig.DevSpace.Selectors = &selectors
+			nextConfig.Dev.Selectors = &selectors
 		}
 	}
 
@@ -95,7 +179,7 @@ func (c *Config) Upgrade() (config.Config, error) {
 					return nil, fmt.Errorf("Couldn't find registry %s in registries", *image.Registry)
 				}
 				if registry.Auth != nil {
-					return nil, fmt.Errorf("Registry authentication is not supported any longer (Registry %s). Please use docker login [registry] instead", *image.Registry)
+					log.Warnf("Registry authentication is not supported any longer (Registry %s). Please use docker login [registry] instead", *image.Registry)
 				}
 				if registry.URL == nil || image.Name == nil {
 					return nil, fmt.Errorf("Registry url or image name is nil for image %s", key)
@@ -103,13 +187,27 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 				(*nextConfig.Images)[key].Name = ptr.String(*registry.URL + "/" + *image.Name)
 			}
+
+			if image.AutoReload == nil || image.AutoReload.Disabled == nil || *image.AutoReload.Disabled == false {
+				if nextConfig.Dev == nil {
+					nextConfig.Dev = &next.DevConfig{}
+				}
+				if nextConfig.Dev.AutoReload == nil {
+					nextConfig.Dev.AutoReload = &next.AutoReloadConfig{}
+				}
+				if nextConfig.Dev.AutoReload.Images == nil {
+					nextConfig.Dev.AutoReload.Images = &[]*string{}
+				}
+
+				(*nextConfig.Dev.AutoReload.Images) = append((*nextConfig.Dev.AutoReload.Images), &key)
+			}
 		}
 	}
 
 	// Convert tiller namespace
 	if c.Tiller != nil && c.Tiller.Namespace != nil {
-		if nextConfig.DevSpace != nil && nextConfig.DevSpace.Deployments != nil {
-			for _, deploy := range *nextConfig.DevSpace.Deployments {
+		if nextConfig.Deployments != nil {
+			for _, deploy := range *nextConfig.Deployments {
 				if deploy.Helm != nil {
 					deploy.Helm.TillerNamespace = c.Tiller.Namespace
 				}
@@ -119,7 +217,7 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 	// Convert internal registry
 	if c.InternalRegistry != nil {
-		return nil, fmt.Errorf("internalRegistry deployment is not supported anymore")
+		log.Warnf("internalRegistry deployment is not supported anymore")
 	}
 
 	return nextConfig, nil

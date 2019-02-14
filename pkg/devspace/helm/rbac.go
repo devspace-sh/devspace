@@ -42,8 +42,8 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, tillerNamespace strin
 	}
 
 	// Add all namespaces that need our permission
-	if config.DevSpace.Deployments != nil && len(*config.DevSpace.Deployments) > 0 {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil && len(*config.Deployments) > 0 {
+		for _, deployConfig := range *config.Deployments {
 			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
 				if *deployConfig.Namespace == "" {
 					appNamespaces = append(appNamespaces, &defaultNamespace)

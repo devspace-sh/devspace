@@ -43,6 +43,11 @@ func TestSimple(t *testing.T) {
 					Service: ptr.String("test"),
 				},
 			},
+			Sync: &[]*SyncConfig{
+				{
+					Namespace: ptr.String("test"),
+				},
+			},
 		},
 		Images: &map[string]*ImageConfig{
 			"test": &ImageConfig{
@@ -73,21 +78,21 @@ func TestSimple(t *testing.T) {
 	if ok == false {
 		t.Fatalf("Config couldn't get converted to version %s", next.Version)
 	}
-	if (*newConfigConverted.DevSpace.Deployments)[0].Helm.Overrides == nil || len(*(*newConfigConverted.DevSpace.Deployments)[0].Helm.Overrides) == 0 || *(*(*newConfigConverted.DevSpace.Deployments)[0].Helm.Overrides)[0] != "overwrite" {
+	if (*newConfigConverted.Deployments)[0].Helm.Overrides == nil || len(*(*newConfigConverted.Deployments)[0].Helm.Overrides) == 0 || *(*(*newConfigConverted.Deployments)[0].Helm.Overrides)[0] != "overwrite" {
 		t.Fatal("Error converting devOverwrite")
 	}
-	if (*newConfigConverted.DevSpace.Deployments)[0].Helm.TillerNamespace == nil || *(*newConfigConverted.DevSpace.Deployments)[0].Helm.TillerNamespace != "tillernamespace" {
+	if (*newConfigConverted.Deployments)[0].Helm.TillerNamespace == nil || *(*newConfigConverted.Deployments)[0].Helm.TillerNamespace != "tillernamespace" {
 		t.Fatal("Error converting tiller namespace")
 	}
 
 	// Check selectors
-	if newConfigConverted.DevSpace.Selectors == nil || len(*newConfigConverted.DevSpace.Selectors) != 1 {
+	if newConfigConverted.Dev.Selectors == nil || len(*newConfigConverted.Dev.Selectors) != 1 {
 		t.Fatal("Error converting services")
 	}
-	if newConfigConverted.DevSpace.Ports == nil || len(*newConfigConverted.DevSpace.Ports) != 1 {
+	if newConfigConverted.Dev.Ports == nil || len(*newConfigConverted.Dev.Ports) != 1 {
 		t.Fatal("Error converting ports")
 	}
-	if *(*newConfigConverted.DevSpace.Selectors)[0].Name != "test" || *(*newConfigConverted.DevSpace.Ports)[0].Selector != "test" {
+	if *(*newConfigConverted.Dev.Selectors)[0].Name != "test" || *(*newConfigConverted.Dev.Ports)[0].Selector != "test" {
 		t.Fatal("Error converting service")
 	}
 

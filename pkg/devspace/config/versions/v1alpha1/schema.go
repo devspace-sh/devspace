@@ -7,7 +7,7 @@ const Version string = "v1alpha1"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
-	return *c.Version
+	return Version
 }
 
 // New creates a new config object

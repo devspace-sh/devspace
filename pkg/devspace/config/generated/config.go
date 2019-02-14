@@ -1,7 +1,6 @@
 package generated
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,8 +16,7 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                     `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*DevSpaceConfig `yaml:"configs,omitempty"`
-	// Key is ProviderName:SpaceID
-	Spaces map[string]*SpaceConfig `yaml:"space,omitempty"`
+	Space        *SpaceConfig               `yaml:"space,omitempty"`
 }
 
 // DevSpaceConfig holds all the information specific to a certain config
@@ -28,8 +26,6 @@ type DevSpaceConfig struct {
 	DockerContextPaths   map[string]string            `yaml:"dockerContextPaths"`
 	ImageTags            map[string]string            `yaml:"imageTags"`
 	Vars                 map[string]interface{}       `yaml:"vars,omitempty"`
-	// ProviderName:SpaceID
-	SpaceID *string `yaml:"spaceID,omitempty"`
 }
 
 // DeploymentConfig holds the information about a specific deployment
@@ -69,7 +65,6 @@ func LoadConfig() (*Config, error) {
 			loadedConfig = &Config{
 				ActiveConfig: DefaultConfigName,
 				Configs:      make(map[string]*DevSpaceConfig),
-				Spaces:       make(map[string]*SpaceConfig),
 			}
 		} else {
 			loadedConfig = &Config{}
@@ -83,9 +78,6 @@ func LoadConfig() (*Config, error) {
 			}
 			if loadedConfig.Configs == nil {
 				loadedConfig.Configs = make(map[string]*DevSpaceConfig)
-			}
-			if loadedConfig.Spaces == nil {
-				loadedConfig.Spaces = make(map[string]*SpaceConfig)
 			}
 		}
 
@@ -148,22 +140,4 @@ func SaveConfig(config *Config) error {
 	}
 
 	return ioutil.WriteFile(configPath, data, 0666)
-}
-
-// GetSpaceConfig returns the cloud config from a DevSpaceConfig
-func GetSpaceConfig(generatedConfig *Config, name string) (*SpaceConfig, error) {
-	config, ok := generatedConfig.Configs[name]
-	if ok == false {
-		return nil, fmt.Errorf("Config %s not found", name)
-	}
-	if config.SpaceID == nil {
-		return nil, fmt.Errorf("No space configured for config %s", name)
-	}
-
-	spaceConfig, ok := generatedConfig.Spaces[*config.SpaceID]
-	if ok == false {
-		return nil, fmt.Errorf("Space with id %s couldn't be found in generated.yaml", *config.SpaceID)
-	}
-
-	return spaceConfig, nil
 }

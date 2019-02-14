@@ -22,12 +22,12 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	if labelSelector == "" {
 		config := configutil.GetBaseConfig()
 
-		if config.DevSpace != nil && config.DevSpace.Selectors != nil && len(*config.DevSpace.Selectors) > 0 {
-			services := *config.DevSpace.Selectors
+		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
+			services := *config.Dev.Selectors
 
 			var service *v1.SelectorConfig
 			if serviceName != "" {
-				service = getServiceWithName(*config.DevSpace.Selectors, serviceName)
+				service = getServiceWithName(*config.Dev.Selectors, serviceName)
 				if service == nil {
 					return fmt.Errorf("no service with name %v exists", serviceName)
 				}
@@ -82,10 +82,10 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 
 	ports := strings.Split(argPorts, ",")
 
-	if config.DevSpace.Ports != nil && len(*config.DevSpace.Ports) > 0 {
-		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.DevSpace.Ports)-1)
+	if config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 {
+		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.Dev.Ports)-1)
 
-		for _, v := range *config.DevSpace.Ports {
+		for _, v := range *config.Dev.Ports {
 			if removeAll {
 				continue
 			}
@@ -106,7 +106,7 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 			}
 		}
 
-		config.DevSpace.Ports = &newPortForwards
+		config.Dev.Ports = &newPortForwards
 
 		err = configutil.SaveBaseConfig()
 		if err != nil {
@@ -130,12 +130,12 @@ func containsPort(port string, ports []string) bool {
 func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, serviceName string, portMappings []*v1.PortMapping) {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Ports == nil {
-		config.DevSpace.Ports = &[]*v1.PortForwardingConfig{}
+	if config.Dev.Ports == nil {
+		config.Dev.Ports = &[]*v1.PortForwardingConfig{}
 	}
 
 	// Check if we should add to existing port mapping
-	for _, v := range *config.DevSpace.Ports {
+	for _, v := range *config.Dev.Ports {
 		var selectors map[string]*string
 
 		if v.LabelSelector != nil {
@@ -158,15 +158,14 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 		labelSelectorMap = nil
 	}
 
-	portMap := append(*config.DevSpace.Ports, &v1.PortForwardingConfig{
-		ResourceType:  nil,
+	portMap := append(*config.Dev.Ports, &v1.PortForwardingConfig{
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 		Namespace:     &namespace,
 		Selector:      &serviceName,
 	})
 
-	config.DevSpace.Ports = &portMap
+	config.Dev.Ports = &portMap
 }
 
 func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {

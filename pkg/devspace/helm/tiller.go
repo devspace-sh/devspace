@@ -180,8 +180,8 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string) e
 			return fmt.Errorf("Error retrieving default namespace: %v", err)
 		}
 
-		if config.DevSpace.Deployments != nil {
-			for _, deployConfig := range *config.DevSpace.Deployments {
+		if config.Deployments != nil {
+			for _, deployConfig := range *config.Deployments {
 				if deployConfig.Namespace != nil && deployConfig.Helm != nil {
 					if *deployConfig.Namespace == "" {
 						appNamespaces = append(appNamespaces, &defaultNamespace)

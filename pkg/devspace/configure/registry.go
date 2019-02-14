@@ -12,19 +12,26 @@ import (
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 )
 
-// Image configures the image name
-func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageName string, createPullSecret bool) error {
-	config := configutil.GetConfig()
+// DevSpaceCloudRegistry is the devspace cloud registry
+const DevSpaceCloudRegistry = "dscr.io"
 
-	if skipQuestions {
-		registryURL = "hub.docker.com"
-	}
-	if registryURL == "" {
+// DefaultImageName is the default image name
+const DefaultImageName = "devspace"
+
+// Image configures the image name
+func Image(dockerUsername string, isCloud bool) error {
+	config := configutil.GetConfig()
+	registryURL := ""
+
+	// Check which registry to use
+	if isCloud == false {
 		registryURL = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
 			DefaultValue:           "hub.docker.com",
 			ValidationRegexPattern: "^.*$",
 		})
+	} else {
+		registryURL = DevSpaceCloudRegistry
 	}
 
 	client, err := docker.NewClient(false)
@@ -70,40 +77,43 @@ func Image(dockerUsername string, skipQuestions bool, registryURL, defaultImageN
 		}
 	}
 
-	googleRegistryRegex := regexp.MustCompile("^(.+\\.)?gcr.io$")
-	isGoogleRegistry := googleRegistryRegex.Match([]byte(registryURL))
-	isDockerHub := registryURL == "hub.docker.com"
+	defaultImageName := ""
 
-	if skipQuestions {
-		defaultImageName = dockerUsername + "/devspace"
-	} else {
-		if isDockerHub {
-			defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Which image name do you want to use on Docker Hub?",
-				DefaultValue:           dockerUsername + "/devspace",
-				ValidationRegexPattern: "^[a-zA-Z0-9/-]{4,60}$",
-			})
-		} else if isGoogleRegistry {
-			project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-			gcloudProject := "myGCloudProject"
+	// Is docker hub?
+	if registryURL == "hub.docker.com" {
+		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which image name do you want to use on Docker Hub?",
+			DefaultValue:           dockerUsername + "/devspace",
+			ValidationRegexPattern: "^[a-zA-Z0-9/-]{4,60}$",
+		})
+		// Is google registry?
+	} else if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryURL)) {
+		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
+		gcloudProject := "myGCloudProject"
 
-			if err == nil {
-				gcloudProject = strings.TrimSpace(string(project))
-			}
-
-			defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Which image name do you want to push to?",
-				DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
-				ValidationRegexPattern: "^.*$",
-			})
-		} else {
-			defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "Which image name do you want to push to?",
-				DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
-				ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
-			})
+		if err == nil {
+			gcloudProject = strings.TrimSpace(string(project))
 		}
 
+		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which image name do you want to push to?",
+			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
+			ValidationRegexPattern: "^.*$",
+		})
+		// Is devspace.cloud?
+	} else if isCloud {
+		defaultImageName = registryURL + "/" + dockerUsername + "/" + DefaultImageName
+	} else {
+		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Which image name do you want to push to?",
+			DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
+			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
+		})
+	}
+
+	// Check if we should create pull secrets for the image
+	createPullSecret := true
+	if isCloud == false {
 		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
 			DefaultValue:           "yes",

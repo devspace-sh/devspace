@@ -34,14 +34,8 @@ const DefaultVarsPath = ".devspace/vars.yaml"
 // DefaultConfigPath is the default config path to use
 const DefaultConfigPath = ".devspace/config.yaml"
 
-// DefaultOverwriteConfigPath is the default overwrite config path to use
-const DefaultOverwriteConfigPath = ".devspace/overwrite.yaml"
-
 // ConfigPath is the path for the main config or if a configs.yaml is there the config to load
 var ConfigPath = DefaultConfigPath
-
-// OverwriteConfigPath specifies where the override.yaml lies
-var OverwriteConfigPath = DefaultOverwriteConfigPath
 
 // LoadedConfig is the config that was loaded from the configs file
 var LoadedConfig string
@@ -208,16 +202,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 		// Check if we should load overwrites
 		if loadOverwrites {
-			if configDefinition == nil {
-				//ignore error as overwrite.yaml is optional
-				overwriteConfig, err := loadConfigFromPath(OverwriteConfigPath)
-				if err != nil {
-					Merge(&config, overwriteConfig)
-					log.Infof("Loaded config %s with overwrite config %s", ConfigPath, OverwriteConfigPath)
-				} else {
-					log.Infof("Loaded config %s", ConfigPath)
-				}
-			} else if configDefinition.Overwrites != nil {
+			if configDefinition == nil && configDefinition.Overwrites != nil {
 				for index, configWrapper := range *configDefinition.Overwrites {
 					overwriteConfig, err := loadConfigFromWrapper(configWrapper)
 					if err != nil {
@@ -229,7 +214,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 				log.Infof("Loaded config %s from %s with %d overwrites", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overwrites))
 			} else {
-				log.Infof("Loaded config %s from %s without overwrites", LoadedConfig, DefaultConfigsPath)
+				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 			}
 		} else {
 			if configDefinition == nil {
@@ -246,20 +231,28 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 // ValidateOnce ensures that specific values are set in the config
 func ValidateOnce() {
 	validateOnce.Do(func() {
-		if config.DevSpace != nil {
-			if config.DevSpace.Deployments != nil {
-				for index, deployConfig := range *config.DevSpace.Deployments {
-					if deployConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed deployment at index %d", index)
+		if config.Dev != nil {
+			if config.Dev.Selectors != nil {
+				for index, selectorConfig := range *config.Dev.Selectors {
+					if selectorConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed selector at index %d", index)
 					}
 				}
 			}
 
-			if config.DevSpace.Selectors != nil {
-				for index, selectorConfig := range *config.DevSpace.Selectors {
-					if selectorConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed selector at index %d", index)
+			if config.Dev.OverrideImages != nil {
+				for index, overrideImageConfig := range *config.Dev.OverrideImages {
+					if overrideImageConfig.Name == nil {
+						log.Fatalf("Error in config: Unnamed override image config at index %d", index)
 					}
+				}
+			}
+		}
+
+		if config.Deployments != nil {
+			for index, deployConfig := range *config.Deployments {
+				if deployConfig.Name == nil {
+					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
 				}
 			}
 		}
@@ -295,13 +288,14 @@ func askQuestions(generatedConfig *generated.Config, vars []*configs.Variable) e
 
 // GetSelector returns the service referenced by serviceName
 func GetSelector(selectorName string) (*latest.SelectorConfig, error) {
-	if config.DevSpace.Selectors != nil {
-		for _, selector := range *config.DevSpace.Selectors {
+	if config.Dev.Selectors != nil {
+		for _, selector := range *config.Dev.Selectors {
 			if *selector.Name == selectorName {
 				return selector, nil
 			}
 		}
 	}
+
 	return nil, errors.New("Unable to find selector: " + selectorName)
 }
 

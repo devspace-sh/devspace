@@ -32,8 +32,8 @@ func StartAttach(client *kubernetes.Clientset, selectorNameOverride, containerNa
 		if selector != nil && selector.ContainerName != nil {
 			containerName = *selector.ContainerName
 		} else {
-			if config.DevSpace.Terminal.ContainerName != nil {
-				containerName = *config.DevSpace.Terminal.ContainerName
+			if config.Dev.Terminal.ContainerName != nil {
+				containerName = *config.Dev.Terminal.ContainerName
 			}
 		}
 	} else {
