@@ -49,12 +49,16 @@ func Execute() {
 }
 
 func init() {
+	// Add sub commands
 	rootCmd.AddCommand(add.NewAddCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(list.NewListCmd())
 	rootCmd.AddCommand(remove.NewRemoveCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())
 	rootCmd.AddCommand(use.NewUseCmd())
+
+	// Add main commands
+	rootCmd.AddCommand(NewLoginCmd())
 
 	cobra.OnInitialize(initConfig)
 }

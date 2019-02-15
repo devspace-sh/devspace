@@ -30,6 +30,15 @@ func newSyncCmd() *cobra.Command {
 
 // RunListSync runs the list sync command logic
 func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	config := configutil.GetConfig()
 
 	if config.Dev.Sync == nil || len(*config.Dev.Sync) == 0 {

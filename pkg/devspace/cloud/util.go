@@ -41,7 +41,7 @@ func (p *Provider) PrintSpaces(name string) error {
 	if len(values) > 0 {
 		log.PrintTable(headerColumnNames, values)
 	} else {
-		log.Info("No devspaces found")
+		log.Info("No spaces found")
 	}
 
 	return nil

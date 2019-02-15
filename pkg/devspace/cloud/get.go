@@ -13,8 +13,31 @@ type Project struct {
 type Cluster struct {
 	ClusterID int
 	OwnerID   *int
+	Name      *string
 	Server    string
 	CaCert    string
+}
+
+// Registry is the type that holds the docker image registry information
+type Registry struct {
+	RegistryID int
+	URL        string
+	OwnerID    *int
+}
+
+// GetAccountName retrieves the account name for the current user
+func (p *Provider) GetAccountName() (string, error) {
+	panic("unimplemented")
+}
+
+// GetRegistries returns all docker image registries
+func (p *Provider) GetRegistries() ([]*Registry, error) {
+	panic("unimplemented")
+}
+
+// GetRegistry returns a docker image registry
+func (p *Provider) GetRegistry(url string) (*Registry, error) {
+	panic("unimplemented")
 }
 
 // GetClusters returns all clusters accessable by the user

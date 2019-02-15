@@ -17,5 +17,7 @@ func NewCreateCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
+	createCmd.AddCommand(newSpaceCmd())
+
 	return createCmd
 }

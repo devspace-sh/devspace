@@ -32,6 +32,15 @@ func newPortsCmd() *cobra.Command {
 
 // RunListPort runs the list port command logic
 func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	config := configutil.GetConfig()
 
 	if config.Dev.Ports == nil || len(*config.Dev.Ports) == 0 {

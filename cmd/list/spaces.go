@@ -40,9 +40,6 @@ func (cmd *spacesCmd) RunListCloudDevspaces(cobraCmd *cobra.Command, args []stri
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}
-	if provider == nil {
-		log.Fatal("No cloud provider specified")
-	}
 
 	err = provider.PrintSpaces(cmd.Name)
 	if err != nil {

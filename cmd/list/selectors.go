@@ -22,14 +22,23 @@ func newSelectorsCmd() *cobra.Command {
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListService,
+		Run:  cmd.RunListSelectors,
 	}
 
 	return selectorsCmd
 }
 
-// RunListService runs the list service command logic
-func (cmd *selectorsCmd) RunListService(cobraCmd *cobra.Command, args []string) {
+// RunListSelectors runs the list service command logic
+func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	config := configutil.GetConfig()
 
 	if config.Dev.Selectors == nil || len(*config.Dev.Selectors) == 0 {

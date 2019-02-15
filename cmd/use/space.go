@@ -3,6 +3,7 @@ package use
 import (
 	"strconv"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -11,7 +12,8 @@ import (
 )
 
 type spaceCmd struct {
-	ID string
+	ID      string
+	context bool
 }
 
 func newSpaceCmd() *cobra.Command {
@@ -36,6 +38,7 @@ func newSpaceCmd() *cobra.Command {
 	}
 
 	useSpace.Flags().StringVar(&cmd.ID, "id", "", "Space id to use")
+	useSpace.Flags().BoolVar(&cmd.context, "context", true, "Create/Update kubectl context for space")
 
 	return useSpace
 }
@@ -126,6 +129,14 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Update kube config
+	if cmd.context {
+		err = cloud.UpdateKubeConfig(cloud.GetKubeContextNameFromSpace(spaceConfig), spaceConfig, true)
+		if err != nil {
+			log.Fatalf("Error saving kube config: %v", err)
+		}
 	}
 
 	log.Donef("Successfully configured config to use space %s", spaceConfig.Name)

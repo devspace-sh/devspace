@@ -332,7 +332,7 @@ func (cmd *InitCmd) configureImage() {
 			err := exec.Command("docker").Run()
 			if err == nil {
 				if cmd.flags.useCloud {
-					log.Fatal("Docker seems to be installed but is not running: %v. Please start docker and restart `devspace init`")
+					log.Fatal("Docker seems to be installed but is not running. Please start docker and restart `devspace init`")
 				}
 
 				useKaniko = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{

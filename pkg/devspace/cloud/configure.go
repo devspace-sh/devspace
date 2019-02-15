@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
@@ -20,13 +21,6 @@ var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30
 
 // GetCurrentProvider returns the current specified cloud provider
 func GetCurrentProvider(log log.Logger) (*Provider, error) {
-	dsConfig := configutil.GetConfig()
-
-	// Don't update or configure anything if we don't use a cloud provider
-	if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
-		return nil, nil
-	}
-
 	log.StartWait("Logging into cloud provider...")
 	defer log.StopWait()
 
@@ -36,14 +30,26 @@ func GetCurrentProvider(log log.Logger) (*Provider, error) {
 		return nil, err
 	}
 
+	providerName := DevSpaceCloudProviderName
+	if configutil.ConfigExists() {
+		dsConfig := configutil.GetConfig()
+
+		// Don't update or configure anything if we don't use a cloud provider
+		if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
+			return nil, nil
+		}
+
+		providerName = *dsConfig.Cluster.CloudProvider
+	}
+
 	// Ensure user is logged in
-	err = EnsureLoggedIn(providerConfig, *dsConfig.Cluster.CloudProvider, log)
+	err = EnsureLoggedIn(providerConfig, providerName, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get provider config
-	provider := providerConfig[*dsConfig.Cluster.CloudProvider]
+	provider := providerConfig[providerName]
 
 	return provider, nil
 }
@@ -122,7 +128,7 @@ func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfi
 
 	// Exchange cluster information
 	if useKubeContext {
-		kubeContext := DevSpaceKubeContextName + "-" + spaceConfig.Namespace
+		kubeContext := GetKubeContextNameFromSpace(spaceConfig)
 		dsConfig.Cluster = &v1.Cluster{
 			CloudProvider: dsConfig.Cluster.CloudProvider,
 		}
@@ -130,7 +136,7 @@ func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfi
 		dsConfig.Cluster.Namespace = &spaceConfig.Namespace
 		dsConfig.Cluster.KubeContext = &kubeContext
 
-		err := updateKubeConfig(kubeContext, spaceConfig)
+		err := UpdateKubeConfig(kubeContext, spaceConfig, false)
 		if err != nil {
 			return err
 		}
@@ -150,7 +156,13 @@ func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfi
 	return nil
 }
 
-func updateKubeConfig(contextName string, spaceConfig *generated.SpaceConfig) error {
+// GetKubeContextNameFromSpace returns the kube context name for a space
+func GetKubeContextNameFromSpace(spaceConfig *generated.SpaceConfig) string {
+	return DevSpaceKubeContextName + "-" + strings.ToLower(spaceConfig.Name)
+}
+
+// UpdateKubeConfig updates the kube config and adds the spaceConfig context
+func UpdateKubeConfig(contextName string, spaceConfig *generated.SpaceConfig, setActive bool) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
@@ -177,6 +189,10 @@ func updateKubeConfig(contextName string, spaceConfig *generated.SpaceConfig) er
 	context.Namespace = spaceConfig.Namespace
 
 	config.Contexts[contextName] = context
+
+	if setActive {
+		config.CurrentContext = contextName
+	}
 
 	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
 }

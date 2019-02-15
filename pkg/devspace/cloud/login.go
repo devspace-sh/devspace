@@ -16,8 +16,8 @@ const LoginEndpoint = "/login"
 // LoginSuccessEndpoint is the url redirected to after successful login
 const LoginSuccessEndpoint = "/loginSuccess"
 
-// LoginWithToken loggs the user in with the given token
-func LoginWithToken(providerConfig ProviderConfig, cloudProvider, token string) error {
+// ReLogin loggs the user in with the given token or via browser
+func ReLogin(providerConfig ProviderConfig, cloudProvider string, token *string, log log.Logger) error {
 	// Let's check if we are logged in first
 	provider, ok := providerConfig[cloudProvider]
 	if ok == false {
@@ -26,23 +26,38 @@ func LoginWithToken(providerConfig ProviderConfig, cloudProvider, token string) 
 			cloudProviders += name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add cloud provider [url]`? Existing cloud providers: %s", cloudProviders)
+		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
-	if provider.Token == "" {
-		provider.Token = token
+	if token != nil {
+		provider.Token = *token
 
 		// Check if we got access
 		_, err := provider.GetSpaces()
 		if err != nil {
-			return fmt.Errorf("Access denied for token %s: %v", token, err)
+			return fmt.Errorf("Access denied for token %s: %v", *token, err)
 		}
+	} else {
+		provider.Token = ""
 
-		// Save config
-		err = SaveCloudConfig(providerConfig)
+		err := provider.Login(log)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Login")
 		}
+	}
+
+	log.Donef("Successfully logged into %s", provider.Name)
+
+	// Login into registries
+	err := provider.LoginIntoRegistries()
+	if err != nil {
+		log.Warnf("Error logging into docker registries: %v", err)
+	}
+
+	// Save config
+	err = SaveCloudConfig(providerConfig)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -58,7 +73,7 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 			cloudProviders += name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add cloud provider [url]`? Existing cloud providers: %s", cloudProviders)
+		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
 	if provider.Token == "" {
@@ -68,6 +83,12 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 		}
 
 		log.Donef("Successfully logged into %s", provider.Name)
+
+		// Login into registries
+		err = provider.LoginIntoRegistries()
+		if err != nil {
+			log.Warnf("Error logging into docker registries: %v", err)
+		}
 
 		err = SaveCloudConfig(providerConfig)
 		if err != nil {

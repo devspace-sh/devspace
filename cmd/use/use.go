@@ -19,6 +19,8 @@ func NewUseCmd() *cobra.Command {
 
 	useCmd.AddCommand(newConfigCmd())
 	useCmd.AddCommand(newSpaceCmd())
+	useCmd.AddCommand(newRegistryCmd())
+	useCmd.AddCommand(newContextCmd())
 
 	return useCmd
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/spf13/cobra"
@@ -33,6 +34,15 @@ func newPackagesCmd() *cobra.Command {
 
 // RunListPackage runs the list sync command logic
 func (cmd *packagesCmd) RunListPackage(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
 	headerColumnNames := []string{
 		"Name",
 		"Version",
