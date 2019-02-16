@@ -18,7 +18,7 @@ func newSpacesCmd() *cobra.Command {
 		Short: "Lists all user spaces",
 		Long: `
 	#######################################################
-	############ devspace list cloud spaces ###############
+	############### devspace list spaces ##################
 	#######################################################
 	List all cloud spaces
 

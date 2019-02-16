@@ -175,16 +175,10 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			// Configure cloud provider
 			config.Cluster.CloudProvider = ptr.String(cloud.DevSpaceCloudProviderName)
 
-			// Login and get current provider
-			provider, err := cloud.GetCurrentProvider(log.GetInstance())
+			// Login and login into registries if necessary
+			_, err := cloud.GetCurrentProvider(log.GetInstance())
 			if err != nil {
 				log.Fatalf("Error login into cloud provider: %v", err)
-			}
-
-			// Log into docker registries
-			err = provider.LoginIntoRegistries()
-			if err != nil {
-				log.Fatal(err)
 			}
 		}
 

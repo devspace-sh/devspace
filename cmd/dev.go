@@ -199,7 +199,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(client, generatedConfig, mustRedeploy || flags.deploy, true, log.GetInstance())
+			err = deploy.All(client, generatedConfig, true, mustRedeploy || flags.deploy, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying devspace: %v", err)
 			}

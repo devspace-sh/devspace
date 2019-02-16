@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,13 +106,28 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return err
 		}
 
-		// We will add it to the build context
-		dockerfileCtx, err = os.Open(dockerfilePath)
-		if err != nil {
-			return errors.Errorf("unable to open Dockerfile: %v", err)
+		// Check if dockerfile is out of context, then we use the docker way to replace the dockerfile
+		if dockerfileCtx != nil {
+			// We will add it to the build context
+			dockerfileCtx, err = os.Open(dockerfilePath)
+			if err != nil {
+				return errors.Errorf("unable to open Dockerfile: %v", err)
+			}
+
+			defer dockerfileCtx.Close()
+		} else {
+			// We will add it to the build context
+			overwriteDockerfileCtx, err := os.Open(dockerfilePath)
+			if err != nil {
+				return errors.Errorf("unable to open Dockerfile: %v", err)
+			}
+
+			buildCtx, err = builder.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
+			if err != nil {
+				return fmt.Errorf("Error overwriting %s: %v", relDockerfile, err)
+			}
 		}
 
-		defer dockerfileCtx.Close()
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 	}
 
@@ -154,7 +170,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		return nil, err
 	}
 
-	b.authConfig, err = dockerclient.Login(b.client, registryURL, "", "", true, false)
+	b.authConfig, err = dockerclient.Login(b.client, registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}

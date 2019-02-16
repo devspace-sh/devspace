@@ -22,7 +22,7 @@ type ProviderConfig map[string]*Provider
 const DevSpaceCloudProviderName = "devspace-cloud"
 
 // GraphqlEndpoint is the endpoint where to execute graphql requests
-const GraphqlEndpoint = "/v1alpha1/graphql"
+const GraphqlEndpoint = "/graphql"
 
 // Provider describes the struct to hold the cloud configuration
 type Provider struct {
@@ -35,6 +35,7 @@ type Provider struct {
 var DevSpaceCloudProviderConfig = &Provider{
 	Name: DevSpaceCloudProviderName,
 	Host: "https://staging.api.devspace.cloud",
+	// Login: "https://github.com/login/oauth/authorize?scope=user:email&client_id=12f7a7bd9f1e5efaa82d&redirect_uri=https://staging.api.devspace.cloud/auth/cli"
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations

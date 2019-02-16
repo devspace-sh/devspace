@@ -6,14 +6,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 )
-
-// DevSpaceCloudRegistry is the devspace cloud registry
-const DevSpaceCloudRegistry = "dscr.io"
 
 // DefaultImageName is the default image name
 const DefaultImageName = "devspace"
@@ -31,7 +29,21 @@ func Image(dockerUsername string, isCloud bool) error {
 			ValidationRegexPattern: "^.*$",
 		})
 	} else {
-		registryURL = DevSpaceCloudRegistry
+		// Get default registry
+		provider, err := cloud.GetCurrentProvider(log.GetInstance())
+		if err != nil {
+			return fmt.Errorf("Error login into cloud provider: %v", err)
+		}
+
+		registries, err := provider.GetRegistries()
+		if err != nil {
+			return fmt.Errorf("Error retrieving registries: %v", err)
+		}
+		if len(registries) > 0 {
+			registryURL = registries[0].URL
+		} else {
+			registryURL = "hub.docker.com"
+		}
 	}
 
 	client, err := docker.NewClient(false)
@@ -67,7 +79,7 @@ func Image(dockerUsername string, isCloud bool) error {
 				IsPassword:             true,
 			})
 
-			_, err = docker.Login(client, registryURL, dockerUsername, dockerPassword, false, true)
+			_, err = docker.Login(client, registryURL, dockerUsername, dockerPassword, false, true, true)
 			if err != nil {
 				log.Warn(err)
 				continue

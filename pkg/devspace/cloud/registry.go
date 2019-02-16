@@ -1,6 +1,9 @@
 package cloud
 
-import "github.com/covexo/devspace/pkg/devspace/docker"
+import (
+	"github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/covexo/devspace/pkg/util/log"
+)
 
 // GetFirstPublicRegistry retrieves the first public registry
 func (p *Provider) GetFirstPublicRegistry() (string, error) {
@@ -41,10 +44,12 @@ func (p *Provider) LoginIntoRegistries() error {
 
 	for _, registry := range registries {
 		// Login
-		_, err = docker.Login(client, registry.URL, accountName, p.Token, true, true)
+		_, err = docker.Login(client, registry.URL, accountName, p.Token, true, true, true)
 		if err != nil {
 			return err
 		}
+
+		log.Donef("Successfully logged into docker registry %s", registry.URL)
 	}
 
 	return nil
@@ -65,7 +70,7 @@ func (p *Provider) LoginIntoRegistry(name string) error {
 	}
 
 	// Get account name
-	_, err = docker.Login(client, name, accountName, p.Token, true, true)
+	_, err = docker.Login(client, name, accountName, p.Token, true, true, true)
 	if err != nil {
 		return err
 	}

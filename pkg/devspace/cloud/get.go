@@ -63,7 +63,7 @@ func (p *Provider) GetRegistries() ([]*Registry, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 		query {
-			ImageRegistry {
+			image_registry {
 				id
 				url
 				owner_id
@@ -149,7 +149,7 @@ func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
 	response := struct {
 		Spaces []*struct {
 			ID          int    `json:"id"`
-			Name        string `json:"string"`
+			Name        string `json:"name"`
 			KubeContext *struct {
 				Namespace           string `json:"namespace"`
 				ServiceAccountToken string `json:"service_account_token"`

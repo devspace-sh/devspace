@@ -57,6 +57,9 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	log.StartWait("Creating space " + args[0])
+	defer log.StopWait()
+
 	// Get projects
 	projects, err := provider.GetProjects()
 	if err != nil {
@@ -110,6 +113,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	log.StopWait()
 	log.Infof("Successfully created space %s", space.Name)
 }
 
