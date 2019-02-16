@@ -236,7 +236,7 @@ func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
 	response := struct {
 		Space *struct {
 			ID          int    `json:"id"`
-			Name        string `json:"string"`
+			Name        string `json:"name"`
 			KubeContext *struct {
 				Namespace           string `json:"namespace"`
 				ServiceAccountToken string `json:"service_account_token"`
@@ -319,9 +319,9 @@ func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
 func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, error) {
 	// Response struct
 	response := struct {
-		Space *struct {
+		Space []*struct {
 			ID          int    `json:"id"`
-			Name        string `json:"string"`
+			Name        string `json:"name"`
 			KubeContext *struct {
 				Namespace           string `json:"namespace"`
 				ServiceAccountToken string `json:"service_account_token"`
@@ -342,7 +342,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, err
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query($name:String!) {
-		space(where:{name:{_eq:$name}}){
+		space(where:{name:{_eq:$name}},limit:1){
 		  id
 		  name
 		  
@@ -374,8 +374,11 @@ func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, err
 	if response.Space == nil {
 		return nil, fmt.Errorf("Space %s not found", spaceName)
 	}
+	if len(response.Space) == 0 {
+		return nil, fmt.Errorf("Space %s not found", spaceName)
+	}
 
-	spaceConfig := response.Space
+	spaceConfig := response.Space[0]
 	if spaceConfig.KubeContext == nil {
 		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 	}

@@ -22,6 +22,7 @@ func (p *Provider) PrintSpaces(name string) error {
 	headerColumnNames := []string{
 		"SpaceID",
 		"Name",
+		"Domain",
 		"Created",
 	}
 	values := [][]string{}
@@ -33,9 +34,15 @@ func (p *Provider) PrintSpaces(name string) error {
 				return err
 			}
 
+			domain := ""
+			if devspace.Domain != nil {
+				domain = *devspace.Domain
+			}
+
 			values = append(values, []string{
 				strconv.Itoa(devspace.SpaceID),
 				devspace.Name,
+				domain,
 				created.String(),
 			})
 		}

@@ -17,10 +17,8 @@ func (p *Provider) DeleteSpace(spaceID int) error {
 
 	// Do the request
 	err := p.GrapqhlRequest(`
-		mutation($spaceID: Int!, $clusterID: Int, $projectID: Int!) {
-			manager_deleteSpace(spaceID: $spaceID) {
-				SpaceID
-			}
+		mutation($spaceID: Int!) {
+			manager_deleteSpace(spaceID: $spaceID)
 		}
 	`, map[string]interface{}{
 		"spaceID": spaceID,

@@ -68,12 +68,9 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	} else {
 		// Load provider
 		if configExists {
-			provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
+			provider, err = cloudpkg.GetCurrentProvider(log.GetInstance())
 			if err != nil {
 				log.Fatalf("Error getting cloud context: %v", err)
-			}
-			if provider == nil {
-				log.Fatal("No cloud provider specified")
 			}
 		} else {
 			provider = providerMap[cloudpkg.DevSpaceCloudProviderName]
