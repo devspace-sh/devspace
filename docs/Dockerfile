@@ -1,11 +1,10 @@
-FROM node:8.11
+FROM node:8.11.4
 
-RUN mkdir -p /app/website
 WORKDIR /app/website
 
-COPY website/package.json .
-RUN npm install
+EXPOSE 3000 35729
+COPY ./docs /app/docs
+COPY ./website /app/website
+RUN yarn install
 
-COPY . /app
-
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
