@@ -1,9 +1,8 @@
 package log
 
 import (
+	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
-
-	"github.com/daviddengcn/go-colortext"
 )
 
 var stdoutLog = &stdoutLogger{
@@ -21,6 +20,19 @@ func StartWait(message string) {
 // StopWait stops printing the wait message
 func StopWait() {
 	stdoutLog.StopWait()
+}
+
+// PrintLogo prints the devspace logo
+func PrintLogo() {
+	logo := `
+     ____              ____                       
+    |  _ \  _____   __/ ___| _ __   __ _  ___ ___ 
+    | | | |/ _ \ \ / /\___ \| '_ \ / _` + "`" + ` |/ __/ _ \
+    | |_| |  __/\ V /  ___) | |_) | (_| | (_|  __/
+    |____/ \___| \_/  |____/| .__/ \__,_|\___\___|
+                            |_|`
+
+	stdout.Write([]byte(ansi.Color(logo+"\r\n\r\n", "cyan+b")))
 }
 
 // Debug prints debug information
@@ -141,10 +153,8 @@ func GetInstance() Logger {
 }
 
 // WriteColored writes a message in color
-func WriteColored(message string, color ct.Color) {
-	ct.Foreground(color, false)
-	stdoutLog.Write([]byte(message))
-	ct.ResetColor()
+func WriteColored(message string, color string) {
+	stdoutLog.Write([]byte(ansi.Color(message, color)))
 }
 
 // Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message

@@ -21,6 +21,7 @@ import (
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/ptr"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -143,6 +144,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		},
 	})
 
+	// Print devspace logo
+	log.PrintLogo()
+
 	cmd.defaultImage = (*config.Images)["default"]
 	cmd.initChartGenerator()
 
@@ -151,7 +155,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		_, chartDirNotFound := os.Stat("chart")
 		if chartDirNotFound == nil {
 			createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to overwrite the existing files in /chart? (yes | no)",
+				Question:     "Do you want to overwrite existing files in /chart?",
 				DefaultValue: "no",
 				Options:      []string{"yes", "no"},
 			}) == "yes"
@@ -202,7 +206,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	log.Done("Project successfully initialized. Run `devspace deploy` to deploy application")
+	log.Done("Project successfully initialized")
+	log.Infof("Run `%s` to deploy application", ansi.Color("devspace deploy", "white+b"))
 }
 
 func (cmd *InitCmd) initChartGenerator() {
@@ -253,24 +258,26 @@ func (cmd *InitCmd) addDefaultSelector() {
 
 func (cmd *InitCmd) addDefaultPorts() {
 	port := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question: "Which port is your application listening on? (Enter to skip)",
+		Question: "Which port is the app listening on? (Enter to skip)",
 	})
 
-	portMappings := []*latest.PortMapping{}
-	exposedPort, err := strconv.Atoi(port)
-	if err == nil {
-		portMappings = append(portMappings, &latest.PortMapping{
-			LocalPort:  &exposedPort,
-			RemotePort: &exposedPort,
-		})
-	}
+	if port != "" {
+		portMappings := []*latest.PortMapping{}
+		exposedPort, err := strconv.Atoi(port)
+		if err == nil {
+			portMappings = append(portMappings, &latest.PortMapping{
+				LocalPort:  &exposedPort,
+				RemotePort: &exposedPort,
+			})
+		}
 
-	config := configutil.GetConfig()
-	config.Dev.Ports = &[]*latest.PortForwardingConfig{
-		{
-			Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
-			PortMappings: &portMappings,
-		},
+		config := configutil.GetConfig()
+		config.Dev.Ports = &[]*latest.PortForwardingConfig{
+			{
+				Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
+				PortMappings: &portMappings,
+			},
+		}
 	}
 }
 
@@ -400,7 +407,7 @@ func (cmd *InitCmd) determineLanguage() {
 	log.StopWait()
 
 	cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:     "What is the major programming language of your project?",
+		Question:     "Select programming language of project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,
 	})

@@ -67,9 +67,9 @@ func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *ku
 		for _, deployConfig := range *config.Deployments {
 			email := "noreply@devspace-cloud.com"
 
-			namespace := *deployConfig.Namespace
-			if namespace == "" {
-				namespace = defaultNamespace
+			namespace := defaultNamespace
+			if deployConfig.Namespace != nil {
+				namespace = *deployConfig.Namespace
 			}
 
 			err := CreatePullSecret(client, namespace, registryURL, username, password, email, log)

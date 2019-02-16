@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -81,7 +81,7 @@ func Configure(log log.Logger) error {
 
 	// Check if there is a space configured
 	if generatedConfig.Space == nil {
-		return errors.New("No space configured.\n Please run `devspace use space [NAME]` to use an existing space or run `devspace create space [NAME]` to create a new space")
+		return fmt.Errorf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	}
 
 	// Refresh space configuration

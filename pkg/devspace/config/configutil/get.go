@@ -242,6 +242,17 @@ func ValidateOnce() {
 				}
 			}
 
+			if config.Dev.Ports != nil {
+				for index, port := range *config.Dev.Ports {
+					if port.Selector == nil && port.LabelSelector == nil {
+						log.Fatalf("Error in config: selector and label selector are nil in port config at index %d", index)
+					}
+					if port.PortMappings == nil {
+						log.Fatalf("Error in config: portMappings is empty in port config at index %d", index)
+					}
+				}
+			}
+
 			if config.Dev.OverrideImages != nil {
 				for index, overrideImageConfig := range *config.Dev.OverrideImages {
 					if overrideImageConfig.Name == nil {
