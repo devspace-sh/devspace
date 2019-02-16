@@ -204,7 +204,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 		// Check if we should load overwrites
 		if loadOverwrites {
-			if configDefinition == nil && configDefinition.Overwrites != nil {
+			if configDefinition != nil && configDefinition.Overwrites != nil {
 				for index, configWrapper := range *configDefinition.Overwrites {
 					overwriteConfig, err := loadConfigFromWrapper(configWrapper)
 					if err != nil {
@@ -216,7 +216,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 				log.Infof("Loaded config %s from %s with %d overwrites", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overwrites))
 			} else {
-				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+				log.Infof("Loaded config from %s", DefaultConfigsPath)
 			}
 		} else {
 			if configDefinition == nil {

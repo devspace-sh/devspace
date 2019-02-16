@@ -1,6 +1,6 @@
 package util
 
-import "encoding/json"
+import json "github.com/json-iterator/go"
 
 // Convert converts the old object into the new object through json serialization / deserialization
 func Convert(old interface{}, new interface{}) error {

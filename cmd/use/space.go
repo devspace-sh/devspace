@@ -31,6 +31,7 @@ func newSpaceCmd() *cobra.Command {
 	Example:
 	devspace use space my-space
 	devspace use space --id=1
+	devspace use space none    // stop using a space
 	#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -56,6 +57,25 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	if cmd.ID != "" && len(args) > 0 {
 		log.Fatalf("Please only specify either --id or name")
+	}
+
+	// Erase currently used space
+	if len(args) == 1 && args[0] == "none" {
+		// Get generated config
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		generatedConfig.Space = nil
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("Successfully erased space")
+		return
 	}
 
 	// Get cloud provider from config

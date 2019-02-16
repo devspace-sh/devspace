@@ -73,7 +73,7 @@ func init() {
 		Short: "Starts your DevSpace",
 		Long: `
 #######################################################
-#################### devspace up ######################
+################### devspace dev ######################
 #######################################################
 Starts and connects your DevSpace:
 1. Builds your Docker images and override entrypoints if specified

@@ -59,6 +59,7 @@ func init() {
 
 	// Add main commands
 	rootCmd.AddCommand(NewLoginCmd())
+	rootCmd.AddCommand(NewConvertCmd())
 
 	cobra.OnInitialize(initConfig)
 }

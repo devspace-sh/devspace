@@ -199,7 +199,9 @@ func (c *Config) Upgrade() (config.Config, error) {
 					nextConfig.Dev.AutoReload.Images = &[]*string{}
 				}
 
-				(*nextConfig.Dev.AutoReload.Images) = append((*nextConfig.Dev.AutoReload.Images), &key)
+				// Assign this because otherwise we get the same value multiple times
+				imageName := key
+				(*nextConfig.Dev.AutoReload.Images) = append((*nextConfig.Dev.AutoReload.Images), &imageName)
 			}
 		}
 	}
