@@ -1,85 +1,70 @@
 package cloud
 
+import (
+	"errors"
+)
+
 // CreateSpace creates a new space and returns the space id
 func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int, error) {
-	panic("unimplemented")
-}
+	// Response struct
+	response := struct {
+		CreateSpace *struct {
+			SpaceID int
+		} `json:"manager_createSpace"`
+	}{}
 
-// CreateProject creates a new project and returns the project id
-func (p *Provider) CreateProject(name string, clusterID int) (int, error) {
-	panic("unimplemented")
-}
-
-/*
-type managerCreateDevSpaceMutation struct {
-	ManagerCreateDevSpace *struct {
-		DevSpaceID int
-	} `json:"manager_createDevSpace"`
-}
-
-type managerCreateDevSpaceTargetMutation struct {
-	ManagerCreateDevSpaceTarget *struct {
-		KubeContextID int
-	} `json:"manager_createDevSpaceTarget"`
-}
-
-// CreateDevSpace creates a new devspace remotely
-func (p *Provider) CreateDevSpace(name string) (int, error) {
-	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
-	req := graphql.NewRequest(`
-		mutation($devSpaceName: String!) {
-			manager_createDevSpace(devSpaceName: $devSpaceName) {
-				DevSpaceID
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation($spaceName: String!, $clusterID: Int, $projectID: Int!) {
+			manager_createSpace(spaceName: $spaceName, clusterID: $clusterID, projectID: $projectID) {
+				SpaceID
 			}
 		}
-	`)
-
-	req.Var("devSpaceName", name)
-	req.Header.Set("Authorization", p.Token)
-
-	ctx := context.Background()
-	response := managerCreateDevSpaceMutation{}
-
-	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
+	`, map[string]interface{}{
+		"spaceName": name,
+		"projectID": projectID,
+		"clusterID": clusterID,
+	}, &response)
 	if err != nil {
 		return 0, err
 	}
 
-	if response.ManagerCreateDevSpace == nil {
-		return 0, errors.New("Couldn't create devspace: returned devSpaceID is null")
+	// Check result
+	if response.CreateSpace == nil {
+		return 0, errors.New("Couldn't create project: returned answer is null")
 	}
 
-	return response.ManagerCreateDevSpace.DevSpaceID, nil
+	return response.CreateSpace.SpaceID, nil
 }
 
-// CreateDevSpaceTarget creates a new target for an existing devspace
-func (p *Provider) CreateDevSpaceTarget(devSpaceID int, target string) error {
-	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
-	req := graphql.NewRequest(`
-		mutation($devSpaceID: Int!, $target: String!) {
-			manager_createDevSpaceTarget(devSpaceID: $devSpaceID, target: $target) {
-				KubeContextID
+// CreateProject creates a new project and returns the project id
+func (p *Provider) CreateProject(projectName string, clusterID int) (int, error) {
+	// Response struct
+	response := struct {
+		CreateProject *struct {
+			ProjectID int
+		} `json:"manager_createProject"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation($clusterID: Int!, $projectName: String!) {
+			manager_createProject(clusterID: $clusterID, projectName: $projectName) {
+				ProjectID
 			}
 		}
-	`)
-
-	req.Var("devSpaceID", devSpaceID)
-	req.Var("target", target)
-	req.Header.Set("Authorization", p.Token)
-
-	ctx := context.Background()
-	response := managerCreateDevSpaceTargetMutation{}
-
-	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
+	`, map[string]interface{}{
+		"projectName": projectName,
+		"clusterID":   clusterID,
+	}, &response)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	if response.ManagerCreateDevSpaceTarget == nil {
-		return fmt.Errorf("Couldn't create devspace target %s: returned kubecontext is null", target)
+	// Check result
+	if response.CreateProject == nil {
+		return 0, errors.New("Couldn't create project: returned answer is null")
 	}
 
-	return nil
-}*/
+	return response.CreateProject.ProjectID, nil
+}

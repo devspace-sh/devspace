@@ -68,6 +68,11 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		return fmt.Errorf("Error initializing helm client: %v", err)
 	}
 
+	err = helm.UpdateRepos()
+	if err != nil {
+		return fmt.Errorf("Couldn't update repos")
+	}
+
 	if len(args) != 1 {
 		helm.PrintAllAvailableCharts()
 		os.Exit(0)

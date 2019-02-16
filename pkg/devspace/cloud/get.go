@@ -1,207 +1,401 @@
 package cloud
 
-import "github.com/covexo/devspace/pkg/devspace/config/generated"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+)
 
 // Project is the type that holds the project information
 type Project struct {
-	ProjectID int
-	ClusterID int
-	Name      string
+	ProjectID int    `json:"id"`
+	OwnerID   int    `json:"owner_id"`
+	ClusterID int    `json:"cluster_id"`
+	Name      string `json:"name"`
 }
 
 // Cluster is the type that holds the cluster information
 type Cluster struct {
-	ClusterID int
-	OwnerID   *int
-	Name      *string
-	Server    string
-	CaCert    string
+	ClusterID int     `json:"id"`
+	OwnerID   *int    `json:"owner_id"`
+	Name      *string `json:"name"`
+	Server    string  `json:"server"`
+	CaCert    string  `json:"ca_cert"`
 }
 
 // Registry is the type that holds the docker image registry information
 type Registry struct {
-	RegistryID int
-	URL        string
-	OwnerID    *int
+	RegistryID int    `json:"id"`
+	URL        string `json:"url"`
+	OwnerID    *int   `json:"owner_id"`
+}
+
+// ClaimSet is the auth token claim set type
+type ClaimSet struct {
+	Subject string `json:"sub"`
+}
+
+// Token describes a JSON Web Token.
+type Token struct {
+	Raw       string
+	Claims    *ClaimSet
+	Signature []byte
 }
 
 // GetAccountName retrieves the account name for the current user
 func (p *Provider) GetAccountName() (string, error) {
-	panic("unimplemented")
+	token, err := ParseTokenClaims(p.Token)
+	if err != nil {
+		return "", err
+	}
+
+	return token.Claims.Subject, nil
 }
 
 // GetRegistries returns all docker image registries
 func (p *Provider) GetRegistries() ([]*Registry, error) {
-	panic("unimplemented")
-}
+	// Response struct
+	response := struct {
+		ImageRegistry []*Registry `json:"image_registry"`
+	}{}
 
-// GetRegistry returns a docker image registry
-func (p *Provider) GetRegistry(url string) (*Registry, error) {
-	panic("unimplemented")
+	// Do the request
+	err := p.GrapqhlRequest(`
+		query {
+			ImageRegistry {
+				id
+				url
+				owner_id
+			}
+		}
+	`, nil, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check result
+	if response.ImageRegistry == nil {
+		return nil, errors.New("Wrong answer from graphql server: ImageRegistries is nil")
+	}
+
+	return response.ImageRegistry, nil
 }
 
 // GetClusters returns all clusters accessable by the user
 func (p *Provider) GetClusters() ([]*Cluster, error) {
-	panic("unimplemented")
+	// Response struct
+	response := struct {
+		Clusters []*Cluster `json:"cluster"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+	  query {
+		cluster {
+		  id
+		  owner_id
+		  name
+		  server
+		  ca_cert
+		}
+	  }
+	`, nil, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check result
+	if response.Clusters == nil {
+		return nil, errors.New("Wrong answer from graphql server: Clusters is nil")
+	}
+
+	return response.Clusters, nil
 }
 
 // GetProjects returns all projects by the user
 func (p *Provider) GetProjects() ([]*Project, error) {
-	panic("unimplemented")
+	// Response struct
+	response := struct {
+		Projects []*Project `json:"project"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+	  query {
+		project {
+		  id
+		  owner_id
+		  cluster_id
+		  name
+		}
+	  }
+	`, nil, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check result
+	if response.Projects == nil {
+		return nil, errors.New("Wrong answer from graphql server: Projects is nil")
+	}
+
+	return response.Projects, nil
 }
 
 // GetSpaces returns all spaces by the user
 func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
-	panic("unimplemented")
+	// Response struct
+	response := struct {
+		Spaces []*struct {
+			ID          int    `json:"id"`
+			Name        string `json:"string"`
+			KubeContext *struct {
+				Namespace           string `json:"namespace"`
+				ServiceAccountToken string `json:"service_account_token"`
+
+				Cluster *struct {
+					CaCert string `json:"ca_cert"`
+					Server string `json:"server"`
+				} `json:"clusterByclusterId"`
+
+				Domains []*struct {
+					URL string `json:"url"`
+				} `json:"kubeContextDomainsBykubeContextId"`
+			} `json:"kubeContextBykubeContextId"`
+			CreatedAt string `json:"created_at"`
+		} `json:"space"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+	  query {
+		space {
+		  id
+		  name
+		  
+		  kubeContextBykubeContextId {
+			namespace
+			service_account_token
+			
+			clusterByclusterId {
+			  ca_cert
+			  server
+			}
+			
+			kubeContextDomainsBykubeContextId(limit:1) {
+			  url
+			}
+		  }
+		  
+		  created_at
+		}
+	  }
+	`, nil, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check result
+	if response.Spaces == nil {
+		return nil, errors.New("Wrong answer from graphql server: Spaces is nil")
+	}
+
+	retSpaces := []*generated.SpaceConfig{}
+	for _, spaceConfig := range response.Spaces {
+		if spaceConfig.KubeContext == nil {
+			return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+		}
+		if spaceConfig.KubeContext.Cluster == nil {
+			return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
+		}
+
+		newSpace := &generated.SpaceConfig{
+			SpaceID:             spaceConfig.ID,
+			Name:                spaceConfig.Name,
+			Namespace:           spaceConfig.KubeContext.Namespace,
+			ServiceAccountToken: spaceConfig.KubeContext.ServiceAccountToken,
+			Server:              spaceConfig.KubeContext.Cluster.Server,
+			CaCert:              spaceConfig.KubeContext.Cluster.CaCert,
+			ProviderName:        p.Name,
+			Created:             spaceConfig.CreatedAt,
+		}
+		if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
+			newSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
+		}
+
+		retSpaces = append(retSpaces, newSpace)
+	}
+
+	return retSpaces, nil
 }
 
 // GetSpace returns a specific space by id
 func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
-	panic("unimplemented")
+	// Response struct
+	response := struct {
+		Space *struct {
+			ID          int    `json:"id"`
+			Name        string `json:"string"`
+			KubeContext *struct {
+				Namespace           string `json:"namespace"`
+				ServiceAccountToken string `json:"service_account_token"`
+
+				Cluster *struct {
+					CaCert string `json:"ca_cert"`
+					Server string `json:"server"`
+				} `json:"clusterByclusterId"`
+
+				Domains []*struct {
+					URL string `json:"url"`
+				} `json:"kubeContextDomainsBykubeContextId"`
+			} `json:"kubeContextBykubeContextId"`
+			CreatedAt string `json:"created_at"`
+		} `json:"space_by_pk"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+	  query($ID:Int!) {
+		space_by_pk(id:$ID) {
+		  id
+		  name
+		  
+		  kubeContextBykubeContextId {
+			namespace
+			service_account_token
+			
+			clusterByclusterId {
+			  ca_cert
+			  server
+			}
+			
+			kubeContextDomainsBykubeContextId(limit:1) {
+			  url
+			}
+		  }
+		  
+		  created_at
+		}
+	  }
+	`, map[string]interface{}{
+		"ID": spaceID,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check result
+	if response.Space == nil {
+		return nil, fmt.Errorf("Space %d not found", spaceID)
+	}
+
+	spaceConfig := response.Space
+	if spaceConfig.KubeContext == nil {
+		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+	}
+	if spaceConfig.KubeContext.Cluster == nil {
+		return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
+	}
+
+	retSpace := &generated.SpaceConfig{
+		SpaceID:             spaceConfig.ID,
+		Name:                spaceConfig.Name,
+		Namespace:           spaceConfig.KubeContext.Namespace,
+		ServiceAccountToken: spaceConfig.KubeContext.ServiceAccountToken,
+		Server:              spaceConfig.KubeContext.Cluster.Server,
+		CaCert:              spaceConfig.KubeContext.Cluster.CaCert,
+		ProviderName:        p.Name,
+		Created:             spaceConfig.CreatedAt,
+	}
+	if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
+		retSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
+	}
+
+	return retSpace, nil
 }
 
 // GetSpaceByName returns a space by name
 func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, error) {
-	panic("unimplemented")
-}
+	// Response struct
+	response := struct {
+		Space *struct {
+			ID          int    `json:"id"`
+			Name        string `json:"string"`
+			KubeContext *struct {
+				Namespace           string `json:"namespace"`
+				ServiceAccountToken string `json:"service_account_token"`
 
-/*
-// DevSpaceConfig holds the information of a devspace
-type DevSpaceConfig struct {
-	DevSpaceID int
-	Name       string
-	Created    string
-}
+				Cluster *struct {
+					CaCert string `json:"ca_cert"`
+					Server string `json:"server"`
+				} `json:"clusterByclusterId"`
 
-// GetDevSpaces returns all devspaces owned by the user
-func (p *Provider) GetSpaces() ([]*DevSpaceConfig, error) {
-	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
-	req := graphql.NewRequest(`
-		query {
-			DevSpaces {
-				DevSpaceID
-				Name
-				Created
+				Domains []*struct {
+					URL string `json:"url"`
+				} `json:"kubeContextDomainsBykubeContextId"`
+			} `json:"kubeContextBykubeContextId"`
+			CreatedAt string `json:"created_at"`
+		} `json:"space"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+	  query($name:String!) {
+		space(where:{name:{_eq:$name}}){
+		  id
+		  name
+		  
+		  kubeContextBykubeContextId {
+			namespace
+			service_account_token
+			
+			clusterByclusterId {
+			  ca_cert
+			  server
 			}
+			
+			kubeContextDomainsBykubeContextId(limit:1) {
+			  url
+			}
+		  }
+		  
+		  created_at
 		}
-	`)
-
-	req.Header.Set("Authorization", p.Token)
-
-	ctx := context.Background()
-	response := devSpaceConfigQuery{}
-
-	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
+	  }
+	`, map[string]interface{}{
+		"name": spaceName,
+	}, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	return response.DevSpaces, nil
+	// Check result
+	if response.Space == nil {
+		return nil, fmt.Errorf("Space %s not found", spaceName)
+	}
+
+	spaceConfig := response.Space
+	if spaceConfig.KubeContext == nil {
+		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+	}
+	if spaceConfig.KubeContext.Cluster == nil {
+		return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
+	}
+
+	retSpace := &generated.SpaceConfig{
+		SpaceID:             spaceConfig.ID,
+		Name:                spaceConfig.Name,
+		Namespace:           spaceConfig.KubeContext.Namespace,
+		ServiceAccountToken: spaceConfig.KubeContext.ServiceAccountToken,
+		Server:              spaceConfig.KubeContext.Cluster.Server,
+		CaCert:              spaceConfig.KubeContext.Cluster.CaCert,
+		ProviderName:        p.Name,
+		Created:             spaceConfig.CreatedAt,
+	}
+	if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
+		retSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
+	}
+
+	return retSpace, nil
 }
-
-// GetDevSpaceTargetConfig retrieves the cluster configuration via graphql request
-func (p *Provider) GetDevSpaceTargetConfig(devSpaceID int, target string) (*generated.DevSpaceTargetConfig, error) {
-	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
-	req := graphql.NewRequest(`
-		query($devSpaceID: Int!, $target: String!) {
-			DevSpaces_by_pk(DevSpaceID: $devSpaceID) {
-				deploymenttargetssBydevspaceid(where: {TargetName: {_eq: $target}}) {
-					TargetName
-					kubecontextsBykubecontextid {
-						Namespace
-						Domain
-						ServiceAccountToken
-						clustersByclusterid {
-							CaCert
-							Server
-						}
-					}
-				}
-			}
-		}
-	`)
-
-	req.Var("devSpaceID", devSpaceID)
-	req.Var("target", target)
-	req.Header.Set("Authorization", p.Token)
-
-	ctx := context.Background()
-	response := devSpaceTargetConfigQuery{}
-
-	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if we got correct information
-	if response.DevSpacesByPK == nil || len(response.DevSpacesByPK.DeploymenttargetssBydevspaceid) != 1 || response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid == nil {
-		return nil, fmt.Errorf("Couldn't find devSpaceID %d or target %s", devSpaceID, target)
-	}
-
-	return &generated.DevSpaceTargetConfig{
-		TargetName:          response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].TargetName,
-		Namespace:           response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid.Namespace,
-		ServiceAccountToken: response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid.ServiceAccountToken,
-		CaCert:              response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid.ClustersByclusterid.CaCert,
-		Server:              response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid.ClustersByclusterid.Server,
-		Domain:              response.DevSpacesByPK.DeploymenttargetssBydevspaceid[0].KubecontextsBykubecontextid.Domain,
-	}, nil
-}
-
-// GetDevSpaceTargetConfigs retrieves the cluster configurations via graphql request
-func (p *Provider) GetDevSpaceTargetConfigs(devSpaceID int) ([]*generated.DevSpaceTargetConfig, error) {
-	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
-	req := graphql.NewRequest(`
-		query($devSpaceID: Int!) {
-			DevSpaces_by_pk(DevSpaceID: $devSpaceID) {
-				deploymenttargetssBydevspaceid {
-					TargetName
-					kubecontextsBykubecontextid {
-						Namespace
-						Domain
-						ServiceAccountToken
-						clustersByclusterid {
-							CaCert
-							Server
-						}
-					}
-				}
-			}
-		}
-	`)
-
-	req.Var("devSpaceID", devSpaceID)
-	req.Header.Set("Authorization", p.Token)
-
-	ctx := context.Background()
-	response := devSpaceTargetConfigQuery{}
-
-	// Run the graphql request
-	err := graphQlClient.Run(ctx, req, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if we got correct information
-	if response.DevSpacesByPK == nil {
-		return nil, fmt.Errorf("Error retrieving devspace targets: nil response received: %#v", response)
-	}
-
-	targets := []*generated.DevSpaceTargetConfig{}
-	for _, target := range response.DevSpacesByPK.DeploymenttargetssBydevspaceid {
-		if target.KubecontextsBykubecontextid != nil {
-			targets = append(targets, &generated.DevSpaceTargetConfig{
-				TargetName:          target.TargetName,
-				Namespace:           target.KubecontextsBykubecontextid.Namespace,
-				ServiceAccountToken: target.KubecontextsBykubecontextid.ServiceAccountToken,
-				CaCert:              target.KubecontextsBykubecontextid.ClustersByclusterid.CaCert,
-				Server:              target.KubecontextsBykubecontextid.ClustersByclusterid.Server,
-				Domain:              target.KubecontextsBykubecontextid.Domain,
-			})
-		}
-	}
-
-	return targets, nil
-}*/

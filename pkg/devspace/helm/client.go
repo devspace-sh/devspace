@@ -156,7 +156,7 @@ func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool)
 
 	_, err = os.Stat(stableRepoCachePathAbs)
 	if err != nil {
-		err = wrapper.updateRepos()
+		err = wrapper.UpdateRepos()
 		if err != nil {
 			return nil, err
 		}
@@ -165,14 +165,14 @@ func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool)
 	return wrapper, nil
 }
 
-func (helmClientWrapper *ClientWrapper) updateRepos() error {
+// UpdateRepos will update the helm repositories
+func (helmClientWrapper *ClientWrapper) UpdateRepos() error {
 	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
 	}
 
 	repos := []*repo.ChartRepository{}
-
 	for _, repoData := range allRepos.Repositories {
 		repo, err := repo.NewChartRepository(repoData, getter.All(*helmClientWrapper.Settings))
 		if err != nil {
@@ -183,7 +183,6 @@ func (helmClientWrapper *ClientWrapper) updateRepos() error {
 	}
 
 	wg := sync.WaitGroup{}
-
 	for _, re := range repos {
 		wg.Add(1)
 
@@ -200,7 +199,6 @@ func (helmClientWrapper *ClientWrapper) updateRepos() error {
 	}
 
 	wg.Wait()
-
 	return nil
 }
 
