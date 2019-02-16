@@ -2,7 +2,7 @@
   "docs": {
     "Getting started": [
         "getting-started/installation",
-        "getting-started/containerization",
+        "getting-started/containerize",
         "getting-started/deployment",
         "getting-started/development"
     ],

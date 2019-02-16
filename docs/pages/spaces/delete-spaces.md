@@ -1,0 +1,5 @@
+---
+title: Delete Spaces
+---
+
+content

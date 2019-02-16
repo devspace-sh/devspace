@@ -9,20 +9,10 @@
 // site configuration options.
 
 const siteConfig = {
-  title: 'DevSpace Documentation (CLI, Cloud)', // Title for your website.
+  title: 'DevSpace Documentation', // Title for your website.
   tagline: 'A website for testing',
-  url: 'https://your-docusaurus-test-site.com', // Your website URL
-  baseUrl: '/', // Base URL for your project */
-  // For github.io type URLs, you would set the url and baseUrl like:
-  //   url: 'https://facebook.github.io',
-  //   baseUrl: '/test-site/',
-
-  // Used for publishing and more
-  projectName: 'test-site',
-  organizationName: 'facebook',
-  // For top-level user or org sites, the organization is still the same.
-  // e.g., for the https://JoelMarcey.github.io site, it would be set like...
-  //   organizationName: 'JoelMarcey'
+  url: 'https://devspace.cloud', // Your website URL
+  baseUrl: '/',
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
@@ -65,11 +55,19 @@ const siteConfig = {
 
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks.
-    theme: 'default',
+    theme: 'atom-one-dark',
   },
 
   // Add custom scripts here that would be placed in <script> tags.
-  scripts: [],
+  scripts: [
+    'https://buttons.github.io/buttons.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
+    '/js/code-block-buttons.js',
+  ],
+
+  stylesheets: [
+    '/css/code-block-buttons.css'
+  ],
 
   // On page navigation for the current documentation page.
   onPageNav: 'separate',
@@ -82,11 +80,8 @@ const siteConfig = {
   // Show documentation's last update time.
   enableUpdateTime: true,
 
-  // You may provide arbitrary config keys to be used as needed by your
-  // template. For example, if you need your repo's URL...
-  //   repoUrl: 'https://github.com/facebook/test-site',
-
-  //customDocsPath: 'pages',
+  customDocsPath: 'pages',
+  docsSideNavCollapsible: true,
 };
 
 module.exports = siteConfig;

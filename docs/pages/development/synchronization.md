@@ -1,0 +1,5 @@
+---
+title: Synchronize files
+---
+
+content
