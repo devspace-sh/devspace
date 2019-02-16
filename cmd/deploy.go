@@ -25,8 +25,9 @@ type DeployCmdFlags struct {
 	KubeContext   string
 	Config        string
 	DockerTarget  string
+	ForceBuild    bool
+	ForceDeploy   bool
 	SwitchContext bool
-	SkipBuild     bool
 }
 
 func init() {
@@ -55,7 +56,10 @@ devspace deploy --kube-context=deploy-context
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
+
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceBuild, "force-build", "b", false, "Forces devspace to build every image")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceDeploy, "force-deploy", "d", false, "Forces devspace to deploy every deployment")
 
 	rootCmd.AddCommand(cobraCmd)
 }
@@ -126,7 +130,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, false, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.flags.ForceBuild, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -140,9 +144,15 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, false, mustRedeploy, log.GetInstance())
+	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.flags.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Save Config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Error saving generated config: %v", err)
 	}
 
 	// Print domain name if we use a cloud provider

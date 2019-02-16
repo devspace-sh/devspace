@@ -11,28 +11,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type spaceCmd struct{}
+type deploymentsCmd struct{}
 
-func newSpaceCmd() *cobra.Command {
-	cmd := &spaceCmd{}
+func newDeploymentsCmd() *cobra.Command {
+	cmd := &deploymentsCmd{}
 
 	return &cobra.Command{
-		Use:   "devspace",
-		Short: "Shows the devspace status",
+		Use:   "deployments",
+		Short: "Shows the deployments status",
 		Long: `
 	#######################################################
-	############# devspace status devspace ################
+	############ devspace status deployments ##############
 	#######################################################
 	Shows the devspace status
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunSpaceStatus,
+		Run:  cmd.RunDeploymentsStatus,
 	}
 }
 
-// RunStatus executes the devspace status command logic
-func (cmd *spaceCmd) RunSpaceStatus(cobraCmd *cobra.Command, args []string) {
+// RunDeploymentsStatus executes the devspace status deployments command logic
+func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {

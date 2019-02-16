@@ -88,8 +88,8 @@ Starts and connects your DevSpace:
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
 
-	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "build", "b", cmd.flags.build, "Force image build")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "deploy", "d", cmd.flags.deploy, "Force chart deployment")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "force-build", "b", cmd.flags.build, "Forces devspace to build every image")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "force-deploy", "d", cmd.flags.deploy, "Forces devspace to deploy every deployment")
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.skipPipeline, "skip-pipeline", "x", cmd.flags.skipPipeline, "Skips build & deployment and only starts sync, portforwarding & terminal")
 
