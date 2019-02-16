@@ -189,11 +189,13 @@ func (helmClientWrapper *ClientWrapper) UpdateRepos() error {
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 
+			if re.Config.Name == "local" {
+				return
+			}
+
 			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
 			if err != nil {
-				log.With(err).Error("Unable to download repo index")
-
-				//TODO
+				log.Errorf("Unable to download repo index: %v", err)
 			}
 		}(re)
 	}

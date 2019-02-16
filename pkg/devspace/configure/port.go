@@ -146,7 +146,6 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 
 		if areLabelMapsEqual(selectors, labelSelectorMap) {
 			portMap := append(*v.PortMappings, portMappings...)
-
 			v.PortMappings = &portMap
 
 			return

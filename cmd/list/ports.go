@@ -74,12 +74,14 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		}
 
 		portMappings := ""
-		for _, v := range *value.PortMappings {
-			if len(portMappings) > 0 {
-				portMappings += ", "
-			}
+		if value.PortMappings != nil {
+			for _, v := range *value.PortMappings {
+				if len(portMappings) > 0 {
+					portMappings += ", "
+				}
 
-			portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
+				portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
+			}
 		}
 
 		portForwards = append(portForwards, []string{

@@ -9,16 +9,22 @@ import (
 )
 
 //AddImage adds an image to the devspace
-func AddImage(nameInConfig string, name string, tag string, contextPath string, dockerfilePath, buildEngine string) error {
+func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
 	config := configutil.GetBaseConfig()
 
 	imageConfig := &v1.ImageConfig{
-		Name: &name,
-		Tag:  &tag,
-		Build: &v1.BuildConfig{
-			ContextPath:    &contextPath,
-			DockerfilePath: &dockerfilePath,
-		},
+		Name:  &name,
+		Build: &v1.BuildConfig{},
+	}
+
+	if tag != "" {
+		imageConfig.Tag = &tag
+	}
+	if contextPath != "" {
+		imageConfig.Build.ContextPath = &contextPath
+	}
+	if dockerfilePath != "" {
+		imageConfig.Build.DockerfilePath = &dockerfilePath
 	}
 
 	if buildEngine == "docker" {

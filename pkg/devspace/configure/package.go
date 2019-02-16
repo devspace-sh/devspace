@@ -219,9 +219,9 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Write([]byte("\n"))
 
 		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to open the package README to see configuration options? (yes|no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes|no)",
+			Question:     "Do you want to open the package README to see configuration options?",
+			DefaultValue: "yes",
+			Options:      []string{"yes", "no"},
 		})
 
 		if shouldShowReadme == "yes" {

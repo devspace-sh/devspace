@@ -55,4 +55,6 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Donef("Successfully removed deployment %s", args[0])
 }
