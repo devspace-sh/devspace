@@ -82,19 +82,27 @@ func GetRegistryAuthSecretName(registryURL string) string {
 }
 
 // GetImageWithTag returns the image (optional with tag)
-func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) string {
+func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) (string, error) {
 	image := *imageConfig.Name
 	if imageConfig.Tag != nil {
 		image = image + ":" + *imageConfig.Tag
 	} else {
+		var config *generated.CacheConfig
 		if isDev {
-			image = image + ":" + generatedConfig.GetActive().Dev.ImageTags[image]
+			config = &generatedConfig.GetActive().Dev
 		} else {
-			image = image + ":" + generatedConfig.GetActive().Deploy.ImageTags[image]
+			config = &generatedConfig.GetActive().Deploy
 		}
+
+		tag, ok := config.ImageTags[image]
+		if ok == false {
+			return "", fmt.Errorf("Couldn't find image tag in generated.yaml. Did the build succeed?")
+		}
+
+		image = image + ":" + tag
 	}
 
-	return image
+	return image, nil
 }
 
 // GetPullSecretNames returns all names of auto-generated image pull secrets

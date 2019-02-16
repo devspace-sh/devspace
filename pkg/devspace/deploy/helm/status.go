@@ -1,10 +1,16 @@
 package helm
 
-import "github.com/covexo/devspace/pkg/devspace/helm"
+import (
+	"time"
+
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/helm"
+)
 
 // Status gets the status of the deployment
 func (d *DeployConfig) Status() ([][]string, error) {
 	var values [][]string
+	config := configutil.GetConfig()
 
 	// Get HelmClient
 	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
@@ -12,12 +18,20 @@ func (d *DeployConfig) Status() ([][]string, error) {
 		return nil, err
 	}
 
+	namespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return nil, err
+	}
+	if d.DeploymentConfig.Namespace != nil {
+		namespace = *d.DeploymentConfig.Namespace
+	}
+
 	releases, err := helmClient.Client.ListReleases()
 	if err != nil {
 		values = append(values, []string{
 			*d.DeploymentConfig.Name,
 			"Error",
-			*d.DeploymentConfig.Namespace,
+			namespace,
 			err.Error(),
 		})
 
@@ -28,7 +42,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 		values = append(values, []string{
 			*d.DeploymentConfig.Name,
 			"Not Found",
-			*d.DeploymentConfig.Namespace,
+			namespace,
 			"No release found",
 		})
 
@@ -41,7 +55,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 				values = append(values, []string{
 					*d.DeploymentConfig.Name,
 					"Error",
-					*d.DeploymentConfig.Namespace,
+					namespace,
 					"HELM STATUS:" + release.Info.Status.Code.String(),
 				})
 
@@ -50,9 +64,9 @@ func (d *DeployConfig) Status() ([][]string, error) {
 
 			values = append(values, []string{
 				*d.DeploymentConfig.Name,
-				"Running",
-				*d.DeploymentConfig.Namespace,
-				"",
+				"Deployed",
+				namespace,
+				"Deployed: " + time.Unix(release.Info.LastDeployed.Seconds, 0).String(),
 			})
 
 			return values, nil
@@ -62,7 +76,7 @@ func (d *DeployConfig) Status() ([][]string, error) {
 	values = append(values, []string{
 		*d.DeploymentConfig.Name,
 		"Not Found",
-		*d.DeploymentConfig.Namespace,
+		namespace,
 		"No release found",
 	})
 

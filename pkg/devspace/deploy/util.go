@@ -38,7 +38,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev,
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig, forceDeploy, isDev)
+			err = deployClient.Deploy(generatedConfig, isDev, forceDeploy)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}

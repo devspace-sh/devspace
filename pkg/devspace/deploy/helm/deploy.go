@@ -111,9 +111,12 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	// Get release information
 	releaseName := *d.DeploymentConfig.Name
-	releaseNamespace := *d.DeploymentConfig.Namespace
-	chartPath := *d.DeploymentConfig.Helm.ChartPath
+	releaseNamespace := ""
+	if d.DeploymentConfig.Namespace != nil {
+		releaseNamespace = *d.DeploymentConfig.Namespace
+	}
 
+	chartPath := *d.DeploymentConfig.Helm.ChartPath
 	values := map[interface{}]interface{}{}
 	overwriteValues := map[interface{}]interface{}{}
 
@@ -147,7 +150,11 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	// Set containers and pull secrets values
-	overwriteValues["containers"] = getContainerValues(overwriteValues, config, generatedConfig, isDev)
+	overwriteValues["containers"], err = getContainerValues(overwriteValues, config, generatedConfig, isDev)
+	if err != nil {
+		return err
+	}
+
 	overwriteValues["pullSecrets"] = getPullSecrets(values, overwriteValues, config)
 
 	wait := true
@@ -166,7 +173,8 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	return nil
 }
 
-func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) map[interface{}]interface{} {
+func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) (map[interface{}]interface{}, error) {
+	var err error
 	overwriteContainerValues := map[interface{}]interface{}{}
 	overwriteContainerValuesFromFile, containerValuesExisting := overwriteValues["containers"]
 	if containerValuesExisting {
@@ -181,11 +189,15 @@ func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.
 			container = existingContainer.(map[interface{}]interface{})
 		}
 
-		container["image"] = registry.GetImageWithTag(generatedConfig, imageConf, isDev)
+		container["image"], err = registry.GetImageWithTag(generatedConfig, imageConf, isDev)
+		if err != nil {
+			return nil, err
+		}
+
 		overwriteContainerValues[imageName] = container
 	}
 
-	return overwriteContainerValues
+	return overwriteContainerValues, nil
 }
 
 func getPullSecrets(values, overwriteValues map[interface{}]interface{}, config *v1.Config) []interface{} {

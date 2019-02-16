@@ -23,7 +23,12 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 	var command []string
 	config := configutil.GetConfig()
 
-	if len(args) == 0 && (config.Dev.Terminal.Command == nil || len(*config.Dev.Terminal.Command) == 0) {
+	customCommand := false
+	if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Command != nil && len(*config.Dev.Terminal.Command) > 0 {
+		customCommand = true
+	}
+
+	if len(args) == 0 && customCommand == false {
 		command = []string{
 			"sh",
 			"-c",
@@ -58,7 +63,7 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 		if selector != nil && selector.ContainerName != nil {
 			containerName = *selector.ContainerName
 		} else {
-			if config.Dev.Terminal.ContainerName != nil {
+			if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.ContainerName != nil {
 				containerName = *config.Dev.Terminal.ContainerName
 			}
 		}

@@ -182,7 +182,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 		generatedConfig.GetActive().Deploy.ImageTags[imageName] = imageTag
 	}
 
-	log.Done("Done building and pushing image '" + imageName + "'")
+	log.Done("Done processing image '" + imageName + "'")
 	return true, nil
 }
 

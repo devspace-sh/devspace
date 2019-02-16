@@ -207,6 +207,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 		}
 	}
+
+	log.Done("Project successfully initialized. Run `devspace deploy` to deploy application")
 }
 
 func (cmd *InitCmd) initChartGenerator() {

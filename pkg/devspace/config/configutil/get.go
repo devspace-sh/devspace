@@ -219,10 +219,10 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				log.Infof("Loaded config from %s", DefaultConfigsPath)
 			}
 		} else {
-			if configDefinition == nil {
-				log.Infof("Loaded config %s", ConfigPath)
-			} else {
+			if configDefinition != nil {
 				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+			} else {
+				log.Infof("Loaded config %s", ConfigPath)
 			}
 		}
 	})
@@ -255,6 +255,15 @@ func ValidateOnce() {
 			for index, deployConfig := range *config.Deployments {
 				if deployConfig.Name == nil {
 					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
+				}
+				if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
+					log.Fatalf("Please specify either helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
+				}
+				if deployConfig.Helm != nil && deployConfig.Helm.ChartPath == nil {
+					log.Fatalf("deployments[%d].helm.chartPath is required", index)
+				}
+				if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
+					log.Fatalf("deployments[%d].kubectl.manifests is required", index)
 				}
 			}
 		}
