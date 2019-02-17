@@ -77,10 +77,15 @@ details[open] {
     padding-bottom: 5px;
 }
 
+details details,
+details pre {
+    margin-right: 30px;
+}
+
 summary {
     margin-left: -34px;
     padding-left: 16px;
-    padding-bottom: 8px;
+    padding-bottom: 0.3em;
     cursor: pointer;
 }
 
