@@ -1,5 +1,119 @@
 /* your custom css */
 
+* {
+    outline: none;
+}
+
+a, a:hover {
+    color: #1c65f7;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+h1, h2 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+h3, h4, h5, h6 {
+    margin-top: 0.6em;
+    margin-bottom: 0.3em;
+}
+
+p {
+    margin: 0.5em 0;
+}
+
+ul, ol {
+    margin: 0.4em 0 1.5em;
+}
+
+details,
+.docs-next {
+    box-shadow: 0 0 20px rgba(35,51,102,.2);
+}
+
+pre .btnIcon {
+    margin-top: 3px;
+    margin-right: -10px;
+    padding-left: 0.4em;
+    padding-right: 15px;
+    background: #282c34;
+    box-shadow: -10px 10px 10px #282c34;
+}
+
+pre .btnIcon * {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+pre:hover .btnIcon * {
+    opacity: 1;
+}
+
+blockquote {
+    margin-top: 1em;
+    background-color: rgb(255, 230, 200);
+    border-left-color: #f80;
+    color: #6e6e6e;
+    border-radius: 2px;
+}
+
+.docs-next {
+    font-weight: 600;
+    background-color: #00bdff;
+    color: #fff;
+    border: none;
+}
+
+details {
+    padding-left: 34px;
+}
+
+details[open] {
+    padding-bottom: 5px;
+}
+
+summary {
+    margin-left: -34px;
+    padding-left: 16px;
+    padding-bottom: 8px;
+    cursor: pointer;
+}
+
+summary > p:empty {
+    display: none;
+}
+
+summary > h1,
+summary > h2,
+summary > h3,
+summary > h4,
+summary > h5,
+summary > h6 {
+    display: inline-block;
+}
+
+summary > h1 > .hash-link,
+summary > h2 > .hash-link,
+summary > h3 > .hash-link,
+summary > h4 > .hash-link,
+summary > h5 > .hash-link,
+summary > h6 > .hash-link {
+    margin-left: -60px;
+    padding-right: 40px;
+}
+
+.docLastUpdate {
+    text-align: left;
+}
+
+.post p:empty {
+    display: none;
+}
+
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
 }
 
