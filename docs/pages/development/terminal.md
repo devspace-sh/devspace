@@ -1,5 +1,5 @@
 ---
-title: Use the temrinal proxy
+title: Use the terminal proxy
 ---
 
 content
