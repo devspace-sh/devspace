@@ -78,6 +78,7 @@ details[open] {
 }
 
 details details,
+details blockquote,
 details pre {
     margin-right: 30px;
 }
