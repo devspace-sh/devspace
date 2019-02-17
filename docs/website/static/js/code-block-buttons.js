@@ -30,16 +30,26 @@ window.addEventListener('load', function() {
       button('Copy', 'Copy code to clipboard', copyIcon, 'btnClipboard'),
     );
   
-    const clipboard = new ClipboardJS('.btnClipboard', {
-      target: function(trigger) {
-        return trigger.parentNode.querySelector('code');
+    var clipboard = new ClipboardJS('.btnClipboard', {
+      target: function(trigger) {console.log("copy")
+        var el = trigger.parentNode.querySelector('code');
+        
+        el.classList.add("-hide-lines");
+
+        return el;
       },
     });
   
     clipboard.on('success', function(event) {
       event.clearSelection();
-      const textEl = event.trigger.querySelector('.btnIcon__label');
+
+      var el = event.trigger.parentNode.querySelector("code");
+
+      el.classList.remove("-hide-lines");
+
+      var textEl = event.trigger.querySelector('.btnIcon__label');
       textEl.textContent = 'Copied';
+
       setTimeout(function() {
         textEl.textContent = 'Copy';
       }, 2000);
