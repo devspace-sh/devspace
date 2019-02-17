@@ -21,7 +21,8 @@
         "development/port-forwarding",
         "development/debugging",
         "development/auto-reloading",
-        "development/entrypoint-overwrites"
+        "development/entrypoint-overwrites",
+        "development/best-practices"
     ],
     "Spaces": [
         "spaces/what-are-spaces",
