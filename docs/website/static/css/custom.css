@@ -69,6 +69,7 @@ blockquote {
 }
 
 details {
+    margin: 14px 0;
     padding-left: 34px;
 }
 
@@ -83,6 +84,10 @@ summary {
     cursor: pointer;
 }
 
+details[open] > summary {
+    padding-bottom: 0;
+}
+
 summary > p:empty {
     display: none;
 }
@@ -94,6 +99,7 @@ summary > h4,
 summary > h5,
 summary > h6 {
     display: inline-block;
+    margin: 0.5em 0;
 }
 
 summary > h1 > .hash-link,
