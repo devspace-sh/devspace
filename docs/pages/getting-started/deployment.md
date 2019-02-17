@@ -56,9 +56,16 @@ Spaces can be used very much like any regular Kubernetes namespace. Therefore, y
 ### Useful kubectl commands
 Here is a list of common kubectl commands:
 
-#### View all pods in your Space
+#### View all pods (group of containers) in your Space
 ```bash
 kubectl get pods
+```
+
+> Pods are groups of containers that share a network stack. [Learn more about pods](../spaces/what-are-kubernetes-pods)
+
+#### View all services in your Space
+```bash
+kubectl get services
 ```
 
 </details>
