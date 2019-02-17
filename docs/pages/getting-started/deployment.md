@@ -33,7 +33,7 @@ DEVSPACE DEPLOY OUTPUT WITH URL
 
 <details>
 <summary>
-## **Connect a custom domain**
+## Connect a custom domain
 </summary>
 
 
@@ -47,7 +47,7 @@ Spaces can be used very much like any regular Kubernetes namespace. Therefore, y
 
 <details>
 <summary>
-### **Install kubectl**
+### Install kubectl
 </summary>
 
 
@@ -56,7 +56,7 @@ Spaces can be used very much like any regular Kubernetes namespace. Therefore, y
 ### Useful kubectl commands
 Here is a list of common kubectl commands:
 
-#### **View all pods in your Space**
+#### View all pods in your Space
 ```bash
 kubectl get pods
 ```
@@ -66,7 +66,7 @@ kubectl get pods
 
 <details>
 <summary>
-## **Troubleshooting**
+## Troubleshooting
 </summary>
 
 If you get an HTTP error when accessing your Space, the following guides can help you solve the most common issues:
@@ -84,7 +84,7 @@ If you get an HTTP error when accessing your Space, the following guides can hel
 </details>
 
 
-## **Learn more about deploying with DevSpace**
+## Learn more about deploying with DevSpace
 
 
 See the following guides to learn more:

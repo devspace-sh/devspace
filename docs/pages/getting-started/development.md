@@ -69,7 +69,7 @@ After starting your application inside the Space, you can access it via `localho
 ## Edit your source code and use hot reloading
 While the terminal started by `devspace dev` is open, your source code files will be synchronized between your local project and your Space. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. nodemon) to update the application running in your Space in real-time.
 
-## **Learn more about developing with DevSpace**
+## Learn more about developing with DevSpace
 Instead of having to run a deployment pipeline to see if everything works correctly, `devspace dev` lets you develop directly inside Kubernetes. This saves a lot of time when building cloud-native software. Developing applications with DevSpace is very powerful and there are many options to define the perfect development workflow for your needs. 
 
 See the following guides to learn more:

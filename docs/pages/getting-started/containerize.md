@@ -38,7 +38,7 @@ project/
 <!-- >
 <details>
 <summary>
-### **Show customization options**
+### Show customization options
 
 </summary>
 
