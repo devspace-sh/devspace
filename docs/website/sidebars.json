@@ -31,7 +31,8 @@
         "spaces/delete-spaces",
         "spaces/events-logs",
         "spaces/domains",
-        "spaces/resource-limits"
+        "spaces/resource-limits",
+        "spaces/what-are-kubernetes-pods"
     ],
     "Images & Registries": [
         "images/workflow",
