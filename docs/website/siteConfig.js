@@ -67,9 +67,7 @@ const siteConfig = {
     '/js/code-block-line-numbers.js',
   ],
 
-  stylesheets: [
-    '/css/code-block-buttons.css'
-  ],
+  stylesheets: [],
 
   // On page navigation for the current documentation page.
   onPageNav: 'separate',
