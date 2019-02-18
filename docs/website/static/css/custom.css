@@ -126,6 +126,33 @@ summary > h6 > .hash-link {
     display: none;
 }
 
+/* nav group titles */
+.toc .toggleNav .navGroup .navGroupCategoryTitle {
+    font-size: 16px;
+}
+
+/* nav arrows */
+.collapsible .arrow {
+    float: left;
+    margin-right: 2px;
+}
+
+/* nav link currently active */
+.toc .toggleNav ul li.navListItemActive a {
+    color: #00bdff!important;
+}
+
+/* nav link */
+.toc .toggleNav ul li a {
+    padding: 2px 0;
+}
+
+/* nav link hover */
+.toc .toggleNav ul li a:hover {
+    text-decoration: none;
+    color: #1c65f7;
+}
+
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
 }
 
