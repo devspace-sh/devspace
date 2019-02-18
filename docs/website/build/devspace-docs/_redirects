@@ -1,2 +1,2 @@
 # redirect home to devspace.cloud
-/   http://devspace.cloud  302!
+/   http://devspace.cloud/docs  302!
