@@ -207,7 +207,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Done("Project successfully initialized")
-	log.Infof("Run `%s` to deploy application", ansi.Color("devspace deploy", "white+b"))
+
+	if cmd.flags.useCloud {
+		log.Infof("\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+	} else {
+		log.Infof("Run `%s` to deploy application", ansi.Color("devspace deploy", "white+b"))
+	}
 }
 
 func (cmd *InitCmd) initChartGenerator() {

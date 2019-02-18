@@ -35,7 +35,6 @@ type Provider struct {
 var DevSpaceCloudProviderConfig = &Provider{
 	Name: DevSpaceCloudProviderName,
 	Host: "https://staging.api.devspace.cloud",
-	// Login: "https://github.com/login/oauth/authorize?scope=user:email&client_id=12f7a7bd9f1e5efaa82d&redirect_uri=https://staging.api.devspace.cloud/auth/cli"
 }
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations

@@ -9,6 +9,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -115,6 +116,8 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	log.StopWait()
 	log.Infof("Successfully created space %s", space.Name)
+
+	log.Infof("\nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
 }
 
 func createProject(p *cloud.Provider) (int, error) {
