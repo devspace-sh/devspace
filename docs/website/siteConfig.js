@@ -9,6 +9,7 @@
 // site configuration options.
 
 const siteConfig = {
+  projectName: "devspace-docs",
   title: 'DevSpace Documentation', // Title for your website.
   tagline: 'A website for testing',
   url: 'https://devspace.cloud', // Your website URL
