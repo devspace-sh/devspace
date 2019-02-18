@@ -6,7 +6,7 @@ lib/core/metadata.js
 lib/core/MetadataBlog.js
 
 website/translated_docs
-/website/build/
+website/build/devspace-docs/*
 website/yarn.lock
 website/node_modules
 website/i18n/*
