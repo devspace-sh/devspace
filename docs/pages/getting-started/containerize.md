@@ -23,30 +23,32 @@ devspace init
 ```
 DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. Then, it will automatically create the following files:
 ```bash
-project/
+project/                    # your project directory
 |
-|--.devspace/
-|   |
-|   |-config.yaml
+|--.devspace/               # DevSpace directory
+|   |-config.yaml           # DevSpace config
 |
-|--chart/
-|--Dockerfile
+|--chart/                   # Helm chart (defines how to deploy your application)
+|   |-Chart.yaml            # chart definition (e.g. name, version)
+|   |-values.yaml           # values for the template variables
+|   |-templates/            # directory containing the template files
+|
+|--Dockerfile               # Dockerfile (defines how to build the Docker image)
 ```
 
-> You can fully customize the deployment configuration created by `devspace init`.
-
-<!-- >
 <details>
 <summary>
-### Show customization options
-
+### Learn how to customize Helm chart and image building (optional)
 </summary>
 
-#### Customize the Dockerfile
-
-#### Customize the Helm chart
-
-#### Advanced Customizations
+See the following guides to:
+- [Configure image building](../images/configuration)
+- [Add packages to your Helm chart (e.g. database)](../charts/packages)
+- [Configure persistent volumes](../charts/persistent-volumes)
+- [Set environment variables](../charts/environment-variables)
+- [Configure networking for your Helm chart (e.g. ingress)](../charts/networking)
+- [Define multiple containers in your Helm chart](../charts/containers)
+- [Add custom Kubernetes manifests (.yaml files)](../charts/custom-manifests)
+- [Configure auto-scaling within your Helm Chart](../charts/scaling)
 
 </details>
-<!-- -->
