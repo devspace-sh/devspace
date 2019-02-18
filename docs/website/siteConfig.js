@@ -19,7 +19,7 @@ const siteConfig = {
   headerLinks: [
     {href: 'http://devspace.cloud/products', label: 'Products'},
     {doc: 'getting-started/installation', label: 'Docs'},
-    {href: 'http://devspace.cloud/', label: 'Help'},
+    {href: 'http://devspace.cloud/', label: 'FAQ'},
   ],
 
   /* path to images for header/footer */

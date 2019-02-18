@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css?family=Raleway:400,500,600,700');
+
 /* your custom css */
 
 * {
@@ -156,10 +158,34 @@ summary > h6 > .hash-link {
     color: #1c65f7;
 }
 
+
+
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
 }
 
 @media only screen and (min-width: 1024px) {
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li a {
+    font-size: 16px;
+    font-family: "Raleway", sans-serif;
+    font-weight: 400;
+  }
+  
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li {
+    padding: 0 10px;
+  }
+  
+  .fixedHeaderContainer .headerWrapper header {
+    padding: 18px 5%;
+  }
+
+  .fixedHeaderContainer {
+    padding: 0;
+  }
+
+  .navPusher {
+    padding-top: 70px;
+    min-height: calc(100vh - 70px);
+  }
 }
 
 @media only screen and (max-width: 1023px) {
