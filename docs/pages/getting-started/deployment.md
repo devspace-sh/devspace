@@ -61,7 +61,7 @@ Here is a list of common kubectl commands:
 kubectl get pods
 ```
 
-> Pods are groups of containers that share a network stack. [Learn more about pods](../spaces/what-are-kubernetes-pods)
+> Pods are groups of containers that share a network stack. [Learn more about pods](../kubernetes/pods)
 
 #### View all services in your Space
 ```bash

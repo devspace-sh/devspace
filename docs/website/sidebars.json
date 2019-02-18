@@ -31,8 +31,7 @@
         "spaces/delete-spaces",
         "spaces/events-logs",
         "spaces/domains",
-        "spaces/resource-limits",
-        "spaces/what-are-kubernetes-pods"
+        "spaces/resource-limits"
     ],
     "Images & Registries": [
         "images/workflow",
@@ -56,6 +55,12 @@
         "domains/add-verify",
         "domains/connect",
         "domains/certificates"
+    ],
+    "Kubernetes": [
+        "kubernetes/overview",
+        "kubernetes/pods",
+        "kubernetes/services",
+        "kubernetes/ingresses"
     ],
     "Advanced Topics": [
         "advanced/pipelines",
