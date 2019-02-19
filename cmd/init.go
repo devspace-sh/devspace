@@ -204,6 +204,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			}
 		}
 
+		cmd.replacePlaceholder()
+
 		err := configutil.SaveBaseConfig()
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
