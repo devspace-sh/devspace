@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css?family=Raleway:400,500,600,700');
+@import url('https://fonts.googleapis.com/css?family=Play');
+
 /* your custom css */
 
 * {
@@ -156,13 +159,177 @@ summary > h6 > .hash-link {
     color: #1c65f7;
 }
 
+.responsive-hidden {
+  display: none;
+}
+
+.fixedHeaderContainer {
+  padding: 0;
+}
+
+.fixedHeaderContainer .headerWrapper {
+  height: 76px;
+}
+
+.fixedHeaderContainer .headerWrapper header {
+  /* padding: 0 5% 0 0; */
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site {
+  background-color: #223366;
+}
+
+
+.hamburger-active {
+  display: block;
+}
+
+.navigationSlider .slidingNav ul.responsive-nav {
+  display: flex;
+  width: 45px;
+  height: 35px;
+  align-items: center;
+  margin: 0;
+}
+
+.responsive-nav li {
+  display: none;
+}
+
+.responsive-nav li.hamburger-active {
+  display: inline;
+}
+
+.fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site .hamburger-active a {
+  background-image: url(../img/hamburger.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
 }
 
-@media only screen and (min-width: 1024px) {
+@media only screen and (min-width: 801px) {
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li a {
+    font-size: 16px;
+    font-family: "Raleway", sans-serif;
+    font-weight: 400;
+  }
+  
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li {
+    padding: 0 10px;
+  }
+
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:last-of-type {
+    display: none;
+  }
+  
+  
+
+ 
+
+
+  .fixedHeaderContainer {
+    padding: 0;
+  }
+
+  .navPusher {
+    padding-top: 70px;
+    min-height: calc(100vh - 70px);
+  }
+
+  .navigationSlider nav.slidingNav {
+    background: none;
+    height: auto;
+    position: relative;
+    right: auto;
+    top: auto;
+    width: auto;
+  }
+
+  .navigationSlider .slidingNav ul {
+    background: none;
+    display: flex;
+    flex-flow: row nowrap;
+    margin: 0;
+    padding: 0;
+    width: auto;
+  }
+
+  .navigationSlider {
+    margin-left: auto;
+    position: relative;
+  }
 }
 
-@media only screen and (max-width: 1023px) {
+@media only screen and (max-width: 801px) {
+  header .navigationWrapper .slidingNav {
+    width: 100%;
+    height: -webkit-fill-available;
+    position: relative;
+
+  }
+
+  header .navigationSlider {
+    width: 45px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navigationSlider.burger-open {
+    position: absolute;
+    z-index: 10;
+    width: 100vw;
+    height: 181px;
+    top: 0px;
+    left: -20px;
+  }
+
+  /* replace ::before with hamburger li which is now undisplayed */ 
+  header .burger-open nav.slidingNav::before {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    display: block;
+    content: "";
+    background-image: url(../img/cross-close.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    right: 27px;
+    top: 10px;
+    z-index: 15;
+  }
+
+  header .burger-open .slidingNav ul.responsive-nav {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    top: 0;
+    background: #223366;
+    padding-top: 34px;
+  }
+
+  header .burger-open .slidingNav ul.responsive-nav li {
+    display: block;
+    font-size: 24px;
+    font-family: "Play", sans-serif;
+    max-height: 34px;
+  }
+}
+
+@media screen and (max-width: 550px) {
+  .fixedHeaderContainer .headerWrapper header .navigationSlider {
+    margin-right: -23px;
+  }
 }
 
 @media only screen and (min-width: 1400px) {

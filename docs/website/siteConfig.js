@@ -19,11 +19,12 @@ const siteConfig = {
   headerLinks: [
     {href: 'http://devspace.cloud/products', label: 'Products'},
     {doc: 'getting-started/installation', label: 'Docs'},
-    {href: 'http://devspace.cloud/', label: 'Help'},
+    {href: 'http://devspace.cloud/', label: 'FAQ'},
+    {href: '#', label: ''},
   ],
 
   /* path to images for header/footer */
-  headerIcon: 'img/docusaurus.svg',
+  headerIcon: 'img/devspace-logo.svg',
   footerIcon: 'img/docusaurus.svg',
   favicon: 'img/favicon.png',
 
@@ -65,6 +66,7 @@ const siteConfig = {
     'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
     '/js/code-block-buttons.js',
     '/js/code-block-line-numbers.js',
+    '/js/responsive-menu.js',
   ],
 
   stylesheets: [],
@@ -73,7 +75,8 @@ const siteConfig = {
   onPageNav: 'separate',
   // No .html extensions for paths.
   cleanUrl: true,
-
+  disableHeaderTitle:true,
+  disableTitleTagline: true,
   // Show documentation's last contributor's name.
   // enableUpdateBy: true,
 
