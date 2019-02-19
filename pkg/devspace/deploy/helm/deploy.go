@@ -191,7 +191,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, config *
 
 	replace := func(value string) interface{} {
 		image := strings.Split(value, ":")
-		return image[0] + ":" + tags[value]
+		return image[0] + ":" + tags[image[0]]
 	}
 
 	walk.Walk(overwriteValues, match, replace)
