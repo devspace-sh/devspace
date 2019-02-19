@@ -119,11 +119,11 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	chartPath := *d.DeploymentConfig.Helm.ChartPath
-	values := map[interface{}]interface{}{}
+	// values := map[interface{}]interface{}{}
 	overwriteValues := map[interface{}]interface{}{}
 
 	valuesPath := filepath.Join(chartPath, "values.yaml")
-	err := yamlutil.ReadYamlFromFile(valuesPath, values)
+	err := yamlutil.ReadYamlFromFile(valuesPath, overwriteValues)
 	if err != nil {
 		return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", valuesPath, err)
 	}
@@ -154,7 +154,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	// Replace container names
 	replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
-	overwriteValues["pullSecrets"] = getPullSecrets(values, overwriteValues, config)
+	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 
 	wait := true
 	if d.DeploymentConfig.Helm.Wait != nil && *d.DeploymentConfig.Helm.Wait == false {
