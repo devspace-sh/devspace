@@ -152,7 +152,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	// Replace container names
-	replaceContainerNames(overwriteValues, config, generatedConfig, isDev)
+	replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
 	overwriteValues["pullSecrets"] = getPullSecrets(values, overwriteValues, config)
 
@@ -172,12 +172,14 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	return nil
 }
 
-func replaceContainerNames(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) {
+func replaceContainerNames(overwriteValues map[interface{}]interface{}, generatedConfig *generated.Config, isDev bool) {
 	active := generatedConfig.GetActive()
 
-	tags := active.Deploy.ImageTags
+	var tags map[string]string
 	if isDev {
 		tags = active.Dev.ImageTags
+	} else {
+		tags = active.Deploy.ImageTags
 	}
 
 	match := func(key, value string) bool {
