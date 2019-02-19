@@ -183,6 +183,8 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 	}
 
 	match := func(key, value string) bool {
+		value = strings.TrimSpace(value)
+
 		image := strings.Split(value, ":")
 		if _, ok := tags[image[0]]; ok {
 			return true
@@ -192,6 +194,8 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 	}
 
 	replace := func(value string) interface{} {
+		value = strings.TrimSpace(value)
+
 		image := strings.Split(value, ":")
 		return image[0] + ":" + tags[image[0]]
 	}
