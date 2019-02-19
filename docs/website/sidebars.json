@@ -74,7 +74,6 @@
     ],
     "CLI Reference": [
         "cli/overview",
-        "cli/convert",
         "cli/deploy",
         "cli/dev",
         "cli/down",
@@ -107,6 +106,7 @@
         "cli/remove/sync",
         "cli/status/deployments",
         "cli/status/sync",
+        "cli/update/config",
         "cli/use/config",
         "cli/use/context",
         "cli/use/registry",
