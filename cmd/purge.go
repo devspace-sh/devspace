@@ -15,32 +15,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DownCmd holds the required data for the down cmd
-type DownCmd struct {
-	flags *DownCmdFlags
+// PurgeCmd holds the required data for the purge cmd
+type PurgeCmd struct {
+	flags *PurgeCmdFlags
 }
 
-// DownCmdFlags holds the possible down cmd flags
-type DownCmdFlags struct {
+// PurgeCmdFlags holds the possible down cmd flags
+type PurgeCmdFlags struct {
 	config     string
 	deployment string
 }
 
 func init() {
-	cmd := &DownCmd{
-		flags: &DownCmdFlags{},
+	cmd := &PurgeCmd{
+		flags: &PurgeCmdFlags{},
 	}
 
 	cobraCmd := &cobra.Command{
-		Use:   "down",
-		Short: "Shutdown your DevSpace",
+		Use:   "purge",
+		Short: "Delete the devspace",
 		Long: `
 #######################################################
-################### devspace down #####################
+################### devspace purge ####################
 #######################################################
-Stops your DevSpace by removing the release via helm.
-If you want to remove all DevSpace related data from
-your project, use: devspace reset
+Deletes the deployed devspace. 
+Warning: will delete everything that is defined in the 
+chart, including persistent volume claims!
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
@@ -52,8 +52,8 @@ your project, use: devspace reset
 	rootCmd.AddCommand(cobraCmd)
 }
 
-// Run executes the down command logic
-func (cmd *DownCmd) Run(cobraCmd *cobra.Command, args []string) {
+// Run executes the purge command logic
+func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
 	}

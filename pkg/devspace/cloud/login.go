@@ -14,7 +14,7 @@ import (
 const LoginEndpoint = "/login"
 
 // LoginSuccessEndpoint is the url redirected to after successful login
-const LoginSuccessEndpoint = "/loginSuccess"
+const LoginSuccessEndpoint = "/login-success"
 
 // ReLogin loggs the user in with the given token or via browser
 func ReLogin(providerConfig ProviderConfig, cloudProvider string, token *string, log log.Logger) error {

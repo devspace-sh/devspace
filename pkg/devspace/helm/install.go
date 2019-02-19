@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
@@ -116,10 +118,11 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		if err != nil {
 			// Delete release and redeploy
 			if strings.Index(err.Error(), "cannot re-use a name that is still in use") != -1 {
-				// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
-				_, err := helmClientWrapper.DeleteRelease(releaseName, true)
+				log.Warn("Rolling back chart because of previous error")
+
+				_, err := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
 				if err != nil {
-					return nil, fmt.Errorf("Error deleting release %s: %v", releaseName, err)
+					return nil, fmt.Errorf("Error rolling back release %s: %v\nRun `%s` to force delete the chart. Warning: purging will also delete in the chart defined persistent volume claims", releaseName, err, ansi.Color("devspace purge", "white+b"))
 				}
 			} else {
 				return nil, err
