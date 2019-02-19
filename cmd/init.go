@@ -35,6 +35,9 @@ type InitCmd struct {
 	flags          *InitCmdFlags
 	chartGenerator *generator.ChartGenerator
 	defaultImage   *latest.ImageConfig
+
+	port      string
+	imageName string
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -48,9 +51,10 @@ type InitCmdFlags struct {
 
 // InitCmdFlagsDefault are the default flags for InitCmdFlags
 var InitCmdFlagsDefault = &InitCmdFlags{
-	reconfigure:      false,
-	overwrite:        false,
-	useCloud:         true,
+	reconfigure: false,
+	overwrite:   false,
+	useCloud:    true,
+
 	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
 	templateRepoPath: "",
 }
@@ -192,6 +196,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.addDefaultSyncConfig()
 		cmd.configureImage()
 
+		// Get image name
+		if len(*config.Images) > 0 {
+			for _, imageConf := range *config.Images {
+				cmd.imageName = *imageConf.Name
+				break
+			}
+		}
+
 		err := configutil.SaveBaseConfig()
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
@@ -212,6 +224,22 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Infof("\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	} else {
 		log.Infof("Run `%s` to deploy application", ansi.Color("devspace deploy", "white+b"))
+	}
+}
+
+func (cmd *InitCmd) replacePlaceholder() {
+	data, err := ioutil.ReadFile("chart/values.yaml")
+	if err != nil {
+		log.Fatal("Couldn't find chart/values.yaml")
+	}
+
+	newContent := string(data)
+	newContent = strings.Replace(newContent, "#image#", cmd.imageName, -1)
+	newContent = strings.Replace(newContent, "#port#", cmd.port, -1)
+
+	err = ioutil.WriteFile("chart/values.yaml", []byte(newContent), 0644)
+	if err != nil {
+		log.Fatal("Error writing chart/values.yaml")
 	}
 }
 
@@ -263,27 +291,30 @@ func (cmd *InitCmd) addDefaultSelector() {
 
 func (cmd *InitCmd) addDefaultPorts() {
 	port := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question: "Which port is the app listening on? (Enter to skip)",
+		Question: "Which port is the app listening on? (Default: 3000)",
 	})
-
-	if port != "" {
-		portMappings := []*latest.PortMapping{}
-		exposedPort, err := strconv.Atoi(port)
-		if err == nil {
-			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort:  &exposedPort,
-				RemotePort: &exposedPort,
-			})
-		}
-
-		config := configutil.GetConfig()
-		config.Dev.Ports = &[]*latest.PortForwardingConfig{
-			{
-				Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
-				PortMappings: &portMappings,
-			},
-		}
+	if port == "" {
+		port = "3000"
 	}
+
+	portMappings := []*latest.PortMapping{}
+	exposedPort, err := strconv.Atoi(port)
+	if err == nil {
+		portMappings = append(portMappings, &latest.PortMapping{
+			LocalPort:  &exposedPort,
+			RemotePort: &exposedPort,
+		})
+	}
+
+	config := configutil.GetConfig()
+	config.Dev.Ports = &[]*latest.PortForwardingConfig{
+		{
+			Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
+			PortMappings: &portMappings,
+		},
+	}
+
+	cmd.port = port
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {

@@ -2,6 +2,7 @@ package stdinutil
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 
 	survey "gopkg.in/AlecAivazis/survey.v1"
@@ -69,6 +70,10 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		}{}
 		err := survey.Ask(question, &answers)
 		if err != nil {
+			if params.Options != nil {
+				os.Exit(0)
+			}
+
 			fmt.Println("\n", err.Error())
 			continue
 		}

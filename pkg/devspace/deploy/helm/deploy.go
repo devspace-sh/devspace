@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/hash"
@@ -149,11 +151,8 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.OverrideValues)
 	}
 
-	// Set containers and pull secrets values
-	overwriteValues["containers"], err = getContainerValues(overwriteValues, config, generatedConfig, isDev)
-	if err != nil {
-		return err
-	}
+	// Replace container names
+	replaceContainerNames(overwriteValues, config, generatedConfig, isDev)
 
 	overwriteValues["pullSecrets"] = getPullSecrets(values, overwriteValues, config)
 
@@ -173,31 +172,29 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	return nil
 }
 
-func getContainerValues(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) (map[interface{}]interface{}, error) {
-	var err error
-	overwriteContainerValues := map[interface{}]interface{}{}
-	overwriteContainerValuesFromFile, containerValuesExisting := overwriteValues["containers"]
-	if containerValuesExisting {
-		overwriteContainerValues = overwriteContainerValuesFromFile.(map[interface{}]interface{})
+func replaceContainerNames(overwriteValues map[interface{}]interface{}, config *v1.Config, generatedConfig *generated.Config, isDev bool) {
+	active := generatedConfig.GetActive()
+
+	tags := active.Deploy.ImageTags
+	if isDev {
+		tags = active.Dev.ImageTags
 	}
 
-	for imageName, imageConf := range *config.Images {
-		container := map[interface{}]interface{}{}
-		existingContainer, containerExists := overwriteContainerValues[imageName]
-
-		if containerExists {
-			container = existingContainer.(map[interface{}]interface{})
+	match := func(key, value string) bool {
+		image := strings.Split(value, ":")
+		if _, ok := tags[image[0]]; ok {
+			return true
 		}
 
-		container["image"], err = registry.GetImageWithTag(generatedConfig, imageConf, isDev)
-		if err != nil {
-			return nil, err
-		}
-
-		overwriteContainerValues[imageName] = container
+		return false
 	}
 
-	return overwriteContainerValues, nil
+	replace := func(value string) interface{} {
+		image := strings.Split(value, ":")
+		return image[0] + ":" + tags[value]
+	}
+
+	walk.Walk(overwriteValues, match, replace)
 }
 
 func getPullSecrets(values, overwriteValues map[interface{}]interface{}, config *v1.Config) []interface{} {
