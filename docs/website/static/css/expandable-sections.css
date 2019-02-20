@@ -43,7 +43,13 @@ summary > h5,
 summary > h6 {
     display: inline-block;
     margin: 0.5em 0;
-    margin-left: 1em;
+    margin-left: 22px;
+}
+
+summary > h4,
+summary > h5,
+summary > h6 {
+    margin-top: 0.7em;
 }
 
 summary > h1 > .hash-link,
