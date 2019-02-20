@@ -167,7 +167,7 @@
     }
     
     .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site .hamburger-active a {
-      background-image: url(../img/hamburger.svg);
+      background-image: url(/img/hamburger.svg);
       background-position: center;
       background-repeat: no-repeat;
       height: 100%;
@@ -194,7 +194,7 @@
     }
   
     .fixedHeaderContainer .headerWrapper header .navigationWrapper.burger-open .slidingNav .nav-site .hamburger-active a {
-      background-image: url(../img/cross-close.svg);
+      background-image: url(/img/cross-close.svg);
       background-position: center;
       background-repeat: no-repeat;
       background-size: contain;

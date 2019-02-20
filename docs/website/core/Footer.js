@@ -26,15 +26,15 @@ class Footer extends React.Component {
       <footer className="nav-footer" id="footer">
         <div className="footer-container">
           <div className="devspace-company">
-              <img src="../img/devspace-logo.svg" />
+              <img src="/img/devspace-logo.svg" />
               DevSpace CLI and DevSpace.cloud are products developed by the covexo GmbH. 
               The terms "DevSpace" and "covexo" are registered trademarks of the covexo GmbH.
           </div>
           <div className="social-networks">
-              <a className="fb-icon" href="https://www.facebook.com/covexo" target="_blank"><img src="../img/facebook-square.svg" /></a>
-              <a className="twitter-icon" href="https://twitter.com/covexo" target="_blank"><img src="../img/twitter-square.svg" /></a>
-              <a className="sof-icon" href="https://stackoverflow.com/questions/tagged/devspace" target="_blank"><img src="../img/stackoverflow-square.svg" /></a>
-              <a className="gh-icon" href="https://github.com/covexo/devspace" target="_blank"><img src="../img/github-square.svg" /></a>
+              <a className="fb-icon" href="https://www.facebook.com/covexo" target="_blank"><img src="/img/facebook-square.svg" /></a>
+              <a className="twitter-icon" href="https://twitter.com/covexo" target="_blank"><img src="/img/twitter-square.svg" /></a>
+              <a className="sof-icon" href="https://stackoverflow.com/questions/tagged/devspace" target="_blank"><img src="/img/stackoverflow-square.svg" /></a>
+              <a className="gh-icon" href="https://github.com/covexo/devspace" target="_blank"><img src="/img/github-square.svg" /></a>
           </div>
           <div className="doc-links">
             <div className="links">
