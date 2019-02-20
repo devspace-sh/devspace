@@ -85,6 +85,7 @@ const siteConfig = {
 
   customDocsPath: 'pages',
   docsSideNavCollapsible: true,
+  editUrl: 'https://github.com/devspace-cloud/devspace/edit/master/docs/pages/',
 };
 
 module.exports = siteConfig;
