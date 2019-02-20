@@ -130,6 +130,11 @@ body .navPusher {
     display: none;
 }
 
+.navPusher .docMainWrapper {
+  max-width: 1600px;
+  padding: 0 5%;
+}
+
 /* nav group titles */
 .toc .toggleNav .navGroup .navGroupCategoryTitle {
     padding-left: 18px;
@@ -251,7 +256,7 @@ body .navPusher {
     display: none;
   }
 
-  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(4) {
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(5) {
     background-color: #00bdff;
     color: #fff;
     border-radius: 5px;
@@ -260,12 +265,12 @@ body .navPusher {
     font-family: "Play", sans-serif;
   }
 
-  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(4):hover {
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(5):hover {
     border: none;
     background-color: #00bbffb2;
   }
 
-  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(4) a {
+  .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li:nth-of-type(5) a {
     font-family: "Play", sans-serif;
   }
 
