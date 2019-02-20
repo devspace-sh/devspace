@@ -42,6 +42,7 @@
     ],
     "Charts": [
         "charts/what-are-helm-charts",
+        "charts/devspace-chart",
         "charts/packages",
         "charts/persistent-volumes",
         "charts/environment-variables",
