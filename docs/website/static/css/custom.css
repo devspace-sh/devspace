@@ -118,6 +118,10 @@ summary > h6 > .hash-link {
     padding-right: 40px;
 }
 
+body .navPusher {
+  padding-top: 76px;
+}
+
 .docLastUpdate {
     text-align: left;
 }
