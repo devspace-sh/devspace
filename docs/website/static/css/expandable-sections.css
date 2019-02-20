@@ -1,0 +1,55 @@
+details {
+    margin: 14px 0;
+    padding-left: 34px;
+}
+
+details[open] {
+    padding-bottom: 5px;
+}
+
+details details,
+details blockquote,
+details pre {
+    margin-right: 30px;
+}
+
+summary {
+    margin-left: -34px;
+    padding-left: 16px;
+    padding-bottom: 0.3em;
+    cursor: pointer;
+}
+
+details[open] > summary {
+    padding-bottom: 0;
+}
+
+summary > p:empty {
+    display: none;
+}
+
+summary > h1,
+summary > h2,
+summary > h3,
+summary > h4,
+summary > h5,
+summary > h6 {
+    display: inline-block;
+    margin: 0.5em 0;
+    margin-left: 1em;
+}
+
+summary > h1 > .hash-link,
+summary > h2 > .hash-link,
+summary > h3 > .hash-link,
+summary > h4 > .hash-link,
+summary > h5 > .hash-link,
+summary > h6 > .hash-link {
+    margin-left: -60px;
+    padding-right: 40px;
+}
+
+summary::-webkit-details-marker {
+    position: absolute;
+    margin-top: 1.2em;
+}
