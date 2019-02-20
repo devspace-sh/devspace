@@ -151,9 +151,11 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.OverrideValues)
 	}
 
-	// Replace container names
+	// Replace image names
 	replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
+	// Set images and pull secrets values
+	overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
 	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 
 	wait := true
@@ -170,6 +172,35 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
 
 	return nil
+}
+
+func getImageValues(config *v1.Config, generatedConfig *generated.Config, isDev bool) map[interface{}]interface{} {
+	active := generatedConfig.GetActive()
+
+	var tags map[string]string
+	if isDev {
+		tags = active.Dev.ImageTags
+	} else {
+		tags = active.Deploy.ImageTags
+	}
+
+	overwriteContainerValues := map[interface{}]interface{}{}
+	if config.Images != nil {
+		for imageName, imageConf := range *config.Images {
+			tag := tags[*imageConf.Name]
+			if imageConf.Tag != nil {
+				tag = *imageConf.Tag
+			}
+
+			overwriteContainerValues[imageName] = map[interface{}]interface{}{
+				"image": *imageConf.Name + ":" + tag,
+				"tag":   tag,
+				"repo":  *imageConf.Name,
+			}
+		}
+	}
+
+	return overwriteContainerValues
 }
 
 func replaceContainerNames(overwriteValues map[interface{}]interface{}, generatedConfig *generated.Config, isDev bool) {

@@ -33,14 +33,14 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "purge",
-		Short: "Delete the devspace",
+		Short: "Delete all deployed kubernetes resources",
 		Long: `
 #######################################################
 ################### devspace purge ####################
 #######################################################
-Deletes the deployed devspace. 
+Deletes the deployed kuberenetes resources. 
 Warning: will delete everything that is defined in the 
-chart, including persistent volume claims!
+local chart, including persistent volume claims!
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
