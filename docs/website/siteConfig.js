@@ -18,8 +18,10 @@ const siteConfig = {
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
     {href: 'http://devspace.cloud/products', label: 'Products'},
+    {href: 'http://devspace.cloud/about', label: 'About'},
     {doc: 'getting-started/installation', label: 'Docs'},
-    {href: 'http://devspace.cloud/', label: 'FAQ'},
+    {href: 'http://devspace.cloud/', label: 'Help'},
+    {href: 'https://devspace.cloud/getting-started', label: 'LOGIN'},
     {href: '#', label: ''},
   ],
 
@@ -69,7 +71,9 @@ const siteConfig = {
     '/js/responsive-menu.js',
   ],
 
-  stylesheets: [],
+  stylesheets: [
+    "https://fonts.googleapis.com/css?family=Play|Raleway:400,500,600"
+  ],
 
   // On page navigation for the current documentation page.
   onPageNav: 'separate',
