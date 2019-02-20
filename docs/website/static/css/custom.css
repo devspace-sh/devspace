@@ -38,6 +38,10 @@ details,
     box-shadow: 0 0 20px rgba(35,51,102,.2);
 }
 
+pre {
+    margin-top: 0.4em;
+}
+
 pre .btnIcon {
     margin-top: 3px;
     margin-right: -10px;
