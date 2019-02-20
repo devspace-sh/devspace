@@ -7,15 +7,14 @@ details[open] {
     padding-bottom: 5px;
 }
 
-details details,
-details blockquote,
-details pre {
-    margin-right: 30px;
+details {
+    padding-right: 30px;
 }
 
 summary {
     position: relative;
     margin-left: -34px;
+    margin-right: -20px;
     padding-left: 16px;
     padding-bottom: 0.3em;
     cursor: pointer;
