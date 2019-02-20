@@ -14,10 +14,17 @@ details pre {
 }
 
 summary {
+    position: relative;
     margin-left: -34px;
     padding-left: 16px;
     padding-bottom: 0.3em;
     cursor: pointer;
+}
+
+summary::-webkit-details-marker {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%)
 }
 
 details[open] > summary {
@@ -47,9 +54,4 @@ summary > h5 > .hash-link,
 summary > h6 > .hash-link {
     margin-left: -60px;
     padding-right: 40px;
-}
-
-summary::-webkit-details-marker {
-    position: absolute;
-    margin-top: 1.2em;
 }
