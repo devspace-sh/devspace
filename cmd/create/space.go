@@ -78,6 +78,9 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		projectID = projects[0].ProjectID
 	}
 
+	log.StartWait("Creating space " + args[0])
+	defer log.StopWait()
+
 	// Create space
 	spaceID, err := provider.CreateSpace(args[0], projectID, nil)
 	if err != nil {
@@ -145,6 +148,7 @@ func createProject(p *cloud.Provider) (int, error) {
 			clustersArr = append(clustersArr, name)
 		}
 
+		log.StopWait()
 		chosenCluster := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:     "Which cluster do you want to use?",
 			DefaultValue: clustersArr[0],

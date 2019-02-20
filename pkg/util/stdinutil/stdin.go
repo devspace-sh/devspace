@@ -70,12 +70,7 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		}{}
 		err := survey.Ask(question, &answers)
 		if err != nil {
-			if params.Options != nil {
-				os.Exit(0)
-			}
-
-			fmt.Println("\n", err.Error())
-			continue
+			os.Exit(0)
 		}
 
 		result = &answers.Question

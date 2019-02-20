@@ -11,7 +11,7 @@ import (
 )
 
 // LoginEndpoint is the cloud endpoint that will log you in
-const LoginEndpoint = "/login"
+const LoginEndpoint = "/login?cli=true"
 
 // LoginSuccessEndpoint is the url redirected to after successful login
 const LoginSuccessEndpoint = "/login-success"
