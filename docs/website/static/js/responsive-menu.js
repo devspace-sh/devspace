@@ -2,6 +2,7 @@
 /* eslint-disable */
 window.addEventListener('load', function() {
   var width = window.innerWidth;
+
   var ul = document.getElementsByClassName("nav-site")[0];
   var lis = ul.querySelectorAll("li");
   var li = lis[lis.length - 1];
@@ -32,7 +33,14 @@ window.addEventListener('load', function() {
 
     if(width < 801 && !burgerIsOpen) {
       navWrapper.classList += " burger-open";
-      li.style.display = "none"
+      li.removeEventListener("click", onHamburgerClick)
+      li.addEventListener("click", onCloseClick)
     }
+  }
+
+  function onCloseClick() {
+    navWrapper.classList = "navigationWrapper navigationSlider";
+    li.removeEventListener("click", onCloseClick)
+    li.addEventListener("click", onHamburgerClick)
   }
 });

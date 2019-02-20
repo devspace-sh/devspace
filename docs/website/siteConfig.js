@@ -20,6 +20,7 @@ const siteConfig = {
     {href: 'http://devspace.cloud/products', label: 'Products'},
     {doc: 'getting-started/installation', label: 'Docs'},
     {href: 'http://devspace.cloud/', label: 'FAQ'},
+    {href: 'https://devspace.cloud/getting-started', label: 'GET STARTED'},
     {href: '#', label: ''},
   ],
 
@@ -69,7 +70,9 @@ const siteConfig = {
     '/js/responsive-menu.js',
   ],
 
-  stylesheets: [],
+  stylesheets: [
+    "https://fonts.googleapis.com/css?family=Play|Raleway:400,500,600"
+  ],
 
   // On page navigation for the current documentation page.
   onPageNav: 'separate',
