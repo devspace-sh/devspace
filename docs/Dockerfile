@@ -1,10 +1,18 @@
 FROM node:8.11.4
+FROM node:8.11.4
 
+RUN mkdir -p /app/website
 WORKDIR /app/website
 
-EXPOSE 3000 35729
-COPY ./docs /app/docs
-COPY ./website /app/website
-RUN yarn install
+COPY website/package.json .
+RUN npm install
 
-CMD ["yarn", "start"]
+COPY . /app
+
+# Application port
+EXPOSE 3000
+
+# Remote debugging port
+EXPOSE 9229
+
+CMD ["npm", "start"]

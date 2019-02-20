@@ -1,0 +1,32 @@
+components:
+- name: default
+  containers:
+  - # Image tag will be automatically updated in runtime
+    # when running devspace deploy or devspace dev
+    image: test.dscr.io/lukasgentele/devspace
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "300Mi"
+        ephemeralStorage: "1Gi"
+    # Environment variables
+    env: []
+    # Mount volumes in this container
+    volumeMounts: []
+  # Expose your component via service
+  # URLs will be connected if name=external and externalPort=80
+  service:
+    name: external
+    type: ClusterIP
+    ports:
+    - externalPort: 80
+      containerPort: 3000
+
+# Define persistent volumes here
+# Then mount them in containers above
+volumes: []
+
+# Defines image pull secrets
+# DevSpace.cli will append all pull secrets which are automatically created
+# More infos on: https://devspace.cloud/docs/images/pull-secrets
+pullSecrets: []
