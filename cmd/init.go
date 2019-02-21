@@ -137,6 +137,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config.Dev.AutoReload = &latest.AutoReloadConfig{
 			Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
 		}
+
+		// Override Entrypoint
+		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
+			&latest.ImageOverrideConfig{
+				Name:       ptr.String("default"),
+				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
+			},
+		}
 	}
 
 	configutil.Merge(&config, &latest.Config{
@@ -168,13 +176,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Create chart and dockerfile
-	if createChart {
-		cmd.initChartGenerator()
-		cmd.determineLanguage()
-		cmd.createChart()
-	}
-
 	if cmd.flags.reconfigure || !configExists {
 		// Check if devspace cloud should be used
 		if cmd.flags.useCloud == false {
@@ -182,6 +183,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		} else {
 			// Configure cloud provider
 			config.Cluster.CloudProvider = ptr.String(cloud.DevSpaceCloudProviderName)
+
+			// Print target
+			log.Infof("Using devspace.cloud - if you want to use your cluster run `%s`", ansi.Color("devspace init --cloud=false", "white+b"))
 
 			// Login and login into registries if necessary
 			_, err := cloud.GetCurrentProvider(log.GetInstance())
@@ -204,8 +208,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			}
 		}
 
-		cmd.replacePlaceholder()
-
 		err := configutil.SaveBaseConfig()
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
@@ -220,12 +222,21 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Create chart and dockerfile
+	if createChart {
+		cmd.initChartGenerator()
+		cmd.determineLanguage()
+		cmd.createChart()
+
+		cmd.replacePlaceholder()
+	}
+
 	log.Done("Project successfully initialized")
 
 	if cmd.flags.useCloud {
 		log.Infof("\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	} else {
-		log.Infof("Run `%s` to deploy application", ansi.Color("devspace deploy", "white+b"))
+		log.Infof("Run:\n- `%s` to develop application\n- `%s` to deploy application", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 }
 
@@ -270,7 +281,7 @@ func (cmd *InitCmd) configureDevSpace() {
 	}
 
 	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:     "Which Kubernetes namespace should your application run in?",
+		Question:     "Which namespace should the app run in?",
 		DefaultValue: "default",
 	})
 
@@ -285,7 +296,8 @@ func (cmd *InitCmd) addDefaultSelector() {
 		{
 			Name: ptr.String(configutil.DefaultDevspaceServiceName),
 			LabelSelector: &map[string]*string{
-				"devspace": ptr.String("default"),
+				"app.kubernetes.io/name":      ptr.String("devspace-app"),
+				"app.kubernetes.io/component": ptr.String("default"),
 			},
 		},
 	}

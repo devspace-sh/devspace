@@ -41,7 +41,7 @@ func NewAnalyzeCmd() *cobra.Command {
 	}
 
 	analyzeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The kubernetes namespace to analyze")
-	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to become running")
+	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
 
 	return analyzeCmd
 }
@@ -54,31 +54,17 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	namespace := "default"
-	if configExists == true {
+	// Create kubectl client either from config or take the active current context
+	var client *kubernetes.Clientset
+	var config *rest.Config
+
+	if configExists {
 		// Configure cloud provider
 		err = cloud.Configure(log.GetInstance())
 		if err != nil {
 			log.Fatalf("Unable to configure cloud provider: %v", err)
 		}
 
-		config := configutil.GetConfig()
-		defaultNamespace, err := configutil.GetDefaultNamespace(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		namespace = defaultNamespace
-	}
-	if cmd.Namespace != "" {
-		namespace = cmd.Namespace
-	}
-
-	// Create kubectl client either from config or take the active current context
-	var client *kubernetes.Clientset
-	var config *rest.Config
-
-	if configExists {
 		config, err = kubectl.GetClientConfig()
 		if err != nil {
 			log.Fatal(err)
@@ -99,6 +85,26 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	namespace := ""
+	if configExists == true {
+		config := configutil.GetConfig()
+
+		namespace, err = configutil.GetDefaultNamespace(config)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		namespace, err = configutil.GetDefaultNamespace(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Override namespace
+	if cmd.Namespace != "" {
+		namespace = cmd.Namespace
 	}
 
 	err = analyze.Analyze(client, config, namespace, !cmd.Wait, log.GetInstance())

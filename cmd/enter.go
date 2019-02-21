@@ -60,6 +60,7 @@ devspace enter bash -l release=test
 
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
+	// Set config root
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
 	}

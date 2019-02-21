@@ -50,6 +50,16 @@ local chart, including persistent volume claims!
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
+
+	var purgeAlias = &cobra.Command{
+		Use:   "down",
+		Short: "alias for devspace purge (deprecated)",
+		Run: func(cobraCmd *cobra.Command, args []string) {
+			log.Warn("`devspace down` is deprecated, please use `devspace purge` in future")
+			cmd.Run(cobraCmd, args)
+		},
+	}
+	rootCmd.AddCommand(purgeAlias)
 }
 
 // Run executes the purge command logic

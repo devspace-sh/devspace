@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
+	"github.com/covexo/devspace/pkg/util/log"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 )
 
@@ -70,6 +72,12 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		}{}
 		err := survey.Ask(question, &answers)
 		if err != nil {
+			if strings.HasPrefix(err.Error(), "Answer has to match pattern") {
+				log.Info(err.Error())
+				continue
+			}
+
+			// Keyboard interrupt
 			os.Exit(0)
 		}
 

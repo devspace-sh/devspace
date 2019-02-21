@@ -29,7 +29,11 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 		}
 
 		var labelSelector map[string]*string
-		namespace := ""
+		namespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return nil, err
+		}
+
 		containerName := ""
 
 		if syncPath.Selector != nil {

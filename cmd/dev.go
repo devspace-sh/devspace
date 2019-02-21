@@ -108,6 +108,16 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
 
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+
+	var devAlias = &cobra.Command{
+		Use:   "up",
+		Short: "alias for devspace dev (deprecated)",
+		Run: func(cobraCmd *cobra.Command, args []string) {
+			log.Warn("`devspace up` is deprecated, please use `devspace dev` in future")
+			cmd.Run(cobraCmd, args)
+		},
+	}
+	rootCmd.AddCommand(devAlias)
 }
 
 // Run executes the command logic

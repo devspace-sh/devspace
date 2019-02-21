@@ -2,19 +2,13 @@ package services
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"time"
-
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
-	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
@@ -71,7 +65,12 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 		containerName = containerNameOverride
 	}
 
-	wrapper, upgradeRoundTripper, err := getUpgraderWrapper()
+	kubeconfig, err := kubectl.GetClientConfig()
+	if err != nil {
+		return err
+	}
+
+	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -91,116 +90,6 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 	err = <-interrupt
 	upgradeRoundTripper.Close()
 	return err
-}
-
-func getSelectorNamespaceLabelSelector(serviceNameOverride, labelSelectorOverride, namespaceOverride string) (*v1.SelectorConfig, string, string, error) {
-	config := configutil.GetConfig()
-
-	var selector *v1.SelectorConfig
-	selectorName := "default"
-
-	if serviceNameOverride == "" {
-		if config.Dev.Terminal != nil && config.Dev.Terminal.Selector != nil {
-			selectorName = *config.Dev.Terminal.Selector
-		}
-	} else {
-		selectorName = serviceNameOverride
-	}
-
-	if selectorName != "" {
-		var err error
-
-		selector, err = configutil.GetSelector(selectorName)
-		if err != nil && selectorName != "default" {
-			return nil, "", "", fmt.Errorf("Error resolving service name: %v", err)
-		}
-	}
-
-	// Select pods
-	namespace := ""
-	if namespaceOverride == "" {
-		if selector != nil && selector.Namespace != nil {
-			namespace = *selector.Namespace
-		} else {
-			if config.Dev.Terminal != nil && config.Dev.Terminal.Namespace != nil {
-				namespace = *config.Dev.Terminal.Namespace
-			}
-		}
-	} else {
-		namespace = namespaceOverride
-	}
-
-	labelSelector := ""
-	// Retrieve pod from label selector
-	if labelSelectorOverride == "" {
-		labelSelector = "release=" + GetNameOfFirstHelmDeployment()
-
-		if selector != nil {
-			labels := make([]string, 0, len(*selector.LabelSelector)-1)
-			for key, value := range *selector.LabelSelector {
-				labels = append(labels, key+"="+*value)
-			}
-
-			labelSelector = strings.Join(labels, ", ")
-		} else {
-			if config.Dev.Terminal != nil && config.Dev.Terminal.LabelSelector != nil {
-				labels := make([]string, 0, len(*config.Dev.Terminal.LabelSelector))
-				for key, value := range *config.Dev.Terminal.LabelSelector {
-					labels = append(labels, key+"="+*value)
-				}
-
-				labelSelector = strings.Join(labels, ", ")
-			}
-		}
-	} else {
-		labelSelector = labelSelectorOverride
-	}
-
-	return selector, namespace, labelSelector, nil
-}
-
-type upgraderWrapper struct {
-	Upgrader    spdy.Upgrader
-	Connections []httpstream.Connection
-}
-
-func (uw *upgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connection, error) {
-	conn, err := uw.Upgrader.NewConnection(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	uw.Connections = append(uw.Connections, conn)
-
-	return conn, nil
-}
-
-func (uw *upgraderWrapper) Close() error {
-	for _, conn := range uw.Connections {
-		err := conn.Close()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func getUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error) {
-	kubeconfig, err := kubectl.GetClientConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(kubeconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return wrapper, &upgraderWrapper{
-		Upgrader:    upgradeRoundTripper,
-		Connections: make([]httpstream.Connection, 0, 1),
-	}, nil
 }
 
 // GetNameOfFirstHelmDeployment retrieves the first helm deployment name

@@ -22,7 +22,10 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 
 		for _, portForwarding := range *config.Dev.Ports {
 			var labelSelector map[string]*string
-			namespace := ""
+			namespace, err := configutil.GetDefaultNamespace(config)
+			if err != nil {
+				return nil, err
+			}
 
 			if portForwarding.Selector != nil {
 				selector, err := configutil.GetSelector(*portForwarding.Selector)

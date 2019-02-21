@@ -16,7 +16,7 @@ import (
 // DefaultImageName is the default image name
 const DefaultImageName = "devspace"
 
-// Image configures the image name
+// Image configures the image name on devspace init
 func Image(dockerUsername string, isCloud bool) error {
 	config := configutil.GetConfig()
 	registryURL := ""

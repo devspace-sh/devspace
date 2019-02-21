@@ -46,7 +46,7 @@ var LoadedConfig string
 const DefaultDevspaceServiceName = "default"
 
 // DefaultDevspaceDeploymentName is the name of the initial default deployment
-const DefaultDevspaceDeploymentName = "devspace-default"
+const DefaultDevspaceDeploymentName = "devspace-app"
 
 // Global config vars
 var config *latest.Config    // merged config
@@ -374,11 +374,11 @@ func GetSelector(selectorName string) (*latest.SelectorConfig, error) {
 
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
 func GetDefaultNamespace(config *latest.Config) (string, error) {
-	if config.Cluster != nil && config.Cluster.Namespace != nil {
+	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil {
 		return *config.Cluster.Namespace, nil
 	}
 
-	if config.Cluster == nil || config.Cluster.APIServer == nil {
+	if config == nil || config.Cluster == nil || config.Cluster.APIServer == nil {
 		kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 		if err != nil {
 			return "", err
