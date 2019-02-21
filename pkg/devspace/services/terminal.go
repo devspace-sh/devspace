@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -8,12 +9,13 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, args []string, interrupt chan error, log log.Logger) error {
+func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, pick bool, args []string, interrupt chan error, log log.Logger) error {
 	var command []string
 	config := configutil.GetConfig()
 
@@ -43,26 +45,50 @@ func StartTerminal(client *kubernetes.Clientset, selectorNameOverride, container
 		return err
 	}
 
-	// Get first running pod
-	log.StartWait("Terminal: Waiting for pods...")
-	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace, time.Second*120)
-	log.StopWait()
-	if err != nil {
-		return fmt.Errorf("Error starting terminal: Cannot find running pod: %v", err)
-	}
+	var pod *v1.Pod
+	var container *v1.Container
+	var containerName string
 
-	// Get container name
-	containerName := pod.Spec.Containers[0].Name
-	if containerNameOverride == "" {
-		if selector != nil && selector.ContainerName != nil {
-			containerName = *selector.ContainerName
+	if pick {
+		pod, container, err = SelectContainer(client, namespace, nil, nil)
+		if err != nil {
+			return err
+		}
+		if pod == nil || container == nil {
+			return fmt.Errorf("No pod found")
+		}
+
+		containerName = container.Name
+	} else {
+		// Get first running pod
+		log.StartWait("Terminal: Waiting for pods...")
+		pod, err = kubectl.GetNewestRunningPod(client, labelSelector, namespace, time.Second*5)
+		log.StopWait()
+		if err != nil {
+			pod, container, err = SelectContainer(client, namespace, nil, nil)
+			if err != nil {
+				return fmt.Errorf("Error starting terminal: Cannot find running pod: %v", err)
+			}
+			if pod == nil || container == nil {
+				return errors.New("Error starting terminal: Cannot find a running pod")
+			}
+
+			containerName = container.Name
 		} else {
-			if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.ContainerName != nil {
-				containerName = *config.Dev.Terminal.ContainerName
+			// Get container name
+			containerName = pod.Spec.Containers[0].Name
+			if containerNameOverride == "" {
+				if selector != nil && selector.ContainerName != nil {
+					containerName = *selector.ContainerName
+				} else {
+					if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.ContainerName != nil {
+						containerName = *config.Dev.Terminal.ContainerName
+					}
+				}
+			} else {
+				containerName = containerNameOverride
 			}
 		}
-	} else {
-		containerName = containerNameOverride
 	}
 
 	kubeconfig, err := kubectl.GetClientConfig()

@@ -60,7 +60,7 @@ func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string
 
 func printReport(report []*reportItem, log log.Logger) {
 	if len(report) == 0 {
-		log.WriteString(fmt.Sprintf("\n%sNo problems found.\n\n", paddingLeft))
+		log.WriteString(fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs -p", "white+b")))
 	} else {
 		log.WriteString("\n")
 

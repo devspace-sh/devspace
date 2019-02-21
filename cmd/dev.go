@@ -301,7 +301,7 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 	}
 
 	if flags.terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
-		return services.StartTerminal(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, args, exitChan, log)
+		return services.StartTerminal(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, false, args, exitChan, log)
 	}
 
 	log.Info("Will now try to print the logs of a running devspace pod...")

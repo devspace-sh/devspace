@@ -78,6 +78,10 @@ func StartLogs(client *kubernetes.Clientset, selectorNameOverride, containerName
 
 	log.WriteString(logOutput)
 	if follow == false {
+		if logOutput == "" {
+			log.Infof("Logs of pod %s:%s were empty", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+		}
+
 		return nil
 	}
 

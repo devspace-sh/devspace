@@ -47,7 +47,7 @@ func NewLogsCmd() *cobra.Command {
 	logsCmd.Flags().StringVarP(&cmd.container, "container", "c", "", "Container name within pod where to execute command")
 	logsCmd.Flags().StringVarP(&cmd.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	logsCmd.Flags().StringVarP(&cmd.namespace, "namespace", "n", "", "Namespace where to select pods")
-	logsCmd.Flags().BoolVarP(&cmd.pick, "pick", "p", false, "Force pod selection")
+	logsCmd.Flags().BoolVarP(&cmd.pick, "pick", "p", false, "Select a pod to stream logs from")
 	logsCmd.Flags().BoolVarP(&cmd.follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.lastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 	logsCmd.Flags().StringVar(&cmd.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
