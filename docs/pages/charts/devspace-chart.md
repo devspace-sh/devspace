@@ -21,7 +21,7 @@ The `values.yaml` is the most important place for configuring your Helm chart. S
 
 <details>
 <summary>
-#### Show a complete example of the `values.yaml`
+#### Show an example of the `values.yaml`
 </summary>
 ```yaml
 components:
