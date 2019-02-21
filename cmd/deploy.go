@@ -165,6 +165,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Donef("Successfully deployed!")
+	log.Info("Run `devspace analyze` to check for potential issues")
 }
 
 func (cmd *DeployCmd) prepareConfig() {

@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -9,16 +8,15 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // MinimumPodAge is the minimum amount of time that a pod should be old
-const MinimumPodAge = 60 * time.Second
+const MinimumPodAge = 20 * time.Second
 
 // WaitTimeout is the amount of time to wait for a pod to start
-const WaitTimeout = 60 * time.Second
+const WaitTimeout = 40 * time.Second
 
 // WaitStatus are the status to wait
 var WaitStatus = []string{
@@ -114,9 +112,9 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 	// Analyzing pods
 	if pods.Items != nil {
 		for _, pod := range pods.Items {
-			problem := Pod(&pod)
-			if problem != "" {
-				problems = append(problems, problem)
+			problem := checkPod(client, &pod)
+			if problem != nil {
+				problems = append(problems, printPodProblem(problem))
 			}
 		}
 	}
@@ -124,105 +122,150 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 	return problems, nil
 }
 
+type podProblem struct {
+	Name   string
+	Status string
+
+	ContainerReady int
+	ContainerTotal int
+
+	InitContainerReady int
+	InitContainerTotal int
+
+	Age string
+
+	ContainerProblems     []*containerProblem
+	InitContainerProblems []*containerProblem
+}
+
+type containerProblem struct {
+	Name string
+
+	Restarts    int
+	LastRestart time.Duration
+
+	Ready bool
+
+	Terminated   bool
+	TerminatedAt time.Duration
+
+	Waiting bool
+
+	Reason  string
+	Message string
+
+	LastExitCode           int
+	LastFaultyExecutionLog string
+}
+
 // Pod analyzes the pod for potential problems
-func Pod(pod *v1.Pod) string {
-	problems := []string{}
-	padding := newString(" ", 5)
-	containerPadding := newString(" ", 3)
+func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
+	hasProblem := false
+	podProblem := &podProblem{
+		Name:                  pod.Name,
+		Status:                kubectl.GetPodStatus(pod),
+		Age:                   time.Now().Sub(pod.CreationTimestamp.UTC()).Round(time.Second).String(),
+		ContainerProblems:     []*containerProblem{},
+		InitContainerProblems: []*containerProblem{},
+	}
+
+	// Check for unusual status
+	if _, ok := OkayStatus[podProblem.Status]; ok == false {
+		hasProblem = true
+	}
 
 	// Analyze container status
 	if pod.Status.ContainerStatuses != nil {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			containerProblems := getContainerProblems(&containerStatus)
-			if len(containerProblems) > 0 {
-				ready := ""
-				if containerStatus.Ready == false {
-					ready = " (not running)"
-				}
+		podProblem.ContainerTotal = len(pod.Status.ContainerStatuses)
 
-				problems = append(problems, fmt.Sprintf("Container %s%s:", ansi.Color(containerStatus.Name, "white+b"), ready))
-				for _, cp := range containerProblems {
-					problems = append(problems, containerPadding+cp)
-				}
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			containerProblem := getContainerProblem(client, pod, &containerStatus)
+			if containerProblem != nil {
+				hasProblem = true
+
+				podProblem.ContainerProblems = append(podProblem.ContainerProblems, containerProblem)
+			}
+
+			if containerStatus.Ready {
+				podProblem.ContainerReady++
 			}
 		}
 	}
 
 	// Analyze init container status
 	if pod.Status.InitContainerStatuses != nil {
-		for _, containerStatus := range pod.Status.InitContainerStatuses {
-			containerProblems := getContainerProblems(&containerStatus)
-			if len(containerProblems) > 0 {
-				ready := ""
-				if containerStatus.Ready == false {
-					ready = " (not running)"
-				}
+		podProblem.InitContainerTotal = len(pod.Status.ContainerStatuses)
 
-				problems = append(problems, fmt.Sprintf("Init Container %s%s:", ansi.Color(containerStatus.Name, "white+b"), ready))
-				for _, cp := range containerProblems {
-					problems = append(problems, containerPadding+cp)
-				}
+		for _, containerStatus := range pod.Status.InitContainerStatuses {
+			containerProblem := getContainerProblem(client, pod, &containerStatus)
+			if containerProblem != nil {
+				hasProblem = true
+
+				podProblem.InitContainerProblems = append(podProblem.InitContainerProblems, containerProblem)
+			}
+
+			if containerStatus.Ready {
+				podProblem.InitContainerReady++
 			}
 		}
 	}
 
-	if len(problems) > 0 {
-		podStatus := kubectl.GetPodStatus(pod)
-		header := fmt.Sprintf("Pod %s (%s):", ansi.Color(pod.Name, "white+b"), ansi.Color(podStatus, "red+b"))
-
-		problem := header + "\n"
-		for _, p := range problems {
-			problem += padding + p + "\n"
-		}
-
-		problem += "\n"
-
-		return problem
+	if hasProblem {
+		return podProblem
 	}
 
-	return ""
+	return nil
 }
 
-func getContainerProblems(containerStatus *v1.ContainerStatus) []string {
-	problems := []string{}
+func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
 	now := time.Now()
-
-	// Check if ready
-	if containerStatus.Ready == false {
-		if containerStatus.State.Terminated != nil {
-			occured := now.Sub(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second).String()
-			reason := ansi.Color(containerStatus.State.Terminated.Reason, "white+b")
-
-			message := fmt.Sprintf("Currently terminated %s ago, with reason %s and exitCode %d", occured, reason, containerStatus.State.Terminated.ExitCode)
-			problems = append(problems, message)
-
-			if containerStatus.State.Terminated.Message != "" {
-				problems = append(problems, "  Message: "+ansi.Color(containerStatus.State.Terminated.Message, "white"))
-			}
-		} else if containerStatus.State.Waiting != nil {
-			message := fmt.Sprintf("Currently waiting, with reason %s", containerStatus.State.Waiting.Reason)
-			problems = append(problems, message)
-
-			if containerStatus.State.Waiting.Message != "" {
-				problems = append(problems, "  Message: "+ansi.Color(containerStatus.State.Waiting.Message, "white"))
-			}
-		}
+	tailLines := int64(50)
+	hasProblem := false
+	containerProblem := &containerProblem{
+		Name:     containerStatus.Name,
+		Restarts: int(containerStatus.RestartCount),
+		Ready:    true,
 	}
 
 	// Check if restarted
 	if containerStatus.RestartCount > 0 {
 		if containerStatus.LastTerminationState.Terminated != nil && now.Sub(containerStatus.LastTerminationState.Terminated.FinishedAt.UTC()) < IgnoreRestartsSince {
-			restartCount := ansi.Color(fmt.Sprintf("%d", containerStatus.RestartCount), "white+b")
-			reason := ansi.Color(containerStatus.LastTerminationState.Terminated.Reason, "white+b")
-			occured := now.Sub(containerStatus.LastTerminationState.Terminated.FinishedAt.Time).Round(time.Second).String()
-			exitCode := int(containerStatus.LastTerminationState.Terminated.ExitCode)
+			hasProblem = true
 
-			problems = append(problems, fmt.Sprintf("Restarted %s times: last restart (%s) was %s ago with exit code %d", restartCount, reason, occured, exitCode))
-			if containerStatus.LastTerminationState.Terminated.Message != "" {
-				problems = append(problems, "  Message: "+ansi.Color(containerStatus.LastTerminationState.Terminated.Message, "white"))
+			containerProblem.LastRestart = time.Now().Sub(containerStatus.LastTerminationState.Terminated.FinishedAt.UTC()).Round(time.Second)
+			containerProblem.LastExitCode = int(containerStatus.LastTerminationState.Terminated.ExitCode)
+
+			if containerProblem.Ready == true && containerProblem.LastExitCode != 0 {
+				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, true, &tailLines)
 			}
 		}
 	}
 
-	return problems
+	// Check if ready
+	if containerStatus.Ready == false {
+		hasProblem = true
+		containerProblem.Ready = false
+
+		if containerStatus.State.Terminated != nil {
+			containerProblem.Terminated = true
+			containerProblem.TerminatedAt = now.Sub(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
+			containerProblem.Reason = containerStatus.State.Terminated.Reason
+			containerProblem.Message = containerStatus.State.Terminated.Message
+
+			containerProblem.LastExitCode = int(containerStatus.State.Terminated.ExitCode)
+			if containerProblem.LastExitCode != 0 {
+				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
+			}
+		} else if containerStatus.State.Waiting != nil {
+			containerProblem.Waiting = true
+			containerProblem.Reason = containerStatus.State.Waiting.Reason
+			containerProblem.Message = containerStatus.State.Waiting.Message
+		}
+	}
+
+	if hasProblem {
+		return containerProblem
+	}
+
+	return nil
 }

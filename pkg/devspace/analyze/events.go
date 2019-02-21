@@ -48,7 +48,7 @@ func Events(client *kubernetes.Clientset, config *rest.Config, namespace string)
 				_, err = dynamicClient.Resource(multiple).Namespace(namespace).Get(event.InvolvedObject.Name, metav1.GetOptions{})
 				if err == nil {
 					header := ansi.Color(fmt.Sprintf("%s - %s %s: ", event.Type, event.InvolvedObject.Kind, event.InvolvedObject.Name), "202+b")
-					problems = append(problems, fmt.Sprintf("%s\n    %dx %s \n", header, int(event.Count), event.Message))
+					problems = append(problems, paddingLeft+fmt.Sprintf("%s\n%s%dx %s \n", header, paddingLeft, int(event.Count), event.Message))
 				}
 			}
 		}

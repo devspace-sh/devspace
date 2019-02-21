@@ -24,6 +24,8 @@ const PaddingLeft = 2
 // HeaderChar is the header char used
 const HeaderChar = "="
 
+var paddingLeft = newString(" ", PaddingLeft)
+
 // Analyze analyses a given
 func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool, log log.Logger) error {
 	report := []*reportItem{}
@@ -57,8 +59,6 @@ func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string
 }
 
 func printReport(report []*reportItem, log log.Logger) {
-	paddingLeft := newString(" ", PaddingLeft)
-
 	if len(report) == 0 {
 		log.WriteString(fmt.Sprintf("\n%sNo problems found.\n\n", paddingLeft))
 	} else {
@@ -68,16 +68,14 @@ func printReport(report []*reportItem, log log.Logger) {
 			log.WriteString(createHeader(reportItem.Name, len(reportItem.Problems)))
 
 			for _, problem := range reportItem.Problems {
-				log.WriteString(paddingLeft + problem + "\n")
+				log.WriteString(problem + "\n")
 			}
 		}
 	}
 }
 
 func createHeader(name string, problemCount int) string {
-	paddingLeft := newString(" ", PaddingLeft)
-
-	header := fmt.Sprintf(" %s (%d potential issues) ", name, problemCount)
+	header := fmt.Sprintf(" %s (%d potential issue(s)) ", name, problemCount)
 	if len(header)%2 == 1 {
 		header += " "
 	}
