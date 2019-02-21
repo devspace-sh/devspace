@@ -1,4 +1,4 @@
-package cmd
+package update
 
 import (
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
@@ -6,34 +6,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ConvertCmd holds the login cmd flags
-type ConvertCmd struct{}
+// configCmd holds the cmd flags
+type configCmd struct{}
 
-// NewConvertCmd creates a new login command
-func NewConvertCmd() *cobra.Command {
-	cmd := &ConvertCmd{}
+// newConfigCmd creates a new command
+func newConfigCmd() *cobra.Command {
+	cmd := &configCmd{}
 
-	convertCmd := &cobra.Command{
-		Use:   "convert",
+	configCmd := &cobra.Command{
+		Use:   "config",
 		Short: "Converts the active config to the current config version",
 		Long: `
 	#######################################################
-	################### devspace login ####################
+	############### devspace update config ################
 	#######################################################
-	Converts the active config to the current config version
+	Updates the currently active config to the newest
+	config version
 
 	Note: convert does not upgrade the overwrite configs
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunConvert,
+		Run:  cmd.RunConfig,
 	}
 
-	return convertCmd
+	return configCmd
 }
 
-// RunConvert executes the functionality devspace convert
-func (cmd *ConvertCmd) RunConvert(cobraCmd *cobra.Command, args []string) {
+// RunConfig executes the functionality devspace update config
+func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {

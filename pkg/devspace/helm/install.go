@@ -103,8 +103,6 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 	}
 
 	if releaseExists {
-		waitOption := k8shelm.UpgradeWait(wait)
-
 		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
@@ -112,27 +110,22 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
 			k8shelm.UpgradeForce(true),
-			waitOption,
+			k8shelm.UpgradeWait(wait),
 		)
 
 		if err != nil {
-			// Delete release and redeploy
-			if strings.Index(err.Error(), "cannot re-use a name that is still in use") != -1 {
-				log.Warn("Rolling back chart because of previous error")
-
-				_, err := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
-				if err != nil {
-					return nil, fmt.Errorf("Error rolling back release %s: %v\nRun `%s` to force delete the chart. Warning: purging will also delete in the chart defined persistent volume claims", releaseName, err, ansi.Color("devspace purge", "white+b"))
-				}
-			} else {
-				return nil, err
+			log.Warn("Try to roll back back chart because of previous error")
+			_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
+			if rollbackError != nil {
+				return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force delete the chart. Warning: purging will also delete in the chart defined persistent volume claims", releaseName, err, ansi.Color("devspace purge", "white+b"))
 			}
-		} else {
-			return upgradeResponse.GetRelease(), nil
+
+			return nil, err
 		}
+
+		return upgradeResponse.GetRelease(), nil
 	}
 
-	waitOption := k8shelm.InstallWait(wait)
 	installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
 		chart,
 		releaseNamespace,
@@ -140,7 +133,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		k8shelm.ValueOverrides(overwriteValues),
 		k8shelm.ReleaseName(releaseName),
 		k8shelm.InstallReuseName(true),
-		waitOption,
+		k8shelm.InstallWait(wait),
 	)
 	if err != nil {
 		// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error

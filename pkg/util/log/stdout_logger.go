@@ -40,13 +40,13 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	},
 	infoFn: {
 		tag:      "[info]   ",
-		color:    "blue+b",
+		color:    "cyan+b",
 		logLevel: logrus.InfoLevel,
 		stream:   stdout,
 	},
 	warnFn: {
 		tag:      "[warn]   ",
-		color:    "cyan+b",
+		color:    "166+b",
 		logLevel: logrus.WarnLevel,
 		stream:   stdout,
 	},
@@ -477,4 +477,19 @@ func (s *stdoutLogger) Write(message []byte) (int, error) {
 	}
 
 	return n, err
+}
+
+func (s *stdoutLogger) WriteString(message string) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	if s.loadingText != nil {
+		s.loadingText.Stop()
+	}
+
+	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+
+	if s.loadingText != nil {
+		s.loadingText.Start()
+	}
 }

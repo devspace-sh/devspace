@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/client-go/util/homedir"
 	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
 	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	"k8s.io/kubernetes/pkg/util/node"
@@ -28,7 +30,7 @@ import (
 var isMinikubeVar *bool
 var loadCloudConfigOnce sync.Once
 
-//NewClient creates a new kubernetes client
+// NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	config, err := getClientConfig(false)
 	if err != nil {
@@ -48,7 +50,12 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 	return kubernetes.NewForConfig(config)
 }
 
-//GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
+// GetClientConfigFromKubectl loads the kubectl client config
+func GetClientConfigFromKubectl() (*rest.Config, error) {
+	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+}
+
+// GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
 	return getClientConfig(false)
 }

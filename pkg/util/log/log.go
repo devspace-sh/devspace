@@ -162,6 +162,11 @@ func Write(message []byte) {
 	stdoutLog.Write(message)
 }
 
+// WriteString writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
+func WriteString(message string) {
+	stdoutLog.WriteString(message)
+}
+
 // PrintTable prints a table with header columns and string values
 func PrintTable(header []string, values [][]string) {
 	stdoutLog.PrintTable(header, values)
