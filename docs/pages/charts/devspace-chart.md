@@ -62,7 +62,7 @@ components:
     horizontal:
       maxReplicas: 4
       averageCPU: 80
-      averageMemory: 200Mi
+      averageMemory: "200Mi"
 
 volumes:
 - name: nginx

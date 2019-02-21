@@ -35,8 +35,7 @@ DEVSPACE DEPLOY OUTPUT WITH URL
 <summary>
 ## Connect a custom domain
 </summary>
-
-
+TODO
 </details>
 
 <details>
@@ -49,7 +48,6 @@ Spaces can be used very much like any regular Kubernetes namespace. Therefore, y
 <summary>
 ### Install kubectl
 </summary>
-
 
 </details>
 
@@ -67,18 +65,17 @@ kubectl get pods
 ```bash
 kubectl get services
 ```
-
 </details>
-
 
 <details>
 <summary>
 ## Troubleshooting
 </summary>
-
 If you get an HTTP error when accessing your Space, the following guides can help you solve the most common issues:
 
 ### 404 Not Found
+
+### 500 Internal Server Error
 
 ### 502 Bad Gateway
 
@@ -86,14 +83,10 @@ If you get an HTTP error when accessing your Space, the following guides can hel
 
 ### 504 Gateway Timeout
 
-### 500 Internal Server Error
-
 </details>
 
 
 ## Learn more about deploying with DevSpace
-
-
 See the following guides to learn more:
 - [Connect custom domains](../deployment/domains)
 - [Monitor and debug deployed applications](../deployment/debugging)

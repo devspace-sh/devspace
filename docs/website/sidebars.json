@@ -75,6 +75,7 @@
     ],
     "CLI Reference": [
         "cli/overview",
+        "cli/analyze",
         "cli/deploy",
         "cli/dev",
         "cli/down",

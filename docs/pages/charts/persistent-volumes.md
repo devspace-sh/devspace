@@ -67,8 +67,8 @@ volume:                     # Volume to mount
 By default, persisent volumes will not be deleted automatically when you remove them from the `volumes` section of `chart/values.yaml`. This ensures that persistent data is not being deleted on accident.
 
 To remove a persistent volume, you have to remove it manually with the following commands:
-```
-devspace use space [SPACE_NAME]
+```bash
+devspace add space [SPACE_NAME]
 kubectl delete persistentvolumeclaim [VOLUME_NAME]
 ```
 > **Warning: Deleting persistent volumes cannot be undone. Your data will be lost forever and cannot be recovered.**

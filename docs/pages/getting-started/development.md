@@ -57,7 +57,7 @@ npm run [start|dev|watch]
 
 By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overwritten with a `sleep` command. You can also define custom commands for entrypoint overwriting. [Learn more about entrypoint overwrites.](../development/entrypoint-overwrites)
 
-> You can open additional terminals with `devspace enter`. [Learn more about the terminal proxy.](../development/terminal)
+> You can open additional terminals with `devspace enter`. [Learn more about the terminal proxy.](../development/terminal#open-additional-terminals)
 
 ## Accessing your application using port-forwarding
 After starting your application inside the Space, you can access it via `localhost:[PORT]` because the command `devspace dev` will start port-forwarding for the ports you specified during `devspace init`.
