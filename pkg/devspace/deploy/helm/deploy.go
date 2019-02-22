@@ -156,6 +156,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	// Set images and pull secrets values
 	overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
+	overwriteValues["containers"] = getImageValues(config, generatedConfig, isDev)
 
 	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 
