@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -172,8 +170,6 @@ func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
 		ContainerProblems:     []*containerProblem{},
 		InitContainerProblems: []*containerProblem{},
 	}
-
-	fmt.Println(duration.HumanDuration(time.Since(pod.CreationTimestamp.Time)))
 
 	// Check for unusual status
 	if _, ok := OkayStatus[podProblem.Status]; ok == false {

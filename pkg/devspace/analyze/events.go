@@ -35,14 +35,11 @@ func Events(client *kubernetes.Clientset, config *rest.Config, namespace string)
 		return nil, err
 	}
 
-	// get current time
-	now := time.Now()
-
 	// loop through events
 	if events.Items != nil {
 		for _, event := range events.Items {
-			if event.Type != "Normal" && now.Sub(event.LastTimestamp.UTC()) < EventRelevanceTime {
-				// This is a bad guess bad usually works
+			if event.Type != "Normal" {
+				// This is a bad guess, but works for most resources
 				multiple, _ := meta.UnsafeGuessKindToResource(event.InvolvedObject.GroupVersionKind())
 
 				_, err = dynamicClient.Resource(multiple).Namespace(namespace).Get(event.InvolvedObject.Name, metav1.GetOptions{})
