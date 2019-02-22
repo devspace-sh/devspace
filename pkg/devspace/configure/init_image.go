@@ -30,7 +30,7 @@ func Image(dockerUsername string, isCloud bool) error {
 		})
 	} else {
 		// Get default registry
-		provider, err := cloud.GetCurrentProvider(log.GetInstance())
+		provider, err := cloud.GetProvider(*config.Cluster.CloudProvider, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error login into cloud provider: %v", err)
 		}

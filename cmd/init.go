@@ -185,16 +185,35 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if cmd.flags.useCloud == false {
 			cmd.configureDevSpace()
 		} else {
+			// Get provider configuration
+			providerConfig, err := cloud.ParseCloudConfig()
+			if err != nil {
+				log.Fatalf("Error loading provider config: %v", err)
+			}
+
 			// Configure cloud provider
 			config.Cluster.CloudProvider = ptr.String(cloud.DevSpaceCloudProviderName)
+
+			// Choose cloud provider
+			if len(providerConfig) > 1 {
+				options := []string{}
+				for providerHost := range providerConfig {
+					options = append(options, providerHost)
+				}
+
+				config.Cluster.CloudProvider = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+					Question: "Select cloud provider",
+					Options:  options,
+				})
+			}
 
 			// Print target
 			log.Infof("Using devspace.cloud - if you want to use your cluster run `%s`", ansi.Color("devspace init --cloud=false", "white+b"))
 
-			// Login and login into registries if necessary
-			_, err := cloud.GetCurrentProvider(log.GetInstance())
+			// Ensure user is logged in
+			err = cloud.EnsureLoggedIn(providerConfig, *config.Cluster.CloudProvider, log.GetInstance())
 			if err != nil {
-				log.Fatalf("Error login into cloud provider: %v", err)
+				log.Fatal(err)
 			}
 		}
 
@@ -427,7 +446,7 @@ func (cmd *InitCmd) configureImage() {
 		break
 	}
 
-	if useKaniko == false && cmd.flags.useCloud == false {
+	if useKaniko == false {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
 		log.StopWait()
@@ -437,7 +456,7 @@ func (cmd *InitCmd) configureImage() {
 		}
 
 		// Don't push image in minikube
-		if kubectl.IsMinikube() {
+		if cmd.flags.useCloud == false && kubectl.IsMinikube() {
 			cmd.defaultImage.SkipPush = ptr.Bool(true)
 			return
 		}
