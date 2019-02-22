@@ -34,7 +34,7 @@ Step 1/11 : FROM node:8.11.4
 [done] √ Deployed helm chart (Release revision: 1)                    
 [done] √ Finished deploying devspace-app
 [done] √ Port forwarding started on 3000:3000           
-[done] √ Sync started on /Users/fabiankramm/Programmieren/go-workspace/src/github.com/covexo/devspace/examples/minikube <-> /app (Pod: devspace/default-f5c8cbcd6-w29rs)
+[done] √ Sync started on /covexo/devspace/examples/minikube <-> /app (Pod: devspace/default-f5c8cbcd6-w29rs)
 root@default-f5c8cbcd6-w29rs:/app#
 ```
 2. Run `npm start` in the new opened terminal to start the webserver

@@ -26,20 +26,20 @@ The command does several things in this order:
 You should see the following output:
 ```
 [info]   Loaded config from .devspace/configs.yaml
-[info]   Using space fabian                       
-[info]   Building image 'dscr.io/fabiankramm/devspace' with engine 'docker'
+[info]   Using space quickstart-kubectl                       
+[info]   Building image 'dscr.io/yourname/devspace' with engine 'docker'
 [done] √ Authentication successful (dscr.io)
 Sending build context to Docker daemon  9.031kB
 Step 1/9 : FROM node:8.11.4
  ---> 8198006b2b57
 [...]
 [info]   Image pushed to registry (dscr.io)
-[done] √ Done processing image 'dscr.io/fabiankramm/devspace'
+[done] √ Done processing image 'dscr.io/yourname/devspace'
 [[info]   Deploying devspace-default with kubectl
 deployment.extensions/devspace configured          
 [done] √ Finished deploying devspace-default
 [done] √ Port forwarding started on 3000:3000           
-[done] √ Sync started on /Users/fabiankramm/Programmieren/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
+[done] √ Sync started on /covexo/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
 [info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
 root@default-7c4dcdfc4-m867d:/app#
 ```

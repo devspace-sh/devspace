@@ -24,12 +24,12 @@ The command does several things in this order:
 You should see the following output:
 ```
 [info]   Loaded config from .devspace/configs.yaml
-[info]   Using space fabian                       
+[info]   Using space redeploy                       
 [info]   Skip building image 'default'         
 [info]   Deploying devspace-default with kubectl
 deployment.extensions/devspace unchanged           
 [done] √ Finished deploying devspace-default       
-[info]   The Space is now reachable via ingress on this URL: https://fabian.devspace.host
+[info]   The Space is now reachable via ingress on this URL: https://yourusername.devspace.host
 [info]   Will now try to print the logs of a running devspace pod...
 [info]   Printing logs of pod devspace-59c4d868f8-j2pg5/default...
 Hello World!
@@ -40,18 +40,18 @@ Hello World!
 2. Change the message in main.go and you should see the container reloading 
 ```
 [info]   Change detected, will reload in 2 seconds
-[info]   Building image 'dscr.io/fabiankramm/devspace' with engine 'docker'
+[info]   Building image 'dscr.io/yourusername/devspace' with engine 'docker'
 [done] √ Authentication successful (dscr.io)
 Sending build context to Docker daemon  12.29kB
 Step 1/6 : FROM golang:1.11
  ---> 901414995ecd
 [...]
 [info]   Image pushed to registry (dscr.io)
-[done] √ Done processing image 'dscr.io/fabiankramm/devspace'
+[done] √ Done processing image 'dscr.io/yourusername/devspace'
 [info]   Deploying devspace-default with kubectl
 deployment.extensions/devspace configured          
 [done] √ Finished deploying devspace-default       
-[info]   The Space is now reachable via ingress on this URL: https://fabian.devspace.host
+[info]   The Space is now reachable via ingress on this URL: https://yourusername.devspace.host
 [info]   Will now try to print the logs of a running devspace pod...
 [info]   Printing logs of pod devspace-5d5cdb7554-lmxsg/default...
 Hello World devspace!
