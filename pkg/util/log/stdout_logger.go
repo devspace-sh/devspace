@@ -7,10 +7,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daviddengcn/go-colortext"
+	goansi "github.com/k0kubun/go-ansi"
+	"github.com/mgutz/ansi"
 
 	"github.com/sirupsen/logrus"
 )
+
+var stdout = goansi.NewAnsiStdout()
+var stderr = goansi.NewAnsiStderr()
 
 type stdoutLogger struct {
 	logMutex sync.Mutex
@@ -22,59 +26,59 @@ type stdoutLogger struct {
 
 type fnTypeInformation struct {
 	tag      string
-	color    ct.Color
+	color    string
 	logLevel logrus.Level
 	stream   io.Writer
 }
 
 var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	debugFn: {
-		tag:      "[DEBUG]  ",
-		color:    ct.Green,
+		tag:      "[debug]  ",
+		color:    "green+b",
 		logLevel: logrus.DebugLevel,
-		stream:   os.Stdout,
+		stream:   stdout,
 	},
 	infoFn: {
-		tag:      "[INFO]   ",
-		color:    ct.Green,
+		tag:      "[info]   ",
+		color:    "cyan+b",
 		logLevel: logrus.InfoLevel,
-		stream:   os.Stdout,
+		stream:   stdout,
 	},
 	warnFn: {
-		tag:      "[WARN]   ",
-		color:    ct.Red,
+		tag:      "[warn]   ",
+		color:    "166+b",
 		logLevel: logrus.WarnLevel,
-		stream:   os.Stdout,
+		stream:   stdout,
 	},
 	errorFn: {
-		tag:      "[ERROR]  ",
-		color:    ct.Red,
+		tag:      "[error]  ",
+		color:    "red+b",
 		logLevel: logrus.ErrorLevel,
-		stream:   os.Stderr,
+		stream:   stdout,
 	},
 	fatalFn: {
-		tag:      "[FATAL]  ",
-		color:    ct.Red,
+		tag:      "[fatal]  ",
+		color:    "red+b",
 		logLevel: logrus.FatalLevel,
-		stream:   os.Stderr,
+		stream:   stdout,
 	},
 	panicFn: {
-		tag:      "[PANIC]  ",
-		color:    ct.Red,
+		tag:      "[panic]  ",
+		color:    "red+b",
 		logLevel: logrus.PanicLevel,
-		stream:   os.Stderr,
+		stream:   stderr,
 	},
 	doneFn: {
-		tag:      "[DONE] √ ",
-		color:    ct.Green,
+		tag:      "[done] √ ",
+		color:    "green+b",
 		logLevel: logrus.InfoLevel,
-		stream:   os.Stdout,
+		stream:   stdout,
 	},
 	failFn: {
-		tag:      "[FAIL] X ",
-		color:    ct.Red,
+		tag:      "[fail] X ",
+		color:    "red+b",
 		logLevel: logrus.ErrorLevel,
-		stream:   os.Stdout,
+		stream:   stdout,
 	},
 }
 
@@ -86,9 +90,10 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 			s.loadingText.Stop()
 		}
 
-		ct.Foreground(fnInformation.color, false)
-		fnInformation.stream.Write([]byte(fnInformation.tag))
-		ct.ResetColor()
+		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
+		// ct.Foreground(fnInformation.color, false)
+		// fnInformation.stream.Write([]byte(fnInformation.tag))
+		// ct.ResetColor()
 
 		fnInformation.stream.Write([]byte(message))
 
@@ -160,7 +165,7 @@ func (s *stdoutLogger) StartWait(message string) {
 
 	s.loadingText = &loadingText{
 		Message: message,
-		Stream:  os.Stdout,
+		Stream:  goansi.NewAnsiStdout(),
 	}
 
 	s.loadingText.Start()
@@ -194,9 +199,11 @@ func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 		}
 	}
 
+	s.Write([]byte("\n"))
+
 	// Print Header
 	for key, value := range header {
-		WriteColored(" "+value+"  ", ct.Green)
+		WriteColored(" "+value+"  ", "green+b")
 
 		padding := columnLengths[key] - len(value)
 
@@ -225,6 +232,8 @@ func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
 
 		s.Write([]byte("\n"))
 	}
+
+	s.Write([]byte("\n"))
 }
 
 func (s *stdoutLogger) Debug(args ...interface{}) {
@@ -468,4 +477,19 @@ func (s *stdoutLogger) Write(message []byte) (int, error) {
 	}
 
 	return n, err
+}
+
+func (s *stdoutLogger) WriteString(message string) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	if s.loadingText != nil {
+		s.loadingText.Stop()
+	}
+
+	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+
+	if s.loadingText != nil {
+		s.loadingText.Start()
+	}
 }

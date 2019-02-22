@@ -4,7 +4,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	"github.com/covexo/devspace/pkg/devspace/deploy"
 	"github.com/covexo/devspace/pkg/devspace/docker"
 	"github.com/covexo/devspace/pkg/devspace/image"
@@ -21,15 +21,13 @@ type DeployCmd struct {
 
 // DeployCmdFlags holds the possible down cmd flags
 type DeployCmdFlags struct {
-	Namespace       string
-	KubeContext     string
-	Config          string
-	ConfigOverwrite string
-	DockerTarget    string
-	CloudTarget     string
-	SwitchContext   bool
-	SkipBuild       bool
-	GitBranch       string
+	Namespace     string
+	KubeContext   string
+	Config        string
+	DockerTarget  string
+	ForceBuild    bool
+	ForceDeploy   bool
+	SwitchContext bool
 }
 
 func init() {
@@ -39,7 +37,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy your DevSpace to a target cluster",
+		Short: "Deploy the devspace to a target cluster",
 		Long: `
 #######################################################
 ################## devspace deploy ####################
@@ -47,61 +45,56 @@ func init() {
 Deploys the devspace to a target cluster:
 
 devspace deploy --namespace=deploy
-devspace deploy --namespace=deploy --docker-target=production
+devspace deploy --namespace=deploy
 devspace deploy --kube-context=deploy-context
-devspace deploy --config=.devspace/deploy.yaml
-devspace deploy --cloud-target=production
-devspace deploy https://github.com/covexo/devspace --branch test
 #######################################################`,
-		Args: cobra.RangeArgs(0, 2),
+		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.Run,
 	}
 
 	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.ConfigOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
-	cobraCmd.Flags().StringVar(&cmd.flags.CloudTarget, "cloud-target", "", "When using a cloud provider, the target to use")
-	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
-	cobraCmd.Flags().BoolVar(&cmd.flags.SkipBuild, "skip-build", false, "Skips the image build & push step")
-	// cobraCmd.Flags().StringVar(&cmd.flags.GitBranch, "branch", "master", "The git branch to checkout")
+
+	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceBuild, "force-build", "b", false, "Forces devspace to build every image")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceDeploy, "force-deploy", "d", false, "Forces devspace to deploy every deployment")
 
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
-	/* if len(args) > 0 {
-		directoryName := "devspace"
-		if len(args) == 2 {
-			directoryName = args[1]
-		}
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
 
-		_, err := git.PlainClone(directoryName, false, &git.CloneOptions{
-			URL:           args[0],
-			Progress:      os.Stdout,
-			ReferenceName: plumbing.ReferenceName(cmd.flags.GitBranch),
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = os.Chdir(directoryName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Donef("Successfully checked out %s into %s", args[0], directoryName)
-	}*/
-
-	cloud.UseDeployTarget = true
+	// Start file logging
 	log.StartFileLogging()
 
 	// Prepare the config
 	cmd.prepareConfig()
 
-	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
+	// Check if there is a space configured
+	if len(args) > 0 {
+		// Configure cloud provider
+		err := cloud.ConfigureWithSpaceName(args[0], log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to configure cloud provider: %v", err)
+		}
+	} else {
+		// Configure cloud provider
+		err := cloud.Configure(log.GetInstance())
+		if err != nil {
+			log.Fatalf("Unable to configure cloud provider: %v", err)
+		}
+	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
@@ -136,43 +129,52 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	if cmd.flags.SkipBuild == false {
-		// Force image build
-		_, err = image.BuildAll(client, generatedConfig, true, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, true, false, log.GetInstance())
+	// Force image build
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.flags.ForceBuild, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Save config if an image was built
+	if mustRedeploy == true {
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving generated config: %v", err)
+		}
+	}
+
+	// Force deployment of all defined deployments
+	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.flags.ForceDeploy, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Save Config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Error saving generated config: %v", err)
+	}
+
 	// Print domain name if we use a cloud provider
-	// TODO: Change this
-	if cloud.DevSpaceURL != "" {
-		log.Infof("Your LiveSpace is now reachable via ingress on this URL: http://%s", cloud.DevSpaceURL)
-		log.Info("See https://devspace-cloud.com/domain-guide for more information")
+	config := configutil.GetConfig()
+	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
+		generatedConfig, _ := generated.LoadConfig()
+		if generatedConfig != nil && generatedConfig.Space != nil && generatedConfig.Space.Domain != nil {
+			log.Infof("The Space is now reachable via ingress on this URL: https://%s", *generatedConfig.Space.Domain)
+		}
 	}
 
 	log.Donef("Successfully deployed!")
+	log.Info("Run `devspace analyze` to check for potential issues")
 }
 
 func (cmd *DeployCmd) prepareConfig() {
 	if configutil.ConfigPath != cmd.flags.Config {
 		configutil.ConfigPath = cmd.flags.Config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
-	}
-	if configutil.OverwriteConfigPath != cmd.flags.ConfigOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.ConfigOverwrite
 	}
 
 	// Load Config and modify it
-	config := configutil.GetConfigWithoutDefaults()
+	config := configutil.GetConfigWithoutDefaults(true)
 
 	if cmd.flags.Namespace != "" {
 		config.Cluster = &v1.Cluster{
@@ -209,10 +211,7 @@ func (cmd *DeployCmd) prepareConfig() {
 			}
 		}
 	}
-	if cmd.flags.CloudTarget != "" {
-		config.Cluster.CloudProviderDeployTarget = &cmd.flags.CloudTarget
-	}
 
 	// Set defaults now
-	configutil.SetDefaultsOnce()
+	configutil.ValidateOnce()
 }

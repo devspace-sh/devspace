@@ -233,3 +233,7 @@ func (f *fileLogger) printWithContextf(fnType logFunctionType, contextFields map
 func (f *fileLogger) Write(message []byte) (int, error) {
 	return f.logger.Out.Write(message)
 }
+
+func (f *fileLogger) WriteString(message string) {
+	f.logger.Out.Write([]byte(message))
+}

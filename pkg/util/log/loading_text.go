@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/covexo/devspace/pkg/util/terminal"
-
-	"github.com/daviddengcn/go-colortext"
+	"github.com/mgutz/ansi"
 )
 
 const waitInterval = time.Millisecond * 150
@@ -49,21 +49,51 @@ func (l *loadingText) Start() {
 
 func (l *loadingText) getLoadingChar() string {
 	var loadingChar string
+	var max int
 
-	switch l.loadingRune {
-	case 0:
-		loadingChar = "|"
-	case 1:
-		loadingChar = "/"
-	case 2:
-		loadingChar = "-"
-	case 3:
-		loadingChar = "\\"
+	if runtime.GOOS == "windows" {
+		switch l.loadingRune {
+		case 0:
+			loadingChar = "|"
+		case 1:
+			loadingChar = "/"
+		case 2:
+			loadingChar = "-"
+		case 3:
+			loadingChar = "\\"
+		}
+
+		max = 3
+	} else {
+		switch l.loadingRune {
+		case 0:
+			loadingChar = "⠋"
+		case 1:
+			loadingChar = "⠙"
+		case 2:
+			loadingChar = "⠹"
+		case 3:
+			loadingChar = "⠸"
+		case 4:
+			loadingChar = "⠼"
+		case 5:
+			loadingChar = "⠴"
+		case 6:
+			loadingChar = "⠦"
+		case 7:
+			loadingChar = "⠧"
+		case 8:
+			loadingChar = "⠇"
+		case 9:
+			loadingChar = "⠏"
+		}
+
+		max = 9
 	}
 
 	l.loadingRune++
 
-	if l.loadingRune > 3 {
+	if l.loadingRune > max {
 		l.loadingRune = 0
 	}
 
@@ -76,11 +106,9 @@ func (l *loadingText) render() {
 	} else {
 		l.Stream.Write([]byte("\r"))
 	}
-	messagePrefix := []byte("[WAIT] ")
+	messagePrefix := []byte("[wait] ")
 
-	ct.Foreground(ct.Red, false)
-	l.Stream.Write(messagePrefix)
-	ct.ResetColor()
+	l.Stream.Write([]byte(ansi.Color(string(messagePrefix), "red+b")))
 
 	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.startTimestamp)/int64(time.Second))
 	message := []byte(l.getLoadingChar() + " " + l.Message)

@@ -1,5 +1,5 @@
 containers:
   php:
-    image: "will be overriden by devspace up"
+    image: php
 
 pullSecrets: []

@@ -5,7 +5,6 @@ import (
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -24,9 +23,8 @@ const TillerRoleManagerName = "tiller-config-manager"
 
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
-func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) error {
+func createTillerRBAC(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
 	config := configutil.GetConfig()
-	tillerNamespace := *config.Tiller.Namespace
 
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
@@ -43,14 +41,9 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, dsConfig *v1.Config) 
 		return err
 	}
 
-	// Add registry namespace
-	if config.InternalRegistry != nil {
-		appNamespaces = append(appNamespaces, config.InternalRegistry.Namespace)
-	}
-
 	// Add all namespaces that need our permission
-	if config.DevSpace.Deployments != nil && len(*config.DevSpace.Deployments) > 0 {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil && len(*config.Deployments) > 0 {
+		for _, deployConfig := range *config.Deployments {
 			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
 				if *deployConfig.Namespace == "" {
 					appNamespaces = append(appNamespaces, &defaultNamespace)

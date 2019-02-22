@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 )
 
 // AddDeployment adds a new deployment to the config
@@ -18,19 +18,19 @@ func AddDeployment(name, namespace, manifests, chart string) error {
 		return errors.New("The --manifests flag and --chart flag cannot be used together")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
-	if config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
 			if *deployConfig.Name == name {
 				return fmt.Errorf("Deployment %s already exists", name)
 			}
 		}
 	} else {
-		config.DevSpace.Deployments = &[]*v1.DeploymentConfig{}
+		config.Deployments = &[]*v1.DeploymentConfig{}
 	}
 
-	deployments := *config.DevSpace.Deployments
+	deployments := *config.Deployments
 
 	if chart != "" {
 		deployments = append(deployments, &v1.DeploymentConfig{
@@ -58,9 +58,9 @@ func AddDeployment(name, namespace, manifests, chart string) error {
 		})
 	}
 
-	config.DevSpace.Deployments = &deployments
+	config.Deployments = &deployments
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -74,21 +74,21 @@ func RemoveDeployment(removeAll bool, name string) error {
 		return errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetBaseConfig()
 
-	if config.DevSpace.Deployments != nil {
+	if config.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
 
-		for _, deployConfig := range *config.DevSpace.Deployments {
+		for _, deployConfig := range *config.Deployments {
 			if removeAll == false && *deployConfig.Name != name {
 				newDeployments = append(newDeployments, deployConfig)
 			}
 		}
 
-		config.DevSpace.Deployments = &newDeployments
+		config.Deployments = &newDeployments
 	}
 
-	err := configutil.SaveConfig()
+	err := configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}

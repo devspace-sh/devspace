@@ -17,34 +17,38 @@ import (
 // StartSync starts the syncing functionality
 func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	config := configutil.GetConfig()
-	if config.DevSpace.Sync == nil {
+	if config.Dev.Sync == nil {
 		return []*sync.SyncConfig{}, nil
 	}
 
-	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.DevSpace.Sync))
-	for _, syncPath := range *config.DevSpace.Sync {
+	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.Dev.Sync))
+	for _, syncPath := range *config.Dev.Sync {
 		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", *syncPath.LocalSubPath, err)
 		}
 
 		var labelSelector map[string]*string
-		namespace := ""
+		namespace, err := configutil.GetDefaultNamespace(config)
+		if err != nil {
+			return nil, err
+		}
+
 		containerName := ""
 
-		if syncPath.Service != nil {
-			service, err := configutil.GetService(*syncPath.Service)
+		if syncPath.Selector != nil {
+			selector, err := configutil.GetSelector(*syncPath.Selector)
 			if err != nil {
-				log.Fatalf("Error resolving service name: %v", err)
+				log.Fatalf("Error resolving selector name: %v", err)
 			}
 
-			labelSelector = *service.LabelSelector
-			if service.Namespace != nil && *service.Namespace != "" {
-				namespace = *service.Namespace
+			labelSelector = *selector.LabelSelector
+			if selector.Namespace != nil && *selector.Namespace != "" {
+				namespace = *selector.Namespace
 			}
 
-			if service.ContainerName != nil && *service.ContainerName != "" {
-				containerName = *service.ContainerName
+			if selector.ContainerName != nil && *selector.ContainerName != "" {
+				containerName = *selector.ContainerName
 			}
 		} else {
 			labelSelector = *syncPath.LabelSelector

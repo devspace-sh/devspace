@@ -4,10 +4,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+
 	"github.com/covexo/devspace/pkg/devspace/cloud"
-	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/registry"
 	"github.com/covexo/devspace/pkg/util/log"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 
@@ -45,11 +45,9 @@ func init() {
 Resets your project by removing all DevSpace related 
 data from your project and your cluster, including:
 1. DevSpace deployments
-2. Docker registry (if deployed)
 3. DevSpace config files in .devspace/ (local)
 
 Use the flag --all-data to also remove:
-1. Tiller server (if deployed)
 2. Helm home (if helm is used)
 
 If you simply want to shutdown your DevSpace, use the 
@@ -60,8 +58,6 @@ command: devspace down
 	}
 
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
-	cobraCmd.Flags().StringVar(&cmd.flags.configOverwrite, "config-overwrite", configutil.OverwriteConfigPath, "The devspace config overwrite file to load (default: '.devspace/overwrite.yaml'")
-
 	rootCmd.AddCommand(cobraCmd)
 }
 
@@ -69,16 +65,22 @@ command: devspace down
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configutil.ConfigPath != cmd.flags.config {
 		configutil.ConfigPath = cmd.flags.config
-
-		// Don't use overwrite config if we use a different config
-		configutil.OverwriteConfigPath = ""
-	}
-	if configutil.OverwriteConfigPath != cmd.flags.configOverwrite {
-		configutil.OverwriteConfigPath = cmd.flags.configOverwrite
 	}
 
-	log.Infof("Loading config %s with overwrite config %s", configutil.ConfigPath, configutil.OverwriteConfigPath)
-	var err error
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !configExists {
+		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+	}
+
+	// Configure cloud provider
+	err = cloud.Configure(log.GetInstance())
+	if err != nil {
+		log.Fatalf("Unable to configure cloud provider: %v", err)
+	}
 
 	// Create kubectl client
 	if cmd.kubectl == nil {
@@ -91,11 +93,9 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	config := configutil.GetConfig()
 
 	if config.Cluster != nil && config.Cluster.CloudProvider != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
-		cmd.deleteCloudDevSpace()
+		cmd.deleteCloudSpace()
 	} else {
 		cmd.deleteDevSpaceDeployments()
-		cmd.deleteInternalRegistry()
-		cmd.deleteTiller()
 		cmd.deleteClusterRoleBinding()
 	}
 
@@ -104,7 +104,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.deleteDevspaceFolder()
 }
 
-func (cmd *ResetCmd) deleteCloudDevSpace() {
+func (cmd *ResetCmd) deleteCloudSpace() {
 	config := configutil.GetConfig()
 	providerConfig, err := cloud.ParseCloudConfig()
 	if err != nil {
@@ -113,47 +113,33 @@ func (cmd *ResetCmd) deleteCloudDevSpace() {
 	}
 
 	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould this DevSpace be deleted from DevSpace Cloud (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
+		Question:     "Should the Space be deleted from DevSpace Cloud",
+		DefaultValue: "yes",
+		Options:      []string{"yes", "no"},
+	}) == "yes"
 
 	if shouldCloudDevSpaceRemoved {
 		// Get selected cloud provider from config
 		selectedCloudProvider := *config.Cluster.CloudProvider
 
 		if provider, ok := providerConfig[selectedCloudProvider]; ok {
-			err := cloud.DeleteDevSpace(provider, *config.Cluster.Namespace)
+			// Get devspace id
+			generatedConfig, err := generated.LoadConfig()
+			if err != nil {
+				log.Failf("Error getting generatedConfig: %v", err)
+				return
+			}
+			if generatedConfig.Space == nil {
+				log.Info("Didn't remove devspace since there is no cloud devspace configured")
+				return
+			}
+
+			err = provider.DeleteSpace(generatedConfig.Space.SpaceID)
 			if err != nil {
 				log.Failf("Error deleting devspace: %v", err)
-			} else {
-				log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
-
-				err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
-				if err != nil {
-					log.Failf("Error deleting kube context: %v", err)
-				}
 			}
-		}
-	} else {
-		cmd.deleteCloudKubeContext()
-	}
-}
 
-func (cmd *ResetCmd) deleteCloudKubeContext() {
-	config := configutil.GetConfig()
-	shouldCloudContextRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould the cloud kube context be removed (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
-
-	if shouldCloudContextRemoved {
-		err := cloud.DeleteKubeContext(*config.Cluster.Namespace)
-		if err != nil {
-			log.Failf("Error deleting kube context: %v", err)
-		} else {
-			log.Done("Successfully deleted kube context")
+			log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
 		}
 	}
 }
@@ -162,66 +148,11 @@ func (cmd *ResetCmd) deleteDevSpaceDeployments() {
 	deleteDevSpace(cmd.kubectl, nil)
 }
 
-func (cmd *ResetCmd) deleteInternalRegistry() {
-	config := configutil.GetConfig()
-
-	if config.InternalRegistry != nil {
-		shouldRegistryRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould the internal registry be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-
-		if shouldRegistryRemoved {
-			isDeployed := helmClient.IsTillerDeployed(cmd.kubectl)
-			if isDeployed == false {
-				return
-			}
-
-			helm, err := helmClient.NewClient(cmd.kubectl, log.GetInstance(), false)
-			if err != nil {
-				log.Fatalf("Error creating helm client: %v", err)
-			}
-
-			_, err = helm.DeleteRelease(registry.InternalRegistryName, true)
-			if err != nil {
-				log.Failf("Error deleting internal registry: %v", err)
-			} else {
-				log.Done("Successfully deleted internal registry")
-			}
-		}
-	}
-}
-
-func (cmd *ResetCmd) deleteTiller() {
-	config := configutil.GetConfig()
-
-	if config.Tiller != nil {
-		shouldRemoveTiller := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould the tiller server be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
-
-		if shouldRemoveTiller {
-			log.StartWait("Deleting tiller")
-			err := helmClient.DeleteTiller(cmd.kubectl)
-			log.StopWait()
-
-			if err != nil {
-				log.Failf("Error deleting tiller: %s", err.Error())
-			} else {
-				log.Done("Successfully deleted tiller server")
-			}
-		}
-	}
-}
-
 func (cmd *ResetCmd) deleteDeploymentFiles() {
 	config := configutil.GetConfig()
 
-	if config.DevSpace != nil && config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
 			if deployConfig.Helm != nil && deployConfig.Helm.ChartPath != nil {
 				absChartPath, err := filepath.Abs(*deployConfig.Helm.ChartPath)
 
@@ -229,10 +160,10 @@ func (cmd *ResetCmd) deleteDeploymentFiles() {
 					_, err := os.Stat(absChartPath)
 					if os.IsNotExist(err) == false {
 						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-							Question:               "\n\nShould the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed? (y/n)",
-							DefaultValue:           "y",
-							ValidationRegexPattern: "^(y|n)$",
-						}) == "y"
+							Question:     "Should the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed?",
+							DefaultValue: "yes",
+							Options:      []string{"yes", "no"},
+						}) == "yes"
 
 						if deleteChart {
 							os.RemoveAll(absChartPath)
@@ -262,10 +193,10 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerfilePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerfile := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "\n\nShould " + dockerfilePath + " be removed? (y/n)",
-				DefaultValue:           "y",
-				ValidationRegexPattern: "^(y|n)$",
-			}) == "y"
+				Question:     "Should " + dockerfilePath + " be removed?",
+				DefaultValue: "yes",
+				Options:      []string{"yes", "no"},
+			}) == "yes"
 
 			if deleteDockerfile {
 				os.Remove(absDockerfilePath)
@@ -287,10 +218,10 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		_, err = os.Stat(absDockerIgnorePath)
 		if os.IsNotExist(err) == false {
 			deleteDockerIgnore := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:               "\n\nShould " + absDockerIgnorePath + " be removed? (y/n)",
-				DefaultValue:           "y",
-				ValidationRegexPattern: "^(y|n)$",
-			}) == "y"
+				Question:     "\n\nShould " + absDockerIgnorePath + " be removed?",
+				DefaultValue: "yes",
+				Options:      []string{"yes", "no"},
+			}) == "yes"
 
 			if deleteDockerIgnore {
 				os.Remove(absDockerIgnorePath)
@@ -305,10 +236,10 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 	_, err := cmd.kubectl.RbacV1beta1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
 	if err == nil {
 		deleteRoleBinding := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed? (y/n)",
-			DefaultValue:           "y",
-			ValidationRegexPattern: "^(y|n)$",
-		}) == "y"
+			Question:     "\n\nShould the ClusterRoleBinding '" + clusterRoleBindingName + "' be removed?",
+			DefaultValue: "yes",
+			Options:      []string{"yes", "no"},
+		}) == "yes"
 
 		if deleteRoleBinding {
 			log.StartWait("Deleting cluster role bindings")
@@ -326,10 +257,10 @@ func (cmd *ResetCmd) deleteClusterRoleBinding() {
 
 func (cmd *ResetCmd) deleteDevspaceFolder() {
 	deleteDevspaceFolder := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:               "\n\nShould the .devspace folder be removed? (y/n)",
-		DefaultValue:           "y",
-		ValidationRegexPattern: "^(y|n)$",
-	}) == "y"
+		Question:     "\n\nShould the .devspace folder be removed?",
+		DefaultValue: "yes",
+		Options:      []string{"yes", "no"},
+	}) == "yes"
 
 	if deleteDevspaceFolder {
 		os.RemoveAll(".devspace")

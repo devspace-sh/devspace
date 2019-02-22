@@ -114,3 +114,6 @@ func (d *DiscardLogger) printWithContextf(fnType logFunctionType, contextFields 
 func (d *DiscardLogger) Write(message []byte) (int, error) {
 	return len(message), nil
 }
+
+// WriteString implements logger interface
+func (d *DiscardLogger) WriteString(message string) {}

@@ -1,19 +1,19 @@
-version: v1alpha1
+version: v1alpha2
 cluster:
-  cloudProvider: devspace-cloud
-# kubeContext: minikube
-devSpace:
-  terminal:
-    labelSelector:
-      release: devspace-node
-  deployments:
-  - name: devspace-node
-    kubectl:
-      manifests:
-      - node/kube/*
-  - name: devspace-php
-    helm:
-      chartPath: php/chart
+  kubeContext: minikube
+  namespace: devspace
+deployments:
+- name: devspace-node
+  kubectl:
+    manifests:
+    - node/kube/*
+- name: devspace-php
+  helm:
+    chartPath: php/chart
+dev:
+  overrideImages:
+  - name: node
+    entrypoint: ["sleep", "9999999999"]
   ports:
   - labelSelector:
       release: devspace-node
@@ -35,14 +35,19 @@ devSpace:
     uploadExcludePaths:
     - Dockerfile
     - chart/
+  terminal:
+    labelSelector:
+      release: devspace-node
 images:
   node:
-    name: yourdockeruser/node
     build:
-      dockerfilePath: node/Dockerfile
       contextPath: node/
+      dockerfilePath: node/Dockerfile
+    image: node
+    skipPush: true
   php:
-    name: yourdockeruser/php
     build:
-      dockerfilePath: php/Dockerfile
       contextPath: php/
+      dockerfilePath: php/Dockerfile
+    image: php
+    skipPush: true

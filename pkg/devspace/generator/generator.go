@@ -11,8 +11,8 @@ import (
 
 	"github.com/covexo/devspace/pkg/util/fsutil"
 
-	"gopkg.in/src-d/enry.v1"
-	"gopkg.in/src-d/go-git.v4"
+	enry "gopkg.in/src-d/enry.v1"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 // ChartGenerator is a type of object that generates a Helm Chart
@@ -148,7 +148,6 @@ func (cg *ChartGenerator) detectLanguage() error {
 	})
 
 	walkError := filepath.Walk(cg.Path, func(path string, fileInfo os.FileInfo, err error) error {
-
 		// If timeout is over, then cancel detect
 		if cancelDetect {
 			return filepath.SkipDir
