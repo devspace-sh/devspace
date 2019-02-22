@@ -19,6 +19,27 @@ import (
 // SpaceNameValidationRegEx is the sapace name validation regex
 var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
+// GetProvider retrieves the provider with the given name and ensures the user is logged in
+func GetProvider(providerName string, log log.Logger) (*Provider, error) {
+	log.StartWait("Logging into cloud provider...")
+	defer log.StopWait()
+
+	// Get provider configuration
+	providerConfig, err := ParseCloudConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure user is logged in
+	err = EnsureLoggedIn(providerConfig, providerName, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get provider config
+	return providerConfig[providerName], nil
+}
+
 // GetCurrentProvider returns the current specified cloud provider
 func GetCurrentProvider(log log.Logger) (*Provider, error) {
 	log.StartWait("Logging into cloud provider...")
