@@ -48,7 +48,7 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, i
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConfigName string, imageConf *v1.ImageConfig, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	dockerfilePath := "./Dockerfile"
 	contextPath := "./"
-	imageName := *imageConf.Name
+	imageName := *imageConf.Image
 	engineName := ""
 
 	if imageConf.Build != nil {
@@ -230,7 +230,7 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 	activeConfig.DockerContextPaths[contextPath] = hash
 
 	// Check if there is an image tag for this image
-	if _, ok := activeConfig.ImageTags[*imageConf.Name]; ok == false {
+	if _, ok := activeConfig.ImageTags[*imageConf.Image]; ok == false {
 		return true, nil
 	}
 

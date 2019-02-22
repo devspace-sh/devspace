@@ -11,6 +11,4 @@ spec:
     spec:
       containers:
       - name: node
-        image: yourdockeruser/node
-        command: ["sleep"]
-        args: ["999999999999"]
+        image: node

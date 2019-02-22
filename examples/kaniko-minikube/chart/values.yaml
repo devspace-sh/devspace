@@ -1,9 +1,0 @@
-containers:
-  default:
-    image: "will be overriden by devspace up"
-    command: 
-    - sleep
-    args:
-    - 99999999
-
-pullSecrets: []

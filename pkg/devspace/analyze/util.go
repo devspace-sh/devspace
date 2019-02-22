@@ -67,18 +67,21 @@ func printContainerProblem(containerProblem *containerProblem) []string {
 		s = append(s, fmt.Sprintf("        Status: %s (reason: %s)", ansi.Color("Terminated", "red+b"), ansi.Color(containerProblem.Reason, "red+b")))
 		s = append(s, fmt.Sprintf("        Terminated: %s ago", ansi.Color(containerProblem.TerminatedAt.String(), "white+b")))
 	}
-
-	if containerProblem.Restarts > 0 {
-		s = append(s, fmt.Sprintf("        Restarts: %s", ansi.Color(strconv.Itoa(containerProblem.Restarts), "red+b")))
-		s = append(s, fmt.Sprintf("        Last Restart: %s ago", ansi.Color(containerProblem.LastRestart.String(), "white+b")))
-	}
 	if containerProblem.Message != "" {
 		s = append(s, fmt.Sprintf("        Message: %s", ansi.Color(containerProblem.Message, "white+b")))
 	}
 
-	if containerProblem.LastExitCode != 0 {
-		s = append(s, fmt.Sprintf("        Last Exit Code: %s", ansi.Color(strconv.Itoa(containerProblem.LastExitCode), "red+b")))
+	if containerProblem.Restarts > 0 {
+		s = append(s, fmt.Sprintf("        Restarts: %s", ansi.Color(strconv.Itoa(containerProblem.Restarts), "red+b")))
+		s = append(s, fmt.Sprintf("        Last Restart: %s ago", ansi.Color(containerProblem.LastRestart.String(), "white+b")))
+		if containerProblem.LastExitCode != 0 {
+			s = append(s, fmt.Sprintf("        Last Exit: %s (Code: %s)", ansi.Color(containerProblem.LastExitReason, "red+b"), ansi.Color(strconv.Itoa(containerProblem.LastExitCode), "red+b")))
+		}
+		if containerProblem.LastMessage != "" {
+			s = append(s, fmt.Sprintf("        Last Exit Message: %s", ansi.Color(containerProblem.LastMessage, "red+b")))
+		}
 	}
+
 	if containerProblem.LastFaultyExecutionLog != "" {
 		s = append(s, fmt.Sprintf("        Last Execution Log: \n%s", ansi.Color(containerProblem.LastFaultyExecutionLog, "red")))
 	}

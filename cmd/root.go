@@ -9,6 +9,7 @@ import (
 	"github.com/covexo/devspace/cmd/list"
 	"github.com/covexo/devspace/cmd/remove"
 	"github.com/covexo/devspace/cmd/status"
+	"github.com/covexo/devspace/cmd/update"
 	"github.com/covexo/devspace/cmd/use"
 	"github.com/covexo/devspace/pkg/devspace/upgrade"
 	"github.com/covexo/devspace/pkg/util/log"
@@ -56,6 +57,7 @@ func init() {
 	rootCmd.AddCommand(remove.NewRemoveCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())
 	rootCmd.AddCommand(use.NewUseCmd())
+	rootCmd.AddCommand(update.NewUpdateCmd())
 
 	// Add main commands
 	rootCmd.AddCommand(NewLoginCmd())

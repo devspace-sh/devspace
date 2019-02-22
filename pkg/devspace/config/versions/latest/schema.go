@@ -137,7 +137,7 @@ type BandwidthLimits struct {
 
 // ImageConfig defines the image specification
 type ImageConfig struct {
-	Name             *string      `yaml:"name"`
+	Image            *string      `yaml:"image"`
 	Tag              *string      `yaml:"tag,omitempty"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
 	Insecure         *bool        `yaml:"insecure,omitempty"`

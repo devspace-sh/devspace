@@ -225,6 +225,12 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				log.Infof("Loaded config %s", ConfigPath)
 			}
 		}
+
+		// Get generated config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Couldn't save generated config: %v", err)
+		}
 	})
 
 	return config
@@ -385,7 +391,7 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 		}
 
 		activeContext := kubeConfig.CurrentContext
-		if config.Cluster.KubeContext != nil {
+		if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
 			activeContext = *config.Cluster.KubeContext
 		}
 

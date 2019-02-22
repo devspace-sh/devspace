@@ -156,7 +156,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	// Set images and pull secrets values
 	overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
-	overwriteValues["containers"] = getImageValues(config, generatedConfig, isDev)
+
 	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 
 	wait := true
@@ -188,15 +188,15 @@ func getImageValues(config *v1.Config, generatedConfig *generated.Config, isDev 
 	overwriteContainerValues := map[interface{}]interface{}{}
 	if config.Images != nil {
 		for imageName, imageConf := range *config.Images {
-			tag := tags[*imageConf.Name]
+			tag := tags[*imageConf.Image]
 			if imageConf.Tag != nil {
 				tag = *imageConf.Tag
 			}
 
 			overwriteContainerValues[imageName] = map[interface{}]interface{}{
-				"image": *imageConf.Name + ":" + tag,
+				"image": *imageConf.Image + ":" + tag,
 				"tag":   tag,
-				"repo":  *imageConf.Name,
+				"repo":  *imageConf.Image,
 			}
 		}
 	}

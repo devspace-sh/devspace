@@ -23,6 +23,7 @@ func NewListCmd() *cobra.Command {
 	listCmd.AddCommand(newPortsCmd())
 	listCmd.AddCommand(newPackagesCmd())
 	listCmd.AddCommand(newConfigsCmd())
+	listCmd.AddCommand(newVarsCmd())
 
 	return listCmd
 }

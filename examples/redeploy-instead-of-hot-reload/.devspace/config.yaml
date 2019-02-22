@@ -1,0 +1,21 @@
+version: v1alpha2
+cluster:
+  cloudProvider: devspace-cloud
+ # kubeContext: minikube
+deployments:
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube/**
+dev:
+  autoReload:
+    paths: 
+    - ./**
+  terminal:
+    disabled: true
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
+images:
+  default:
+    image: dscr.io/yourusername/devspace

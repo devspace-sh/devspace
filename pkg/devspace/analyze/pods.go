@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -154,7 +156,9 @@ type containerProblem struct {
 	Reason  string
 	Message string
 
+	LastExitReason         string
 	LastExitCode           int
+	LastMessage            string
 	LastFaultyExecutionLog string
 }
 
@@ -164,10 +168,12 @@ func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
 	podProblem := &podProblem{
 		Name:                  pod.Name,
 		Status:                kubectl.GetPodStatus(pod),
-		Age:                   time.Now().Sub(pod.CreationTimestamp.UTC()).Round(time.Second).String(),
+		Age:                   time.Since(pod.CreationTimestamp.Time).Round(time.Second).String(),
 		ContainerProblems:     []*containerProblem{},
 		InitContainerProblems: []*containerProblem{},
 	}
+
+	fmt.Println(duration.HumanDuration(time.Since(pod.CreationTimestamp.Time)))
 
 	// Check for unusual status
 	if _, ok := OkayStatus[podProblem.Status]; ok == false {
@@ -218,7 +224,6 @@ func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
 }
 
 func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
-	now := time.Now()
 	tailLines := int64(50)
 	hasProblem := false
 	containerProblem := &containerProblem{
@@ -229,11 +234,13 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 
 	// Check if restarted
 	if containerStatus.RestartCount > 0 {
-		if containerStatus.LastTerminationState.Terminated != nil && now.Sub(containerStatus.LastTerminationState.Terminated.FinishedAt.UTC()) < IgnoreRestartsSince {
+		if containerStatus.LastTerminationState.Terminated != nil && (containerStatus.RestartCount > 4 || time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
 			hasProblem = true
 
-			containerProblem.LastRestart = time.Now().Sub(containerStatus.LastTerminationState.Terminated.FinishedAt.UTC()).Round(time.Second)
+			containerProblem.LastRestart = time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time).Round(time.Second)
 			containerProblem.LastExitCode = int(containerStatus.LastTerminationState.Terminated.ExitCode)
+			containerProblem.LastMessage = containerStatus.LastTerminationState.Terminated.Message
+			containerProblem.LastExitReason = containerStatus.LastTerminationState.Terminated.Reason
 
 			if containerProblem.Ready == true && containerProblem.LastExitCode != 0 {
 				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, true, &tailLines)
@@ -248,7 +255,7 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 
 		if containerStatus.State.Terminated != nil {
 			containerProblem.Terminated = true
-			containerProblem.TerminatedAt = now.Sub(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
+			containerProblem.TerminatedAt = time.Since(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
 			containerProblem.Reason = containerStatus.State.Terminated.Reason
 			containerProblem.Message = containerStatus.State.Terminated.Message
 

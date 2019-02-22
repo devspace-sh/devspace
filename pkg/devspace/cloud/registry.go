@@ -50,6 +50,7 @@ func (p *Provider) LoginIntoRegistries() error {
 		}
 
 		log.Donef("Successfully logged into docker registry %s", registry.URL)
+		log.Infof("You can now use %s/%s/* to deploy private docker images", registry.URL, accountName)
 	}
 
 	return nil

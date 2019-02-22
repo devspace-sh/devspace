@@ -37,7 +37,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy your DevSpace to a target cluster",
+		Short: "Deploy the devspace to a target cluster",
 		Long: `
 #######################################################
 ################## devspace deploy ####################
@@ -45,7 +45,7 @@ func init() {
 Deploys the devspace to a target cluster:
 
 devspace deploy --namespace=deploy
-devspace deploy --namespace=deploy --docker-target=production
+devspace deploy --namespace=deploy
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.MaximumNArgs(1),

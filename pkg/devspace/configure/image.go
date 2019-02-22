@@ -13,7 +13,7 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 	config := configutil.GetBaseConfig()
 
 	imageConfig := &v1.ImageConfig{
-		Name:  &name,
+		Image: &name,
 		Build: &v1.BuildConfig{},
 	}
 

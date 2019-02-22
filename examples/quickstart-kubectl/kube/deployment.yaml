@@ -7,10 +7,11 @@ spec:
   template:
     metadata:
       labels:
-        release: devspace-default
+        app.kubernetes.io/component: default
+        app.kubernetes.io/name: devspace-app
     spec:
       containers:
       - name: default
-        image: yourdockername/quickstart
-        command: ["sleep"]
-        args: ["999999999999"]
+        image: dscr.io/yourusername/quickstart
+      imagePullSecrets:
+      - name: devspace-auth-dscr-io

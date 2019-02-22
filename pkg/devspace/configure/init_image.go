@@ -134,7 +134,7 @@ func Image(dockerUsername string, isCloud bool) error {
 	}
 
 	imageMap := *config.Images
-	imageMap["default"].Name = &defaultImageName
+	imageMap["default"].Image = &defaultImageName
 
 	if createPullSecret {
 		imageMap["default"].CreatePullSecret = &createPullSecret

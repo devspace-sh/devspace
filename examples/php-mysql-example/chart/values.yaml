@@ -1,5 +1,40 @@
-containers:
-  default:
-    image: "will be overriden by devspace up"
+components:
+- name: default
+  containers:
+  - # Image tag will be automatically updated in runtime
+    # when running devspace deploy or devspace dev
+    image: dscr.io/fabiankramm/devspace
+  service:
+    name: external
+    type: ClusterIP
+    ports:
+    - externalPort: 80
+      containerPort: 80
+- name: mysql
+  containers:
+  - image: mysql:5.7
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: "4S+XV5vXNE**x%3ZP8u!!QZEpdGD_X25"
+    - name: MYSQL_DATABASE
+      value: "devspace"
+  volumeMounts:
+  - containerPath: /var/lib/mysql
+    volume:
+      name: mysql-data
+  service:
+    name: mysql
+    ports:
+    - externalPort: 3306
+      containerPort: 3306
 
+# Define persistent volumes here
+# Then mount them in containers above
+volumes:
+- name: mysql-data
+  size: "5Gi"
+
+# Defines image pull secrets
+# DevSpace.cli will append all pull secrets which are automatically created
+# More infos on: https://devspace.cloud/docs/images/pull-secrets
 pullSecrets: []

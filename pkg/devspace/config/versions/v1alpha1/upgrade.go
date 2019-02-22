@@ -163,11 +163,24 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 			nextConfig.Dev.Selectors = &selectors
 		}
+
+		// Convert auto reaload
+		if c.DevSpace.AutoReload != nil {
+			if nextConfig.Dev.AutoReload == nil {
+				nextConfig.Dev.AutoReload = &next.AutoReloadConfig{}
+			}
+
+			if c.DevSpace.AutoReload.Paths != nil && len(*c.DevSpace.AutoReload.Paths) > 0 {
+				nextConfig.Dev.AutoReload.Paths = c.DevSpace.AutoReload.Paths
+			}
+		}
 	}
 
-	// Convert registries
+	// Convert images with registries
 	if c.Images != nil {
 		for key, image := range *c.Images {
+			(*nextConfig.Images)[key].Image = image.Name
+
 			if image.Registry != nil {
 				if c.Registries == nil {
 					return nil, fmt.Errorf("Registries is nil in config")
@@ -185,7 +198,7 @@ func (c *Config) Upgrade() (config.Config, error) {
 					return nil, fmt.Errorf("Registry url or image name is nil for image %s", key)
 				}
 
-				(*nextConfig.Images)[key].Name = ptr.String(*registry.URL + "/" + *image.Name)
+				(*nextConfig.Images)[key].Image = ptr.String(*registry.URL + "/" + *image.Name)
 			}
 
 			if image.AutoReload == nil || image.AutoReload.Disabled == nil || *image.AutoReload.Disabled == false {

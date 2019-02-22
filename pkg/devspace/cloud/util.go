@@ -9,42 +9,75 @@ import (
 	"strings"
 	"time"
 
+	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
+
 	"github.com/covexo/devspace/pkg/util/log"
 )
 
 // PrintSpaces prints the users spaces
 func (p *Provider) PrintSpaces(name string) error {
-	devspaces, err := p.GetSpaces()
+	spaces, err := p.GetSpaces()
 	if err != nil {
-		return fmt.Errorf("Error retrieving devspaces: %v", err)
+		return fmt.Errorf("Error retrieving spaces: %v", err)
 	}
 
-	headerColumnNames := []string{
-		"SpaceID",
-		"Name",
-		"Domain",
-		"Created",
+	activeSpaceID := 0
+	if configutil.ConfigExists() {
+		generated, err := generated.LoadConfig()
+		if err == nil && generated.Space != nil {
+			activeSpaceID = generated.Space.SpaceID
+		}
 	}
+
+	headerColumnNames := []string{}
+	if activeSpaceID != 0 {
+		headerColumnNames = append(headerColumnNames, []string{
+			"SpaceID",
+			"Name",
+			"Active",
+			"Domain",
+			"Created",
+		}...)
+	} else {
+		headerColumnNames = append(headerColumnNames, []string{
+			"SpaceID",
+			"Name",
+			"Domain",
+			"Created",
+		}...)
+	}
+
 	values := [][]string{}
 
-	for _, devspace := range devspaces {
-		if name == "" || name == devspace.Name {
-			created, err := time.Parse(time.RFC3339, strings.Split(devspace.Created, ".")[0]+"Z")
+	for _, space := range spaces {
+		if name == "" || name == space.Name {
+			created, err := time.Parse(time.RFC3339, strings.Split(space.Created, ".")[0]+"Z")
 			if err != nil {
 				return err
 			}
 
 			domain := ""
-			if devspace.Domain != nil {
-				domain = *devspace.Domain
+			if space.Domain != nil {
+				domain = *space.Domain
 			}
 
-			values = append(values, []string{
-				strconv.Itoa(devspace.SpaceID),
-				devspace.Name,
-				domain,
-				created.String(),
-			})
+			if activeSpaceID != 0 {
+				values = append(values, []string{
+					strconv.Itoa(space.SpaceID),
+					space.Name,
+					strconv.FormatBool(space.SpaceID == activeSpaceID),
+					domain,
+					created.String(),
+				})
+			} else {
+				values = append(values, []string{
+					strconv.Itoa(space.SpaceID),
+					space.Name,
+					domain,
+					created.String(),
+				})
+			}
 		}
 	}
 

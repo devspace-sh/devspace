@@ -151,7 +151,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		Version: ptr.String(latest.Version),
 		Images: &map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Name: ptr.String("devspace"),
+				Image: ptr.String("devspace"),
 			},
 		},
 	})
@@ -200,14 +200,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		cmd.addDefaultSyncConfig()
 		cmd.configureImage()
 
-		// Get image name
-		if len(*config.Images) > 0 {
-			for _, imageConf := range *config.Images {
-				cmd.imageName = *imageConf.Name
-				break
-			}
-		}
-
 		err := configutil.SaveBaseConfig()
 		if err != nil {
 			log.With(err).Fatalf("Config error: %s", err.Error())
@@ -241,6 +233,16 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) replacePlaceholder() {
+	config := configutil.GetConfig()
+
+	// Get image name
+	if len(*config.Images) > 0 {
+		for _, imageConf := range *config.Images {
+			cmd.imageName = *imageConf.Image
+			break
+		}
+	}
+
 	data, err := ioutil.ReadFile("chart/values.yaml")
 	if err != nil {
 		log.Fatal("Couldn't find chart/values.yaml")

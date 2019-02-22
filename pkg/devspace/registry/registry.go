@@ -1,10 +1,10 @@
 package registry
 
 import (
-	"crypto/md5"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
@@ -16,9 +16,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const registryAuthSecretNamePrefix = "devspace-registry-auth-"
+const registryAuthSecretNamePrefix = "devspace-auth-"
 
 var pullSecretNames = []string{}
+
+var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // CreatePullSecret creates an image pull secret for a registry
 func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
@@ -76,14 +78,16 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 
 // GetRegistryAuthSecretName returns the name of the image pull secret for a registry
 func GetRegistryAuthSecretName(registryURL string) string {
-	registryHash := md5.Sum([]byte(registryURL))
+	if registryURL == "" {
+		return registryAuthSecretNamePrefix + "docker"
+	}
 
-	return registryAuthSecretNamePrefix + hex.EncodeToString(registryHash[:])
+	return registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-")
 }
 
 // GetImageWithTag returns the image (optional with tag)
 func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) (string, error) {
-	image := *imageConfig.Name
+	image := *imageConfig.Image
 	if imageConfig.Tag != nil {
 		image = image + ":" + *imageConfig.Tag
 	} else {

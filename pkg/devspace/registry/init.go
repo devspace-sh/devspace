@@ -28,7 +28,7 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.C
 	if config.Images != nil {
 		for _, imageConf := range *config.Images {
 			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
-				registryURL, err := GetRegistryFromImageName(*imageConf.Name)
+				registryURL, err := GetRegistryFromImageName(*imageConf.Image)
 				if err != nil {
 					return err
 				}

@@ -16,7 +16,3 @@ spec:
       containers:
       - name: default
         image: "{{ .Values.containers.php.image }}"
-      imagePullSecrets:
-        {{- range $index, $secretName := .Values.pullSecrets }}
-        - name: "{{ $secretName }}"
-        {{- end }}

@@ -23,7 +23,7 @@ func StartAttach(client *kubernetes.Clientset, selectorNameOverride, containerNa
 		return err
 	}
 
-	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace, time.Second*7)
+	pod, err := kubectl.GetNewestRunningPod(client, labelSelector, namespace, time.Second*60)
 	if err != nil {
 		return err
 	}
