@@ -100,7 +100,7 @@ func TestSimple(t *testing.T) {
 	if newConfigConverted.Images == nil || (*newConfigConverted.Images)["test"] == nil {
 		t.Fatal("Error converting images")
 	}
-	if *(*newConfigConverted.Images)["test"].Name != "test.io/test" {
+	if *(*newConfigConverted.Images)["test"].Image != "test.io/test" {
 		t.Fatal("Error converting image name")
 	}
 }

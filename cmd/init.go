@@ -176,6 +176,10 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	if createChart {
+		cmd.determineLanguage()
+	}
+
 	if cmd.flags.reconfigure || !configExists {
 		// Check if devspace cloud should be used
 		if cmd.flags.useCloud == false {
@@ -216,10 +220,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Create chart and dockerfile
 	if createChart {
-		cmd.initChartGenerator()
-		cmd.determineLanguage()
 		cmd.createChart()
-
 		cmd.replacePlaceholder()
 	}
 
@@ -240,6 +241,14 @@ func (cmd *InitCmd) replacePlaceholder() {
 		for _, imageConf := range *config.Images {
 			cmd.imageName = *imageConf.Image
 			break
+		}
+	}
+
+	if cmd.port == "" {
+		cmd.port = "3000"
+
+		if config.Dev != nil && config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 && (*config.Dev.Ports)[0].PortMappings != nil && len(*(*config.Dev.Ports)[0].PortMappings) > 0 {
+			cmd.port = strconv.Itoa(*(*(*config.Dev.Ports)[0].PortMappings)[0].RemotePort)
 		}
 	}
 
