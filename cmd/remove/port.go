@@ -19,14 +19,14 @@ func newPortCmd() *cobra.Command {
 		Use:   "port",
 		Short: "Removes forwarded ports from a devspace",
 		Long: `
-	#######################################################
-	############### devspace remove port ##################
-	#######################################################
-	Removes port mappings from the devspace configuration:
-	devspace remove port 8080,3000
-	devspace remove port --label-selector=release=test
-	devspace remove port --all
-	#######################################################
+#######################################################
+############### devspace remove port ##################
+#######################################################
+Removes port mappings from the devspace configuration:
+devspace remove port 8080,3000
+devspace remove port --label-selector=release=test
+devspace remove port --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemovePort,

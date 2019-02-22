@@ -17,14 +17,14 @@ func newConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "Converts the active config to the current config version",
 		Long: `
-	#######################################################
-	############### devspace update config ################
-	#######################################################
-	Updates the currently active config to the newest
-	config version
+#######################################################
+############### devspace update config ################
+#######################################################
+Updates the currently active config to the newest
+config version
 
-	Note: convert does not upgrade the overwrite configs
-	#######################################################
+Note: convert does not upgrade the overwrite configs
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunConfig,

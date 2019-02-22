@@ -20,14 +20,14 @@ func newProviderCmd() *cobra.Command {
 		Use:   "provider",
 		Short: "Removes a cloud provider from the configuration",
 		Long: `
-	#######################################################
-	############ devspace remove provider #################
-	#######################################################
-	Removes a cloud provider.
+#######################################################
+############ devspace remove provider #################
+#######################################################
+Removes a cloud provider.
 
-	Example:
-	devspace remove provider https://app.devspace.cloud
-	#######################################################
+Example:
+devspace remove provider https://app.devspace.cloud
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunRemoveCloudProvider,

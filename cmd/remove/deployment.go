@@ -18,13 +18,13 @@ func newDeploymentCmd() *cobra.Command {
 		Use:   "deployment",
 		Short: "Removes one or all deployments from the devspace",
 		Long: `
-	#######################################################
-	############ devspace remove deployment ###############
-	#######################################################
-	Removes one or all deployments from a devspace:
-	devspace remove deployment devspace-default
-	devspace remove deployment --all
-	#######################################################
+#######################################################
+############ devspace remove deployment ###############
+#######################################################
+Removes one or all deployments from a devspace:
+devspace remove deployment devspace-default
+devspace remove deployment --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemoveDeployment,

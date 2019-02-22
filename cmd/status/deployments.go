@@ -20,11 +20,11 @@ func newDeploymentsCmd() *cobra.Command {
 		Use:   "deployments",
 		Short: "Shows the deployments status",
 		Long: `
-	#######################################################
-	############ devspace status deployments ##############
-	#######################################################
-	Shows the devspace status
-	#######################################################
+#######################################################
+############ devspace status deployments ##############
+#######################################################
+Shows the devspace status
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunDeploymentsStatus,

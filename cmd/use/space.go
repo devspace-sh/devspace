@@ -20,15 +20,15 @@ func newSpaceCmd() *cobra.Command {
 		Use:   "space",
 		Short: "Use an existing space for the current configuration",
 		Long: `
-	#######################################################
-	################ devspace use space ###################
-	#######################################################
-	Use an existing space for the current configuration
+#######################################################
+################ devspace use space ###################
+#######################################################
+Use an existing space for the current configuration
 
-	Example:
-	devspace use space my-space
-	devspace use space none    // stop using a space
-	#######################################################
+Example:
+devspace use space my-space
+devspace use space none    // stop using a space
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunUseSpace,

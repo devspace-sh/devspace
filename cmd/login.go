@@ -20,16 +20,16 @@ func NewLoginCmd() *cobra.Command {
 		Use:   "login",
 		Short: "Log into devspace cloud",
 		Long: `
-	#######################################################
-	################### devspace login ####################
-	#######################################################
-	If no --token is supplied the browser will be opened 
-	and the login page is shown
+#######################################################
+################### devspace login ####################
+#######################################################
+If no --token is supplied the browser will be opened 
+and the login page is shown
 
-	Example:
-	devspace login
-	devspace login --token 123456789
-	#######################################################
+Example:
+devspace login
+devspace login --token 123456789
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunLogin,

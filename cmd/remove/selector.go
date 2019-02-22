@@ -20,18 +20,18 @@ func newSelectorCmd() *cobra.Command {
 		Use:   "selector",
 		Short: "Removes one or all selectors from the devspace",
 		Long: `
-	#######################################################
-	############ devspace remove selector #################
-	#######################################################
-	Removes one, multiple or all selectors from a devspace.
-	If the argument is specified, the selector with that name will be deleted.
-	If more than one condition for deletion is specified, all selectors that match at least one of the conditions will be deleted.
-	
-	Examples:
-	devspace remove selector my-selector
-	devspace remove selector --namespace=my-namespace --label-selector=environment=production,tier=frontend
-	devspace remove selector --all
-	#######################################################
+#######################################################
+############ devspace remove selector #################
+#######################################################
+Removes one, multiple or all selectors from a devspace.
+If the argument is specified, the selector with that name will be deleted.
+If more than one condition for deletion is specified, all selectors that match at least one of the conditions will be deleted.
+
+Examples:
+devspace remove selector my-selector
+devspace remove selector --namespace=my-namespace --label-selector=environment=production,tier=frontend
+devspace remove selector --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemoveSelector,

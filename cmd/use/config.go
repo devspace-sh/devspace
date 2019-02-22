@@ -17,15 +17,15 @@ func newConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "Use a specific devspace configuration",
 		Long: `
-	#######################################################
-	################ devspace use config ##################
-	#######################################################
-	Use a specific devspace configuration that is defined
-	in .devspace/configs.yaml
-	
-	Example:
-	devspace use config myconfig
-	#######################################################
+#######################################################
+################ devspace use config ##################
+#######################################################
+Use a specific devspace configuration that is defined
+in .devspace/configs.yaml
+
+Example:
+devspace use config myconfig
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunUseConfig,

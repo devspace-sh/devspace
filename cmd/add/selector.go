@@ -19,15 +19,15 @@ func newSelectorCmd() *cobra.Command {
 		Use:   "selector",
 		Short: "Add a selector",
 		Long: ` 
-	#######################################################
-	############# devspace add selector ###################
-	#######################################################
-	Add a new selector to your devspace
-	
-	Examples:
-	devspace add selector my-selector --namespace=my-namespace
-	devspace add selector my-selector --label-selector=environment=production,tier=frontend
-	#######################################################
+#######################################################
+############# devspace add selector ###################
+#######################################################
+Add a new selector to your devspace
+
+Examples:
+devspace add selector my-selector --namespace=my-namespace
+devspace add selector my-selector --label-selector=environment=production,tier=frontend
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddSelector,

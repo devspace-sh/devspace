@@ -15,11 +15,11 @@ func newSelectorsCmd() *cobra.Command {
 		Use:   "selectors",
 		Short: "Lists all selectors",
 		Long: `
-	#######################################################
-	############# devspace list selectors #################
-	#######################################################
-	Lists the selectors that are defined in the DevSpace
-	#######################################################
+#######################################################
+############# devspace list selectors #################
+#######################################################
+Lists the selectors that are defined in the DevSpace
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListSelectors,

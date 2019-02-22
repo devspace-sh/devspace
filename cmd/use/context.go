@@ -17,16 +17,16 @@ func newContextCmd() *cobra.Command {
 		Use:   "context",
 		Short: "Change current kubectl context to space",
 		Long: `
-	#######################################################
-	################ devspace use context #################
-	#######################################################
-	Change the current kubectl context to the defined space
-	kubernetes credentials
-	
-	Example:
-	devspace use context         // Use active space credentials
-	devspace use context myspace // Use different space credentials
-	#######################################################
+#######################################################
+################ devspace use context #################
+#######################################################
+Change the current kubectl context to the defined space
+kubernetes credentials
+
+Example:
+devspace use context         // Use active space credentials
+devspace use context myspace // Use different space credentials
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunUseContext,

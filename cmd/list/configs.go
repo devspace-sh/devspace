@@ -20,11 +20,11 @@ func newConfigsCmd() *cobra.Command {
 		Use:   "configs",
 		Short: "Lists the defined configurations",
 		Long: `
-	#######################################################
-	############## devspace list configs ##################
-	#######################################################
-	Lists the defined devspace configuartions
-	#######################################################
+#######################################################
+############## devspace list configs ##################
+#######################################################
+Lists the defined devspace configuartions
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListConfigs,

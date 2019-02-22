@@ -29,15 +29,16 @@ func NewLogsCmd() *cobra.Command {
 		Use:   "logs",
 		Short: "Prints the logs of a pod and attaches to it",
 		Long: `
-	#######################################################
-	#################### devspace logs ####################
-	#######################################################
-	Logs prints the last log of a pod container and attachs to it
+#######################################################
+#################### devspace logs ####################
+#######################################################
+Logs prints the last log of a pod container and attachs 
+to it
 
-	Example:
-	devspace logs
-	devspace logs --namespace=mynamespace
-	#######################################################
+Example:
+devspace logs
+devspace logs --namespace=mynamespace
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunLogs,

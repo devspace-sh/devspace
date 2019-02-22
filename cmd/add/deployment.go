@@ -20,17 +20,17 @@ func newDeploymentCmd() *cobra.Command {
 		Use:   "deployment",
 		Short: "Add a deployment",
 		Long: ` 
-	#######################################################
-	############# devspace add deployment #################
-	#######################################################
-	Add a new deployment (kubernetes manifests or 
-	helm chart) to your devspace, that will be deployed
-	
-	Examples:
-	devspace add deployment my-deployment --chart=chart/
-	devspace add deployment my-deployment --manifests=kube/pod.yaml
-	devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
-	#######################################################
+#######################################################
+############# devspace add deployment #################
+#######################################################
+Add a new deployment (kubernetes manifests or 
+helm chart) to your devspace, that will be deployed
+
+Examples:
+devspace add deployment my-deployment --chart=chart/
+devspace add deployment my-deployment --manifests=kube/pod.yaml
+devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddDeployment,

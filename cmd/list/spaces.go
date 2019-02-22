@@ -17,14 +17,14 @@ func newSpacesCmd() *cobra.Command {
 		Use:   "spaces",
 		Short: "Lists all user spaces",
 		Long: `
-	#######################################################
-	############### devspace list spaces ##################
-	#######################################################
-	List all cloud spaces
+#######################################################
+############### devspace list spaces ##################
+#######################################################
+List all cloud spaces
 
-	Example:
-	devspace list spaces
-	#######################################################
+Example:
+devspace list spaces
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListCloudDevspaces,
