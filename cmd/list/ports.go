@@ -17,11 +17,11 @@ func newPortsCmd() *cobra.Command {
 		Use:   "ports",
 		Short: "Lists port forwarding configurations",
 		Long: `
-	#######################################################
-	############### devspace list ports ###################
-	#######################################################
-	Lists the port forwarding configurations
-	#######################################################
+#######################################################
+############### devspace list ports ###################
+#######################################################
+Lists the port forwarding configurations
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListPort,

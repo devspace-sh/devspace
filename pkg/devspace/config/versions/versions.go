@@ -21,6 +21,7 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	if ok == false {
 		// This is needed because overrides usually don't have versions
 		data["version"] = latest.Version
+		version = latest.Version
 	}
 
 	versionLoadFunc, ok := versionLoader[version]

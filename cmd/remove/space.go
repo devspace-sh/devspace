@@ -23,16 +23,16 @@ func newSpaceCmd() *cobra.Command {
 		Use:   "space",
 		Short: "Removes a cloud space",
 		Long: `
-	#######################################################
-	############## devspace remove space ##################
-	#######################################################
-	Removes a cloud space.
+#######################################################
+############## devspace remove space ##################
+#######################################################
+Removes a cloud space.
 
-	Example:
-	devspace remove space myspace
-	devspace remove space --id=1
-	devspace remove space --all
-	#######################################################
+Example:
+devspace remove space myspace
+devspace remove space --id=1
+devspace remove space --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemoveCloudDevSpace,

@@ -19,13 +19,13 @@ func newPackageCmd() *cobra.Command {
 		Use:   "package",
 		Short: "Removes one or all packages from a devspace",
 		Long: `
-	#######################################################
-	############## devspace remove package ################
-	#######################################################
-	Removes a package from the devspace:
-	devspace remove package mysql
-	devspace remove package mysql -d devspace-default
-	#######################################################
+#######################################################
+############## devspace remove package ################
+#######################################################
+Removes a package from the devspace:
+devspace remove package mysql
+devspace remove package mysql -d devspace-default
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemovePackage,

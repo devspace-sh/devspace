@@ -18,13 +18,13 @@ func newImageCmd() *cobra.Command {
 		Use:   "image",
 		Short: "Removes one or all images from the devspace",
 		Long: `
-	#######################################################
-	############ devspace remove image ####################
-	#######################################################
-	Removes one or all images from a devspace:
-	devspace remove image default
-	devspace remove image --all
-	#######################################################
+#######################################################
+############ devspace remove image ####################
+#######################################################
+Removes one or all images from a devspace:
+devspace remove image default
+devspace remove image --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemoveImage,

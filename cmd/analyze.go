@@ -25,16 +25,16 @@ func NewAnalyzeCmd() *cobra.Command {
 		Use:   "analyze",
 		Short: "Analyzes a kubernetes namespace and checks for potential problems",
 		Long: `
-	#######################################################
-	################## devspace analyze ###################
-	#######################################################
-	Analyze checks a namespaces events, replicasets, services
-	and pods for potential problems
+#######################################################
+################## devspace analyze ###################
+#######################################################
+Analyze checks a namespaces events, replicasets, services
+and pods for potential problems
 
-	Example:
-	devspace analyze
-	devspace analyze --namespace=mynamespace
-	#######################################################
+Example:
+devspace analyze
+devspace analyze --namespace=mynamespace
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunAnalyze,

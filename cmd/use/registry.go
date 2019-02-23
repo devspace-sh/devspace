@@ -16,14 +16,14 @@ func newRegistryCmd() *cobra.Command {
 		Use:   "registry",
 		Short: "Configure docker to use a specific registry",
 		Long: `
-	#######################################################
-	############### devspace use registry #################
-	#######################################################
-	Use a devspace cloud docker registry 
+#######################################################
+############### devspace use registry #################
+#######################################################
+Use a devspace cloud docker registry 
 
-	Example:
-	devspace use registry dscr.io
-	#######################################################
+Example:
+devspace use registry dscr.io
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunUseRegistry,

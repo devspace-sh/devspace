@@ -25,14 +25,14 @@ func newSpaceCmd() *cobra.Command {
 		Use:   "space",
 		Short: "Create a new cloud space",
 		Long: `
-	#######################################################
-	############### devspace create space #################
-	#######################################################
-	Creates a new space
+#######################################################
+############### devspace create space #################
+#######################################################
+Creates a new space
 
-	Example:
-	devspace create space myspace
-	#######################################################
+Example:
+devspace create space myspace
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunCreateSpace,

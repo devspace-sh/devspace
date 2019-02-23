@@ -19,11 +19,11 @@ func newPackagesCmd() *cobra.Command {
 		Use:   "packages",
 		Short: "Lists all added packages",
 		Long: `
-	#######################################################
-	############### devspace list packages ################
-	#######################################################
-	Lists the packages that were added to the DevSpace
-	#######################################################
+#######################################################
+############### devspace list packages ################
+#######################################################
+Lists the packages that were added to the DevSpace
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListPackage,

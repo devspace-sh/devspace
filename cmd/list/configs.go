@@ -20,11 +20,11 @@ func newConfigsCmd() *cobra.Command {
 		Use:   "configs",
 		Short: "Lists the defined configurations",
 		Long: `
-	#######################################################
-	############## devspace list configs ##################
-	#######################################################
-	Lists the defined devspace configuartions
-	#######################################################
+#######################################################
+############## devspace list configs ##################
+#######################################################
+Lists the defined devspace configuartions
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListConfigs,
@@ -83,8 +83,8 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 		}
 
 		overrides := 0
-		if config.Overwrites != nil {
-			overrides = len(*config.Overwrites)
+		if config.Overrides != nil {
+			overrides = len(*config.Overrides)
 		}
 
 		configRows = append(configRows, []string{

@@ -21,19 +21,19 @@ func newPackageCmd() *cobra.Command {
 		Use:   "package",
 		Short: "Add a helm chart",
 		Long: ` 
-	#######################################################
-	############### devspace add package ##################
-	#######################################################
-	Adds an existing helm chart to the devspace
-	(run 'devspace add package' to display all available 
-	helm charts)
-	
-	Examples:
-	devspace add package
-	devspace add package mysql
-	devspace add package mysql --app-version=5.7.14
-	devspace add package mysql --chart-version=0.10.3 -d devspace-default
-	#######################################################
+#######################################################
+############### devspace add package ##################
+#######################################################
+Adds an existing helm chart to the devspace
+(run 'devspace add package' to display all available 
+helm charts)
+
+Examples:
+devspace add package
+devspace add package mysql
+devspace add package mysql --app-version=5.7.14
+devspace add package mysql --chart-version=0.10.3 -d devspace-default
+#######################################################
 	`,
 		Run: cmd.RunAddPackage,
 	}

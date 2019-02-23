@@ -21,13 +21,13 @@ func newPortCmd() *cobra.Command {
 		Use:   "port",
 		Short: "Add a new port forward configuration",
 		Long: `
-	#######################################################
-	################ devspace add port ####################
-	#######################################################
-	Add a new port mapping that should be forwarded to
-	the devspace (format is local:remote comma separated):
-	devspace add port 8080:80,3000
-	#######################################################
+#######################################################
+################ devspace add port ####################
+#######################################################
+Add a new port mapping that should be forwarded to
+the devspace (format is local:remote comma separated):
+devspace add port 8080:80,3000
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddPort,

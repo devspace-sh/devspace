@@ -17,15 +17,15 @@ func newContextCmd() *cobra.Command {
 		Use:   "context",
 		Short: "Removes a cloud space kubectl context",
 		Long: `
-	#######################################################
-	############# devspace remove context #################
-	#######################################################
-	Removes a cloud space kubectl context
+#######################################################
+############# devspace remove context #################
+#######################################################
+Removes a cloud space kubectl context
 
-	Example:
-	devspace remove context myspace
-	devspace remove context --all
-	#######################################################
+Example:
+devspace remove context myspace
+devspace remove context --all
+#######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunRemoveContext,

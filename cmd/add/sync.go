@@ -24,14 +24,14 @@ func newSyncCmd() *cobra.Command {
 		Use:   "sync",
 		Short: "Add a sync path to the devspace",
 		Long: `
-	#######################################################
-	################# devspace add sync ###################
-	#######################################################
-	Add a sync path to the devspace
+#######################################################
+################# devspace add sync ###################
+#######################################################
+Add a sync path to the devspace
 
-	How to use:
-	devspace add sync --local=app --container=/app
-	#######################################################
+How to use:
+devspace add sync --local=app --container=/app
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunAddSync,

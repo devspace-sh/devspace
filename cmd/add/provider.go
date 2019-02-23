@@ -21,14 +21,14 @@ func newProviderCmd() *cobra.Command {
 		Use:   "provider",
 		Short: "Adds a new cloud provider to the configuration",
 		Long: `
-	#######################################################
-	############## devspace add provider ##################
-	#######################################################
-	Add a new cloud provider.
+#######################################################
+############## devspace add provider ##################
+#######################################################
+Add a new cloud provider.
 
-	Example:
-	devspace add provider https://app.devspace.cloud
-	#######################################################
+Example:
+devspace add provider https://app.devspace.cloud
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddProvider,

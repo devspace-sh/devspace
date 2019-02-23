@@ -18,12 +18,12 @@ func newVarsCmd() *cobra.Command {
 		Use:   "vars",
 		Short: "Lists the vars in the active config",
 		Long: `
-	#######################################################
-	############### devspace list vars ####################
-	#######################################################
-	Lists the defined vars in the devspace config with their
-	values
-	#######################################################
+#######################################################
+############### devspace list vars ####################
+#######################################################
+Lists the defined vars in the devspace config with their
+values
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		Run:  cmd.RunListVars,

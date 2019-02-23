@@ -22,19 +22,19 @@ func newImageCmd() *cobra.Command {
 		Use:   "image",
 		Short: "Add an image",
 		Long: ` 
-	#######################################################
-	############# devspace add image ######################
-	#######################################################
-	Add a new image to your devspace
-	
-	Examples:
-	devspace add image my-image --name=dockeruser/devspaceimage2
-	devspace add image my-image --name=dockeruser/devspaceimage2 --tag=alpine
-	devspace add image my-image --name=dockeruser/devspaceimage2 --context=C:/Path/To/Context
-	devspace add image my-image --name=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
-	devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=docker
-	devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=kaniko
-	#######################################################
+#######################################################
+############# devspace add image ######################
+#######################################################
+Add a new image to your devspace
+
+Examples:
+devspace add image my-image --name=dockeruser/devspaceimage2
+devspace add image my-image --name=dockeruser/devspaceimage2 --tag=alpine
+devspace add image my-image --name=dockeruser/devspaceimage2 --context=C:/Path/To/Context
+devspace add image my-image --name=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
+devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=docker
+devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=kaniko
+#######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddImage,
