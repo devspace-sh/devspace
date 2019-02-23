@@ -19,6 +19,7 @@ import (
 	"github.com/covexo/devspace/pkg/devspace/config/configs"
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/mgutz/ansi"
 )
 
 //ConfigInterface defines the pattern of every config
@@ -126,27 +127,16 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			}
 
 			// Get config to load
-			if generatedConfig.ActiveConfig == "" {
-				// check if default config exists
-				if configs[generated.DefaultConfigName] == nil {
-					if len(configs) == 0 {
-						log.Fatalf("No config found in %s", DefaultConfigsPath)
-					}
-
-					for name := range configs {
-						LoadedConfig = name
-						break
-					}
-				} else {
-					LoadedConfig = generated.DefaultConfigName
-				}
-			} else {
-				LoadedConfig = generatedConfig.ActiveConfig
-			}
+			LoadedConfig = generatedConfig.ActiveConfig
 
 			// Check if we should override loadedconfig
 			if ConfigPath != DefaultConfigPath {
 				LoadedConfig = ConfigPath
+			}
+
+			// Check if active config exists
+			if _, ok := configs[LoadedConfig]; ok == false {
+				log.Fatalf("No active config selected. Run: \n- `%s` to list all available configs\n- `%s` to use a specific config", ansi.Color("devspace list configs", "white+b"), ansi.Color("devspace use config [NAME]", "white+b"))
 			}
 
 			// Get real config definition
