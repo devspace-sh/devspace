@@ -8,7 +8,6 @@ import (
 )
 
 type portCmd struct {
-	ResourceType  string
 	LabelSelector string
 	Namespace     string
 	Service       string
@@ -33,7 +32,6 @@ devspace add port 8080:80,3000
 		Run:  cmd.RunAddPort,
 	}
 
-	addPortCmd.Flags().StringVar(&cmd.ResourceType, "resource-type", "pod", "Selected resource type")
 	addPortCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
 	addPortCmd.Flags().StringVar(&cmd.Service, "service", "", "The devspace config service")

@@ -155,7 +155,6 @@ func (c *Config) Upgrade() (config.Config, error) {
 				selectors = append(selectors, &next.SelectorConfig{
 					Name:          service.Name,
 					Namespace:     service.Namespace,
-					ResourceType:  service.ResourceType,
 					LabelSelector: service.LabelSelector,
 					ContainerName: service.ContainerName,
 				})
