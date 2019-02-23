@@ -3,8 +3,8 @@ title: Workflow & basics
 ---
 
 Running `devspace dev` will do the following:
-1. Read the `Dockerfile` and apply in-memory [entrypoint overwrites](../development/entrypoint-overwrites) (optional)
-2. Build a Docker image using the (overwritten) `Dockerfile`
+1. Read the `Dockerfile` and apply in-memory [entrypoint overriding](../development/entrypoint-overrides) (optional)
+2. Build a Docker image using the (overridden) `Dockerfile`
 3. Push this Docker image to the [DevSpace Container Registry (dscr.io)](../images/internal-registry)
 4. Deploy your Helm chart as defined in `chart/`
 5. Start [port forwarding](../development/port-forwarding)

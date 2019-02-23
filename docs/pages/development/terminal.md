@@ -14,7 +14,7 @@ npm run [start|dev|watch]
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overwritten with a `sleep` command. You can also define custom commands for entrypoint overwriting. [Learn more about entrypoint overwrites.](../development/entrypoint-overwrites)
+By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](../development/entrypoint-overrides)
 
 ## Open additional terminals
 You can open additional terminals, simply run the following command:

@@ -21,7 +21,7 @@
         "development/port-forwarding",
         "development/debugging",
         "development/auto-reloading",
-        "development/entrypoint-overwrites",
+        "development/entrypoint-overrides",
         "development/best-practices"
     ],
     "Spaces": [
@@ -70,7 +70,7 @@
     "Configuration Reference": [
         "configuration/reference",
         "configuration/multiple-configs",
-        "configuration/overwrites",
+        "configuration/overrides",
         "configuration/variables"
     ],
     "CLI Reference": [

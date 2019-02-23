@@ -38,7 +38,7 @@ containers:
       cpu: "200m"
       memory: "300Mi"
 ```
-The values defined in `values.yaml` are defaults which can be overwritten during the deployment of an Helm chart. DevSpace.cli uses value-overwriting to update the image tags to the most recently build and pushed tags.
+The values defined in `values.yaml` are defaults which can be overridden during the deployment of an Helm chart. DevSpace.cli uses value-overriding to update the image tags to the most recently build and pushed tags.
 
 ### templates/
 The `templates/` folder contains all templates for your chart. Tiller will parse all the `.yaml` files defined in this folder and parse them as templates together with the values defined in the `values.yaml`. 

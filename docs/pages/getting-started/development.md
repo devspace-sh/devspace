@@ -35,8 +35,8 @@ devspace dev
 > It is highly discouraged to run `devspace dev` in production Spaces. [Learn more best practices.](../development/best-practices)
 
 Running `devspace dev` will do the following:
-1. Read the `Dockerfile` and apply in-memory [entrypoint overwrites](../development/entrypoint-overwrites) (optional)
-2. Build a Docker image using the (overwritten) `Dockerfile`
+1. Read the `Dockerfile` and apply in-memory [entrypoint overrides](../development/entrypoint-override) (optional)
+2. Build a Docker image using the (overridden) `Dockerfile`
 3. Push this Docker image to the [DevSpace Container Registry (dscr.io)](../images/internal-registry)
 4. Deploy your Helm chart as defined in `chart/`
 5. Start [port forwarding](../development/port-forwarding)
@@ -55,7 +55,7 @@ npm run [start|dev|watch]
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overwritten with a `sleep` command. You can also define custom commands for entrypoint overwriting. [Learn more about entrypoint overwrites.](../development/entrypoint-overwrites)
+By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for entrypoint overriding. [Learn more about entrypoint overriding.](../development/entrypoint-orverride)
 
 > You can open additional terminals with `devspace enter`. [Learn more about the terminal proxy.](../development/terminal#open-additional-terminals)
 
@@ -76,6 +76,6 @@ See the following guides to learn more:
 - [Use the terminal proxy](../development/synchronization)
 - [Configure code synchronization](../development/synchronization)
 - [Configure port-forwarding](../development/port-forwarding)
-- [Overwrite entrypoints](../development/entrypoint-overwrites)
+- [Override entrypoints](../development/entrypoint-overriding)
 - [Monitor and debug applications](../development/debugging)
 - [Learn best practices](../development/best-practices)

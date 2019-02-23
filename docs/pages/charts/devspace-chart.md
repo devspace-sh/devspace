@@ -91,7 +91,7 @@ The DevSpace Helm chart is constantly being improved. To get the newest version 
 
 > Updating the DevSpace Helm chart will only add or modify files in `template/`.
 
-If you want to add custom template files in `templates/`, you should prefix the filename of the custom templates with `_` to make sure that they will not be overwritten when running `devspace update chart`.
+If you want to add custom template files in `templates/`, you should prefix the filename of the custom templates with `_` to make sure that they will not be removed or replaced when running `devspace update chart`.
 
 [Learn more about adding custom templates and manifests.](./custom-manifests)
 
