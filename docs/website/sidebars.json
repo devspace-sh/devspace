@@ -11,7 +11,6 @@
         "deployment/images",
         "deployment/charts",
         "deployment/domains",
-        "deployment/debugging",
         "deployment/scaling"
     ],
     "Develop with DevSpace": [
@@ -19,17 +18,21 @@
         "development/terminal",
         "development/synchronization",
         "development/port-forwarding",
-        "development/debugging",
         "development/auto-reloading",
         "development/entrypoint-overrides",
         "development/best-practices"
+    ],
+    "Debug with DevSpace": [
+        "debugging/overview",
+        "debugging/analyze",
+        "debugging/logs",
+        "debugging/enter"
     ],
     "Spaces": [
         "spaces/what-are-spaces",
         "spaces/create-spaces",
         "spaces/switch-spaces",
         "spaces/delete-spaces",
-        "spaces/events-logs",
         "spaces/domains",
         "spaces/resource-limits"
     ],
