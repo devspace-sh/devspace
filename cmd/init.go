@@ -26,7 +26,6 @@ import (
 )
 
 const configGitignore = `logs/
-overwrite.yaml
 generated.yaml
 `
 

@@ -83,8 +83,8 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 		}
 
 		overrides := 0
-		if config.Overwrites != nil {
-			overrides = len(*config.Overwrites)
+		if config.Overrides != nil {
+			overrides = len(*config.Overrides)
 		}
 
 		configRows = append(configRows, []string{

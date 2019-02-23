@@ -202,20 +202,20 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 		Merge(&config, deepCopy(configRaw))
 
-		// Check if we should load overwrites
+		// Check if we should load overrides
 		if loadOverwrites {
 			if configDefinition != nil {
-				if configDefinition.Overwrites != nil {
-					for index, configWrapper := range *configDefinition.Overwrites {
+				if configDefinition.Overrides != nil {
+					for index, configWrapper := range *configDefinition.Overrides {
 						overwriteConfig, err := loadConfigFromWrapper(configWrapper)
 						if err != nil {
-							log.Fatalf("Error loading overwrite config at index %d: %v", index, err)
+							log.Fatalf("Error loading override config at index %d: %v", index, err)
 						}
 
 						Merge(&config, overwriteConfig)
 					}
 
-					log.Infof("Loaded config %s from %s with %d overwrites", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overwrites))
+					log.Infof("Loaded config %s from %s with %d overrides", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overrides))
 				} else {
 					log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 				}
