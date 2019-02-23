@@ -147,7 +147,6 @@
   @media only screen and (max-width: 801px) {
     header .navigationWrapper .slidingNav {
       width: 100%;
-      height: -webkit-fill-available;
       position: relative;
   
     }

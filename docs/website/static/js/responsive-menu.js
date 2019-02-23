@@ -28,6 +28,8 @@ window.addEventListener('load', function() {
     }
   }
 
+  onResize();
+
   function onHamburgerClick() {
     var burgerIsOpen = document.getElementsByClassName("burger-open").length;
 
