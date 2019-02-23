@@ -8,7 +8,6 @@ import (
 )
 
 type syncCmd struct {
-	ResourceType  string
 	LabelSelector string
 	LocalPath     string
 	ContainerPath string
@@ -37,7 +36,6 @@ devspace add sync --local=app --container=/app
 		Run:  cmd.RunAddSync,
 	}
 
-	addSyncCmd.Flags().StringVar(&cmd.ResourceType, "resource-type", "pod", "Selected resource type")
 	addSyncCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.LocalPath, "local", "", "Relative local path")
 	addSyncCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")

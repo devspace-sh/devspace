@@ -95,7 +95,6 @@ type AutoReloadConfig struct {
 type SelectorConfig struct {
 	Name          *string             `yaml:"name,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
-	ResourceType  *string             `yaml:"resourceType,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector"`
 	ContainerName *string             `yaml:"containerName,omitempty"`
 }
