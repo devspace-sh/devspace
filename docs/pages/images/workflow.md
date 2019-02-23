@@ -2,7 +2,7 @@
 title: Workflow & basics
 ---
 
-With DevSpace.cli, you can automate the manual work of building, tagging and pushing Docker images. Simply [define an image in your DevSpace configuration](./configuration) and DevSpace.cli will:
+With DevSpace.cli, you can automate the manual work of building, tagging and pushing Docker images. Simply [define an image in your DevSpace configuration](../deployment/images) and DevSpace.cli will:
 
 1. Build a new image if the Dockerfile or the Docker context has changed
 2. Apply [entrypoint overrides](../development/entrypoint-overrides) for development (only when running `devspace dev`)

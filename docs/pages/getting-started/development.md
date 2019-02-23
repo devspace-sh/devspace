@@ -77,5 +77,5 @@ See the following guides to learn more:
 - [Configure code synchronization](../development/synchronization)
 - [Configure port-forwarding](../development/port-forwarding)
 - [Override entrypoints](../development/entrypoint-overriding)
-- [Monitor and debug applications](../development/debugging)
+- [Monitor and debug applications](../debugging/overview)
 - [Learn best practices](../development/best-practices)

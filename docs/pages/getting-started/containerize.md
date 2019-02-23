@@ -42,7 +42,7 @@ project/                    # your project directory
 </summary>
 
 See the following guides to:
-- [Configure image building](../images/configuration)
+- [Configure image building](../deployment/images)
 - [Add packages to your Helm chart (e.g. database)](../charts/packages)
 - [Configure persistent volumes](../charts/persistent-volumes)
 - [Set environment variables](../charts/environment-variables)

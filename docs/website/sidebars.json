@@ -9,6 +9,7 @@
     "Deploy with DevSpace": [
         "deployment/workflow",
         "deployment/images",
+        "deployment/deployments",
         "deployment/charts",
         "deployment/domains",
         "deployment/scaling"
@@ -36,9 +37,8 @@
         "spaces/domains",
         "spaces/resource-limits"
     ],
-    "Images & Registries": [
+    "Image Registries": [
         "images/workflow",
-        "images/configuration",
         "images/internal-registry",
         "images/external-registry",
         "images/pull-secrets"

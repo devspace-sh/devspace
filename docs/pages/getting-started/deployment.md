@@ -89,7 +89,7 @@ If you get an HTTP error when accessing your Space, the following guides can hel
 ## Learn more about deploying with DevSpace
 See the following guides to learn more:
 - [Connect custom domains](../deployment/domains)
-- [Monitor and debug deployed applications](../deployment/debugging)
+- [Monitor and debug deployed applications](../debugging/overview)
 - [Scale deployed applications](../deployment/scaling)
 - [Configure Docker image](../deployment/images)
 - [Configure Helm chart](../deployment/charts)
