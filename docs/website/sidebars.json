@@ -57,12 +57,6 @@
         "domains/connect",
         "domains/certificates"
     ],
-    "Kubernetes": [
-        "kubernetes/overview",
-        "kubernetes/pods",
-        "kubernetes/services",
-        "kubernetes/ingresses"
-    ],
     "Advanced Topics": [
         "advanced/pipelines",
         "advanced/external-clusters"
