@@ -1,5 +1,13 @@
+.fixedHeaderContainer .headerWrapper {
+    margin: 0;
+}
+
 .responsive-hidden {
     display: none;
+  }
+  
+  .navPusher {
+    padding-top: 75px;
   }
   
   .fixedHeaderContainer {
@@ -112,11 +120,6 @@
       padding: 0;
     }
   
-    .navPusher {
-      padding-top: 70px;
-      min-height: calc(100vh - 70px);
-    }
-  
     .navigationSlider nav.slidingNav {
       background: none;
       height: auto;
@@ -144,7 +147,8 @@
     }
   }
   
-  @media only screen and (max-width: 801px) {
+  @media only screen and (max-width: 800px) {
+
     header .navigationWrapper .slidingNav {
       width: 100%;
       position: relative;
@@ -236,5 +240,11 @@
     .fixedHeaderContainer .headerWrapper header .navigationSlider {
       right: -4px;
       position: absolute;
+    }
+  }
+
+  @media screen and (max-width: 1023px) {
+    .collapsible .arrow {
+        margin-left: 12px;
     }
   }
