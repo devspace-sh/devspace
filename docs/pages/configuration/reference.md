@@ -158,7 +158,7 @@ ports:                              # struct[] | Array of port forwarding settin
 - selector:                         # TODO
   portMappings:                     # struct[] | Array of port mappings
   - localPort: 8080                 # int      | Forward this port on your local computer
-    remotePort: 3000                # int      | Forward traffic to this port of the pod selected by "selector" (TODO)
+    remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
 [Learn more about port forwarding.](../development/port-forwarding)

@@ -15,7 +15,7 @@ It is recommended to change the `name` and `description` of your chart by editin
 The `values.yaml` is the most important place for configuring your Helm chart. See the following guides to learn how to use the `values.yaml` to:
 - [Configure persistent volumes](./persistent-volumes)
 - [Set environment variables](./environment-variables)
-- [Configure networking (e.g. define services)](./networking#TODO)
+- [Configure networking (e.g. define services)](./networking)
 - [Define additional containers](./containers)
 - [Configure scaling](./scaling)
 
