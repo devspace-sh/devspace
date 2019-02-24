@@ -1,2 +1,5 @@
 # redirect home to devspace.cloud
-/   http://devspace.cloud/docs  302!
+/   https://devspace.cloud/docs  302!
+
+# Redirect default Netlify subdomain to primary domain
+https://docs-devspace-cloud.netlify.com/* https://devspace.cloud/docs/:splat 301!
