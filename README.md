@@ -190,7 +190,8 @@ devspace deploy my-app
 
 
 ## Architecture
-[![DevSpace Architecture](docs/website/static/img/github-readme-architecture.gif)](#)
+<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="80%"></a></p>
+
 DevSpace consists of three major components:
 
 <Details>
