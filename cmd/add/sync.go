@@ -41,7 +41,7 @@ devspace add sync --local=app --container=/app
 	addSyncCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
-	addSyncCmd.Flags().StringVar(&cmd.Service, "service", "", "The devspace config service")
+	addSyncCmd.Flags().StringVar(&cmd.Service, "selector", "", "The devspace config selector")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")

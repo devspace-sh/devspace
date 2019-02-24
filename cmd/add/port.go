@@ -34,7 +34,7 @@ devspace add port 8080:80,3000
 
 	addPortCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
-	addPortCmd.Flags().StringVar(&cmd.Service, "service", "", "The devspace config service")
+	addPortCmd.Flags().StringVar(&cmd.Service, "selector", "", "The devspace config selector")
 
 	return addPortCmd
 }

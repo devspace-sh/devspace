@@ -180,6 +180,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
+		cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:     "Do you want to use devspace.cloud as target cluster?",
+			DefaultValue: "yes",
+			Options:      []string{"yes", "no"},
+		}) == "yes"
+
 		// Check if devspace cloud should be used
 		if cmd.flags.useCloud == false {
 			cmd.configureDevSpace()
