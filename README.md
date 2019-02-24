@@ -119,7 +119,7 @@ Checkout the **[Getting Started Guide for DevSpace](#).**
 ![DevSpace.cli Demo](https://github.com/devspace-cloud/devspace/raw/master/docs/website/static/img/devspace-cli-demo-readme.gif)
 
 ## Quickstart
-For more in-depth walkthoughs, see **[Getting Started Guide for DevSpace](#).**
+For more in-depth walkthroughs, see **[Getting Started Guide for DevSpace](#).**
 
 ### 1. Install DevSpace.cli & Docker
 
@@ -190,7 +190,7 @@ devspace deploy my-app
 
 
 ## Architecture
-![DevSpace Architecture](docs/website/static/img/github-readme-architecture.svg)
+[![DevSpace Architecture](docs/website/static/img/github-readme-architecture.gif)](#)
 DevSpace consists of three major components:
 
 <Details>
@@ -198,17 +198,25 @@ DevSpace consists of three major components:
 
 DevSpace.cli is an open-source command-line tool that provides everything you need to develop, deploy and debug applications with Docker and Kubernetes.
 
+> You can either use DevSpace.cli as standalone solution for your self-managed Kubernetes namespaces or in combination with DevSpace.cloud.
+
 </Details>
 
 <Details>
 <Summary><b>DevSpace.cloud</b> • management platform for Spaces</Summary>
 
-DevSpace.cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace.cli or GUI.
+DevSpace.cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace.cli or GUI. 
+
+> The Spaces you create with DevSpace.cloud either run on DevSpace.host or on your own Kubernetes clusters after connecting them to the platform.
 
 </Details>
 
 <Details>
 <Summary><b>DevSpace.host</b> • hosting service for Spaces</Summary>
+
+DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
+
+> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
 
 </Details>
 
@@ -222,24 +230,39 @@ DevSpace.cloud is a developer platform for Kubernetes that lets you create and m
 | **Self-hosted Spaces**  | ✓  | ✓ | x | 
 | **Self-managed Spaces**  | ✓  | x | x | 
 
-> Note that you can [**easily switch between the modes of using DevSpace**](#).
 
 ### Learn more about each mode:
 
 <Details>
 <Summary><b>Hosted Spaces</b></Summary>
 
+If you do not want to setup and maintain your own Kubernetes clusters, you can use **Hosted Spaces** on top of DevSpace.host. In this case, DevSpace.cloud will provision and fully manage your Spaces on DevSpace.host and you will be charged for the cloud resources that are needed to start your containers.
+
+> Using **Hosted Spaces** is recommended for users that do not have extensive knowlege about server administration and/or about managing Kubernetes clusters in production.
+
 </Details>
 
 <Details>
 <Summary><b>Self-hosted Spaces</b></Summary>
+
+If you are experienced with managing Kubernetes clusters and you want to operate your own clusters, you can use **Self-hosted Spaces** which means that DevSpace.cloud operates and manages your Spaces on top of your own Kubernetes clusters. To get started with **Self-hosted Spaces**, you need to [connect your Kubernetes cluster to DevSpace.cloud as external cluster](#).
+
+> Using external clusters to create **Self-hosted Spaces** is recommended for users that have large workloads and have the knowledge and personnel to maintain Kubernetes cluster in production.
 
 </Details>
 
 <Details>
 <Summary><b>Self-managed Spaces</b></Summary>
 
+If you are a DevOps engineer in charge of deploying applications to Kubernetes, DevSpace.cli may be able to speed up and facilitate your workflow for building Helm charts. If you are working with self-managed Kubernetes clusters and you want to create and manage namespaces yourself, you are using **Self-managed Spaces**. This is the case when you develop and test applications with minikube, for example.
+
+> **Self-managed Spaces** are good for testing Helm charts in staging and production-like environments which are not easy to connect to DevSpacec.loud, however this mode is **not** recommended when multiple developers use the same Kubernetes cluster. In multi-user scenarios, it is recommended to use **Self-hosted Spaces** because DevSpace.cloud will isolate Spaces of different users, enforce resource limits and eliminate many security risks for your clusters. Doing these tasks manually instead of using DevSpace.cloud is error-prone and may cause severe security issues and malfunctioning clusters.
+
 </Details>
+
+<br>
+
+Because you can fairly easy [switch between the three modes uf using DevSpace](#), it generally makes sense to start with **Hosted Spaces** and switch to one of the other modes later on.
 
 ---
 
@@ -270,40 +293,70 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <Details>
 <Summary>Do I need a Kubernetes cluster to use DevSpace?</Summary>
 
+**No.** You can simply use **Hosted Spaces** which run on top of DevSpace.host and which are fully managed by DevSpace.cloud.
+
 </Details>
 
 <Details>
 <Summary>Can I use DevSpace with my existing Kubernetes clusters?</Summary>
+
+**Yes.** You can [connect your existing Kubernetes clusters to DevSpace.cloud](#) as external clusters. DevSpace.cloud will then be able to create and manage Spaces on your Kubernetes clusters.
 
 </Details>
 
 <Details>
 <Summary>Do I need to be a Kubernetes expert to use DevSpace?</Summary>
 
+**No.** Altough DevSpace provides a lot of advanced tooling for Kubernetes experts, it is optimized for developer experience which makes it especially easy to use for Kubernetes beginners.
+
 </Details>
 
 <Details>
 <Summary>What is a Space?</Summary>
+
+Spaces are smart Kubernetes namespaces which provide the following features:
+- Automatic provisioning via `devspace create space [SPACE_NAME]`
+- Automatic allocation of a subdomain for each Space, e.g. `my-app.devspace.host`
+- Automatic RBAC configuration for better isolation of users
+- Automatic resource limit configuration and enforcement
+- Resource auto-scaling within the configured limits
+- Smart analysis of issues within your Space via `devspace analyze`
 
 </Details>
 
 <Details>
 <Summary>What is DevSpace.cli?</Summary>
 
+DevSpace.cli is an open-source command-line tool that provides everything you need to develop, deploy and debug applications with Docker and Kubernetes.
+
+> You can either use DevSpace.cli as standalone solution for your self-managed Kubernetes namespaces or in combination with DevSpace.cloud.
+
 </Details>
 
 <Details>
 <Summary>What is DevSpace.cloud?</Summary>
+
+DevSpace.cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace.cli or GUI. 
+
+> The Spaces you create with DevSpace.cloud either run on DevSpace.host or on your own Kubernetes clusters after connecting them to the platform.
 
 </Details>
 
 <Details>
 <Summary>What is DevSpace.host?</Summary>
 
+DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
+
+> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+
 </Details>
 
 <Details>
 <Summary>What is a Helm chart?</Summary>
+
+[Helm](#) is the package manager for Kubernetes. Packages in Helm are called Helm charts.
+
+[Learn more about Helm charts](#)
 
 </Details>
 
