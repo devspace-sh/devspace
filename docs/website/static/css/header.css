@@ -248,3 +248,7 @@
         margin-left: 12px;
     }
   }
+
+  .navigationSlider .slidingNav ul {
+    margin-top: 0;
+  }

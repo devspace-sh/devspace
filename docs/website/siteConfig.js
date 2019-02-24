@@ -26,12 +26,12 @@ const siteConfig = {
 
   /* path to images for header/footer */
   headerIcon: 'img/devspace-logo.svg',
-  footerIcon: 'img/docusaurus.svg',
+  footerIcon: 'img/devspace-logo.svg',
   favicon: 'img/favicon.png',
 
   // Open Graph and Twitter card images.
-  ogImage: 'img/docusaurus.png',
-  twitterImage: 'img/docusaurus.png',
+  ogImage: 'img/devspace-logo.svg',
+  twitterImage: 'img/devspace-logo.svg',
 
   /* Colors for website */
   colors: {
