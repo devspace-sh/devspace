@@ -189,9 +189,7 @@ cluster:                            # struct   | Cluster configuration
   cloudProvider: app.devspace.cloud # string   | URL of the DevSpace.cloud instance your DevSpace.cli client is connecting to
 ```
 
-### without DevSpace.cloud *(deprecated)*
-Using DevSpace.cli without DevSpace.cloud is not recommended. 
-
+### without DevSpace.cloud
 > If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace.cloud or run your own instance of DevSpace.cloud](../advanced/external-clusters) instead of using the following configuration options.
 
 ```yaml
