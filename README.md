@@ -190,8 +190,6 @@ devspace deploy my-app
 
 
 ## Architecture
-<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="80%"></a></p>
-
 DevSpace consists of three major components:
 
 <Details>
@@ -221,7 +219,9 @@ DevSpace.host is a hosting service that lets you create Spaces instead of entire
 
 </Details>
 
----
+<br>
+
+<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="80%"></a></p>
 
 ### There are three modes of using DevSpace:
 
