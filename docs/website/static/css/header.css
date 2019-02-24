@@ -31,7 +31,7 @@
   .fixedHeaderContainer .headerWrapper header a {
     width: 270px;
     height: 40px;
-    z-index: 2;
+    z-index: 11;
   }
   
   .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site {
@@ -41,6 +41,8 @@
   
   .hamburger-active {
     display: block;
+    height: 100%;
+    width: 100%;
   }
   
   .navigationSlider .slidingNav ul.responsive-nav {
@@ -151,8 +153,8 @@
 
     header .navigationWrapper .slidingNav {
       width: 100%;
+      height: 100%;
       position: relative;
-  
     }
   
     header .navigationSlider {
@@ -165,8 +167,6 @@
   
     .responsive-nav li.hamburger-active {
       display: inline;
-      height: 100%;
-      width: 100%;
     }
     
     .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site .hamburger-active a {
@@ -191,8 +191,8 @@
       width: 20px;
       height: 20px;
       display: block;
-      right: 15px;
-      top: 15px;
+      right: 40px;
+      top: 30px;
       z-index: 15;
     }
   
