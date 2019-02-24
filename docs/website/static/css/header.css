@@ -252,3 +252,7 @@
   .navigationSlider .slidingNav .nav-site {
     margin-top: 0;
   }
+  
+  .docsSlider .toc .navBreadcrumb {
+      z-index: 1;
+  }
