@@ -174,7 +174,7 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 <br>
 
 **What does `devspace init` do?**  
-DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. It will then, create an Helm chart and a Dockerfile within your project, if you do not already have one.
+DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
 ### 4. Create a Space
 This command will create and configure a Kubernetes namespace for you:
