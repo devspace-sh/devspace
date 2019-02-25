@@ -27,7 +27,8 @@
         "debugging/overview",
         "debugging/analyze",
         "debugging/logs",
-        "debugging/enter"
+        "debugging/enter",
+        "debugging/debuggers"
     ],
     "Spaces": [
         "spaces/what-are-spaces",
