@@ -3,10 +3,10 @@ package versions
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/config/versions/config"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/v1alpha1"
-	"github.com/covexo/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha1"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 

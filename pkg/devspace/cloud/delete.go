@@ -3,8 +3,8 @@ package cloud
 import (
 	"errors"
 
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"k8s.io/client-go/tools/clientcmd"
 )
 

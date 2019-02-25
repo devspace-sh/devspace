@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 )
 
 // Project is the type that holds the project information

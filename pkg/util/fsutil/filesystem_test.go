@@ -10,7 +10,7 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 	randomString := RandStringRunes(10)
 
 	writeData := []byte("Content " + randomString)
-	fileName := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
+	fileName := "C:\\Users\\devspace-cloud\\tempFolderForGoTests\\" + randomString + "\\" + randomString
 
 	e := WriteToFile(writeData, fileName)
 
@@ -73,10 +73,10 @@ func TestWriteToFileAndReadFile(t *testing.T) {
 func TestCopy(t *testing.T) {
 
 	randomString := RandStringRunes(10)
-	sourcePath := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
+	sourcePath := "C:\\Users\\devspace-cloud\\tempFolderForGoTests\\" + randomString + "\\" + randomString
 
 	randomString = RandStringRunes(10)
-	destPath := "C:\\Users\\covexo\\tempFolderForGoTests\\" + randomString + "\\" + randomString
+	destPath := "C:\\Users\\devspace-cloud\\tempFolderForGoTests\\" + randomString + "\\" + randomString
 
 	WriteToFile([]byte{}, sourcePath)
 
@@ -101,7 +101,7 @@ func TestGetHomeDir(t *testing.T) {
 func TestGetCurrentGofileDir(t *testing.T) {
 
 	currentGofileDirByMethod := GetCurrentGofileDir()
-	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil"
+	expected := os.Getenv("GOPATH") + "\\src\\github.com\\devspace-cloud\\devspace\\pkg\\util\\fsutil"
 
 	if currentGofileDirByMethod != expected && currentGofileDirByMethod != strings.Replace(expected, "\\", "/", -1){
 		t.Error("CurrentGoFileDir is not correct.\nMethod result: " + currentGofileDirByMethod +
@@ -114,7 +114,7 @@ func TestGetCurrentGofileDir(t *testing.T) {
 func TestGetCurrentGofile(t *testing.T) {
 
 	currentGofileByMethod := GetCurrentGofile()
-	expected := os.Getenv("GOPATH") + "\\src\\github.com\\covexo\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
+	expected := os.Getenv("GOPATH") + "\\src\\github.com\\devspace-cloud\\devspace\\pkg\\util\\fsutil\\filesystem_test.go"
 
 	if currentGofileByMethod != expected && currentGofileByMethod != strings.Replace(expected, "\\", "/", -1){
 		t.Error("CurrentGoFile is not correct.\nMethod result: " + currentGofileByMethod +

@@ -7,15 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
-	"github.com/covexo/devspace/pkg/devspace/builder"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	synctool "github.com/covexo/devspace/pkg/devspace/sync"
-	"github.com/covexo/devspace/pkg/util/ignoreutil"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	synctool "github.com/devspace-cloud/devspace/pkg/devspace/sync"
+	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	k8sv1 "k8s.io/api/core/v1"
@@ -62,7 +62,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		return nil, err
 	}
 
-	email := "noreply@devspace-cloud.com"
+	email := "noreply@devspace.cloud"
 	authConfig, err := docker.GetAuthConfig(b.dockerClient, registryURL, true)
 	if err != nil {
 		return nil, err

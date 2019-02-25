@@ -11,18 +11,18 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	latest "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/devspace/generator"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/fsutil"
-	"github.com/covexo/devspace/pkg/util/kubeconfig"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/ptr"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +56,7 @@ var InitCmdFlagsDefault = &InitCmdFlags{
 	overwrite:   false,
 	useCloud:    true,
 
-	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
+	templateRepoURL:  "https://github.com/devspace-cloud/devspace-templates.git",
 	templateRepoPath: "",
 }
 
@@ -102,7 +102,7 @@ YOUR_PROJECT_PATH/
 	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
-	cobraCmd.Flags().BoolVar(&cmd.flags.useCloud, "cloud", cmd.flags.useCloud, "Use the devspace.cloud to initialize project")
+	cobraCmd.Flags().BoolVar(&cmd.flags.useCloud, "cloud", cmd.flags.useCloud, "Use the DevSpace.cloud for this project")
 }
 
 // Run executes the command logic
@@ -157,7 +157,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		},
 	})
 
-	// Print devspace logo
+	// Print DevSpace logo
 	log.PrintLogo()
 
 	cmd.defaultImage = (*config.Images)["default"]
@@ -184,13 +184,13 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if cmd.flags.reconfigure || !configExists {
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to use devspace.cloud as target cluster?",
+				Question:     "Do you want to use DevSpace.cloud?",
 				DefaultValue: "yes",
 				Options:      []string{"yes", "no"},
 			}) == "yes"
 		}
 
-		// Check if devspace cloud should be used
+		// Check if DevSpace.cloud should be used
 		if cmd.flags.useCloud == false {
 			cmd.configureDevSpace()
 		} else {
@@ -381,23 +381,23 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	dockerignore, err := ioutil.ReadFile(".dockerignore")
-	uploadExcludePaths := []string{}
+	excludePaths := []string{}
 
 	if err == nil {
 		dockerignoreRules := strings.Split(string(dockerignore), "\n")
 
 		for _, ignoreRule := range dockerignoreRules {
 			if len(ignoreRule) > 0 {
-				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+				excludePaths = append(excludePaths, ignoreRule)
 			}
 		}
 	}
 
 	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-		Selector:           ptr.String(configutil.DefaultDevspaceServiceName),
-		ContainerPath:      ptr.String("/app"),
-		LocalSubPath:       ptr.String("./"),
-		UploadExcludePaths: &uploadExcludePaths,
+		Selector:      ptr.String(configutil.DefaultDevspaceServiceName),
+		ContainerPath: ptr.String("/app"),
+		LocalSubPath:  ptr.String("./"),
+		ExcludePaths:  &excludePaths,
 	})
 
 	config.Dev.Sync = &syncConfig

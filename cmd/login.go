@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ func NewLoginCmd() *cobra.Command {
 
 	loginCmd := &cobra.Command{
 		Use:   "login",
-		Short: "Log into devspace cloud",
+		Short: "Log into DevSpace.cloud",
 		Long: `
 #######################################################
 ################### devspace login ####################

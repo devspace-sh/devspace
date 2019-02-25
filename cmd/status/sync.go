@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ func newSyncCmd() *cobra.Command {
 #######################################################
 ################ devspace status sync #################
 #######################################################
-Shows the devspace sync status
+Shows the sync status
 #######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -61,7 +61,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Read syncLog
@@ -100,7 +100,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if len(syncMap) == 0 {
-		log.Info("No sync activity found. Did you run `devspace up`?")
+		log.Info("No sync activity found. Did you run `devspace dev`?")
 		return
 	}
 

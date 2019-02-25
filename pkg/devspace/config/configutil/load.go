@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/ptr"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/versions"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -29,27 +29,33 @@ func varReplaceFn(value string) interface{} {
 	varName := strings.TrimSpace(value[2 : len(value)-1])
 	retString := ""
 
-	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
-		retString = os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
-
-		// Check if we can convert val
-		if retString == "true" {
-			return true
-		} else if retString == "false" {
-			return false
-		} else if i, err := strconv.Atoi(retString); err == nil {
-			return i
-		}
-
-		return retString
-	}
-
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error reading generated config: %v", err)
 	}
 
+	// Get current config
 	currentConfig := generatedConfig.GetActive()
+
+	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
+		retString = os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
+
+		// Check if we can convert val
+		if retString == "true" {
+			currentConfig.Vars[varName] = true
+			return true
+		} else if retString == "false" {
+			currentConfig.Vars[varName] = false
+			return false
+		} else if i, err := strconv.Atoi(retString); err == nil {
+			currentConfig.Vars[varName] = i
+			return i
+		}
+
+		currentConfig.Vars[varName] = retString
+		return retString
+	}
+
 	if configVal, ok := currentConfig.Vars[value]; ok {
 		return configVal
 	}

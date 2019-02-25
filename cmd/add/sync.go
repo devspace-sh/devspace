@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -21,12 +21,12 @@ func newSyncCmd() *cobra.Command {
 
 	addSyncCmd := &cobra.Command{
 		Use:   "sync",
-		Short: "Add a sync path to the devspace",
+		Short: "Add a sync path",
 		Long: `
 #######################################################
 ################# devspace add sync ###################
 #######################################################
-Add a sync path to the devspace
+Add a sync path to the DevSpace configuration
 
 How to use:
 devspace add sync --local=app --container=/app
@@ -41,7 +41,7 @@ devspace add sync --local=app --container=/app
 	addSyncCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
-	addSyncCmd.Flags().StringVar(&cmd.Service, "selector", "", "The devspace config selector")
+	addSyncCmd.Flags().StringVar(&cmd.Service, "selector", "", "Name of a selector defined in your DevSpace config")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")
@@ -57,7 +57,7 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths, cmd.Service)

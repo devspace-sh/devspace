@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/juju/errors"
 )
 

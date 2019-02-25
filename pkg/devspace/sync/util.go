@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 	k8sv1 "k8s.io/api/core/v1"

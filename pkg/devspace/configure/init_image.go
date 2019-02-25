@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 )
 
 // DefaultImageName is the default image name
@@ -112,7 +112,7 @@ func Image(dockerUsername string, isCloud bool) error {
 			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
 			ValidationRegexPattern: "^.*$",
 		})
-		// Is devspace.cloud?
+		// Is DevSpace.cloud?
 	} else if isCloud {
 		defaultImageName = registryURL + "/" + dockerUsername + "/" + DefaultImageName
 	} else {

@@ -4,11 +4,11 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -38,13 +38,13 @@ devspace create space myspace
 		Run:  cmd.RunCreateSpace,
 	}
 
-	spaceCmd.Flags().BoolVar(&cmd.context, "context", true, "Create/Update kubectl context for space")
-	spaceCmd.Flags().BoolVar(&cmd.active, "active", true, "If there is a devspace config, make space the active space")
+	spaceCmd.Flags().BoolVar(&cmd.context, "context", true, "Create/Update kubectl context for Space")
+	spaceCmd.Flags().BoolVar(&cmd.active, "active", true, "Use the new Space as active Space for the current project")
 
 	return spaceCmd
 }
 
-// RunCreateSpace executes the devspace create space command logic
+// RunCreateSpace executes the "devspace create space" command logic
 func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()

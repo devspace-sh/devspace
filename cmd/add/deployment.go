@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func newDeploymentCmd() *cobra.Command {
 ############# devspace add deployment #################
 #######################################################
 Add a new deployment (kubernetes manifests or 
-helm chart) to your devspace, that will be deployed
+helm chart) to your DevSpace configuration
 
 Examples:
 devspace add deployment my-deployment --chart=chart/
@@ -51,7 +51,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddDeployment(args[0], cmd.Namespace, cmd.Manifests, cmd.Chart)

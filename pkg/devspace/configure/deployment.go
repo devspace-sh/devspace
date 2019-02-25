@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
 // AddDeployment adds a new deployment to the config

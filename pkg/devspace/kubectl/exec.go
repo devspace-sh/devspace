@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/covexo/devspace/pkg/util/terminal"
+	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"

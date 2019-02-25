@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -23,8 +23,8 @@ func newPortCmd() *cobra.Command {
 #######################################################
 ################ devspace add port ####################
 #######################################################
-Add a new port mapping that should be forwarded to
-the devspace (format is local:remote comma separated):
+Add a new port mapping to your DevSpace configuration
+(format is local:remote comma separated):
 devspace add port 8080:80,3000
 #######################################################
 	`,
@@ -34,7 +34,7 @@ devspace add port 8080:80,3000
 
 	addPortCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
-	addPortCmd.Flags().StringVar(&cmd.Service, "selector", "", "The devspace config selector")
+	addPortCmd.Flags().StringVar(&cmd.Service, "selector", "", "Name of a selector defined in your DevSpace config")
 
 	return addPortCmd
 }
@@ -47,7 +47,7 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddPort(cmd.Namespace, cmd.LabelSelector, cmd.Service, args)
