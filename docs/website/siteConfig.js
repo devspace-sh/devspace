@@ -9,28 +9,11 @@
 // site configuration options.
 
 const siteConfig = {
-<<<<<<< HEAD
   projectName: "devspace-docs",
   title: 'DevSpace Documentation', // Title for your website.
   tagline: 'A website for testing',
   url: 'https://devspace.cloud', // Your website URL
   baseUrl: '/',
-=======
-  title: 'DevSpace Documentation' /* title for your website */,
-  tagline: 'Cloud-Native Development with Kubernetes',
-  url: 'https://docs.devspace-cloud.com' /* your website url */,
-  baseUrl: '/' /* base url for your project */,
-  // For github.io type URLs, you would set the url and baseUrl like:
-  //   url: 'https://facebook.github.io',
-  //   baseUrl: '/test-site/',
-
-  // Used for publishing and more
-  projectName: 'devspace',
-  organizationName: 'devspace-cloud',
-  // For top-level user or org sites, the organization is still the same.
-  // e.g., for the https://JoelMarcey.github.io site, it would be set like...
-  //   organizationName: 'JoelMarcey'
->>>>>>> master
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
@@ -70,16 +53,8 @@ const siteConfig = {
   },
   */
 
-<<<<<<< HEAD
   // This copyright info is used in /core/Footer.js and blog RSS/Atom feeds.
   copyright: `Copyright © ${new Date().getFullYear()} DevSpace`,
-=======
-  // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
-  copyright:
-    'Copyright © ' +
-    new Date().getFullYear() +
-    ' devspace-cloud GmbH',
->>>>>>> master
 
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks.
