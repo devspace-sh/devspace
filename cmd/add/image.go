@@ -28,25 +28,25 @@ func newImageCmd() *cobra.Command {
 Add a new image to your devspace
 
 Examples:
-devspace add image my-image --name=dockeruser/devspaceimage2
-devspace add image my-image --name=dockeruser/devspaceimage2 --tag=alpine
-devspace add image my-image --name=dockeruser/devspaceimage2 --context=C:/Path/To/Context
-devspace add image my-image --name=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
-devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=docker
-devspace add image my-image --name=dockeruser/devspaceimage2 --buildengine=kaniko
+devspace add image my-image --image=dockeruser/devspaceimage2
+devspace add image my-image --image=dockeruser/devspaceimage2 --tag=alpine
+devspace add image my-image --image=dockeruser/devspaceimage2 --context=C:/Path/To/Context
+devspace add image my-image --image=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
+devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=docker
+devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=kaniko
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddImage,
 	}
 
-	addImageCmd.Flags().StringVar(&cmd.Name, "name", "", "The name of the image")
+	addImageCmd.Flags().StringVar(&cmd.Name, "image", "", "The image name of the image (e.g. myusername/devspace)")
 	addImageCmd.Flags().StringVar(&cmd.Tag, "tag", "", "The tag of the image")
 	addImageCmd.Flags().StringVar(&cmd.ContextPath, "context", "", "The path of the images' context")
 	addImageCmd.Flags().StringVar(&cmd.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
 	addImageCmd.Flags().StringVar(&cmd.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
 
-	addImageCmd.MarkFlagRequired("name")
+	addImageCmd.MarkFlagRequired("image")
 	return addImageCmd
 }
 
