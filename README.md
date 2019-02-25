@@ -223,7 +223,7 @@ DevSpace.cloud is a developer platform for Kubernetes that lets you create and m
 
 DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
 
-> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+> DevSpace.host runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
 
 </details>
 
@@ -357,7 +357,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
-1. [Connect your existing Kubernetes clusters to DevSpace.cloud](https://devspace.cloud/docs/advanced/external-clusters) as external clusters. DevSpace.cloud will then be able to create and manage users and Spaces on opt of your Kubernetes clusters.
+1. [Connect your existing Kubernetes clusters to DevSpace.cloud](https://devspace.cloud/docs/advanced/external-clusters) as external clusters. DevSpace.cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
 2. You just use DevSpace.cli without DevSpace.cloud. That means that you manually need to:
     * enforce resource limits
     * configure secure user permissions
@@ -410,7 +410,7 @@ DevSpace.cloud is a developer platform for Kubernetes that lets you create and m
 
 DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
 
-> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+> DevSpace.host runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
 
 </details>
 
