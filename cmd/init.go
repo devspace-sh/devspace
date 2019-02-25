@@ -381,23 +381,23 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	dockerignore, err := ioutil.ReadFile(".dockerignore")
-	uploadExcludePaths := []string{}
+	excludePaths := []string{}
 
 	if err == nil {
 		dockerignoreRules := strings.Split(string(dockerignore), "\n")
 
 		for _, ignoreRule := range dockerignoreRules {
 			if len(ignoreRule) > 0 {
-				uploadExcludePaths = append(uploadExcludePaths, ignoreRule)
+				excludePaths = append(excludePaths, ignoreRule)
 			}
 		}
 	}
 
 	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-		Selector:           ptr.String(configutil.DefaultDevspaceServiceName),
-		ContainerPath:      ptr.String("/app"),
-		LocalSubPath:       ptr.String("./"),
-		UploadExcludePaths: &uploadExcludePaths,
+		Selector:      ptr.String(configutil.DefaultDevspaceServiceName),
+		ContainerPath: ptr.String("/app"),
+		LocalSubPath:  ptr.String("./"),
+		ExcludePaths:  &excludePaths,
 	})
 
 	config.Dev.Sync = &syncConfig
