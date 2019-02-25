@@ -202,7 +202,62 @@ devspace deploy my-app
 
 ## Architecture
 
-<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="100%"></a></p>
+<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture"></a></p>
+
+<Details>
+<Summary><b>DevSpace.cli</b> • swiss army knife for Kubernetes</Summary>
+
+DevSpace.cli is an open-source command-line tool that provides everything you need to develop, deploy and debug applications with Docker and Kubernetes.
+
+> You can either use DevSpace.cli as standalone solution for your self-managed Kubernetes namespaces or in combination with DevSpace.cloud.
+
+</Details>
+
+<Details>
+<Summary><b>DevSpace.cloud</b> • management platform for Spaces</Summary>
+
+DevSpace.cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace.cli or GUI. 
+
+> The Spaces you create with DevSpace.cloud either run on DevSpace.host or on your own Kubernetes clusters after connecting them to the platform.
+
+</Details>
+
+<Details>
+<Summary><b>DevSpace.host</b> • hosting service for Spaces</Summary>
+
+DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
+
+> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+
+</Details>
+
+<br>
+
+## Where are my apps running?
+DevSpace.cli is a client-only command-line tool which lets you develop, deploy and debug applications in:
+
+<Details>
+<Summary><b>Hosted Spaces</b> • hosted on DevSpace.host</Summary>
+
+TODO
+
+</Details>
+
+<Details>
+<Summary><b>Self-hosted Spaces</b> • hosted on your clusters & managed by DevSpace.cloud</Summary>
+
+TODO
+
+</Details>
+
+<Details>
+<Summary><b>Self-managed namespaces</b> • hosted & managed by yourself</Summary>
+
+TODO
+
+</Details>
+
+<br>
 
 <table width="100%">
     <tbody width="100%">
@@ -234,11 +289,11 @@ devspace deploy my-app
             <td align="right">What management effort do I have?</td>
             <td width="25%" align="center">
                 <b>No admin effort.</b><br>
-                <small>DevSpace.cloud manages everything.</small>
+                <small>DevSpace manages everything.</small>
             </td>
             <td width="25%" align="center">
                 <b>You create and connect the cluster.</b><br>
-                <small>DevSpace.cloud manages users and Spaces on top of it.</small>
+                <small>DevSpace manages users and Spaces on top of it.</small>
             </td>
             <td width="25%" align="center">
                 <b>You manage everything.</b><br>
@@ -249,34 +304,6 @@ devspace deploy my-app
 </table>
 
 Because you can fairly easy [switch between the three modes uf using DevSpace](#), it generally makes sense to start with **Hosted Spaces** and switch to one of the other modes later on.
-
-<Details>
-<Summary><b>DevSpace.cli</b> • swiss army knife for Kubernetes</Summary>
-
-DevSpace.cli is an open-source command-line tool that provides everything you need to develop, deploy and debug applications with Docker and Kubernetes.
-
-> You can either use DevSpace.cli as standalone solution for your self-managed Kubernetes namespaces or in combination with DevSpace.cloud.
-
-</Details>
-
-<Details>
-<Summary><b>DevSpace.cloud</b> • management platform for Spaces</Summary>
-
-DevSpace.cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace.cli or GUI. 
-
-> The Spaces you create with DevSpace.cloud either run on DevSpace.host or on your own Kubernetes clusters after connecting them to the platform.
-
-</Details>
-
-<Details>
-<Summary><b>DevSpace.host</b> • hosting service for Spaces</Summary>
-
-DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
-
-> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
-
-</Details>
-
 
 <br>
 
