@@ -109,7 +109,7 @@ In this section paths can be specified that should be watched by devspace for ch
 - `paths` *string array* path globs which devspace should watch for changes (e.g. `config/**`, `.env`, `node/package*` etc.)
 
 ### devspace.ports
-To access applications running inside a DevSpace, the DevSpace CLI allows to configure port forwardings. A port forwarding consists of the following:
+To access applications running inside a DevSpace, the DevSpace.cli allows to configure port forwardings. A port forwarding consists of the following:
 - `service` *string* DevSpace service to start port forwarding for (use either service OR namespace, labelSelector, resourceType)
 - `namespace` *string* the namespace where to select the pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select from (default: release: devspace-default)
@@ -125,7 +125,7 @@ PortMapping:
 In the example above, you could open `localhost:8080` inside your browser to see the output of the application listening on port 80 within your DevSpace.
 
 ### devspace.sync[]
-To comfortably sync code to a DevSpace, the DevSpace CLI allows to configure real-time code synchronizations. A sync config consists of the following:
+To comfortably sync code to a DevSpace, the DevSpace.cli allows to configure real-time code synchronizations. A sync config consists of the following:
 - `service` *string* DevSpace service to start the sync for (use either service OR namespace, labelSelector, containerName)
 - `namespace` *string* the namespace where to select the pods from
 - `labelSelector` *map[string]string* a key value map with the labels to select the correct pod (default: release: devspace-default)
@@ -152,7 +152,7 @@ An image is defined by:
 - `name` *string* name of the image with registry url prefixed (e.g. dockerhubname/image, gcr.io/googleprojectname/image etc.)
 - `createPullSecret` *bool* creates a pull secret in the cluster namespace if the credentials are available in the docker credentials store or specified under `registries[].auth`
 - `registry` *string* Optional: registry references one of the keys defined in the `registries` map. If defined do not prefix the image name with the registry url
-- `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/covexo/devspace/tree/master/examples/minikube))
+- `skipPush` *bool* if true the image push step is skipped for this image (useful for minikube setups see [minikube-example](https://github.com/devspace-cloud/devspace/tree/master/examples/minikube))
 - `autoReload` *AutoReloadConfig* auto reload configuration
 - `build` *BuildConfig* defines the build procedure for this image  
 
@@ -177,7 +177,7 @@ DockerConfig:
 KanikoConfig:
 - `cache` *bool* if true the last image build is used as cache repository
 - `namespace` *string* specifies the namespace where the build pod should be started
-- `pullSecret` *string* mount this pullSecret instead of creating one to authenticate to the registry (see [kaniko](https://github.com/covexo/devspace/tree/master/examples/kaniko) for an example)
+- `pullSecret` *string* mount this pullSecret instead of creating one to authenticate to the registry (see [kaniko](https://github.com/devspace-cloud/devspace/tree/master/examples/kaniko) for an example)
 
 ### images[].build.options
 BuildOptions:

@@ -2,7 +2,7 @@
 title: devspace upgrade
 ---
 
-Run `devspace upgrade` to upgrade the DevSpace CLI to the newest version.
+Run `devspace upgrade` to upgrade the DevSpace.cli to the newest version.
 
 ```bash
 Usage:

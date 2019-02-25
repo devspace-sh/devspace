@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func newImageCmd() *cobra.Command {
 #######################################################
 ############# devspace add image ######################
 #######################################################
-Add a new image to your devspace
+Add a new image to your DevSpace configuration
 
 Examples:
 devspace add image my-image --name=dockeruser/devspaceimage2
@@ -58,7 +58,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddImage(args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildEngine)

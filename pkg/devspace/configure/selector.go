@@ -3,9 +3,9 @@ package configure
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 )
 
 // AddSelector adds a selector

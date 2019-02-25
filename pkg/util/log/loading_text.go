@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/terminal"
+	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	"github.com/mgutz/ansi"
 )
 

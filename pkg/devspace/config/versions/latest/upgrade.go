@@ -1,6 +1,6 @@
 package latest
 
-import "github.com/covexo/devspace/pkg/devspace/config/versions/config"
+import "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 
 // Upgrade upgrades the config
 func (c *Config) Upgrade() (config.Config, error) {

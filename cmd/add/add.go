@@ -8,7 +8,7 @@ import (
 func NewAddCmd() *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add",
-		Short: "Change the devspace configuration",
+		Short: "Change the DevSpace configuration",
 		Long: `
 #######################################################
 #################### devspace add #####################

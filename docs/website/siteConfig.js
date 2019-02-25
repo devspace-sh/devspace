@@ -31,7 +31,7 @@ const siteConfig = {
 
   // Used for publishing and more
   projectName: 'devspace',
-  organizationName: 'covexo',
+  organizationName: 'devspace-cloud',
   // For top-level user or org sites, the organization is still the same.
   // e.g., for the https://JoelMarcey.github.io site, it would be set like...
   //   organizationName: 'JoelMarcey'
@@ -72,7 +72,7 @@ const siteConfig = {
   copyright:
     'Copyright © ' +
     new Date().getFullYear() +
-    ' covexo GmbH',
+    ' devspace-cloud GmbH',
 
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks

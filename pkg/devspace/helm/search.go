@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"sort"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	helmdownloader "k8s.io/helm/pkg/downloader"
 	"k8s.io/helm/pkg/getter"
 	"k8s.io/helm/pkg/repo"

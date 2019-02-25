@@ -39,7 +39,7 @@ Step 1/9 : FROM node:8.11.4
 deployment.extensions/devspace configured          
 [done] √ Finished deploying devspace-default
 [done] √ Port forwarding started on 3000:3000           
-[done] √ Sync started on /covexo/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
+[done] √ Sync started on /devspace-cloud/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
 [info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
 root@default-7c4dcdfc4-m867d:/app#
 ```

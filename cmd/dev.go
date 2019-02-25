@@ -5,18 +5,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/watch"
+	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/deploy"
-	"github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/devspace/image"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/registry"
-	"github.com/covexo/devspace/pkg/devspace/services"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/image"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -70,12 +70,12 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "dev",
-		Short: "Starts your DevSpace",
+		Short: "Starts the development mode",
 		Long: `
 #######################################################
 ################### devspace dev ######################
 #######################################################
-Starts and connects your DevSpace:
+Starts your project in development mode:
 1. Builds your Docker images and override entrypoints if specified
 2. Deploys the deployments via helm or kubectl
 3. Forwards container ports to the local computer
@@ -88,8 +88,8 @@ Starts and connects your DevSpace:
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
 
-	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "force-build", "b", cmd.flags.build, "Forces devspace to build every image")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "force-deploy", "d", cmd.flags.deploy, "Forces devspace to deploy every deployment")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "force-build", "b", cmd.flags.build, "Forces to build every image")
+	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "force-deploy", "d", cmd.flags.deploy, "Forces to deploy every deployment")
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.skipPipeline, "skip-pipeline", "x", cmd.flags.skipPipeline, "Skips build & deployment and only starts sync, portforwarding & terminal")
 
@@ -104,14 +104,14 @@ Starts and connects your DevSpace:
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods for terminal")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the devspace context")
-	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the devspace")
+	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the DevSpace context")
+	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the project")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 
 	var devAlias = &cobra.Command{
 		Use:   "up",
-		Short: "alias for devspace dev (deprecated)",
+		Short: "alias for `devspace dev` (deprecated)",
 		Run: func(cobraCmd *cobra.Command, args []string) {
 			log.Warn("`devspace up` is deprecated, please use `devspace dev` in future")
 			cmd.Run(cobraCmd, args)
@@ -132,7 +132,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Start file logging
@@ -211,7 +211,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 			// Deploy all
 			err = deploy.All(client, generatedConfig, true, mustRedeploy || flags.deploy, log.GetInstance())
 			if err != nil {
-				return fmt.Errorf("Error deploying devspace: %v", err)
+				return fmt.Errorf("Error deploying: %v", err)
 			}
 
 			// Save Config
@@ -304,9 +304,9 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 		return services.StartTerminal(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, false, args, exitChan, log)
 	}
 
-	log.Info("Will now try to print the logs of a running devspace pod...")
+	log.Info("Will now try to print the logs of a running pod...")
 
-	// Start attaching to a running devspace pod
+	// Start attaching to a running pod
 	err := services.StartAttach(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
@@ -314,7 +314,7 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 			return err
 		}
 
-		log.Infof("Couldn't print logs of running devspace pod: %v", err)
+		log.Infof("Couldn't print logs of running pod: %v", err)
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")

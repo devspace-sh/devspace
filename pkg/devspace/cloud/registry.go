@@ -1,8 +1,8 @@
 package cloud
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // GetFirstPublicRegistry retrieves the first public registry

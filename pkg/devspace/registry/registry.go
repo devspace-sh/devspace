@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 
 	k8sv1 "k8s.io/api/core/v1"

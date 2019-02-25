@@ -6,8 +6,8 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )

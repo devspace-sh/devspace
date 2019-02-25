@@ -57,7 +57,7 @@ class Footer extends React.Component {
               Stack Overflow
             </a>
             <a
-              href="https://twitter.com/covexo"
+              href="https://twitter.com/devspace-cloud"
               target="_blank"
               rel="noreferrer noopener">
               Twitter
@@ -65,12 +65,12 @@ class Footer extends React.Component {
           </div>
           <div>
             <h5>More</h5>
-            <a href="https://github.com/covexo/devspace">GitHub</a>
+            <a href="https://github.com/devspace-cloud/devspace">GitHub</a>
             <a
               className="github-button"
               href={this.props.config.repoUrl}
               data-icon="octicon-star"
-              data-count-href="/covexo/devspace/stargazers"
+              data-count-href="/devspace-cloud/devspace/stargazers"
               data-show-count={true}
               data-count-aria-label="# stargazers on GitHub"
               aria-label="Star this project on GitHub">
@@ -80,13 +80,13 @@ class Footer extends React.Component {
         </section>
 
         <a
-          href="https://github.com/covexo/devspace/"
+          href="https://github.com/devspace-cloud/devspace/"
           target="_blank"
           rel="noreferrer noopener"
           className="footer-logo">
           <img
             src={this.props.config.baseUrl + 'img/devspace-logo.svg'}
-            alt="DevSpace CLI Logo"
+            alt="DevSpace.cli Logo"
             width="300"
             height="54"
           />

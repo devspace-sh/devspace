@@ -4,10 +4,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -18,12 +18,12 @@ func newConfigsCmd() *cobra.Command {
 
 	configsCmd := &cobra.Command{
 		Use:   "configs",
-		Short: "Lists the defined configurations",
+		Short: "Lists all DevSpace configurations",
 		Long: `
 #######################################################
 ############## devspace list configs ##################
 #######################################################
-Lists the defined devspace configuartions
+Lists all DevSpace configuartions for this project
 #######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -41,7 +41,7 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Check if configs.yaml exists

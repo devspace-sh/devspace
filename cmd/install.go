@@ -4,12 +4,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/covexo/devspace/pkg/util/envutil"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/envutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
+	helmClient "github.com/devspace-cloud/devspace/pkg/devspace/helm"
 
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +34,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Installs the DevSpace CLI",
+		Short: "Installs the DevSpace.cli",
 		Long: `
 #######################################################
 ################## devspace install ###################

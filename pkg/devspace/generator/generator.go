@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 
 	enry "gopkg.in/src-d/enry.v1"
 	git "gopkg.in/src-d/go-git.v4"

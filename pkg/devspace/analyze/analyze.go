@@ -3,7 +3,7 @@ package analyze
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 
 	"k8s.io/client-go/kubernetes"

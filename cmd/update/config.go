@@ -1,8 +1,8 @@
 package update
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ Note: convert does not upgrade the overwrite configs
 	return configCmd
 }
 
-// RunConfig executes the functionality devspace update config
+// RunConfig executes the functionality "devspace update config"
 func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
@@ -41,7 +41,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Get config

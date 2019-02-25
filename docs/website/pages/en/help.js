@@ -31,7 +31,7 @@ class Help extends React.Component {
       },
       {
         title: 'Further Questions?',
-        content: "Feel free to open a **[new issue on GitHub](https://github.com/covexo/devspace/issues/new?labels=kind%2Fquestion&title=Question:)**",
+        content: "Feel free to open a **[new issue on GitHub](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fquestion&title=Question:)**",
       },
     ];
 
@@ -46,7 +46,7 @@ class Help extends React.Component {
             <GridBlock contents={supportLinks} layout="threeColumn" />
             <br />
             <h2>Professional Support</h2>
-            <p>The DevSpace CLI is an open source project sponsored and maintained by the covexo GmbH. Our team offers DevSpace hosting as well as support and services around Kubernetes, Docker and DevSpaces. If you need professional support, get in touch with us: sales@covexo.com</p>
+            <p>The DevSpace.cli is an open source project sponsored and maintained by the devspace-cloud GmbH. Our team offers DevSpace hosting as well as support and services around Kubernetes, Docker and DevSpaces. If you need professional support, get in touch with us: sales@devspace-cloud.com</p>
           </div>
         </Container>
       </div>

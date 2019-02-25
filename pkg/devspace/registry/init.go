@@ -3,11 +3,11 @@ package registry
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/docker/docker/client"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -65,7 +65,7 @@ func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *ku
 
 	if config.Deployments != nil && username != "" && password != "" {
 		for _, deployConfig := range *config.Deployments {
-			email := "noreply@devspace-cloud.com"
+			email := "noreply@devspace.cloud"
 
 			namespace := defaultNamespace
 			if deployConfig.Namespace != nil {

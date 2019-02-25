@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/analyze"
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -46,7 +46,7 @@ devspace analyze --namespace=mynamespace
 	return analyzeCmd
 }
 
-// RunAnalyze executes the functionality devspace analyze
+// RunAnalyze executes the functionality "devspace analyze"
 func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()

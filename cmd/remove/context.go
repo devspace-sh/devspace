@@ -1,8 +1,8 @@
 package remove
 
 import (
-	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/util/log"
+	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 

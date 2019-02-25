@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
-	"github.com/covexo/devspace/pkg/devspace/helm"
-	"github.com/covexo/devspace/pkg/devspace/registry"
-	"github.com/covexo/devspace/pkg/util/hash"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 )
 
 // Deploy deploys the given deployment with helm

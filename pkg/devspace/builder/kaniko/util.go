@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/processutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/processutil"
 )
 
 // OutputFormat a regex and a replacement for outputs

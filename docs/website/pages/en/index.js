@@ -79,7 +79,7 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle />
           <PromoSection>
-            <Button href="https://github.com/covexo/devspace">Source Code</Button>
+            <Button href="https://github.com/devspace-cloud/devspace">Source Code</Button>
             <Button href={docUrl('getting-started/quickstart.html', language)}>Quickstart</Button>
           </PromoSection>
         </div>

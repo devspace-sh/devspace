@@ -3,8 +3,8 @@ package configutil
 import (
 	"testing"
 
-	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/util/ptr"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 func TestSimpleMerge(t *testing.T) {
