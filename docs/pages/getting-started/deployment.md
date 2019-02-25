@@ -35,7 +35,9 @@ DEVSPACE DEPLOY OUTPUT WITH URL
 <summary>
 ## Connect a custom domain
 </summary>
-TODO
+1. Go to: [https://app.devspace.cloud/spaces](https://app.devspace.cloud/spaces)
+2. Open the tab "Network" for the Space you want to connect the domain for
+3. Connect a domain as explained in the UI
 </details>
 
 <details>

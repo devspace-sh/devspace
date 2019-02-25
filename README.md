@@ -166,7 +166,7 @@ devspace init
 <summary><b>Don't have a project to test DevSpace with?</b> Check out our example project.</summary>
 
 ```
-TODO
+git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 ```
 
 </details>
@@ -235,21 +235,30 @@ DevSpace.cli is a client-only command-line tool which lets you develop, deploy a
 <details>
 <summary><b>Hosted Spaces</b> • hosted on DevSpace.host</summary>
 
-TODO
+Hosted Spaces run on DevSpace.host. You will automatically get a `.devspace.host` subdomain for your Space. Using DevSpace.host automatically means that you are using DevSpace.cloud which manages all Spaces running on top of DevSpace.host. 
+
+> Users of DevSpace.host can create one Space with limited resources for free. To enable resource scaling, you have to verify your account by adding payment information. With a verified account, you can use more cloud resources for your containers and only pay the resources that are actually needed to create and run your containers.
 
 </details>
 
 <details>
 <summary><b>Self-hosted Spaces</b> • hosted on your clusters & managed by DevSpace.cloud</summary>
 
-TODO
+Self-hosted Spaces run on your own Kubernetes cluster which can be hosted anywhere you like (e.g. managed public cloud, private cloud). Self-hosted Spaces are different from self-managed Spaces because self-hosted Spaces are still managed by DevSpace.cloud.
+
+> To use self-hosted Spaces, simply [connect your own Kubernetes cluster as external cluster in DevSpace.cloud](https://devspace.cloud/docs/advanced/external-clusters). You will then be able to use DevSpace.cloud and create self-hosted Spaces which are not running on DevSpace.host but on your own Kubernetes clusters.
 
 </details>
 
 <details>
 <summary><b>Self-managed namespaces</b> • hosted & managed by yourself</summary>
 
-TODO
+Self-managed namespaces are hosted on your own Kubernetes clusters. Unlike Spaces, regular Kubernetes namespaces are **not** managed by DevSpace.cloud. That means that you will have to take care of the following things manually:
+* enforce resource limits
+* configure secure user permissions
+* isolate namespaces of different users
+* connect domains and configure ingresses
+* install and manage basic cluster services (e.g. ingress controller, cert-manager for TLS, monitoring and log aggregation tools)
 
 </details>
 
