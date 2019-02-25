@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	latest "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
@@ -180,11 +182,13 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
-		cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:     "Do you want to use devspace.cloud as target cluster?",
-			DefaultValue: "yes",
-			Options:      []string{"yes", "no"},
-		}) == "yes"
+		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
+			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:     "Do you want to use devspace.cloud as target cluster?",
+				DefaultValue: "yes",
+				Options:      []string{"yes", "no"},
+			}) == "yes"
+		}
 
 		// Check if devspace cloud should be used
 		if cmd.flags.useCloud == false {
@@ -211,9 +215,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 					Options:  options,
 				})
 			}
-
-			// Print target
-			log.Infof("Using devspace.cloud - if you want to use your cluster run `%s`", ansi.Color("devspace init --cloud=false", "white+b"))
 
 			// Ensure user is logged in
 			err = cloud.EnsureLoggedIn(providerConfig, *config.Cluster.CloudProvider, log.GetInstance())

@@ -19,7 +19,7 @@ const DevSpaceKubeContextName = "devspace"
 type ProviderConfig map[string]*Provider
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
-const DevSpaceCloudProviderName = "devspace-cloud"
+const DevSpaceCloudProviderName = "app.devspace.cloud"
 
 // GraphqlEndpoint is the endpoint where to execute graphql requests
 const GraphqlEndpoint = "/graphql"
