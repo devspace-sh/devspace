@@ -13,12 +13,12 @@ import (
 	"github.com/juju/errors"
 	homedir "github.com/mitchellh/go-homedir"
 
-	"github.com/covexo/devspace/pkg/util/kubeconfig"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/mgutz/ansi"
 )
 

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 )
 

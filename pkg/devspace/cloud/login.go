@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -99,7 +99,7 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 	return nil
 }
 
-// Login logs the user into the devspace cloud
+// Login logs the user into DevSpace.cloud
 func (p *Provider) Login(log log.Logger) error {
 	log.StartWait("Logging into cloud provider...")
 	defer log.StopWait()

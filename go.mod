@@ -1,4 +1,4 @@
-module github.com/covexo/devspace
+module github.com/devspace-cloud/devspace
 
 require (
 	cloud.google.com/go v0.34.0 // indirect

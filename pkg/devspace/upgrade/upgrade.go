@@ -11,7 +11,7 @@ import (
 
 // Version holds the current version tag
 var version string
-var githubSlug = "covexo/devspace"
+var githubSlug = "devspace-cloud/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {

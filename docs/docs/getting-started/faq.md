@@ -6,13 +6,13 @@ sidebar_label: FAQ
 ## DevSpace
 
 ### What is a DevSpace?
-A DevSpace is a remote workspace that enables cloud-native development directly inside a Kubernetes cluster. You can setup a DevSpace for each of your projects and directly connect it with your local workspace through the DevSpace CLI. 
+A DevSpace is a remote workspace that enables cloud-native development directly inside a Kubernetes cluster. You can setup a DevSpace for each of your projects and directly connect it with your local workspace through the DevSpace.cli. 
 
-### What is the DevSpace CLI?
-The DevSpace CLI lets you connect your local workspace to a DevSpace. It is an open-source, client-only software that provides real-time code sync, port forwarding, terminal tunneling and more, so programming with your DevSpace feels just like working with a local development runtime.
+### What is the DevSpace.cli?
+The DevSpace.cli lets you connect your local workspace to a DevSpace. It is an open-source, client-only software that provides real-time code sync, port forwarding, terminal tunneling and more, so programming with your DevSpace feels just like working with a local development runtime.
 
 ### Is it free and open source?
-Yes. The DevSpace CLI is completely free and open source (Apache-2.0 license). You can use it for private and for commercial projects.
+Yes. The DevSpace.cli is completely free and open source (Apache-2.0 license). You can use it for private and for commercial projects.
 
 ### Why do I need a DevSpace?
 There are many use cases where a DevSpace has advantages over regular development on localhost, e.g.:
@@ -26,7 +26,7 @@ There are many use cases where a DevSpace has advantages over regular developmen
 You can use any programming languages with your DevSpace. Just use a Docker image that provides the right tooling to build, run and debug applications with the programming language you want to work with.
 
 ### Can I use my own Dockerfile?
-Yes. If you do not have a Dockerfile yet, the DevSpace CLI will create one for you. If you already have one, the DevSpace CLI will simply work with that one.
+Yes. If you do not have a Dockerfile yet, the DevSpace.cli will create one for you. If you already have one, the DevSpace.cli will simply work with that one.
 
 ### Can I use it with Minikube?
 Yes. Just make sure your Minikube cluster works correctly (cluster DNS is started, pods can talk to each other and to the internet etc.).
@@ -35,10 +35,10 @@ Yes. Just make sure your Minikube cluster works correctly (cluster DNS is starte
 Yes. Just make sure your self-hosted Kubernetes cluster works correctly (cluster DNS is started, pods can talk to each other and to the internet etc.).
 
 ### Can I use it with Azure, Google Cloud or Amazon Web Services?
-Yes. Just make sure your Kubernetes API server is reachable from your computer and you have the right credentials in place (if kubectl works fine on your terminal, then the DevSpace CLI should also work correctly).
+Yes. Just make sure your Kubernetes API server is reachable from your computer and you have the right credentials in place (if kubectl works fine on your terminal, then the DevSpace.cli should also work correctly).
 
 ### How do I get my code into the DevSpace?
-The DevSpace CLI sets up a real-time code sync for you. This sync mechanism is very reliable and fast. It works with ephemeral container storage as well as with any kind of persistent volumes. The code sync is bi-directional, i.e. it synchronizes changes from your laptop to your DevSpace and the other way around.
+The DevSpace.cli sets up a real-time code sync for you. This sync mechanism is very reliable and fast. It works with ephemeral container storage as well as with any kind of persistent volumes. The code sync is bi-directional, i.e. it synchronizes changes from your laptop to your DevSpace and the other way around.
 
 ### What is port forwarding?
 Port forwarding allows you to access a DevSpace port via localhost, e.g. you can access localhost:8080 and this request will be forwarded for example to your DevSpace on port 80.

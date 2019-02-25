@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/builder"
-	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
-	"github.com/covexo/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"

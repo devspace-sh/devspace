@@ -1,8 +1,8 @@
 package list
 
 import (
-	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/util/log"
+	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -27,15 +27,15 @@ devspace list spaces
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListCloudDevspaces,
+		Run:  cmd.RunListSpaces,
 	}
 
 	spacesCmd.Flags().StringVar(&cmd.Name, "name", "", "Space name to show (default: all)")
 	return spacesCmd
 }
 
-// RunListCloudDevspaces executes the devspace list cloud devspaces functionality
-func (cmd *spacesCmd) RunListCloudDevspaces(cobraCmd *cobra.Command, args []string) {
+// RunListCloudDevspaces executes the "devspace list spaces" functionality
+func (cmd *spacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) {
 	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)

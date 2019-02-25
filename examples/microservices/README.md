@@ -42,8 +42,8 @@ deployment.extensions/devspace created
 [done] √ Deployed helm chart (Release revision: 1)                    
 [done] √ Finished deploying devspace-php
 [done] √ Port forwarding started on 3000:3000           
-[done] √ Sync started on /covexo/devspace/examples/microservices/node <-> /app (Pod: devspace/devspace-798ff95944-dn2jj)
-[done] √ Sync started on /covexo/devspace/examples/microservices/php <-> /var/www/html (Pod: devspace/devspace-php-5c7d99565c-l5f62)
+[done] √ Sync started on /devspace-cloud/devspace/examples/microservices/node <-> /app (Pod: devspace/devspace-798ff95944-dn2jj)
+[done] √ Sync started on /devspace-cloud/devspace/examples/microservices/php <-> /var/www/html (Pod: devspace/devspace-php-5c7d99565c-l5f62)
 root@devspace-798ff95944-dn2jj:/app#
 ```
 2. Run `npm start` in the new opened terminal to start the webserver

@@ -1,10 +1,10 @@
 package use
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -15,12 +15,12 @@ func newConfigCmd() *cobra.Command {
 
 	return &cobra.Command{
 		Use:   "config",
-		Short: "Use a specific devspace configuration",
+		Short: "Use a specific DevSpace configuration",
 		Long: `
 #######################################################
 ################ devspace use config ##################
 #######################################################
-Use a specific devspace configuration that is defined
+Use a specific DevSpace configuration that is defined
 in .devspace/configs.yaml
 
 Example:
@@ -32,7 +32,7 @@ devspace use config myconfig
 	}
 }
 
-// RunUseConfig executes the devspace use config command logic
+// RunUseConfig executes the "devspace use config command" logic
 func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
@@ -40,7 +40,7 @@ func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	configs := configs.Configs{}

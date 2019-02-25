@@ -3,7 +3,7 @@ title: Source Code Synchronization
 ---
 
 # Code Synchronization
-The DevSpace CLI synchronization mechanism is written from scratch and made for Kubernetes development with hot reloading. While current other Kubernetes development solutions (like draft, skaffold and telepresence) help the developer with the problem how to test and deploy cloud-native applications in Kubernetes clusters, actual iterative development, testing and hot reloading of cloud-native applications within Kubernetes is still an annoying problem. Especially for developers of programming languages that support hot reload development environments, such as nodejs, this is a hassle. The DevSpace CLI has a syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container, a deployment pipeline or a docker build. This greatly accelerates development, debugging and testing directly in remote containers.
+The DevSpace.cli synchronization mechanism is written from scratch and made for Kubernetes development with hot reloading. While current other Kubernetes development solutions (like draft, skaffold and telepresence) help the developer with the problem how to test and deploy cloud-native applications in Kubernetes clusters, actual iterative development, testing and hot reloading of cloud-native applications within Kubernetes is still an annoying problem. Especially for developers of programming languages that support hot reload development environments, such as nodejs, this is a hassle. The DevSpace.cli has a syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container, a deployment pipeline or a docker build. This greatly accelerates development, debugging and testing directly in remote containers.
 
 Our main requirements to the sync mechanism were:
 - Easy to integrate, no cluster dependencies, client-only implementation
@@ -13,7 +13,7 @@ Our main requirements to the sync mechanism were:
 - File watchers and hot reload tools like nodemon should recognize sync changes like on local filesystem
 - Fast and reliable
 
- If synchronization is configured (check with `devspace list sync`), the DevSpace CLI will establish a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background. You can check the latest sync activity by running the command `devspace status sync` or take a look at the `sync.log` in `.devspace/logs`.
+ If synchronization is configured (check with `devspace list sync`), the DevSpace.cli will establish a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background. You can check the latest sync activity by running the command `devspace status sync` or take a look at the `sync.log` in `.devspace/logs`.
 
 ## Sync Requirements
 No server-side component for code synchronization is required, the sync is client-only. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.

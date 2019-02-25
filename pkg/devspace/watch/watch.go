@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // Callback is the function type

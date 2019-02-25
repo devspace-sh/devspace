@@ -2,7 +2,7 @@
 title: 3. Coding with DevSpace
 ---
 
-There are 5 central features the devspace cli is doing for you when running `devspace up`:
+There are 5 central features the DevSpace.cli is doing for you when running `devspace up`:
 1. Image building 
 2. Helm chart deployment 
 3. Port forwarding from local machine to remote containers
@@ -15,7 +15,7 @@ When you run `devspace up` for the first time, your [/Dockerfile](/docs/configur
 **Note:** To force re-build your docker image, you can run `devspace up -b`.
 
 ## Chart Deployment
-The devspace cli will deploy a helm chart in the target cluster by running `devspace up`. The deployed chart can be found locally in the `chart/` folder and can be changed as wanted. There is one special field in the `chart/values.yaml`: For each container specified under the key `containers.containerName`, the `image` property will be filled automatically after the build step.  
+The DevSpace.cli will deploy a helm chart in the target cluster by running `devspace up`. The deployed chart can be found locally in the `chart/` folder and can be changed as wanted. There is one special field in the `chart/values.yaml`: For each container specified under the key `containers.containerName`, the `image` property will be filled automatically after the build step.  
 
 If you are interested how helm charts work and how to write and adjust them, you can take a look at [helm charts](https://github.com/helm/helm/blob/master/docs/charts.md)
 

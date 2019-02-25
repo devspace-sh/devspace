@@ -3,8 +3,8 @@ package helm
 import (
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 )
 
 // Status gets the status of the deployment

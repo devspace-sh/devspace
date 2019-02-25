@@ -37,7 +37,7 @@ Step 1/8 : FROM php:7.1-apache-stretch
 [info]   Skipping chart ./chart                                                               
 [done] √ Finished deploying devspace-app
 [done] √ Port forwarding started on 8080:80             
-[done] √ Sync started on /github.com/covexo/devspace/examples/php-mysql-example <-> /app (Pod: d4c1654922db400f612a027283b50001/default-74d58cbc59-9j4mj)
+[done] √ Sync started on /github.com/devspace-cloud/devspace/examples/php-mysql-example <-> /app (Pod: d4c1654922db400f612a027283b50001/default-74d58cbc59-9j4mj)
 [info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
 root@default-7c4dcdfc4-m867d:/var/www/html#
 ```

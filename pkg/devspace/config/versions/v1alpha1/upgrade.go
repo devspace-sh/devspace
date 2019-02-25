@@ -3,11 +3,11 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/config/versions/config"
-	next "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/util"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 // Upgrade upgrades the config

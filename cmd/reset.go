@@ -4,14 +4,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +37,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "reset",
-		Short: "Remove devspace completely from your project",
+		Short: "Remove DevSpace completely from your project",
 		Long: `
 #######################################################
 ################### devspace reset ####################
@@ -57,7 +57,7 @@ command: devspace down
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 	rootCmd.AddCommand(cobraCmd)
 }
 
@@ -73,7 +73,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Configure cloud provider
@@ -113,7 +113,7 @@ func (cmd *ResetCmd) deleteCloudSpace() {
 	}
 
 	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:     "Should the Space be deleted from DevSpace Cloud",
+		Question:     "Should the Space be deleted from DevSpace.cloud?",
 		DefaultValue: "yes",
 		Options:      []string{"yes", "no"},
 	}) == "yes"
@@ -130,16 +130,16 @@ func (cmd *ResetCmd) deleteCloudSpace() {
 				return
 			}
 			if generatedConfig.Space == nil {
-				log.Info("Didn't remove devspace since there is no cloud devspace configured")
+				log.Info("Didn't remove Space since there is no Space configured")
 				return
 			}
 
 			err = provider.DeleteSpace(generatedConfig.Space.SpaceID)
 			if err != nil {
-				log.Failf("Error deleting devspace: %v", err)
+				log.Failf("Error deleting Space: %v", err)
 			}
 
-			log.Donef("Successfully deleted devspace %s", *config.Cluster.Namespace)
+			log.Donef("Successfully deleted Space %s", *config.Cluster.Namespace)
 		}
 	}
 }
