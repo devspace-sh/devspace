@@ -1,123 +1,124 @@
 /* your custom css */
 
-@media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
+* {
+    outline: none;
 }
 
-@media only screen and (min-width: 1024px) {
+a, a:hover {
+    color: #1c65f7;
 }
 
-@media only screen and (max-width: 1023px) {
+a:hover {
+    text-decoration: underline;
 }
+
+h1, h2 {
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+}
+
+h3, h4, h5, h6 {
+    margin-top: 1.2em;
+    margin-bottom: 0.3em;
+}
+
+p {
+    margin: 0.5em 0;
+}
+
+ul, ol {
+    margin: 0.4em 0 1.5em;
+}
+
+details,
+.docs-next {
+    box-shadow: 0 0 20px rgba(35,51,102,.2);
+}
+
+pre {
+    margin-top: 0.4em;
+}
+
+pre .btnIcon {
+    margin-top: 3px;
+    margin-right: -10px;
+    padding-left: 0.4em;
+    padding-right: 15px;
+    background: #282c34;
+    box-shadow: -10px 10px 10px #282c34;
+}
+
+pre .btnIcon * {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+pre:hover .btnIcon * {
+    opacity: 1;
+}
+
+blockquote {
+    margin-top: 1em;
+    background-color: rgb(255, 230, 200);
+    border-left-color: #f80;
+    color: #6e6e6e;
+    border-radius: 2px;
+}
+
+.docs-next {
+    font-weight: 600;
+    background-color: #00bdff;
+    color: #fff;
+    border: none;
+}
+
+.docLastUpdate {
+    text-align: left;
+}
+
+.post p:empty {
+    display: none;
+}
+
+.navPusher .docMainWrapper {
+  max-width: 1600px;
+  padding: 0 5%;
+}
+
+/* nav group titles */
+.toc .toggleNav .navGroup .navGroupCategoryTitle {
+    padding-left: 18px;
+    font-size: 16px;
+}
+
+/* nav arrows */
+.collapsible .arrow {
+    position: absolute;
+    left: 0;
+    margin-right: 2px;
+    margin-left: -5px;
+}
+
+/* nav link currently active */
+.toc .toggleNav ul li.navListItemActive a {
+    color: #00bdff!important;
+}
+
+/* nav link */
+.toc .toggleNav ul li a {
+    padding: 2px 0 2px 10px;
+}
+
+/* nav link hover */
+.toc .toggleNav ul li a:hover {
+    text-decoration: none;
+    color: #1c65f7;
+}
+
+
 
 @media only screen and (min-width: 1400px) {
 }
 
 @media only screen and (min-width: 1500px) {
-}
-
-body {
-    overflow-x: hidden;
-}
-
-.footer-logo {
-    display: block;
-    text-align: center;
-}
-
-.onPageNav ul ul li {
-    margin-top: 0em;
-}
-
-.toc .toggleNav ul li a {
-    padding: 1px 0;
-}
-
-.toc .toggleNav ul li.navListItemActive a {
-    font-weight: 600;
-    color: #ff8800;
-    border-left: 4px solid #ff8800;
-    margin-left: -8px;
-    padding-left: 4px;
-}
-
-.docs-prevnext .button {
-    font-weight: 600;
-    color: #ff8800;
-    border: 2px solid #ff8800;
-}
-
-.docs-prevnext .button:hover {
-    background-color: #ff8800;
-    border-color: transparent;
-    color: #fff;
-}
-
-h1,
-h2,
-h3,
-h4,
-.postHeader {
-    margin-bottom: 6px !important;
-}
-
-h2 {
-    margin-top: 26px;
-}
-
-h3 {
-    font-size: 18px;
-}
-
-.post a:not(.hash-link) {
-    padding: 0 0.2em;
-    font-weight: 600;
-    color: #3F51B5;
-    background: #4ac9f521;
-}
-
-.post a:not(.hash-link):hover {
-    color: #fff;
-    background: #4ac9f5;
-}
-
-.post ul {
-    margin-top: -0.5em;
-}
-
-.post ul ul {
-    margin-top: 0.3em;
-}
-
-.post .hljs,
-.post code {
-    color: #fff;
-    background: #233366;
-}
-
-.post em {
-    font-style: italic;
-    font-size: 90%;
-    padding: 0 2px;
-}
-
-.post .hljs {
-    margin: 0 -25px;
-}
-
-.post .hljs-string,
-.post .hljs-literal,
-.post .hljs-number {
-    color: rgb(197, 217, 255);
-}
-
-.post .hljs-built_in {
-    color: #fff;
-}
-
-.post .hljs-comment {
-    color: #a9e4f8;
-}
-
-.post .hljs-variable {
-    color: #4ac9f5;
 }

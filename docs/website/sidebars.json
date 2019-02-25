@@ -1,36 +1,116 @@
 {
   "docs": {
-    "Getting Started": [
-      "getting-started/quickstart",
-      "getting-started/faq"
+    "Getting started": [
+        "getting-started/installation",
+        "getting-started/containerize",
+        "getting-started/deployment",
+        "getting-started/development"
     ],
-    "Commands": [
-      "cli/init",
-      "cli/deploy",
-      "cli/up",
-      "cli/enter",
-      "cli/down",
-      "cli/reset",
-      "cli/add",
-      "cli/add_package",
-      "cli/remove",
-      "cli/remove_package",
-      "cli/install",
-      "cli/upgrade",
-      "cli/list",
-      "cli/status"
+    "Deploy with DevSpace": [
+        "deployment/workflow",
+        "deployment/images",
+        "deployment/deployments",
+        "deployment/charts",
+        "deployment/domains",
+        "deployment/scaling"
     ],
-    "Configuration": [
-      "configuration/config.yaml",
-      "configuration/overwrite.yaml",
-      "configuration/dockerfile",
-      "configuration/chart"
+    "Develop with DevSpace": [
+        "development/workflow",
+        "development/terminal",
+        "development/synchronization",
+        "development/port-forwarding",
+        "development/auto-reloading",
+        "development/entrypoint-overrides",
+        "development/best-practices"
     ],
-    "Advanced": [
-      "advanced/logs",
-      "advanced/kubernetes",
-      "advanced/sync",
-      "advanced/architecture"
+    "Debug with DevSpace": [
+        "debugging/overview",
+        "debugging/analyze",
+        "debugging/logs",
+        "debugging/enter",
+        "debugging/debuggers"
+    ],
+    "Spaces": [
+        "spaces/what-are-spaces",
+        "spaces/create-spaces",
+        "spaces/switch-spaces",
+        "spaces/delete-spaces",
+        "spaces/domains",
+        "spaces/resource-limits"
+    ],
+    "Image Registries": [
+        "images/workflow",
+        "images/internal-registry",
+        "images/external-registry",
+        "images/pull-secrets"
+    ],
+    "Charts": [
+        "charts/what-are-helm-charts",
+        "charts/devspace-chart",
+        "charts/packages",
+        "charts/persistent-volumes",
+        "charts/environment-variables",
+        "charts/networking",
+        "charts/containers",
+        "charts/custom-manifests",
+        "charts/scaling"
+    ],
+    "Domains": [
+        "domains/workflow",
+        "domains/add-verify",
+        "domains/connect",
+        "domains/certificates"
+    ],
+    "Advanced Topics": [
+        "advanced/pipelines",
+        "advanced/external-clusters"
+    ],
+    "Configuration Reference": [
+        "configuration/reference",
+        "configuration/multiple-configs",
+        "configuration/overrides",
+        "configuration/variables"
+    ],
+    "CLI Reference": [
+        "cli/overview",
+        "cli/analyze",
+        "cli/deploy",
+        "cli/dev",
+        "cli/down",
+        "cli/enter",
+        "cli/init",
+        "cli/install",
+        "cli/login",
+        "cli/reset",
+        "cli/upgrade",
+        "cli/add/deployment",
+        "cli/add/image",
+        "cli/add/package",
+        "cli/add/port",
+        "cli/add/selector",
+        "cli/add/sync",
+        "cli/create/space",
+        "cli/list/configs",
+        "cli/list/packages",
+        "cli/list/ports",
+        "cli/list/selectors",
+        "cli/list/spaces",
+        "cli/list/sync",
+        "cli/remove/context",
+        "cli/remove/deployment",
+        "cli/remove/image",
+        "cli/remove/package",
+        "cli/remove/port",
+        "cli/remove/selector",
+        "cli/remove/space",
+        "cli/remove/sync",
+        "cli/status/deployments",
+        "cli/status/sync",
+        "cli/update/config",
+        "cli/use/config",
+        "cli/use/context",
+        "cli/use/registry",
+        "cli/use/space"
     ]
   }
 }

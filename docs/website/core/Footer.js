@@ -10,91 +10,73 @@ const React = require('react');
 class Footer extends React.Component {
   docUrl(doc, language) {
     const baseUrl = this.props.config.baseUrl;
-    return baseUrl + 'docs/' + doc;
+    const docsUrl = this.props.config.docsUrl;
+    const docsPart = `${docsUrl ? `${docsUrl}/` : ''}`;
+    const langPart = `${language ? `${language}/` : ''}`;
+    return `${baseUrl}${docsPart}${langPart}${doc}`;
   }
 
   pageUrl(doc, language) {
     const baseUrl = this.props.config.baseUrl;
-    return baseUrl + (language ? language + '/' : '') + doc;
+    return baseUrl + (language ? `${language}/` : '') + doc;
   }
 
   render() {
-    const currentYear = new Date().getFullYear();
     return (
       <footer className="nav-footer" id="footer">
-        <section className="sitemap">
-          <a href={this.props.config.baseUrl} className="nav-home">
-            {this.props.config.footerIcon && (
-              <img
-                src={this.props.config.baseUrl + this.props.config.footerIcon}
-                alt={this.props.config.title}
-                width="66"
-                height="58"
-              />
-            )}
-          </a>
-          <div>
-            <h5>Docs</h5>
-            <a href={this.docUrl('getting-started/faq.html', this.props.language)}>
-              Frequently Asked Questions (FAQ)
-            </a>
-            <a href={this.docUrl('getting-started/quickstart.html', this.props.language)}>
-              Getting Started (Quickstart Guide)
-            </a>
-            <a href={this.docUrl('cli/init.html', this.props.language)}>
-              Command Line Interface (CLI Docs)
-            </a>
-            <a href={this.docUrl('configuration/dockerfile.html', this.props.language)}>
-              Configuration Files
-            </a>
+        <div className="footer-container">
+          <div className="devspace-company">
+              <img src="/img/devspace-logo.svg" />
+              DevSpace CLI and DevSpace.cloud are products developed by the covexo GmbH. 
+              The terms "DevSpace" and "covexo" are registered trademarks of the covexo GmbH.
           </div>
-          <div>
-            <h5>Community</h5>
-            <a
-              href="http://stackoverflow.com/questions/tagged/devspace"
-              target="_blank"
-              rel="noreferrer noopener">
-              Stack Overflow
-            </a>
-            <a
-              href="https://twitter.com/devspace-cloud"
-              target="_blank"
-              rel="noreferrer noopener">
-              Twitter
-            </a>
+          <div className="social-networks">
+              <a className="fb-icon" href="https://www.facebook.com/covexo" target="_blank"><img src="/img/facebook-square.svg" /></a>
+              <a className="twitter-icon" href="https://twitter.com/covexo" target="_blank"><img src="/img/twitter-square.svg" /></a>
+              <a className="sof-icon" href="https://stackoverflow.com/questions/tagged/devspace" target="_blank"><img src="/img/stackoverflow-square.svg" /></a>
+              <a className="gh-icon" href="https://github.com/covexo/devspace" target="_blank"><img src="/img/github-square.svg" /></a>
           </div>
-          <div>
-            <h5>More</h5>
-            <a href="https://github.com/devspace-cloud/devspace">GitHub</a>
-            <a
-              className="github-button"
-              href={this.props.config.repoUrl}
-              data-icon="octicon-star"
-              data-count-href="/devspace-cloud/devspace/stargazers"
-              data-show-count={true}
-              data-count-aria-label="# stargazers on GitHub"
-              aria-label="Star this project on GitHub">
-              Star
-            </a>
+          <div className="doc-links">
+            <div className="links">
+                <h5 className="title">DevSpace CLI</h5>
+                <a className="link" target="_blank" href="https://github.com/covexo/devspace">GitHub Repository</a>
+                <a className="link" href="/getting-started">Quickstart Guide</a>
+                <a className="link" target="_blank" href="https://devspace.covexo.com/docs/cli/init.html">Command List</a>
+                <a className="link" target="_blank" href="https://devspace.covexo.com/docs/getting-started/faq.html">FAQ</a>
+            </div>
+            <div className="links">
+                <h5 className="title">DevSpace Cloud</h5>
+                <a className="link" href="/products">Products</a>
+                <a className="link" href="/products">Pricing</a>
+                <a className="link" href="/products">Enterprise Edition</a>
+            </div>
+            <div className="links invisible"></div>
+            <div className="links invisible"></div>
+            <div className="links">
+                <h5 className="title">Documentation</h5>
+                <a className="link" href="/getting-started">Getting Started</a>
+                <a className="link" target="_blank" href="https://docs.devspace-cloud.com/docs/configuration/config.yaml.html">Configuration</a>
+                <a className="link" target="_blank" href="https://docs.devspace-cloud.com/docs/advanced/architecture.html">Architecture</a>
+            </div>
+            <div className="links">
+                <h5 className="title">Community</h5>
+                <a className="link" target="_blank" href="http://slack.devspace-cloud.com">Slack Chat</a>
+                <a className="link" target="_blank" href="https://www.meetup.com/members/231546888">Meetups</a>
+                <a className="link" target="_blank" href="https://github.com/covexo/devspace#contributing">Contribute</a>
+            </div>
+            <div className="links">
+                <h5 className="title">Legal</h5>
+                <a className="link" href="/terms">Terms and Conditions</a>
+                <a className="link" href="/privacy-policy">Privacy Policy</a>
+                <a className="link" href="/legal-notice">Legal Notice</a>
+            </div>
+            <div className="links"/>
           </div>
-        </section>
-
-        <a
-          href="https://github.com/devspace-cloud/devspace/"
-          target="_blank"
-          rel="noreferrer noopener"
-          className="footer-logo">
-          <img
-            src={this.props.config.baseUrl + 'img/devspace-logo.svg'}
-            alt="DevSpace.cli Logo"
-            width="300"
-            height="54"
-          />
-        </a>
-        <section className="copyright">{this.props.config.copyright}</section>
+        </div>
       </footer>
     );
   }
 }
+
 
 module.exports = Footer;
