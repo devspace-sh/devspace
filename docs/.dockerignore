@@ -1,4 +1,2 @@
-Dockerfile
-.devspace/
-chart/
-node_modules/
+*/node_modules
+*.log

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/covexo/devspace/cmd/add"
-	"github.com/covexo/devspace/cmd/create"
-	"github.com/covexo/devspace/cmd/list"
-	"github.com/covexo/devspace/cmd/remove"
-	"github.com/covexo/devspace/cmd/status"
-	"github.com/covexo/devspace/cmd/update"
-	"github.com/covexo/devspace/cmd/use"
-	"github.com/covexo/devspace/pkg/devspace/upgrade"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/cmd/add"
+	"github.com/devspace-cloud/devspace/cmd/create"
+	"github.com/devspace-cloud/devspace/cmd/list"
+	"github.com/devspace-cloud/devspace/cmd/remove"
+	"github.com/devspace-cloud/devspace/cmd/status"
+	"github.com/devspace-cloud/devspace/cmd/update"
+	"github.com/devspace-cloud/devspace/cmd/use"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,11 +23,10 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "devspace",
-	Short: "Welcome to the DevSpace CLI!",
-	Long: `With a DevSpace you can program, build and execute cloud-native applications
-	 directly inside a Kubernetes cluster. Start your DevSpace now with:
+	Short: "Welcome to the DevSpace.cli!",
+	Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 
-	devspace up`,
+	devspace init`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

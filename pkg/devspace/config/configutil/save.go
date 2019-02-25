@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 

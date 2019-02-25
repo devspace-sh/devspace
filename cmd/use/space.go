@@ -1,11 +1,11 @@
 package use
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	cloudpkg "github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ devspace use space none    // stop using a space
 	return useSpace
 }
 
-// RunUseDevSpace executes the functionality devspace cloud use devspace
+// RunUseDevSpace executes the functionality "devspace use space"
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
@@ -47,7 +47,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Erase currently used space
@@ -78,11 +78,11 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("No cloud provider specified")
 	}
 
-	log.StartWait("Retrieving space")
+	log.StartWait("Retrieving Space details")
 
 	spaceConfig, err := provider.GetSpaceByName(args[0])
 	if err != nil {
-		log.Fatalf("Error retrieving devspaces: %v", err)
+		log.Fatalf("Error retrieving Spaces details: %v", err)
 	}
 
 	log.StopWait()

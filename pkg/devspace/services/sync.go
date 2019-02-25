@@ -8,10 +8,10 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/sync"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // StartSync starts the syncing functionality

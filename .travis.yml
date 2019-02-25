@@ -5,7 +5,7 @@ notifications:
 jobs:
   include:
   - stage: test
-    go_import_path: github.com/covexo/devspace
+    go_import_path: github.com/devspace-cloud/devspace
     install:
       - npm install -g codeclimate-test-reporter
     os: linux
@@ -21,7 +21,7 @@ jobs:
   - go: 1.11.4
     os: osx
     stage: deploy
-    go_import_path: github.com/covexo/devspace
+    go_import_path: github.com/devspace-cloud/devspace
     install: skip
     script: skip
     before_deploy:

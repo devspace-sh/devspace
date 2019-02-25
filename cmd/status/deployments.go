@@ -1,13 +1,13 @@
 package status
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/deploy"
-	deployHelm "github.com/covexo/devspace/pkg/devspace/deploy/helm"
-	deployKubectl "github.com/covexo/devspace/pkg/devspace/deploy/kubectl"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
+	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -18,12 +18,12 @@ func newDeploymentsCmd() *cobra.Command {
 
 	return &cobra.Command{
 		Use:   "deployments",
-		Short: "Shows the deployments status",
+		Short: "Shows the status of all deployments",
 		Long: `
 #######################################################
 ############ devspace status deployments ##############
 #######################################################
-Shows the devspace status
+Shows the status of all deployments
 #######################################################
 	`,
 		Args: cobra.NoArgs,

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	yaml "gopkg.in/yaml.v2"
 )

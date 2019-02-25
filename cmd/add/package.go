@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func newPackageCmd() *cobra.Command {
 #######################################################
 ############### devspace add package ##################
 #######################################################
-Adds an existing helm chart to the devspace
+Adds a Helm chart as dependeny to the project chart
 (run 'devspace add package' to display all available 
 helm charts)
 
@@ -54,7 +54,7 @@ func (cmd *packageCmd) RunAddPackage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddPackage(cmd.SkipQuestion, cmd.AppVersion, cmd.ChartVersion, cmd.Deployment, args, log.GetInstance())

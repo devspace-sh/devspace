@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/fsutil"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"k8s.io/helm/pkg/getter"
 	"k8s.io/helm/pkg/kube"
@@ -18,7 +18,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"

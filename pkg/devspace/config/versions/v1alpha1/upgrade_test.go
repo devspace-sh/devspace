@@ -3,8 +3,8 @@ package v1alpha1
 import (
 	"testing"
 
-	next "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/util/ptr"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 func TestEmpty(t *testing.T) {

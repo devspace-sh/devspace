@@ -5,8 +5,8 @@ import (
 
 	"os"
 
-	"github.com/covexo/devspace/cmd"
-	"github.com/covexo/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/cmd"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 )
 
 var version string

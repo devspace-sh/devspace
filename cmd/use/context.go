@@ -1,10 +1,10 @@
 package use
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ devspace use context myspace // Use different space credentials
 	}
 }
 
-// RunUseConfig executes the devspace use config command logic
+// RunUseConfig executes the "devspace use config" command logic
 func (*contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()

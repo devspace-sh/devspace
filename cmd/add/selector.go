@@ -1,9 +1,9 @@
 package add
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/configure"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ func newSelectorCmd() *cobra.Command {
 #######################################################
 ############# devspace add selector ###################
 #######################################################
-Add a new selector to your devspace
+Add a new selector to your DevSpace configuration
 
 Examples:
 devspace add selector my-selector --namespace=my-namespace
@@ -47,7 +47,7 @@ func (cmd *selectorCmd) RunAddSelector(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	err = configure.AddSelector(args[0], cmd.LabelSelector, cmd.Namespace, true)

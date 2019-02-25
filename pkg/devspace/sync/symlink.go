@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/covexo/devspace/pkg/devspace/watch"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/rjeczalik/notify"
 )
 

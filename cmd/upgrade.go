@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/upgrade"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -22,12 +22,12 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade the devspace cli to the newest version",
+		Short: "Upgrade the DevSpace.cli to the newest version",
 		Long: `
 #######################################################
 ################## devspace upgrade ###################
 #######################################################
-Upgrades the devspace cli to the newest version
+Upgrades the DevSpace.cli to the newest version
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,

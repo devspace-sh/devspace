@@ -36,7 +36,7 @@ You should see the following output:
 [done] √ Deployed helm chart (Release revision: 2)                    
 [done] √ Finished deploying devspace-default
 [done] √ Port forwarding started on 8080:8080           
-[done] √ Sync started on /covexo/devspace/examples/kaniko <-> /app (Pod: devspace/default-7bf98f5d86-xpqmr)
+[done] √ Sync started on /devspace-cloud/devspace/examples/kaniko <-> /app (Pod: devspace/default-7bf98f5d86-xpqmr)
 root@default-7bf98f5d86-xpqmr:/go/src/app#
 ```
 2. Run `go run main.go` in the new opened terminal to start the webserver

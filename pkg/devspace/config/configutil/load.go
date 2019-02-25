@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/util/log"
-	"github.com/covexo/devspace/pkg/util/ptr"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configs"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/versions"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	"github.com/covexo/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	yaml "gopkg.in/yaml.v2"
 )
 

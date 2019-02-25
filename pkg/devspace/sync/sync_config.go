@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"

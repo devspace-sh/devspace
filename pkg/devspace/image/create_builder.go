@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/builder"
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-	"github.com/covexo/devspace/pkg/devspace/builder/kaniko"
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"k8s.io/client-go/kubernetes"
 )
 

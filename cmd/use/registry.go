@@ -1,8 +1,8 @@
 package use
 
 import (
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func newRegistryCmd() *cobra.Command {
 #######################################################
 ############### devspace use registry #################
 #######################################################
-Use a devspace cloud docker registry 
+Define which registry to use.
 
 Example:
 devspace use registry dscr.io
@@ -32,7 +32,7 @@ devspace use registry dscr.io
 	return registryCmd
 }
 
-// RunUseRegistry executes the functionality devspace use registry
+// RunUseRegistry executes the functionality "devspace use registry"
 func (cmd *registryCmd) RunUseRegistry(cobraCmd *cobra.Command, args []string) {
 	// Get provider
 	provider, err := cloud.GetCurrentProvider(log.GetInstance())
