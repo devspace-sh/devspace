@@ -23,15 +23,17 @@
 ```
 devspace init
 ```
-> DevSpace uses smart defaults for many programming languages and frameworks to:
-> - Automatically create a Dockerfile for your app (if you don't have one, yet)
-> - Add a highly customizable Helm chart to your project
+#### DevSpace uses smart defaults for many programming languages and frameworks to:
+1. Automatically create a Dockerfile for your app
+2. Add a highly customizable Helm chart to your project
 
-Customize Dockerfile and Kubernetes deployment
-- [Add packages (e.g. databases)](#)
-- [Configure persistent volumes](#)
-- [Set environment variables](#)
-- [Enable auto-scaling](#)
+> If you already have a Dockerfile or a Helm chart, DevSpace.cli will ask you if you want to use them instead of the default files.
+
+Customize Dockerfile and Kubernetes deployment:
+ - [Add packages (e.g. databases)](#)
+ - [Configure persistent volumes](#)
+ - [Set environment variables](#)
+ - [Enable auto-scaling](#)
 
 ---
 
@@ -44,28 +46,30 @@ Customize Dockerfile and Kubernetes deployment
 ```
 devspace create space my-app
 ```
-> Spaces are smart Kubernetes namespaces with:
-> - Automatic allocation of a subdomain for each Space
-> - Automatic RBAC configuration for better isolation of users
-> - Resource auto-scaling within the configured limits
-> - and much more...
-> 
-> [Learn more about Spaces.](#)
+If you are using DevSpace.cloud, you can create Spaces with a single command. Spaces are smart Kubernetes namespaces with:
+- Automatic allocation of a subdomain for each Space
+- Automatic RBAC configuration for better isolation of users
+- Resource auto-scaling within the configured limits
+- [and much more...](#)
+
+> **If you do not want to use DevSpace.cloud, you will not be able to create Spaces.** You can skip this step and deploy your application to a regular Kubernetes namespace using `devspace deploy`.
 
 ### 2. Deploy your application
 ```
-devspace deploy my-app
+devspace deploy
 ```
-> 1. Builds, tags and pushes your Docker images
-> 2. Deploys your project to your Space
 
-**Access your application on: *my-app.devspace.host***
+#### What does `devspace deploy` do?
+1. Builds, tags and pushes your Docker images
+2. Creates pull secrets for your image registries
+3. Deploys your project with the newest images
 
-Learn how to:
-- [Connect custom domains](#)
-- [Monitor and debug deployed applications](#)
-- [Scale deployed applications with DevSpace](#)
-- [Integrate DevSpace in your CI/CD pipeline](#)
+### 3. Access your application
+After deploying, your application will run on a domain that is connected to your Space:
+- **auto-generated, e.g. `my-app.devspace.host`**
+- **custom domain ([Learn how to connected a custom domain](#))**
+
+> **If you are not using DevSpace.cloud, you will need to manually configure a domain and an ingress.**
 
 ---
 
@@ -76,7 +80,6 @@ Learn how to:
 
 ### Develop in a production-like environment
 ```
-devspace use space my-app-development
 devspace dev
 ```
 **With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay.
@@ -112,16 +115,11 @@ Learn more about development with DevSpace:
 
 <br>
 
-Checkout the **[Getting Started Guide for DevSpace](#).**
-
----
-
 ![DevSpace.cli Demo](https://github.com/devspace-cloud/devspace/raw/master/docs/website/static/img/devspace-cli-demo-readme.gif)
 
-## Quickstart
-For more in-depth walkthroughs, see **[Getting Started Guide for DevSpace](#).**
 
-### 1. Install DevSpace.cli & Docker
+## Getting started with DevSpace
+### 1. Install DevSpace.cli
 
 <Details>
 <Summary><b>via Windows Powershell</b></Summary>
@@ -155,42 +153,102 @@ sudo mv devspace /usr/local/bin
 
 </Details>
 
-<br>
+### 2. Install Docker
 
 DevSpace uses Docker to build container images, so you need Docker on your local computer. If you do not have Docker installed yet, you can download the latest stable releases here:
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
 
-### 2. Containerize your application
+
+### 3. Containerize your application
 Run this command within your project:
 ```
 devspace init
 ```
+<Details>
+<Summary><b>Don't have a project to test DevSpace with?</b> Check out our example project.</Summary>
+
+```
+TODO
+```
+
+</Details>
+
+<br>
+
+**What does `devspace init` do?**  
 DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. It will then, create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
-### 3. Create a Space
+### 4. Create a Space
 This command will create and configure a Kubernetes namespace for you:
 ```
 devspace create space my-app
 ```
+> If you are **not** using DevSpace.cloud, you will not be able to create Spaces. You can skip this step and deploy your application to a regular Kubernetes namespace using `devspace deploy`.
 
-### 4. Deploy your application
+### 5. Deploy your application
 Deploy your application to your newly created Space:
 ```
 devspace deploy my-app
 ```
 
-> Explore additional DevSpace features:
-> - [Connecting custom domains](#)
-> - [Debugging deployments with DevSpace](#)
-> - [Developing applications with DevSpace](#)
+### What's next?
+ - [Connecting custom domains](#)
+ - [Debugging deployments with DevSpace](#)
+ - [Developing applications with DevSpace](#)
 
----
-
+<br>
 
 ## Architecture
-DevSpace consists of three major components:
+
+<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="100%"></a></p>
+
+<table width="100%">
+    <tbody width="100%">
+        <tr>
+            <td width="25%"></td>
+            <td width="25%" align="center"><b>Hosted Spaces</b></td>
+            <td width="25%" align="center"><b>Self-hosted Spaces</b></td>
+            <td width="25%" align="center"><b>Self-managed Namespaces</b></td>
+        </tr>
+        <tr>
+            <td align="right">DevSpace.cli</td>
+            <td align="center"><b>✓</b></td>
+            <td align="center"><b>✓</b></td>
+            <td align="center"><b>✓</b></td>
+        </tr>
+        <tr>
+            <td align="right">managed with DevSpace.cloud</td>
+            <td align="center"><b>✓</b></td>
+            <td align="center"><b>✓</b></td>
+            <td align="center"><b>✗</b></td>
+        </tr>
+        <tr>
+            <td align="right">hosted on DevSpace.host</td>
+            <td width="25%" align="center"><b>✓</b></td>
+            <td width="25%" align="center"><b>✗</b></td>
+            <td width="25%" align="center"><b>✗</b></td>
+        </tr>
+        <tr>
+            <td align="right">What management effort do I have?</td>
+            <td width="25%" align="center">
+                <b>No admin effort.</b><br>
+                <small>DevSpace.cloud manages everything.</small>
+            </td>
+            <td width="25%" align="center">
+                <b>You create and connect the cluster.</b><br>
+                <small>DevSpace.cloud manages users and Spaces on top of it.</small>
+            </td>
+            <td width="25%" align="center">
+                <b>You manage everything.</b><br>
+                <small>You manually create, secure and maintain cluster, users and namespaces</small>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+Because you can fairly easy [switch between the three modes uf using DevSpace](#), it generally makes sense to start with **Hosted Spaces** and switch to one of the other modes later on.
 
 <Details>
 <Summary><b>DevSpace.cli</b> • swiss army knife for Kubernetes</Summary>
@@ -219,53 +277,8 @@ DevSpace.host is a hosting service that lets you create Spaces instead of entire
 
 </Details>
 
-<br>
-
-<p align="center"><a href="#"><img src="docs/website/static/img/github-readme-architecture.gif" alt="DevSpace Architecture" width="80%"></a></p>
-
-### There are three modes of using DevSpace:
-
-| Mode | DevSpace.cli | DevSpace.cloud | DevSpace.host |
-| ---: | :---: | :---: | :--: | 
-| **Hosted Spaces**  | ✓  | ✓ | ✓ | 
-| **Self-hosted Spaces**  | ✓  | ✓ | x | 
-| **Self-managed Spaces**  | ✓  | x | x | 
-
-
-### Learn more about each mode:
-
-<Details>
-<Summary><b>Hosted Spaces</b></Summary>
-
-If you do not want to setup and maintain your own Kubernetes clusters, you can use **Hosted Spaces** on top of DevSpace.host. In this case, DevSpace.cloud will provision and fully manage your Spaces on DevSpace.host and you will be charged for the cloud resources that are needed to start your containers.
-
-> Using **Hosted Spaces** is recommended for users that do not have extensive knowlege about server administration and/or about managing Kubernetes clusters in production.
-
-</Details>
-
-<Details>
-<Summary><b>Self-hosted Spaces</b></Summary>
-
-If you are experienced with managing Kubernetes clusters and you want to operate your own clusters, you can use **Self-hosted Spaces** which means that DevSpace.cloud operates and manages your Spaces on top of your own Kubernetes clusters. To get started with **Self-hosted Spaces**, you need to [connect your Kubernetes cluster to DevSpace.cloud as external cluster](#).
-
-> Using external clusters to create **Self-hosted Spaces** is recommended for users that have large workloads and have the knowledge and personnel to maintain Kubernetes cluster in production.
-
-</Details>
-
-<Details>
-<Summary><b>Self-managed Spaces</b></Summary>
-
-If you are a DevOps engineer in charge of deploying applications to Kubernetes, DevSpace.cli may be able to speed up and facilitate your workflow for building Helm charts. If you are working with self-managed Kubernetes clusters and you want to create and manage namespaces yourself, you are using **Self-managed Spaces**. This is the case when you develop and test applications with minikube, for example.
-
-> **Self-managed Spaces** are good for testing Helm charts in staging and production-like environments which are not easy to connect to DevSpacec.loud, however this mode is **not** recommended when multiple developers use the same Kubernetes cluster. In multi-user scenarios, it is recommended to use **Self-hosted Spaces** because DevSpace.cloud will isolate Spaces of different users, enforce resource limits and eliminate many security risks for your clusters. Doing these tasks manually instead of using DevSpace.cloud is error-prone and may cause severe security issues and malfunctioning clusters.
-
-</Details>
 
 <br>
-
-Because you can fairly easy [switch between the three modes uf using DevSpace](#), it generally makes sense to start with **Hosted Spaces** and switch to one of the other modes later on.
-
----
 
 ## Contributing
 Help us make DevSpace.cli the best tool for developing, deploying and debugging Kubernetes apps.
@@ -288,7 +301,8 @@ This project is mainly written in Golang. If you want to contribute code:
 
 See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 
----
+
+<br>
 
 ## FAQ
 <Details>
@@ -301,7 +315,14 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <Details>
 <Summary>Can I use DevSpace with my existing Kubernetes clusters?</Summary>
 
-**Yes.** You can [connect your existing Kubernetes clusters to DevSpace.cloud](#) as external clusters. DevSpace.cloud will then be able to create and manage Spaces on your Kubernetes clusters.
+**Yes.** You have two options:
+1. [Connect your existing Kubernetes clusters to DevSpace.cloud](#) as external clusters. DevSpace.cloud will then be able to create and manage users and Spaces on opt of your Kubernetes clusters.
+2. You just use DevSpace.cli without DevSpace.cloud. That means that you manually need to:
+    * enforce resource limits
+    * configure secure user permissions
+    * isolate namespaces of different users
+    * connect domains and configure ingresses
+    * install and manage basic cluster services (e.g. ingress controller, cert-manager for TLS, monitoring and log aggregation tools)
 
 </Details>
 
@@ -362,7 +383,7 @@ DevSpace.host is a hosting service that lets you create Spaces instead of entire
 </Details>
 
 
----
+<br>
 
 ## License
 You can use the DevSpace.cli for any private or commercial projects because it is licensed under the Apache 2.0 open source license.
