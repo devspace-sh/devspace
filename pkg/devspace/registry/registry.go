@@ -1,36 +1,26 @@
 package registry
 
 import (
-	"crypto/md5"
 	"encoding/base64"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"time"
+	"regexp"
+	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/covexo/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/helm"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// InternalRegistryName is the name of the release used to deploy the internal registry
-const InternalRegistryName = "devspace-registry"
-
-// InternalRegistryDeploymentName is the name of the kubernetes deployment
-const InternalRegistryDeploymentName = "devspace-registry-docker-registry"
-
-const registryAuthSecretNamePrefix = "devspace-registry-auth-"
-const registryPort = 5000
+const registryAuthSecretNamePrefix = "devspace-auth-"
 
 var pullSecretNames = []string{}
+
+var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // CreatePullSecret creates an image pull secret for a registry
 func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
@@ -88,113 +78,35 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 
 // GetRegistryAuthSecretName returns the name of the image pull secret for a registry
 func GetRegistryAuthSecretName(registryURL string) string {
-	registryHash := md5.Sum([]byte(registryURL))
+	if registryURL == "" {
+		return registryAuthSecretNamePrefix + "docker"
+	}
 
-	return registryAuthSecretNamePrefix + hex.EncodeToString(registryHash[:])
+	return registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-")
 }
 
-// InitInternalRegistry deploys and starts a new docker registry if necessary
-func InitInternalRegistry(kubectl *kubernetes.Clientset, helm *helm.ClientWrapper, internalRegistry *v1.InternalRegistryConfig, registryConfig *v1.RegistryConfig) error {
-	registryReleaseNamespace := *internalRegistry.Namespace
-
-	// Check if registry already exists
-	registryDeployment, err := kubectl.ExtensionsV1beta1().Deployments(registryReleaseNamespace).Get(InternalRegistryDeploymentName, metav1.GetOptions{})
-	if err != nil {
-		err = createRegistry(kubectl, helm, internalRegistry, registryConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Get the registry url
-	serviceHostname, err := getRegistryURL(kubectl, registryReleaseNamespace, InternalRegistryName+"-docker-registry")
-	if err != nil {
-		return err
-	}
-
-	// Update config values
-	registryConfig.URL = configutil.String(serviceHostname)
-	registryConfig.Insecure = configutil.Bool(true)
-
-	// Wait for registry if it is not ready yet
-	if registryDeployment == nil || registryDeployment.Status.Replicas == 0 || registryDeployment.Status.ReadyReplicas != registryDeployment.Status.Replicas {
-		// Wait till registry is started
-		err = waitForRegistry(registryReleaseNamespace, InternalRegistryDeploymentName, kubectl)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func waitForRegistry(registryNamespace, registryReleaseDeploymentName string, client *kubernetes.Clientset) error {
-	registryWaitingTime := 2 * 60 * time.Second
-	registryCheckInverval := 5 * time.Second
-
-	log.StartWait("Waiting for internal registry to start")
-	defer log.StopWait()
-
-	for registryWaitingTime > 0 {
-		registryDeployment, err := client.ExtensionsV1beta1().Deployments(registryNamespace).Get(registryReleaseDeploymentName, metav1.GetOptions{})
-		if err != nil {
-			continue
-		}
-		if registryDeployment.Status.ReadyReplicas == registryDeployment.Status.Replicas {
-			return nil
-		}
-
-		time.Sleep(registryCheckInverval)
-		registryWaitingTime = registryWaitingTime - registryCheckInverval
-	}
-
-	return errors.New("Internal registry start waiting time timed out")
-}
-
-// GetImageURL returns the image (optional with tag)
-func GetImageURL(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, includingLatestTag bool) string {
-	image := *imageConfig.Name
-	registryURL := ""
-
-	if imageConfig.Registry != nil {
-		registryConfig, registryConfErr := GetRegistryConfig(imageConfig)
-		if registryConfErr != nil {
-			log.Fatal(registryConfErr)
-		}
-
-		registryURL = *registryConfig.URL
-		if registryURL != "" && registryURL != "hub.docker.com" {
-			image = registryURL + "/" + image
-		}
-	}
-
-	fullImageName := *imageConfig.Name
-	if registryURL != "" {
-		fullImageName = registryURL + "/" + fullImageName
-	}
-
-	if includingLatestTag {
-		if imageConfig.Tag != nil {
-			image = image + ":" + *imageConfig.Tag
+// GetImageWithTag returns the image (optional with tag)
+func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) (string, error) {
+	image := *imageConfig.Image
+	if imageConfig.Tag != nil {
+		image = image + ":" + *imageConfig.Tag
+	} else {
+		var config *generated.CacheConfig
+		if isDev {
+			config = &generatedConfig.GetActive().Dev
 		} else {
-			image = image + ":" + generatedConfig.ImageTags[fullImageName]
+			config = &generatedConfig.GetActive().Deploy
 		}
+
+		tag, ok := config.ImageTags[image]
+		if ok == false {
+			return "", fmt.Errorf("Couldn't find image tag in generated.yaml. Did the build succeed?")
+		}
+
+		image = image + ":" + tag
 	}
 
-	return image
-}
-
-// GetRegistryConfig returns the registry config for an image or an error if the registry is not defined
-func GetRegistryConfig(imageConfig *v1.ImageConfig) (*v1.RegistryConfig, error) {
-	config := configutil.GetConfig()
-	registryName := *imageConfig.Registry
-	registryMap := *config.Registries
-	registryConfig, registryFound := registryMap[registryName]
-	if !registryFound {
-		return nil, errors.New("Unable to find registry: " + registryName)
-	}
-
-	return registryConfig, nil
+	return image, nil
 }
 
 // GetPullSecretNames returns all names of auto-generated image pull secrets

@@ -18,7 +18,6 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/covexo/devspace/pkg/devspace/config/configutil"
 	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
@@ -29,9 +28,8 @@ import (
 	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
 
-// Get Client only once
-var helmClient *ClientWrapper
-var getOnce sync.Once
+// Get a client for each tillernamespace only once
+var helmClients = make(map[string]*ClientWrapper)
 
 // ClientWrapper holds the necessary information for helm
 type ClientWrapper struct {
@@ -42,29 +40,36 @@ type ClientWrapper struct {
 }
 
 // NewClient creates a new helm client
-func NewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
-	var outerError error
-
-	getOnce.Do(func() {
-		helmClient, outerError = createNewClient(kubectlClient, log, upgradeTiller)
-	})
-
-	return helmClient, outerError
-}
-
-func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
-	config := configutil.GetConfig()
-	if config.Tiller == nil || config.Tiller.Namespace == nil {
-		return nil, errors.New("No tiller namespace specified")
+// NOTE: This is not safe to use in goroutines and could cause multiple creation of the same client
+func NewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
+	if client, ok := helmClients[tillerNamespace]; ok {
+		return client, nil
 	}
 
-	tillerNamespace := *config.Tiller.Namespace
+	client, err := createNewClient(tillerNamespace, log, upgradeTiller)
+	if err != nil {
+		return nil, err
+	}
+
+	helmClients[tillerNamespace] = client
+	return client, nil
+}
+
+func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
+	// Get kube config
 	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	err = ensureTiller(kubectlClient, config, upgradeTiller)
+	// Create client from config
+	kubectlClient, err := kubernetes.NewForConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create tiller if necessary
+	err = ensureTiller(kubectlClient, tillerNamespace, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +87,9 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
 			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
-
 			if err == nil && tunnel != nil {
 				break
 			}
-
 			if tunnelWaitTime <= 0 {
 				return nil, err
 			}
@@ -125,7 +128,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 		return nil, err
 	}
 
-	helmHomePath := homeDir + "/.devspace/helm"
+	helmHomePath := homeDir + "/.helm"
 	repoPath := helmHomePath + "/repository"
 	repoFile := repoPath + "/repositories.yaml"
 	stableRepoCachePathAbs := helmHomePath + "/" + stableRepoCachePath
@@ -153,7 +156,7 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 
 	_, err = os.Stat(stableRepoCachePathAbs)
 	if err != nil {
-		err = wrapper.updateRepos()
+		err = wrapper.UpdateRepos()
 		if err != nil {
 			return nil, err
 		}
@@ -162,14 +165,14 @@ func createNewClient(kubectlClient *kubernetes.Clientset, log log.Logger, upgrad
 	return wrapper, nil
 }
 
-func (helmClientWrapper *ClientWrapper) updateRepos() error {
+// UpdateRepos will update the helm repositories
+func (helmClientWrapper *ClientWrapper) UpdateRepos() error {
 	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
 	}
 
 	repos := []*repo.ChartRepository{}
-
 	for _, repoData := range allRepos.Repositories {
 		repo, err := repo.NewChartRepository(repoData, getter.All(*helmClientWrapper.Settings))
 		if err != nil {
@@ -180,24 +183,24 @@ func (helmClientWrapper *ClientWrapper) updateRepos() error {
 	}
 
 	wg := sync.WaitGroup{}
-
 	for _, re := range repos {
 		wg.Add(1)
 
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 
+			if re.Config.Name == "local" {
+				return
+			}
+
 			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
 			if err != nil {
-				log.With(err).Error("Unable to download repo index")
-
-				//TODO
+				log.Errorf("Unable to download repo index: %v", err)
 			}
 		}(re)
 	}
 
 	wg.Wait()
-
 	return nil
 }
 

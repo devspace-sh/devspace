@@ -1,27 +1,31 @@
-version: v1alpha1
+version: v1alpha2
 cluster:
   cloudProvider: devspace-cloud
-# kubeContext: minikube
-devSpace:
-  deployments:
-  - helm:
-      chartPath: ./chart
-    name: devspace-default
+ # kubeContext: minikube
+deployments:
+- helm:
+    chartPath: ./chart
+  name: devspace-app
+dev:
   ports:
-  - labelSelector:
-      release: devspace-default
-    portMappings:
-    - localPort: 3000
+  - portMappings:
+    - localPort: 8080
       remotePort: 80
+    selector: default
+  selectors:
+  - labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
+    name: default
   sync:
   - containerPath: /var/www/html
-    labelSelector:
-      release: devspace-default
     localSubPath: ./
+    selector: default
     uploadExcludePaths:
     - Dockerfile
     - .devspace/
     - chart/
 images:
   default:
-    name: yourdockername/devspace
+    createPullSecret: true
+    image: dscr.io/fabiankramm/devspace

@@ -1,29 +1,37 @@
-version: v1alpha1
+version: v1alpha2
 cluster:
-  cloudProvider: devspace-cloud
-devSpace:
-  deployments:
-  - helm:
-      chartPath: ./chart
-    name: devspace-default
+  kubeContext: minikube
+  namespace: devspace
+deployments:
+- helm:
+    chartPath: ./chart
+  name: devspace-default
+dev:
+  overrideImages:
+  - name: default
+    entrypoint: ["sleep", "999999999999"]
   ports:
-  - labelSelector:
-      release: devspace-default
+  - selector: default
     portMappings:
     - localPort: 8080
       remotePort: 8080
+  selectors:
+  - name: default
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-default
   sync:
   - containerPath: /app
-    labelSelector:
-      release: devspace-default
+    selector: default
     localSubPath: ./
     uploadExcludePaths:
     - Dockerfile
     - .devspace/
     - chart/
+    - app
 images:
   default:
     build:
       kaniko:
         cache: true
-    name: yourdockername/kaniko
+    image: yourdockeruser/devspace

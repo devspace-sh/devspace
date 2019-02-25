@@ -1,58 +1,49 @@
 package cloud
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
+	"errors"
 
+	"github.com/covexo/devspace/pkg/devspace/config/generated"
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// DeleteDevSpace deletes the devspace from the cloud provider
-func DeleteDevSpace(provider *Provider, devSpaceID string) error {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", provider.Host+DeleteDevSpaceEndpoint, nil)
-	if err != nil {
-		return err
-	}
+// DeleteSpace deletes a space with the given id
+func (p *Provider) DeleteSpace(spaceID int) error {
+	// Response struct
+	response := struct {
+		ManagerDeleteSpace bool `json:"manager_deleteSpace"`
+	}{}
 
-	req.Header.Set("Authorization", provider.Token)
-
-	if devSpaceID != "" {
-		q := req.URL.Query()
-		if devSpaceID != "" {
-			q.Add("namespace", devSpaceID)
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation($spaceID: Int!) {
+			manager_deleteSpace(spaceID: $spaceID)
 		}
-		req.URL.RawQuery = q.Encode()
-	}
-
-	resp, err := client.Do(req)
+	`, map[string]interface{}{
+		"spaceID": spaceID,
+	}, &response)
 	if err != nil {
 		return err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	} else if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("You are not allowed to delete devspace %s", devSpaceID)
-	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Couldn't delete devspace %s: %s. Status: %d", devSpaceID, body, resp.StatusCode)
+	// Check result
+	if response.ManagerDeleteSpace == false {
+		return errors.New("Mutation returned wrong result")
 	}
 
 	return nil
 }
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
-func DeleteKubeContext(devSpaceID string) error {
+func DeleteKubeContext(space *generated.SpaceConfig) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
 
 	hasChanged := false
-	kubeContext := DevSpaceKubeContextName + "-" + devSpaceID
+	kubeContext := GetKubeContextNameFromSpace(space)
 
 	if _, ok := config.Clusters[kubeContext]; ok {
 		delete(config.Clusters, kubeContext)

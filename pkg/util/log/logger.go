@@ -42,6 +42,7 @@ type Logger interface {
 	Printf(level logrus.Level, format string, args ...interface{})
 
 	Write(message []byte) (int, error)
+	WriteString(message string)
 	SetLevel(level logrus.Level)
 
 	printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{})

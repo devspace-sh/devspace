@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
+	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
@@ -100,11 +102,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		overwriteValues = unmarshalledValues
 	}
 
-	var release *hapi_release5.Release
-
 	if releaseExists {
-		waitOption := k8shelm.UpgradeWait(wait)
-
 		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
@@ -112,38 +110,39 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
 			k8shelm.UpgradeForce(true),
-			waitOption,
+			k8shelm.UpgradeWait(wait),
 		)
 
 		if err != nil {
-			return nil, err
-		}
-
-		release = upgradeResponse.GetRelease()
-	} else {
-		waitOption := k8shelm.InstallWait(wait)
-
-		installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
-			chart,
-			releaseNamespace,
-			k8shelm.InstallTimeout(deploymentTimeout),
-			k8shelm.ValueOverrides(overwriteValues),
-			k8shelm.ReleaseName(releaseName),
-			k8shelm.InstallReuseName(false),
-			k8shelm.InstallReuseName(true),
-			waitOption,
-		)
-
-		if err != nil {
-			// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
-			helmClientWrapper.DeleteRelease(releaseName, true)
+			log.Warn("Try to roll back back chart because of previous error")
+			_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
+			if rollbackError != nil {
+				return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force delete the chart. Warning: purging will also delete in the chart defined persistent volume claims", releaseName, err, ansi.Color("devspace purge", "white+b"))
+			}
 
 			return nil, err
 		}
 
-		release = installResponse.GetRelease()
+		return upgradeResponse.GetRelease(), nil
 	}
-	return release, nil
+
+	installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
+		chart,
+		releaseNamespace,
+		k8shelm.InstallTimeout(deploymentTimeout),
+		k8shelm.ValueOverrides(overwriteValues),
+		k8shelm.ReleaseName(releaseName),
+		k8shelm.InstallReuseName(true),
+		k8shelm.InstallWait(wait),
+	)
+	if err != nil {
+		// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
+		helmClientWrapper.DeleteRelease(releaseName, true)
+
+		return nil, err
+	}
+
+	return installResponse.GetRelease(), nil
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace

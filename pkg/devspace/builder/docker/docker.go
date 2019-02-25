@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/builder"
 	dockerclient "github.com/covexo/devspace/pkg/devspace/docker"
+	"github.com/covexo/devspace/pkg/devspace/registry"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/pkg/term"
-	"github.com/docker/docker/registry"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
@@ -34,48 +36,23 @@ var (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	RegistryURL string
-	ImageName   string
-	ImageTag    string
-
 	imageURL   string
 	authConfig *types.AuthConfig
 	client     client.CommonAPIClient
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(client client.CommonAPIClient, registryURL, imageName, imageTag string) (*Builder, error) {
-	imageURL := imageName + ":" + imageTag
-	if registryURL != "" {
-		// Check if it's the official registry or not
-		ref, err := reference.ParseNormalizedNamed(registryURL + "/" + imageURL)
-		if err != nil {
-			return nil, err
-		}
-
-		repoInfo, err := registry.ParseRepositoryInfo(ref)
-		if err != nil {
-			return nil, err
-		}
-
-		if repoInfo.Index.Official == false {
-			imageURL = registryURL + "/" + imageURL
-		}
-	}
-
+func NewBuilder(client client.CommonAPIClient, imageName, imageTag string) (*Builder, error) {
 	return &Builder{
-		RegistryURL: registryURL,
-		ImageName:   imageName,
-		ImageTag:    imageTag,
-		imageURL:    imageURL,
-		client:      client,
+		imageURL: imageName + ":" + imageTag,
+		client:   client,
 	}, nil
 }
 
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
 	if options == nil {
 		options = &types.ImageBuildOptions{}
 	}
@@ -122,6 +99,38 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		return err
 	}
 
+	// Check if we should overwrite entrypoint
+	if entrypoint != nil && len(*entrypoint) > 0 {
+		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		if err != nil {
+			return err
+		}
+
+		// Check if dockerfile is out of context, then we use the docker way to replace the dockerfile
+		if dockerfileCtx != nil {
+			// We will add it to the build context
+			dockerfileCtx, err = os.Open(dockerfilePath)
+			if err != nil {
+				return errors.Errorf("unable to open Dockerfile: %v", err)
+			}
+
+			defer dockerfileCtx.Close()
+		} else {
+			// We will add it to the build context
+			overwriteDockerfileCtx, err := os.Open(dockerfilePath)
+			if err != nil {
+				return errors.Errorf("unable to open Dockerfile: %v", err)
+			}
+
+			buildCtx, err = builder.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
+			if err != nil {
+				return fmt.Errorf("Error overwriting %s: %v", relDockerfile, err)
+			}
+		}
+
+		defer os.RemoveAll(filepath.Dir(dockerfilePath))
+	}
+
 	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context
 	if dockerfileCtx != nil && buildCtx != nil {
 		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
@@ -155,10 +164,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 }
 
 // Authenticate authenticates the client with a remote registry
-func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	var err error
+func (b *Builder) Authenticate() (*types.AuthConfig, error) {
+	registryURL, err := registry.GetRegistryFromImageName(b.imageURL)
+	if err != nil {
+		return nil, err
+	}
 
-	b.authConfig, err = dockerclient.Login(b.client, b.RegistryURL, user, password, checkCredentialsStore, false)
+	b.authConfig, err = dockerclient.Login(b.client, registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +180,6 @@ func (b *Builder) Authenticate(user, password string, checkCredentialsStore bool
 
 // PushImage pushes an image to the specified registry
 func (b *Builder) PushImage() error {
-	ctx := context.Background()
 	ref, err := reference.ParseNormalizedNamed(b.imageURL)
 	if err != nil {
 		return err
@@ -179,7 +190,7 @@ func (b *Builder) PushImage() error {
 		return err
 	}
 
-	out, err := b.client.ImagePush(ctx, reference.FamiliarString(ref), types.ImagePushOptions{
+	out, err := b.client.ImagePush(context.Background(), reference.FamiliarString(ref), types.ImagePushOptions{
 		RegistryAuth: encodedAuth,
 	})
 	if err != nil {
@@ -200,5 +211,6 @@ func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return base64.URLEncoding.EncodeToString(buf), nil
 }

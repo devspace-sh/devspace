@@ -1,89 +1,65 @@
-# Quickstart kubectl example
+# Quickstart example
 
-This example shows you how to develop a small node express application with devspace and devspace-cloud using kubectl as deployment method instead of helm.
+This example shows you how to develop and deploy a small node express application with devspace and kubectl on devspace.cloud. For a more detailed documentation, take a look at https://devspace.cloud/docs
 
 # Step 0: Prerequisites
 
-In order to use this example, make sure you have docker installed and a docker registry where you can push to (hub.docker.com, gcr.io etc.). Make sure you are logged in to the registry via `docker login`.  
+In order to get things ready do the following:
+1. Install docker
+2. Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+3. Run `devspace login`
+4. Exchange the image `dscr.io/yourusername/devspace` in `.devspace/config` and `kube/deployment.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
+5. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just erase the cloudProvider in `.devspace/config` and skip this step)
 
-Exchange the image name in `.devspace/config.yaml` under `images.default.name` with the image name you want to use. Do the same thing in `kube/deployment.yaml` under `spec.template.spec.image`. Do **not** add a tag to those image names, because this will be done at runtime automatically.  
+# Step 1: Develop the application
 
-## Optional: Use self hosted cluster (minikube, GKE etc.) instead of devspace-cloud
+1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `.devspace/config.yaml`). 
 
-If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access your cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.  
+The command does several things in this order:
+- Build the docker image (override the entrypoint with sleep 999999 (don't worry it can still use all cached layers))
+- Create needed image pull secrets
+- Deploy the kubectl manifests (you can find and change them in `kube/`)
+- Start port forwarding the remote port 3000 to local port 3000
+- Start syncing all files in the quickstart folder with the remote container
+- Open a terminal to the remote pod
 
-# Step 1: Start the devspace
-
-To deploy the application to the devspace-cloud simply run `devspace up`. The output of the command should look similar to this: 
-
+You should see the following output:
 ```
-[INFO]   Building image 'fabian1991/quickstart' with engine 'docker'
-[DONE] √ Authentication successful (hub.docker.com)
-Sending build context to Docker daemon  20.99kB
-Step 1/7 : FROM node:8.11.4
+[info]   Loaded config from .devspace/configs.yaml
+[info]   Using space quickstart-kubectl                       
+[info]   Building image 'dscr.io/yourname/devspace' with engine 'docker'
+[done] √ Authentication successful (dscr.io)
+Sending build context to Docker daemon  9.031kB
+Step 1/9 : FROM node:8.11.4
  ---> 8198006b2b57
-Step 2/7 : RUN mkdir /app
- ---> Using cache
- ---> 2064997c60c5
-Step 3/7 : WORKDIR /app
- ---> Using cache
- ---> 6faeba82e3d7
-Step 4/7 : COPY package.json .
- ---> Using cache
- ---> cb24ee28e9eb
-Step 5/7 : RUN npm install
- ---> Using cache
- ---> a6ed836b6a83
-Step 6/7 : COPY . .
- ---> f23d8c3c1c51
-Step 7/7 : CMD ["npm", "start"]
- ---> Running in f1e2310d36e3
- ---> 98fbe8f46c11
-Successfully built 98fbe8f46c11
-Successfully tagged fabian1991/quickstart:dk0dqqO
-The push refers to repository [docker.io/fabian1991/quickstart]
-28bb9f0f148c: Pushed
-090fce06793d: Layer already exists
-e342c5b21403: Layer already exists
-cbf8535e7a06: Layer already exists
-be0fb77bfb1f: Layer already exists
-63c810287aa2: Layer already exists
-2793dc0607dd: Layer already exists
-74800c25aa8c: Layer already exists
-ba504a540674: Layer already exists
-81101ce649d5: Layer already exists
-daf45b2cad9a: Layer already exists
-8c466bf4ca6f: Layer already exists
-dk0dqqO: digest: sha256:5e043c3d366676331f4ffe6a9b6f38cbc08338c25ef47789060564d3304153a2 size: 2839
-[INFO]   Image pushed to registry (hub.docker.com)
-[DONE] √ Done building and pushing image 'fabian1991/quickstart'
-[INFO]   Deploying devspace-default with kubectl
-deployment.extensions/devspace created
-[DONE] √ Successfully deployed devspace-default
-[DONE] √ Port forwarding started on 3000:3000
-[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl <-> /app (Pod:e388779b2b49465855bb0322057a9fff/devspace-5b5f977b77-49cjt)
-root@devspace-5b5f977b77-49cjt:/app#
+[...]
+[info]   Image pushed to registry (dscr.io)
+[done] √ Done processing image 'dscr.io/yourname/devspace'
+[[info]   Deploying devspace-default with kubectl
+deployment.extensions/devspace configured          
+[done] √ Finished deploying devspace-default
+[done] √ Port forwarding started on 3000:3000           
+[done] √ Sync started on /covexo/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
+[info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
+root@default-7c4dcdfc4-m867d:/app#
 ```
+2. Run `npm start` in the new opened terminal to start the webserver
+3. Go to `localhost:3000` to see the output of the webserver (or https://yourname.devspace.host)
+4. Change something in the `index.js`
+5. You should see the webserver restarting
+6. Refresh the browser to see the changes applied.
+7. If you change the Dockerfile or make changes in the manifest folder, devspace will redeploy the whole application instead of hot reloading (you can change this in the `.devspace/config.yaml`)
 
-The command built your Dockerfile and pushed it to the target docker registry. Afterwards, it created a new kubernetes namespace for you in the devspace-cloud and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. You can check the running pods via `kubectl get po`.
+# Step 2: Deploy the application
 
-Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/quickstart-kubectl` and `/app` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 3000 was forwarded to your local port 3000.  
+Deploying the application is the same as developing it, but instead of `devspace dev` you run `devspace deploy`. The deploy command does not override the image entrypoint and does not start any of the developing services (port-forwarding, sync and terminal) and just deploys the application, which is then accessible at https://yourname.devspace.host. See https://devspace.cloud/docs how to connect your private domain.
 
-# Step 2: Start developing
+# Troubleshooting 
 
-You can start the server now with `npm start` in the open terminal. Now navigate in your browser to `localhost:3000` and you should see the output 'Hello World!'.  
+If you experience problems during deploy or want to check if there are any issues within your deployed application devspace provides useful commands for you:
+- `devspace analyze` analyzes the namespace and checks for warning events and failed pods / containers
+- `devspace enter` open a terminal to a kubernetes pod (the same as running `kubectl exec ...`)
+- `devspace logs` shows the logs of a devspace (the same as running `kubectl logs ...`)
+- `devspace purge` delete the deployed application
 
-Change something in `index.js` locally and you should see something like this: 
-
-```
-[nodemon] 1.18.4
-[nodemon] to restart at any time, enter `rs`
-[nodemon] watching: *.*
-[nodemon] starting `node index.js`
-Example app listening on port 3000!
-[nodemon] restarting due to changes...
-[nodemon] starting `node index.js`
-Example app listening on port 3000!
-```
-
-Now just refresh your browser and you should see the changes immediately. 
+See https://devspace.cloud/docs for more advanced documentation

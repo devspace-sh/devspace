@@ -1,86 +1,60 @@
 # Php Mysql example
 
-This example shows you how to develop a small php web application that uses mysql as a database.
+This example shows you how to develop and deploy a small php and mysql application with devspace on devspace.cloud. For a more detailed documentation, take a look at https://devspace.cloud/docs
 
 # Step 0: Prerequisites
 
-In order to use this example, make sure you have docker installed and a docker registry where you can push to (hub.docker.com, gcr.io etc.). Make sure you are logged in to the registry via `docker login`.  
+In order to get things ready do the following:
+1. Install docker
+2. Run `devspace login`
+3. Exchange the image `dscr.io/yourusername/devspace` in `.devspace/config` and `chart/values.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
+4. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just erase the cloudProvider in `.devspace/config` and skip this step)
 
-Exchange the image name in `.devspace/config.yaml` under `images.default.name` with the image name you want to use. Do **not** add a tag to this image name, because this will be done at runtime automatically.  
+# Step 1: Develop the application
 
-## Optional: Use self hosted cluster (minikube, GKE etc.) instead of devspace-cloud
+1. Run `devspace dev` to start the application in development mode
 
-By default, this example will deploy to the devspace-cloud, a free managed kubernetes cluster. If you want to use your own cluster instead of the devspace-cloud as deployment target, make sure `kubectl` is configured correctly to access resources on the cluster. Then just erase the `cluster` section in the `.devspace/config.yaml` and devspace will use your current `kubectl` context as deployment target.  
+The command does several things in this order:
+- Build the docker image
+- Setup tiller in the namespace and create needed image pull secrets
+- Deploy the chart (you can find and change it in `chart/`)
+- Start port forwarding the remote port 80 to local port 8080 
+- Start syncing all files in the php-mysql-example folder with the remote container in /var/www/html
+- Open a terminal to the remote pod
 
-# Step 1: Start the devspace
-
-To deploy the application to the devspace-cloud simply run `devspace up`. The output of the command should look similar to this: 
-
+You should see the following output:
 ```
-INFO]   Building image 'fabian1991/devspace' with engine 'docker'
-[DONE] √ Authentication successful (hub.docker.com)
-Sending build context to Docker daemon  7.168kB
-Step 1/6 : FROM php:7.1-apache-stretch
- ---> 93e6fb4b13e1
-Step 2/6 : ENV PORT 80
- ---> Using cache
- ---> 788a58416826
-Step 3/6 : EXPOSE 80
- ---> Using cache
- ---> b01729d4ade9
-Step 4/6 : RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
- ---> Running in 1dbd0ba85b71
-Configuring for:
-PHP Api Version:         20160303
-Zend Module Api No:      20160303
-Zend Extension Api No:   320160303
+[info]   Loaded config from .devspace/configs.yaml
+[info]   Using space fabian                       
+[info]   Building image 'dscr.io/fabiankramm/devspace' with engine 'docker'
+[done] √ Authentication successful (dscr.io)
+Sending build context to Docker daemon  9.031kB
+Step 1/8 : FROM php:7.1-apache-stretch
+ ---> 8198006b2b57
 [...]
-warning: mysqli (mysqli.so) is already loaded!
-
- ---> d4942a93c915
-Step 5/6 : COPY . /var/www/html
- ---> dbb818ed4318
-Step 6/6 : RUN usermod -u 1000 www-data;     a2enmod rewrite;     chown -R www-data:www-data /var/www/html
- ---> Running in 1c90fe728588
-Enabling module rewrite.
-To activate the new configuration, you need to run:
-  service apache2 restart
- ---> 99eb800d832d
-Successfully built 99eb800d832d
-Successfully tagged fabian1991/devspace:HKgauKH
-The push refers to repository [docker.io/fabian1991/devspace]
-aff6c1858e21: Pushed
-d1bd441544af: Pushed
-60f45585ecc1: Pushed
-bc0dfe6b56ad: Layer already exists
-f82ba3fb9cea: Layer already exists
-c6a1866bd1a0: Layer already exists
-c9b57a1cfeb1: Layer already exists
-1e97bcb161b3: Layer already exists
-369e6fd590f3: Layer already exists
-1805144065e1: Layer already exists
-b6311cdc5fb6: Layer already exists
-e30181a94bbf: Layer already exists
-481da43a1302: Layer already exists
-a4ace4ed0385: Layer already exists
-fd29e0f8792a: Layer already exists
-687dad24bb36: Layer already exists
-237472299760: Layer already exists
-HKgauKH: digest: sha256:6530af9474b2e9b8b1bfc6986288b4dcd34fca5365ffee60a2f6f63de4327b80 size: 3868
-[INFO]   Image pushed to registry (hub.docker.com)
-[DONE] √ Done building and pushing image 'fabian1991/devspace'
-[INFO]   Deploying devspace-default with helm
-[DONE] √ Deployed helm chart (Release revision: 2)
-[DONE] √ Successfully deployed devspace-default
-[DONE] √ Port forwarding started on 3000:80
-[DONE] √ Sync started on /go-workspace/src/github.com/covexo/devspace/examples/php-mysql-example <-> /var/www/html (Pod: test/devspace-default-55c89799d5-x8rvl)
-root@devspace-default-55c89799d5-x8rvl:/var/www/html#
+[info]   Image pushed to registry (dscr.io)                         
+[info]   Deploying devspace-app with helm
+[info]   Skipping chart ./chart                                                               
+[done] √ Finished deploying devspace-app
+[done] √ Port forwarding started on 8080:80             
+[done] √ Sync started on /github.com/covexo/devspace/examples/php-mysql-example <-> /app (Pod: d4c1654922db400f612a027283b50001/default-74d58cbc59-9j4mj)
+[info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
+root@default-7c4dcdfc4-m867d:/var/www/html#
 ```
+2. Go to `localhost:8080` to see the output of the webserver (or https://yourname.devspace.host)
+4. Change something in the `index.php`
+5. Refresh the browser to see the changes applied.
 
-The command built your Dockerfile and pushed it to the target docker registry. Afterwards, it created a new kubernetes namespace for you in the devspace-cloud and deployed the `kube/deployment.yaml` to that namespace. It also created a new kubectl context for you. You can check the running pods via `kubectl get po`.
+# Step 2: Deploy the application
 
-Furthermore a bi-directional sync was started between the local folder `/go-workspace/src/github.com/covexo/devspace/examples/php-mysql-example` and `/var/www/html` within the docker container. Whenever you change a file in either of those two folders the change will be synchronized. In addition the container port 80 was forwarded to your local port 3000.  
+Deploying the application is the same as developing it, but instead of `devspace dev` you run `devspace deploy`. The deploy command does not start any of the developing services (port-forwarding, sync and terminal) and just deploys the application, which is then accessible at https://yourname.devspace.host. See https://devspace.cloud/docs on how to connect your private domain.
 
-# Step 2: Start developing
+# Troubleshooting 
 
-Navigate in your browser to `localhost:3000` and you should a signin page. If you submit the form, the application will insert a new entry in the `Users` table of the mysql database. Try changing the `index.php` locally and reload the webpage and you should be able to see the changes immediately.
+If you experience problems during deploy or want to check if there are any issues within your deployed application devspace provides useful commands for you:
+- `devspace analyze` analyzes the namespace and checks for warning events and failed pods / containers
+- `devspace enter` open a terminal to a kubernetes pod (the same as running `kubectl exec ...`)
+- `devspace logs` shows the logs of a devspace (the same as running `kubectl logs ...`)
+- `devspace purge` delete the deployed application
+
+See https://devspace.cloud/docs for more advanced documentation

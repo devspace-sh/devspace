@@ -12,11 +12,11 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceDeploy, useDevOverwrite bool, log log.Logger) error {
+func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
 	config := configutil.GetConfig()
 
-	if config.DevSpace.Deployments != nil {
-		for _, deployConfig := range *config.DevSpace.Deployments {
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
 			var deployClient Interface
 			var err error
 
@@ -30,7 +30,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 			} else if deployConfig.Helm != nil {
 				log.Info("Deploying " + *deployConfig.Name + " with helm")
 
-				deployClient, err = helm.New(client, deployConfig, useDevOverwrite, log)
+				deployClient, err = helm.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
@@ -38,7 +38,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, forceD
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig, forceDeploy)
+			err = deployClient.Deploy(generatedConfig, isDev, forceDeploy)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}

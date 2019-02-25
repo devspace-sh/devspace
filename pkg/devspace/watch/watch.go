@@ -2,6 +2,7 @@ package watch
 
 import (
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -120,9 +121,9 @@ func (w *Watcher) Update() ([]string, []string, error) {
 	}
 
 	changed, deleted := w.gatherChanges(fileMap)
-	if len(changed) > 0 || len(deleted) > 0 {
-		w.FileMap = fileMap
-	}
+
+	// Update map
+	w.FileMap = fileMap
 
 	return changed, deleted, nil
 }
@@ -134,6 +135,10 @@ func (w *Watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []st
 	// Get changed paths
 	for file, fileInfo := range newState {
 		if oldFileInfo, ok := w.FileMap[file]; !ok || oldFileInfo.Size() != fileInfo.Size() || oldFileInfo.ModTime().UnixNano() != fileInfo.ModTime().UnixNano() {
+			if strings.HasPrefix(file, ".devspace") {
+				continue
+			}
+
 			changed = append(changed, file)
 		}
 	}
@@ -141,6 +146,10 @@ func (w *Watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []st
 	// Get deleted paths
 	for file := range w.FileMap {
 		if _, ok := newState[file]; !ok {
+			if strings.HasPrefix(file, ".devspace") {
+				continue
+			}
+
 			deleted = append(deleted, file)
 		}
 	}

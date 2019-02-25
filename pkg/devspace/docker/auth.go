@@ -12,9 +12,7 @@ import (
 
 // GetRegistryEndpoint retrieves the correct registry url
 func GetRegistryEndpoint(client client.CommonAPIClient, registryURL string) (bool, string, error) {
-	ctx := context.Background()
-	authServer := getOfficialServer(ctx, client)
-
+	authServer := getOfficialServer(context.Background(), client)
 	if registryURL == "" || registryURL == "hub.docker.com" {
 		registryURL = authServer
 	}
@@ -33,7 +31,7 @@ func GetAuthConfig(client client.CommonAPIClient, registryURL string, checkCrede
 }
 
 // Login logs the user into docker
-func Login(client client.CommonAPIClient, registryURL, user, password string, checkCredentialsStore, saveAuthConfig bool) (*types.AuthConfig, error) {
+func Login(client client.CommonAPIClient, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
 	ctx := context.Background()
 	isDefaultRegistry, serverAddress, err := GetRegistryEndpoint(client, registryURL)
 	if err != nil {
@@ -42,7 +40,7 @@ func Login(client client.CommonAPIClient, registryURL, user, password string, ch
 
 	authConfig, err := getDefaultAuthConfig(checkCredentialsStore, serverAddress, isDefaultRegistry)
 	authConfig.IdentityToken = ""
-	if err != nil || authConfig.Username == "" || authConfig.Password == "" {
+	if err != nil || authConfig.Username == "" || authConfig.Password == "" || relogin {
 		authConfig.Username = strings.TrimSpace(user)
 		authConfig.Password = strings.TrimSpace(password)
 	}

@@ -6,35 +6,36 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
+	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/generated"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/devspace/deploy"
+	v1 "github.com/covexo/devspace/pkg/devspace/config/versions/latest"
 	helmClient "github.com/covexo/devspace/pkg/devspace/helm"
-	"github.com/covexo/devspace/pkg/devspace/kubectl"
 	"github.com/covexo/devspace/pkg/util/log"
+	"github.com/covexo/devspace/pkg/util/ptr"
 	"github.com/covexo/devspace/pkg/util/stdinutil"
 	"github.com/covexo/devspace/pkg/util/tar"
 	"github.com/covexo/devspace/pkg/util/yamlutil"
 	"github.com/russross/blackfriday"
 	"github.com/skratchdot/open-golang/open"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/helm/pkg/repo"
 )
 
 // AddPackage adds a helm dependency to specified deployment
 func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, args []string, log log.Logger) error {
-	config := configutil.GetConfig()
-	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
+	config := configutil.GetBaseConfig()
+	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
 
+	// Configure cloud provider
+	err := cloud.Configure(log)
+	if err != nil {
+		return err
+	}
+
 	var deploymentConfig *v1.DeploymentConfig
-	for _, deployConfig := range *config.DevSpace.Deployments {
+	for _, deployConfig := range *config.Deployments {
 		if deployment == "" || deployment == *deployConfig.Name {
 			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
 				return fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
@@ -49,14 +50,27 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		return fmt.Errorf("Deployment %s not found", deployment)
 	}
 
-	kubectl, err := kubectl.NewClient()
+	/*kubectl, err := kubectl.NewClient()
 	if err != nil {
 		return fmt.Errorf("Unable to create new kubectl client: %v", err)
+	}*/
+
+	tillerNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+	if deploymentConfig.Helm != nil && deploymentConfig.Helm.TillerNamespace != nil && *deploymentConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = *deploymentConfig.Helm.TillerNamespace
 	}
 
-	helm, err := helmClient.NewClient(kubectl, log, false)
+	helm, err := helmClient.NewClient(tillerNamespace, log, false)
 	if err != nil {
 		return fmt.Errorf("Error initializing helm client: %v", err)
+	}
+
+	err = helm.UpdateRepos()
+	if err != nil {
+		return fmt.Errorf("Couldn't update repos")
 	}
 
 	if len(args) != 1 {
@@ -167,31 +181,34 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			return err
 		}
 	}
-	serviceLabelSelector := map[string]*string{}
 
-	packageService := &v1.ServiceConfig{
-		Name:          configutil.String(packageName),
+	serviceLabelSelector := map[string]*string{}
+	packageService := &v1.SelectorConfig{
+		Name:          ptr.String(packageName),
 		LabelSelector: &serviceLabelSelector,
 	}
 
 	if hasPackageDefaultValues && len(packageDefaults.serviceSelectors) > 0 {
 		for key, value := range packageDefaults.serviceSelectors {
-			serviceLabelSelector[key] = configutil.String(value)
+			serviceLabelSelector[key] = ptr.String(value)
 		}
 	} else {
-		serviceLabelSelector["app"] = configutil.String(*deploymentConfig.Name + "-" + packageName)
+		serviceLabelSelector["app"] = ptr.String(*deploymentConfig.Name + "-" + packageName)
 	}
 
-	_, sericeNotFoundErr := configutil.GetService(*packageService.Name)
-
-	if sericeNotFoundErr != nil {
-		err = configutil.AddService(packageService)
-		if err != nil {
-			return fmt.Errorf("Unable to add service to config: %v", err)
+	_, err = configutil.GetSelector(*packageService.Name)
+	if err != nil {
+		if config.Dev.Selectors == nil {
+			config.Dev.Selectors = &[]*v1.SelectorConfig{}
 		}
+
+		configSelectors := *config.Dev.Selectors
+		configSelectors = append(configSelectors, packageService)
+
+		config.Dev.Selectors = &configSelectors
 	}
 
-	err = configutil.SaveConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		return fmt.Errorf("Unable to save config: %v", err)
 	}
@@ -202,9 +219,9 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 		log.Write([]byte("\n"))
 
 		shouldShowReadme := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to open the package README to see configuration options? (yes|no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes|no)",
+			Question:     "Do you want to open the package README to see configuration options?",
+			DefaultValue: "yes",
+			Options:      []string{"yes", "no"},
 		})
 
 		if shouldShowReadme == "yes" {
@@ -218,7 +235,7 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			}
 		}
 
-		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		/*shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to re-deploy your DevSpace with the added package? (yes|no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)",
@@ -229,13 +246,13 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 			if err != nil {
 				return err
 			}
-		}
+		}*/
 	}
 
 	return nil
 }
 
-func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) error {
+/* func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *v1.DeploymentConfig, log log.Logger) error {
 	config := configutil.GetConfig()
 	listOptions := metav1.ListOptions{}
 	deploymentNamespace := *deploymentConfig.Namespace
@@ -262,7 +279,7 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 		log.Warnf("Unable to list Kubernetes services: %v", clusterServiceErr)
 	}
 
-	err = deploy.All(kubectl, generatedConfig, true, true, log)
+	err = deploy.All(kubectl, generatedConfig, true, log)
 	log.StopWait()
 
 	// Save generated config
@@ -322,17 +339,23 @@ func redeployAferPackageChange(kubectl *kubernetes.Clientset, deploymentConfig *
 		}
 	}
 	return nil
-}
+}*/
 
 // RemovePackage removes a helm dependency from a deployment
 func RemovePackage(removeAll bool, deployment string, args []string, log log.Logger) error {
 	config := configutil.GetConfig()
-	if config.DevSpace.Deployments == nil || (len(*config.DevSpace.Deployments) != 1 && deployment == "") {
+	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
 	}
 
+	// Configure cloud provider
+	err := cloud.Configure(log)
+	if err != nil {
+		return err
+	}
+
 	var deploymentConfig *v1.DeploymentConfig
-	for _, deployConfig := range *config.DevSpace.Deployments {
+	for _, deployConfig := range *config.Deployments {
 		if deployment == "" || deployment == *deployConfig.Name {
 			if deployConfig.Helm == nil || deployConfig.Helm.ChartPath == nil {
 				return fmt.Errorf("Selected deployment %s is not a valid helm deployment", *deployConfig.Name)
@@ -345,6 +368,15 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 
 	if deploymentConfig == nil {
 		return fmt.Errorf("Deployment %s not found", deployment)
+	}
+
+	// Get tiller namespace
+	tillerNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return err
+	}
+	if deploymentConfig.Helm != nil && deploymentConfig.Helm.TillerNamespace != nil && *deploymentConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = *deploymentConfig.Helm.TillerNamespace
 	}
 
 	chartPath, err := filepath.Abs(*deploymentConfig.Helm.ChartPath)
@@ -380,7 +412,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 				log.Warnf("Unable to delete package folder: %s\nError: %v", subChartPath, err)
 			}
 
-			err = rebuildDependencies(chartPath, yamlContents, log)
+			err = rebuildDependencies(tillerNamespace, chartPath, yamlContents, log)
 			if err != nil {
 				return err
 			}
@@ -409,7 +441,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 						dependenciesArr = append(dependenciesArr[:key], dependenciesArr[key+1:]...)
 						yamlContents["dependencies"] = dependenciesArr
 
-						err = rebuildDependencies(chartPath, yamlContents, log)
+						err = rebuildDependencies(tillerNamespace, chartPath, yamlContents, log)
 						if err != nil {
 							return err
 						}
@@ -423,7 +455,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 		}
 		log.Write([]byte("\n"))
 
-		shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		/*shouldRedeploy := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to re-deploy your DevSpace to purge unnecessary packages? (yes|no)",
 			DefaultValue:           "yes",
 			ValidationRegexPattern: "^(yes|no)",
@@ -439,7 +471,7 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 			if err != nil {
 				return err
 			}
-		}
+		}*/
 		return nil
 	}
 
@@ -448,19 +480,14 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	return nil
 }
 
-func rebuildDependencies(chartPath string, newYamlContents map[interface{}]interface{}, log log.Logger) error {
+func rebuildDependencies(tillerNamespace string, chartPath string, newYamlContents map[interface{}]interface{}, log log.Logger) error {
 	err := yamlutil.WriteYamlToFile(newYamlContents, filepath.Join(chartPath, "requirements.yaml"))
 	if err != nil {
 		return err
 	}
 
 	// Rebuild dependencies
-	kubectl, err := kubectl.NewClient()
-	if err != nil {
-		return fmt.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	helm, err := helmClient.NewClient(kubectl, log, false)
+	helm, err := helmClient.NewClient(tillerNamespace, log, false)
 	if err != nil {
 		return fmt.Errorf("Error initializing helm client: %v", err)
 	}

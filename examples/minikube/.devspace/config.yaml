@@ -1,23 +1,31 @@
-version: v1alpha1
+version: v1alpha2
 cluster:
   kubeContext: minikube
-  namespace: test
-devSpace:
-  deployments:
-  - helm:
-      chartPath: ./chart
-    name: devspace-default
+  namespace: devspace
+deployments:
+- helm:
+    chartPath: ./chart
+  name: devspace-app
+dev:
+  overrideImages:
+  - entrypoint:
+    - sleep
+    - "999999999999"
+    name: default
   ports:
-  - labelSelector:
-      release: devspace-default
-    portMappings:
+  - portMappings:
     - localPort: 3000
       remotePort: 3000
+    selector: default
+  selectors:
+  - labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
+    name: default
   sync:
   - containerPath: /app
-    labelSelector:
-      release: devspace-default
     localSubPath: ./
+    selector: default
     uploadExcludePaths:
     - Dockerfile
     - .devspace/
@@ -25,5 +33,5 @@ devSpace:
     - node_modules/
 images:
   default:
-    name: devspace
+    image: devspace
     skipPush: true

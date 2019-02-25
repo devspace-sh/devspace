@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/covexo/devspace/pkg/util/kubeconfig"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
 	"github.com/covexo/devspace/pkg/devspace/config/configutil"
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
 	"github.com/covexo/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/client-go/util/homedir"
 	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
 	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	"k8s.io/kubernetes/pkg/util/node"
@@ -30,7 +30,7 @@ import (
 var isMinikubeVar *bool
 var loadCloudConfigOnce sync.Once
 
-//NewClient creates a new kubernetes client
+// NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
 	config, err := getClientConfig(false)
 	if err != nil {
@@ -50,25 +50,20 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 	return kubernetes.NewForConfig(config)
 }
 
-//GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
+// GetClientConfigFromKubectl loads the kubectl client config
+func GetClientConfigFromKubectl() (*rest.Config, error) {
+	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+}
+
+// GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
 	return getClientConfig(false)
 }
 
 func getClientConfig(switchContext bool) (*rest.Config, error) {
-	var err error
-
 	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
-	}
-
-	// Update devspace cloud cluster config
-	if config.Cluster.CloudProvider != nil && *config.Cluster.CloudProvider != "" {
-		err = loadCloudConfig(config, log.GetInstance())
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// Use kube config if desired
@@ -144,28 +139,6 @@ func getClientConfig(switchContext bool) (*rest.Config, error) {
 	kubeConfig.CurrentContext = "devspace"
 
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
-}
-
-func loadCloudConfig(config *v1.Config, log log.Logger) error {
-	var outerError error
-
-	loadCloudConfigOnce.Do(func() {
-		providerConfig, err := cloud.ParseCloudConfig()
-		if err != nil {
-			outerError = fmt.Errorf("Couldn't load cloud provider config: %v", err)
-			return
-		}
-
-		err = cloud.Update(providerConfig, &cloud.UpdateOptions{
-			UseKubeContext:    config.Cluster.APIServer == nil,
-			SwitchKubeContext: false,
-		}, log)
-		if err != nil {
-			log.Warnf("Couldn't update cloud provider %s information: %v", *config.Cluster.CloudProvider, err)
-		}
-	})
-
-	return outerError
 }
 
 // IsMinikube returns true if the Kubernetes cluster is a minikube
