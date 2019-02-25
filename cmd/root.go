@@ -32,14 +32,17 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if upgrade.GetVersion() != "" && strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
+	if upgrade.GetVersion() != "" {
 		rootCmd.Version = upgrade.GetVersion()
-		newerVersion, err := upgrade.CheckForNewerVersion()
 
-		if err == nil && newerVersion != "" {
-			log.Warnf("There is a newer version of DevSpace.cli v%s. Run `devspace upgrade` to update DevSpace.cli.\n", newerVersion)
-		} else if err != nil {
-			log.Warnf("Couldn't check for newest version: %s\n", err.Error())
+		if strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
+			newerVersion, err := upgrade.CheckForNewerVersion()
+
+			if err == nil && newerVersion != "" {
+				log.Warnf("There is a newer version of devspace cli v%s. Run `devspace upgrade` to update the cli.\n", newerVersion)
+			} else if err != nil {
+				log.Warnf("Couldn't check for newest version: %s\n", err.Error())
+			}
 		}
 	}
 
