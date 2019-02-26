@@ -40,8 +40,6 @@ func Execute() {
 
 			if err == nil && newerVersion != "" {
 				log.Warnf("There is a newer version of devspace cli v%s. Run `devspace upgrade` to update the cli.\n", newerVersion)
-			} else if err != nil {
-				log.Warnf("Couldn't check for newest version: %s\n", err.Error())
 			}
 		}
 	}
