@@ -9,17 +9,24 @@ You are more than welcome to open issues in this project to [suggest new feature
 
 ## Contributing Code
 This project is mainly written in Golang. To contribute code,
-1. Fork the project
-2. Clone the project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace`
-3. Install the dependencies: `dep ensure -v` (requires [Installing Dep](https://golang.github.io/dep/docs/installation.html))
-4. Make changes to the code (add new dependencies to the Gopkg.toml)
-5. Build the project, e.g. via `go build -o devspace.exe`
-6. Make changes
-7. Run tests: `go test ./...`
-8. Format your code: `go fmt ./...`
-9. Commit changes
-10. Push commits
-11. Open pull request
+1. Ensure you are running golang version 1.11.4 or greater for go module support
+2. Set the following environment variables:
+    ```
+    GO111MODULE=on
+    GOFLAGS=-mod=vendor
+    ```
+3. Fork the project
+4. Clone the project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace`
+5. Run `go clean -modcache`
+6. Run `go mod vendor` to install the dependencies
+7. Make changes to the code (add new dependencies to the Gopkg.toml)
+8. Build the project, e.g. via `go build -o devspace.exe`
+9. Make changes
+10. Run tests: `go test ./...`
+11. Format your code: `go fmt ./...`
+12. Commit changes
+13. Push commits
+14. Open pull request
 
 ## Improving the Documentation
 The documentation is contained within `./docs` and made with Docusaurus. See the [Docs README](./docs) for infos about developing the docs.
