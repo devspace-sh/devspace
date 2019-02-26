@@ -15,6 +15,7 @@ code.-hide-lines .line {
     text-align: right;
     color: #828282;
     background: #282c34;
+    user-select: none;
     z-index: 1;
 }
 
