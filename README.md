@@ -121,10 +121,10 @@ Learn more about development with DevSpace:
 <summary><b>via Windows Powershell</b></summary>
 
 ```
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
-md -Force "$Env:Programfiles\devspace"
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest" -UseBasicParsing).Content -replace ".*`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".*","`$1") -o $Env:Programfiles\devspace\devspace.exe
-& "$Env:Programfiles\devspace\devspace.exe" "install"
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
+md -Force "$Env:APPDATA\devspace";
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+& "$Env:APPDATA\devspace\devspace.exe" "install";
 ```
 
 </details>
@@ -133,8 +133,8 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/cov
 <summary><b>via Mac Terminal</b></summary>
 
 ```
-curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-darwin-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
-sudo mv devspace /usr/local/bin
+curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo mv devspace /usr/local/bin;
 ```
 
 </details>
@@ -143,8 +143,8 @@ sudo mv devspace /usr/local/bin
 <summary><b>via Linux Bash</b></summary>
 
 ```
-curl -s -H "Accept: application/json" "https://api.github.com/repos/covexo/devspace/releases/latest" | sed -nE 's!.*"(https://github.com[^"]*devspace-linux-amd64)".*!\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
-sudo mv devspace /usr/local/bin
+curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo mv devspace /usr/local/bin;
 ```
 
 </details>
