@@ -170,8 +170,12 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		return fmt.Errorf("Unable to deploy helm chart: %v", err)
 	}
 
-	releaseRevision := int(appRelease.Version)
-	d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
+	if appRelease != nil {
+		releaseRevision := int(appRelease.Version)
+		d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
+	} else {
+		d.Log.Done("Deployed helm chart")
+	}
 
 	return nil
 }

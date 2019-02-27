@@ -10,7 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type reportItem struct {
+// ReportItem is the struct that holds the problems
+type ReportItem struct {
 	Name     string
 	Problems []string
 }
@@ -28,15 +29,28 @@ var paddingLeft = newString(" ", PaddingLeft)
 
 // Analyze analyses a given
 func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool, log log.Logger) error {
-	report := []*reportItem{}
+	report, err := CreateReport(client, config, namespace, noWait)
+	if err != nil {
+		return err
+	}
+
+	reportString := ReportToString(report)
+	log.WriteString(reportString)
+
+	return nil
+}
+
+// CreateReport creates a new report about a certain namespace
+func CreateReport(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool) ([]*ReportItem, error) {
+	report := []*ReportItem{}
 
 	// Analyze events
 	problems, err := Events(client, config, namespace)
 	if err != nil {
-		return fmt.Errorf("Error during analyzing events: %v", err)
+		return nil, fmt.Errorf("Error during analyzing events: %v", err)
 	}
 	if len(problems) > 0 {
-		report = append(report, &reportItem{
+		report = append(report, &ReportItem{
 			Name:     "Events",
 			Problems: problems,
 		})
@@ -45,33 +59,37 @@ func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string
 	// Analyze pods
 	problems, err = Pods(client, namespace, noWait)
 	if err != nil {
-		return fmt.Errorf("Error during analyzing pods: %v", err)
+		return nil, fmt.Errorf("Error during analyzing pods: %v", err)
 	}
 	if len(problems) > 0 {
-		report = append(report, &reportItem{
+		report = append(report, &ReportItem{
 			Name:     "Pods",
 			Problems: problems,
 		})
 	}
 
-	printReport(report, log)
-	return nil
+	return report, nil
 }
 
-func printReport(report []*reportItem, log log.Logger) {
+// ReportToString transforms a report to a string
+func ReportToString(report []*ReportItem) string {
+	reportString := ""
+
 	if len(report) == 0 {
-		log.WriteString(fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs -p", "white+b")))
+		reportString += fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs -p", "white+b"))
 	} else {
-		log.WriteString("\n")
+		reportString += "\n"
 
 		for _, reportItem := range report {
-			log.WriteString(createHeader(reportItem.Name, len(reportItem.Problems)))
+			reportString += createHeader(reportItem.Name, len(reportItem.Problems))
 
 			for _, problem := range reportItem.Problems {
-				log.WriteString(problem + "\n")
+				reportString += problem + "\n"
 			}
 		}
 	}
+
+	return reportString
 }
 
 func createHeader(name string, problemCount int) string {
