@@ -25,7 +25,7 @@ import (
 )
 
 // DeploymentTimeout is the timeout to wait for helm to deploy
-const DeploymentTimeout = int64(2 * 60)
+const DeploymentTimeout = int64(40)
 
 func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
 	missing := []string{}
@@ -51,7 +51,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, wait bool) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, wait bool, timeout *int64) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
 		config := configutil.GetConfig()
 
@@ -108,11 +108,17 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		overwriteValues = unmarshalledValues
 	}
 
+	// Set timeout
+	waitTimeout := DeploymentTimeout
+	if timeout != nil {
+		waitTimeout = *timeout
+	}
+
 	if releaseExists {
 		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
-			k8shelm.UpgradeTimeout(DeploymentTimeout),
+			k8shelm.UpgradeTimeout(waitTimeout),
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
 			k8shelm.UpgradeForce(true),
@@ -140,7 +146,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 	installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
 		chart,
 		releaseNamespace,
-		k8shelm.InstallTimeout(DeploymentTimeout),
+		k8shelm.InstallTimeout(waitTimeout),
 		k8shelm.ValueOverrides(overwriteValues),
 		k8shelm.ReleaseName(releaseName),
 		k8shelm.InstallReuseName(true),
@@ -189,7 +195,7 @@ func (helmClientWrapper *ClientWrapper) analyzeError(srcErr error, releaseNamesp
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}, wait bool) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}, wait bool, timeout *int64) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}
@@ -208,5 +214,5 @@ func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, r
 		return nil, err
 	}
 
-	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, wait)
+	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, wait, timeout)
 }
