@@ -88,6 +88,7 @@ Notice:
 helm:                               # struct   | Options for deploying with Helm
   chartPath: ./chart                # string   | Relative path 
   wait: true                        # bool     | Wait for pods to start after deployment (Default: true)
+  timeout: 40                       # int      | Timeout to wait for pods to start after deployment (Default: 40)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
   overrideValues: {}                # struct   | Any object with Helm values to override values.yaml during deployment
   overrides: ...
