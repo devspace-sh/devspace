@@ -121,10 +121,10 @@ Learn more about development with DevSpace:
 <summary><b>via Windows Powershell</b></summary>
 
 ```
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
-md -Force "$Env:Programfiles\devspace"
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/covexo/devspace/releases/latest" -UseBasicParsing).Content -replace ".*`"(https://github.com[^`"]*devspace-windows-amd64.exe)`".*","`$1") -o $Env:Programfiles\devspace\devspace.exe
-& "$Env:Programfiles\devspace\devspace.exe" "install"
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
+md -Force "$Env:APPDATA\devspace";
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+& "$Env:APPDATA\devspace\devspace.exe" "install";
 ```
 
 </details>
@@ -133,7 +133,8 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://api.github.com/repos/cov
 <summary><b>via Mac Terminal</b></summary>
 
 ```
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo mv devspace /usr/local/bin;
 ```
 
 </details>
@@ -142,7 +143,8 @@ curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -n
 <summary><b>via Linux Bash</b></summary>
 
 ```
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace && sudo mv devspace /usr/local/bin
+curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo mv devspace /usr/local/bin;
 ```
 
 </details>
@@ -172,7 +174,7 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 <br>
 
 **What does `devspace init` do?**  
-DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. It will then, create an Helm chart and a Dockerfile within your project, if you do not already have one.
+DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
 ### 4. Create a Space
 This command will create and configure a Kubernetes namespace for you:
@@ -221,7 +223,7 @@ DevSpace.cloud is a developer platform for Kubernetes that lets you create and m
 
 DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
 
-> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+> DevSpace.host runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
 
 </details>
 
@@ -332,11 +334,10 @@ This project is mainly written in Golang. If you want to contribute code:
     ```
 3. Check-out the project: `git clone https://github.com/devspace-cloud/devspace && cd devspace`
 4. Run `go clean -modcache`
-5. Run `go mod tidy`
-6. Run `go mod vendor`
-7. Make changes to the code
-8. Build the project, e.g. via `go build -o devspace.exe`
-9. Evaluate and test your changes `./devspace [SOME_COMMAND]`
+5. Run `go mod vendor`
+6. Make changes to the code
+7. Build the project, e.g. via `go build -o devspace.exe`
+8. Evaluate and test your changes `./devspace [SOME_COMMAND]`
 
 See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 
@@ -355,7 +356,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
-1. [Connect your existing Kubernetes clusters to DevSpace.cloud](https://devspace.cloud/docs/advanced/external-clusters) as external clusters. DevSpace.cloud will then be able to create and manage users and Spaces on opt of your Kubernetes clusters.
+1. [Connect your existing Kubernetes clusters to DevSpace.cloud](https://devspace.cloud/docs/advanced/external-clusters) as external clusters. DevSpace.cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
 2. You just use DevSpace.cli without DevSpace.cloud. That means that you manually need to:
     * enforce resource limits
     * configure secure user permissions
@@ -408,7 +409,7 @@ DevSpace.cloud is a developer platform for Kubernetes that lets you create and m
 
 DevSpace.host is a hosting service that lets you create Spaces instead of entire Kubernetes clusters. Because you only pay for the resources used for creating your containers, it is much cheaper than having to pay for an entire Kubernetes cluster, especially for small and medium size workloads.
 
-> DevSpace.host is runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
+> DevSpace.host runs on top of Google Cloud, AWS and Azure clusters and is optimized for reliability and scalability.
 
 </details>
 
