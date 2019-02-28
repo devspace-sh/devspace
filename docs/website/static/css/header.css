@@ -18,6 +18,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin: 0 auto;
   }
   
   .fixedHeaderContainer .headerWrapper header a {
@@ -58,6 +59,12 @@
   /* @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
   } */
   
+  @media only screen and (min-width: 1024px){
+    .separateOnPageNav .headerWrapper.wrapper, .separateOnPageNav .wrapper {
+      max-width: 1600px;
+    }
+  }
+
   @media only screen and (min-width: 801px) {
     .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li a {
       font-size: 16px;
@@ -162,8 +169,6 @@
   
     .responsive-nav li.hamburger-active {
       display: inline;
-      height: 100%;
-      width: 100%;
     }
     
     .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site .hamburger-active a {
