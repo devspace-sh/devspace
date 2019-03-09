@@ -346,8 +346,8 @@ func GetPaths() []string {
 				for imageConfName, imageConf := range *config.Images {
 					if *imageName == imageConfName {
 						dockerfilePath := "./Dockerfile"
-						if imageConf.Build != nil && imageConf.Build.DockerfilePath != nil {
-							dockerfilePath = *imageConf.Build.DockerfilePath
+						if imageConf.Build != nil && imageConf.Build.Dockerfile != nil {
+							dockerfilePath = *imageConf.Build.Dockerfile
 						}
 
 						paths = append(paths, dockerfilePath)

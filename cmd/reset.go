@@ -125,8 +125,8 @@ func (cmd *ResetCmd) deleteImageFiles() {
 
 	for _, imageConfig := range *config.Images {
 		dockerfilePath := "Dockerfile"
-		if imageConfig.Build != nil && imageConfig.Build.DockerfilePath != nil {
-			dockerfilePath = *imageConfig.Build.DockerfilePath
+		if imageConfig.Build != nil && imageConfig.Build.Dockerfile != nil {
+			dockerfilePath = *imageConfig.Build.Dockerfile
 		}
 
 		absDockerfilePath, err := filepath.Abs(dockerfilePath)
@@ -149,8 +149,8 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		}
 
 		contextPath := "."
-		if imageConfig.Build != nil && imageConfig.Build.ContextPath != nil {
-			contextPath = *imageConfig.Build.ContextPath
+		if imageConfig.Build != nil && imageConfig.Build.Context != nil {
+			contextPath = *imageConfig.Build.Context
 		}
 
 		absContextPath, err := filepath.Abs(contextPath)

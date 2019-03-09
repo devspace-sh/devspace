@@ -14,7 +14,23 @@ func (c *Config) Upgrade() (config.Config, error) {
 		return nil, err
 	}
 
-	// Everything should be fine except the cloud provider
+	// Convert dockerfilepath and contextpath
+	if c.Images != nil {
+		for key, image := range *c.Images {
+			if image.Build != nil {
+				if (*nextConfig.Images)[key].Build == nil {
+					(*nextConfig.Images)[key].Build = &next.BuildConfig{}
+				}
+
+				if image.Build.DockerfilePath != nil {
+					(*nextConfig.Images)[key].Build.Dockerfile = image.Build.DockerfilePath
+				}
+				if image.Build.ContextPath != nil {
+					(*nextConfig.Images)[key].Build.Context = image.Build.ContextPath
+				}
+			}
+		}
+	}
 
 	return nextConfig, nil
 }

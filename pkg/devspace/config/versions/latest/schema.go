@@ -56,6 +56,7 @@ type DeploymentConfig struct {
 type HelmConfig struct {
 	ChartPath       *string                      `yaml:"chartPath,omitempty"`
 	Wait            *bool                        `yaml:"wait,omitempty"`
+	Force           *bool                        `yaml:"force,omitempty"`
 	Timeout         *int64                       `yaml:"timeout,omitempty"`
 	TillerNamespace *string                      `yaml:"tillerNamespace,omitempty"`
 	Overrides       *[]*string                   `yaml:"overrides,omitempty"`
@@ -81,7 +82,9 @@ type DevConfig struct {
 // ImageOverrideConfig holds information about what parts of the image config are overwritten during devspace dev
 type ImageOverrideConfig struct {
 	Name       *string    `yaml:"name"`
-	Entrypoint *[]*string `yaml:"entrypoint"`
+	Entrypoint *[]*string `yaml:"entrypoint,omitempty"`
+	Dockerfile *string    `yaml:"dockerfile,omitempty"`
+	Context    *string    `yaml:"context,omitempty"`
 }
 
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths
@@ -144,14 +147,14 @@ type ImageConfig struct {
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
-//BuildConfig defines the build process for an image
+// BuildConfig defines the build process for an image
 type BuildConfig struct {
-	Disabled       *bool         `yaml:"disabled,omitempty"`
-	ContextPath    *string       `yaml:"contextPath"`
-	DockerfilePath *string       `yaml:"dockerfilePath"`
-	Kaniko         *KanikoConfig `yaml:"kaniko,omitempty"`
-	Docker         *DockerConfig `yaml:"docker,omitempty"`
-	Options        *BuildOptions `yaml:"options,omitempty"`
+	Disabled   *bool         `yaml:"disabled,omitempty"`
+	Context    *string       `yaml:"context"`
+	Dockerfile *string       `yaml:"dockerfile"`
+	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker     *DockerConfig `yaml:"docker,omitempty"`
+	Options    *BuildOptions `yaml:"options,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace.cli to build with Docker on Minikube or on localhost

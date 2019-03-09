@@ -51,7 +51,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, wait bool, timeout *int64) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, wait bool, timeout *int64, force *bool) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
 		config := configutil.GetConfig()
 
@@ -115,13 +115,18 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 	}
 
 	if releaseExists {
+		forceDefault := false
+		if force != nil {
+			forceDefault = *force
+		}
+
 		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
 			k8shelm.UpgradeTimeout(waitTimeout),
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
-			//	k8shelm.UpgradeForce(true),
+			k8shelm.UpgradeForce(forceDefault),
 			k8shelm.UpgradeWait(wait),
 		)
 
@@ -195,7 +200,7 @@ func (helmClientWrapper *ClientWrapper) analyzeError(srcErr error, releaseNamesp
 }
 
 // InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}, wait bool, timeout *int64) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}, wait bool, timeout *int64, force *bool) (*hapi_release5.Release, error) {
 	if len(chartVersion) == 0 {
 		chartVersion = ">0.0.0-0"
 	}
@@ -214,5 +219,5 @@ func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, r
 		return nil, err
 	}
 
-	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, wait, timeout)
+	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, wait, timeout, force)
 }
