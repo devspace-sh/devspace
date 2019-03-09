@@ -34,8 +34,8 @@ images:                             # map[string]struct | Images to be built and
 ```yaml
 build:                              # struct   | Build configuration for an image
   disabled: false                   # bool     | Disable image building (Default: false)
-  dockerfilePath: ./Dockerfile      # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
-  contextPath: ./                   # string   | Relative path to the context used for building (Default: ./)
+  dockerfile: ./Dockerfile          # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
+  context: ./                       # string   | Relative path to the context used for building (Default: ./)
   kaniko: ...                       # struct   | Build image with kaniko and set options for kaniko
   docker: ...                       # struct   | Build image with docker and set options for docker
   options: ...                      # struct   | Set build options that are independent of of the build tool used
@@ -88,6 +88,7 @@ Notice:
 helm:                               # struct   | Options for deploying with Helm
   chartPath: ./chart                # string   | Relative path 
   wait: true                        # bool     | Wait for pods to start after deployment (Default: true)
+  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
   timeout: 40                       # int      | Timeout to wait for pods to start after deployment (Default: 40)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
   overrideValues: {}                # struct   | Any object with Helm values to override values.yaml during deployment
@@ -131,6 +132,8 @@ autoReload:                         # struct   | Options for auto-reloading (i.e
 ```yaml
 overrideImages:                     # struct[] | Array of override settings for image building
 - name: default                     # string   | Name of the image to apply this override rule to
+  dockerfile: default               # string   | Relative path of the Dockerfile that should be used instead of the one originally defined
+  context: default                  # string   | Relative path of the context directory that should be used instead of the one originally defined
   entrypoint: []                    # string[] | Array defining with the entrypoint that should be used instead of the entrypoint defined in the Dockerfile
 ```
 [Learn more about entrypoint overriding.](../development/entrypoint-overrides)
@@ -184,15 +187,6 @@ sync:                               # struct[] | Array of file sync settings for
 ## cluster
 > **Warning:** Change the cluster configuration only if you *really* know what you are doing. Editing this configuration can lead to issues with when running DevSpace.cli commands.
 
-### using DevSpace.cloud (Enterprise)
-```yaml
-cluster:                            # struct   | Cluster configuration
-  cloudProvider: app.devspace.cloud # string   | URL of the DevSpace.cloud instance your DevSpace.cli client is connecting to
-```
-
-### without DevSpace.cloud
-> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace.cloud or run your own instance of DevSpace.cloud](../advanced/external-clusters) instead of using the following configuration options.
-
 ```yaml
 cluster:                            # struct   | Cluster configuration
   kubeContext: ""                   # string   | Name of the Kubernetes context to use (Default: "" = current Kubernetes context used by kubectl)
@@ -205,5 +199,6 @@ cluster:                            # struct   | Cluster configuration
     token: ""                       # string   | Use token-based authentication using this token
 ```
 Notice:
-- You **cannot** use any of these configuration options in combination with `cloudProvider`.
 - You **cannot** use `clientCert` and `clientKey` in combination with `token`.
+
+> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace.cloud or run your own instance of DevSpace.cloud](../advanced/external-clusters) instead of using the following configuration options.

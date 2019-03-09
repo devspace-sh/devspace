@@ -33,14 +33,14 @@ Adding a package as dependency will only change your local project files, e.g. `
 
 When you are ready to update your deployed application, you can simply re-deploy your application with:
 ```
-devspace deploy [SPACE_NAME]
+devspace deploy
 ```
 
 ## Remove a package
 To a remove a previouly added package, you can simply run:
 ```
 devspace remove package [PACKAGE_NAME]
-devspace deploy [SPACE_NAME]
+devspace deploy
 ```
 
 > If your packages created persistent volumes, you may have to delete them manually. [Learn more about deleting persistent volumes.](./persistent-volumes#delete-persistent-volumes)

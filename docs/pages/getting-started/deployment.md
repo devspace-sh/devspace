@@ -17,7 +17,7 @@ Learn more about [working with multiple Spaces](../spaces/switch-spaces).
 ## Deploy your application
 Now, you can deploy your application to your `production` Space with the following command:
 ```bash
-devspace deploy production
+devspace deploy
 ```
 This command will do the following:
 1. Build a [Docker image](../deployment/images) as defined in the `Dockerfile`
