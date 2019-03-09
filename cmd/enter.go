@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +20,7 @@ type EnterCmdFlags struct {
 	namespace     string
 	labelSelector string
 	container     string
+	pod           string
 	switchContext bool
 	pick          bool
 	config        string
@@ -54,6 +55,7 @@ devspace enter bash -l release=test
 
 	cobraCmd.Flags().StringVarP(&cmd.flags.selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
+	cobraCmd.Flags().StringVar(&cmd.flags.pod, "pod", "", "Pod to open a shell to")
 	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
@@ -79,20 +81,35 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
-
 	// Get kubectl client
 	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
+	// Build params
+	params := targetselector.CmdParameter{}
+	if cmd.flags.selector != "" {
+		params.Selector = &cmd.flags.selector
+	}
+	if cmd.flags.container != "" {
+		params.ContainerName = &cmd.flags.container
+	}
+	if cmd.flags.labelSelector != "" {
+		params.LabelSelector = &cmd.flags.labelSelector
+	}
+	if cmd.flags.namespace != "" {
+		params.Namespace = &cmd.flags.namespace
+	}
+	if cmd.flags.pod != "" {
+		params.PodName = &cmd.flags.pod
+	}
+	if cmd.flags.pick != false {
+		params.Pick = &cmd.flags.pick
+	}
+
 	// Start terminal
-	err = services.StartTerminal(kubectl, cmd.flags.selector, cmd.flags.container, cmd.flags.labelSelector, cmd.flags.namespace, cmd.flags.pick, args, make(chan error), log.GetInstance())
+	err = services.StartTerminal(kubectl, params, args, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

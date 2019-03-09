@@ -7,7 +7,8 @@ import (
 )
 
 type contextCmd struct {
-	All bool
+	All      bool
+	Provider string
 }
 
 func newContextCmd() *cobra.Command {
@@ -32,13 +33,21 @@ devspace remove context --all
 	}
 
 	contextCmd.Flags().BoolVar(&cmd.All, "all", false, "Delete all kubectl contexts created from spaces")
+	contextCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
 	return contextCmd
 }
 
 // RunRemoveContext executes the devspace remove context functionality
 func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) {
-	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
+	// Check if user has specified a certain provider
+	var cloudProvider *string
+	if cmd.Provider != "" {
+		cloudProvider = &cmd.Provider
+	}
+
+	// Get provider
+	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}

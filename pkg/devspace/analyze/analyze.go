@@ -44,26 +44,30 @@ func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string
 func CreateReport(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool) ([]*ReportItem, error) {
 	report := []*ReportItem{}
 
-	// Analyze events
-	problems, err := Events(client, config, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("Error during analyzing events: %v", err)
-	}
-	if len(problems) > 0 {
-		report = append(report, &ReportItem{
-			Name:     "Events",
-			Problems: problems,
-		})
-	}
-
 	// Analyze pods
-	problems, err = Pods(client, namespace, noWait)
+	problems, err := Pods(client, namespace, noWait)
 	if err != nil {
 		return nil, fmt.Errorf("Error during analyzing pods: %v", err)
 	}
 	if len(problems) > 0 {
 		report = append(report, &ReportItem{
 			Name:     "Pods",
+			Problems: problems,
+		})
+	}
+
+	// Analyze replicasets
+
+	// Analyze statefulsets
+
+	// Analyze events
+	problems, err = Events(client, config, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("Error during analyzing events: %v", err)
+	}
+	if len(problems) > 0 {
+		report = append(report, &ReportItem{
+			Name:     "Events",
 			Problems: problems,
 		})
 	}

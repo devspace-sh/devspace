@@ -156,8 +156,6 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 
 	// Set images and pull secrets values
 	overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
-	overwriteValues["containers"] = getImageValues(config, generatedConfig, isDev)
-
 	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 
 	wait := true
@@ -165,7 +163,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		wait = *d.DeploymentConfig.Helm.Wait
 	}
 
-	appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues, wait, d.DeploymentConfig.Helm.Timeout)
+	appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues, wait, d.DeploymentConfig.Helm.Timeout, d.DeploymentConfig.Helm.Force)
 	if err != nil {
 		return fmt.Errorf("Unable to deploy helm chart: %v", err)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 
+	"github.com/devspace-cloud/devspace/pkg/util/envutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -25,8 +26,8 @@ func (p *Provider) PrintSpaces(name string) error {
 	activeSpaceID := 0
 	if configutil.ConfigExists() {
 		generated, err := generated.LoadConfig()
-		if err == nil && generated.Space != nil {
-			activeSpaceID = generated.Space.SpaceID
+		if err == nil && generated.CloudSpace != nil {
+			activeSpaceID = generated.CloudSpace.SpaceID
 		}
 	}
 
@@ -88,6 +89,14 @@ func (p *Provider) PrintSpaces(name string) error {
 	}
 
 	return nil
+}
+
+// SetTillerNamespace sets the tiller environment variable
+func SetTillerNamespace(space *Space) error {
+	if space == nil {
+		return envutil.SetEnvVar("TILLER_NAMESPACE", "kube-system")
+	}
+	return envutil.SetEnvVar("TILLER_NAMESPACE", space.Namespace)
 }
 
 // ParseTokenClaims parses a token from a string

@@ -3,9 +3,20 @@ package cloud
 import (
 	"errors"
 	"fmt"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 )
+
+// Space holds the information about a space in the cloud
+type Space struct {
+	SpaceID             int     `yaml:"spaceID"`
+	ProviderName        string  `yaml:"providerName"`
+	Name                string  `yaml:"name"`
+	Namespace           string  `yaml:"namespace"`
+	Created             string  `yaml:"created"`
+	ServiceAccountToken string  `yaml:"serviceAccountToken"`
+	CaCert              string  `yaml:"caCert"`
+	Server              string  `yaml:"server"`
+	Domain              *string `yaml:"domain"`
+}
 
 // Project is the type that holds the project information
 type Project struct {
@@ -144,7 +155,7 @@ func (p *Provider) GetProjects() ([]*Project, error) {
 }
 
 // GetSpaces returns all spaces by the user
-func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
+func (p *Provider) GetSpaces() ([]*Space, error) {
 	// Response struct
 	response := struct {
 		Spaces []*struct {
@@ -201,7 +212,7 @@ func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
 		return nil, errors.New("Wrong answer from graphql server: Spaces is nil")
 	}
 
-	retSpaces := []*generated.SpaceConfig{}
+	retSpaces := []*Space{}
 	for _, spaceConfig := range response.Spaces {
 		if spaceConfig.KubeContext == nil {
 			return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
@@ -210,7 +221,7 @@ func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
 			return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
 		}
 
-		newSpace := &generated.SpaceConfig{
+		newSpace := &Space{
 			SpaceID:             spaceConfig.ID,
 			Name:                spaceConfig.Name,
 			Namespace:           spaceConfig.KubeContext.Namespace,
@@ -231,7 +242,7 @@ func (p *Provider) GetSpaces() ([]*generated.SpaceConfig, error) {
 }
 
 // GetSpace returns a specific space by id
-func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
+func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 	// Response struct
 	response := struct {
 		Space *struct {
@@ -298,7 +309,7 @@ func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
 		return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
 	}
 
-	retSpace := &generated.SpaceConfig{
+	retSpace := &Space{
 		SpaceID:             spaceConfig.ID,
 		Name:                spaceConfig.Name,
 		Namespace:           spaceConfig.KubeContext.Namespace,
@@ -316,7 +327,7 @@ func (p *Provider) GetSpace(spaceID int) (*generated.SpaceConfig, error) {
 }
 
 // GetSpaceByName returns a space by name
-func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, error) {
+func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 	// Response struct
 	response := struct {
 		Space []*struct {
@@ -386,7 +397,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*generated.SpaceConfig, err
 		return nil, fmt.Errorf("Cluster is nil for space %s", spaceConfig.Name)
 	}
 
-	retSpace := &generated.SpaceConfig{
+	retSpace := &Space{
 		SpaceID:             spaceConfig.ID,
 		Name:                spaceConfig.Name,
 		Namespace:           spaceConfig.KubeContext.Namespace,

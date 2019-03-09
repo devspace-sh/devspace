@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha2"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )

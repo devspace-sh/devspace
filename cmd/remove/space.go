@@ -39,7 +39,7 @@ devspace remove space --all
 	}
 
 	spaceCmd.Flags().StringVar(&cmd.SpaceID, "id", "", "SpaceID id to use")
-	spaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Provider to use")
+	spaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
 	spaceCmd.Flags().BoolVar(&cmd.All, "all", false, "Delete all spaces")
 
 	return spaceCmd
@@ -53,31 +53,16 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		log.Fatal(err)
 	}
 
-	var provider *cloudpkg.Provider
-
-	providerMap, err := cloudpkg.ParseCloudConfig()
-	if err != nil {
-		log.Fatalf("Error loading provider: %v", err)
+	// Check if user has specified a certain provider
+	var cloudProvider *string
+	if cmd.Provider != "" {
+		cloudProvider = &cmd.Provider
 	}
 
-	if cmd.Provider != "" {
-		provider = providerMap[cmd.Provider]
-		if provider == nil {
-			log.Fatalf("Couldn't find provider %s", cmd.Provider)
-		}
-	} else {
-		// Load provider
-		if configExists {
-			provider, err = cloudpkg.GetCurrentProvider(log.GetInstance())
-			if err != nil {
-				log.Fatalf("Error getting cloud context: %v", err)
-			}
-		} else {
-			provider = providerMap[cloudpkg.DevSpaceCloudProviderName]
-			if provider == nil {
-				log.Fatalf("Couldn't find provider %s", cloudpkg.DevSpaceCloudProviderName)
-			}
-		}
+	// Get provider
+	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Error getting cloud context: %v", err)
 	}
 
 	// Delete all spaces
@@ -104,7 +89,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	defer log.StopWait()
 
 	// Get by id
-	var space *generated.SpaceConfig
+	var space *cloudpkg.Space
 
 	if cmd.SpaceID != "" {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
@@ -122,17 +107,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			log.Fatalf("Error retrieving space %s: %v", args[0], err)
 		}
 	} else {
-		// Get current space
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if generatedConfig.Space == nil {
-			log.Fatal("Please provide a space name or id for this command")
-		}
-
-		space = generatedConfig.Space
+		log.Fatal("Please provide a space name or id for this command")
 	}
 
 	// Delete space remotely
@@ -155,7 +130,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		}
 
 		// Remove space from generated config
-		generatedConfig.Space = nil
+		generatedConfig.CloudSpace = nil
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

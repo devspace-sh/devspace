@@ -3,7 +3,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -50,16 +49,6 @@ local chart, including persistent volume claims!
 	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
-
-	var purgeAlias = &cobra.Command{
-		Use:   "down",
-		Short: "alias for devspace purge (deprecated)",
-		Run: func(cobraCmd *cobra.Command, args []string) {
-			log.Warn("`devspace down` is deprecated, please use `devspace purge` in future")
-			cmd.Run(cobraCmd, args)
-		},
-	}
-	rootCmd.AddCommand(purgeAlias)
 }
 
 // Run executes the purge command logic
@@ -78,12 +67,6 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.StartFileLogging()
-
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
 
 	kubectl, err := kubectl.NewClient()
 	if err != nil {

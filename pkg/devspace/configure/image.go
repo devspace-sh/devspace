@@ -21,10 +21,10 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 		imageConfig.Tag = &tag
 	}
 	if contextPath != "" {
-		imageConfig.Build.ContextPath = &contextPath
+		imageConfig.Build.Context = &contextPath
 	}
 	if dockerfilePath != "" {
-		imageConfig.Build.DockerfilePath = &dockerfilePath
+		imageConfig.Build.Dockerfile = &dockerfilePath
 	}
 
 	if buildEngine == "docker" {

@@ -52,7 +52,7 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 
 // GetClientConfigFromKubectl loads the kubectl client config
 func GetClientConfigFromKubectl() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	return getClientConfig(false)
 }
 
 // GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
@@ -61,6 +61,10 @@ func GetClientConfig() (*rest.Config, error) {
 }
 
 func getClientConfig(switchContext bool) (*rest.Config, error) {
+	if configutil.ConfigExists() == false {
+		return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	}
+
 	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
