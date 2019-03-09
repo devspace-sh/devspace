@@ -58,7 +58,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 	prefix := DevSpaceKubeContextName
 	if providerName != DevSpaceCloudProviderName {
-		prefix += "-" + strings.ToLower(strings.ReplaceAll(providerName, ".", "-"))
+		prefix += "-" + strings.ToLower(strings.Replace(providerName, ".", "-", -1))
 	}
 
 	return prefix + "-" + strings.ToLower(spaceName)
