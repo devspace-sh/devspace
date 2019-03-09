@@ -1,5 +1,5 @@
 ---
-title: 1. Install DevSpace
+title: 1. Install DevSpace CLI
 ---
 
 To build and deploy applications with DevSpace, you need to install DevSpace CLI and Docker.
