@@ -27,7 +27,7 @@ config2:
 ```
 The above example defines two configurations `config1` and `config2`. Both will load the same config file `.devspace/config.yaml` but `config2` is slightly different because it will apply an override after loading the config file. This override defines that `images.database.image` should be overriden with the value `dscr.io/my-username/alternative-db-image`.
 
-[Learn more about defining and using multiple configs.](/docs/configuration/multiple-configs)
+[Learn more about defining and using multiple configs.](/docs/cli/configuration/multiple-configs)
 
 ## Advanced options for config overrides
 Instead of specifying overrides directly inside `.devspace/config.yaml` with `data`, it is also possible to define a file containing the override data and reference this file with `path` instead of using `data`.

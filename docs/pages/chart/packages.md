@@ -23,7 +23,7 @@ devspace add package mysql
 The exemplary command above would:
 1. Add `mysql` as dependency within `chart/requirements.yaml`
 2. Add the most common config options to your `chart/values.yaml` under `mysql`
-3. OPTIONAL: Add a selector for the package to `dev.selectors` in `.devspace/config.yaml` if supported for this package ([Learn more about selectors](/docs/configuration/reference#devselectors))
+3. OPTIONAL: Add a selector for the package to `dev.selectors` in `.devspace/config.yaml` if supported for this package ([Learn more about selectors](/docs/cli/configuration/reference#devselectors))
 4. OPTIONAL: Display the README of the `mysql` Helm chart
 
 ### Re-deploy your application

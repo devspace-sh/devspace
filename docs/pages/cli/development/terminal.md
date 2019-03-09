@@ -14,7 +14,7 @@ npm run [start|dev|watch]
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](/docs/development/entrypoint-overrides)
+By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](/docs/cli/development/entrypoint-overrides)
 
 ## Open additional terminals
 You can open additional terminals, simply run the following command:
@@ -23,7 +23,7 @@ devspace enter
 ```
 
 > **Do not run `devspace dev` to open additional terminals.**  
-> It is highly discouraged to run `devspace dev` multiple times in parallel because the port-forwarding as well as the code synchronization processes will interfere with each other. [Learn more best practices.](/docs/development/best-practices)
+> It is highly discouraged to run `devspace dev` multiple times in parallel because the port-forwarding as well as the code synchronization processes will interfere with each other. [Learn more best practices.](/docs/cli/development/best-practices)
 
 Use the command `devspace enter [COMMAND]` to run a command direclty after opening the terminal.
 ```bash

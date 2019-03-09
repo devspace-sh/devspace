@@ -28,7 +28,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](/docs/images/workflow)
+[Learn more about building images with DevSpace.](/docs/cli/images/workflow)
 
 ### images[*].build
 ```yaml
@@ -94,7 +94,7 @@ helm:                               # struct   | Options for deploying with Helm
   overrideValues: {}                # struct   | Any object with Helm values to override values.yaml during deployment
   overrides: ...
 ```
-[Learn more about configuring deployments with Helm.](/docs/deployment/charts)
+[Learn more about configuring deployments with Helm.](/docs/cli/deployment/charts)
 
 ### deployments[*].kubectl
 ```yaml
@@ -118,7 +118,7 @@ dev:                                # struct   | Options for "devspace dev"
   ports: []                         # struct[] | Array of port-forwarding settings for selected pods
   sync: []                          # struct[] | Array of file sync settings for selected pods
 ```
-[Learn more about development with DevSpace.](/docs/development/workflow)
+[Learn more about development with DevSpace.](/docs/cli/development/workflow)
 
 ### dev.autoReload
 ```yaml
@@ -136,7 +136,7 @@ overrideImages:                     # struct[] | Array of override settings for 
   context: default                  # string   | Relative path of the context directory that should be used instead of the one originally defined
   entrypoint: []                    # string[] | Array defining with the entrypoint that should be used instead of the entrypoint defined in the Dockerfile
 ```
-[Learn more about entrypoint overriding.](/docs/development/entrypoint-overrides)
+[Learn more about entrypoint overriding.](/docs/cli/development/entrypoint-overrides)
 
 ### dev.selectors
 ```yaml
@@ -154,7 +154,7 @@ terminal:                           # struct   | Options for the terminal proxy
   disabled: false                   # bool     | Disable terminal proxy / only start port-forwarding and code sync if defined (Default: false)
   command: []                       # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about configuring the terminal proxy.](/docs/development/terminal)
+[Learn more about configuring the terminal proxy.](/docs/cli/development/terminal)
 
 ### dev.ports
 ```yaml
@@ -165,7 +165,7 @@ ports:                              # struct[] | Array of port forwarding settin
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
-[Learn more about port forwarding.](/docs/development/port-forwarding)
+[Learn more about port forwarding.](/docs/cli/development/port-forwarding)
 
 ### dev.sync
 ```yaml
@@ -180,7 +180,7 @@ sync:                               # struct[] | Array of file sync settings for
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](/docs/development/synchronization)
+[Learn more about confguring the code synchronization.](/docs/cli/development/synchronization)
 
 
 ---

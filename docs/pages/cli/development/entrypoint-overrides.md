@@ -40,7 +40,7 @@ In the example above, the result would be that the container that uses the `defa
 Common use cases for overriding entrypoints are:
 1. You want to start your application in dev mode with hot reloading (e.g. `npm run watch` using nodemon instead of `npm start`).
 2. You want to increase the log level or set environment variables before starting your app (e.g. `NODE_ENV=development && npm start`).
-3. You want to start a container without starting your application (e.g. `sleep 99999999`) because you want to start the application manually via the [terminal proxy](/docs/development/terminal).
+3. You want to start a container without starting your application (e.g. `sleep 99999999`) because you want to start the application manually via the [terminal proxy](/docs/cli/development/terminal).
 </details>
 
 <details>

@@ -20,8 +20,8 @@ Now, you can deploy your application to your `production` Space with the followi
 devspace deploy
 ```
 This command will do the following:
-1. Build a [Docker image](/docs/deployment/images) as defined in the `Dockerfile`
-2. Push this Docker image to any [Docker registry](/docs/images/workflow)
+1. Build a [Docker image](/docs/cli/deployment/images) as defined in the `Dockerfile`
+2. Push this Docker image to any [Docker registry](/docs/cli/images/workflow)
 3. Deploy your [Helm chart](/docs/chart/what-are-helm-charts) as defined in `chart/`
 4. Make your application available on a `.devspace.host` domain
 
@@ -90,8 +90,8 @@ If you get an HTTP error when accessing your Space, the following guides can hel
 
 ## Learn more about deploying with DevSpace
 See the following guides to learn more:
-- [Connect custom domains](/docs/deployment/domains)
-- [Monitor and debug deployed applications](/docs/debugging/overview)
-- [Scale deployed applications](/docs/deployment/scaling)
-- [Configure Docker image](/docs/deployment/images)
-- [Configure Helm chart](/docs/deployment/charts)
+- [Connect custom domains](/docs/cli/deployment/domains)
+- [Monitor and debug deployed applications](/docs/cli/debugging/overview)
+- [Scale deployed applications](/docs/cli/deployment/scaling)
+- [Configure Docker image](/docs/cli/deployment/images)
+- [Configure Helm chart](/docs/cli/deployment/charts)

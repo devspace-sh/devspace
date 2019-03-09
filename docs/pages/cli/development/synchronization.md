@@ -23,7 +23,7 @@ dev:
 ```
 The `selector` field shown above refers to the name of one of the selectors defined in `dev.selectors` and decide which container is to be selected for synchronizing files.
 
-[Learn more about selectors.](/docs/configuration/reference#devselectors)
+[Learn more about selectors.](/docs/cli/configuration/reference#devselectors)
 
 ## Define paths to be excluded from sync
 Sometimes, it is recommended to exclude certain paths from being synchronized, e.g.

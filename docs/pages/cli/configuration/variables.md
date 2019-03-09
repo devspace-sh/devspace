@@ -4,9 +4,9 @@ title: Define dynamic configs
 
 Dynamic configs let you define variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for different developers.
 
-Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when [using DevSpace within CI/CD pipelines](/docs/deployment/pipelines).
+Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when [using DevSpace within CI/CD pipelines](/docs/cli/deployment/pipelines).
 
-> To be able to define dynamic configs, you need to be familiar with the basics of [using multiple configs](/docs/configuration/multiple-configs).
+> To be able to define dynamic configs, you need to be familiar with the basics of [using multiple configs](/docs/cli/configuration/multiple-configs).
 
 ## Define config variables
 Config variables are placeholders with the format `${VAR_NAME}`. They have to be defined in the `vars` section of the `.devspace/configs.yaml`. You can then refer to these variables from within your configuration. You can use config variables within config files, within configs defined with `config.data` and within your overrides specified as `path` or `data`.
@@ -49,7 +49,7 @@ export DEVSPACE_VAR_IMAGENAME="some-value"
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Using environment variables to set dynamic configs can be particularly useful when defining secrets as environment variables in automation scenarios, e.g. when [using DevSpace within CI/CD pipelines](/docs/deployment/pipelines).
+Using environment variables to set dynamic configs can be particularly useful when defining secrets as environment variables in automation scenarios, e.g. when [using DevSpace within CI/CD pipelines](/docs/cli/deployment/pipelines).
 
 
 ---
@@ -61,5 +61,5 @@ Using environment variables to set dynamic configs can be particularly useful wh
 </summary>
 While config overriding is very useful for different deployment environments, it is not as suitable for managing configs that vary between different developers. Imaging having 80 people working on a project: Do you want to manage 80 different configurations and version them via git? Dynamic configs allow you to version one config file which uses variables that are saved outside the git repository on the local machine of the developer.
 
-Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. [using DevSpace within CI/CD pipelines](/docs/deployment/pipelines).
+Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. [using DevSpace within CI/CD pipelines](/docs/cli/deployment/pipelines).
 </details>
