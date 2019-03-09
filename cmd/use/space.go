@@ -10,7 +10,7 @@ import (
 )
 
 type spaceCmd struct {
-	context bool
+	provider string
 }
 
 func newSpaceCmd() *cobra.Command {
@@ -34,7 +34,7 @@ devspace use space none    // stop using a space
 		Run:  cmd.RunUseSpace,
 	}
 
-	useSpace.Flags().BoolVar(&cmd.context, "context", true, "Create/Update kubectl context for space")
+	useSpace.Flags().StringVar(&cmd.provider, "provider", "", "The cloud provider to use")
 
 	return useSpace
 }
@@ -46,31 +46,44 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
-	}
 
 	// Erase currently used space
 	if args[0] == "none" {
+		// Set tiller env
+		err = cloudpkg.SetTillerNamespace(nil)
+		if err != nil {
+			log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+		}
+
+		if !configExists {
+			return
+		}
+
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		generatedConfig.Space = nil
+		generatedConfig.CloudSpace = nil
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Info("Successfully erased space")
+		log.Info("Successfully erased space from config")
 		return
 	}
 
+	// Check if user has specified a certain provider
+	var cloudProvider *string
+	if cmd.provider != "" {
+		cloudProvider = &cmd.provider
+	}
+
 	// Get cloud provider from config
-	provider, err := cloudpkg.GetCurrentProvider(log.GetInstance())
+	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}
@@ -80,33 +93,48 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	log.StartWait("Retrieving Space details")
 
-	spaceConfig, err := provider.GetSpaceByName(args[0])
+	space, err := provider.GetSpaceByName(args[0])
 	if err != nil {
 		log.Fatalf("Error retrieving Spaces details: %v", err)
 	}
 
 	log.StopWait()
 
-	// Get generated config
-	generatedConfig, err := generated.LoadConfig()
+	// Change kube context
+	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
+	err = cloud.UpdateKubeConfig(kubeContext, space, true)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	generatedConfig.Space = spaceConfig
-
-	err = generated.SaveConfig(generatedConfig)
+	// Set tiller env
+	err = cloudpkg.SetTillerNamespace(space)
 	if err != nil {
-		log.Fatal(err)
+		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
-	// Update kube config
-	if cmd.context {
-		err = cloud.UpdateKubeConfig(cloud.GetKubeContextNameFromSpace(spaceConfig), spaceConfig, true)
+	if configExists {
+		// Get generated config
+		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
-			log.Fatalf("Error saving kube config: %v", err)
+			log.Fatal(err)
+		}
+
+		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
+			SpaceID:      space.SpaceID,
+			ProviderName: space.ProviderName,
+			Name:         space.Name,
+			Namespace:    space.Namespace,
+			KubeContext:  kubeContext,
+			Created:      space.Created,
+			Domain:       space.Domain,
+		}
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
-	log.Donef("Successfully configured config to use space %s", spaceConfig.Name)
+	log.Donef("Successfully configured config to use space %s", space.Name)
 }

@@ -166,40 +166,37 @@ func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string) e
 	// Delete service
 	kubectlClient.CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-	// Only delete service accounts and roles in non cloud-provider environments
-	if config.Cluster.CloudProvider == nil || *config.Cluster.CloudProvider == "" {
-		// Delete serviceaccount
-		kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	// Delete serviceaccount
+	kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-		appNamespaces := []*string{
-			&tillerNamespace,
-		}
+	appNamespaces := []*string{
+		&tillerNamespace,
+	}
 
-		defaultNamespace, err := configutil.GetDefaultNamespace(config)
-		if err != nil {
-			return fmt.Errorf("Error retrieving default namespace: %v", err)
-		}
+	defaultNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return fmt.Errorf("Error retrieving default namespace: %v", err)
+	}
 
-		if config.Deployments != nil {
-			for _, deployConfig := range *config.Deployments {
-				if deployConfig.Namespace != nil && deployConfig.Helm != nil {
-					if *deployConfig.Namespace == "" {
-						appNamespaces = append(appNamespaces, &defaultNamespace)
-						continue
-					}
-
-					appNamespaces = append(appNamespaces, deployConfig.Namespace)
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
+			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
+				if *deployConfig.Namespace == "" {
+					appNamespaces = append(appNamespaces, &defaultNamespace)
+					continue
 				}
+
+				appNamespaces = append(appNamespaces, deployConfig.Namespace)
 			}
 		}
+	}
 
-		for _, appNamespace := range appNamespaces {
-			kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	for _, appNamespace := range appNamespaces {
+		kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-			kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-			kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		}
+		kubectlClient.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		kubectlClient.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}
 
 	return nil

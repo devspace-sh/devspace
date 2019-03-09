@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 )
 
 // AddSelector adds a selector
@@ -22,7 +21,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 			services := *config.Dev.Selectors
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
-			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
 		}
 	}
 

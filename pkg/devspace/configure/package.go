@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	helmClient "github.com/devspace-cloud/devspace/pkg/devspace/helm"
@@ -26,12 +25,6 @@ func AddPackage(skipQuestion bool, appVersion, chartVersion, deployment string, 
 	config := configutil.GetBaseConfig()
 	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
-	}
-
-	// Configure cloud provider
-	err := cloud.Configure(log)
-	if err != nil {
-		return err
 	}
 
 	var deploymentConfig *v1.DeploymentConfig
@@ -346,12 +339,6 @@ func RemovePackage(removeAll bool, deployment string, args []string, log log.Log
 	config := configutil.GetConfig()
 	if config.Deployments == nil || (len(*config.Deployments) != 1 && deployment == "") {
 		return fmt.Errorf("Please specify the deployment via the -d flag")
-	}
-
-	// Configure cloud provider
-	err := cloud.Configure(log)
-	if err != nil {
-		return err
 	}
 
 	var deploymentConfig *v1.DeploymentConfig

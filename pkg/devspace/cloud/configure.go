@@ -2,16 +2,12 @@ package cloud
 
 import (
 	"encoding/base64"
-	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -19,32 +15,8 @@ import (
 // SpaceNameValidationRegEx is the sapace name validation regex
 var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
-// GetProvider retrieves the provider with the given name and ensures the user is logged in
-func GetProvider(providerName string, log log.Logger) (*Provider, error) {
-	log.StartWait("Logging into cloud provider...")
-	defer log.StopWait()
-
-	// Get provider configuration
-	providerConfig, err := ParseCloudConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure user is logged in
-	err = EnsureLoggedIn(providerConfig, providerName, log)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get provider config
-	return providerConfig[providerName], nil
-}
-
-// GetCurrentProvider returns the current specified cloud provider
-func GetCurrentProvider(log log.Logger) (*Provider, error) {
-	log.StartWait("Logging into cloud provider...")
-	defer log.StopWait()
-
+// GetProvider returns the current specified cloud provider
+func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	// Get provider configuration
 	providerConfig, err := ParseCloudConfig()
 	if err != nil {
@@ -52,16 +24,25 @@ func GetCurrentProvider(log log.Logger) (*Provider, error) {
 	}
 
 	providerName := DevSpaceCloudProviderName
-	if configutil.ConfigExists() {
-		dsConfig := configutil.GetConfig()
+	if useProviderName == nil {
+		// Choose cloud provider
+		if len(providerConfig) > 1 {
+			options := []string{}
+			for providerHost := range providerConfig {
+				options = append(options, providerHost)
+			}
 
-		// Don't update or configure anything if we don't use a cloud provider
-		if dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || *dsConfig.Cluster.CloudProvider == "" {
-			return nil, nil
+			providerName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Select cloud provider",
+				Options:  options,
+			})
 		}
-
-		providerName = *dsConfig.Cluster.CloudProvider
+	} else {
+		providerName = *useProviderName
 	}
+
+	log.StartWait("Logging into cloud provider...")
+	defer log.StopWait()
 
 	// Ensure user is logged in
 	err = EnsureLoggedIn(providerConfig, providerName, log)
@@ -69,121 +50,22 @@ func GetCurrentProvider(log log.Logger) (*Provider, error) {
 		return nil, err
 	}
 
-	// Get provider config
-	provider := providerConfig[providerName]
-
-	return provider, nil
-}
-
-// Configure will alter the cluster configuration in the generated config
-func Configure(log log.Logger) error {
-	dsConfig := configutil.GetConfig()
-
-	// Get provider and login
-	provider, err := GetCurrentProvider(log)
-	if err != nil {
-		return err
-	}
-	if provider == nil {
-		return nil
-	}
-
-	log.StartWait("Retrieving cloud context...")
-	defer log.StopWait()
-
-	// Get generated config
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return err
-	}
-
-	// Save generated config later
-	defer generated.SaveConfig(generatedConfig)
-
-	// Check if there is a space configured
-	if generatedConfig.Space == nil {
-		return fmt.Errorf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
-	}
-
-	// Refresh space configuration
-	spaceConfig, err := provider.GetSpace(generatedConfig.Space.SpaceID)
-	if err != nil {
-		spaceConfig = generatedConfig.Space
-		log.Warnf("Couldn't get space %s: %v", spaceConfig.Name, err)
-	} else {
-		generatedConfig.Space = spaceConfig
-	}
-
-	return updateDevSpaceConfig(dsConfig, spaceConfig, log)
-}
-
-// ConfigureWithSpaceName configures the environment temporarily with the given space name
-func ConfigureWithSpaceName(spaceName string, log log.Logger) error {
-	dsConfig := configutil.GetConfig()
-
-	// Get provider and login
-	provider, err := GetCurrentProvider(log)
-	if err != nil {
-		return err
-	}
-	if provider == nil {
-		return nil
-	}
-
-	log.StartWait("Retrieving cloud context...")
-	defer log.StopWait()
-
-	spaceConfig, err := provider.GetSpaceByName(spaceName)
-	if err != nil {
-		return fmt.Errorf("Couldn't get space config for space %s: %v", spaceName, err)
-	}
-
-	return updateDevSpaceConfig(dsConfig, spaceConfig, log)
-}
-
-func updateDevSpaceConfig(dsConfig *v1.Config, spaceConfig *generated.SpaceConfig, log log.Logger) error {
-	log.Infof("Using space %s", spaceConfig.Name)
-
-	// Check if we should use the kubecontext by checking if an api server is specified in the config
-	useKubeContext := dsConfig.Cluster == nil || dsConfig.Cluster.CloudProvider == nil || dsConfig.Cluster.APIServer == nil
-
-	// Exchange cluster information
-	if useKubeContext {
-		kubeContext := GetKubeContextNameFromSpace(spaceConfig)
-		dsConfig.Cluster = &v1.Cluster{
-			CloudProvider: dsConfig.Cluster.CloudProvider,
-		}
-
-		dsConfig.Cluster.Namespace = &spaceConfig.Namespace
-		dsConfig.Cluster.KubeContext = &kubeContext
-
-		err := UpdateKubeConfig(kubeContext, spaceConfig, false)
-		if err != nil {
-			return err
-		}
-	} else {
-		dsConfig.Cluster = &v1.Cluster{
-			CloudProvider: dsConfig.Cluster.CloudProvider,
-		}
-
-		dsConfig.Cluster.APIServer = &spaceConfig.Server
-		dsConfig.Cluster.Namespace = &spaceConfig.Namespace
-		dsConfig.Cluster.CaCert = &spaceConfig.CaCert
-		dsConfig.Cluster.User = &v1.ClusterUser{
-			Token: &spaceConfig.ServiceAccountToken,
-		}
-	}
-
-	return nil
+	// Return provider config
+	return providerConfig[providerName], nil
 }
 
 // GetKubeContextNameFromSpace returns the kube context name for a space
-func GetKubeContextNameFromSpace(spaceConfig *generated.SpaceConfig) string {
-	return DevSpaceKubeContextName + "-" + strings.ToLower(spaceConfig.Name)
+func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
+	prefix := DevSpaceKubeContextName
+	if providerName != DevSpaceCloudProviderName {
+		prefix += "-" + strings.ToLower(strings.ReplaceAll(providerName, ".", "-"))
+	}
+
+	return prefix + "-" + strings.ToLower(spaceName)
 }
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
-func UpdateKubeConfig(contextName string, spaceConfig *generated.SpaceConfig, setActive bool) error {
+func UpdateKubeConfig(contextName string, spaceConfig *Space, setActive bool) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err

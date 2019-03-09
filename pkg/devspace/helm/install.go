@@ -121,7 +121,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 			k8shelm.UpgradeTimeout(waitTimeout),
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
-			k8shelm.UpgradeForce(true),
+			//	k8shelm.UpgradeForce(true),
 			k8shelm.UpgradeWait(wait),
 		)
 

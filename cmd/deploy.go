@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -48,7 +47,7 @@ devspace deploy --namespace=deploy
 devspace deploy --namespace=deploy
 devspace deploy --kube-context=deploy-context
 #######################################################`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
 
@@ -80,21 +79,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Prepare the config
 	cmd.prepareConfig()
-
-	// Check if there is a space configured
-	if len(args) > 0 {
-		// Configure cloud provider
-		err := cloud.ConfigureWithSpaceName(args[0], log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to configure cloud provider: %v", err)
-		}
-	} else {
-		// Configure cloud provider
-		err := cloud.Configure(log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to configure cloud provider: %v", err)
-		}
-	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
@@ -153,15 +137,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		log.Fatalf("Error saving generated config: %v", err)
-	}
-
-	// Print domain name if we use a cloud provider
-	config := configutil.GetConfig()
-	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
-		generatedConfig, _ := generated.LoadConfig()
-		if generatedConfig != nil && generatedConfig.Space != nil && generatedConfig.Space.Domain != nil {
-			log.Infof("The Space is now reachable via ingress on this URL: https://%s", *generatedConfig.Space.Domain)
-		}
 	}
 
 	log.Donef("Successfully deployed!")

@@ -3,7 +3,6 @@ package cloud
 import (
 	"errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -36,14 +35,14 @@ func (p *Provider) DeleteSpace(spaceID int) error {
 }
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
-func DeleteKubeContext(space *generated.SpaceConfig) error {
+func DeleteKubeContext(space *Space) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
 
 	hasChanged := false
-	kubeContext := GetKubeContextNameFromSpace(space)
+	kubeContext := GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 
 	if _, ok := config.Clusters[kubeContext]; ok {
 		delete(config.Clusters, kubeContext)

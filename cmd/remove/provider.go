@@ -1,9 +1,6 @@
 package remove
 
 import (
-	"net/url"
-	"strings"
-
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -26,7 +23,7 @@ func newProviderCmd() *cobra.Command {
 Removes a cloud provider.
 
 Example:
-devspace remove provider https://app.devspace.cloud
+devspace remove provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -40,20 +37,7 @@ devspace remove provider https://app.devspace.cloud
 
 // RunRemoveCloudProvider executes the devspace remove cloud provider functionality
 func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) {
-	providerName := cmd.Name
-	if providerName == "" {
-		u, err := url.Parse(args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		parts := strings.Split(u.Hostname(), ".")
-		if len(parts) >= 2 {
-			providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
-		} else {
-			providerName = u.Hostname()
-		}
-	}
+	providerName := args[0]
 
 	// Get provider configuration
 	providerConfig, err := cloudpkg.ParseCloudConfig()

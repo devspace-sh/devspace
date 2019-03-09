@@ -1,9 +1,9 @@
-package latest
+package v1alpha2
 
 import "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 
 // Version is the current api version
-const Version string = "v1alpha3"
+const Version string = "v1alpha2"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -30,11 +30,12 @@ type Config struct {
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
-	KubeContext *string      `yaml:"kubeContext,omitempty"`
-	Namespace   *string      `yaml:"namespace,omitempty"`
-	APIServer   *string      `yaml:"apiServer,omitempty"`
-	CaCert      *string      `yaml:"caCert,omitempty"`
-	User        *ClusterUser `yaml:"user,omitempty"`
+	CloudProvider *string      `yaml:"cloudProvider,omitempty"`
+	KubeContext   *string      `yaml:"kubeContext,omitempty"`
+	Namespace     *string      `yaml:"namespace,omitempty"`
+	APIServer     *string      `yaml:"apiServer,omitempty"`
+	CaCert        *string      `yaml:"caCert,omitempty"`
+	User          *ClusterUser `yaml:"user,omitempty"`
 }
 
 // ClusterUser is a user with its username and its client certificate

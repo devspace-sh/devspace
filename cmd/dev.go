@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
@@ -138,12 +138,6 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
-
 	// Create kubectl client and switch context if specified
 	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
@@ -267,15 +261,7 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 		}()
 	}
 
-	// Print domain name if we use a cloud provider and space
 	config := configutil.GetConfig()
-	if config.Cluster != nil && config.Cluster.CloudProvider != nil {
-		generatedConfig, _ := generated.LoadConfig()
-		if generatedConfig != nil && generatedConfig.Space != nil && generatedConfig.Space.Domain != nil {
-			log.Infof("The Space is now reachable via ingress on this URL: https://%s", *generatedConfig.Space.Domain)
-		}
-	}
-
 	exitChan := make(chan error)
 	autoReloadPaths := GetPaths()
 
@@ -300,14 +286,29 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 		defer watcher.Stop()
 	}
 
+	// Build params
+	params := targetselector.CmdParameter{}
+	if flags.selector != "" {
+		params.Selector = &flags.selector
+	}
+	if flags.container != "" {
+		params.ContainerName = &flags.container
+	}
+	if flags.labelSelector != "" {
+		params.LabelSelector = &flags.labelSelector
+	}
+	if flags.namespace != "" {
+		params.Namespace = &flags.namespace
+	}
+
 	if flags.terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
-		return services.StartTerminal(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, false, args, exitChan, log)
+		return services.StartTerminal(client, params, args, exitChan, log)
 	}
 
 	log.Info("Will now try to print the logs of a running pod...")
 
 	// Start attaching to a running pod
-	err := services.StartAttach(client, flags.selector, flags.container, flags.labelSelector, flags.namespace, exitChan, log)
+	err := services.StartAttach(client, params, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
 		if _, ok := err.(*reloadError); ok {
