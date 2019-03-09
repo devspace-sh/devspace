@@ -10,4 +10,4 @@ Spaces are smart Kubernetes namespaces which provide the following features:
 - Resource auto-scaling within the configured limits
 - Smart analysis of issues within your Space via `devspace analyze`
 
-You can create Spaces that either run on DevSpace.cloud (will get a `.devspace.host` subdomain) or on your own Kubernetes clusters (external Spaces with an automatically provisioned subdomain of one of your domains).
+You can create Spaces that either run on DevSpace Cloud (will get a `.devspace.host` subdomain) or on your own Kubernetes clusters (external Spaces with an automatically provisioned subdomain of one of your domains).

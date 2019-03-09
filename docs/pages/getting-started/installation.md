@@ -2,9 +2,9 @@
 title: 1. Install DevSpace
 ---
 
-To build and deploy applications with DevSpace, you need to install DevSpace.cli and Docker.
+To build and deploy applications with DevSpace, you need to install DevSpace CLI and Docker.
 
-## Install DevSpace.cli
+## Install DevSpace CLI
 Run the code for your platform (Windows, Mac, Linux)
 
 <!--DOCUSAURUS_CODE_TABS-->

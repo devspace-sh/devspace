@@ -2,7 +2,7 @@
 title: Use the terminal proxy
 ---
 
-After running `devspace dev`, DevSpace.cli will open a terminal proxy, which lets you run commands within your deployed containers.
+After running `devspace dev`, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers.
 
 ## Start your application via terminal proxy
 Starting your application with the terminal proxy works the same way as starting it with your local terminal. Common commands to start your applications in development mode would be:

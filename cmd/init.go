@@ -102,7 +102,7 @@ YOUR_PROJECT_PATH/
 	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
-	cobraCmd.Flags().BoolVar(&cmd.flags.useCloud, "cloud", cmd.flags.useCloud, "Use the DevSpace.cloud for this project")
+	cobraCmd.Flags().BoolVar(&cmd.flags.useCloud, "cloud", cmd.flags.useCloud, "Use the DevSpace Cloud for this project")
 }
 
 // Run executes the command logic
@@ -186,7 +186,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to use DevSpace.cloud?",
+				Question:     "Do you want to use DevSpace Cloud?",
 				DefaultValue: "yes",
 				Options:      []string{"yes", "no"},
 			}) == "yes"
@@ -194,7 +194,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		var providerName *string
 
-		// Check if DevSpace.cloud should be used
+		// Check if DevSpace Cloud should be used
 		if cmd.flags.useCloud == false {
 			cmd.configureDevSpace()
 		} else {

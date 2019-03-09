@@ -2,7 +2,7 @@
 title: Configure Helm charts
 ---
 
-By default, DevSpace.cli will copy the DevSpace Helm chart into the folder `chart/` within your project when you run `devspace init`. This chart is highly customizable and will make it much easier for you to get an enterprise-grade, scalable and secure deployment of your application running on Kubernetes.
+By default, DevSpace CLI will copy the DevSpace Helm chart into the folder `chart/` within your project when you run `devspace init`. This chart is highly customizable and will make it much easier for you to get an enterprise-grade, scalable and secure deployment of your application running on Kubernetes.
 
 See the following cusomization guides to:
 - [Add packages to your Helm chart (e.g. database)](../charts/packages)

@@ -3,7 +3,7 @@ title: Analyze issues
 ---
 
 ## Analyze your Space to identify issues
-DevSpace.cli can automatically analyze your Space and identify potential issues with your deployments.
+DevSpace CLI can automatically analyze your Space and identify potential issues with your deployments.
 ```bash
 devspace use space [SPACE_NAME]
 devspace analyze

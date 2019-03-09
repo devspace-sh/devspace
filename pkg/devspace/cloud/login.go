@@ -99,7 +99,7 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 	return nil
 }
 
-// Login logs the user into DevSpace.cloud
+// Login logs the user into DevSpace Cloud
 func (p *Provider) Login(log log.Logger) error {
 	log.StartWait("Logging into cloud provider...")
 	defer log.StopWait()

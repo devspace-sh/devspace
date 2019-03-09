@@ -27,7 +27,7 @@ class Footer extends React.Component {
         <div className="footer-container">
           <div className="devspace-company">
               <img src="/img/devspace-logo.svg" />
-              DevSpace CLI and DevSpace.cloud are products developed by the covexo GmbH. 
+              DevSpace CLI and DevSpace Cloud are products developed by the covexo GmbH. 
               The terms "DevSpace" and "covexo" are registered trademarks of the covexo GmbH.
           </div>
           <div className="social-networks">

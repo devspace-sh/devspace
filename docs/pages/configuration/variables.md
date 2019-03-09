@@ -25,7 +25,7 @@ config1:
 ```
 If a user runs `devspace deploy` for the first time after defining the config variable as shown above, the question `Which database image do you want to use?` will appear within the terminal and the user would be asked to enter a value for this config variable. Setting a value for the config variables would **not** alter the configuration in any way because values of config variables are stored separately from the configuration.
 
-> DevSpace.cli only asks the user once to provide the values for environment variables 
+> DevSpace CLI only asks the user once to provide the values for environment variables 
 
 Currently, there is no convenience command for deleting the values of config variables. You can, however, remove config values manually from `.devspace/generated.yaml` if necessary.
 

@@ -1,10 +1,10 @@
-# DevSpace.cli Documentation
+# DevSpace CLI Documentation
 This documentation is created with Docusaurus.
 
 ## Contributing
 To contribute code,
 1. Fork the project
-2. Clone the DevSpace.cli project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace/docs/website`
+2. Clone the DevSpace CLI project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace/docs/website`
 3. Start a DevSpace for the docs page: `devspace up`
 4. Wait for the DevSpace terminal to open and run: `npm run start`
 5. Make changes

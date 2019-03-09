@@ -2,23 +2,23 @@
 title: Configure Docker images
 ---
 
-DevSpace.cli allows you to build, tag and push all the images that you need for deploying your application.
+DevSpace CLI allows you to build, tag and push all the images that you need for deploying your application.
 
 ## Default image created by `devspace init`
-When running `devspace init` within your project, DevSpace.cli defines an image called `default` within your config file `.devspace/config.yaml`.
+When running `devspace init` within your project, DevSpace CLI defines an image called `default` within your config file `.devspace/config.yaml`.
 ```yaml
 images:
   default:
     image: dscr.io/username/devspace
 ```
-Because this image called `default` only has the `image` option configured, DevSpace.cli will automatically conclude that:
+Because this image called `default` only has the `image` option configured, DevSpace CLI will automatically conclude that:
 
 1. The image should be built using your local Docker daemon
 2. The Dockerfile for building the image will be located inside the root folder of your project (i.e. ./Dockerfile)
 2. The context for building the image will be the root folder of your project (i.e. ./)
 
 ## Add additonal images
-To tell DevSpace.cli to build an additional image, simply use the `devspace add image` command.
+To tell DevSpace CLI to build an additional image, simply use the `devspace add image` command.
 ```bash
 devspace add image database --dockerfile=./db/Dockerfile --context=./db --image=dscr.io/username/mysql
 ```
@@ -42,7 +42,7 @@ devspace remove image database
 The command shown above would remove the image with name `database` from your DevSpace configuration.
 
 ## Build images with kaniko (experimental)
-Instead of using your local Docker daemon to build your images, you can also use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Docker images. Using kaniko has the advantage that you are building the image inside a container that runs remotely on top of Kubernetes. Using DevSpace.cloud, this container would run inside the Space that you are currently working with.
+Instead of using your local Docker daemon to build your images, you can also use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Docker images. Using kaniko has the advantage that you are building the image inside a container that runs remotely on top of Kubernetes. Using DevSpace Cloud, this container would run inside the Space that you are currently working with.
 ```yaml
 images:
   default:
@@ -51,19 +51,19 @@ images:
       kaniko:
         cache: true
 ```
-The config excerpt shown above would tell DevSpace.cli to build the image `default` with kaniko and to use caching while building the image.
+The config excerpt shown above would tell DevSpace CLI to build the image `default` with kaniko and to use caching while building the image.
 
 > In comparison to using a local Docker daemon, **kaniko is currently very slow** at building images. Therefore, it is currently recommended to use Docker for building images.
 
 ## Skip image pushing (for development with minikube)
-If you are using minikube for development, you usually do not need to push your images to a registry because DevSpace.cli will build your images with minikube's Docker daemon and the image will already be present and does not need to be pulled from a registry.
+If you are using minikube for development, you usually do not need to push your images to a registry because DevSpace CLI will build your images with minikube's Docker daemon and the image will already be present and does not need to be pulled from a registry.
 ```yaml
 images:
   default:
     image: my-registry.tld/username/image
     skipPush: true
 ```
-Defining `skipPush: true` tells DevSpace.cli not to push an image after building and tagging it.
+Defining `skipPush: true` tells DevSpace CLI not to push an image after building and tagging it.
 
 
 ---

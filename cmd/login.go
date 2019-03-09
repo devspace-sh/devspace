@@ -17,7 +17,7 @@ func NewLoginCmd() *cobra.Command {
 
 	loginCmd := &cobra.Command{
 		Use:   "login",
-		Short: "Log into DevSpace.cloud",
+		Short: "Log into DevSpace Cloud",
 		Long: `
 #######################################################
 ################### devspace login ####################

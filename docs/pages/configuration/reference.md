@@ -58,7 +58,7 @@ kaniko:                             # struct   | Options for building images wit
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
 ```
-> It is recommended to use Docker for building images when using DevSpace.cloud.
+> It is recommended to use Docker for building images when using DevSpace Cloud.
 
 ### images[*].build.options
 ```yaml
@@ -185,7 +185,7 @@ sync:                               # struct[] | Array of file sync settings for
 
 ---
 ## cluster
-> **Warning:** Change the cluster configuration only if you *really* know what you are doing. Editing this configuration can lead to issues with when running DevSpace.cli commands.
+> **Warning:** Change the cluster configuration only if you *really* know what you are doing. Editing this configuration can lead to issues with when running DevSpace CLI commands.
 
 ```yaml
 cluster:                            # struct   | Cluster configuration
@@ -201,4 +201,4 @@ cluster:                            # struct   | Cluster configuration
 Notice:
 - You **cannot** use `clientCert` and `clientKey` in combination with `token`.
 
-> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace.cloud or run your own instance of DevSpace.cloud](../advanced/external-clusters) instead of using the following configuration options.
+> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace Cloud or run your own instance of DevSpace Cloud](../advanced/external-clusters) instead of using the following configuration options.

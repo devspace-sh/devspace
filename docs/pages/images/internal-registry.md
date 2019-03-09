@@ -2,12 +2,12 @@
 title: Use dscr.io
 ---
 
-To make it easier for you to get started with Kubernetes, DevSpace.cloud provides a private Docker registry for you. This registry is called DevSpace Container Registry (dscr.io) and allows you to push and pull images to private repositories. 
+To make it easier for you to get started with Kubernetes, DevSpace Cloud provides a private Docker registry for you. This registry is called DevSpace Container Registry (dscr.io) and allows you to push and pull images to private repositories. 
 
 > Images in dscr.io have the following format: **dscr.io/[USERNAME]/[IMAGE_NAME]:[TAG]**
 
 ## Login to dscr.io
-The authentication credentials for dscr.io are automatically generated and fully managed by DevSpace.cli. That means DevSpace.cli will automatically retrieve and securely store your credentials when you login to DevSpace.cloud via:
+The authentication credentials for dscr.io are automatically generated and fully managed by DevSpace CLI. That means DevSpace CLI will automatically retrieve and securely store your credentials when you login to DevSpace Cloud via:
 ```bash
 devspace login
 ```

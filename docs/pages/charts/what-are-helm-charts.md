@@ -38,7 +38,7 @@ containers:
       cpu: "200m"
       memory: "300Mi"
 ```
-The values defined in `values.yaml` are defaults which can be overridden during the deployment of an Helm chart. DevSpace.cli uses value-overriding to update the image tags to the most recently build and pushed tags.
+The values defined in `values.yaml` are defaults which can be overridden during the deployment of an Helm chart. DevSpace CLI uses value-overriding to update the image tags to the most recently build and pushed tags.
 
 ### templates/
 The `templates/` folder contains all templates for your chart. Tiller will parse all the `.yaml` files defined in this folder and parse them as templates together with the values defined in the `values.yaml`. 
@@ -81,7 +81,7 @@ dependencies:
 - name: mysql
   version: 3.2.1
 ```
-DevSpace.cli provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
+DevSpace CLI provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
 
 [Learn more about adding packages.](./packages)
 
@@ -90,19 +90,19 @@ DevSpace.cli provides the convenience command `devspace add package [chart-name]
 
 <details>
 <summary>
-### Do I need to install Helm to use DevSpace.cli?
+### Do I need to install Helm to use DevSpace CLI?
 </summary>
-**No.** DevSpace.cli comes with an in-built Helm client and it will automatically install [Tiller](#what-is-tiller), the server-side Helm component, within your Spaces.
+**No.** DevSpace CLI comes with an in-built Helm client and it will automatically install [Tiller](#what-is-tiller), the server-side Helm component, within your Spaces.
 </details>
 
 <details>
 <summary>
-### How does DevSpace.cli deploy charts?
+### How does DevSpace CLI deploy charts?
 </summary>
-When you run `devspace deploy` or `devspace dev`, DevSpace.cli will deploy your chart. This deployment process involves the following steps:
+When you run `devspace deploy` or `devspace dev`, DevSpace CLI will deploy your chart. This deployment process involves the following steps:
 1. Installing or upgrading [Tiller](#what-is-tiller) in your Space
 2. Loading the template values from `values.yaml`
-3. Updating the image tags in the template values to the most recently image that has been built and pushed by DevSpace.cli (happens in-memory)
+3. Updating the image tags in the template values to the most recently image that has been built and pushed by DevSpace CLI (happens in-memory)
 4. Opening a connection to the [Tiller](#what-is-tiller) server in your Space (via port-forwarding)
 5. Deploying the chart with [Tiller](#what-is-tiller) as new release OR upgrading an existing release
 6. [ON ERROR: rollback release to the latest working version (revision)]
@@ -112,7 +112,7 @@ When you run `devspace deploy` or `devspace dev`, DevSpace.cli will deploy your 
 <summary>
 ### How do I update a deployed Helm chart with DevSpace?
 </summary>
-If you changed your chart (e.g. edited the values.yaml), you can simply run `devspace deploy` again and DevSpace.cli will update your existing Helm release (i.e. deployed application).
+If you changed your chart (e.g. edited the values.yaml), you can simply run `devspace deploy` again and DevSpace CLI will update your existing Helm release (i.e. deployed application).
 </details>
 
 <details>
@@ -138,7 +138,7 @@ Use `kubectl get ingress` to list all ingresses in a Space.
 </summary>
 Tiller is the server-side component of Helm which is responsible for instantiating releases within your Kubernetes namespace and for keeping track of different revisions of a release that you deploy over time. Tiller will likely be removed in the future because a lot of Helm users want Helm to become a client-only tool.
 
-Before deploying your application, DevSpace.cli will start a Tiller deployment within your Space which then deploys your application as defined in your Helm chart. You can actually see the tiller pod by running this kubectl command:
+Before deploying your application, DevSpace CLI will start a Tiller deployment within your Space which then deploys your application as defined in your Helm chart. You can actually see the tiller pod by running this kubectl command:
 ```bash
 kubectl get po -l name=tiller 
 ```
@@ -148,7 +148,7 @@ kubectl get po -l name=tiller
 <summary>
 ### Can I use DevSpace without Helm?
 </summary>
-**Yes**. You can [define deployments using plain Kubernetes manifests](../charts/custom-manifests) and DevSpace.cli will run `kubectl apply -f [FILE]` instead of using Helm.
+**Yes**. You can [define deployments using plain Kubernetes manifests](../charts/custom-manifests) and DevSpace CLI will run `kubectl apply -f [FILE]` instead of using Helm.
 
 **But:** We highly recommend to use the [DevSpace Helm chart](./devspace-chart) and add custom [Kubernetes manifests](./custom-manifests), if needed.
 </details>

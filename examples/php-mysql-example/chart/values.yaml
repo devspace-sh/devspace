@@ -35,6 +35,6 @@ volumes:
   size: "1Gi"
 
 # Defines image pull secrets
-# DevSpace.cli will append all pull secrets which are automatically created
+# DevSpace CLI will append all pull secrets which are automatically created
 # More infos on: https://devspace.cloud/docs/images/pull-secrets
 pullSecrets: []

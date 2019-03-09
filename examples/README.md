@@ -1,6 +1,6 @@
 # DevSpace Examples
 
-This folder contains several examples how to use the DevSpace.cli for various use cases. Below is a table with the examples:  
+This folder contains several examples how to use the DevSpace CLI for various use cases. Below is a table with the examples:  
 
 | Name | Builder | Registry | Deployment | Description |
 |:------|:----------:|:----------:|:----------:|:-------------|

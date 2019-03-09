@@ -2,15 +2,15 @@
 title: 3. Deploy with DevSpace
 ---
 
-To be able to deploy applications with DevSpace.cli, you first need to create a so-called Space.
-> Spaces are smart Kubernetes namespaces. You can create Spaces that either run on DevSpace.cloud or on your own Kubernetes clusters. [Learn more about Spaces.](../spaces/what-are-spaces)
+To be able to deploy applications with DevSpace CLI, you first need to create a so-called Space.
+> Spaces are smart Kubernetes namespaces. You can create Spaces that either run on DevSpace Cloud or on your own Kubernetes clusters. [Learn more about Spaces.](../spaces/what-are-spaces)
 
 ## Create a Space
 With the following command, you can create a Space called `production` for your project:
 ```bash
 devspace create space production
 ```
-You can create multiple Spaces for your project (e.g. production, staging, development). DevSpace.cli will automatically work with the Space that you created last. To actively switch to a Space, you can use the command: `devspace use space [name]`
+You can create multiple Spaces for your project (e.g. production, staging, development). DevSpace CLI will automatically work with the Space that you created last. To actively switch to a Space, you can use the command: `devspace use space [name]`
 
 Learn more about [working with multiple Spaces](../spaces/switch-spaces).
 

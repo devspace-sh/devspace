@@ -2,7 +2,7 @@
 title: 2. Containerize your app
 ---
 
-DevSpace.cli lets you easily containerize your application, so you can deploy it to Kubernetes. You can use one of your own projects for the remainder of this guide. 
+DevSpace CLI lets you easily containerize your application, so you can deploy it to Kubernetes. You can use one of your own projects for the remainder of this guide. 
 
 If you do not have a project to work with, you can **checkout one of our demo projects (optional)**
 <!--DOCUSAURUS_CODE_TABS-->
@@ -21,7 +21,7 @@ Run the following command within your project:
 ```bash
 devspace init
 ```
-DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. Then, it will automatically create the following files:
+DevSpace CLI will automatically detect your programming language and ask for the ports your application is listening on. Then, it will automatically create the following files:
 ```bash
 project/                    # your project directory
 |

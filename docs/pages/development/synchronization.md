@@ -2,10 +2,10 @@
 title: Synchronize files
 ---
 
-The code synchronization feature of DevSpace.cli allows you to use hot reloading. Especially for developers of programming languages that support hot reloading, such as nodejs, re-building and re-deploying containers woule be annoying. Therefore, DevSpace.cli uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container. This greatly accelerates development, debugging and testing directly in remote containers.
+The code synchronization feature of DevSpace CLI allows you to use hot reloading. Especially for developers of programming languages that support hot reloading, such as nodejs, re-building and re-deploying containers woule be annoying. Therefore, DevSpace CLI uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of restarting the container. This greatly accelerates development, debugging and testing directly in remote containers.
 
 ## Add a path to be synchronized
-You can use `devspace add sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace.cli that `[LOCAL_PATH]` within the project on your computer and `[CONTAINER_PATH]` within your Space should be synchronized.
+You can use `devspace add sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace CLI that `[LOCAL_PATH]` within the project on your computer and `[CONTAINER_PATH]` within your Space should be synchronized.
 ```bash
 devspace add sync --local="./src" --container="/app"
 ```
@@ -52,7 +52,7 @@ The above example would configure the sync, so that:
 > Generally, the config options for excluding paths use the same syntax as `.gitignore`
 
 ## Remove sync paths
-You can use the command `devspace remove sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace.cli to remove the sync configurations where `localSubPath=[LOCAL_PATH]` and `containerPath=[CONTAINER_PATH]` from `dev.sync` in `.devspace/config.yaml`
+You can use the command `devspace remove sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace CLI to remove the sync configurations where `localSubPath=[LOCAL_PATH]` and `containerPath=[CONTAINER_PATH]` from `dev.sync` in `.devspace/config.yaml`
 ```bash
 devspace remove sync --local="./src" --container="/app"
 ```
@@ -73,7 +73,7 @@ Additionally, you can ciew the sync log within `.devspace/logs/sync.log` to get 
 <summary>
 ### How does the sync work?
 </summary>
-DevSpace.cli establishes a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background.
+DevSpace CLI establishes a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background.
 </details>
 
 <details>
@@ -82,7 +82,7 @@ DevSpace.cli establishes a bi-directional code synchronization between the speci
 </summary>
 Some basic POSIX binaries have to be present in the container (which usually exist in most containers): sh, tar, cd, sleep, find, stat, mkdir, rm, cat, printf, echo, kill
 
-Other than the binaries listed above, no server-side component for code synchronization is required, as the sync algorithm runs completely client-only within DevSpace.cli. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+Other than the binaries listed above, no server-side component for code synchronization is required, as the sync algorithm runs completely client-only within DevSpace CLI. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
 </details>
 
 <details>
