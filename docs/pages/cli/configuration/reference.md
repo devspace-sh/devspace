@@ -103,8 +103,8 @@ kubectl:                            # struct   | Options for deploying with "kub
   manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube/* or manifests/service.yaml)
 ```
 > **It is recommended to use Helm for deployment.** To add existing manifests, you can 
-[use the DevSpace helm chart](/docs/chart/devspace-chart) and then
-[add custom Kubernetes manifests](/docs/chart/custom-manifests).
+[use the DevSpace Helm Chart](/docs/chart/basics/devspace-helm-chart) and then
+[add custom Kubernetes manifests](/docs/chart/customization/custom-manifests).
 
 
 ---

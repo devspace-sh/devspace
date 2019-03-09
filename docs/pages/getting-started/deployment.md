@@ -22,7 +22,7 @@ devspace deploy
 This command will do the following:
 1. Build a [Docker image](/docs/cli/deployment/images) as defined in the `Dockerfile`
 2. Push this Docker image to any [Docker registry](/docs/cli/images/workflow)
-3. Deploy your [Helm chart](/docs/chart/what-are-helm-charts) as defined in `chart/`
+3. Deploy your [Helm chart](/docs/chart/basics/what-are-helm-charts) as defined in `chart/`
 4. Make your application available on a `.devspace.host` domain
 
 ## Access your application

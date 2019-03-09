@@ -86,9 +86,9 @@
         "cli/commands/use/config",
         "cli/commands/use/space"
     ],
-    "Getting started": [
+    "Basics": [
         "chart/what-are-helm-charts",
-        "chart/devspace-chart"
+        "chart/devspace-helm-chart"
     ],
     "Customizing the chart": [
         "chart/packages",
@@ -99,7 +99,7 @@
         "chart/custom-manifests",
         "chart/scaling"
     ],
-    "Getting started": [
+    "Overview": [
         "cloud/intro/overview"
     ],
     "Spaces": [

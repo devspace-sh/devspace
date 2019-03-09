@@ -43,7 +43,7 @@ devspace remove package [PACKAGE_NAME]
 devspace deploy
 ```
 
-> If your packages created persistent volumes, you may have to delete them manually. [Learn more about deleting persistent volumes.](/docs/chart/persistent-volumes#delete-persistent-volumes)
+> If your packages created persistent volumes, you may have to delete them manually. [Learn more about deleting persistent volumes.](/docs/chart/customization/persistent-volumes#delete-persistent-volumes)
 
 ---
 ## FAQ

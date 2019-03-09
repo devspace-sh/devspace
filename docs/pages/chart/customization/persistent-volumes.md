@@ -8,7 +8,7 @@ Altough it is recommend to keep your applications as stateless as possible, some
 
 Persistent volumes allow you to define a virtual device which is independent of your containers an can be mounted into the containers. An analogy would be a USB stick (persistent volume) that you plug into a computer (container) which always resets the in-build hard drive on every restart.
 
-When using the [DevSpace Helm chart], you can edit the `chart/values.yaml` to:
+When using the [DevSpace Helm Chart], you can edit the `chart/values.yaml` to:
 1. [Define persistent volumes](#define-persistent-volumes)
 2. [Mount these persistent volumes into containers](#mount-persistent-volumes)
 
@@ -89,7 +89,7 @@ kubectl delete persistentvolumeclaim [VOLUME_NAME]
 </summary>
 Generally: **No.**
 
-If you use the DevSpace Helm chart, it will automatically deploy containers within a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
+If you use the DevSpace Helm Chart, it will automatically deploy containers within a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
 </details>
 
 <details>

@@ -1,8 +1,8 @@
 ---
-title: DevSpace Helm chart
+title: DevSpace Helm Chart
 ---
 
-Running `devspace init` will automatically add the DevSpace Helm chart to the folder `chart/` within your project. This chart is highly customizable and provides very powerful features out-of-the-box (e.g. horizontal auto-scaling).
+Running `devspace init` will automatically add the DevSpace Helm Chart to the folder `chart/` within your project. This chart is highly customizable and provides very powerful features out-of-the-box (e.g. horizontal auto-scaling).
 
 ## Configure the DevSpace Helm Chart
 
@@ -13,11 +13,11 @@ It is recommended to change the `name` and `description` of your chart by editin
 
 ### Edit the `values.yaml`
 The `values.yaml` is the most important place for configuring your Helm chart. See the following guides to learn how to use the `values.yaml` to:
-- [Configure persistent volumes](/docs/chart/persistent-volumes)
-- [Set environment variables](/docs/chart/environment-variables)
-- [Configure networking (e.g. define services)](/docs/chart/networking)
-- [Define additional containers](/docs/chart/containers)
-- [Configure scaling](/docs/chart/scaling)
+- [Configure persistent volumes](/docs/chart/customization/persistent-volumes)
+- [Set environment variables](/docs/chart/customization/environment-variables)
+- [Configure networking (e.g. define services)](/docs/chart/customization/networking)
+- [Define additional containers](/docs/chart/customization/containers)
+- [Configure scaling](/docs/chart/customization/scaling)
 
 <details>
 <summary>
@@ -78,31 +78,31 @@ By default, `devspace init` will create a minimal `values.yaml` containing the m
 ### Add dependencies in `requirements.yaml`
 Generally, it is recommended to use `devspace add package [CHART_NAME]` to add a dependency and `devspace remove package [CHART_NAME]` to remove a dependency instead of manually editing the `requirements.yaml`. However, it can be useful to edit the `requirements.yaml` to change the version of a dependency.
 
-Learn more about [adding and removing packages](/docs/chart/packges).
+Learn more about [adding and removing packages](/docs/chart/customization/packges).
 
 ### Customize `templates/`
 
-> It is highly recommended **NOT** to edit any files within the `template/` folder of the DevSpace Helm chart.
+> It is highly recommended **NOT** to edit any files within the `template/` folder of the DevSpace Helm Chart.
 
-You can [add custom templates or Kubernetes manifests](/docs/chart/custom-manifests) if needed. It is, however, recommended that you prefix the filenames with `_` to allow you to run `devspace update chart` to [update your DevSpace Helm chart](#update-the-devspace-helm-chart) without breaking anything.
+You can [add custom templates or Kubernetes manifests](/docs/chart/customization/custom-manifests) if needed. It is, however, recommended that you store them instide `templates/custom/` to allow you to run `devspace update chart` to [update the DevSpace Helm Chart](#update-the-devspace-helm-chart) without breaking anything.
 
-## Update the DevSpace Helm chart
-The DevSpace Helm chart is constantly being improved. To get the newest version of it, you can run `devspace update chart`.
+## Update the DevSpace Helm Chart
+The DevSpace Helm Chart is constantly being improved. To get the newest version of it, you can run `devspace update chart`.
 
-> Updating the DevSpace Helm chart will only add or modify files in `template/`.
+> Updating the DevSpace Helm Chart will only add or modify files in `templates/` which are not placed into `templates/custom/`.
 
-If you want to add custom template files in `templates/`, you should prefix the filename of the custom templates with `_` to make sure that they will not be removed or replaced when running `devspace update chart`.
+If you want to add custom template files in `templates/`, you should store them in `templates/custom/` to make sure that they will not be removed or replaced when running `devspace update chart`.
 
-[Learn more about adding custom templates and manifests.](/docs/chart/custom-manifests)
+[Learn more about adding custom templates and manifests.](/docs/chart/customization/custom-manifests)
 
 ---
 ## FAQ
 
 <details>
 <summary>
-### Why should I use the DevSpace Helm chart?
+### Why should I use the DevSpace Helm Chart?
 </summary>
-The DevSpace Helm chart is optimized for developer productivity and provides the following benefits:
+The DevSpace Helm Chart is optimized for developer productivity and provides the following benefits:
 - Follows the [best practices for Helm charts](https://docs.helm.sh/chart_best_practices)
 - Easy configuration for horizontal auto-scaling
 - Out-of-the-box ingress connectivity via service `external`

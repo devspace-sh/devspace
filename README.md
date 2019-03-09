@@ -25,7 +25,7 @@ devspace init
 ```
 #### DevSpace uses smart defaults for many programming languages and frameworks to:
 1. Automatically create a Dockerfile for your app
-2. Add a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-chart) to your project
+2. Add a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project
 
 > If you already have a Dockerfile or a Helm chart, DevSpace CLI will ask you if you want to use them instead of the default files.
 

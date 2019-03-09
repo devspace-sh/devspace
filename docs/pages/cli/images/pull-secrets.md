@@ -27,7 +27,7 @@ images:
     createPullSecret: false
 ```
 
-To use your custom image pull secret, the DevSpace Helm chart provides an array called `pullSecrets` within `chart/values.yaml`.
+To use your custom image pull secret, the DevSpace Helm Chart provides an array called `pullSecrets` within `chart/values.yaml`.
 
 ```yaml
 pullSecrets:

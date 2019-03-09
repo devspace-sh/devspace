@@ -43,12 +43,12 @@ project/                    # your project directory
 
 See the following guides to:
 - [Configure image building](/docs/cli/deployment/images)
-- [Add packages to your Helm chart (e.g. database)](/docs/chart/packages)
-- [Configure persistent volumes](/docs/chart/persistent-volumes)
-- [Set environment variables](/docs/chart/environment-variables)
-- [Configure networking for your Helm chart (e.g. ingress)](/docs/chart/networking)
-- [Define multiple containers in your Helm chart](/docs/chart/containers)
-- [Add custom Kubernetes manifests (.yaml files)](/docs/chart/custom-manifests)
-- [Configure auto-scaling within your Helm Chart](/docs/chart/scaling)
+- [Add packages to your Helm chart (e.g. database)](/docs/chart/customization/packages)
+- [Configure persistent volumes](/docs/chart/customization/persistent-volumes)
+- [Set environment variables](/docs/chart/customization/environment-variables)
+- [Configure networking for your Helm chart (e.g. ingress)](/docs/chart/customization/networking)
+- [Define multiple containers in your Helm chart](/docs/chart/customization/containers)
+- [Add custom Kubernetes manifests (.yaml files)](/docs/chart/customization/custom-manifests)
+- [Configure auto-scaling within your Helm Chart](/docs/chart/customization/scaling)
 
 </details>
