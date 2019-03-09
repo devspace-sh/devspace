@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
@@ -26,7 +27,16 @@ func ReadKubeConfig(filename string) (*api.Config, error) {
 	// decode config, empty if no bytes
 	unconvertedConfig, _, err := latest.Codec.Decode(data, nil, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error decoding config from data: %s", string(data))
+		// Save the old kube config as backup and return a new one
+		oldFilename := filename + ".backup"
+		writeFileErr := ioutil.WriteFile(oldFilename, data, 0666)
+		if writeFileErr != nil {
+			return nil, errors.Wrapf(err, "Error decoding config from data: %s", string(data))
+		}
+
+		log.Warnf("Error decoding config from data: %v, data: %s", err, string(data))
+		log.Warnf("Old kube config was saved at: %s", oldFilename)
+		return api.NewConfig(), nil
 	}
 
 	config := unconvertedConfig.(*api.Config)

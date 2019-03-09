@@ -11,6 +11,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -21,38 +22,20 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))
 
 		for _, portForwarding := range *config.Dev.Ports {
-			var labelSelector map[string]*string
-			namespace, err := configutil.GetDefaultNamespace(config)
+			selector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
+				ConfigParameter: targetselector.ConfigParameter{
+					Selector:      portForwarding.Selector,
+					Namespace:     portForwarding.Namespace,
+					LabelSelector: portForwarding.LabelSelector,
+				},
+			}, false)
 			if err != nil {
-				return nil, err
-			}
-
-			if portForwarding.Selector != nil {
-				selector, err := configutil.GetSelector(*portForwarding.Selector)
-				if err != nil {
-					log.Fatalf("Error resolving service name: %v", err)
-				}
-
-				labelSelector = *selector.LabelSelector
-				if selector.Namespace != nil && *selector.Namespace != "" {
-					namespace = *selector.Namespace
-				}
-			} else {
-				labelSelector = *portForwarding.LabelSelector
-				if portForwarding.Namespace != nil && *portForwarding.Namespace != "" {
-					namespace = *portForwarding.Namespace
-				}
-			}
-
-			labels := make([]string, 0, len(labelSelector)-1)
-			for key, value := range labelSelector {
-				labels = append(labels, key+"="+*value)
+				return nil, fmt.Errorf("Error creating target selector: %v", err)
 			}
 
 			log.StartWait("Port-Forwarding: Waiting for pods...")
-			pod, err := kubectl.GetNewestRunningPod(client, strings.Join(labels, ", "), namespace, time.Second*120)
+			pod, err := selector.GetPod(client)
 			log.StopWait()
-
 			if err != nil {
 				return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {

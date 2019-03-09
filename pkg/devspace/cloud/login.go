@@ -26,7 +26,7 @@ func ReLogin(providerConfig ProviderConfig, cloudProvider string, token *string,
 			cloudProviders += name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
+		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [name]`? Existing cloud providers: %s", cloudProviders)
 	}
 
 	if token != nil {

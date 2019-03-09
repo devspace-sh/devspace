@@ -1,18 +1,13 @@
 package add
 
 import (
-	"net/url"
-	"strings"
-
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
-type providerCmd struct {
-	Name string
-}
+type providerCmd struct{}
 
 func newProviderCmd() *cobra.Command {
 	cmd := &providerCmd{}
@@ -27,34 +22,19 @@ func newProviderCmd() *cobra.Command {
 Add a new cloud provider.
 
 Example:
-devspace add provider https://app.devspace.cloud
+devspace add provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunAddProvider,
 	}
 
-	addProviderCmd.Flags().StringVar(&cmd.Name, "name", "", "Cloud provider name to use")
-
 	return addProviderCmd
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
 func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
-	providerName := cmd.Name
-	if providerName == "" {
-		u, err := url.Parse(args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		parts := strings.Split(u.Hostname(), ".")
-		if len(parts) >= 2 {
-			providerName = parts[len(parts)-2] + "." + parts[len(parts)-1]
-		} else {
-			providerName = u.Hostname()
-		}
-	}
+	providerName := args[0]
 
 	// Get provider configuration
 	providerConfig, err := cloudpkg.ParseCloudConfig()
@@ -64,7 +44,13 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 
 	providerConfig[providerName] = &cloudpkg.Provider{
 		Name: providerName,
-		Host: args[0],
+		Host: "https://" + providerName,
+	}
+
+	// Ensure user is logged in
+	err = cloudpkg.EnsureLoggedIn(providerConfig, providerName, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Couldn't login to provider: %v", err)
 	}
 
 	err = cloudpkg.SaveCloudConfig(providerConfig)

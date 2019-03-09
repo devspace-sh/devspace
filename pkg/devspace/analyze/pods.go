@@ -16,7 +16,7 @@ import (
 const MinimumPodAge = 20 * time.Second
 
 // WaitTimeout is the amount of time to wait for a pod to start
-const WaitTimeout = 40 * time.Second
+const WaitTimeout = 120 * time.Second
 
 // WaitStatus are the status to wait
 var WaitStatus = []string{
@@ -73,12 +73,6 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 			if pods.Items != nil {
 				for _, pod := range pods.Items {
 					podStatus := kubectl.GetPodStatus(&pod)
-					if strings.HasPrefix(podStatus, "Init") {
-						loop = true
-						log.StartWait("Waiting for pod " + pod.Name + " init container startup")
-						break
-					}
-
 					for _, status := range WaitStatus {
 						if podStatus == status {
 							loop = true
@@ -173,7 +167,9 @@ func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
 
 	// Check for unusual status
 	if _, ok := OkayStatus[podProblem.Status]; ok == false {
-		hasProblem = true
+		if strings.HasPrefix(podProblem.Status, "Init") == false {
+			hasProblem = true
+		}
 	}
 
 	// Analyze container status

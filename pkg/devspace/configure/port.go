@@ -7,8 +7,22 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 )
+
+// GetNameOfFirstHelmDeployment retrieves the first helm deployment name
+func GetNameOfFirstHelmDeployment() string {
+	config := configutil.GetConfig()
+
+	if config.Deployments != nil {
+		for _, deploymentConfig := range *config.Deployments {
+			if deploymentConfig.Helm != nil {
+				return *deploymentConfig.Name
+			}
+		}
+	}
+
+	return configutil.DefaultDevspaceDeploymentName
+}
 
 // AddPort adds a port to the config
 func AddPort(namespace, labelSelector, serviceName string, args []string) error {
@@ -36,7 +50,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 			}
 			labelSelectorMap = *service.LabelSelector
 		} else {
-			labelSelector = "release=" + services.GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
 		}
 	}
 

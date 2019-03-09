@@ -146,16 +146,16 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
 			},
 		}
-	}
 
-	configutil.Merge(&config, &latest.Config{
-		Version: ptr.String(latest.Version),
-		Images: &map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: ptr.String("devspace"),
+		configutil.Merge(&config, &latest.Config{
+			Version: ptr.String(latest.Version),
+			Images: &map[string]*latest.ImageConfig{
+				"default": &latest.ImageConfig{
+					Image: ptr.String("devspace"),
+				},
 			},
-		},
-	})
+		})
+	}
 
 	// Print DevSpace logo
 	log.PrintLogo()
@@ -182,6 +182,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if cmd.flags.reconfigure || !configExists {
+		cmd.addDefaultPorts()
+
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:     "Do you want to use DevSpace.cloud?",
@@ -189,6 +191,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				Options:      []string{"yes", "no"},
 			}) == "yes"
 		}
+
+		var providerName *string
 
 		// Check if DevSpace.cloud should be used
 		if cmd.flags.useCloud == false {
@@ -201,7 +205,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			}
 
 			// Configure cloud provider
-			config.Cluster.CloudProvider = ptr.String(cloud.DevSpaceCloudProviderName)
+			providerName = ptr.String(cloud.DevSpaceCloudProviderName)
 
 			// Choose cloud provider
 			if len(providerConfig) > 1 {
@@ -210,14 +214,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 					options = append(options, providerHost)
 				}
 
-				config.Cluster.CloudProvider = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				providerName = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 					Question: "Select cloud provider",
 					Options:  options,
 				})
 			}
 
 			// Ensure user is logged in
-			err = cloud.EnsureLoggedIn(providerConfig, *config.Cluster.CloudProvider, log.GetInstance())
+			err = cloud.EnsureLoggedIn(providerConfig, *providerName, log.GetInstance())
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -225,9 +229,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		// Configure .devspace/config.yaml
 		cmd.addDefaultSelector()
-		cmd.addDefaultPorts()
 		cmd.addDefaultSyncConfig()
-		cmd.configureImage()
+		cmd.configureImage(providerName)
 
 		err := configutil.SaveBaseConfig()
 		if err != nil {
@@ -403,7 +406,7 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	config.Dev.Sync = &syncConfig
 }
 
-func (cmd *InitCmd) configureImage() {
+func (cmd *InitCmd) configureImage(providerName *string) {
 	dockerUsername := ""
 	useKaniko := false
 
@@ -468,7 +471,7 @@ func (cmd *InitCmd) configureImage() {
 		}
 	}
 
-	err = configure.Image(dockerUsername, cmd.flags.useCloud)
+	err = configure.Image(dockerUsername, providerName)
 	if err != nil {
 		log.Fatal(err)
 	}

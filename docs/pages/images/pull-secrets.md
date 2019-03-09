@@ -4,7 +4,7 @@ title: Understand pull secrets
 
 When you push images to a private registry, you need to login to this registry beforehand (e.g. using `docker login`). When Kubernetes tries to pull images from a private registry, it also has to provide credentials to be authorized to pull images from this registry. The way to tell Kubernetes these credentials is to create a Kubernetes secret with these credentials. Such a secret is called image pull secret.
 
-> By default, Devspace.cli automatically creates and managed image pull secrets for all the images within your DevSpace configuration.
+> By default, Devspace.cli automatically creates and manages image pull secrets for all the images within your DevSpace configuration.
 
 ## Creating your own secrets
 If you are not using dscr.io, it is recommended to create your own image pull secrets.

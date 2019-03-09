@@ -17,7 +17,6 @@ func NewRemoveCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	removeCmd.AddCommand(newContextCmd())
 	removeCmd.AddCommand(newDeploymentCmd())
 	removeCmd.AddCommand(newImageCmd())
 	removeCmd.AddCommand(newPackageCmd())
