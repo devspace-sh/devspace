@@ -17,7 +17,7 @@ You can define persistent volumes in the `volumes` section of `chart/values.yaml
 ```
 volumes:
 - name: nginx
-  size: "2Mi"
+  size: "2Gi"
 - name: mysql-data
   size: "5Gi"
 ```

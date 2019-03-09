@@ -66,7 +66,7 @@ components:
 
 volumes:
 - name: nginx
-  size: "2Gi"
+  size: "1Gi"
 
 pullSecrets:
 - custom-pull-secret
