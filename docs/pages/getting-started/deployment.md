@@ -3,7 +3,7 @@ title: 3. Deploy with DevSpace
 ---
 
 To be able to deploy applications with DevSpace CLI, you first need to create a so-called Space.
-> Spaces are smart Kubernetes namespaces. You can create Spaces that either run on DevSpace Cloud or on your own Kubernetes clusters. [Learn more about Spaces.](../spaces/what-are-spaces)
+> Spaces are smart Kubernetes namespaces. You can create Spaces that either run on DevSpace Cloud or on your own Kubernetes clusters. [Learn more about Spaces.](/docs/cloud/spaces/what-are-spaces)
 
 ## Create a Space
 With the following command, you can create a Space called `production` for your project:
@@ -12,7 +12,7 @@ devspace create space production
 ```
 You can create multiple Spaces for your project (e.g. production, staging, development). DevSpace CLI will automatically work with the Space that you created last. To actively switch to a Space, you can use the command: `devspace use space [name]`
 
-Learn more about [working with multiple Spaces](../spaces/switch-spaces).
+Learn more about [working with multiple Spaces](/docs/cloud/spaces/switch-spaces).
 
 ## Deploy your application
 Now, you can deploy your application to your `production` Space with the following command:
@@ -20,9 +20,9 @@ Now, you can deploy your application to your `production` Space with the followi
 devspace deploy
 ```
 This command will do the following:
-1. Build a [Docker image](../deployment/images) as defined in the `Dockerfile`
-2. Push this Docker image (either to [DevSpace Container Registry (dscr.io)](../images/internal-registry) or to any [external registry](../images/external-registry))
-3. Deploy your [Helm chart](../charts/what-are-helm-charts) as defined in `chart/`
+1. Build a [Docker image](/docs/deployment/images) as defined in the `Dockerfile`
+2. Push this Docker image to any [Docker registry](/docs/images/workflow)
+3. Deploy your [Helm chart](/docs/chart/what-are-helm-charts) as defined in `chart/`
 4. Make your application available on a `.devspace.host` domain
 
 ## Access your application
@@ -61,7 +61,7 @@ Here is a list of common kubectl commands:
 kubectl get pods
 ```
 
-> Pods are groups of containers that share a network stack. [Learn more about pods](../kubernetes/pods)
+> Pods are groups of containers that share a network stack. [Learn more about pods](/docs/kubernetes/pods)
 
 #### View all services in your Space
 ```bash
@@ -90,8 +90,8 @@ If you get an HTTP error when accessing your Space, the following guides can hel
 
 ## Learn more about deploying with DevSpace
 See the following guides to learn more:
-- [Connect custom domains](../deployment/domains)
-- [Monitor and debug deployed applications](../debugging/overview)
-- [Scale deployed applications](../deployment/scaling)
-- [Configure Docker image](../deployment/images)
-- [Configure Helm chart](../deployment/charts)
+- [Connect custom domains](/docs/deployment/domains)
+- [Monitor and debug deployed applications](/docs/debugging/overview)
+- [Scale deployed applications](/docs/deployment/scaling)
+- [Configure Docker image](/docs/deployment/images)
+- [Configure Helm chart](/docs/deployment/charts)

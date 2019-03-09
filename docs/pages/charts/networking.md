@@ -49,10 +49,10 @@ ports:
 </details>
 
 ## Configure an `external` service for a domain
-To make one of your services public on the internet, you need to [connect a domain to your Space](../spaces/domains) which automatically creates an ingress for this domain within your Space. An ingress routes the traffic from your domain name to a service defined for one of your components. When connecting a domain, this ingress will by default route all traffic to the service `external` on port `80`. 
+To make one of your services public on the internet, you need to [connect a domain to your Space](/docs/cloud/spaces/domains) which automatically creates an ingress for this domain within your Space. An ingress routes the traffic from your domain name to a service defined for one of your components. When connecting a domain, this ingress will by default route all traffic to the service `external` on port `80`. 
 
 So if you want to add the domain `example.tld`, you need to:
-1. [Connect the domain `example.tld` your Space](../spaces/domains)
+1. [Connect the domain `example.tld` your Space](/docs/cloud/spaces/domains)
 2. Configure a service with name `external` in one of your components.
     ```yaml
     components:
@@ -68,7 +68,7 @@ So if you want to add the domain `example.tld`, you need to:
 This would allow you to access `example.tld:80` and Kubernetes will connect you to the server that is running inside the `nodejs-app` container on port `3000`.
 
 ## Configuring ingresses for domains
-Generally, [adding a domain to your Space](../spaces/domains) will create an ingress for this domain automatically. You can view a list of ingresses in your Space with the following commands:
+Generally, [adding a domain to your Space](/docs/cloud/spaces/domains) will create an ingress for this domain automatically. You can view a list of ingresses in your Space with the following commands:
 ```bash
 devspace use space [SPACE_NAME]
 kubectl get ingress
@@ -86,7 +86,7 @@ kubectl edit ingress [INGRESS_NAME]
 <summary>
 ### How do I create high-availability services?
 </summary>
-If you want fault-tolerance for your services, you can [define that your components run in a replicated way](./scaling). Generally, incoming traffic for a service will be forwarded to a randomly selected replica of the service's component. However, if one of the components become unhealthy, Kubernetes will automatically forward traffic to the other available replicas. To allow Kubernetes to know which of your containers are unhealthy, you need to [define health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/) 
+If you want fault-tolerance for your services, you can [define that your components run in a replicated way](/docs/chart/scaling). Generally, incoming traffic for a service will be forwarded to a randomly selected replica of the service's component. However, if one of the components become unhealthy, Kubernetes will automatically forward traffic to the other available replicas. To allow Kubernetes to know which of your containers are unhealthy, you need to [define health checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/) 
 </details>
 
 <details>

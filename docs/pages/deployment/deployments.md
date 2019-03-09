@@ -12,7 +12,7 @@ deployments:
   helm:
     chartPath: ./chart
 ```
-This `default` deployment is configured to deploy the Helm chart locaed in `./chart`. When running `devspace init`, the [DevSpace Helm chart](../charts/devspace-chart) will will automatically be added into the `./chart` folder of your project.
+This `default` deployment is configured to deploy the Helm chart locaed in `./chart`. When running `devspace init`, the [DevSpace Helm chart](/docs/chart/devspace-chart) will will automatically be added into the `./chart` folder of your project.
 
 Unlike `images`, `deployments` is an array and not a map because DevSpace CLI will iterate over the deployment one after another. It has been designed this way because the order in which your deployments are starting might be relevant depending on your application.
 
@@ -57,5 +57,5 @@ deployments:
 The config excerpt shown above would tell DevSpace CLI to deploy every Kubernetes manifest in `./db/manifests` as well as the manifest contained in the file `./db/rbac.yaml`.
 
 > **It is recommended to use Helm instead of kubectl for deployment.** To add plain manifests, you can 
-[use the DevSpace helm chart](../charts/devspace-chart) and then
-[add custom Kubernetes manifests](../charts/custom-manifests).
+[use the DevSpace helm chart](/docs/chart/devspace-chart) and then
+[add custom Kubernetes manifests](/docs/chart/custom-manifests).

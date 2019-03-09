@@ -160,7 +160,7 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 **What does `devspace init` do?**  
 DevSpace CLI will automatically detect your programming language and ask for the ports your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
-### 4. Create a namespace
+### 4. Create a new namespace (optional)
 
 #### Option 1: Using your own Kubernetes cluster
 Run this command to create a new namespace and set it as default namespace for the current context:
@@ -236,7 +236,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
-1. [Connect your existing Kubernetes clusters to DevSpace Cloud](https://devspace.cloud/docs/advanced/external-clusters) as external clusters. DevSpace Cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
+1. [Connect your existing Kubernetes clusters to DevSpace Cloud](https://devspace.cloud/docs/cloud/external-clusters/overview) as external clusters. DevSpace Cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
 2. You just use DevSpace CLI without DevSpace Cloud. That means that you manually need to:
     * enforce resource limits
     * configure secure user permissions

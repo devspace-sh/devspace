@@ -28,7 +28,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](../images/workflow)
+[Learn more about building images with DevSpace.](/docs/images/workflow)
 
 ### images[*].build
 ```yaml
@@ -94,7 +94,7 @@ helm:                               # struct   | Options for deploying with Helm
   overrideValues: {}                # struct   | Any object with Helm values to override values.yaml during deployment
   overrides: ...
 ```
-[Learn more about configuring deployments with Helm.](../deployment/charts)
+[Learn more about configuring deployments with Helm.](/docs/deployment/charts)
 
 ### deployments[*].kubectl
 ```yaml
@@ -103,8 +103,8 @@ kubectl:                            # struct   | Options for deploying with "kub
   manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube/* or manifests/service.yaml)
 ```
 > **It is recommended to use Helm for deployment.** To add existing manifests, you can 
-[use the DevSpace helm chart](../charts/devspace-chart) and then
-[add custom Kubernetes manifests](../charts/custom-manifests).
+[use the DevSpace helm chart](/docs/chart/devspace-chart) and then
+[add custom Kubernetes manifests](/docs/chart/custom-manifests).
 
 
 ---
@@ -118,7 +118,7 @@ dev:                                # struct   | Options for "devspace dev"
   ports: []                         # struct[] | Array of port-forwarding settings for selected pods
   sync: []                          # struct[] | Array of file sync settings for selected pods
 ```
-[Learn more about development with DevSpace.](../development/workflow)
+[Learn more about development with DevSpace.](/docs/development/workflow)
 
 ### dev.autoReload
 ```yaml
@@ -136,7 +136,7 @@ overrideImages:                     # struct[] | Array of override settings for 
   context: default                  # string   | Relative path of the context directory that should be used instead of the one originally defined
   entrypoint: []                    # string[] | Array defining with the entrypoint that should be used instead of the entrypoint defined in the Dockerfile
 ```
-[Learn more about entrypoint overriding.](../development/entrypoint-overrides)
+[Learn more about entrypoint overriding.](/docs/development/entrypoint-overrides)
 
 ### dev.selectors
 ```yaml
@@ -154,7 +154,7 @@ terminal:                           # struct   | Options for the terminal proxy
   disabled: false                   # bool     | Disable terminal proxy / only start port-forwarding and code sync if defined (Default: false)
   command: []                       # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about configuring the terminal proxy.](../development/terminal)
+[Learn more about configuring the terminal proxy.](/docs/development/terminal)
 
 ### dev.ports
 ```yaml
@@ -165,7 +165,7 @@ ports:                              # struct[] | Array of port forwarding settin
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
-[Learn more about port forwarding.](../development/port-forwarding)
+[Learn more about port forwarding.](/docs/development/port-forwarding)
 
 ### dev.sync
 ```yaml
@@ -180,7 +180,7 @@ sync:                               # struct[] | Array of file sync settings for
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](../development/synchronization)
+[Learn more about confguring the code synchronization.](/docs/development/synchronization)
 
 
 ---
@@ -201,4 +201,4 @@ cluster:                            # struct   | Cluster configuration
 Notice:
 - You **cannot** use `clientCert` and `clientKey` in combination with `token`.
 
-> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace Cloud or run your own instance of DevSpace Cloud](../advanced/external-clusters) instead of using the following configuration options.
+> If you want to work with self-managed Kubernetes clusters, it is highly recommended to [connect an external cluster to DevSpace Cloud or run your own instance of DevSpace Cloud](/docs/cloud/external-clusters/overview) instead of using the following configuration options.

@@ -83,7 +83,7 @@ dependencies:
 ```
 DevSpace CLI provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
 
-[Learn more about adding packages.](./packages)
+[Learn more about adding packages.](/docs/chart/packages)
 
 ---
 ## FAQ
@@ -123,7 +123,7 @@ Generally: **No.**
 
 The problem with adding an ingress to your Helm chart is that you cannot share your code with other developers because the same hostname (domain) can only be used by one person, otherwise there would be two ingresses using the same domain which will cause problems with the Kubernetes-internal traffic routing. 
 
-> DevSpace automatically takes care of creating and configuring ingresses within your Spaces. [Learn more about how to connect domains to your Spaces](../domains/connect)
+> DevSpace automatically takes care of creating and configuring ingresses within your Spaces. [Learn more about how to connect domains to your Spaces](/docs/cloud/domains/connect)
 
 You can, however, manually create ingresses or manually edit any ingress that has been automatically created. Use the following command to edit an ingress manually:
 ```bash
@@ -148,7 +148,7 @@ kubectl get po -l name=tiller
 <summary>
 ### Can I use DevSpace without Helm?
 </summary>
-**Yes**. You can [define deployments using plain Kubernetes manifests](../charts/custom-manifests) and DevSpace CLI will run `kubectl apply -f [FILE]` instead of using Helm.
+**Yes**. You can [define deployments using plain Kubernetes manifests](/docs/chart/custom-manifests) and DevSpace CLI will run `kubectl apply -f [FILE]` instead of using Helm.
 
-**But:** We highly recommend to use the [DevSpace Helm chart](./devspace-chart) and add custom [Kubernetes manifests](./custom-manifests), if needed.
+**But:** We highly recommend to use the [DevSpace Helm chart](/docs/chart/devspace-chart) and add custom [Kubernetes manifests](/docs/chart/custom-manifests), if needed.
 </details>

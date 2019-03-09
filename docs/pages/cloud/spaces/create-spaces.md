@@ -8,7 +8,7 @@ devspace add space [SPACE_NAME]
 ```
 Your Space name should only contain the following characters: `a-z`, `0-9`, `-`
 
-> Creating a Space will automatically [switch to this Space](./switch-spaces).
+> Creating a Space will automatically [switch to this Space](/docs/cloud/spaces/switch-spaces).
 
 Space names must be unique. To get a list of all your Spaces, run:
 ```bash

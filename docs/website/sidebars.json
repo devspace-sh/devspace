@@ -12,7 +12,8 @@
         "deployment/deployments",
         "deployment/charts",
         "deployment/domains",
-        "deployment/scaling"
+        "deployment/scaling",
+        "deployment/pipelines"
     ],
     "Develop with DevSpace": [
         "development/workflow",
@@ -30,40 +31,10 @@
         "debugging/enter",
         "debugging/debuggers"
     ],
-    "Spaces": [
-        "spaces/what-are-spaces",
-        "spaces/create-spaces",
-        "spaces/switch-spaces",
-        "spaces/delete-spaces",
-        "spaces/domains",
-        "spaces/resource-limits"
-    ],
     "Image Registries": [
         "images/workflow",
-        "images/internal-registry",
-        "images/external-registry",
+        "images/authentication",
         "images/pull-secrets"
-    ],
-    "Charts": [
-        "charts/what-are-helm-charts",
-        "charts/devspace-chart",
-        "charts/packages",
-        "charts/persistent-volumes",
-        "charts/environment-variables",
-        "charts/networking",
-        "charts/containers",
-        "charts/custom-manifests",
-        "charts/scaling"
-    ],
-    "Domains": [
-        "domains/workflow",
-        "domains/add-verify",
-        "domains/connect",
-        "domains/certificates"
-    ],
-    "Advanced Topics": [
-        "advanced/pipelines",
-        "advanced/external-clusters"
     ],
     "Configuration Reference": [
         "configuration/reference",
@@ -114,6 +85,42 @@
         "cli/update/config",
         "cli/use/config",
         "cli/use/space"
+    ],
+    "DevSpace Helm Chart": [
+        "chart/what-are-helm-charts",
+        "chart/devspace-chart",
+        "chart/packages",
+        "chart/persistent-volumes",
+        "chart/environment-variables",
+        "chart/networking",
+        "chart/containers",
+        "chart/custom-manifests",
+        "chart/scaling"
+    ],
+    "DevSpace Cloud": [
+        "cloud/intro/overview"
+    ],
+    "Spaces": [
+        "cloud/spaces/what-are-spaces",
+        "cloud/spaces/create-spaces",
+        "cloud/spaces/switch-spaces",
+        "cloud/spaces/delete-spaces",
+        "cloud/spaces/domains",
+        "cloud/spaces/resource-limits"
+    ],
+    "Domains": [
+        "cloud/domains/workflow",
+        "cloud/domains/add-verify",
+        "cloud/domains/connect",
+        "cloud/domains/certificates"
+    ],
+    "Images": [
+        "cloud/images/overview",
+        "cloud/images/dscr-io"
+    ],
+    "External Clusters": [
+        "cloud/external-clusters/overview",
+        "cloud/external-clusters/connect"
     ]
   }
 }

@@ -4,7 +4,7 @@ title: Use multiple configs
 
 Sometimes it might be useful to define multiple configurations (e.g. for deploying to different environments). To support this case, DevSpace CLI allows you to create the file `.devspace/configs.yaml` where you can define multiple configurations.
 
-> Using multiple configs is an advanced feature. To define a different behavior for `devspace deploy` and `devspace dev`, you should consider [overriding the entrypoints of your images](../development/entrypoint-overrides) and make sure you consider the [best practices for development with DevSpace](../development/best-practices).
+> Using multiple configs is an advanced feature. To define a different behavior for `devspace deploy` and `devspace dev`, you should consider [overriding the entrypoints of your images](/docs/development/entrypoint-overrides) and make sure you consider the [best practices for development with DevSpace](/docs/development/best-practices).
 
 ## Defining multiple configurations
 Multiple configurations can be defined in `.devspace/configs.yaml` **(note the `s` in `configs.yaml`)**.
@@ -24,7 +24,7 @@ A config can either be loaded from a `path` or it can be defined directly inside
 
 The above example defines two configurations. The first one is called `config1` and will be loaded from the path `.devspace/config.yaml`. The second one is called `config2` and is directly defined within the `data` section in this `.devspace/config.yaml` file.
 
-> Instead of creating multiple completely different configuration files, it is often much better to use [config overrides](./overrides) which allow you to have multiple slightly different configurations on top of a single configuration file.
+> Instead of creating multiple completely different configuration files, it is often much better to use [config overrides](/docs/configuration/overrides) which allow you to have multiple slightly different configurations on top of a single configuration file.
 
 ## Switching between multiple configs
 To switch between different configs, you can run:
