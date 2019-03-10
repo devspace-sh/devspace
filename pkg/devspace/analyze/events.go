@@ -14,7 +14,7 @@ import (
 )
 
 // EventRelevanceTime is the time in which events are relevant for us
-const EventRelevanceTime = 600 * time.Second
+const EventRelevanceTime = 1800 * time.Second
 
 // Events checks the namespace events for warnings
 func Events(client *kubernetes.Clientset, config *rest.Config, namespace string) ([]string, error) {

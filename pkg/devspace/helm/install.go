@@ -184,7 +184,7 @@ func (helmClientWrapper *ClientWrapper) analyzeError(srcErr error, releaseNamesp
 			return srcErr
 		}
 
-		report, err := analyze.CreateReport(helmClientWrapper.kubectl, config, releaseNamespace, false)
+		report, err := analyze.CreateReport(config, releaseNamespace, false)
 		if err != nil {
 			log.Warnf("Error creating analyze report: %v", err)
 			return srcErr
