@@ -35,7 +35,7 @@ func (gr *GitRepository) HasUpdate() (bool, error) {
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 	})
-	if err != nil {
+	if err != git.NoErrAlreadyUpToDate && err != nil {
 		return false, err
 	}
 
@@ -74,7 +74,7 @@ func (gr *GitRepository) Update() (bool, error) {
 		err = repoWorktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
 		})
-		if err != nil {
+		if err != git.NoErrAlreadyUpToDate && err != nil {
 			return false, err
 		}
 

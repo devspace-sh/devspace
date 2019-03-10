@@ -137,7 +137,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Create chart if necessary
 	_, err = os.Stat("chart")
 	if err != nil {
-		chartGenerator, err := generator.NewChartGenerator(".")
+		chartGenerator, err := generator.NewChartGenerator("chart")
 		if err != nil {
 			log.Fatalf("Error intializing chart generator: %v", err)
 		}

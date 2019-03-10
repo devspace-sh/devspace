@@ -56,10 +56,15 @@ func ContainerizeApplication(localPath string, templateRepoURL string) error {
 	detectedLang := "none"
 	supportedLanguages, err := dockerfileGenerator.GetSupportedLanguages()
 	if err == nil {
-		detectedLang, _ = dockerfileGenerator.GetLanguage()
+		detectedLang, err = dockerfileGenerator.GetLanguage()
+		if err != nil {
+			log.Warnf("Error during language detection: %v", err)
+		}
 		if detectedLang == "" {
 			detectedLang = "none"
 		}
+	} else {
+		log.Warnf("Error retrieving support languages: %v", err)
 	}
 	if len(supportedLanguages) == 0 {
 		supportedLanguages = []string{"none"}
@@ -79,7 +84,7 @@ func ContainerizeApplication(localPath string, templateRepoURL string) error {
 
 // NewDockerfileGenerator creates a new dockerfile generator
 func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*DockerfileGenerator, error) {
-	repoURL := DockerfileRepoPath
+	repoURL := DockerfileRepoURL
 	if templateRepoURL != nil {
 		repoURL = *templateRepoURL
 	}

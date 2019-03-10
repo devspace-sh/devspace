@@ -72,6 +72,10 @@ func Copy(sourcePath string, targetPath string, overwrite bool) error {
 
 	return filepath.Walk(sourcePath, func(nextSourcePath string, fileInfo os.FileInfo, err error) error {
 		nextTargetPath := filepath.Join(targetPath, strings.TrimPrefix(nextSourcePath, sourcePath))
+		if fileInfo == nil {
+			return nil
+		}
+
 		if !fileInfo.Mode().IsRegular() {
 			return nil
 		}

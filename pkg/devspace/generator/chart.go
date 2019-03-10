@@ -33,7 +33,7 @@ func NewChartGenerator(localPath string) (*ChartGenerator, error) {
 		return nil, err
 	}
 
-	gitRepository := NewGitRepository(filepath.Join(homedir, DockerfileRepoPath), ChartRepoURL)
+	gitRepository := NewGitRepository(filepath.Join(homedir, ChartRepoPath), ChartRepoURL)
 	return &ChartGenerator{
 		LocalPath: localPath,
 		gitRepo:   gitRepository,
