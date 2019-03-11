@@ -165,7 +165,7 @@ DevSpace CLI will automatically detect your programming language and ask for the
 #### Option 1: Using your own Kubernetes cluster
 Run this command to create a new namespace and set it as default namespace for the current context:
 ```
-kubectl create my-app
+kubectl create namespace my-app
 kubectl config set-context --current --namespace=my-app
 ```
 DevSpace CLI will, by default, operate in the default namespace of your current context. However, you can also [define a namespace in the DevSpace configuration](TODO) to tell DevSpace CLI that it should always switch to this namespace before running any commands.
