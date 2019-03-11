@@ -87,17 +87,17 @@
         "cli/commands/use/space"
     ],
     "Basics": [
-        "chart/what-are-helm-charts",
-        "chart/devspace-helm-chart"
+        "chart/basics/what-are-helm-charts",
+        "chart/basics/devspace-helm-chart"
     ],
     "Customizing the chart": [
-        "chart/packages",
-        "chart/persistent-volumes",
-        "chart/environment-variables",
-        "chart/networking",
-        "chart/containers",
-        "chart/custom-manifests",
-        "chart/scaling"
+        "chart/customization/packages",
+        "chart/customization/persistent-volumes",
+        "chart/customization/environment-variables",
+        "chart/customization/networking",
+        "chart/customization/containers",
+        "chart/customization/custom-manifests",
+        "chart/customization/scaling"
     ],
     "Overview": [
         "cloud/intro/overview"
