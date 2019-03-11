@@ -136,7 +136,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 				log.Warn("Try to roll back back chart because of previous error")
 				_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
 				if rollbackError != nil {
-					return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to delete the space", releaseName, err, ansi.Color("devspace purge", "white+b"))
+					return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force the deletion of the space", releaseName, err, ansi.Color("devspace purge", "white+b"))
 				}
 
 				return nil, err
