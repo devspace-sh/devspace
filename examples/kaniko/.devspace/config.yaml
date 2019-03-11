@@ -1,4 +1,4 @@
-version: v1alpha2
+version: v1alpha3
 cluster:
   kubeContext: minikube
   namespace: devspace

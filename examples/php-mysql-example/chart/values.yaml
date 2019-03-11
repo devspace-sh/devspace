@@ -3,7 +3,7 @@ components:
   containers:
   - # Image tag will be automatically updated in runtime
     # when running devspace deploy or devspace dev
-    image: dscr.io/fabiankramm/devspace
+    image: dscr.io/yourusername/devspace
   service:
     name: external
     type: ClusterIP

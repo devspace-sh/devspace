@@ -1,14 +1,14 @@
 # Php Mysql example
 
-This example shows you how to develop and deploy a small php and mysql application with devspace on devspace.cloud. For a more detailed documentation, take a look at https://devspace.cloud/docs
+This example shows you how to develop and deploy a small php and mysql application with devspace. For a more detailed documentation, take a look at https://devspace.cloud/docs
 
 # Step 0: Prerequisites
 
 In order to get things ready do the following:
 1. Install docker
-2. Run `devspace login`
+2. Run `devspace login` (If you want to use your own cluster just skip this step)
 3. Exchange the image `dscr.io/yourusername/devspace` in `.devspace/config` and `chart/values.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
-4. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just erase the cloudProvider in `.devspace/config` and skip this step)
+4. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just skip this step and devspace will use the current kubectl context)
 
 # Step 1: Develop the application
 

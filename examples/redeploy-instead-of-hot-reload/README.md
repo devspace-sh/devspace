@@ -7,9 +7,9 @@ This example shows you how to develop a small go application with automated repe
 In order to get things ready do the following:
 1. Install docker
 2. Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-3. Run `devspace login`
+3. Run `devspace login` (If you want to use your own cluster just skip this step)
 4. Exchange the image `dscr.io/yourusername/devspace` in `.devspace/config` and `kube/deployment.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
-5. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just erase the cloudProvider in `.devspace/config` and skip this step)
+5. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just skip this step and devspace will use the current kubectl context)
 
 # Step 1: Develop the application
 

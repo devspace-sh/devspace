@@ -51,7 +51,7 @@ func (cg *ChartGenerator) Update(force bool) error {
 	_, err = os.Stat(cg.LocalPath)
 	if err == nil {
 		// Check if everything is correct
-		_, err := os.Stat(filepath.Join(cg.LocalPath, "devspace-version.yaml"))
+		_, err := os.Stat(filepath.Join(cg.LocalPath, "devspace.yaml"))
 		if force == false && os.IsNotExist(err) {
 			return fmt.Errorf("Error updating chart: Chart at %s is not a devspace-chart, you can force the update with `devspace update chart --force`", cg.LocalPath)
 		}

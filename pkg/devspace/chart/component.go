@@ -26,7 +26,7 @@ func ListAvailableComponents() ([]*generator.ComponentSchema, error) {
 // AddComponent adds a component with the given name to the chart
 func AddComponent(chartPath string, name string) error {
 	// Check if devspace chart
-	_, err := os.Stat(filepath.Join(chartPath, "devspace-version.yaml"))
+	_, err := os.Stat(filepath.Join(chartPath, "devspace.yaml"))
 	if os.IsNotExist(err) {
 		return errors.New("Chart is not a devspace chart. `devspace add component` only works with the devspace chart")
 	}

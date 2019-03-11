@@ -104,7 +104,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	// Check if domain there is a domain for the space
 	if space.Domain == nil {
-		log.Fatalf("Space %s has no domain. See https://devspace.cloud/docs/domains/connect on how to connect domains", space.Name)
+		log.Fatalf("Space %s has no domain. See https://devspace.cloud/docs/cloud/domains/connect on how to connect domains", space.Name)
 	}
 
 	now := time.Now()

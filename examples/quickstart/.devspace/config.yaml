@@ -1,6 +1,5 @@
-version: v1alpha2
-cluster:
-  cloudProvider: devspace-cloud
+version: v1alpha3
+#cluster:
  # kubeContext: minikube
 dev:
   overrideImages:
