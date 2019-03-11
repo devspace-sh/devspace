@@ -4,33 +4,38 @@
     outline: none;
 }
 
-a, a:hover {
+body a, body a:hover {
     color: #1c65f7;
 }
 
-a:hover {
+body a:hover {
     text-decoration: underline;
 }
 
-h1, h2 {
+body h1, 
+body h2 {
     margin-top: 1.6em;
     margin-bottom: 0.5em;
 }
 
-h3, h4, h5, h6 {
+body h3, 
+body h4, 
+body h5, 
+body h6 {
     margin-top: 1.2em;
     margin-bottom: 0.3em;
 }
 
-p {
+body p {
     margin: 0.5em 0;
 }
 
-ul, ol {
+body ul, 
+body ol {
     margin: 0.4em 0 1.5em;
 }
 
-details,
+body details,
 .docs-next {
     box-shadow: 0 0 20px rgba(35,51,102,.2);
 }
@@ -57,7 +62,7 @@ pre:hover .btnIcon * {
     opacity: 1;
 }
 
-blockquote {
+body blockquote {
     margin-top: 1em;
     background-color: rgb(255, 230, 200);
     border-left-color: #f80;
