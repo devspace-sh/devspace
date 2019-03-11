@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -140,7 +141,11 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Donef("Successfully deployed!")
-	log.Info("Run `devspace analyze` to check for potential issues")
+	if generatedConfig.CloudSpace != nil {
+		log.Infof("Run: \n- `%s` to open the app in the browser\n- `%s` to open a shell into the container\n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
+	} else {
+		log.Infof("Run `%s` to check for potential issues", ansi.Color("devspace analyze", "white+b"))
+	}
 }
 
 func (cmd *DeployCmd) prepareConfig() {

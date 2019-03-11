@@ -14,7 +14,7 @@ type AnalyzeCmd struct {
 	Wait      bool
 }
 
-// NewAnalyzeCmd creates a new login command
+// NewAnalyzeCmd creates a new analyze command
 func NewAnalyzeCmd() *cobra.Command {
 	cmd := &AnalyzeCmd{}
 
@@ -57,12 +57,6 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClient()
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
-	}
-
 	namespace := ""
 	if configExists == true {
 		config := configutil.GetConfig()
@@ -83,7 +77,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.Analyze(client, config, namespace, !cmd.Wait, log.GetInstance())
+	err = analyze.Analyze(config, namespace, !cmd.Wait, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error during analyze: %v", err)
 	}

@@ -61,7 +61,7 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 
 	// Waiting for pods to become active
 	if noWait == false {
-		for loop := true; loop && time.Now().Sub(now) < WaitTimeout; {
+		for loop := true; loop && time.Since(now) < WaitTimeout; {
 			loop = false
 
 			// Get all pods
