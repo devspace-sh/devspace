@@ -288,7 +288,7 @@ func (cmd *InitCmd) replacePlaceholder() {
 		}
 
 		if cmd.imageName != "" {
-			err := chart.ReplacePort("chart/values.yaml", cmd.imageName)
+			err := chart.ReplaceImage("chart/values.yaml", cmd.imageName)
 			if err != nil {
 				log.Fatalf("Couldn't replace image: %v", err)
 			}
@@ -300,12 +300,12 @@ func (cmd *InitCmd) replacePlaceholder() {
 		if config.Dev != nil && config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 && (*config.Dev.Ports)[0].PortMappings != nil && len(*(*config.Dev.Ports)[0].PortMappings) > 0 {
 			cmd.port = strconv.Itoa(*(*(*config.Dev.Ports)[0].PortMappings)[0].RemotePort)
 		}
+	}
 
-		if cmd.port != "" {
-			err := chart.ReplacePort("chart/values.yaml", cmd.port)
-			if err != nil {
-				log.Fatalf("Couldn't replace port: %v", err)
-			}
+	if cmd.port != "" {
+		err := chart.ReplacePort("chart/values.yaml", cmd.port)
+		if err != nil {
+			log.Fatalf("Couldn't replace port: %v", err)
 		}
 	}
 }

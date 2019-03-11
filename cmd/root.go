@@ -64,6 +64,7 @@ func init() {
 	rootCmd.AddCommand(NewAnalyzeCmd())
 	rootCmd.AddCommand(NewLogsCmd())
 	rootCmd.AddCommand(NewOpenCmd())
+	rootCmd.AddCommand(NewUICmd())
 
 	cobra.OnInitialize(initConfig)
 }
