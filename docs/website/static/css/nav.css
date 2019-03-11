@@ -1,5 +1,7 @@
-.toc {
-    padding: 30px 0 10px;
+@media(max-width: "1024px") {
+    .toc {
+        padding: 30px 0 10px;
+    }
 }
 
 /* large titles for Chart + Cloud */
@@ -22,6 +24,7 @@
 }
 
 .toc .toggleNav .navGroup {
+    position: relative;
     margin-bottom: 14px;
 }
 
