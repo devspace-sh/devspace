@@ -17,10 +17,11 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    // {href: 'http://devspace.cloud/products', label: 'Products'},
+    {href: 'http://devspace.cloud/pricing', label: 'Pricing'},
+    {href: 'http://devspace.cloud/about', label: 'About'},
     {doc: 'getting-started/installation', label: 'Docs'},
-    // {href: 'http://devspace.cloud/', label: 'FAQ'},
-    {doc: 'getting-started/installation', label: 'GET STARTED'},
+    {href: 'http://devspace.cloud/help', label: 'Help'},
+    {doc: 'getting-started/installation', label: 'Login'},
     {href: '#', label: ''},
   ],
 
