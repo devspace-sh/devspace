@@ -1,5 +1,0 @@
----
-title: Service
----
-
-content

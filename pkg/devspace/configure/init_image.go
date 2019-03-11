@@ -112,7 +112,7 @@ func Image(dockerUsername string, cloudProvider *string) error {
 			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
 			ValidationRegexPattern: "^.*$",
 		})
-		// Is DevSpace.cloud?
+		// Is DevSpace Cloud?
 	} else if cloudProvider != nil {
 		defaultImageName = registryURL + "/" + dockerUsername + "/" + DefaultImageName
 	} else {

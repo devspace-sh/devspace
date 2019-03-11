@@ -27,7 +27,7 @@ class Footer extends React.Component {
         <div className="footer-container">
           <div className="devspace-company">
               <img src="/img/devspace-logo.svg" />
-              DevSpace CLI and DevSpace.cloud are products developed by the covexo GmbH. 
+              DevSpace CLI and DevSpace Cloud are products developed by the covexo GmbH. 
               The terms "DevSpace" and "covexo" are registered trademarks of the covexo GmbH.
           </div>
           <div className="social-networks">
@@ -55,7 +55,7 @@ class Footer extends React.Component {
             <div className="links">
                 <h5 className="title">Documentation</h5>
                 <a className="link" href="/getting-started">Getting Started</a>
-                <a className="link" target="_blank" href="https://docs.devspace-cloud.com/docs/configuration/config.yaml.html">Configuration</a>
+                <a className="link" target="_blank" href="https://docs.devspace-cloud.com/docs/cli/configuration/config.yaml.html">Configuration</a>
                 <a className="link" target="_blank" href="https://docs.devspace-cloud.com/docs/advanced/architecture.html">Architecture</a>
             </div>
             <div className="links">

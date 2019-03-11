@@ -2,7 +2,7 @@
 title: 2. Containerize your app
 ---
 
-DevSpace.cli lets you easily containerize your application, so you can deploy it to Kubernetes. You can use one of your own projects for the remainder of this guide. 
+DevSpace CLI lets you easily containerize your application, so you can deploy it to Kubernetes. You can use one of your own projects for the remainder of this guide. 
 
 If you do not have a project to work with, you can **checkout one of our demo projects (optional)**
 <!--DOCUSAURUS_CODE_TABS-->
@@ -21,7 +21,7 @@ Run the following command within your project:
 ```bash
 devspace init
 ```
-DevSpace.cli will automatically detect your programming language and ask for the ports your application is listening on. Then, it will automatically create the following files:
+DevSpace CLI will automatically detect your programming language and ask for the ports your application is listening on. Then, it will automatically create the following files:
 ```bash
 project/                    # your project directory
 |
@@ -42,13 +42,13 @@ project/                    # your project directory
 </summary>
 
 See the following guides to:
-- [Configure image building](../deployment/images)
-- [Add packages to your Helm chart (e.g. database)](../charts/packages)
-- [Configure persistent volumes](../charts/persistent-volumes)
-- [Set environment variables](../charts/environment-variables)
-- [Configure networking for your Helm chart (e.g. ingress)](../charts/networking)
-- [Define multiple containers in your Helm chart](../charts/containers)
-- [Add custom Kubernetes manifests (.yaml files)](../charts/custom-manifests)
-- [Configure auto-scaling within your Helm Chart](../charts/scaling)
+- [Configure image building](/docs/cli/deployment/images)
+- [Add packages to your Helm chart (e.g. database)](/docs/chart/customization/packages)
+- [Configure persistent volumes](/docs/chart/customization/persistent-volumes)
+- [Set environment variables](/docs/chart/customization/environment-variables)
+- [Configure networking for your Helm chart (e.g. ingress)](/docs/chart/customization/networking)
+- [Define multiple containers in your Helm chart](/docs/chart/customization/containers)
+- [Add custom Kubernetes manifests (.yaml files)](/docs/chart/customization/custom-manifests)
+- [Configure auto-scaling within your Helm Chart](/docs/chart/customization/scaling)
 
 </details>

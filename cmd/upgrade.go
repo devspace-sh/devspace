@@ -22,12 +22,12 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade the DevSpace.cli to the newest version",
+		Short: "Upgrade the DevSpace CLI to the newest version",
 		Long: `
 #######################################################
 ################## devspace upgrade ###################
 #######################################################
-Upgrades the DevSpace.cli to the newest version
+Upgrades the DevSpace CLI to the newest version
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,

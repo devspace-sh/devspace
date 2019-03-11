@@ -34,7 +34,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Installs the DevSpace.cli",
+		Short: "Installs the DevSpace CLI",
 		Long: `
 #######################################################
 ################## devspace install ###################
