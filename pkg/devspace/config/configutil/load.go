@@ -92,7 +92,10 @@ func AskQuestion(variable *configs.Variable) interface{} {
 		if variable.Default != nil {
 			params.DefaultValue = *variable.Default
 		}
-		if variable.RegexPattern != nil {
+
+		if variable.Options != nil {
+			params.Options = *variable.Options
+		} else if variable.RegexPattern != nil {
 			params.ValidationRegexPattern = *variable.RegexPattern
 		}
 	}
@@ -171,7 +174,8 @@ func LoadConfigs(configs *configs.Configs, path string) error {
 	return yaml.UnmarshalStrict(yamlFileContent, configs)
 }
 
-func resolveVars(yamlFileContent []byte) ([]byte, error) {
+// CustomResolveVars resolves variables with a custom replace function
+func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string) bool, replaceFn func(string) interface{}) ([]byte, error) {
 	rawConfig := make(map[interface{}]interface{})
 
 	err := yaml.Unmarshal(yamlFileContent, &rawConfig)
@@ -179,7 +183,7 @@ func resolveVars(yamlFileContent []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	walk.Walk(rawConfig, varMatchFn, varReplaceFn)
+	walk.Walk(rawConfig, matchFn, replaceFn)
 
 	out, err := yaml.Marshal(rawConfig)
 	if err != nil {
@@ -187,4 +191,8 @@ func resolveVars(yamlFileContent []byte) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+func resolveVars(yamlFileContent []byte) ([]byte, error) {
+	return CustomResolveVars(yamlFileContent, varMatchFn, varReplaceFn)
 }
