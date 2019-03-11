@@ -62,7 +62,7 @@ func CreateReport(config *rest.Config, namespace string, noWait bool) ([]*Report
 	}
 
 	// We only check events if we suspect a problem
-	checkEvents := false
+	checkEvents := len(report) > 0
 
 	// Analyze replicasets
 	replicaSetProblems, err := ReplicaSets(client, namespace)
