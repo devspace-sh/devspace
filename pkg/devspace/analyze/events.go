@@ -14,7 +14,7 @@ import (
 )
 
 // EventRelevanceTime is the time in which events are relevant for us
-const EventRelevanceTime = 600 * time.Second
+const EventRelevanceTime = 1800 * time.Second
 
 // Events checks the namespace events for warnings
 func Events(client *kubernetes.Clientset, config *rest.Config, namespace string) ([]string, error) {
@@ -44,7 +44,7 @@ func Events(client *kubernetes.Clientset, config *rest.Config, namespace string)
 
 				_, err = dynamicClient.Resource(multiple).Namespace(namespace).Get(event.InvolvedObject.Name, metav1.GetOptions{})
 				if err == nil {
-					header := ansi.Color(fmt.Sprintf("%s - %s %s: ", event.Type, event.InvolvedObject.Kind, event.InvolvedObject.Name), "202+b")
+					header := ansi.Color(fmt.Sprintf("%s (%s ago) - %s %s: ", event.Type, time.Since(event.LastTimestamp.Time).Round(time.Second).String(), event.InvolvedObject.Kind, event.InvolvedObject.Name), "202+b")
 					problems = append(problems, paddingLeft+fmt.Sprintf("%s\n%s%dx %s \n", header, paddingLeft, int(event.Count), event.Message))
 				}
 			}
