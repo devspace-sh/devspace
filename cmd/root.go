@@ -23,7 +23,7 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "devspace",
-	Short: "Welcome to the DevSpace.cli!",
+	Short: "Welcome to the DevSpace CLI!",
 	Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 
 	devspace init`,
@@ -39,7 +39,7 @@ func Execute() {
 			newerVersion, err := upgrade.CheckForNewerVersion()
 
 			if err == nil && newerVersion != "" {
-				log.Warnf("There is a newer version of devspace cli v%s. Run `devspace upgrade` to update the cli.\n", newerVersion)
+				log.Warnf("There is a newer version of DevSpace CLI v%s. Run `devspace upgrade` to update the CLI.\n", newerVersion)
 			}
 		}
 	}

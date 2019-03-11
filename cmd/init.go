@@ -158,7 +158,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Check if kubectl exists
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to use DevSpace.cloud?",
+				Question:     "Do you want to use DevSpace Cloud?",
 				DefaultValue: "yes",
 				Options:      []string{"yes", "no"},
 			}) == "yes"
@@ -166,7 +166,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		var providerName *string
 
-		// Check if DevSpace.cloud should be used
+		// Check if DevSpace Cloud should be used
 		if cmd.flags.useCloud == false {
 			cmd.configureDevSpace()
 		} else {
