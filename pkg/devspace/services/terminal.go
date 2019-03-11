@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
@@ -52,6 +53,8 @@ func StartTerminal(client *kubernetes.Clientset, cmdParameter targetselector.Cmd
 	if err != nil {
 		return err
 	}
+
+	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
 	go func() {
 		terminalErr := kubectl.ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)

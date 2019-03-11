@@ -66,12 +66,9 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
-	}
-	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	log.StartFileLogging()

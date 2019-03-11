@@ -1,6 +1,9 @@
 package v1alpha2
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+)
 
 // Version is the current api version
 const Version string = "v1alpha2"
@@ -13,6 +16,7 @@ func (c *Config) GetVersion() string {
 // New creates a new config object
 func New() config.Config {
 	return &Config{
+		Version: ptr.String(Version),
 		Cluster: &Cluster{},
 		Dev:     &DevConfig{},
 		Images:  &map[string]*ImageConfig{},

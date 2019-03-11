@@ -11,8 +11,10 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/chart"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -33,9 +35,9 @@ generated.yaml
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
-	flags          *InitCmdFlags
-	chartGenerator *generator.ChartGenerator
-	defaultImage   *latest.ImageConfig
+	flags               *InitCmdFlags
+	dockerfileGenerator *generator.DockerfileGenerator
+	defaultImage        *latest.ImageConfig
 
 	port      string
 	imageName string
@@ -43,21 +45,17 @@ type InitCmd struct {
 
 // InitCmdFlags are the flags available for the init-command
 type InitCmdFlags struct {
-	reconfigure      bool
-	overwrite        bool
-	useCloud         bool
-	templateRepoURL  string
-	templateRepoPath string
+	reconfigure     bool
+	useCloud        bool
+	templateRepoURL string
 }
 
 // InitCmdFlagsDefault are the default flags for InitCmdFlags
 var InitCmdFlagsDefault = &InitCmdFlags{
 	reconfigure: false,
-	overwrite:   false,
 	useCloud:    true,
 
-	templateRepoURL:  "https://github.com/devspace-cloud/devspace-templates.git",
-	templateRepoPath: "",
+	templateRepoURL: "",
 }
 
 func init() {
@@ -99,10 +97,7 @@ YOUR_PROJECT_PATH/
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", cmd.flags.reconfigure, "Change existing configuration")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
 	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
-	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
-	cobraCmd.Flags().BoolVar(&cmd.flags.useCloud, "cloud", cmd.flags.useCloud, "Use the DevSpace.cloud for this project")
 }
 
 // Run executes the command logic
@@ -124,66 +119,43 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Create config
 		config = configutil.InitConfig()
 
-		// Set intial deployments
-		config.Deployments = &[]*latest.DeploymentConfig{
-			{
-				Name: ptr.String(configutil.DefaultDevspaceDeploymentName),
-				Helm: &latest.HelmConfig{
-					ChartPath: ptr.String("./chart"),
-				},
-			},
-		}
-
-		// Auto reload configuration
-		config.Dev.AutoReload = &latest.AutoReloadConfig{
-			Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
-		}
-
-		// Override Entrypoint
-		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
-			&latest.ImageOverrideConfig{
-				Name:       ptr.String("default"),
-				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
-			},
-		}
-
-		configutil.Merge(&config, &latest.Config{
-			Version: ptr.String(latest.Version),
-			Images: &map[string]*latest.ImageConfig{
-				"default": &latest.ImageConfig{
-					Image: ptr.String("devspace"),
-				},
-			},
-		})
+		// Init config
+		cmd.initConfig(config)
 	}
 
 	// Print DevSpace logo
 	log.PrintLogo()
 
 	cmd.defaultImage = (*config.Images)["default"]
-	cmd.initChartGenerator()
 
-	createChart := cmd.flags.overwrite
-	if !cmd.flags.overwrite {
-		_, chartDirNotFound := os.Stat("chart")
-		if chartDirNotFound == nil {
-			createChart = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Do you want to overwrite existing files in /chart?",
-				DefaultValue: "no",
-				Options:      []string{"yes", "no"},
-			}) == "yes"
-		} else {
-			createChart = true
+	// Containerize application if necessary
+	err := generator.ContainerizeApplication(".", cmd.flags.templateRepoURL)
+	if err != nil {
+		log.Fatalf("Error containerizing application: %v", err)
+	}
+
+	// Create chart if necessary
+	_, err = os.Stat("chart")
+	if err != nil {
+		chartGenerator, err := generator.NewChartGenerator("chart")
+		if err != nil {
+			log.Fatalf("Error intializing chart generator: %v", err)
 		}
+
+		err = chartGenerator.Update(false)
+		if err != nil {
+			log.Fatalf("Error creating chart: %v", err)
+		}
+	} else {
+		log.Info("Devspace detected that you already have a chart at ./chart. If you want to update the chart run `devspace update chart`")
 	}
 
-	if createChart {
-		cmd.determineLanguage()
-	}
-
+	// Create .devspace config if necessary
 	if cmd.flags.reconfigure || !configExists {
+		// Add default ports
 		cmd.addDefaultPorts()
 
+		// Check if kubectl exists
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question:     "Do you want to use DevSpace.cloud?",
@@ -244,14 +216,26 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if os.IsNotExist(err) {
 			fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
 		}
+
+		// Create generated yaml if cloud
+		if cmd.flags.useCloud {
+			generatedConfig, err := generated.LoadConfig()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
+				ProviderName: *providerName,
+			}
+
+			err = generated.SaveConfig(generatedConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
-	// Create chart and dockerfile
-	if createChart {
-		cmd.createChart()
-		cmd.replacePlaceholder()
-	}
-
+	cmd.replacePlaceholder()
 	log.Done("Project successfully initialized")
 
 	if cmd.flags.useCloud {
@@ -261,55 +245,68 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
+func (cmd *InitCmd) initConfig(config *latest.Config) {
+	// Set intial deployments
+	config.Deployments = &[]*latest.DeploymentConfig{
+		{
+			Name: ptr.String(configutil.DefaultDevspaceDeploymentName),
+			Helm: &latest.HelmConfig{
+				ChartPath: ptr.String("./chart"),
+			},
+		},
+	}
+
+	// Auto reload configuration
+	config.Dev.AutoReload = &latest.AutoReloadConfig{
+		Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
+	}
+
+	// Override Entrypoint
+	config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
+		&latest.ImageOverrideConfig{
+			Name:       ptr.String("default"),
+			Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
+		},
+	}
+
+	// Set images
+	config.Images = &map[string]*latest.ImageConfig{
+		"default": &latest.ImageConfig{
+			Image: ptr.String("devspace"),
+		},
+	}
+}
+
 func (cmd *InitCmd) replacePlaceholder() {
 	config := configutil.GetConfig()
 
 	// Get image name
-	if len(*config.Images) > 0 {
+	if config.Images != nil && len(*config.Images) > 0 {
 		for _, imageConf := range *config.Images {
 			cmd.imageName = *imageConf.Image
 			break
 		}
+
+		if cmd.imageName != "" {
+			err := chart.ReplaceImage("chart/values.yaml", cmd.imageName)
+			if err != nil {
+				log.Fatalf("Couldn't replace image: %v", err)
+			}
+		}
 	}
 
+	// Get image port
 	if cmd.port == "" {
-		cmd.port = "3000"
-
 		if config.Dev != nil && config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 && (*config.Dev.Ports)[0].PortMappings != nil && len(*(*config.Dev.Ports)[0].PortMappings) > 0 {
 			cmd.port = strconv.Itoa(*(*(*config.Dev.Ports)[0].PortMappings)[0].RemotePort)
 		}
 	}
 
-	data, err := ioutil.ReadFile("chart/values.yaml")
-	if err != nil {
-		log.Fatal("Couldn't find chart/values.yaml")
-	}
-
-	newContent := string(data)
-	newContent = strings.Replace(newContent, "#image#", cmd.imageName, -1)
-	newContent = strings.Replace(newContent, "#port#", cmd.port, -1)
-
-	err = ioutil.WriteFile("chart/values.yaml", []byte(newContent), 0644)
-	if err != nil {
-		log.Fatal("Error writing chart/values.yaml")
-	}
-}
-
-func (cmd *InitCmd) initChartGenerator() {
-	workdir, _ := os.Getwd()
-	templateRepoPath := cmd.flags.templateRepoPath
-
-	if len(templateRepoPath) == 0 {
-		templateRepoPath, _ = ioutil.TempDir("", "")
-		defer os.RemoveAll(templateRepoPath)
-	}
-	templateRepo := &generator.TemplateRepository{
-		URL:       cmd.flags.templateRepoURL,
-		LocalPath: templateRepoPath,
-	}
-	cmd.chartGenerator = &generator.ChartGenerator{
-		TemplateRepo: templateRepo,
-		Path:         workdir,
+	if cmd.port != "" {
+		err := chart.ReplacePort("chart/values.yaml", cmd.port)
+		if err != nil {
+			log.Fatalf("Couldn't replace port: %v", err)
+		}
 	}
 }
 
@@ -474,37 +471,5 @@ func (cmd *InitCmd) configureImage(providerName *string) {
 	err = configure.Image(dockerUsername, providerName)
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-func (cmd *InitCmd) determineLanguage() {
-	log.StartWait("Detecting programming language")
-
-	detectedLang := ""
-	supportedLanguages, err := cmd.chartGenerator.GetSupportedLanguages()
-	if err == nil {
-		detectedLang, _ = cmd.chartGenerator.GetLanguage()
-	}
-
-	if detectedLang == "" {
-		detectedLang = "none"
-	}
-	if len(supportedLanguages) == 0 {
-		supportedLanguages = []string{"none"}
-	}
-
-	log.StopWait()
-
-	cmd.chartGenerator.Language = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:     "Select programming language of project",
-		DefaultValue: detectedLang,
-		Options:      supportedLanguages,
-	})
-}
-
-func (cmd *InitCmd) createChart() {
-	err := cmd.chartGenerator.CreateChart()
-	if err != nil {
-		log.Fatalf("Error while creating Helm chart and Dockerfile: %s", err.Error())
 	}
 }
