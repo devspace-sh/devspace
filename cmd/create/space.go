@@ -106,12 +106,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env
-	err = cloud.SetTillerNamespace(space)
-	if err != nil {
-		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
-	}
-
 	// Set space as active space
 	if cmd.active && configExists {
 		// Get generated config
