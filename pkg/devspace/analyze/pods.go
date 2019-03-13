@@ -13,7 +13,7 @@ import (
 )
 
 // MinimumPodAge is the minimum amount of time that a pod should be old
-const MinimumPodAge = 20 * time.Second
+const MinimumPodAge = 10 * time.Second
 
 // WaitTimeout is the amount of time to wait for a pod to start
 const WaitTimeout = 120 * time.Second
@@ -61,7 +61,7 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 
 	// Waiting for pods to become active
 	if noWait == false {
-		for loop := true; loop && time.Now().Sub(now) < WaitTimeout; {
+		for loop := true; loop && time.Since(now) < WaitTimeout; {
 			loop = false
 
 			// Get all pods
@@ -81,7 +81,7 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 						}
 					}
 
-					if podStatus == "Running" && now.Sub(pod.Status.StartTime.UTC()) < MinimumPodAge {
+					if podStatus == "Running" && time.Since(pod.Status.StartTime.UTC()) < MinimumPodAge {
 						loop = true
 						log.StartWait("Waiting for pod " + pod.Name + " startup")
 						break

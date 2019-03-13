@@ -6,57 +6,40 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(client *kubernetes.Clientset, selectorNameOverride, containerNameOverride, labelSelectorOverride, namespaceOverride string, pick, follow bool, tail int64, log log.Logger) error {
-	config := configutil.GetConfig()
+func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: cmdParameter,
+	}
 
-	selector, namespace, labelSelector, err := getSelectorNamespaceLabelSelector(selectorNameOverride, labelSelectorOverride, namespaceOverride)
+	if configutil.ConfigExists() {
+		config := configutil.GetConfig()
+
+		if config.Dev != nil && config.Dev.Terminal != nil {
+			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+				Selector:      config.Dev.Terminal.Selector,
+				Namespace:     config.Dev.Terminal.Namespace,
+				LabelSelector: config.Dev.Terminal.LabelSelector,
+				ContainerName: config.Dev.Terminal.ContainerName,
+			}
+		}
+	}
+
+	targetSelector, err := targetselector.NewTargetSelector(selectorParameter, true)
 	if err != nil {
 		return err
 	}
 
-	// Get container name
-	var containerName *string
-	if containerNameOverride == "" {
-		if selector != nil && selector.ContainerName != nil {
-			containerName = selector.ContainerName
-		} else {
-			if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.ContainerName != nil {
-				containerName = config.Dev.Terminal.ContainerName
-			}
-		}
-	} else {
-		containerName = &containerNameOverride
-	}
-
-	var (
-		pod       *v1.Pod
-		container *v1.Container
-	)
-
-	if pick {
-		pod, container, err = SelectContainer(client, namespace, nil, nil)
-		if err != nil {
-			return err
-		}
-		if pod == nil || container == nil {
-			return fmt.Errorf("No pod found")
-		}
-	} else {
-		pod, container, err = SelectContainer(client, namespace, &labelSelector, containerName)
-		if err != nil {
-			return err
-		}
-		if pod == nil || container == nil {
-			return fmt.Errorf("No pod found")
-		}
+	pod, container, err := targetSelector.GetContainer(client)
+	if err != nil {
+		return err
 	}
 
 	kubeconfig, err := kubectl.GetClientConfig()
@@ -71,7 +54,7 @@ func StartLogs(client *kubernetes.Clientset, selectorNameOverride, containerName
 
 	log.Infof("Printing logs of pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
-	logOutput, err := kubectl.Logs(client, namespace, pod.Name, container.Name, false, &tail)
+	logOutput, err := kubectl.Logs(client, pod.Namespace, pod.Name, container.Name, false, &tail)
 	if err != nil {
 		return nil
 	}

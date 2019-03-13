@@ -1,4 +1,4 @@
-version: v1alpha2
+version: v1alpha3
 cluster:
   kubeContext: minikube
   namespace: devspace
@@ -41,13 +41,13 @@ dev:
 images:
   node:
     build:
-      contextPath: node/
-      dockerfilePath: node/Dockerfile
+      context: node/
+      dockerfile: node/Dockerfile
     image: node
     skipPush: true
   php:
     build:
-      contextPath: php/
-      dockerfilePath: php/Dockerfile
+      context: php/
+      dockerfile: php/Dockerfile
     image: php
     skipPush: true

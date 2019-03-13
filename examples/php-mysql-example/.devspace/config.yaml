@@ -1,7 +1,6 @@
-version: v1alpha2
-cluster:
-  cloudProvider: devspace-cloud
- # kubeContext: minikube
+version: v1alpha3
+#cluster:
+# kubeContext: minikube
 deployments:
 - helm:
     chartPath: ./chart
@@ -28,4 +27,4 @@ dev:
 images:
   default:
     createPullSecret: true
-    image: dscr.io/fabiankramm/devspace
+    image: dscr.io/yourusername/devspace

@@ -22,7 +22,7 @@ import (
 	"github.com/mgutz/ansi"
 )
 
-//ConfigInterface defines the pattern of every config
+// ConfigInterface defines the pattern of every config
 type ConfigInterface interface{}
 
 // DefaultCloudTarget is the default cloud target to use
@@ -220,7 +220,20 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			}
 		}
 
-		// Get generated config
+		// Exchange kube context if necessary
+		if generatedConfig.CloudSpace != nil {
+			if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
+				if generatedConfig.CloudSpace.KubeContext == "" {
+					log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+				}
+
+				config.Cluster = &latest.Cluster{
+					KubeContext: &generatedConfig.CloudSpace.KubeContext,
+				}
+			}
+		}
+
+		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatalf("Couldn't save generated config: %v", err)

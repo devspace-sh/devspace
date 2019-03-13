@@ -1,7 +1,6 @@
 package status
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -49,14 +48,8 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		"NAMESPACE",
 		"INFO",
 	}
+
 	config := configutil.GetConfig()
-
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
-
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())

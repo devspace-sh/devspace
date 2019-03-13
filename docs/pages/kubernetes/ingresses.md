@@ -1,5 +1,0 @@
----
-title: Ingress
----
-
-content

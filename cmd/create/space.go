@@ -14,8 +14,8 @@ import (
 )
 
 type spaceCmd struct {
-	context bool
-	active  bool
+	active   bool
+	provider string
 }
 
 func newSpaceCmd() *cobra.Command {
@@ -38,8 +38,8 @@ devspace create space myspace
 		Run:  cmd.RunCreateSpace,
 	}
 
-	spaceCmd.Flags().BoolVar(&cmd.context, "context", true, "Create/Update kubectl context for Space")
 	spaceCmd.Flags().BoolVar(&cmd.active, "active", true, "Use the new Space as active Space for the current project")
+	spaceCmd.Flags().StringVar(&cmd.provider, "provider", "", "The cloud provider to use")
 
 	return spaceCmd
 }
@@ -52,8 +52,14 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// Check if user has specified a certain provider
+	var cloudProvider *string
+	if cmd.provider != "" {
+		cloudProvider = &cmd.provider
+	}
+
 	// Get provider
-	provider, err := cloud.GetCurrentProvider(log.GetInstance())
+	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,11 +100,10 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Change kube context
-	if cmd.context {
-		err = cloud.UpdateKubeConfig(cloud.GetKubeContextNameFromSpace(space), space, true)
-		if err != nil {
-			log.Fatalf("Error saving kube config: %v", err)
-		}
+	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
+	err = cloud.UpdateKubeConfig(kubeContext, space, true)
+	if err != nil {
+		log.Fatalf("Error saving kube config: %v", err)
 	}
 
 	// Set space as active space
@@ -109,7 +114,15 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		generatedConfig.Space = space
+		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
+			SpaceID:      space.SpaceID,
+			ProviderName: space.ProviderName,
+			Name:         space.Name,
+			Namespace:    space.Namespace,
+			KubeContext:  kubeContext,
+			Created:      space.Created,
+			Domain:       space.Domain,
+		}
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

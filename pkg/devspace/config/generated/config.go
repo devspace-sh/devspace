@@ -16,7 +16,18 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                     `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*DevSpaceConfig `yaml:"configs,omitempty"`
-	Space        *SpaceConfig               `yaml:"space,omitempty"`
+	CloudSpace   *CloudSpaceConfig          `yaml:"space"`
+}
+
+// CloudSpaceConfig holds all the informations about a certain cloud space
+type CloudSpaceConfig struct {
+	SpaceID      int     `yaml:"spaceID"`
+	ProviderName string  `yaml:"providerName"`
+	KubeContext  string  `yaml:"kubeContext"`
+	Name         string  `yaml:"name"`
+	Namespace    string  `yaml:"namespace"`
+	Created      string  `yaml:"created"`
+	Domain       *string `yaml:"domain"`
 }
 
 // DevSpaceConfig holds all the information specific to a certain config
@@ -38,19 +49,6 @@ type CacheConfig struct {
 type DeploymentConfig struct {
 	HelmOverrideTimestamps map[string]int64 `yaml:"helmOverrideTimestamps"`
 	HelmChartHash          string           `yaml:"helmChartHash"`
-}
-
-// SpaceConfig holds the information about a space in the cloud
-type SpaceConfig struct {
-	SpaceID             int     `yaml:"spaceID"`
-	ProviderName        string  `yaml:"providerName"`
-	Name                string  `yaml:"name"`
-	Namespace           string  `yaml:"namespace"`
-	Created             string  `yaml:"created"`
-	ServiceAccountToken string  `yaml:"serviceAccountToken"`
-	CaCert              string  `yaml:"caCert"`
-	Server              string  `yaml:"server"`
-	Domain              *string `yaml:"domain"`
 }
 
 // ConfigPath is the relative generated config path

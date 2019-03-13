@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +15,7 @@ type LogsCmd struct {
 	namespace         string
 	labelSelector     string
 	container         string
+	pod               string
 	config            string
 	pick              bool
 	follow            bool
@@ -46,6 +47,7 @@ devspace logs --namespace=mynamespace
 
 	logsCmd.Flags().StringVarP(&cmd.selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	logsCmd.Flags().StringVarP(&cmd.container, "container", "c", "", "Container name within pod where to execute command")
+	logsCmd.Flags().StringVar(&cmd.pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	logsCmd.Flags().StringVarP(&cmd.namespace, "namespace", "n", "", "Namespace where to select pods")
 	logsCmd.Flags().BoolVarP(&cmd.pick, "pick", "p", false, "Select a pod to stream logs from")
@@ -64,21 +66,12 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
-	}
 
 	log.StartFileLogging()
-
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
 
 	// Get kubectl client
 	kubectl, err := kubectl.NewClient()
@@ -86,8 +79,29 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
+	// Build params
+	params := targetselector.CmdParameter{}
+	if cmd.selector != "" {
+		params.Selector = &cmd.selector
+	}
+	if cmd.container != "" {
+		params.ContainerName = &cmd.container
+	}
+	if cmd.labelSelector != "" {
+		params.LabelSelector = &cmd.labelSelector
+	}
+	if cmd.namespace != "" {
+		params.Namespace = &cmd.namespace
+	}
+	if cmd.pod != "" {
+		params.PodName = &cmd.pod
+	}
+	if cmd.pick != false {
+		params.Pick = &cmd.pick
+	}
+
 	// Start terminal
-	err = services.StartLogs(kubectl, cmd.selector, cmd.container, cmd.labelSelector, cmd.namespace, cmd.pick, cmd.follow, int64(cmd.lastAmountOfLines), log.GetInstance())
+	err = services.StartLogs(kubectl, params, cmd.follow, int64(cmd.lastAmountOfLines), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

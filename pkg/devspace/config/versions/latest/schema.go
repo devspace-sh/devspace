@@ -1,9 +1,12 @@
 package latest
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+)
 
 // Version is the current api version
-const Version string = "v1alpha2"
+const Version string = "v1alpha3"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -13,6 +16,7 @@ func (c *Config) GetVersion() string {
 // New creates a new config object
 func New() config.Config {
 	return &Config{
+		Version: ptr.String(Version),
 		Cluster: &Cluster{},
 		Dev:     &DevConfig{},
 		Images:  &map[string]*ImageConfig{},
@@ -30,12 +34,11 @@ type Config struct {
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
-	CloudProvider *string      `yaml:"cloudProvider,omitempty"`
-	KubeContext   *string      `yaml:"kubeContext,omitempty"`
-	Namespace     *string      `yaml:"namespace,omitempty"`
-	APIServer     *string      `yaml:"apiServer,omitempty"`
-	CaCert        *string      `yaml:"caCert,omitempty"`
-	User          *ClusterUser `yaml:"user,omitempty"`
+	KubeContext *string      `yaml:"kubeContext,omitempty"`
+	Namespace   *string      `yaml:"namespace,omitempty"`
+	APIServer   *string      `yaml:"apiServer,omitempty"`
+	CaCert      *string      `yaml:"caCert,omitempty"`
+	User        *ClusterUser `yaml:"user,omitempty"`
 }
 
 // ClusterUser is a user with its username and its client certificate
@@ -57,6 +60,7 @@ type DeploymentConfig struct {
 type HelmConfig struct {
 	ChartPath       *string                      `yaml:"chartPath,omitempty"`
 	Wait            *bool                        `yaml:"wait,omitempty"`
+	Force           *bool                        `yaml:"force,omitempty"`
 	Timeout         *int64                       `yaml:"timeout,omitempty"`
 	TillerNamespace *string                      `yaml:"tillerNamespace,omitempty"`
 	Overrides       *[]*string                   `yaml:"overrides,omitempty"`
@@ -82,7 +86,9 @@ type DevConfig struct {
 // ImageOverrideConfig holds information about what parts of the image config are overwritten during devspace dev
 type ImageOverrideConfig struct {
 	Name       *string    `yaml:"name"`
-	Entrypoint *[]*string `yaml:"entrypoint"`
+	Entrypoint *[]*string `yaml:"entrypoint,omitempty"`
+	Dockerfile *string    `yaml:"dockerfile,omitempty"`
+	Context    *string    `yaml:"context,omitempty"`
 }
 
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths
@@ -145,24 +151,24 @@ type ImageConfig struct {
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
-//BuildConfig defines the build process for an image
+// BuildConfig defines the build process for an image
 type BuildConfig struct {
-	Disabled       *bool         `yaml:"disabled,omitempty"`
-	ContextPath    *string       `yaml:"contextPath"`
-	DockerfilePath *string       `yaml:"dockerfilePath"`
-	Kaniko         *KanikoConfig `yaml:"kaniko,omitempty"`
-	Docker         *DockerConfig `yaml:"docker,omitempty"`
-	Options        *BuildOptions `yaml:"options,omitempty"`
+	Disabled   *bool         `yaml:"disabled,omitempty"`
+	Context    *string       `yaml:"context"`
+	Dockerfile *string       `yaml:"dockerfile"`
+	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker     *DockerConfig `yaml:"docker,omitempty"`
+	Options    *BuildOptions `yaml:"options,omitempty"`
 }
 
-// KanikoConfig tells the DevSpace.cli to build with Docker on Minikube or on localhost
+// KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
 	Cache      *bool   `yaml:"cache"`
 	Namespace  *string `yaml:"namespace,omitempty"`
 	PullSecret *string `yaml:"pullSecret,omitempty"`
 }
 
-// DockerConfig tells the DevSpace.cli to build with Docker on Minikube or on localhost
+// DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty"`
 }

@@ -1,0 +1,69 @@
+@media(max-width: "1024px") {
+    .toc {
+        padding: 30px 0 10px;
+    }
+}
+
+/* large titles for Chart + Cloud */
+.navGroups .navGroup:nth-child(8)::before,
+.navGroups .navGroup:nth-child(10)::before {
+    display: block;
+    margin: 1.4em 0 0.5em;
+    padding: 0.5em 0 0.4em;
+    border-bottom: 1px solid #ddd;
+    font-size: 21px;
+    font-family: "Raleway", sans-serif;
+}
+
+.navGroups .navGroup:nth-child(8)::before {
+    content: "DevSpace Helm Chart";
+}
+
+.navGroups .navGroup:nth-child(10)::before {
+    content: "DevSpace Cloud";
+}
+
+.toc .toggleNav .navGroup {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+.toc .toggleNav ul {
+    margin-bottom: 16px;
+}
+
+/* nav group titles */
+.toc .toggleNav .navGroup .navGroupCategoryTitle {
+    padding-left: 18px;
+    font-size: 16px;
+}
+
+/* nav arrows */
+.collapsible .arrow {
+    position: absolute;
+    left: 0;
+    margin-right: 2px;
+    margin-left: -5px;
+}
+
+/* nav link currently active */
+.toc .toggleNav ul li.navListItemActive a {
+    color: #00bdff!important;
+}
+
+/* nav link */
+.toc .toggleNav ul li a {
+    padding: 1px 0 1px 10px;
+}
+
+/* nav link hover */
+.toc .toggleNav ul li a:hover {
+    text-decoration: none;
+    color: #1c65f7;
+}
+
+@media(max-width: 1023px) {
+    .docsNavContainer {
+        position: absolute;
+    }
+}

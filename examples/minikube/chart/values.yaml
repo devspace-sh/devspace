@@ -27,6 +27,6 @@ components:
 volumes: []
 
 # Defines image pull secrets
-# DevSpace.cli will append all pull secrets which are automatically created
-# More infos on: https://devspace.cloud/docs/images/pull-secrets
+# DevSpace CLI will append all pull secrets which are automatically created
+# More infos on: https://devspace.cloud/docs/cli/images/pull-secrets
 pullSecrets: []

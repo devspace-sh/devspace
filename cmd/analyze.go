@@ -2,13 +2,10 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // AnalyzeCmd holds the analyze cmd flags
@@ -17,7 +14,7 @@ type AnalyzeCmd struct {
 	Wait      bool
 }
 
-// NewAnalyzeCmd creates a new login command
+// NewAnalyzeCmd creates a new analyze command
 func NewAnalyzeCmd() *cobra.Command {
 	cmd := &AnalyzeCmd{}
 
@@ -54,37 +51,10 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Create kubectl client either from config or take the active current context
-	var client *kubernetes.Clientset
-	var config *rest.Config
-
-	if configExists {
-		// Configure cloud provider
-		err = cloud.Configure(log.GetInstance())
-		if err != nil {
-			log.Fatalf("Unable to configure cloud provider: %v", err)
-		}
-
-		config, err = kubectl.GetClientConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Create kubectl client and switch context if specified
-		client, err = kubectl.NewClient()
-		if err != nil {
-			log.Fatalf("Unable to create new kubectl client: %v", err)
-		}
-	} else {
-		config, err = kubectl.GetClientConfigFromKubectl()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		client, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// Create kubectl client
+	config, err := kubectl.GetClientConfig()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	namespace := ""
@@ -107,7 +77,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.Analyze(client, config, namespace, !cmd.Wait, log.GetInstance())
+	err = analyze.Analyze(config, namespace, !cmd.Wait, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error during analyze: %v", err)
 	}

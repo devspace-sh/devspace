@@ -8,8 +8,7 @@ import (
 
 // LoginCmd holds the login cmd flags
 type LoginCmd struct {
-	Token    string
-	Provider string
+	Token string
 }
 
 // NewLoginCmd creates a new login command
@@ -18,7 +17,7 @@ func NewLoginCmd() *cobra.Command {
 
 	loginCmd := &cobra.Command{
 		Use:   "login",
-		Short: "Log into DevSpace.cloud",
+		Short: "Log into DevSpace Cloud",
 		Long: `
 #######################################################
 ################### devspace login ####################
@@ -28,15 +27,15 @@ and the login page is shown
 
 Example:
 devspace login
+devspace login my.custom.cloud
 devspace login --token 123456789
 #######################################################
 	`,
-		Args: cobra.NoArgs,
+		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunLogin,
 	}
 
 	loginCmd.Flags().StringVar(&cmd.Token, "token", "", "Token to use for login")
-	loginCmd.Flags().StringVar(&cmd.Provider, "provider", cloud.DevSpaceCloudProviderName, "Cloud provider to use")
 
 	return loginCmd
 }
@@ -48,17 +47,22 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	providerName := cloud.DevSpaceCloudProviderName
+	if len(args) > 0 {
+		providerName = args[0]
+	}
+
 	if cmd.Token != "" {
-		err = cloud.ReLogin(providerConfig, cmd.Provider, &cmd.Token, log.GetInstance())
+		err = cloud.ReLogin(providerConfig, providerName, &cmd.Token, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error logging in: %v", err)
 		}
 	} else {
-		err = cloud.ReLogin(providerConfig, cmd.Provider, nil, log.GetInstance())
+		err = cloud.ReLogin(providerConfig, providerName, nil, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error logging in: %v", err)
 		}
 	}
 
-	log.Infof("Successful logged into %s", cmd.Provider)
+	log.Infof("Successful logged into %s", providerName)
 }

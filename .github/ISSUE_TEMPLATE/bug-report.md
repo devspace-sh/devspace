@@ -20,7 +20,7 @@ about: Create a report to help us reproduce and fix a bug
 - Deployment method: helm | kubectl apply
 
 **Kubernetes Cluster:**  
-- Cloud Provider: google | aws | azure | DevSpace.cloud | DevSpace Cloud Enterprise | other
+- Cloud Provider: google | aws | azure | DevSpace Cloud | DevSpace Cloud Enterprise | other
 - Kubernetes Version: [use `kubectl version`]
 
 **Anything else we need to know?**  

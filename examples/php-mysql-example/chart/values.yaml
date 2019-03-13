@@ -3,7 +3,7 @@ components:
   containers:
   - # Image tag will be automatically updated in runtime
     # when running devspace deploy or devspace dev
-    image: dscr.io/fabiankramm/devspace
+    image: dscr.io/yourusername/devspace
   service:
     name: external
     type: ClusterIP
@@ -32,9 +32,9 @@ components:
 # Then mount them in containers above
 volumes:
 - name: mysql-data
-  size: "5Gi"
+  size: "1Gi"
 
 # Defines image pull secrets
-# DevSpace.cli will append all pull secrets which are automatically created
-# More infos on: https://devspace.cloud/docs/images/pull-secrets
+# DevSpace CLI will append all pull secrets which are automatically created
+# More infos on: https://devspace.cloud/docs/cli/images/pull-secrets
 pullSecrets: []

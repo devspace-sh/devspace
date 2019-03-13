@@ -21,7 +21,7 @@ const siteConfig = {
     {href: 'http://devspace.cloud/about', label: 'About'},
     {doc: 'getting-started/installation', label: 'Docs'},
     {href: 'http://devspace.cloud/help', label: 'Help'},
-    {doc: 'getting-started/installation', label: 'Login'},
+    {href: 'https://app.devspace.cloud/', label: 'Login'},
     {href: '#', label: ''},
   ],
 

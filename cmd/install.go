@@ -34,7 +34,7 @@ func init() {
 
 	cobraCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Installs the DevSpace.cli",
+		Short: "Installs the DevSpace CLI",
 		Long: `
 #######################################################
 ################## devspace install ###################
@@ -58,6 +58,6 @@ func (cmd *InstallCmd) Run(cobraCmd *cobra.Command, args []string) {
 	executableDir := filepath.Dir(executablePath)
 	err = envutil.AddToPath(executableDir)
 	if err != nil {
-		log.Fatalf("Unable to add devspace install dir to path: %s", err)
+		log.Fatalf("Unable to add devspace install dir to path: %s\n\nPlease add the following path manually to your PATH environment variable: %s\nSee this documentation page for help: https://devspace.cloud/docs/getting-started/installation", err, executableDir)
 	}
 }

@@ -17,12 +17,12 @@ import (
 const DefaultImageName = "devspace"
 
 // Image configures the image name on devspace init
-func Image(dockerUsername string, isCloud bool) error {
+func Image(dockerUsername string, cloudProvider *string) error {
 	config := configutil.GetConfig()
 	registryURL := ""
 
 	// Check which registry to use
-	if isCloud == false {
+	if cloudProvider == nil {
 		registryURL = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
 			DefaultValue:           "hub.docker.com",
@@ -30,7 +30,7 @@ func Image(dockerUsername string, isCloud bool) error {
 		})
 	} else {
 		// Get default registry
-		provider, err := cloud.GetProvider(*config.Cluster.CloudProvider, log.GetInstance())
+		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error login into cloud provider: %v", err)
 		}
@@ -112,8 +112,8 @@ func Image(dockerUsername string, isCloud bool) error {
 			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
 			ValidationRegexPattern: "^.*$",
 		})
-		// Is DevSpace.cloud?
-	} else if isCloud {
+		// Is DevSpace Cloud?
+	} else if cloudProvider != nil {
 		defaultImageName = registryURL + "/" + dockerUsername + "/" + DefaultImageName
 	} else {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
@@ -125,7 +125,7 @@ func Image(dockerUsername string, isCloud bool) error {
 
 	// Check if we should create pull secrets for the image
 	createPullSecret := true
-	if isCloud == false {
+	if cloudProvider == nil {
 		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
 			DefaultValue:           "yes",

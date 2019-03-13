@@ -4,9 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
@@ -76,12 +73,6 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	// Configure cloud provider
-	err = cloud.Configure(log.GetInstance())
-	if err != nil {
-		log.Fatalf("Unable to configure cloud provider: %v", err)
-	}
-
 	// Create kubectl client
 	if cmd.kubectl == nil {
 		cmd.kubectl, err = kubectl.NewClient()
@@ -90,58 +81,11 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	config := configutil.GetConfig()
-
-	if config.Cluster != nil && config.Cluster.CloudProvider != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
-		cmd.deleteCloudSpace()
-	} else {
-		cmd.deleteDevSpaceDeployments()
-		cmd.deleteClusterRoleBinding()
-	}
-
+	cmd.deleteDevSpaceDeployments()
+	cmd.deleteClusterRoleBinding()
 	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()
 	cmd.deleteDevspaceFolder()
-}
-
-func (cmd *ResetCmd) deleteCloudSpace() {
-	config := configutil.GetConfig()
-	providerConfig, err := cloud.ParseCloudConfig()
-	if err != nil {
-		log.Failf("Error loading cloud config: %v", err)
-		return
-	}
-
-	shouldCloudDevSpaceRemoved := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question:     "Should the Space be deleted from DevSpace.cloud?",
-		DefaultValue: "yes",
-		Options:      []string{"yes", "no"},
-	}) == "yes"
-
-	if shouldCloudDevSpaceRemoved {
-		// Get selected cloud provider from config
-		selectedCloudProvider := *config.Cluster.CloudProvider
-
-		if provider, ok := providerConfig[selectedCloudProvider]; ok {
-			// Get devspace id
-			generatedConfig, err := generated.LoadConfig()
-			if err != nil {
-				log.Failf("Error getting generatedConfig: %v", err)
-				return
-			}
-			if generatedConfig.Space == nil {
-				log.Info("Didn't remove Space since there is no Space configured")
-				return
-			}
-
-			err = provider.DeleteSpace(generatedConfig.Space.SpaceID)
-			if err != nil {
-				log.Failf("Error deleting Space: %v", err)
-			}
-
-			log.Donef("Successfully deleted Space %s", *config.Cluster.Namespace)
-		}
-	}
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
@@ -181,8 +125,8 @@ func (cmd *ResetCmd) deleteImageFiles() {
 
 	for _, imageConfig := range *config.Images {
 		dockerfilePath := "Dockerfile"
-		if imageConfig.Build != nil && imageConfig.Build.DockerfilePath != nil {
-			dockerfilePath = *imageConfig.Build.DockerfilePath
+		if imageConfig.Build != nil && imageConfig.Build.Dockerfile != nil {
+			dockerfilePath = *imageConfig.Build.Dockerfile
 		}
 
 		absDockerfilePath, err := filepath.Abs(dockerfilePath)
@@ -205,8 +149,8 @@ func (cmd *ResetCmd) deleteImageFiles() {
 		}
 
 		contextPath := "."
-		if imageConfig.Build != nil && imageConfig.Build.ContextPath != nil {
-			contextPath = *imageConfig.Build.ContextPath
+		if imageConfig.Build != nil && imageConfig.Build.Context != nil {
+			contextPath = *imageConfig.Build.Context
 		}
 
 		absContextPath, err := filepath.Abs(contextPath)

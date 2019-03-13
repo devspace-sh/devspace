@@ -46,20 +46,10 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, i
 
 // Build builds an image with the specified engine
 func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConfigName string, imageConf *v1.ImageConfig, isDev, forceRebuild bool, log log.Logger) (bool, error) {
-	dockerfilePath := "./Dockerfile"
-	contextPath := "./"
-	imageName := *imageConf.Image
-	engineName := ""
-
-	if imageConf.Build != nil {
-		if imageConf.Build.DockerfilePath != nil {
-			dockerfilePath = *imageConf.Build.DockerfilePath
-		}
-
-		if imageConf.Build.ContextPath != nil {
-			contextPath = *imageConf.Build.ContextPath
-		}
-	}
+	var (
+		dockerfilePath, contextPath = getDockerfileAndContext(imageConfigName, imageConf, isDev)
+		imageName, engineName       = *imageConf.Image, ""
+	)
 
 	// Check if rebuild is needed
 	needRebuild, err := shouldRebuild(generatedConfig, imageConf, contextPath, dockerfilePath, forceRebuild, isDev)
@@ -74,12 +64,12 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	// Get absolute paths
 	absoluteDockerfilePath, err := filepath.Abs(dockerfilePath)
 	if err != nil {
-		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.DockerfilePath)
+		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.Dockerfile)
 	}
 
-	contextPath, err = filepath.Abs(contextPath)
+	absoluteContextPath, err := filepath.Abs(contextPath)
 	if err != nil {
-		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.ContextPath)
+		return false, fmt.Errorf("Couldn't determine absolute path for %s", *imageConf.Build.Context)
 	}
 
 	// Get image tag
@@ -158,7 +148,7 @@ func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imag
 	}
 
 	// Build Image
-	err = imageBuilder.BuildImage(contextPath, absoluteDockerfilePath, buildOptions, entrypoint)
+	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, buildOptions, entrypoint)
 	if err != nil {
 		return false, fmt.Errorf("Error during image build: %v", err)
 	}
@@ -235,4 +225,37 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 	}
 
 	return mustRebuild, nil
+}
+
+func getDockerfileAndContext(imageConfigName string, imageConf *v1.ImageConfig, isDev bool) (string, string) {
+	var (
+		config         = configutil.GetConfig()
+		dockerfilePath = "./Dockerfile"
+		contextPath    = "./"
+	)
+
+	if imageConf.Build != nil {
+		if imageConf.Build.Dockerfile != nil {
+			dockerfilePath = *imageConf.Build.Dockerfile
+		}
+
+		if imageConf.Build.Context != nil {
+			contextPath = *imageConf.Build.Context
+		}
+	}
+
+	if isDev && config.Dev != nil && config.Dev.OverrideImages != nil {
+		for _, overrideConfig := range *config.Dev.OverrideImages {
+			if *overrideConfig.Name == imageConfigName {
+				if overrideConfig.Dockerfile != nil {
+					dockerfilePath = *overrideConfig.Dockerfile
+				}
+				if overrideConfig.Context != nil {
+					contextPath = *overrideConfig.Context
+				}
+			}
+		}
+	}
+
+	return dockerfilePath, contextPath
 }

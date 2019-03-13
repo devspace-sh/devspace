@@ -28,8 +28,8 @@ const HeaderChar = "="
 var paddingLeft = newString(" ", PaddingLeft)
 
 // Analyze analyses a given
-func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool, log log.Logger) error {
-	report, err := CreateReport(client, config, namespace, noWait)
+func Analyze(config *rest.Config, namespace string, noWait bool, log log.Logger) error {
+	report, err := CreateReport(config, namespace, noWait)
 	if err != nil {
 		return err
 	}
@@ -41,23 +41,16 @@ func Analyze(client *kubernetes.Clientset, config *rest.Config, namespace string
 }
 
 // CreateReport creates a new report about a certain namespace
-func CreateReport(client *kubernetes.Clientset, config *rest.Config, namespace string, noWait bool) ([]*ReportItem, error) {
+func CreateReport(config *rest.Config, namespace string, noWait bool) ([]*ReportItem, error) {
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
 	report := []*ReportItem{}
 
-	// Analyze events
-	problems, err := Events(client, config, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("Error during analyzing events: %v", err)
-	}
-	if len(problems) > 0 {
-		report = append(report, &ReportItem{
-			Name:     "Events",
-			Problems: problems,
-		})
-	}
-
 	// Analyze pods
-	problems, err = Pods(client, namespace, noWait)
+	problems, err := Pods(client, namespace, noWait)
 	if err != nil {
 		return nil, fmt.Errorf("Error during analyzing pods: %v", err)
 	}
@@ -66,6 +59,42 @@ func CreateReport(client *kubernetes.Clientset, config *rest.Config, namespace s
 			Name:     "Pods",
 			Problems: problems,
 		})
+	}
+
+	// We only check events if we suspect a problem
+	checkEvents := len(report) > 0
+
+	// Analyze replicasets
+	replicaSetProblems, err := ReplicaSets(client, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("Error during analyzing replica sets: %v", err)
+	}
+	if len(replicaSetProblems) > 0 {
+		checkEvents = true
+	}
+
+	// Analyze statefulsets
+	statefulSetProblems, err := StatefulSets(client, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("Error during analyzing stateful sets: %v", err)
+	}
+	if len(statefulSetProblems) > 0 {
+		checkEvents = true
+	}
+
+	if checkEvents {
+		// Analyze events
+		problems, err = Events(client, config, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("Error during analyzing events: %v", err)
+		}
+		if len(problems) > 0 {
+			// Prepend to report
+			report = append([]*ReportItem{&ReportItem{
+				Name:     "Events",
+				Problems: problems,
+			}}, report...)
+		}
 	}
 
 	return report, nil

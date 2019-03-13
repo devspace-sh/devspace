@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -28,11 +27,20 @@ import (
 )
 
 var isMinikubeVar *bool
-var loadCloudConfigOnce sync.Once
 
 // NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(false)
+	config, err := getClientConfig(nil, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(config)
+}
+
+// NewClientFromContext creates a new kubernetes client
+func NewClientFromContext(context string) (*kubernetes.Clientset, error) {
+	config, err := getClientConfig(&context, false)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +50,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
 func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(switchContext)
+	config, err := getClientConfig(nil, switchContext)
 	if err != nil {
 		return nil, err
 	}
@@ -52,15 +60,33 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 
 // GetClientConfigFromKubectl loads the kubectl client config
 func GetClientConfigFromKubectl() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	return getClientConfig(nil, false)
+}
+
+// GetClientConfigFromContext loads the configuration from a kubernetes context
+func GetClientConfigFromContext(context string) (*rest.Config, error) {
+	return getClientConfig(&context, false)
 }
 
 // GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
 func GetClientConfig() (*rest.Config, error) {
-	return getClientConfig(false)
+	return getClientConfig(nil, false)
 }
 
-func getClientConfig(switchContext bool) (*rest.Config, error) {
+func getClientConfig(context *string, switchContext bool) (*rest.Config, error) {
+	if configutil.ConfigExists() == false || context != nil {
+		if context != nil {
+			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+			if err != nil {
+				return nil, err
+			}
+
+			return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, *context, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+		}
+
+		return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	}
+
 	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
