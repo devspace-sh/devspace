@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"runtime"
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/util/envutil"
@@ -59,5 +60,11 @@ func (cmd *InstallCmd) Run(cobraCmd *cobra.Command, args []string) {
 	err = envutil.AddToPath(executableDir)
 	if err != nil {
 		log.Fatalf("Unable to add devspace install dir to path: %s\n\nPlease add the following path manually to your PATH environment variable: %s\nSee this documentation page for help: https://devspace.cloud/docs/getting-started/installation", err, executableDir)
+	}
+
+	log.Info("DevSpace CLI has been added to your path.")
+
+	if runtime.GOOS == "windows" {
+		log.Warn("The Path variable will not be updated in already opened terminals. Please re-open the terminal if your system cannot find devspace.exe")
 	}
 }
