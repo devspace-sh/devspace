@@ -24,6 +24,7 @@ class Footer extends React.Component {
   render() {
     return (
       <footer className="nav-footer" id="footer">
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-58VC97L" height="0" width="0" style={{display: "none", visibility: "hidden"}}></iframe></noscript>
       </footer>
     );
   }
