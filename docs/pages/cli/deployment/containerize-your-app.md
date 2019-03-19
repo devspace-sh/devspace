@@ -2,7 +2,7 @@
 title: Containerize a project
 ---
 
-DevSpace requires your project to have at least one Dockerfile that can be built. If you don't have a working Dockerfile, DevSpace can help you create one.
+DevSpace requires your project to have at least one Dockerfile that can be built with docker. If you don't have a working Dockerfile, DevSpace can help you create one.
 
 # Containerize your existing application
 

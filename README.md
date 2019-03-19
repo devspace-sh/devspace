@@ -19,21 +19,27 @@ DevSpace CLI eliminates these cumbersome, repetitive tasks through automating an
 <details>
 <summary><b>Containerize</b> any project in minutes</summary>
 
+### Containerize project
+
+> If you already have a Dockerfile you can skip this step
+
+DevSpace can create a smart default Dockerfile based on the detected programming language with:
+```
+devspace containerize
+```
+
 ### Initialize your project
 ```
 devspace init
 ```
-#### DevSpace uses smart defaults for many programming languages and frameworks to:
-1. Automatically create a Dockerfile for your app
-2. Add a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project
 
-> If you already have a Dockerfile or a Helm chart, DevSpace CLI will ask you if you want to use them instead of the default files.
+Initializes DevSpace and adds a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project.
 
-Customize Dockerfile and Kubernetes deployment:
-- [Add packages (e.g. databases)](https://devspace.cloud/docs/charts/packages)
+Customize your Kubernetes deployment easily:
+- [Easily add a database](https://devspace.cloud/docs/chart/customization/predefined-components)
+- [Easily add custom kubernetes yamls](https://devspace.cloud/docs/chart/customization/custom-manifests)
 - [Configure persistent volumes](https://devspace.cloud/docs/charts/persistent-volumes)
-- [Set environment variables](https://devspace.cloud/docs/charts/environment-variables)
-- [Enable auto-scaling](https://devspace.cloud/docs/charts/scaling)
+- [Configure environment variables](https://devspace.cloud/docs/charts/environment-variables)
 
 ---
 
@@ -52,7 +58,7 @@ devspace deploy
 2. Creates pull secrets for your image registries
 3. Deploys your project with the newest images (e.g. using Helm)
 
-> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Cloud](TODO) to get a fully managed Kubernetes namespace.
+> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Cloud](https://devspace.cloud) to get a fully managed Kubernetes namespace.
 
 ---
 
@@ -290,7 +296,6 @@ DevSpace Cloud is a developer platform for Kubernetes that lets you create and m
 [Learn more about Helm charts](https://helm.sh/docs/)
 
 </details>
-
 
 <br>
 
