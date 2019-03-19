@@ -8,6 +8,7 @@
     ],
     "Deploy with DevSpace": [
         "cli/deployment/workflow",
+        "cli/deployment/containerize-your-app",
         "cli/deployment/images",
         "cli/deployment/deployments",
         "cli/deployment/charts",
@@ -88,15 +89,18 @@
     ],
     "Basics": [
         "chart/basics/what-are-helm-charts",
-        "chart/basics/devspace-helm-chart"
+        "chart/basics/devspace-helm-chart",
+        "chart/basics/components"
     ],
     "Customizing the chart": [
-        "chart/customization/packages",
-        "chart/customization/persistent-volumes",
-        "chart/customization/environment-variables",
-        "chart/customization/networking",
+        "chart/customization/add-component",
+        "chart/customization/predefined-components",
         "chart/customization/containers",
         "chart/customization/custom-manifests",
+        "chart/customization/packages",
+        "chart/customization/environment-variables",
+        "chart/customization/persistent-volumes",
+        "chart/customization/networking",
         "chart/customization/scaling"
     ],
     "Overview": [

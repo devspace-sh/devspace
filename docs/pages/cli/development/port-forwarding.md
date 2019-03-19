@@ -24,6 +24,12 @@ dev:
       remotePort: 80
     - localPort: 3000
       remotePort: 3000
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
 ```
 The above example shows the port forwarding configuration that would be created when running the exemplary `devspace add port` command as shown above.
 

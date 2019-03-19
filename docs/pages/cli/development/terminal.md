@@ -46,6 +46,12 @@ devspace enter -l "release=test"    # --label-sector | Use the label selector "r
 The configuration for the terminal proxy can be set within the `dev.terminal` section of `.devspace/config.yaml`.
 ```yaml
 dev:
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
   terminal:
     selector: default
     containerName: nodejs
