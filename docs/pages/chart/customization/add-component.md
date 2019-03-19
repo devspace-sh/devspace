@@ -2,15 +2,13 @@
 title: Add a custom component
 ---
 
-On this page a custom component is added to the DevSpace chart.
-
-> If you just want to quickly add a database like mysql, postgres, mogodb etc. you can checkout the [predefined components](/docs/customization/predefined-components)
+On this page a custom [component](/docs/chart/basics/components) is added to the DevSpace chart.
 
 > If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
 
 ## Add a Component
 
-If you have understood the basic structure of a component, adding another component to your chart is easy. After initializing your project, your `chart/values.yaml` should look like: 
+If you have understood the basic structure of a [component](/docs/chart/basics/components), adding another [component](/docs/chart/basics/components) to your chart is easy. After initializing your project, your `chart/values.yaml` should look like: 
 
 ```yaml
 components:

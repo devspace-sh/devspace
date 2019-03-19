@@ -12,9 +12,7 @@
         "cli/deployment/images",
         "cli/deployment/deployments",
         "cli/deployment/charts",
-        "cli/deployment/domains",
-        "cli/deployment/scaling",
-        "cli/deployment/pipelines"
+        "cli/deployment/domains"
     ],
     "Develop with DevSpace": [
         "cli/development/workflow",
@@ -22,15 +20,13 @@
         "cli/development/synchronization",
         "cli/development/port-forwarding",
         "cli/development/auto-reloading",
-        "cli/development/entrypoint-overrides",
-        "cli/development/best-practices"
+        "cli/development/entrypoint-overrides"
     ],
     "Debug with DevSpace": [
         "cli/debugging/overview",
         "cli/debugging/analyze",
         "cli/debugging/logs",
-        "cli/debugging/enter",
-        "cli/debugging/debuggers"
+        "cli/debugging/enter"
     ],
     "Image Registries": [
         "cli/images/workflow",
@@ -93,15 +89,14 @@
         "chart/basics/components"
     ],
     "Customizing the chart": [
-        "chart/customization/add-component",
-        "chart/customization/predefined-components",
-        "chart/customization/containers",
-        "chart/customization/custom-manifests",
-        "chart/customization/packages",
         "chart/customization/environment-variables",
         "chart/customization/persistent-volumes",
         "chart/customization/networking",
-        "chart/customization/scaling"
+        "chart/customization/predefined-components",
+        "chart/customization/add-component",
+        "chart/customization/containers",
+        "chart/customization/custom-manifests",
+        "chart/customization/packages"
     ],
     "Overview": [
         "cloud/intro/overview"
@@ -115,13 +110,10 @@
         "cloud/spaces/resource-limits"
     ],
     "Domains": [
-        "cloud/domains/workflow",
-        "cloud/domains/add-verify",
         "cloud/domains/connect",
         "cloud/domains/certificates"
     ],
     "Images": [
-        "cloud/images/overview",
         "cloud/images/dscr-io"
     ],
     "External Clusters": [

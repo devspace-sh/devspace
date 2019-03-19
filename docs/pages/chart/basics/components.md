@@ -2,7 +2,7 @@
 title: Components
 ---
 
-On this page the DevSpace helm chart components are explained and it shown how a new component can be added.
+On this page the DevSpace helm chart components (defined in `chart/values.yaml`) are explained.
 
 > If you just want to quickly add a database like mysql, postgres, mogodb etc. you can checkout the [predefined components](/docs/customization/predefined-components)
 
@@ -24,7 +24,7 @@ You can specify several options for each container:
 ### service:
 For each component a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) is created. A service is specified by a name and an array of externalPorts and containerPorts. Other components (or kubernetes pods) can access the component then via the service name:
 
-Take a look at:
+Take a look at this `values.yaml`:
 ```yaml
 components:
 # First component your app
