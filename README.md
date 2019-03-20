@@ -187,8 +187,8 @@ devspace deploy
 ```
 
 ### What's next?
+- [Developing applications with DevSpace](https://devspace.cloud/docs/getting-started/development)
 - [Debugging deployments with DevSpace](https://devspace.cloud/docs/cli/debugging/overview)
-- [Developing applications with DevSpace](https://devspace.cloud/docs/cli/development/workflow)
 - [Customize the DevSpace Helm Chart](https://devspace.cloud/docs/chart/basics/devspace-helm-chart)
 
 <br>
