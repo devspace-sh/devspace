@@ -103,7 +103,7 @@ Learn more about development with DevSpace:
 <br>
 
 ## Getting started with DevSpace
-### 1. Install DevSpace CLI
+### 1. Install DevSpace & Docker
 
 <details>
 <summary><b>via Windows Powershell</b></summary>
@@ -135,6 +135,7 @@ sudo mv devspace /usr/local/bin;
 
 </details>
 
+Install Docker if you don't have already
 <details>
     <summary><b>Install Docker</b></summary>
 
@@ -145,7 +146,7 @@ DevSpace uses Docker to build container images, so you need Docker on your local
 
 </details>
 
-### 3. Containerize your application
+### 2. Containerize your application
 If you don't have a Dockerfile run this command within your project:
 ```
 devspace containerize
@@ -169,7 +170,7 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 **What does `devspace containerize & devspace init` do?**  
 DevSpace CLI will automatically detect your programming language and ask for the port your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
-### 4. Create a space (optional)
+### 3. Create a space (optional)
 
 > This step is optional, you can also use your custom kubernetes cluster with DevSpace
 
@@ -179,7 +180,7 @@ devspace create space my-app
 ```
 DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space, which is forever free on [DevSpace Cloud](https://devspace.cloud). 
 
-### 5. Deploy your application
+### 4. Deploy your application
 Deploy your application to kubernetes:
 ```
 devspace deploy
