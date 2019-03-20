@@ -1,8 +1,8 @@
 ---
-title: Add packages (e.g. database)
+title: Add helm packages
 ---
 
-With DevSpace, it is very easy to add packages like databases and caches to your application.
+With DevSpace, it is very easy to add helm packages like databases and caches to your application.
 
 ## List all available packages
 To show a list of available packages (Helm charts), run the following command:

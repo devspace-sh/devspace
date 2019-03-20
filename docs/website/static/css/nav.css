@@ -19,6 +19,10 @@
     content: "DevSpace Helm Chart";
 }
 
+.separateOnPageNav .navPusher .docsNavContainer {
+    flex: 0 0 250px;
+}
+
 .navGroups .navGroup:nth-child(10)::before {
     content: "DevSpace Cloud";
 }

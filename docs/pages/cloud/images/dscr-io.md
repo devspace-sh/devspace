@@ -1,5 +1,5 @@
 ---
-title: Use dscr.io
+title: dscr.io
 ---
 
 To make it easier for you to get started with Kubernetes, DevSpace Cloud provides a private Docker registry for you. This registry is called DevSpace Container Registry (dscr.io) and allows you to push and pull images to private repositories. 

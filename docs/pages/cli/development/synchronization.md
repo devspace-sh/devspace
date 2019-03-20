@@ -14,14 +14,23 @@ The exemplary command above would configure a synchronization between the local 
 > Is is highly recommended to use a **relative** path within your project for the flag `--local` and an **absolute** path within your container for the `--container` flag.
 
 Besides using the convenience command `devspace add sync`, you can also edit the configuration option in `dev.sync` within the config file `.devspace/config.yaml`. Running the exemplary command shown above would produce the following config:
+
 ```yaml
 dev:
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
   sync:
   - containerPath: /app
     localSubPath: ./src
+    # Use default selector defined above
     selector: default
 ```
-The `selector` field shown above refers to the name of one of the selectors defined in `dev.selectors` and decide which container is to be selected for synchronizing files.
+
+The `selector` field shown above refers to the name of one of the selectors defined in `dev.selectors` and decides which container is to be selected for synchronizing files.
 
 [Learn more about selectors.](/docs/cli/configuration/reference#devselectors)
 
@@ -32,9 +41,16 @@ Sometimes, it is recommended to exclude certain paths from being synchronized, e
 - Directories containing temporary files
 ```yaml
 dev:
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
   sync:
   - containerPath: /app
     localSubPath: ./src
+    # Use default selector defined above
     selector: default
     uploadExcludePaths:
     - node_modules/

@@ -16,6 +16,25 @@ npm run [start|dev|watch]
 
 By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](/docs/cli/development/entrypoint-overrides)
 
+## Print logs instead of opening a terminal 
+
+If you rather want to print the container logs instead of opening a terminal to the container you can define this in the `.devspace/config.yaml`:
+
+```yaml
+dev:
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
+  terminal:
+    selector: default
+    containerName: nodejs
+    # Next line tells devspace to show logs instead of terminal
+    disabled: true
+```
+
 ## Open additional terminals
 You can open additional terminals, simply run the following command:
 ```bash
@@ -46,6 +65,12 @@ devspace enter -l "release=test"    # --label-sector | Use the label selector "r
 The configuration for the terminal proxy can be set within the `dev.terminal` section of `.devspace/config.yaml`.
 ```yaml
 dev:
+  selectors:
+  - name: default
+    # This tells devspace to select pods that have the following labels
+    labelSelector:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
   terminal:
     selector: default
     containerName: nodejs

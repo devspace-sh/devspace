@@ -71,8 +71,6 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.StartFileLogging()
-
 	// Get kubectl client
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
