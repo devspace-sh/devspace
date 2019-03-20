@@ -4,10 +4,10 @@ title: Resource limits
 
 ## Resource Limits
 
-Free spaces are limited in resources. In the free tier a space can use up:
-- 600m CPU limit (0 requests)
-- 1Gi Memory limit (0 requests)
-- 5Gi ephemeral storage limit
+Free spaces are limited in resources. In the free tier a space can use up to:
+- 600m CPU
+- 1Gi Memory
+- 5Gi ephemeral storage
 - 10Gi of persistent storage
 - 6 pods (max 3 container per pod)
 - 30 config maps
@@ -15,11 +15,11 @@ Free spaces are limited in resources. In the free tier a space can use up:
 - 4 ingresses
 
 The default values if not other specified are:
-- 100m CPU limit per container
-- 200Mi memory limit per container
-- 1Gi ephemeral storage limit per container
+- 100m CPU per container
+- 200Mi memory per container
+- 1Gi ephemeral storage per container
 
-## Space restrictions
+## Space access restrictions
 
 You can create most of the kuberentes resources in a space including:
 - configmaps

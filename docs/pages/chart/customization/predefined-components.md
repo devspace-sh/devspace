@@ -3,7 +3,7 @@ title: Add a predefined component
 ---
 
 DevSpace provides some easy and ready to use predefined [components](/docs/chart/basics/components), such as mysql, postgres, mongodb and others. You can list all available components with:
-```Bash
+```json
 $ devspace list available-components
 
  Name       Description                                                                               

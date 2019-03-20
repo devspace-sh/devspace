@@ -6,7 +6,7 @@ Instead of storing configuration data (e.g. database host, username and password
 
 ## Setting environment variables
 You can define environment variables for your containers in the `components[*].container[*].env` section within `chart/values.yaml`.
-```
+```yaml
 components:
 - name: default
   containers:

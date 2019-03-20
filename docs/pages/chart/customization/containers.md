@@ -39,7 +39,6 @@ components:
 Adding a new container is fairly simple. In this case we add a sidecar container (see [connect to google cloud sql](https://cloud.google.com/sql/docs/mysql/connect-kubernetes-engine)) so we can access google cloud sql:
 
 ```yaml
-```yaml
 components:
 - name: default
   containers:

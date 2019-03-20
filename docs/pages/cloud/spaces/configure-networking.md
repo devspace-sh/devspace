@@ -5,7 +5,7 @@ title: Configure Networking
 In DevSpace cloud by default an [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) is created for each space that routes incoming traffic to an url specific to that space. By default this is https://your-space-name.devspace.host .  
 
 You can look at the default ingress via [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/):
-```bash
+```json
 $ kubectl get ingress devspace-ingress 
 NAME               HOSTS                       ADDRESS         PORTS     AGE
 devspace-ingress   test-42bbdd.devspace.host   35.197.73.240   80, 443   23h 
@@ -14,7 +14,7 @@ devspace-ingress   test-42bbdd.devspace.host   35.197.73.240   80, 443   23h
 # Understanding routing
 
 In general incoming traffic is routed via this schema:
-```
+```bash
 Internet -> DevSpace Cloud -> Ingress Controller -> Ingress -> Service -> Pod:Container
 ```
 
@@ -34,7 +34,7 @@ components:
 ```
 
 This values.yaml tells devspace to create a service named `external` that listens on port 80 and redirects that port to port 3000 in the component. Now take a look at the default ingress:
-```bash
+```yaml
 $ kubectl get ingress devspace-ingress -o yaml
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -56,7 +56,7 @@ spec:
 ```
 
 This definition tells the ingress controller to redirect traffic to a service called external on port 80. So this means traffic is routed to `dscr.io/youruser/devspace`like this:
-```
+```bash
 Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:3000
 ```
 
@@ -76,7 +76,7 @@ components:
 ```
 
 Then just run `devspace deploy` and the traffic will be routed like this:
-```
+```bash
 Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:newport
 ```
 
