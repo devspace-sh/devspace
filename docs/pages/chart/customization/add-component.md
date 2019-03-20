@@ -47,13 +47,13 @@ components:
     - name: MYSQL_DATABASE
       value: "mydatabase"
   service:
-    name: mysql
+    name: mysql-service-name
     ports:
     - externalPort: 3306
       containerPort: 3306
 ```
 
-You can redeploy the application now with `devspace deploy` and you should be able to access the mysql database within your default component via: `mysql://root:yourpassword@mysql:3306/mydatabase`.  
+You can redeploy the application now with `devspace deploy` and you should be able to access the mysql database within your default component via: `mysql://root:yourpassword@mysql-service-name:3306/mydatabase`.  
 
 However the mysql database is currently running without persistent the data. Add a persistent volume path to the component and run `devspace deploy`:
 
@@ -75,7 +75,7 @@ components:
         name: mysql-data
         path: /mysql
   service:
-    name: mysql
+    name: mysql-service-name
     ports:
     - externalPort: 3306
       containerPort: 3306
