@@ -34,6 +34,15 @@ In general it is a good idea to look at the official [docker documentation](http
 
 <details>
 <summary>
+### application cannot be accessed with space url
+</summary>
+
+This could be caused by several problems. Run `devspace analyze` and check if there are any issues during container startup. If not [routing](/docs/cloud/spaces/configure-networking) to your container could be an issue. Make sure your container is listening on `0.0.0.0` and not `localhost` and on the same port as specified in `chart/values.yaml` under components.service.containerPort.
+
+</details>
+
+<details>
+<summary>
 ### No such file or directory
 </summary>
 
