@@ -226,7 +226,7 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 
 	// Check if restarted
 	if containerStatus.RestartCount > 0 {
-		if containerStatus.LastTerminationState.Terminated != nil && (containerStatus.RestartCount > 4 || time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
+		if containerStatus.LastTerminationState.Terminated != nil && (time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
 			hasProblem = true
 
 			containerProblem.LastRestart = time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time).Round(time.Second)

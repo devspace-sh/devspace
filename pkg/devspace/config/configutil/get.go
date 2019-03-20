@@ -224,7 +224,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		if generatedConfig.CloudSpace != nil {
 			if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
 				if generatedConfig.CloudSpace.KubeContext == "" {
-					log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+					log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 				}
 
 				config.Cluster = &latest.Cluster{
