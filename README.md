@@ -19,14 +19,12 @@ DevSpace CLI eliminates these cumbersome, repetitive tasks through automating an
 <details>
 <summary><b>Containerize</b> any project in minutes</summary>
 
-### Containerize project
-
-> If you already have a Dockerfile you can skip this step
-
-DevSpace can create a smart default Dockerfile based on the detected programming language with:
+### Containerize your project
 ```
 devspace containerize
 ```
+
+DevSpace can create a smart default Dockerfile based on the detected programming language detected in your project.
 
 ### Initialize your project
 ```
@@ -146,7 +144,12 @@ DevSpace uses Docker to build container images, so you need Docker on your local
 
 
 ### 3. Containerize your application
-Run this command within your project:
+If you don't have a Dockerfile run this command within your project:
+```
+devspace containerize
+```
+
+Then initialize DevSpace with this command in your project:
 ```
 devspace init
 ```
@@ -161,8 +164,8 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 
 <br>
 
-**What does `devspace init` do?**  
-DevSpace CLI will automatically detect your programming language and ask for the ports your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
+**What does `devspace containerize & devspace init` do?**  
+DevSpace CLI will automatically detect your programming language and ask for the port your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
 ### 4. Create a new namespace (optional)
 
