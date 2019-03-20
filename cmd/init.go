@@ -149,10 +149,10 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 
 		cmd.addDefaultSelector()
+		cmd.addDefaultPorts()
 
 		if cmd.flags.image == "" {
 			// Add default sync configuration
-			cmd.addDefaultPorts()
 			cmd.addDefaultSyncConfig()
 		}
 	}
@@ -374,10 +374,11 @@ func (cmd *InitCmd) addDefaultPorts() {
 				port = strconv.Itoa(ports[0])
 			}
 		}
-	} else {
+	}
+
+	if port == "" {
 		port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:     "Which port is the app listening on? (Default: 3000)",
-			DefaultValue: strconv.Itoa(ports[0]),
+			Question: "Which port is the app listening on? (Default: 3000)",
 		})
 		if port == "" {
 			port = "3000"
