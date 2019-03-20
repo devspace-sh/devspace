@@ -167,27 +167,18 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 **What does `devspace containerize & devspace init` do?**  
 DevSpace CLI will automatically detect your programming language and ask for the port your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
-### 4. Create a new namespace (optional)
+### 4. Create a space (optional)
 
-#### Option 1: Using your own Kubernetes cluster
-Run this command to create a new namespace and set it as default namespace for the current context:
-```
-kubectl create namespace my-app
-kubectl config set-context --current --namespace=my-app
-```
-DevSpace CLI will, by default, operate in the default namespace of your current context. However, you can also [define a namespace in the DevSpace configuration](TODO) to tell DevSpace CLI that it should always switch to this namespace before running any commands.
+> This step is optional, you can also use your custom kubernetes cluster with DevSpace
 
-> Using `--current` in the seconds command requires a fairly recent version of kubectl.
-
-#### Option 2: Using DevSpace Cloud
-This command will create and configure a Kubernetes namespace for you:
+This command will create and configure a Kubernetes namespace for you in the devspace cloud:
 ```
 devspace create space my-app
 ```
 DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space for free on DevSpace Cloud. [See DevSpace Cloud pricing](https://devspace.cloud/pricing) for further details.
 
 ### 5. Deploy your application
-Deploy your application to your newly created Space:
+Deploy your application to kubernetes:
 ```
 devspace deploy
 ```
@@ -195,7 +186,7 @@ devspace deploy
 ### What's next?
 - [Debugging deployments with DevSpace](https://devspace.cloud/docs/cli/debugging/overview)
 - [Developing applications with DevSpace](https://devspace.cloud/docs/cli/development/workflow)
-- [Connecting custom domains](https://devspace.cloud/docs/cli/deployment/domains) (DevSpace Cloud)
+- [Customize the DevSpace Helm Chart](https://devspace.cloud/docs/chart/basics/devspace-helm-chart)
 
 <br>
 
