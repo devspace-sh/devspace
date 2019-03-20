@@ -135,13 +135,15 @@ sudo mv devspace /usr/local/bin;
 
 </details>
 
-### 2. Install Docker
+<details>
+    <summary><b>Install Docker</b></summary>
 
 DevSpace uses Docker to build container images, so you need Docker on your local computer. If you do not have Docker installed yet, you can download the latest stable releases here:
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
 
+</details>
 
 ### 3. Containerize your application
 If you don't have a Dockerfile run this command within your project:
@@ -175,7 +177,7 @@ This command will create and configure a Kubernetes namespace for you in the dev
 ```
 devspace create space my-app
 ```
-DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space for free on DevSpace Cloud. See [DevSpace Cloud](https://devspace.cloud) for further details.
+DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space, which is forever free on [DevSpace Cloud](https://devspace.cloud). 
 
 ### 5. Deploy your application
 Deploy your application to kubernetes:
