@@ -14,7 +14,7 @@ When using the [DevSpace Helm Chart], you can edit the `chart/values.yaml` to:
 
 ## Define persistent volumes
 You can define persistent volumes in the `volumes` section of `chart/values.yaml`.
-```
+```yaml
 volumes:
 - name: nginx
   size: "2Gi"
@@ -35,7 +35,7 @@ size: [number] + Gi|Mi|Ki   # Size of the volume in Gigabyte, Megabyte or Kiloby
 
 ## Mount persistent volumes
 You can mount persistent volumes for each `container` defined in `components[*].container[*].volumeMounts` section of `chart/values.yaml`.
-```
+```yaml
 components:
 - name: default
   containers:

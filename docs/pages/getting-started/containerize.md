@@ -7,31 +7,31 @@ If you want to deploy your application with DevSpace CLI, your application will 
 If you do not have a project to work with, you can **checkout one of our demo projects (optional)**
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Node.js-->
-```bash
+```json
 git clone https://github.com/devspace-cloud/quickstart-nodejs
 cd quickstart-nodejs
 ```
 
 <!--Python-->
-```bash
+```json
 git clone https://github.com/devspace-cloud/quickstart-python
 cd quickstart-python
 ```
 
 <!--Golang-->
-```bash
+```json
 git clone https://github.com/devspace-cloud/quickstart-golang
 cd quickstart-golang
 ```
 
 <!--Ruby-->
-```bash
+```json
 git clone https://github.com/devspace-cloud/quickstart-ruby
 cd quickstart-ruby
 ```
 
 <!--Php-->
-```bash
+```json
 git clone https://github.com/devspace-cloud/quickstart-php
 cd quickstart-php
 ```
