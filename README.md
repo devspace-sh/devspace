@@ -24,7 +24,7 @@ DevSpace CLI eliminates these cumbersome, repetitive tasks through automating an
 devspace containerize
 ```
 
-DevSpace can create a smart default Dockerfile based on the detected programming language detected in your project.
+DevSpace can create a Dockerfile for your project based on the detected programming language in your project.
 
 ### Initialize your project
 ```
