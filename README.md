@@ -69,7 +69,7 @@ devspace deploy
 ```
 devspace dev
 ```
-**With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay.
+**With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
 Learn more about development with DevSpace:
 - [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/cli/development/synchronization)
@@ -175,7 +175,7 @@ This command will create and configure a Kubernetes namespace for you in the dev
 ```
 devspace create space my-app
 ```
-DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space for free on DevSpace Cloud. [See DevSpace Cloud pricing](https://devspace.cloud/pricing) for further details.
+DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space for free on DevSpace Cloud. See [DevSpace Cloud](https://devspace.cloud) for further details.
 
 ### 5. Deploy your application
 Deploy your application to kubernetes:
