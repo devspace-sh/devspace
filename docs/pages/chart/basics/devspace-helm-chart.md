@@ -2,22 +2,29 @@
 title: DevSpace Helm Chart
 ---
 
-Running `devspace init` will automatically add the DevSpace Helm Chart to the folder `chart/` within your project. This chart is highly customizable and provides very powerful features out-of-the-box (e.g. horizontal auto-scaling).
+Running `devspace init` will automatically add the DevSpace Helm Chart to the folder `chart/` within your project. The chart contains the information how to deploy the application to a kubernetes cluster. This chart is highly customizable and provides very powerful features out-of-the-box (e.g. horizontal auto-scaling).
 
 ## Configure the DevSpace Helm Chart
 
-### Edit the `Chart.yaml`
+The `chart/values.yaml` is the most important place for configuring your Helm chart. See the following guides to learn how to use the `chart/values.yaml` to:
+- [Configure persistent volumes](/docs/chart/customization/persistent-volumes)
+- [Configure environment variables](/docs/chart/customization/environment-variables)
+- [Configure networking (e.g. define services)](/docs/chart/customization/networking)
+- [Add a predefined component (e.g. database)](/docs/chart/customization/predefined-components)
+- [Add a custom component](/docs/chart/customization/add-component)
+- [Add a sidecar container](/docs/chart/customization/containers)
+- [Add custom Kubernetes files](/docs/chart/customization/custom-manifests)
+- [Add helm packages](/docs/chart/customization/packages)
+
+<details>
+<summary>
+#### Edit the `chart/Chart.yaml`
+</summary>
 It is recommended to change the `name` and `description` of your chart by editing the `Chart.yaml` and to update the `version` whenever you edit anything within your chart as described below.
 
-[Learn more about versioning your chart.](https://docs.helm.sh/chart_best_practices/#version-numbers)
+[Learn more about versioning your chart](https://docs.helm.sh/chart_best_practices/#version-numbers)
 
-### Edit the `values.yaml`
-The `values.yaml` is the most important place for configuring your Helm chart. See the following guides to learn how to use the `values.yaml` to:
-- [Configure persistent volumes](/docs/chart/customization/persistent-volumes)
-- [Set environment variables](/docs/chart/customization/environment-variables)
-- [Configure networking (e.g. define services)](/docs/chart/customization/networking)
-- [Define additional containers](/docs/chart/customization/containers)
-- [Configure scaling](/docs/chart/customization/scaling)
+</details>
 
 <details>
 <summary>

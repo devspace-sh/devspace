@@ -77,6 +77,9 @@ Although ingresses for connected domains are created automatically, you modify t
 ```
 kubectl edit ingress [INGRESS_NAME]
 ```
+
+To learn more about networking in devspace cloud, take a look at [configure space networking](/docs/cloud/spaces/configure-networking).
+
 > It is **NOT** recommended to add an ingress definition to your `chart/template/` folder because it makes it harder to share the Helm chart configuration with other developers.
 
 ---
