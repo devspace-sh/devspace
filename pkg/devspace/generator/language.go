@@ -32,11 +32,11 @@ type DockerfileGenerator struct {
 }
 
 // ContainerizeApplication will create a dockerfile at the given path based on the language detected
-func ContainerizeApplication(localPath string, templateRepoURL string) error {
+func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string) error {
 	// Check if the user already has a dockerfile
-	_, err := os.Stat(filepath.Join("Dockerfile"))
+	_, err := os.Stat(dockerfilePath)
 	if os.IsNotExist(err) == false {
-		log.Infof("Devspace will use the dockerfile at ./Dockerfile for building an image")
+		log.Infof("Dockerfile at %s already exists", dockerfilePath)
 		return nil
 	}
 

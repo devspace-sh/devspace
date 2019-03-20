@@ -78,6 +78,11 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 				log.Fatal(err)
 			}
 
+			err = cloudpkg.DeleteKubeContext(space)
+			if err != nil {
+				log.Fatalf("Error deleting kube context: %v", err)
+			}
+
 			log.Donef("Deleted space %s", space.Name)
 		}
 
