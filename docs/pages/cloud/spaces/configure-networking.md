@@ -15,7 +15,7 @@ devspace-ingress   test-42bbdd.devspace.host   35.197.73.240   80, 443   23h
 
 In general incoming traffic is routed via this schema:
 ```
-Internet -> DevSpace Cloud -> Ingress Controller -> Ingress -> Service -> Pod:Container
+Internet -> DevSpace Cloud -> Ingress Controller -> Ingress -> Service -> Pod:Container          
 ```
 
 Let's take a look at a standard `chart/values.yaml`:
@@ -57,7 +57,7 @@ spec:
 
 This definition tells the ingress controller to redirect traffic to a service called external on port 80. So this means traffic is routed to `dscr.io/youruser/devspace`like this:
 ```
-Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:3000
+Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:3000    
 ```
 
 # Change container port traffic is routed to
@@ -77,7 +77,7 @@ components:
 
 Then just run `devspace deploy` and the traffic will be routed like this:
 ```
-Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:newport
+Internet -> DevSpace Cloud -> Ingress Controller -> devspace-ingress -> external:80 -> dscr.io/youruser/devspace:newport    
 ```
 
 # Configure different routes based on path
