@@ -91,8 +91,8 @@ YOUR_PROJECT_PATH/
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", false, "Change existing configuration")
 	cobraCmd.Flags().BoolVar(&cmd.flags.chart, "chart", true, "Create devspace helm chart if not existent")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "context", ".", "Change existing configuration")
-	cobraCmd.Flags().StringVar(&cmd.flags.context, "dockerfile", "Dockerfile", "Change existing configuration")
+	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", ".", "Change existing configuration")
+	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", "Dockerfile", "Change existing configuration")
 	cobraCmd.Flags().StringVar(&cmd.flags.image, "image", "", "Change existing configuration")
 }
 
@@ -116,6 +116,19 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Print DevSpace logo
 	log.PrintLogo()
 
+	// Check if dockerfile exists
+	if cmd.flags.image == "" {
+		_, err := os.Stat(cmd.flags.dockerfile)
+		if err != nil {
+			log.Fatalf("Couldn't find dockerfile at %s. See https://devspace.cloud/docs/cli/deployment/containerize-your-app for more information.\n Run: \n- `%s` to automatically create a Dockerfile for the project\n- `%s` to use a custom dockerfile location\n- `%s` to tell devspace to not build any images from source", cmd.flags.dockerfile, ansi.Color("devspace containerize", "white+b"), ansi.Color("devspace init --dockerfile=./mycustompath/Dockerfile", "white+b"), ansi.Color("devspace init --image=myregistry.io/myusername/myimage", "white+b"))
+		}
+
+		_, err = os.Stat(cmd.flags.context)
+		if err != nil {
+			log.Fatalf("Couldn't find context at %s.", cmd.flags.context)
+		}
+	}
+
 	// Create chart if necessary
 	if cmd.flags.chart {
 		_, err := os.Stat("chart")
@@ -129,6 +142,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			if err != nil {
 				log.Fatalf("Error creating chart: %v", err)
 			}
+
+			log.Info("DevSpace chart created at chart/")
 		} else {
 			log.Info("Devspace detected that you already have a chart at ./chart. If you want to update the chart run `devspace update chart`")
 		}
@@ -139,19 +154,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			// Add default sync configuration
 			cmd.addDefaultPorts()
 			cmd.addDefaultSyncConfig()
-		}
-	}
-
-	// Check if dockerfile exists
-	if cmd.flags.image == "" {
-		_, err := os.Stat(cmd.flags.dockerfile)
-		if err != nil {
-			log.Fatalf("Couldn't find dockerfile at %s. See https://devspace.cloud/docs/cli/deployment/containerize-your-app for more information. Run: \n- `%s` to automatically create a Dockerfile for the project\n- `%s` to use a custom dockerfile location\n- `%s` to tell devspace to not build any images from source", cmd.flags.dockerfile, ansi.Color("devspace containerize", "white+b"), ansi.Color("devspace init --dockerfile=./mycustompath/Dockerfile", "white+b"), ansi.Color("devspace init --image=myregistry.io/myusername/myimage", "white+b"))
-		}
-
-		_, err = os.Stat(cmd.flags.context)
-		if err != nil {
-			log.Fatalf("Couldn't find context at %s.", cmd.flags.context)
 		}
 	}
 
@@ -268,24 +270,24 @@ func (cmd *InitCmd) initConfig(config *latest.Config) {
 		Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
 	}
 
+	// Set images
+	config.Images = &map[string]*latest.ImageConfig{
+		"default": &latest.ImageConfig{
+			Image: ptr.String("devspace"),
+		},
+	}
+
+	// Set default image
+	cmd.defaultImage = (*config.Images)["default"]
+
+	// Override Entrypoint
 	if cmd.flags.image == "" {
-		// Override Entrypoint
 		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
 			&latest.ImageOverrideConfig{
 				Name:       ptr.String("default"),
 				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
 			},
 		}
-
-		// Set images
-		config.Images = &map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: ptr.String("devspace"),
-			},
-		}
-
-		// Set default image
-		cmd.defaultImage = (*config.Images)["default"]
 	}
 }
 
