@@ -21,6 +21,7 @@ const WaitTimeout = 120 * time.Second
 // WaitStatus are the status to wait
 var WaitStatus = []string{
 	"ContainerCreating",
+	"PodInitializing",
 	"Pending",
 	"Terminating",
 }
@@ -242,10 +243,10 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 
 	// Check if ready
 	if containerStatus.Ready == false {
-		hasProblem = true
 		containerProblem.Ready = false
 
 		if containerStatus.State.Terminated != nil {
+			hasProblem = true
 			containerProblem.Terminated = true
 			containerProblem.TerminatedAt = time.Since(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
 			containerProblem.Reason = containerStatus.State.Terminated.Reason
@@ -256,6 +257,7 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {
+			hasProblem = true
 			containerProblem.Waiting = true
 			containerProblem.Reason = containerStatus.State.Waiting.Reason
 			containerProblem.Message = containerStatus.State.Waiting.Message

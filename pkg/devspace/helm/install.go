@@ -25,7 +25,7 @@ import (
 )
 
 // DeploymentTimeout is the timeout to wait for helm to deploy
-const DeploymentTimeout = int64(40)
+const DeploymentTimeout = int64(80)
 
 func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
 	missing := []string{}
