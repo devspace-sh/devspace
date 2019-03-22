@@ -82,6 +82,12 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 						}
 					}
 
+					if strings.HasPrefix(podStatus, "Init:") {
+						loop = true
+						log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
+						break
+					}
+
 					if podStatus == "Running" && time.Since(pod.Status.StartTime.UTC()) < MinimumPodAge {
 						loop = true
 						log.StartWait("Waiting for pod " + pod.Name + " startup")
