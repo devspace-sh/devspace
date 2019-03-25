@@ -90,7 +90,11 @@ body blockquote {
   padding: 0 5%;
 }
 
-
+@media only screen and (min-width: 1024px) {
+  .docsNavContainer {
+    height: unset;
+  }
+}
 
 @media only screen and (min-width: 1400px) {
 }
