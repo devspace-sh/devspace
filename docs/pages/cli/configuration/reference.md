@@ -4,14 +4,15 @@ title: Full Reference
 
 ## version
 ```yaml
-version: v1alpha2                   # string   | Version of the config
+version: v1alpha3                   # string   | Version of the config
 ```
 
 <details>
 <summary>
 ### List of supported versions
 </summary>
-- v1alpha2 ***latest***
+- v1alpha3 ***latest***
+- v1alpha2 
 - v1alpha1
 </details>
 

@@ -19,21 +19,25 @@ DevSpace CLI eliminates these cumbersome, repetitive tasks through automating an
 <details>
 <summary><b>Containerize</b> any project in minutes</summary>
 
+### Containerize your project
+```
+devspace containerize
+```
+
+DevSpace can create a Dockerfile for your project based on the detected programming language in your project.
+
 ### Initialize your project
 ```
 devspace init
 ```
-#### DevSpace uses smart defaults for many programming languages and frameworks to:
-1. Automatically create a Dockerfile for your app
-2. Add a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project
 
-> If you already have a Dockerfile or a Helm chart, DevSpace CLI will ask you if you want to use them instead of the default files.
+Initializes DevSpace and adds a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project.
 
-Customize Dockerfile and Kubernetes deployment:
-- [Add packages (e.g. databases)](https://devspace.cloud/docs/charts/packages)
+Customize your Kubernetes deployment easily:
+- [Easily add a database](https://devspace.cloud/docs/chart/customization/predefined-components)
+- [Easily add custom kubernetes yamls](https://devspace.cloud/docs/chart/customization/custom-manifests)
 - [Configure persistent volumes](https://devspace.cloud/docs/charts/persistent-volumes)
-- [Set environment variables](https://devspace.cloud/docs/charts/environment-variables)
-- [Enable auto-scaling](https://devspace.cloud/docs/charts/scaling)
+- [Configure environment variables](https://devspace.cloud/docs/charts/environment-variables)
 
 ---
 
@@ -52,7 +56,7 @@ devspace deploy
 2. Creates pull secrets for your image registries
 3. Deploys your project with the newest images (e.g. using Helm)
 
-> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Cloud](TODO) to get a fully managed Kubernetes namespace.
+> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Cloud](https://devspace.cloud) to get a fully managed Kubernetes namespace.
 
 ---
 
@@ -65,7 +69,7 @@ devspace deploy
 ```
 devspace dev
 ```
-**With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay.
+**With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
 Learn more about development with DevSpace:
 - [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/cli/development/synchronization)
@@ -99,16 +103,14 @@ Learn more about development with DevSpace:
 <br>
 
 ## Getting started with DevSpace
-### 1. Install DevSpace CLI
+### 1. Install DevSpace & Docker
 
 <details>
 <summary><b>via Windows Powershell</b></summary>
 
 ```
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-md -Force "$Env:APPDATA\devspace";
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
-& "$Env:APPDATA\devspace\devspace.exe" "install";
+md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
 ```
 
 </details>
@@ -133,16 +135,24 @@ sudo mv devspace /usr/local/bin;
 
 </details>
 
-### 2. Install Docker
+Install Docker if you don't have already
+<details>
+    <summary><b>Install Docker</b></summary>
 
 DevSpace uses Docker to build container images, so you need Docker on your local computer. If you do not have Docker installed yet, you can download the latest stable releases here:
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
 
+</details>
 
-### 3. Containerize your application
-Run this command within your project:
+### 2. Containerize your application
+If you don't have a Dockerfile run this command within your project:
+```
+devspace containerize
+```
+
+Then initialize DevSpace with this command in your project:
 ```
 devspace init
 ```
@@ -157,38 +167,29 @@ git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
 
 <br>
 
-**What does `devspace init` do?**  
-DevSpace CLI will automatically detect your programming language and ask for the ports your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
+**What does `devspace containerize & devspace init` do?**  
+DevSpace CLI will automatically detect your programming language and ask for the port your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
-### 4. Create a new namespace (optional)
+### 3. Create a space (optional)
 
-#### Option 1: Using your own Kubernetes cluster
-Run this command to create a new namespace and set it as default namespace for the current context:
-```
-kubectl create namespace my-app
-kubectl config set-context --current --namespace=my-app
-```
-DevSpace CLI will, by default, operate in the default namespace of your current context. However, you can also [define a namespace in the DevSpace configuration](TODO) to tell DevSpace CLI that it should always switch to this namespace before running any commands.
+> This step is optional, you can also use your custom kubernetes cluster with DevSpace
 
-> Using `--current` in the seconds command requires a fairly recent version of kubectl.
-
-#### Option 2: Using DevSpace Cloud
-This command will create and configure a Kubernetes namespace for you:
+This command will create and configure a Kubernetes namespace for you in the devspace cloud:
 ```
 devspace create space my-app
 ```
-DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space for free on DevSpace Cloud. [See DevSpace Cloud pricing](https://devspace.cloud/pricing) for further details.
+DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space, which is forever free on [DevSpace Cloud](https://devspace.cloud). 
 
-### 5. Deploy your application
-Deploy your application to your newly created Space:
+### 4. Deploy your application
+Deploy your application to kubernetes:
 ```
 devspace deploy
 ```
 
 ### What's next?
+- [Developing applications with DevSpace](https://devspace.cloud/docs/getting-started/development)
 - [Debugging deployments with DevSpace](https://devspace.cloud/docs/cli/debugging/overview)
-- [Developing applications with DevSpace](https://devspace.cloud/docs/cli/development/workflow)
-- [Connecting custom domains](https://devspace.cloud/docs/cli/deployment/domains) (DevSpace Cloud)
+- [Customize the DevSpace Helm Chart](https://devspace.cloud/docs/chart/basics/devspace-helm-chart)
 
 <br>
 
@@ -292,7 +293,6 @@ DevSpace Cloud is a developer platform for Kubernetes that lets you create and m
 [Learn more about Helm charts](https://helm.sh/docs/)
 
 </details>
-
 
 <br>
 

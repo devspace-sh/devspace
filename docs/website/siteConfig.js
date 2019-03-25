@@ -69,6 +69,7 @@ const siteConfig = {
     '/js/code-block-buttons.js',
     '/js/code-block-line-numbers.js',
     '/js/responsive-menu.js',
+    '/js/tag-manager.js',
   ],
 
   stylesheets: [

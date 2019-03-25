@@ -1,12 +1,12 @@
 ---
-title: Set environment variables
+title: Configure environment variables
 ---
 
 Instead of storing configuration data (e.g. database host, username and password) inside your Docker image, you should define such information as environment variables within your Helm chart.
 
 ## Setting environment variables
 You can define environment variables for your containers in the `components[*].container[*].env` section within `chart/values.yaml`.
-```
+```yaml
 components:
 - name: default
   containers:

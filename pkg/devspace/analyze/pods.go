@@ -21,6 +21,7 @@ const WaitTimeout = 120 * time.Second
 // WaitStatus are the status to wait
 var WaitStatus = []string{
 	"ContainerCreating",
+	"PodInitializing",
 	"Pending",
 	"Terminating",
 }
@@ -79,6 +80,12 @@ func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string
 							log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
 							break
 						}
+					}
+
+					if strings.HasPrefix(podStatus, "Init:") {
+						loop = true
+						log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
+						break
 					}
 
 					if podStatus == "Running" && time.Since(pod.Status.StartTime.UTC()) < MinimumPodAge {
@@ -226,7 +233,7 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 
 	// Check if restarted
 	if containerStatus.RestartCount > 0 {
-		if containerStatus.LastTerminationState.Terminated != nil && (containerStatus.RestartCount > 4 || time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
+		if containerStatus.LastTerminationState.Terminated != nil && (time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
 			hasProblem = true
 
 			containerProblem.LastRestart = time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time).Round(time.Second)
@@ -234,18 +241,18 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 			containerProblem.LastMessage = containerStatus.LastTerminationState.Terminated.Message
 			containerProblem.LastExitReason = containerStatus.LastTerminationState.Terminated.Reason
 
-			if containerProblem.Ready == true && containerProblem.LastExitCode != 0 {
-				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, true, &tailLines)
+			if containerProblem.LastExitCode != 0 {
+				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
 			}
 		}
 	}
 
 	// Check if ready
 	if containerStatus.Ready == false {
-		hasProblem = true
 		containerProblem.Ready = false
 
 		if containerStatus.State.Terminated != nil {
+			hasProblem = true
 			containerProblem.Terminated = true
 			containerProblem.TerminatedAt = time.Since(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
 			containerProblem.Reason = containerStatus.State.Terminated.Reason
@@ -256,6 +263,7 @@ func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerSta
 				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {
+			hasProblem = true
 			containerProblem.Waiting = true
 			containerProblem.Reason = containerStatus.State.Waiting.Reason
 			containerProblem.Message = containerStatus.State.Waiting.Message

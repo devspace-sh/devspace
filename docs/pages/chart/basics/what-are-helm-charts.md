@@ -4,6 +4,8 @@ title: What is a Helm chart?
 
 [Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts.
 
+> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
+
 ## Structure of an Helm chart
 The following structure shows the most important parts of an Helm chart:
 ```bash

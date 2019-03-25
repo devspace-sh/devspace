@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
@@ -17,8 +16,7 @@ import (
 const DefaultImageName = "devspace"
 
 // Image configures the image name on devspace init
-func Image(dockerUsername string, cloudProvider *string) error {
-	config := configutil.GetConfig()
+func Image(dockerUsername string, cloudProvider *string) (string, error) {
 	registryURL := ""
 
 	// Check which registry to use
@@ -32,12 +30,12 @@ func Image(dockerUsername string, cloudProvider *string) error {
 		// Get default registry
 		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 		if err != nil {
-			return fmt.Errorf("Error login into cloud provider: %v", err)
+			return "", fmt.Errorf("Error login into cloud provider: %v", err)
 		}
 
 		registries, err := provider.GetRegistries()
 		if err != nil {
-			return fmt.Errorf("Error retrieving registries: %v", err)
+			return "", fmt.Errorf("Error retrieving registries: %v", err)
 		}
 		if len(registries) > 0 {
 			registryURL = registries[0].URL
@@ -48,7 +46,7 @@ func Image(dockerUsername string, cloudProvider *string) error {
 
 	client, err := docker.NewClient(false)
 	if err != nil {
-		return fmt.Errorf("Couldn't create docker client: %v", err)
+		return "", fmt.Errorf("Couldn't create docker client: %v", err)
 	}
 
 	if registryURL != "hub.docker.com" {
@@ -56,7 +54,7 @@ func Image(dockerUsername string, cloudProvider *string) error {
 		dockerAuthConfig, err := docker.GetAuthConfig(client, registryURL, true)
 		log.StopWait()
 		if err != nil {
-			return fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", registryURL)
+			return "", fmt.Errorf("Couldn't find credentials in credentials store. Make sure you login to the registry with: docker login %s", registryURL)
 		}
 
 		dockerUsername = dockerAuthConfig.Username
@@ -123,22 +121,5 @@ func Image(dockerUsername string, cloudProvider *string) error {
 		})
 	}
 
-	// Check if we should create pull secrets for the image
-	createPullSecret := true
-	if cloudProvider == nil {
-		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:               "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes|no)$",
-		}) == "yes"
-	}
-
-	imageMap := *config.Images
-	imageMap["default"].Image = &defaultImageName
-
-	if createPullSecret {
-		imageMap["default"].CreatePullSecret = &createPullSecret
-	}
-
-	return nil
+	return defaultImageName, nil
 }

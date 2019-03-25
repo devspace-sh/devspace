@@ -2,50 +2,26 @@
 title: 4. Develop with DevSpace
 ---
 
-DevSpace also allows you to connect your local project to a Space and develop applications directly inside this Space. The biggest advantages of developing directly inside a Space is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
-
-## Create a Space for Development
-Create a new Space called `development` with the following command:
-```bash
-devspace create space development
-```
-Now, you should have 2 Spaces called `production` and `development`. To get a list of all your Spaces, run:
-```bash
-devspace list spaces
-```
-You should see an output similar to this one:
-```bash
-TODO
-```
-
-> You should use separate Spaces for development, staging and production. Additionally, everyone working on a project together should use a separate Space for development. [Learn more best practices.](/docs/cli/development/best-practices)
-
-## Select a Space for development
-To be sure that you are connected with the correct Space, you should always actively switch to your development Space. In this case, we want to develop within the Space called `development` that we created above. So, we run this command:
-```bash
-devspace use space development
-```
+DevSpace also allows you to work either remotely in a kubernetes cluster or locally with the help of [minikube](https://kubernetes.io/docs/setup/minikube/) and develop applications directly inside kubernetes. The biggest advantages of developing directly inside kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
 
 ## Start developing with DevSpace
-Now, you can start to develop within your Space with this command:
+Developing a DevSpace application is easy, just run this command:
 ```bash
 devspace dev
 ```
 
-> It is highly discouraged to run `devspace dev` in production Spaces. [Learn more best practices.](/docs/cli/development/best-practices)
-
 Running `devspace dev` will do the following:
-1. Read the `Dockerfile` and apply in-memory [entrypoint overrides](/docs/cli/development/entrypoint-override) (optional)
-2. Build a Docker image using the (overridden) `Dockerfile`
-3. Push this Docker image to the [DevSpace Container Registry (dscr.io)](/docs/cloud/images/dscr-io)
+1. Optional: Read the `Dockerfile` and apply in-memory [entrypoint overrides](/docs/cli/development/entrypoint-override)
+2. Build a Docker image 
+3. Push the Docker image to a container registry
 4. Deploy your Helm chart as defined in `chart/`
 5. Start [port forwarding](/docs/cli/development/port-forwarding)
 6. Start [real-time code synchronization](/docs/cli/development/synchronization)
-7. Start [terminal proxy](/docs/cli/development/terminal)
+7. Start [terminal proxy](/docs/cli/development/terminal) (You can also print container logs instead of opening a terminal, see: [terminal](/docs/cli/development/terminal))
 
-> It is highly discouraged to run `devspace dev` multiple times in parallel because the port-forwarding as well as the code synchronization processes will interfere with each other. [Learn more best practices.](/docs/cli/development/best-practices)
+> It is highly discouraged to run `devspace dev` multiple times in parallel because the port-forwarding as well as the code synchronization processes will interfere with each other.
 
-## Start your application within the Space
+## Start your application in the terminal
 After running `devspace dev`, you will be directly inside the container terminal, where you can run a command to start your application. Common commands to start your applications in development mode would be:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Node.js-->
@@ -64,8 +40,6 @@ After starting your application inside the Space, you can access it via `localho
 
 [Learn more about how to configure port forwarding.](/docs/cli/development/port-forwarding)
 
-> Instead of using port-forwarding, you could also access your application using the automatically generated URL `my-space-url.devspace.host`. [Learn more about Space URLs.](/docs/space/what-are-spaces#auto-generated-urls)
-
 ## Edit your source code and use hot reloading
 While the terminal started by `devspace dev` is open, your source code files will be synchronized between your local project and your Space. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. nodemon) to update the application running in your Space in real-time.
 
@@ -76,6 +50,7 @@ See the following guides to learn more:
 - [Use the terminal proxy](/docs/cli/development/synchronization)
 - [Configure code synchronization](/docs/cli/development/synchronization)
 - [Configure port-forwarding](/docs/cli/development/port-forwarding)
+- [Use separate Dockerfile during development](/docs/cli/development/entrypoint-overriding)
 - [Override entrypoints](/docs/cli/development/entrypoint-overriding)
 - [Monitor and debug applications](/docs/cli/debugging/overview)
 - [Learn best practices](/docs/cli/development/best-practices)

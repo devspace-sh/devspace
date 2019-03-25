@@ -65,21 +65,25 @@ func CreateReport(config *rest.Config, namespace string, noWait bool) ([]*Report
 	checkEvents := len(report) > 0
 
 	// Analyze replicasets
-	replicaSetProblems, err := ReplicaSets(client, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("Error during analyzing replica sets: %v", err)
-	}
-	if len(replicaSetProblems) > 0 {
-		checkEvents = true
+	if checkEvents == false {
+		replicaSetProblems, err := ReplicaSets(client, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("Error during analyzing replica sets: %v", err)
+		}
+		if len(replicaSetProblems) > 0 {
+			checkEvents = true
+		}
 	}
 
 	// Analyze statefulsets
-	statefulSetProblems, err := StatefulSets(client, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("Error during analyzing stateful sets: %v", err)
-	}
-	if len(statefulSetProblems) > 0 {
-		checkEvents = true
+	if checkEvents == false {
+		statefulSetProblems, err := StatefulSets(client, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("Error during analyzing stateful sets: %v", err)
+		}
+		if len(statefulSetProblems) > 0 {
+			checkEvents = true
+		}
 	}
 
 	if checkEvents {

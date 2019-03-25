@@ -76,8 +76,6 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.StartFileLogging()
-
 	// Get kubectl client
 	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
 	if err != nil {
