@@ -23,7 +23,6 @@ type EnterCmdFlags struct {
 	pod           string
 	switchContext bool
 	pick          bool
-	config        string
 }
 
 func init() {
@@ -60,16 +59,10 @@ devspace enter bash -l release=test
 	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
 	cobraCmd.Flags().BoolVarP(&cmd.flags.pick, "pick", "p", false, "Select a pod to stream logs from")
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 }
 
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {

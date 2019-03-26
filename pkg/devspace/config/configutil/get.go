@@ -2,16 +2,14 @@ package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
-	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/juju/errors"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -25,20 +23,11 @@ import (
 // ConfigInterface defines the pattern of every config
 type ConfigInterface interface{}
 
-// DefaultCloudTarget is the default cloud target to use
-const DefaultCloudTarget = "dev"
-
 // DefaultConfigsPath is the default configs path to use
-const DefaultConfigsPath = ".devspace/configs.yaml"
-
-// DefaultVarsPath is the default vars path to use if no configs.yaml is present
-const DefaultVarsPath = ".devspace/vars.yaml"
+const DefaultConfigsPath = "devspace-configs.yaml"
 
 // DefaultConfigPath is the default config path to use
-const DefaultConfigPath = ".devspace/config.yaml"
-
-// ConfigPath is the path for the main config or if a configs.yaml is there the config to load
-var ConfigPath = DefaultConfigPath
+const DefaultConfigPath = "devspace.yaml"
 
 // LoadedConfig is the config that was loaded from the configs file
 var LoadedConfig string
@@ -59,19 +48,36 @@ var validateOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
 func ConfigExists() bool {
-	// Check configs.yaml
-	_, err := os.Stat(DefaultConfigsPath)
+	return configExistsInPath(".")
+}
+
+// configExistsInPath checks wheter a devspace configuration exists at a certain path
+func configExistsInPath(path string) bool {
+	// Check devspace.yaml
+	_, err := os.Stat(filepath.Join(path, DefaultConfigPath))
 	if err == nil {
-		return true // configs.yaml found
+		return true
 	}
 
-	// Check normal config.yaml
-	_, err = os.Stat(ConfigPath)
-	if err != nil {
-		return false
+	// Check devspace-configs.yaml
+	_, err = os.Stat(filepath.Join(path, DefaultConfigsPath))
+	if err == nil {
+		return true
 	}
 
-	return true // Normal config file found
+	// Check old .devspace/config.yaml
+	_, err = os.Stat(filepath.Join(path, ".devspace", "config.yaml"))
+	if err == nil {
+		return true
+	}
+
+	// Check old .devspace/configs.yaml
+	_, err = os.Stat(filepath.Join(path, ".devspace", "configs.yaml"))
+	if err == nil {
+		return true
+	}
+
+	return false // Normal config file found
 }
 
 // InitConfig initializes the config objects
@@ -129,11 +135,6 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			// Get config to load
 			LoadedConfig = generatedConfig.ActiveConfig
 
-			// Check if we should override loadedconfig
-			if ConfigPath != DefaultConfigPath {
-				LoadedConfig = ConfigPath
-			}
-
 			// Check if active config exists
 			if _, ok := configs[LoadedConfig]; ok == false {
 				log.Fatalf("No active config selected. Run: \n- `%s` to list all available configs\n- `%s` to use a specific config", ansi.Color("devspace list configs", "white+b"), ansi.Color("devspace use config [NAME]", "white+b"))
@@ -164,27 +165,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				log.Fatal(err)
 			}
 		} else {
-			_, err := os.Stat(DefaultVarsPath)
-			if err == nil {
-				vars := []*configs.Variable{}
-				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
-				if err != nil {
-					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
-				}
-
-				err = yaml.UnmarshalStrict(yamlFileContent, vars)
-				if err != nil {
-					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
-				}
-
-				// Ask questions
-				err = askQuestions(generatedConfig, vars)
-				if err != nil {
-					log.Fatalf("Error filling vars: %v", err)
-				}
-			}
-
-			configRaw, err = loadConfigFromPath(ConfigPath)
+			configRaw, err = loadConfigFromPath(DefaultConfigPath)
 			if err != nil {
 				log.Fatalf("Loading config: %v", err)
 			}
@@ -210,13 +191,13 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 					log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 				}
 			} else {
-				log.Infof("Loaded config from %s", DefaultConfigsPath)
+				log.Infof("Loaded config from %s", DefaultConfigPath)
 			}
 		} else {
 			if configDefinition != nil {
 				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 			} else {
-				log.Infof("Loaded config %s", ConfigPath)
+				log.Infof("Loaded config %s", DefaultConfigPath)
 			}
 		}
 
@@ -348,17 +329,23 @@ func SetDevSpaceRoot() (bool, error) {
 	lastLength := 0
 	for len(cwd) != lastLength {
 		if cwd != homedir {
-			_, err := os.Stat(filepath.Join(cwd, ".devspace"))
-			if err == nil {
+			configExists := configExistsInPath(cwd)
+			if configExists {
 				// Change working directory
 				err = os.Chdir(cwd)
 				if err != nil {
 					return false, err
 				}
 
+				// Convert config if needed
+				err = convertDotDevSpaceConfigToDevSpaceYaml(cwd)
+				if err != nil {
+					return false, errors.Wrap(err, "convert devspace config")
+				}
+
 				// Notify user that we are not using the current working directory
 				if originalCwd != cwd {
-					log.Infof("Using devspace config in %s/.devspace", filepath.ToSlash(cwd))
+					log.Infof("Using devspace config in %s", filepath.ToSlash(cwd))
 				}
 
 				return true, nil

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -13,11 +12,6 @@ import (
 
 // SaveBaseConfig writes the data of a config to its yaml file
 func SaveBaseConfig() error {
-	// Don't save custom config files
-	if ConfigPath != DefaultConfigPath {
-		return nil
-	}
-
 	// default and overwrite values
 	configToIgnore := latest.New()
 
@@ -27,7 +21,7 @@ func SaveBaseConfig() error {
 		return err
 	}
 
-	savePath := ConfigPath
+	savePath := DefaultConfigPath
 
 	// Convert to string
 	configMap, _ := configMapRaw.(map[interface{}]interface{})
@@ -67,9 +61,6 @@ func SaveBaseConfig() error {
 		// Save config in save path
 		savePath = *configDefinition.Config.Path
 	}
-
-	configDir := filepath.Dir(ConfigPath)
-	os.MkdirAll(configDir, os.ModePerm)
 
 	err = ioutil.WriteFile(savePath, configYaml, os.ModePerm)
 	if err != nil {

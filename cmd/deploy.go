@@ -23,7 +23,6 @@ type DeployCmd struct {
 type DeployCmdFlags struct {
 	Namespace     string
 	KubeContext   string
-	Config        string
 	DockerTarget  string
 	ForceBuild    bool
 	ForceDeploy   bool
@@ -54,7 +53,6 @@ devspace deploy --kube-context=deploy-context
 
 	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
@@ -149,10 +147,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *DeployCmd) prepareConfig() {
-	if configutil.ConfigPath != cmd.flags.Config {
-		configutil.ConfigPath = cmd.flags.Config
-	}
-
 	// Load Config and modify it
 	config := configutil.GetConfigWithoutDefaults(true)
 

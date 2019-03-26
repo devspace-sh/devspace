@@ -42,8 +42,6 @@ type DevCmdFlags struct {
 	container       string
 	labelSelector   string
 	namespace       string
-	config          string
-	configOverwrite string
 }
 
 // DevFlagsDefault are the default flags for DevCmdFlags
@@ -106,16 +104,10 @@ Starts your project in development mode:
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the DevSpace context")
 	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the project")
-
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 }
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {

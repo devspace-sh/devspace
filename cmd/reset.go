@@ -22,10 +22,7 @@ type ResetCmd struct {
 }
 
 // ResetCmdFlags holds the possible reset cmd flags
-type ResetCmdFlags struct {
-	config          string
-	configOverwrite string
-}
+type ResetCmdFlags struct{}
 
 func init() {
 	cmd := &ResetCmd{
@@ -54,16 +51,11 @@ command: devspace down
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {

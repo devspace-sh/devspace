@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,9 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = `logs/
-generated.yaml
-`
+const configGitignore = `.devspace/`
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
@@ -219,13 +216,21 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
 
-	// Create .gitignore
-	configDir := filepath.Dir(configutil.ConfigPath)
-
 	// Check if .gitignore exists
-	_, err = os.Stat(filepath.Join(configDir, ".gitignore"))
+	_, err = os.Stat(".gitignore")
 	if os.IsNotExist(err) {
-		fsutil.WriteToFile([]byte(configGitignore), filepath.Join(configDir, ".gitignore"))
+		fsutil.WriteToFile([]byte(configGitignore), ".gitignore")
+	} else {
+		gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Warnf("Error writing to .gitignore: %v", err)
+		} else {
+			defer gitignore.Close()
+
+			if _, err = gitignore.WriteString(configGitignore); err != nil {
+				log.Warnf("Error writing to .gitignore: %v", err)
+			}
+		}
 	}
 
 	// Create generated yaml if cloud

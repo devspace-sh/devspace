@@ -21,7 +21,6 @@ type PurgeCmd struct {
 
 // PurgeCmdFlags holds the possible down cmd flags
 type PurgeCmdFlags struct {
-	config     string
 	deployment string
 }
 
@@ -46,17 +45,12 @@ local chart, including persistent volume claims!
 	}
 
 	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
