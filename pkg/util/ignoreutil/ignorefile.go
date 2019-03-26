@@ -13,7 +13,6 @@ func GetIgnoreRules(rootDirectory string) ([]string, error) {
 	ignoreRules := []string{}
 
 	ignoreFiles, err := glob.Glob(rootDirectory + "/**/.dockerignore")
-
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -15,6 +16,11 @@ import (
 
 // StartLogs print the logs and then attaches to the container
 func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+	return StartLogsWithWriter(client, cmdParameter, follow, tail, log, os.Stdout, os.Stderr)
+}
+
+// StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
+func StartLogsWithWriter(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
@@ -59,7 +65,7 @@ func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdPara
 		return nil
 	}
 
-	log.WriteString(logOutput)
+	stdout.Write([]byte(logOutput))
 	if follow == false {
 		if logOutput == "" {
 			log.Infof("Logs of pod %s:%s were empty", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
@@ -70,8 +76,9 @@ func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdPara
 
 	interrupt := make(chan error)
 
+	// TODO: Refactor this, because with this method we could miss some messages between logs and attach
 	go func() {
-		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, true, nil, os.Stdout, os.Stderr)
+		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, true, nil, stdout, stderr)
 		if err != nil {
 			if _, ok := err.(kubectlExec.CodeExitError); ok == false {
 				interrupt <- fmt.Errorf("Unable to start attach session: %v", err)

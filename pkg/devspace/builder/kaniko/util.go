@@ -2,86 +2,51 @@ package kaniko
 
 import (
 	"io"
-	"regexp"
-	"sync"
-
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/processutil"
+	"strings"
 )
 
-// OutputFormat a regex and a replacement for outputs
-type OutputFormat struct {
-	Regex       *regexp.Regexp
-	Replacement string
+type kanikoLogger struct {
+	out io.Writer
 }
 
-func formatKanikoOutput(stdout io.ReadCloser, stderr io.ReadCloser) string {
-	wg := &sync.WaitGroup{}
-	lastLine := ""
-	outputFormats := []OutputFormat{
-		{
-			Regex:       regexp.MustCompile(`.* msg="Downloading base image (.*)"`),
-			Replacement: " FROM $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="(Unpacking layer: \d+)"`),
-			Replacement: ">> $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="cmd: Add \[(.*)\]"`),
-			Replacement: " ADD $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="cmd: copy \[(.*)\]"`),
-			Replacement: " COPY $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="dest: (.*)"`),
-			Replacement: ">> destination: $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="args: \[-c (.*)\]"`),
-			Replacement: " RUN $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Replacing CMD in config with \[(.*)\]"`),
-			Replacement: " CMD $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Changed working directory to (.*)"`),
-			Replacement: " WORKDIR $1",
-		},
-		{
-			Regex:       regexp.MustCompile(`.* msg="Taking snapshot of full filesystem..."`),
-			Replacement: " Packaging layers",
-		},
-	}
+// Implement the io.Writer interface
+func (k kanikoLogger) Write(p []byte) (n int, err error) {
+	str := string(p)
 
-	kanikoLogRegex := regexp.MustCompile(`^time="(.*)" level=(.*) msg="(.*)"`)
-	buildPrefix := "build >"
+	lines := strings.Split(str, "\n")
+	newLines := make([]string, 0, len(lines))
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
 
-	printFormattedOutput := func(originalLine string) {
-		line := []byte(originalLine)
-
-		for _, outputFormat := range outputFormats {
-			line = outputFormat.Regex.ReplaceAll(line, []byte(outputFormat.Replacement))
+		if strings.HasSuffix(trimmedLine, ", because it was changed.") {
+			continue
+		}
+		if strings.HasSuffix(trimmedLine, "No matching credentials were found, falling back on anonymous") {
+			continue
+		}
+		if strings.HasPrefix(trimmedLine, "ERROR: logging before flag.Parse:") {
+			continue
+		}
+		if strings.HasSuffix(trimmedLine, "Taking snapshot of full filesystem...") {
+			continue
+		}
+		if strings.HasSuffix(trimmedLine, "Taking snapshot of files...") {
+			continue
+		}
+		if strings.HasSuffix(trimmedLine, "No files changed in this command, skipping snapshotting.") {
+			continue
+		}
+		if strings.Index(trimmedLine, "Error while retrieving image from cache: getting file info") != -1 {
+			continue
 		}
 
-		lineString := string(line)
-
-		if len(line) != len(originalLine) {
-			log.Done(buildPrefix + lineString)
-		} else if kanikoLogRegex.Match(line) == false {
-			log.Info(buildPrefix + ">> " + lineString)
-		}
-
-		lastLine = string(kanikoLogRegex.ReplaceAll([]byte(originalLine), []byte("$3")))
+		newLines = append(newLines, line)
 	}
 
-	processutil.RunOnEveryLine(stdout, printFormattedOutput, 500, wg)
-	processutil.RunOnEveryLine(stderr, printFormattedOutput, 500, wg)
+	i, err := k.out.Write([]byte(strings.Join(newLines, "\n")))
+	if err != nil {
+		return i, err
+	}
 
-	wg.Wait()
-
-	return lastLine
+	return len(p), nil
 }

@@ -1,24 +1,27 @@
 package kaniko
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
+	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	synctool "github.com/devspace-cloud/devspace/pkg/devspace/sync"
-	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	k8sv1 "k8s.io/api/core/v1"
+	dockerterm "github.com/docker/docker/pkg/term"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/util/interrupt"
@@ -26,24 +29,28 @@ import (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	PullSecretName   string
-	ImageName        string
-	PreviousImageTag string
-	BuildNamespace   string
+	PullSecretName string
+	ImageName      string
+	BuildNamespace string
 
 	allowInsecureRegistry bool
+	kanikoOptions         *latest.KanikoConfig
 	kubectl               *kubernetes.Clientset
 	dockerClient          client.CommonAPIClient
 }
 
+// Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
+const waitTimeout = 2 * time.Minute
+
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(pullSecretName, imageName, imageTag, lastImageTag, buildNamespace string, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
-		PullSecretName:        pullSecretName,
-		ImageName:             imageName + ":" + imageTag,
-		PreviousImageTag:      lastImageTag,
-		BuildNamespace:        buildNamespace,
+		PullSecretName: pullSecretName,
+		ImageName:      imageName + ":" + imageTag,
+		BuildNamespace: buildNamespace,
+
 		allowInsecureRegistry: allowInsecureRegistry,
+		kanikoOptions:         kanikoOptions,
 		kubectl:               kubectl,
 		dockerClient:          dockerClient,
 	}, nil
@@ -94,65 +101,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 	}
 
-	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	// Generate the build pod spec
+	buildPod, err := b.getBuildPod(options, dockerfilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "get build pod")
 	}
 
-	pullSecretName := registry.GetRegistryAuthSecretName(registryURL)
-	if b.PullSecretName != "" {
-		pullSecretName = b.PullSecretName
-	}
-
-	randString, _ := randutil.GenerateRandomString(12)
-	buildID := strings.ToLower(randString)
-	buildPod := &k8sv1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "devspace-build-",
-			Labels: map[string]string{
-				"devspace-build-id": buildID,
-			},
-		},
-		Spec: k8sv1.PodSpec{
-			Containers: []k8sv1.Container{
-				{
-					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:debug-5ac29a97734170a0547fea33b348dc7c328e2f8a",
-					ImagePullPolicy: k8sv1.PullIfNotPresent,
-					Command: []string{
-						"/busybox/sleep",
-					},
-					Args: []string{
-						"36000",
-					},
-					VolumeMounts: []k8sv1.VolumeMount{
-						{
-							Name:      pullSecretName,
-							MountPath: "/root/.docker",
-						},
-					},
-				},
-			},
-			Volumes: []k8sv1.Volume{
-				{
-					Name: pullSecretName,
-					VolumeSource: k8sv1.VolumeSource{
-						Secret: &k8sv1.SecretVolumeSource{
-							SecretName: pullSecretName,
-							Items: []k8sv1.KeyToPath{
-								{
-									Key:  k8sv1.DockerConfigJsonKey,
-									Path: "config.json",
-								},
-							},
-						},
-					},
-				},
-			},
-			RestartPolicy: k8sv1.RestartPolicyOnFailure,
-		},
-	}
-
+	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
 
@@ -166,105 +121,139 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	intr := interrupt.New(nil, deleteBuildPod)
-
 	err = intr.Run(func() error {
-		buildPodCreated, buildPodCreateErr := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
+		defer log.StopWait()
 
-		if buildPodCreateErr != nil {
-			return fmt.Errorf("Unable to create build pod: %s", buildPodCreateErr.Error())
+		pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
+			LabelSelector: "devspace-build=true",
+		})
+		if err != nil {
+			return errors.Wrap(err, "list pods in build namespace")
 		}
 
-		readyWaitTime := 2 * 60 * time.Second
-		readyCheckInterval := 5 * time.Second
-		buildPodReady := false
+		if len(pods.Items) > 0 {
+			log.StartWait("Deleting old build pods")
 
-		log.StartWait("Waiting for kaniko build pod to start")
+			for _, pod := range pods.Items {
+				// Delete older build pods when they already exist
+				err := b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{
+					GracePeriodSeconds: ptr.Int64(0),
+				})
+				if err != nil {
+					return errors.Wrap(err, "delete build pod")
+				}
+			}
 
-		for readyWaitTime > 0 {
+			// Wait till all pods are deleted
+			for true {
+				time.Sleep(time.Second * 3)
+
+				pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
+					LabelSelector: "devspace-build=true",
+				})
+				if err != nil || len(pods.Items) == 0 {
+					break
+				}
+			}
+		}
+
+		buildPodCreated, err := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
+		if err != nil {
+			return fmt.Errorf("Unable to create build pod: %s", err.Error())
+		}
+
+		now := time.Now()
+		log.StartWait("Waiting for build init container to start")
+
+		for {
 			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
-
-			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
-				buildPodReady = true
+			if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil {
 				break
 			}
 
-			time.Sleep(readyCheckInterval)
-			readyWaitTime = readyWaitTime - readyCheckInterval
+			time.Sleep(5 * time.Second)
+			if time.Since(now) >= waitTimeout {
+				return fmt.Errorf("Timeout waiting for init container")
+			}
 		}
 
-		log.StopWait()
-		log.Done("Kaniko build pod started")
-
-		if !buildPodReady {
-			return fmt.Errorf("Unable to start build pod")
-		}
+		// Get ignore rules from docker ignore
 		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(contextPath)
-
 		if ignoreRuleErr != nil {
 			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
 		}
 
-		buildContainer := &buildPod.Spec.Containers[0]
-
 		log.StartWait("Uploading files to build container")
 
-		err := synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, contextPath, "/src", ignoreRules)
+		// Copy complete context
+		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], contextPath, kanikoContextPath, ignoreRules)
 		if err != nil {
-			return fmt.Errorf("Error uploading files to container: %s", err.Error())
+			return fmt.Errorf("Error uploading files to container: %v", err)
 		}
 
-		err = synctool.CopyToContainer(b.kubectl, buildPod, buildContainer, dockerfilePath, "/src", ignoreRules)
+		// Copy dockerfile
+		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], dockerfilePath, kanikoContextPath, ignoreRules)
 		if err != nil {
-			return fmt.Errorf("Error uploading files to container: %s", err.Error())
+			return fmt.Errorf("Error uploading files to container: %v", err)
 		}
 
-		log.StopWait()
+		// Tell init container we are done
+		_, _, err = kubectl.ExecBuffered(b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
+		if err != nil {
+			return fmt.Errorf("Error executing command in init container: %v", err)
+		}
+
 		log.Done("Uploaded files to container")
+		log.StartWait("Waiting for kaniko container to start")
 
-		log.StartWait("Building container image")
+		now = time.Now()
+		for true {
+			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
+				break
+			}
 
-		imageDestination := b.ImageName
-		containerBuildPath := "/src"
-		exitChannel := make(chan error)
-		kanikoBuildCmd := []string{
-			"/kaniko/executor",
-			"--dockerfile=" + containerBuildPath + "/Dockerfile",
-			"--context=dir://" + containerBuildPath,
-			"--destination=" + imageDestination,
-			"--single-snapshot",
+			time.Sleep(2 * time.Second)
+			if time.Since(now) >= waitTimeout {
+				return fmt.Errorf("Timeout waiting for kaniko build pod")
+			}
 		}
-
-		for key, value := range options.BuildArgs {
-			newKanikoArg := fmt.Sprintf("%v=%v", key, *value)
-			kanikoBuildCmd = append(kanikoBuildCmd, "--build-arg", newKanikoArg)
-		}
-
-		if !options.NoCache {
-			kanikoBuildCmd = append(kanikoBuildCmd, "--cache=true", "--cache-repo="+b.PreviousImageTag)
-		}
-
-		if b.allowInsecureRegistry {
-			kanikoBuildCmd = append(kanikoBuildCmd, "--insecure", "--skip-tls-verify")
-		}
-
-		stdoutReader, stdoutWriter, _ := os.Pipe()
-		stderrReader, stderrWriter, _ := os.Pipe()
-
-		go func() {
-			exitChannel <- kubectl.ExecStream(b.kubectl, buildPod, buildContainer.Name, kanikoBuildCmd, false, nil, stdoutWriter, stderrWriter)
-		}()
-
-		lastKanikoOutput := formatKanikoOutput(stdoutReader, stderrReader)
-		exitError := <-exitChannel
 
 		log.StopWait()
+		log.Done("Build pod has started")
 
-		if exitError != nil {
-			return fmt.Errorf("Error: %s, Last Kaniko Output: %s", exitError.Error(), lastKanikoOutput)
+		_, stdout, stderr := dockerterm.StdStreams()
+		stdoutLogger := kanikoLogger{out: stdout}
+		stderrLogger := kanikoLogger{out: stderr}
+
+		// Stream the logs
+		err = services.StartLogsWithWriter(b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log.GetInstance(), stdoutLogger, stderrLogger)
+		if err != nil {
+			return fmt.Errorf("Error during printling build logs: %v", err)
 		}
+
+		log.StartWait("Checking build status")
+		for true {
+			time.Sleep(time.Second)
+
+			// Check if build was successfull
+			pod, err := b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("Error checking if build was successful: %v", err)
+			}
+
+			// Check if terminated
+			if pod.Status.ContainerStatuses[0].State.Terminated != nil {
+				if pod.Status.ContainerStatuses[0].State.Terminated.ExitCode != 0 {
+					return fmt.Errorf("Error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
+				}
+
+				break
+			}
+		}
+		log.StopWait()
 
 		log.Done("Done building image")
-
 		return nil
 	})
 
