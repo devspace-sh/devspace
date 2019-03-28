@@ -15,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 )
@@ -189,6 +190,8 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 		// Set images and pull secrets values
 		overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
 		overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
+
+		log.Infof("%#+v", overwriteValues["pullSecrets"])
 	}
 
 	// Deploy chart

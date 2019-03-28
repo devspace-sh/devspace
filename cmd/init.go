@@ -98,7 +98,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if config already exists
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.flags.reconfigure == false {
-		log.Fatalf("Config in .devspace/config.yaml already exists. Please run `devspace init --reconfigure` to reinitialize the project")
+		log.Fatalf("Config devspace.yaml already exists. Please run `devspace init --reconfigure` to reinitialize the project")
 	}
 
 	// Delete config & overwrite config
@@ -414,12 +414,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 		config.Dev.Sync = &[]*latest.SyncConfig{}
 	}
 
-	for _, syncPath := range *config.Dev.Sync {
-		if *syncPath.LocalSubPath == "./" || *syncPath.ContainerPath == "/app" {
-			return
-		}
-	}
-
 	dockerignore, err := ioutil.ReadFile(".dockerignore")
 	excludePaths := []string{}
 
@@ -434,10 +428,8 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-		Selector:      ptr.String(configutil.DefaultDevspaceServiceName),
-		ContainerPath: ptr.String("/app"),
-		LocalSubPath:  ptr.String("./"),
-		ExcludePaths:  &excludePaths,
+		Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
+		ExcludePaths: &excludePaths,
 	})
 
 	config.Dev.Sync = &syncConfig

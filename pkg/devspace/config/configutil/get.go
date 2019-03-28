@@ -277,9 +277,6 @@ func ValidateOnce() {
 					if sync.Selector == nil && sync.LabelSelector == nil {
 						log.Fatalf("Error in config: selector and label selector are nil in sync config at index %d", index)
 					}
-					if sync.ContainerPath == nil || sync.LocalSubPath == nil {
-						log.Fatalf("Error in config: containerPath or localSubPath are nil in sync config at index %d", index)
-					}
 				}
 			}
 

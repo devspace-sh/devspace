@@ -22,9 +22,14 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 
 	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.Dev.Sync))
 	for _, syncPath := range *config.Dev.Sync {
-		absLocalPath, err := filepath.Abs(*syncPath.LocalSubPath)
+		localPath := "."
+		if syncPath.LocalSubPath != nil {
+			localPath = *syncPath.LocalSubPath
+		}
+
+		absLocalPath, err := filepath.Abs(localPath)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", *syncPath.LocalSubPath, err)
+			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", localPath, err)
 		}
 
 		selector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
@@ -46,12 +51,17 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			return nil, fmt.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
 		}
 
+		containerPath := "."
+		if syncPath.ContainerPath == nil {
+			containerPath = *syncPath.ContainerPath
+		}
+
 		syncConfig := &sync.SyncConfig{
 			Kubectl:   client,
 			Pod:       pod,
 			Container: container,
 			WatchPath: absLocalPath,
-			DestPath:  *syncPath.ContainerPath,
+			DestPath:  containerPath,
 			Verbose:   verboseSync,
 		}
 
