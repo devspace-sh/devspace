@@ -1,22 +1,23 @@
 package helm
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
+
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/downloader"
 	helmdownloader "k8s.io/helm/pkg/downloader"
 	"k8s.io/helm/pkg/getter"
 	k8shelm "k8s.io/helm/pkg/helm"
@@ -51,7 +52,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, wait bool, timeout *int64, force *bool) (*hapi_release5.Release, error) {
+func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
 		config := configutil.GetConfig()
 
@@ -90,6 +91,8 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 				return nil, err
 			}
 		}
+	} else if err != helmchartutil.ErrRequirementsNotFound {
+		return nil, fmt.Errorf("cannot load requirements: %v", err)
 	}
 
 	releaseExists, err := helmClientWrapper.ReleaseExists(releaseName)
@@ -108,35 +111,42 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 		overwriteValues = unmarshalledValues
 	}
 
-	// Set timeout
+	// Set wait and timeout
 	waitTimeout := DeploymentTimeout
-	if timeout != nil {
-		waitTimeout = *timeout
+	if helmConfig.Timeout != nil {
+		waitTimeout = *helmConfig.Timeout
+	}
+
+	wait := true
+	if helmConfig.Wait != nil {
+		wait = *helmConfig.Wait
+	}
+
+	rollback := true
+	if helmConfig.Rollback != nil {
+		rollback = *helmConfig.Rollback
 	}
 
 	if releaseExists {
-		forceDefault := false
-		if force != nil {
-			forceDefault = *force
-		}
-
 		upgradeResponse, err := helmClientWrapper.Client.UpdateRelease(
 			releaseName,
 			chartPath,
+			k8shelm.UpgradeWait(wait),
 			k8shelm.UpgradeTimeout(waitTimeout),
 			k8shelm.UpdateValueOverrides(overwriteValues),
 			k8shelm.ReuseValues(false),
-			k8shelm.UpgradeForce(forceDefault),
-			k8shelm.UpgradeWait(wait),
+			k8shelm.UpgradeForce(ptr.ReverseBool(helmConfig.Force)),
 		)
 
 		if err != nil {
 			err = helmClientWrapper.analyzeError(fmt.Errorf("helm upgrade: %v", err), releaseNamespace)
 			if err != nil {
-				log.Warn("Try to roll back back chart because of previous error")
-				_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
-				if rollbackError != nil {
-					return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force the deletion of the space", releaseName, err, ansi.Color("devspace purge", "white+b"))
+				if rollback {
+					log.Warn("Try to roll back back chart because of previous error")
+					_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
+					if rollbackError != nil {
+						return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force the deletion of the space", releaseName, err, ansi.Color("devspace purge", "white+b"))
+					}
 				}
 
 				return nil, err
@@ -151,17 +161,19 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 	installResponse, err := helmClientWrapper.Client.InstallReleaseFromChart(
 		chart,
 		releaseNamespace,
+		k8shelm.InstallWait(wait),
 		k8shelm.InstallTimeout(waitTimeout),
 		k8shelm.ValueOverrides(overwriteValues),
 		k8shelm.ReleaseName(releaseName),
 		k8shelm.InstallReuseName(true),
-		k8shelm.InstallWait(wait),
 	)
 	if err != nil {
 		err = helmClientWrapper.analyzeError(fmt.Errorf("helm install: %v", err), releaseNamespace)
 		if err != nil {
-			// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
-			helmClientWrapper.DeleteRelease(releaseName, true)
+			if rollback {
+				// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
+				helmClientWrapper.DeleteRelease(releaseName, true)
+			}
 
 			return nil, err
 		}
@@ -199,25 +211,13 @@ func (helmClientWrapper *ClientWrapper) analyzeError(srcErr error, releaseNamesp
 	return srcErr
 }
 
-// InstallChartByName installs the given chart by name under the releasename in the releasenamespace
-func (helmClientWrapper *ClientWrapper) InstallChartByName(releaseName string, releaseNamespace string, chartName string, chartVersion string, values *map[interface{}]interface{}, wait bool, timeout *int64, force *bool) (*hapi_release5.Release, error) {
-	if len(chartVersion) == 0 {
-		chartVersion = ">0.0.0-0"
-	}
-
-	getter := getter.All(*helmClientWrapper.Settings)
-	chartDownloader := downloader.ChartDownloader{
-		HelmHome: helmClientWrapper.Settings.Home,
-		Out:      os.Stdout,
-		Getters:  getter,
-		Verify:   downloader.VerifyNever,
-	}
-	os.MkdirAll(helmClientWrapper.Settings.Home.Archive(), os.ModePerm)
-
-	chartPath, _, err := chartDownloader.DownloadTo(chartName, chartVersion, helmClientWrapper.Settings.Home.Archive())
+// InstallChart installs the given chart by name under the releasename in the releasenamespace
+func (helmClientWrapper *ClientWrapper) InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
+	chart := helmConfig.Chart
+	chartPath, err := locateChartPath(helmClientWrapper.Settings, ptr.ReverseString(chart.RepoURL), ptr.ReverseString(chart.Username), ptr.ReverseString(chart.Password), ptr.ReverseString(chart.Name), ptr.ReverseString(chart.Version), false, "", "", "", "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "locate chart path")
 	}
 
-	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, wait, timeout, force)
+	return helmClientWrapper.InstallChartByPath(releaseName, releaseNamespace, chartPath, values, helmConfig)
 }

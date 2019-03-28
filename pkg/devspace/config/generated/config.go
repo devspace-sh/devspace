@@ -49,6 +49,7 @@ type CacheConfig struct {
 type DeploymentConfig struct {
 	HelmOverrideTimestamps map[string]int64 `yaml:"helmOverrideTimestamps"`
 	HelmChartHash          string           `yaml:"helmChartHash"`
+	DeploymentConfigHash   uint32           `yaml:"deploymentConfigHash"`
 }
 
 // ConfigPath is the relative generated config path

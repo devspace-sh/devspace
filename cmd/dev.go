@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -315,13 +316,16 @@ func GetPaths() []string {
 			for _, deployName := range *config.Dev.AutoReload.Deployments {
 				for _, deployConf := range *config.Deployments {
 					if *deployName == *deployConf.Name {
-						if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
-							chartPath := *deployConf.Helm.ChartPath
-							if chartPath[len(chartPath)-1] != '/' {
-								chartPath += "/"
-							}
+						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != nil {
+							_, err := os.Stat(*deployConf.Helm.Chart.Name)
+							if err == nil {
+								chartPath := *deployConf.Helm.Chart.Name
+								if chartPath[len(chartPath)-1] != '/' {
+									chartPath += "/"
+								}
 
-							paths = append(paths, chartPath+"**")
+								paths = append(paths, chartPath+"**")
+							}
 						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
 							for _, manifestPath := range *deployConf.Kubectl.Manifests {
 								paths = append(paths, *manifestPath)

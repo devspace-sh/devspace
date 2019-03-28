@@ -21,7 +21,6 @@ func NewAddCmd() *cobra.Command {
 	addCmd.AddCommand(newSelectorCmd())
 	addCmd.AddCommand(newProviderCmd())
 	addCmd.AddCommand(newPortCmd())
-	addCmd.AddCommand(newPackageCmd())
 	addCmd.AddCommand(newImageCmd())
 	addCmd.AddCommand(newDeploymentCmd())
 	addCmd.AddCommand(newComponentCmd())

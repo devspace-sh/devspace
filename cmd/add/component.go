@@ -1,12 +1,6 @@
 package add
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/chart"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
-	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +37,7 @@ devspace add component mysql
 // RunAddPackage executes the add package command logic
 func (cmd *componentCmd) RunAddComponent(cobraCmd *cobra.Command, args []string) {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	/*configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,5 +101,5 @@ func (cmd *componentCmd) RunAddComponent(cobraCmd *cobra.Command, args []string)
 		log.Fatalf("Error adding component %s: %v", args[0], err)
 	}
 
-	log.Donef("Successfully added the component %s\nRun:\n- `%s` to update the application", args[0], ansi.Color("devspace deploy", "white+b"))
+	log.Donef("Successfully added the component %s\nRun:\n- `%s` to update the application", args[0], ansi.Color("devspace deploy", "white+b"))*/
 }

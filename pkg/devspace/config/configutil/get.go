@@ -2,10 +2,12 @@ package configutil
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
+	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -28,6 +30,9 @@ const DefaultConfigsPath = "devspace-configs.yaml"
 
 // DefaultConfigPath is the default config path to use
 const DefaultConfigPath = "devspace.yaml"
+
+// DefaultVarsPath is the default vars path to use
+const DefaultVarsPath = "devspace-vars.yaml"
 
 // LoadedConfig is the config that was loaded from the configs file
 var LoadedConfig string
@@ -165,6 +170,26 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				log.Fatal(err)
 			}
 		} else {
+			_, err := os.Stat(DefaultVarsPath)
+			if err == nil {
+				vars := []*configs.Variable{}
+				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
+				if err != nil {
+					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
+				}
+
+				err = yaml.UnmarshalStrict(yamlFileContent, vars)
+				if err != nil {
+					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
+				}
+
+				// Ask questions
+				err = askQuestions(generatedConfig, vars)
+				if err != nil {
+					log.Fatalf("Error filling vars: %v", err)
+				}
+			}
+
 			configRaw, err = loadConfigFromPath(DefaultConfigPath)
 			if err != nil {
 				log.Fatalf("Loading config: %v", err)
@@ -275,8 +300,8 @@ func ValidateOnce() {
 				if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 					log.Fatalf("Please specify either helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
 				}
-				if deployConfig.Helm != nil && deployConfig.Helm.ChartPath == nil {
-					log.Fatalf("deployments[%d].helm.chartPath is required", index)
+				if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
+					log.Fatalf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
 				}
 				if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 					log.Fatalf("deployments[%d].kubectl.manifests is required", index)

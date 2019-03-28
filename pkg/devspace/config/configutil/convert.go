@@ -45,5 +45,23 @@ func convertDotDevSpaceConfigToDevSpaceYaml(basePath string) error {
 		}
 	}
 
+	oldVarsPath := filepath.Join(basePath, ".devspace", "vars.yaml")
+	newVarsPath := filepath.Join(basePath, DefaultVarsPath)
+
+	// Convert old to new configs.yaml
+	_, err = os.Stat(newVarsPath)
+	if os.IsNotExist(err) {
+		// Check if .devspace/vars.yaml exists
+		_, err = os.Stat(oldVarsPath)
+		if os.IsNotExist(err) == false {
+			err = os.Rename(oldVarsPath, newVarsPath)
+			if err != nil {
+				return errors.Wrap(err, "rename")
+			}
+
+			log.Infof("Renamed old vars %s to new vars %s", oldVarsPath, newVarsPath)
+		}
+	}
+
 	return nil
 }

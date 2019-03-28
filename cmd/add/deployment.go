@@ -10,7 +10,13 @@ import (
 type deploymentCmd struct {
 	Namespace string
 	Manifests string
-	Chart     string
+
+	Chart        string
+	ChartVersion string
+	ChartRepo    string
+
+	Image     string
+	Component string
 }
 
 func newDeploymentCmd() *cobra.Command {
@@ -23,11 +29,12 @@ func newDeploymentCmd() *cobra.Command {
 #######################################################
 ############# devspace add deployment #################
 #######################################################
-Add a new deployment (kubernetes manifests or 
-helm chart) to your DevSpace configuration
+Add a new deployment (docker image, components, 
+kubernetes manifests or helm chart) to your DevSpace configuration
 
 Examples:
 devspace add deployment my-deployment --chart=chart/
+devspace add deployment my-deployment --chart=stable/mysql
 devspace add deployment my-deployment --manifests=kube/pod.yaml
 devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 #######################################################
@@ -37,8 +44,18 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 	}
 
 	addDeploymentCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to use for deploying")
-	addDeploymentCmd.Flags().StringVar(&cmd.Manifests, "manifests", "", "The kubernetes manifests to deploy (glob pattern are allowed, comma separated)")
+
+	// Kubectl options
+	addDeploymentCmd.Flags().StringVar(&cmd.Manifests, "manifests", "", "The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)")
+
+	// Helm chart options
 	addDeploymentCmd.Flags().StringVar(&cmd.Chart, "chart", "", "The helm chart to deploy")
+	addDeploymentCmd.Flags().StringVar(&cmd.ChartVersion, "chart-version", "", "The helm chart version to use")
+	addDeploymentCmd.Flags().StringVar(&cmd.ChartRepo, "chart-repo", "", "The helm chart repository url to use")
+
+	// Component options
+	addDeploymentCmd.Flags().StringVar(&cmd.Image, "image", "", "A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)")
+	addDeploymentCmd.Flags().StringVar(&cmd.Image, "component", "", "A predefined component to use (see `devspace list available-components`)")
 
 	return addDeploymentCmd
 }

@@ -75,41 +75,12 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	cmd.deleteDevSpaceDeployments()
 	cmd.deleteClusterRoleBinding()
-	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()
 	cmd.deleteDevspaceFolder()
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
 	deleteDevSpace(cmd.kubectl, nil)
-}
-
-func (cmd *ResetCmd) deleteDeploymentFiles() {
-	config := configutil.GetConfig()
-
-	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
-			if deployConfig.Helm != nil && deployConfig.Helm.ChartPath != nil {
-				absChartPath, err := filepath.Abs(*deployConfig.Helm.ChartPath)
-
-				if err == nil {
-					_, err := os.Stat(absChartPath)
-					if os.IsNotExist(err) == false {
-						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-							Question:     "Should the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed?",
-							DefaultValue: "yes",
-							Options:      []string{"yes", "no"},
-						}) == "yes"
-
-						if deleteChart {
-							os.RemoveAll(absChartPath)
-							log.Donef("Successfully deleted %s", *deployConfig.Helm.ChartPath)
-						}
-					}
-				}
-			}
-		}
-	}
 }
 
 func (cmd *ResetCmd) deleteImageFiles() {

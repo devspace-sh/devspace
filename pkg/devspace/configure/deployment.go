@@ -37,7 +37,9 @@ func AddDeployment(name, namespace, manifests, chart string) error {
 			Name:      &name,
 			Namespace: &namespace,
 			Helm: &v1.HelmConfig{
-				ChartPath: &chart,
+				Chart: &v1.ChartConfig{
+					Name: &chart,
+				},
 			},
 		})
 	} else if manifests != "" {

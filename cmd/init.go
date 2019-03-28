@@ -265,14 +265,11 @@ func (cmd *InitCmd) initConfig(config *latest.Config) {
 		{
 			Name: ptr.String(configutil.DefaultDevspaceDeploymentName),
 			Helm: &latest.HelmConfig{
-				ChartPath: ptr.String("./chart"),
+				Chart: &latest.ChartConfig{
+					Name: ptr.String("./chart"),
+				},
 			},
 		},
-	}
-
-	// Auto reload configuration
-	config.Dev.AutoReload = &latest.AutoReloadConfig{
-		Deployments: &[]*string{ptr.String(configutil.DefaultDevspaceDeploymentName)},
 	}
 
 	// Set images
