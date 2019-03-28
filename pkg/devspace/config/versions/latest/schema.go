@@ -68,16 +68,16 @@ type ComponentConfig struct {
 	Volumes             *[]*VolumeConfig     `yaml:"volumes,omitempty"`
 	Service             *ServiceConfig       `yaml:"service,omitempty"`
 	PullSecrets         *[]*string           `yaml:"pullSecrets,omitempty"`
-	Autoscaling         *AutoscalingConfig   `yaml:"autoscaling,omitempty"`
+	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
 }
 
-// AutoscalingConfig holds the autoscaling config of a component
-type AutoscalingConfig struct {
-	Horizontal *AutoscalingHorizontalConfig `yaml:"horizontal,omitempty"`
+// AutoScalingConfig holds the autoscaling config of a component
+type AutoScalingConfig struct {
+	Horizontal *AutoScalingHorizontalConfig `yaml:"horizontal,omitempty"`
 }
 
-// AutoscalingHorizontalConfig holds the horizontal autoscaling config of a component
-type AutoscalingHorizontalConfig struct {
+// AutoScalingHorizontalConfig holds the horizontal autoscaling config of a component
+type AutoScalingHorizontalConfig struct {
 	MaxReplicas   *int    `yaml:"maxReplicas,omitempty"`
 	AverageCPU    *string `yaml:"averageCPU,omitempty"`
 	AverageMemory *string `yaml:"averageMemory,omitempty"`
