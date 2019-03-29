@@ -64,7 +64,7 @@ type ComponentConfig struct {
 	Replicas            *int                 `yaml:"replicas,omitempty"`
 	PodManagementPolicy *string              `yaml:"podManagementPolicy,omitempty"`
 	ServiceName         *string              `yaml:"serviceName,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate"`
+	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
 	Volumes             *[]*VolumeConfig     `yaml:"volumes,omitempty"`
 	Service             *ServiceConfig       `yaml:"service,omitempty"`
 	PullSecrets         *[]*string           `yaml:"pullSecrets,omitempty"`
@@ -98,8 +98,8 @@ type ContainerConfig struct {
 	Resources      *map[interface{}]interface{} `yaml:"resources,omitempty"`
 	Env            *[]*v1.EnvVar                `yaml:"env,omitempty"`
 	VolumeMounts   *[]*VolumeMountConfig        `yaml:"volumeMounts,omitempty"`
-	LifenessProbe  *v1.Probe                    `yaml:"lifenessProbe,omitempty"`
-	ReadinessProbe *v1.Probe                    `yaml:"readinessProbe,omitempty"`
+	LifenessProbe  *map[interface{}]interface{} `yaml:"lifenessProbe,omitempty"`
+	ReadinessProbe *map[interface{}]interface{} `yaml:"readinessProbe,omitempty"`
 	Command        *[]*string                   `yaml:"command,omitempty"`
 	Args           *[]*string                   `yaml:"args,omitempty"`
 }

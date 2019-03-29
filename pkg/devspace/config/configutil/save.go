@@ -1,23 +1,19 @@
 package configutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // SaveBaseConfig writes the data of a config to its yaml file
 func SaveBaseConfig() error {
-	out, err := yaml.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(DefaultConfigPath, out, os.ModePerm)
-
 	// default and overwrite values
-	/*configToIgnore := latest.New()
+	configToIgnore := latest.New()
 
 	// generates config without default and overwrite values
 	configMapRaw, _, err := Split(config, configRaw, configToIgnore)
@@ -25,14 +21,15 @@ func SaveBaseConfig() error {
 		return err
 	}
 
-	savePath := DefaultConfigPath
-
 	// Convert to string
 	configMap, _ := configMapRaw.(map[interface{}]interface{})
 	configYaml, err := yaml.Marshal(configMap)
 	if err != nil {
 		return err
 	}
+
+	// Path to save the configuration to
+	savePath := DefaultConfigPath
 
 	// Check if we have to save to configs.yaml
 	if LoadedConfig != "" {
@@ -71,5 +68,5 @@ func SaveBaseConfig() error {
 		return err
 	}
 
-	return nil*/
+	return nil
 }
