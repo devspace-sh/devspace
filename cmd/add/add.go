@@ -23,7 +23,6 @@ func NewAddCmd() *cobra.Command {
 	addCmd.AddCommand(newPortCmd())
 	addCmd.AddCommand(newImageCmd())
 	addCmd.AddCommand(newDeploymentCmd())
-	addCmd.AddCommand(newComponentCmd())
 
 	return addCmd
 }

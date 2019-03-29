@@ -2,6 +2,7 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -49,13 +50,13 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 	addDeploymentCmd.Flags().StringVar(&cmd.Manifests, "manifests", "", "The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)")
 
 	// Helm chart options
-	addDeploymentCmd.Flags().StringVar(&cmd.Chart, "chart", "", "The helm chart to deploy")
+	addDeploymentCmd.Flags().StringVar(&cmd.Chart, "chart", "", "A helm chart to deploy (e.g. ./chart or stable/mysql)")
 	addDeploymentCmd.Flags().StringVar(&cmd.ChartVersion, "chart-version", "", "The helm chart version to use")
 	addDeploymentCmd.Flags().StringVar(&cmd.ChartRepo, "chart-repo", "", "The helm chart repository url to use")
 
 	// Component options
 	addDeploymentCmd.Flags().StringVar(&cmd.Image, "image", "", "A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)")
-	addDeploymentCmd.Flags().StringVar(&cmd.Image, "component", "", "A predefined component to use (see `devspace list available-components`)")
+	addDeploymentCmd.Flags().StringVar(&cmd.Component, "component", "", "A predefined component to use (run `devspace list available-components` to see all available components)")
 
 	return addDeploymentCmd
 }
@@ -71,9 +72,50 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddDeployment(args[0], cmd.Namespace, cmd.Manifests, cmd.Chart)
+	deploymentName := args[0]
+
+	// Get base config and check if deployment already exists
+	config := configutil.GetBaseConfig()
+	if config.Deployments != nil {
+		for _, deployConfig := range *config.Deployments {
+			if *deployConfig.Name == deploymentName {
+				log.Fatalf("Deployment %s already exists", deploymentName)
+			}
+		}
+	} else {
+		config.Deployments = &[]*latest.DeploymentConfig{}
+	}
+
+	var newDeployment *latest.DeploymentConfig
+
+	// figure out what kind of deployment to add
+	if cmd.Manifests != "" {
+		newDeployment, err = configure.GetKubectlDeployment(config, deploymentName, cmd.Manifests)
+	} else if cmd.Chart != "" {
+		newDeployment, err = configure.GetHelmDeployment(config, deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
+	} else if cmd.Image != "" {
+		newDeployment, err = configure.GetImageComponentDeployment(config, deploymentName, cmd.Image)
+	} else if cmd.Component != "" {
+		newDeployment, err = configure.GetPredefinedComponentDeployment(config, deploymentName, cmd.Component)
+	} else {
+		log.Fatal("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
+	}
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Add namespace if defined
+	if cmd.Namespace != "" {
+		newDeployment.Namespace = &cmd.Namespace
+	}
+
+	// Prepend deployment
+	(*config.Deployments) = append([]*latest.DeploymentConfig{newDeployment}, (*config.Deployments)...)
+
+	// Save config
+	err = configutil.SaveBaseConfig()
+	if err != nil {
+		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}
 
 	log.Donef("Successfully added %s as new deployment", args[0])

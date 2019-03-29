@@ -11,6 +11,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 	homedir "github.com/mitchellh/go-homedir"
@@ -110,18 +111,8 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 	c.VariableValues[*variable.Name] = *stdinutil.GetFromStdin(params)
 }
 
-// ComponentTemplateSchema is the component template schema
-type ComponentTemplateSchema struct {
-	Components []map[interface{}]interface{} `yaml:"components"`
-	Volumes    []map[interface{}]interface{} `yaml:"volumes"`
-}
-
 // NewComponentGenerator creates a new component generator for the given path
-func NewComponentGenerator(localChartPath string) (*ComponentsGenerator, error) {
-	if localChartPath == "" {
-		localChartPath = "."
-	}
-
+func NewComponentGenerator() (*ComponentsGenerator, error) {
 	homedir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -134,8 +125,7 @@ func NewComponentGenerator(localChartPath string) (*ComponentsGenerator, error) 
 	}
 
 	return &ComponentsGenerator{
-		LocalPath: localChartPath,
-		gitRepo:   gitRepository,
+		gitRepo: gitRepository,
 	}, nil
 }
 
@@ -186,7 +176,7 @@ func (cg *ComponentsGenerator) GetComponent(name string) (*ComponentSchema, erro
 }
 
 // GetComponentTemplate retrieves a component templates
-func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*ComponentTemplateSchema, error) {
+func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.ComponentConfig, error) {
 	component, err := cg.GetComponent(name)
 	if err != nil {
 		return nil, err
@@ -215,7 +205,7 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*ComponentTemp
 		return nil, fmt.Errorf("Error resolving variables: %v", err)
 	}
 
-	componentTemplate := &ComponentTemplateSchema{}
+	componentTemplate := &latest.ComponentConfig{}
 	err = yaml.UnmarshalStrict(yamlFileContent, componentTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("Error unmarshalling yaml: %v", err)

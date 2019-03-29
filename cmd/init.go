@@ -54,26 +54,13 @@ func init() {
 	}
 	cobraCmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initializes your DevSpace",
+		Short: "Initializes DevSpace in the current folder",
 		Long: `
 #######################################################
 #################### devspace init ####################
 #######################################################
-Gets your project ready to start a DevSpaces.
-Creates the following files and directories:
-
-YOUR_PROJECT_PATH/
-|
-|-- chart/
-|   |-- Chart.yaml
-|   |-- values.yaml
-|   |-- templates
-|
-|-- .devspace/
-|   |-- .gitignore
-|   |-- generated.yaml
-|   |-- config.yaml
-
+Initializes a new devspace project within the current
+folder. Creates a devspace.yaml with all configuration.
 #######################################################
 	`,
 		Args: cobra.NoArgs,
@@ -526,5 +513,15 @@ func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
 		{
 			Image: &imageName,
 		},
+	}
+
+	// Check if cloud
+	if cmd.flags.useCloud {
+		(*(*config.Deployments)[0].Component.Containers)[0].Resources = &map[interface{}]interface{}{
+			"limits": map[interface{}]interface{}{
+				"cpu":    "400m",
+				"memory": "500Mi",
+			},
+		}
 	}
 }
