@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -115,10 +116,16 @@ func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
 					log.Warnf("Unable to create kubectl deploy config: %v", err)
 					continue
 				}
-			} else {
+			} else if deployConfig.Helm != nil {
 				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
+					continue
+				}
+			} else if deployConfig.Component != nil {
+				deployClient, err = deployComponent.New(kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create component deploy config: %v", err)
 					continue
 				}
 			}

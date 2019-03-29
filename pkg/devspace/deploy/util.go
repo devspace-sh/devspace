@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -31,6 +32,13 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev,
 				log.Info("Deploying " + *deployConfig.Name + " with helm")
 
 				deployClient, err = helm.New(client, deployConfig, log)
+				if err != nil {
+					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+				}
+			} else if deployConfig.Component != nil {
+				log.Info("Deploying " + *deployConfig.Name + " component with helm")
+
+				deployClient, err = component.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}

@@ -34,14 +34,11 @@ const DefaultConfigPath = "devspace.yaml"
 // DefaultVarsPath is the default vars path to use
 const DefaultVarsPath = "devspace-vars.yaml"
 
+// DefaultDevSpaceSelectorName is the default app selector
+const DefaultDevSpaceSelectorName = "app-selector"
+
 // LoadedConfig is the config that was loaded from the configs file
 var LoadedConfig string
-
-// DefaultDevspaceServiceName is the name of the initial default service
-const DefaultDevspaceServiceName = "default"
-
-// DefaultDevspaceDeploymentName is the name of the initial default deployment
-const DefaultDevspaceDeploymentName = "devspace-app"
 
 // Global config vars
 var config *latest.Config    // merged config
@@ -294,8 +291,8 @@ func ValidateOnce() {
 				if deployConfig.Name == nil {
 					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
 				}
-				if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
-					log.Fatalf("Please specify either helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
+				if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
+					log.Fatalf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
 				}
 				if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
 					log.Fatalf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)

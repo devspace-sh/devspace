@@ -5,12 +5,13 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/chart"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -29,16 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = `.devspace/`
+const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
 	flags               *InitCmdFlags
 	dockerfileGenerator *generator.DockerfileGenerator
-	defaultImage        *latest.ImageConfig
-
-	port      string
-	imageName string
 }
 
 // InitCmdFlags are the flags available for the init-command
@@ -48,7 +45,6 @@ type InitCmdFlags struct {
 	context     string
 	image       string
 
-	chart    bool
 	useCloud bool
 }
 
@@ -86,11 +82,10 @@ YOUR_PROJECT_PATH/
 	rootCmd.AddCommand(cobraCmd)
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", false, "Change existing configuration")
-	cobraCmd.Flags().BoolVar(&cmd.flags.chart, "chart", true, "Create devspace helm chart if not existent")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", ".", "Change existing configuration")
-	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", "Dockerfile", "Change existing configuration")
-	cobraCmd.Flags().StringVar(&cmd.flags.image, "image", "", "Change existing configuration")
+	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", ".", "Context path to use for intialization")
+	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", "Dockerfile", "Local dockerfile to use for initialization")
+	cobraCmd.Flags().StringVar(&cmd.flags.image, "image", "", "Container image to use")
 }
 
 // Run executes the command logic
@@ -103,6 +98,15 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Delete config & overwrite config
 	os.RemoveAll(".devspace")
+
+	// Delete configs path
+	os.Remove(configutil.DefaultConfigsPath)
+
+	// Delete config & overwrite config
+	os.Remove(configutil.DefaultConfigPath)
+
+	// Delete config & overwrite config
+	os.Remove(configutil.DefaultVarsPath)
 
 	// Create config
 	config := configutil.InitConfig()
@@ -126,32 +130,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Create chart if necessary
-	if cmd.flags.chart {
-		_, err := os.Stat("chart")
-		if err != nil {
-			chartGenerator, err := generator.NewChartGenerator("chart")
-			if err != nil {
-				log.Fatalf("Error intializing chart generator: %v", err)
-			}
+	// Configure port
+	cmd.addDefaultPorts()
 
-			err = chartGenerator.Update(false)
-			if err != nil {
-				log.Fatalf("Error creating chart: %v", err)
-			}
-
-			log.Info("DevSpace chart created at chart/")
-		} else {
-			log.Info("Devspace detected that you already have a chart at ./chart. If you want to update the chart run `devspace update chart`")
-		}
-
-		cmd.addDefaultSelector()
-		cmd.addDefaultPorts()
-
-		if cmd.flags.image == "" {
-			// Add default sync configuration
-			cmd.addDefaultSyncConfig()
-		}
+	// Add default sync configuration
+	if cmd.flags.image == "" {
+		cmd.addDefaultSyncConfig()
 	}
 
 	// Check if kubectl exists
@@ -198,16 +182,11 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Configure .devspace/config.yaml
+	// Configure image name
 	if cmd.flags.image != "" {
 		cmd.configureImageFromImageName()
 	} else {
 		cmd.configureImageFromDockerfile(providerName)
-	}
-
-	// Replace chart placeholders
-	if cmd.flags.chart {
-		cmd.replacePlaceholder()
 	}
 
 	// Save config
@@ -260,74 +239,36 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) initConfig(config *latest.Config) {
+	componentName, err := getComponentName()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Set intial deployments
 	config.Deployments = &[]*latest.DeploymentConfig{
 		{
-			Name: ptr.String(configutil.DefaultDevspaceDeploymentName),
-			Helm: &latest.HelmConfig{
-				Chart: &latest.ChartConfig{
-					Name: ptr.String("./chart"),
-				},
-			},
+			Name:      &componentName,
+			Component: &latest.ComponentConfig{},
 		},
-	}
-
-	// Set images
-	config.Images = &map[string]*latest.ImageConfig{
-		"default": &latest.ImageConfig{
-			Image: ptr.String("devspace"),
-		},
-	}
-
-	// Set default image
-	cmd.defaultImage = (*config.Images)["default"]
-
-	// Override Entrypoint
-	if cmd.flags.image == "" {
-		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
-			&latest.ImageOverrideConfig{
-				Name:       ptr.String("default"),
-				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
-			},
-		}
 	}
 }
 
-func (cmd *InitCmd) replacePlaceholder() {
-	config := configutil.GetConfig()
-
-	// Get image name
-	if config.Images != nil && len(*config.Images) > 0 {
-		for _, imageConf := range *config.Images {
-			cmd.imageName = *imageConf.Image
-			if cmd.flags.image != "" {
-				cmd.imageName += ":" + *imageConf.Tag
-			}
-
-			break
-		}
-
-		if cmd.imageName != "" {
-			err := chart.ReplaceImage("chart/values.yaml", cmd.imageName)
-			if err != nil {
-				log.Fatalf("Couldn't replace image: %v", err)
-			}
-		}
+func getComponentName() (string, error) {
+	absPath, err := filepath.Abs(".")
+	if err != nil {
+		return "", err
 	}
 
-	// Get image port
-	if cmd.port == "" {
-		if config.Dev != nil && config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 && (*config.Dev.Ports)[0].PortMappings != nil && len(*(*config.Dev.Ports)[0].PortMappings) > 0 {
-			cmd.port = strconv.Itoa(*(*(*config.Dev.Ports)[0].PortMappings)[0].RemotePort)
-		}
+	dirname := filepath.Base(absPath)
+	dirname = strings.ToLower(dirname)
+	dirname = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(dirname, "")
+	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
+	dirname = strings.Trim(dirname, "-")
+	if len(dirname) == 0 {
+		dirname = "devspace"
 	}
 
-	if cmd.port != "" {
-		err := chart.ReplacePort("chart/values.yaml", cmd.port)
-		if err != nil {
-			log.Fatalf("Couldn't replace port: %v", err)
-		}
-	}
+	return dirname, nil
 }
 
 func (cmd *InitCmd) configureDevSpace() {
@@ -344,19 +285,6 @@ func (cmd *InitCmd) configureDevSpace() {
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = namespace
-}
-
-func (cmd *InitCmd) addDefaultSelector() {
-	config := configutil.GetConfig()
-	config.Dev.Selectors = &[]*latest.SelectorConfig{
-		{
-			Name: ptr.String(configutil.DefaultDevspaceServiceName),
-			LabelSelector: &map[string]*string{
-				"app.kubernetes.io/name":      ptr.String("devspace-app"),
-				"app.kubernetes.io/component": ptr.String("default"),
-			},
-		},
-	}
 }
 
 func (cmd *InitCmd) addDefaultPorts() {
@@ -399,12 +327,21 @@ func (cmd *InitCmd) addDefaultPorts() {
 	config := configutil.GetConfig()
 	config.Dev.Ports = &[]*latest.PortForwardingConfig{
 		{
-			Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
+			LabelSelector: &map[string]*string{
+				"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+			},
 			PortMappings: &portMappings,
 		},
 	}
 
-	cmd.port = port
+	// Add port to component
+	(*config.Deployments)[0].Component.Service = &latest.ServiceConfig{
+		Ports: &[]*latest.ServicePortConfig{
+			{
+				Port: &exposedPort,
+			},
+		},
+	}
 }
 
 func (cmd *InitCmd) addDefaultSyncConfig() {
@@ -419,7 +356,6 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 
 	if err == nil {
 		dockerignoreRules := strings.Split(string(dockerignore), "\n")
-
 		for _, ignoreRule := range dockerignoreRules {
 			if len(ignoreRule) > 0 {
 				excludePaths = append(excludePaths, ignoreRule)
@@ -428,7 +364,9 @@ func (cmd *InitCmd) addDefaultSyncConfig() {
 	}
 
 	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-		Selector:     ptr.String(configutil.DefaultDevspaceServiceName),
+		LabelSelector: &map[string]*string{
+			"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+		},
 		ExcludePaths: &excludePaths,
 	})
 
@@ -442,32 +380,46 @@ func (cmd *InitCmd) configureImageFromImageName() {
 		Options:  []string{"yes", "no"},
 	}) == "yes"
 
-	splittedImage := strings.Split(cmd.flags.image, ":")
-
 	config := configutil.GetConfig()
-	imageMap := *config.Images
-
-	imageMap["default"].Image = &splittedImage[0]
-	if len(splittedImage) > 1 {
-		imageMap["default"].Tag = &splittedImage[1]
-	} else {
-		imageMap["default"].Tag = ptr.String("latest")
-	}
-
-	imageMap["default"].Build = &latest.BuildConfig{
-		Disabled: ptr.Bool(true),
+	(*config.Deployments)[0].Component.Containers = &[]*latest.ContainerConfig{
+		{
+			Image: &cmd.flags.image,
+		},
 	}
 
 	if createPullSecret {
-		imageMap["default"].CreatePullSecret = &createPullSecret
+		splittedImage := strings.Split(cmd.flags.image, ":")
+
+		imageTag := "latest"
+		if len(splittedImage) > 1 {
+			imageTag = splittedImage[1]
+		}
+
+		config.Images = &map[string]*latest.ImageConfig{
+			"default": &latest.ImageConfig{
+				Image: &splittedImage[0],
+				Tag:   &imageTag,
+				Build: &latest.BuildConfig{
+					Disabled: ptr.Bool(true),
+				},
+				CreatePullSecret: &createPullSecret,
+			},
+		}
 	}
 }
 
 func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
-	config := configutil.GetConfig()
+	var (
+		config         = configutil.GetConfig()
+		dockerUsername = ""
+		useKaniko      = false
+		defaultImage   = &latest.ImageConfig{}
+	)
 
-	dockerUsername := ""
-	useKaniko := false
+	// Set image to default image
+	config.Images = &map[string]*latest.ImageConfig{
+		"default": defaultImage,
+	}
 
 	// Get docker client
 	client, err := docker.NewClient(true)
@@ -482,10 +434,6 @@ func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
 			// Check if docker cli is installed
 			err := exec.Command("docker").Run()
 			if err == nil {
-				if cmd.flags.useCloud {
-					log.Fatal("Docker seems to be installed but is not running. Please start docker and restart `devspace init`")
-				}
-
 				useKaniko = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 					Question:               "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
 					DefaultValue:           "no",
@@ -495,18 +443,15 @@ func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
 				if useKaniko == false {
 					continue
 				}
-			} else if cmd.flags.useCloud {
-				log.Fatal("Please install docker in order to use `devspace init`")
 			}
 
 			// We use kaniko
 			useKaniko = true
 
 			// Set default build engine to kaniko, if no docker is installed
-			cmd.defaultImage.Build = &latest.BuildConfig{
+			defaultImage.Build = &latest.BuildConfig{
 				Kaniko: &latest.KanikoConfig{
-					Cache:     ptr.Bool(true),
-					Namespace: ptr.String(""),
+					Cache: ptr.Bool(true),
 				},
 			}
 		}
@@ -525,7 +470,8 @@ func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
 
 		// Don't push image in minikube
 		if cmd.flags.useCloud == false && kubectl.IsMinikube() {
-			cmd.defaultImage.SkipPush = ptr.Bool(true)
+			defaultImage.Image = ptr.String("devspace")
+			defaultImage.SkipPush = ptr.Bool(true)
 			return
 		}
 	}
@@ -545,14 +491,40 @@ func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
 		}) == "yes"
 	}
 
-	imageMap := *config.Images
-	imageMap["default"].Image = &imageName
-	imageMap["default"].Build = &latest.BuildConfig{
-		Dockerfile: &cmd.flags.dockerfile,
-		Context:    &cmd.flags.context,
+	// Override Entrypoint in dev mode
+	config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
+		&latest.ImageOverrideConfig{
+			Name:       ptr.String("default"),
+			Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
+		},
 	}
 
+	// Set image name
+	defaultImage.Image = &imageName
+
+	// Set image specifics
+	if cmd.flags.dockerfile != "Dockerfile" {
+		if defaultImage.Build == nil {
+			defaultImage.Build = &latest.BuildConfig{}
+		}
+
+		defaultImage.Build.Dockerfile = &cmd.flags.dockerfile
+	}
+	if cmd.flags.context != "." {
+		if defaultImage.Build == nil {
+			defaultImage.Build = &latest.BuildConfig{}
+		}
+
+		defaultImage.Build.Context = &cmd.flags.context
+	}
 	if createPullSecret {
-		imageMap["default"].CreatePullSecret = &createPullSecret
+		defaultImage.CreatePullSecret = &createPullSecret
+	}
+
+	// Set component image name
+	(*config.Deployments)[0].Component.Containers = &[]*latest.ContainerConfig{
+		{
+			Image: &imageName,
+		},
 	}
 }
