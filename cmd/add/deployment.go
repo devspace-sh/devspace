@@ -1,6 +1,8 @@
 package add
 
 import (
+	"strconv"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
@@ -18,6 +20,9 @@ type deploymentCmd struct {
 
 	Image     string
 	Component string
+
+	Dockerfile string
+	Context    string
 }
 
 func newDeploymentCmd() *cobra.Command {
@@ -34,8 +39,18 @@ Add a new deployment (docker image, components,
 kubernetes manifests or helm chart) to your DevSpace configuration
 
 Examples:
+# Deploy a predefined component 
+devspace add deployment my-deployment --component=mysql
+# Deploy a local dockerfile
+devspace add deployment my-deployment --dockerfile=./Dockerfile
+devspace add deployment my-deployment --image=myregistry.io/myuser/myrepo --dockerfile=frontend/Dockerfile --context=frontend/Dockerfile
+# Deploy an existing docker image
+devspace add deployment my-deployment --image=mysql
+devspace add deployment my-deployment --image=myregistry.io/myusername/mysql
+# Deploy local or remote helm charts
 devspace add deployment my-deployment --chart=chart/
 devspace add deployment my-deployment --chart=stable/mysql
+# Deploy local kubernetes yamls
 devspace add deployment my-deployment --manifests=kube/pod.yaml
 devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 #######################################################
@@ -57,6 +72,8 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 	// Component options
 	addDeploymentCmd.Flags().StringVar(&cmd.Image, "image", "", "A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)")
 	addDeploymentCmd.Flags().StringVar(&cmd.Component, "component", "", "A predefined component to use (run `devspace list available-components` to see all available components)")
+	addDeploymentCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", "", "A dockerfile")
+	addDeploymentCmd.Flags().StringVar(&cmd.Context, "context", "", "")
 
 	return addDeploymentCmd
 }
@@ -87,16 +104,19 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	}
 
 	var newDeployment *latest.DeploymentConfig
+	var newImage *latest.ImageConfig
 
 	// figure out what kind of deployment to add
 	if cmd.Manifests != "" {
-		newDeployment, err = configure.GetKubectlDeployment(config, deploymentName, cmd.Manifests)
+		newDeployment, err = configure.GetKubectlDeployment(deploymentName, cmd.Manifests)
 	} else if cmd.Chart != "" {
-		newDeployment, err = configure.GetHelmDeployment(config, deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
+		newDeployment, err = configure.GetHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
+	} else if cmd.Dockerfile != "" {
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
 	} else if cmd.Image != "" {
-		newDeployment, err = configure.GetImageComponentDeployment(config, deploymentName, cmd.Image)
+		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image)
 	} else if cmd.Component != "" {
-		newDeployment, err = configure.GetPredefinedComponentDeployment(config, deploymentName, cmd.Component)
+		newDeployment, err = configure.GetPredefinedComponentDeployment(deploymentName, cmd.Component)
 	} else {
 		log.Fatal("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
 	}
@@ -111,6 +131,28 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 
 	// Prepend deployment
 	(*config.Deployments) = append([]*latest.DeploymentConfig{newDeployment}, (*config.Deployments)...)
+
+	// Add image config if necessary
+	if newImage != nil {
+		imageName := deploymentName
+
+		// Check if image name exits
+		for i := 0; true; i++ {
+			if _, ok := (*config.Images)[imageName]; ok {
+				if i == 0 {
+					imageName = imageName + "-" + strconv.Itoa(i)
+				} else {
+					imageName = imageName[:len(imageName)-1] + strconv.Itoa(i)
+				}
+
+				continue
+			}
+
+			break
+		}
+
+		(*config.Images)[imageName] = newImage
+	}
 
 	// Save config
 	err = configutil.SaveBaseConfig()

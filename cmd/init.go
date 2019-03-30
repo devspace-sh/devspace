@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,10 +14,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/dockerfile"
+	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -32,8 +27,18 @@ import (
 
 const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
 
+const (
+	createDockerfileOption = "Create a Dockerfile for me"
+	enterDockerfileOption  = "Enter path to your Dockerfile"
+	enterManifestsOption   = "Enter path to your Kubernetes manifests"
+	enterHelmChartOption   = "Enter path to your Helm chart"
+	useExistingImageOption = "Use existing image (e.g. from Docker Hub)"
+)
+
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
+	providerName *string
+
 	flags               *InitCmdFlags
 	dockerfileGenerator *generator.DockerfileGenerator
 }
@@ -41,9 +46,9 @@ type InitCmd struct {
 // InitCmdFlags are the flags available for the init-command
 type InitCmdFlags struct {
 	reconfigure bool
-	dockerfile  string
-	context     string
-	image       string
+
+	dockerfile string
+	context    string
 
 	useCloud bool
 }
@@ -70,9 +75,8 @@ folder. Creates a devspace.yaml with all configuration.
 
 	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", false, "Change existing configuration")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", ".", "Context path to use for intialization")
-	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", "Dockerfile", "Local dockerfile to use for initialization")
-	cobraCmd.Flags().StringVar(&cmd.flags.image, "image", "", "Container image to use")
+	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", "", "Context path to use for intialization")
+	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", image.DefaultDockerfilePath, "Dockerfile to use for initialization")
 }
 
 // Run executes the command logic
@@ -98,86 +102,115 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Create config
 	config := configutil.InitConfig()
 
-	// Init config
-	cmd.initConfig(config)
-
 	// Print DevSpace logo
 	log.PrintLogo()
 
+	// Check if user wants to use devspace cloud
+	cmd.checkIfDevSpaceCloud()
+
+	// Add deployment and image config
+	deploymentName, err := getDeploymentName()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var newImage *latest.ImageConfig
+	var newDeployment *latest.DeploymentConfig
+
 	// Check if dockerfile exists
-	if cmd.flags.image == "" {
-		_, err := os.Stat(cmd.flags.dockerfile)
-		if err != nil {
-			log.Fatalf("Couldn't find dockerfile at %s. See https://devspace.cloud/docs/cli/deployment/containerize-your-app for more information.\n Run: \n- `%s` to automatically create a Dockerfile for the project\n- `%s` to use a custom dockerfile location\n- `%s` to tell devspace to not build any images from source", cmd.flags.dockerfile, ansi.Color("devspace containerize", "white+b"), ansi.Color("devspace init --dockerfile=./mycustompath/Dockerfile", "white+b"), ansi.Color("devspace init --image=myregistry.io/myusername/myimage", "white+b"))
-		}
+	addFromDockerfile := true
 
-		_, err = os.Stat(cmd.flags.context)
-		if err != nil {
-			log.Fatalf("Couldn't find context at %s.", cmd.flags.context)
-		}
-	}
+	_, err = os.Stat(cmd.flags.dockerfile)
+	if err != nil {
+		selectedOption := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:     "Seems like you do not have a Dockerfile. What do you want to do?",
+			DefaultValue: createDockerfileOption,
+			Options: []string{
+				createDockerfileOption,
+				enterDockerfileOption,
+				enterManifestsOption,
+				enterHelmChartOption,
+				useExistingImageOption,
+			},
+		})
 
-	// Configure port
-	cmd.addDefaultPorts()
-
-	// Add default sync configuration
-	if cmd.flags.image == "" {
-		cmd.addDefaultSyncConfig()
-	}
-
-	// Check if kubectl exists
-	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
-		cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:     "Do you want to use DevSpace Cloud?",
-			DefaultValue: "yes",
-			Options:      []string{"yes", "no"},
-		}) == "yes"
-	}
-
-	var providerName *string
-
-	// Check if DevSpace Cloud should be used
-	if cmd.flags.useCloud == false {
-		cmd.configureDevSpace()
-	} else {
-		// Get provider configuration
-		providerConfig, err := cloud.ParseCloudConfig()
-		if err != nil {
-			log.Fatalf("Error loading provider config: %v", err)
-		}
-
-		// Configure cloud provider
-		providerName = ptr.String(cloud.DevSpaceCloudProviderName)
-
-		// Choose cloud provider
-		if len(providerConfig) > 1 {
-			options := []string{}
-			for providerHost := range providerConfig {
-				options = append(options, providerHost)
+		if selectedOption == createDockerfileOption {
+			// Containerize application if necessary
+			err = generator.ContainerizeApplication(cmd.flags.dockerfile, ".", "")
+			if err != nil {
+				log.Fatalf("Error containerizing application: %v", err)
 			}
-
-			providerName = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question: "Select cloud provider",
-				Options:  options,
+		} else if selectedOption == enterDockerfileOption {
+			cmd.flags.dockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Please enter a path to your dockerfile (e.g. ./MyDockerfile)",
 			})
+		} else if selectedOption == enterManifestsOption {
+			addFromDockerfile = false
+			manifests := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Please enter kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
+			})
+
+			newDeployment, err = configure.GetKubectlDeployment(deploymentName, manifests)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if selectedOption == enterHelmChartOption {
+			addFromDockerfile = false
+			chartName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
+			})
+
+			newDeployment, err = configure.GetHelmDeployment(deploymentName, chartName, "", "")
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if selectedOption == useExistingImageOption {
+			addFromDockerfile = false
+			existingImageName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
+			})
+
+			newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	// Check if dockerfile exists now
+	if addFromDockerfile {
+		_, err = os.Stat(cmd.flags.dockerfile)
+		if err != nil {
+			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.flags.dockerfile)
 		}
 
-		// Ensure user is logged in
-		err = cloud.EnsureLoggedIn(providerConfig, *providerName, log.GetInstance())
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, "", cmd.flags.dockerfile, cmd.flags.context)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	// Configure image name
-	if cmd.flags.image != "" {
-		cmd.configureImageFromImageName()
-	} else {
-		cmd.configureImageFromDockerfile(providerName)
+	if newImage != nil {
+		(*config.Images)["default"] = newImage
+	}
+	if newDeployment != nil {
+		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
+
+		if newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
+			(*newDeployment.Component.Containers)[0].Resources = &map[interface{}]interface{}{
+				"limits": map[interface{}]interface{}{
+					"cpu":    "400m",
+					"memory": "500Mi",
+				},
+			}
+		}
 	}
 
+	// Add the development configuration
+	cmd.addDevConfig()
+
 	// Save config
-	err := configutil.SaveBaseConfig()
+	err = configutil.SaveBaseConfig()
 	if err != nil {
 		log.With(err).Fatalf("Config error: %s", err.Error())
 	}
@@ -199,23 +232,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Create generated yaml if cloud
-	if cmd.flags.useCloud {
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-			ProviderName: *providerName,
-		}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
 	log.Done("Project successfully initialized")
 
 	if cmd.flags.useCloud {
@@ -225,22 +241,66 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func (cmd *InitCmd) initConfig(config *latest.Config) {
-	componentName, err := getComponentName()
-	if err != nil {
-		log.Fatal(err)
+func (cmd *InitCmd) checkIfDevSpaceCloud() {
+	// Check if kubectl exists
+	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
+		cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:     "Which Kubernetes cluster do you want to use?",
+			DefaultValue: "DevSpace Cloud (managed cluster)",
+			Options:      []string{"DevSpace Cloud (managed cluster)", "Use current kubectl context (no server-side component)"},
+		}) == "DevSpace Cloud (managed cluster)"
 	}
 
-	// Set intial deployments
-	config.Deployments = &[]*latest.DeploymentConfig{
-		{
-			Name:      &componentName,
-			Component: &latest.ComponentConfig{},
-		},
+	// Check if DevSpace Cloud should be used
+	if cmd.flags.useCloud == false {
+		cmd.configureCluster()
+	} else {
+		// Get provider configuration
+		providerConfig, err := cloud.ParseCloudConfig()
+		if err != nil {
+			log.Fatalf("Error loading provider config: %v", err)
+		}
+
+		// Configure cloud provider
+		cmd.providerName = ptr.String(cloud.DevSpaceCloudProviderName)
+
+		// Choose cloud provider
+		if len(providerConfig) > 1 {
+			options := []string{}
+			for providerHost := range providerConfig {
+				options = append(options, providerHost)
+			}
+
+			cmd.providerName = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question: "Select cloud provider",
+				Options:  options,
+			})
+		}
+
+		// Ensure user is logged in
+		err = cloud.EnsureLoggedIn(providerConfig, *cmd.providerName, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Create generated yaml if cloud
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
+			ProviderName: *cmd.providerName,
+		}
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
-func getComponentName() (string, error) {
+func getDeploymentName() (string, error) {
 	absPath, err := filepath.Abs(".")
 	if err != nil {
 		return "", err
@@ -258,7 +318,7 @@ func getComponentName() (string, error) {
 	return dirname, nil
 }
 
-func (cmd *InitCmd) configureDevSpace() {
+func (cmd *InitCmd) configureCluster() {
 	currentContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
 		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
@@ -274,253 +334,67 @@ func (cmd *InitCmd) configureDevSpace() {
 	config.Cluster.Namespace = namespace
 }
 
-func (cmd *InitCmd) addDefaultPorts() {
-	port := ""
+func (cmd *InitCmd) addDevConfig() {
+	config := configutil.GetConfig()
 
-	// Try to get ports from dockerfile
-	ports, err := dockerfile.GetPorts(cmd.flags.dockerfile)
-	if err == nil {
-		if len(ports) == 1 {
-			port = strconv.Itoa(ports[0])
-		} else if len(ports) > 1 {
-			port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-				Question:     "Which port is the app listening on?",
-				DefaultValue: strconv.Itoa(ports[0]),
+	// Forward ports
+	if len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil && (*config.Deployments)[0].Component.Service != nil && (*config.Deployments)[0].Component.Service.Ports != nil && len(*(*config.Deployments)[0].Component.Service.Ports) > 0 {
+		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
+
+		if servicePort.Port != nil {
+			portMappings := []*latest.PortMapping{}
+			exposedPort := *servicePort.Port
+			portMappings = append(portMappings, &latest.PortMapping{
+				LocalPort:  &exposedPort,
+				RemotePort: &exposedPort,
 			})
-			if port == "" {
-				port = strconv.Itoa(ports[0])
-			}
-		}
-	}
 
-	if port == "" {
-		port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question: "Which port is the app listening on? (Default: 3000)",
-		})
-		if port == "" {
-			port = "3000"
-		}
-	}
-
-	portMappings := []*latest.PortMapping{}
-	exposedPort, err := strconv.Atoi(port)
-	if err == nil {
-		portMappings = append(portMappings, &latest.PortMapping{
-			LocalPort:  &exposedPort,
-			RemotePort: &exposedPort,
-		})
-	}
-
-	config := configutil.GetConfig()
-	config.Dev.Ports = &[]*latest.PortForwardingConfig{
-		{
-			LabelSelector: &map[string]*string{
-				"app.kubernetes.io/component": (*config.Deployments)[0].Name,
-			},
-			PortMappings: &portMappings,
-		},
-	}
-
-	// Add port to component
-	(*config.Deployments)[0].Component.Service = &latest.ServiceConfig{
-		Ports: &[]*latest.ServicePortConfig{
-			{
-				Port: &exposedPort,
-			},
-		},
-	}
-}
-
-func (cmd *InitCmd) addDefaultSyncConfig() {
-	config := configutil.GetConfig()
-
-	if config.Dev.Sync == nil {
-		config.Dev.Sync = &[]*latest.SyncConfig{}
-	}
-
-	dockerignore, err := ioutil.ReadFile(".dockerignore")
-	excludePaths := []string{}
-
-	if err == nil {
-		dockerignoreRules := strings.Split(string(dockerignore), "\n")
-		for _, ignoreRule := range dockerignoreRules {
-			if len(ignoreRule) > 0 {
-				excludePaths = append(excludePaths, ignoreRule)
-			}
-		}
-	}
-
-	syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-		LabelSelector: &map[string]*string{
-			"app.kubernetes.io/component": (*config.Deployments)[0].Name,
-		},
-		ExcludePaths: &excludePaths,
-	})
-
-	config.Dev.Sync = &syncConfig
-}
-
-func (cmd *InitCmd) configureImageFromImageName() {
-	// Check if we should create pull secrets for the image
-	createPullSecret := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question: "Do you want to enable automatic creation of pull secrets for this image? (yes | no)",
-		Options:  []string{"yes", "no"},
-	}) == "yes"
-
-	config := configutil.GetConfig()
-	(*config.Deployments)[0].Component.Containers = &[]*latest.ContainerConfig{
-		{
-			Image: &cmd.flags.image,
-		},
-	}
-
-	if createPullSecret {
-		splittedImage := strings.Split(cmd.flags.image, ":")
-
-		imageTag := "latest"
-		if len(splittedImage) > 1 {
-			imageTag = splittedImage[1]
-		}
-
-		config.Images = &map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: &splittedImage[0],
-				Tag:   &imageTag,
-				Build: &latest.BuildConfig{
-					Disabled: ptr.Bool(true),
+			config.Dev.Ports = &[]*latest.PortForwardingConfig{
+				{
+					LabelSelector: &map[string]*string{
+						"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+					},
+					PortMappings: &portMappings,
 				},
-				CreatePullSecret: &createPullSecret,
-			},
+			}
 		}
 	}
-}
 
-func (cmd *InitCmd) configureImageFromDockerfile(providerName *string) {
-	var (
-		config         = configutil.GetConfig()
-		dockerUsername = ""
-		useKaniko      = false
-		defaultImage   = &latest.ImageConfig{}
-	)
+	// Specify sync path
+	if len(*config.Images) > 0 && len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil {
+		if (*config.Images)["default"].Build == nil || (*config.Images)["default"].Build.Disabled == nil {
+			if config.Dev.Sync == nil {
+				config.Dev.Sync = &[]*latest.SyncConfig{}
+			}
 
-	// Set image to default image
-	config.Images = &map[string]*latest.ImageConfig{
-		"default": defaultImage,
-	}
-
-	// Get docker client
-	client, err := docker.NewClient(true)
-	if err != nil {
-		log.Fatalf("Cannot create docker client: %v", err)
-	}
-
-	// Check if docker is installed
-	for {
-		_, err = client.Ping(context.Background())
-		if err != nil {
-			// Check if docker cli is installed
-			err := exec.Command("docker").Run()
+			dockerignore, err := ioutil.ReadFile(".dockerignore")
+			excludePaths := []string{}
 			if err == nil {
-				useKaniko = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-					Question:               "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
-					DefaultValue:           "no",
-					ValidationRegexPattern: "^(yes)|(no)$",
-				}) == "yes"
-
-				if useKaniko == false {
-					continue
+				dockerignoreRules := strings.Split(string(dockerignore), "\n")
+				for _, ignoreRule := range dockerignoreRules {
+					if len(ignoreRule) > 0 {
+						excludePaths = append(excludePaths, ignoreRule)
+					}
 				}
 			}
 
-			// We use kaniko
-			useKaniko = true
-
-			// Set default build engine to kaniko, if no docker is installed
-			defaultImage.Build = &latest.BuildConfig{
-				Kaniko: &latest.KanikoConfig{
-					Cache: ptr.Bool(true),
+			syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
+				LabelSelector: &map[string]*string{
+					"app.kubernetes.io/component": (*config.Deployments)[0].Name,
 				},
-			}
-		}
+				ExcludePaths: &excludePaths,
+			})
 
-		break
-	}
-
-	if useKaniko == false {
-		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
-		log.StopWait()
-
-		if err == nil {
-			dockerUsername = dockerAuthConfig.Username
-		}
-
-		// Don't push image in minikube
-		if cmd.flags.useCloud == false && kubectl.IsMinikube() {
-			defaultImage.Image = ptr.String("devspace")
-			defaultImage.SkipPush = ptr.Bool(true)
-			return
+			config.Dev.Sync = &syncConfig
 		}
 	}
 
-	// Get image name
-	imageName, err := configure.Image(dockerUsername, providerName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Check if we should create pull secrets for the image
-	createPullSecret := true
-	if providerName == nil {
-		createPullSecret = createPullSecret || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question: "Do you want to enable automatic creation of pull secrets for this image?",
-			Options:  []string{"yes", "no"},
-		}) == "yes"
-	}
-
-	// Override Entrypoint in dev mode
-	config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
-		&latest.ImageOverrideConfig{
-			Name:       ptr.String("default"),
-			Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
-		},
-	}
-
-	// Set image name
-	defaultImage.Image = &imageName
-
-	// Set image specifics
-	if cmd.flags.dockerfile != "Dockerfile" {
-		if defaultImage.Build == nil {
-			defaultImage.Build = &latest.BuildConfig{}
-		}
-
-		defaultImage.Build.Dockerfile = &cmd.flags.dockerfile
-	}
-	if cmd.flags.context != "." {
-		if defaultImage.Build == nil {
-			defaultImage.Build = &latest.BuildConfig{}
-		}
-
-		defaultImage.Build.Context = &cmd.flags.context
-	}
-	if createPullSecret {
-		defaultImage.CreatePullSecret = &createPullSecret
-	}
-
-	// Set component image name
-	(*config.Deployments)[0].Component.Containers = &[]*latest.ContainerConfig{
-		{
-			Image: &imageName,
-		},
-	}
-
-	// Check if cloud
-	if cmd.flags.useCloud {
-		(*(*config.Deployments)[0].Component.Containers)[0].Resources = &map[interface{}]interface{}{
-			"limits": map[interface{}]interface{}{
-				"cpu":    "400m",
-				"memory": "500Mi",
+	// Override image entrypoint
+	if len(*config.Images) > 0 {
+		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
+			&latest.ImageOverrideConfig{
+				Name:       ptr.String("default"),
+				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
 			},
 		}
 	}

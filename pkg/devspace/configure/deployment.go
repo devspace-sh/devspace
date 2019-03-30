@@ -6,16 +6,90 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 	"github.com/pkg/errors"
 )
 
-// GetImageComponentDeployment adds a new deployment that deploys an image via a component
-func GetImageComponentDeployment(config *latest.Config, name, imageName string) (*latest.DeploymentConfig, error) {
+// GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
+func GetDockerfileComponentDeployment(name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+	var imageConfig *latest.ImageConfig
+	if imageName == "" {
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "load generated config")
+		}
+
+		var providerName *string
+		if generatedConfig.CloudSpace != nil {
+			providerName = &generatedConfig.CloudSpace.ProviderName
+		}
+
+		imageConfig, err = GetImageConfigFromDockerfile(dockerfile, context, providerName)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "get image config")
+		}
+	} else {
+		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
+	}
+
+	// Prepare return deployment config
+	retDeploymentConfig := &latest.DeploymentConfig{
+		Name: &name,
+		Component: &latest.ComponentConfig{
+			Containers: &[]*latest.ContainerConfig{
+				{
+					Image: &imageName,
+				},
+			},
+		},
+	}
+
+	// Try to get ports from dockerfile
+	port := ""
+	ports, err := dockerfileutil.GetPorts(dockerfile)
+	if err == nil {
+		if len(ports) == 1 {
+			port = strconv.Itoa(ports[0])
+		} else if len(ports) > 1 {
+			port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				Question:     "Which port is the container listening on?",
+				DefaultValue: strconv.Itoa(ports[0]),
+			})
+			if port == "" {
+				port = strconv.Itoa(ports[0])
+			}
+		}
+	}
+	if port == "" {
+		port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question: "Which port is the container listening on? (Enter to skip)",
+		})
+	}
+	if port != "" {
+		port, err := strconv.Atoi(port)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "parsing port")
+		}
+
+		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
+			Ports: &[]*latest.ServicePortConfig{
+				{
+					Port: &port,
+				},
+			},
+		}
+	}
+
+	return imageConfig, retDeploymentConfig, nil
+}
+
+// GetImageComponentDeployment returns a new deployment that deploys an image via a component
+func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	retDeploymentConfig := &latest.DeploymentConfig{
 		Name: &name,
 		Component: &latest.ComponentConfig{
@@ -34,7 +108,7 @@ func GetImageComponentDeployment(config *latest.Config, name, imageName string) 
 	if port != "" {
 		port, err := strconv.Atoi(port)
 		if err != nil {
-			return nil, errors.Wrap(err, "parsing port")
+			return nil, nil, errors.Wrap(err, "parsing port")
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
@@ -46,35 +120,11 @@ func GetImageComponentDeployment(config *latest.Config, name, imageName string) 
 		}
 	}
 
-	// Configure pull secret
-	createPullSecret := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-		Question: "Do you want to enable automatic creation of pull secrets for this image?",
-		Options:  []string{"yes", "no"},
-	}) == "yes"
-	if createPullSecret {
-		// Figure out tag
-		splittedImage := strings.Split(imageName, ":")
-		imageTag := "latest"
-		if len(splittedImage) > 1 {
-			imageTag = splittedImage[1]
-		}
-
-		// Add to image config
-		(*config.Images)[name] = &latest.ImageConfig{
-			Image:            &splittedImage[0],
-			Tag:              &imageTag,
-			CreatePullSecret: &createPullSecret,
-			Build: &latest.BuildConfig{
-				Disabled: ptr.Bool(true),
-			},
-		}
-	}
-
-	return retDeploymentConfig, nil
+	return nil, retDeploymentConfig, nil
 }
 
 // GetPredefinedComponentDeployment returns deployment that uses a predefined component
-func GetPredefinedComponentDeployment(config *latest.Config, name, component string) (*latest.DeploymentConfig, error) {
+func GetPredefinedComponentDeployment(name, component string) (*latest.DeploymentConfig, error) {
 	// Create component generator
 	componentGenerator, err := generator.NewComponentGenerator()
 	if err != nil {
@@ -94,7 +144,7 @@ func GetPredefinedComponentDeployment(config *latest.Config, name, component str
 }
 
 // GetKubectlDeployment retruns a new kubectl deployment
-func GetKubectlDeployment(config *latest.Config, name, manifests string) (*latest.DeploymentConfig, error) {
+func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, error) {
 	splitted := strings.Split(manifests, ",")
 	splittedPointer := []*string{}
 
@@ -112,7 +162,7 @@ func GetKubectlDeployment(config *latest.Config, name, manifests string) (*lates
 }
 
 // GetHelmDeployment returns a new helm deployment
-func GetHelmDeployment(config *latest.Config, name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error) {
+func GetHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error) {
 	retDeploymentConfig := &v1.DeploymentConfig{
 		Name: &name,
 		Helm: &v1.HelmConfig{
