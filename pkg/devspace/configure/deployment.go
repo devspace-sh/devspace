@@ -37,6 +37,10 @@ func GetDockerfileComponentDeployment(name, imageName, dockerfile, context strin
 		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
 	}
 
+	if imageName == "" {
+		imageName = *imageConfig.Image
+	}
+
 	// Prepare return deployment config
 	retDeploymentConfig := &latest.DeploymentConfig{
 		Name: &name,
