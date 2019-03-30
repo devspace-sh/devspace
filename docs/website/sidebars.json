@@ -1,102 +1,111 @@
 {
   "docs": {
-    "Getting started": [
+    "Getting Started": [
         "getting-started/installation",
-        "getting-started/containerize",
         "getting-started/deployment",
-        "getting-started/development"
+        "getting-started/development",
+        "getting-started/debugging"
     ],
-    "Deploy with DevSpace": [
-        "cli/deployment/workflow",
-        "cli/deployment/containerize-your-app",
-        "cli/deployment/images",
-        "cli/deployment/deployments",
-        "cli/deployment/charts",
-        "cli/deployment/domains"
+    "Workflow & Basics": [
+        "workflow-basics/containerization",
+        "workflow-basics/deployment",
+        "workflow-basics/development",
+        "workflow-basics/debugging",
+        "workflow-basics/logs",
+        "workflow-basics/analyze",
+        "workflow-basics/enter"
     ],
-    "Develop with DevSpace": [
-        "cli/development/workflow",
-        "cli/development/terminal",
-        "cli/development/synchronization",
-        "cli/development/port-forwarding",
-        "cli/development/auto-reloading",
-        "cli/development/entrypoint-overrides"
+    "Build Images": [
+        "image-building/configuration",
+        "image-building/add-images",
+        "image-building/remove-images",
+        "image-building/authentication",
+        "image-building/pull-secrets",
+        "image-building/specification"
     ],
-    "Debug with DevSpace": [
-        "cli/debugging/overview",
-        "cli/debugging/analyze",
-        "cli/debugging/logs",
-        "cli/debugging/enter"
+    "Deploy Containers": [
+        "deployment/containers/dockerfiles",
+        "deployment/containers/docker-images"
     ],
-    "Image Registries": [
-        "cli/images/workflow",
-        "cli/images/authentication",
-        "cli/images/pull-secrets"
+    "Deploy Components": [
+        "deployment/components/what-are-components",
+        "deployment/components/add-predefined-components",
+        "deployment/components/add-custom-components",
+        "deployment/components/remove-components",
+        "deployment/components/configuration/volumes",
+        "deployment/components/configuration/service",
+        "deployment/components/configuration/scaling",
+        "deployment/components/configuration/specification",
+        "deployment/components/containers/image",
+        "deployment/components/containers/environment-variables",
+        "deployment/components/containers/resource-limits",
+        "deployment/components/containers/entrypoint",
+        "deployment/components/containers/health-checks"
     ],
-    "Configuration Reference": [
-        "cli/configuration/reference",
-        "cli/configuration/multiple-configs",
-        "cli/configuration/overrides",
-        "cli/configuration/variables"
+    "Deploy Manifests": [
+        "deployment/kubernetes-manifests/what-are-manifests",
+        "deployment/kubernetes-manifests/add-manifests",
+        "deployment/kubernetes-manifests/remove-manifests"
+    ],
+    "Deploy Helm Charts": [
+        "deployment/helm-charts/what-are-helm-charts",
+        "deployment/helm-charts/add-charts",
+        "deployment/helm-charts/remove-charts"
+    ],
+    "Develop with Kubernetes": [
+        "development/workflow",
+        "development/terminal",
+        "development/synchronization",
+        "development/port-forwarding",
+        "development/auto-reloading",
+        "development/overrides"
+    ],
+    "Advanced Configuration": [
+        "configuration/reference",
+        "configuration/multiple-configs",
+        "configuration/overrides",
+        "configuration/variables"
     ],
     "CLI Reference": [
-        "cli/commands/overview",
-        "cli/commands/analyze",
-        "cli/commands/deploy",
-        "cli/commands/dev",
-        "cli/commands/enter",
-        "cli/commands/help",
-        "cli/commands/init",
-        "cli/commands/install",
-        "cli/commands/login",
-        "cli/commands/logs",
-        "cli/commands/purge",
-        "cli/commands/reset",
-        "cli/commands/upgrade",
-        "cli/commands/add/deployment",
-        "cli/commands/add/image",
-        "cli/commands/add/package",
-        "cli/commands/add/port",
-        "cli/commands/add/provider",
-        "cli/commands/add/selector",
-        "cli/commands/add/sync",
-        "cli/commands/create/space",
-        "cli/commands/list/configs",
-        "cli/commands/list/packages",
-        "cli/commands/list/ports",
-        "cli/commands/list/providers",
-        "cli/commands/list/selectors",
-        "cli/commands/list/spaces",
-        "cli/commands/list/sync",
-        "cli/commands/list/vars",
-        "cli/commands/remove/deployment",
-        "cli/commands/remove/image",
-        "cli/commands/remove/package",
-        "cli/commands/remove/port",
-        "cli/commands/remove/provider",
-        "cli/commands/remove/selector",
-        "cli/commands/remove/space",
-        "cli/commands/remove/sync",
-        "cli/commands/status/deployments",
-        "cli/commands/status/sync",
-        "cli/commands/update/config",
-        "cli/commands/use/config",
-        "cli/commands/use/space"
-    ],
-    "Basics": [
-        "chart/basics/what-are-helm-charts",
-        "chart/basics/devspace-helm-chart",
-        "chart/basics/components"
-    ],
-    "Customizing the chart": [
-        "chart/customization/environment-variables",
-        "chart/customization/persistent-volumes",
-        "chart/customization/networking",
-        "chart/customization/predefined-components",
-        "chart/customization/add-component",
-        "chart/customization/containers",
-        "chart/customization/custom-manifests",
-        "chart/customization/packages"
+        "cli-commands/overview",
+        "cli-commands/analyze",
+        "cli-commands/deploy",
+        "cli-commands/dev",
+        "cli-commands/enter",
+        "cli-commands/help",
+        "cli-commands/init",
+        "cli-commands/install",
+        "cli-commands/login",
+        "cli-commands/logs",
+        "cli-commands/purge",
+        "cli-commands/reset",
+        "cli-commands/upgrade",
+        "cli-commands/add/deployment",
+        "cli-commands/add/image",
+        "cli-commands/add/port",
+        "cli-commands/add/provider",
+        "cli-commands/add/selector",
+        "cli-commands/add/sync",
+        "cli-commands/create/space",
+        "cli-commands/list/configs",
+        "cli-commands/list/ports",
+        "cli-commands/list/providers",
+        "cli-commands/list/selectors",
+        "cli-commands/list/spaces",
+        "cli-commands/list/sync",
+        "cli-commands/list/vars",
+        "cli-commands/remove/deployment",
+        "cli-commands/remove/image",
+        "cli-commands/remove/port",
+        "cli-commands/remove/provider",
+        "cli-commands/remove/selector",
+        "cli-commands/remove/space",
+        "cli-commands/remove/sync",
+        "cli-commands/status/deployments",
+        "cli-commands/status/sync",
+        "cli-commands/update/config",
+        "cli-commands/use/config",
+        "cli-commands/use/space"
     ],
     "Overview": [
         "cloud/intro/overview"

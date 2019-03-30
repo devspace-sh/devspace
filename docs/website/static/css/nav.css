@@ -4,8 +4,7 @@
     }
 }
 
-/* large titles for Chart + Cloud */
-.navGroups .navGroup:nth-child(8)::before,
+/* large title for DevSpace Cloud */
 .navGroups .navGroup:nth-child(10)::before {
     display: block;
     margin: 1.4em 0 0.5em;
@@ -13,18 +12,42 @@
     border-bottom: 1px solid #ddd;
     font-size: 21px;
     font-family: "Raleway", sans-serif;
-}
-
-.navGroups .navGroup:nth-child(8)::before {
-    content: "DevSpace Helm Chart";
-}
-
-.separateOnPageNav .navPusher .docsNavContainer {
-    flex: 0 0 250px;
+    content: "DevSpace Cloud";
 }
 
 .navGroups .navGroup:nth-child(10)::before {
     content: "DevSpace Cloud";
+}
+
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::before,
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::before,
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::before {
+    display: block;
+    margin: 0.8em 0 0 25px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::before {
+    content: "Basics";
+}
+
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::before {
+    content: "Configure components";
+}
+
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::before {
+    content: "Configure containers";
+}
+
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n+5) .navItem,
+.navGroups .navGroup:nth-child(5) .navListItem .navItem {
+    margin-left: 13px;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer {
+    flex: 0 0 250px;
 }
 
 .toc .toggleNav .navGroup {
@@ -38,6 +61,7 @@
 
 /* nav group titles */
 .toc .toggleNav .navGroup .navGroupCategoryTitle {
+    padding-top: 6px;
     padding-left: 18px;
     font-size: 16px;
 }
@@ -57,7 +81,7 @@
 
 /* nav link */
 .toc .toggleNav ul li a {
-    padding: 1px 0 1px 10px;
+    padding: 1px 0 1px 25px;
 }
 
 /* nav link hover */

@@ -1,5 +1,0 @@
----
-title: Configure scaling
----
-
-content

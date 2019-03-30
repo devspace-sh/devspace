@@ -1,0 +1,5 @@
+---
+title: Remove components
+---
+
+CONTENT

@@ -1,5 +1,5 @@
 ---
-title: 4. Develop with DevSpace
+title: 3. Develop with DevSpace
 ---
 
 DevSpace also allows you to work either remotely in a kubernetes cluster or locally with the help of [minikube](https://kubernetes.io/docs/setup/minikube/) and develop applications directly inside kubernetes. The biggest advantages of developing directly inside kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
