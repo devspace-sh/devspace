@@ -54,7 +54,7 @@ jobs:
         tags: true
   - stage: Publish
     language: node_js
-    before_deploy:
+    before_install:
     - cd dist/npm
     deploy:
       provider: npm
