@@ -134,24 +134,38 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 
 	// Add image config if necessary
 	if newImage != nil {
-		imageName := deploymentName
+		imageAlreadyExists := false
 
-		// Check if image name exits
-		for i := 0; true; i++ {
-			if _, ok := (*config.Images)[imageName]; ok {
-				if i == 0 {
-					imageName = imageName + "-" + strconv.Itoa(i)
-				} else {
-					imageName = imageName[:len(imageName)-1] + strconv.Itoa(i)
-				}
-
-				continue
+		// First check if image already exists in another configuration
+		for _, imageConfig := range *config.Images {
+			if *imageConfig.Image == *newImage.Image {
+				imageAlreadyExists = true
+				break
 			}
-
-			break
 		}
 
-		(*config.Images)[imageName] = newImage
+		// Only add if it does not already exist
+		if imageAlreadyExists == false {
+			// Deployment name
+			imageName := deploymentName
+
+			// Check if image name exits
+			for i := 0; true; i++ {
+				if _, ok := (*config.Images)[imageName]; ok {
+					if i == 0 {
+						imageName = imageName + "-" + strconv.Itoa(i)
+					} else {
+						imageName = imageName[:len(imageName)-1] + strconv.Itoa(i)
+					}
+
+					continue
+				}
+
+				break
+			}
+
+			(*config.Images)[imageName] = newImage
+		}
 	}
 
 	// Save config
