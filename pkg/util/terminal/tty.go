@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"io"
+	"os"
 
 	dockerterm "github.com/docker/docker/pkg/term"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
@@ -24,8 +25,13 @@ func SetupTTY(stdin io.Reader, stdout io.Writer) term.TTY {
 
 	stdin, stdout, _ = dockerterm.StdStreams()
 
-	t.In = stdin
-	t.Out = stdout
+	if stdout == os.Stdin {
+		t.In = stdin
+	}
+
+	if stdout == os.Stdout {
+		t.Out = stdout
+	}
 
 	return t
 }

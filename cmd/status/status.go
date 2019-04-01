@@ -18,7 +18,6 @@ func NewStatusCmd() *cobra.Command {
 	}
 
 	statusCmd.AddCommand(newSyncCmd())
-	statusCmd.AddCommand(newDeploymentsCmd())
 
 	return statusCmd
 }

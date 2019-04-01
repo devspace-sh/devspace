@@ -2,6 +2,7 @@ package configutil
 
 import (
 	"reflect"
+	"strings"
 	"unsafe"
 
 	yaml "gopkg.in/yaml.v2"
@@ -113,4 +114,77 @@ func deepCopy(from interface{}) interface{} {
 	yaml.Unmarshal(yamlData, copy)
 
 	return copy
+}
+
+func getMapValue(valueMap interface{}, key interface{}, refType reflect.Type) interface{} {
+	valueMapValue, _ := getPointerValue(valueMap)
+	mapRef := reflect.ValueOf(valueMapValue)
+	keyRef := reflect.ValueOf(key)
+	mapValue := mapRef.MapIndex(keyRef)
+
+	if isZero(mapValue) {
+		mapValue = reflect.New(refType)
+	}
+	return mapValue.Interface()
+}
+
+//isZero is a reflect function from: https://github.com/golang/go/issues/7501
+func isZero(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+	switch v.Kind() {
+	case reflect.Array, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
+}
+
+func getYamlKey(key string) string {
+	re := ""
+
+	for i := 0; i < len(key); i++ {
+		letter := key[i : i+1]
+		lowerLetter := strings.ToLower(letter)
+
+		if i == 0 || (letter != lowerLetter) {
+			re = re + lowerLetter
+		} else {
+			re = re + key[i:]
+			break
+		}
+	}
+	return re
+}
+
+func getPointerValue(object interface{}) (interface{}, bool) {
+	if object != nil {
+		objectType := reflect.TypeOf(object)
+		objectKind := objectType.Kind()
+
+		if objectKind == reflect.Ptr {
+			objectValueRef := reflect.ValueOf(object)
+
+			if objectValueRef.IsNil() {
+				pointerValueType := objectValueRef.Type().Elem()
+				newInstance, _ := getPointerValue(reflect.New(pointerValueType).Interface())
+
+				return newInstance, true
+			}
+			value, _ := getPointerValue(objectValueRef.Elem().Interface())
+
+			return value, false
+		}
+	}
+	return object, false
 }

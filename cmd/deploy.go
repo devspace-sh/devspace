@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -23,7 +24,6 @@ type DeployCmd struct {
 type DeployCmdFlags struct {
 	Namespace     string
 	KubeContext   string
-	Config        string
 	DockerTarget  string
 	ForceBuild    bool
 	ForceDeploy   bool
@@ -54,7 +54,6 @@ devspace deploy --kube-context=deploy-context
 
 	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
 	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	cobraCmd.Flags().StringVar(&cmd.flags.Config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
 
 	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
@@ -140,19 +139,22 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving generated config: %v", err)
 	}
 
-	log.Donef("Successfully deployed!")
 	if generatedConfig.CloudSpace != nil {
+		// Create ingress if there is none
+		err = cloud.CreateIngress(client)
+		if err != nil {
+			log.Fatalf("Error creating ingress: %v", err)
+		}
+
+		log.Donef("Successfully deployed!")
 		log.Infof("Run: \n- `%s` to open the app in the browser\n- `%s` to open a shell into the container\n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
 	} else {
+		log.Donef("Successfully deployed!")
 		log.Infof("Run `%s` to check for potential issues", ansi.Color("devspace analyze", "white+b"))
 	}
 }
 
 func (cmd *DeployCmd) prepareConfig() {
-	if configutil.ConfigPath != cmd.flags.Config {
-		configutil.ConfigPath = cmd.flags.Config
-	}
-
 	// Load Config and modify it
 	config := configutil.GetConfigWithoutDefaults(true)
 

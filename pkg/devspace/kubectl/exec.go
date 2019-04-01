@@ -95,6 +95,16 @@ func ExecBuffered(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container
 		return nil, nil, err
 	}
 
+	err = stdoutWriter.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = stderrWriter.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 

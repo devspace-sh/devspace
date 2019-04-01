@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
@@ -22,10 +23,7 @@ type ResetCmd struct {
 }
 
 // ResetCmdFlags holds the possible reset cmd flags
-type ResetCmdFlags struct {
-	config          string
-	configOverwrite string
-}
+type ResetCmdFlags struct{}
 
 func init() {
 	cmd := &ResetCmd{
@@ -54,16 +52,11 @@ command: devspace down
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the reset command logic
 func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -83,41 +76,12 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	cmd.deleteDevSpaceDeployments()
 	cmd.deleteClusterRoleBinding()
-	cmd.deleteDeploymentFiles()
 	cmd.deleteImageFiles()
 	cmd.deleteDevspaceFolder()
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
-	deleteDevSpace(cmd.kubectl, nil)
-}
-
-func (cmd *ResetCmd) deleteDeploymentFiles() {
-	config := configutil.GetConfig()
-
-	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
-			if deployConfig.Helm != nil && deployConfig.Helm.ChartPath != nil {
-				absChartPath, err := filepath.Abs(*deployConfig.Helm.ChartPath)
-
-				if err == nil {
-					_, err := os.Stat(absChartPath)
-					if os.IsNotExist(err) == false {
-						deleteChart := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-							Question:     "Should the Chart (" + *deployConfig.Helm.ChartPath + "/*) be removed?",
-							DefaultValue: "yes",
-							Options:      []string{"yes", "no"},
-						}) == "yes"
-
-						if deleteChart {
-							os.RemoveAll(absChartPath)
-							log.Donef("Successfully deleted %s", *deployConfig.Helm.ChartPath)
-						}
-					}
-				}
-			}
-		}
-	}
+	deploy.PurgeDeployments(cmd.kubectl, nil)
 }
 
 func (cmd *ResetCmd) deleteImageFiles() {

@@ -20,6 +20,12 @@ import (
 	"github.com/docker/docker/pkg/archive"
 )
 
+// DefaultDockerfilePath is the default dockerfile path to use
+const DefaultDockerfilePath = "./Dockerfile"
+
+// DefaultContextPath is the default context path to use
+const DefaultContextPath = "./"
+
 // BuildAll builds all images
 func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	config := configutil.GetConfig()
@@ -230,8 +236,8 @@ func shouldRebuild(runtimeConfig *generated.Config, imageConf *v1.ImageConfig, c
 func getDockerfileAndContext(imageConfigName string, imageConf *v1.ImageConfig, isDev bool) (string, string) {
 	var (
 		config         = configutil.GetConfig()
-		dockerfilePath = "./Dockerfile"
-		contextPath    = "./"
+		dockerfilePath = DefaultDockerfilePath
+		contextPath    = DefaultContextPath
 	)
 
 	if imageConf.Build != nil {

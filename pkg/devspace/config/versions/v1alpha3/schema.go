@@ -1,13 +1,12 @@
-package latest
+package v1alpha3
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	v1 "k8s.io/api/core/v1"
 )
 
 // Version is the current api version
-const Version string = "v1alpha4"
+const Version string = "v1alpha3"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -51,114 +50,21 @@ type ClusterUser struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name      *string          `yaml:"name"`
-	Namespace *string          `yaml:"namespace,omitempty"`
-	Helm      *HelmConfig      `yaml:"helm,omitempty"`
-	Kubectl   *KubectlConfig   `yaml:"kubectl,omitempty"`
-	Component *ComponentConfig `yaml:"component,omitempty"`
-}
-
-// ComponentConfig holds the component information
-type ComponentConfig struct {
-	Containers          *[]*ContainerConfig  `yaml:"containers,omitempty"`
-	Replicas            *int                 `yaml:"replicas,omitempty"`
-	PodManagementPolicy *string              `yaml:"podManagementPolicy,omitempty"`
-	ServiceName         *string              `yaml:"serviceName,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
-	Volumes             *[]*VolumeConfig     `yaml:"volumes,omitempty"`
-	Service             *ServiceConfig       `yaml:"service,omitempty"`
-	PullSecrets         *[]*string           `yaml:"pullSecrets,omitempty"`
-	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
-}
-
-// AutoScalingConfig holds the autoscaling config of a component
-type AutoScalingConfig struct {
-	Horizontal *AutoScalingHorizontalConfig `yaml:"horizontal,omitempty"`
-}
-
-// AutoScalingHorizontalConfig holds the horizontal autoscaling config of a component
-type AutoScalingHorizontalConfig struct {
-	MaxReplicas   *int    `yaml:"maxReplicas,omitempty"`
-	AverageCPU    *string `yaml:"averageCPU,omitempty"`
-	AverageMemory *string `yaml:"averageMemory,omitempty"`
-}
-
-// RollingUpdateConfig holds the configuration for rolling updates
-type RollingUpdateConfig struct {
-	Enabled        *bool   `yaml:"enabled,omitempty"`
-	MaxSurge       *string `yaml:"maxSurge,omitempty"`
-	MaxUnavailable *string `yaml:"maxUnavailable,omitempty"`
-	Partition      *int    `yaml:"partition,omitempty"`
-}
-
-// ContainerConfig holds the configurations of a container
-type ContainerConfig struct {
-	Name           *string                         `yaml:"name,omitempty"`
-	Image          *string                         `yaml:"image,omitempty"`
-	Resources      *map[interface{}]interface{}    `yaml:"resources,omitempty"`
-	Env            *[]*map[interface{}]interface{} `yaml:"env,omitempty"`
-	VolumeMounts   *[]*VolumeMountConfig           `yaml:"volumeMounts,omitempty"`
-	LifenessProbe  *map[interface{}]interface{}    `yaml:"lifenessProbe,omitempty"`
-	ReadinessProbe *map[interface{}]interface{}    `yaml:"readinessProbe,omitempty"`
-	Command        *[]*string                      `yaml:"command,omitempty"`
-	Args           *[]*string                      `yaml:"args,omitempty"`
-}
-
-// VolumeMountConfig holds the configuration for a specific mount path
-type VolumeMountConfig struct {
-	ContainerPath *string                  `yaml:"containerPath,omitempty"`
-	Volume        *VolumeMountVolumeConfig `yaml:"volume,omitempty"`
-}
-
-// VolumeMountVolumeConfig holds the configuration for a specfic mount path volume
-type VolumeMountVolumeConfig struct {
-	Name     *string `yaml:"name,omitempty"`
-	SubPath  *string `yaml:"subPath,omitempty"`
-	ReadOnly *bool   `yaml:"readOnly,omitempty"`
-}
-
-// VolumeConfig holds the configuration for a specific volume
-type VolumeConfig struct {
-	Name      *string                   `yaml:"name,omitempty"`
-	Size      *string                   `yaml:"size,omitempty"`
-	ConfigMap *v1.ConfigMapVolumeSource `yaml:"configMap,omitempty"`
-	Secret    *v1.SecretVolumeSource    `yaml:"secret,omitempty"`
-}
-
-// ServiceConfig holds the configuration of a component service
-type ServiceConfig struct {
-	Name  *string               `yaml:"name,omitempty"`
-	Type  *string               `yaml:"type,omitempty"`
-	Ports *[]*ServicePortConfig `yaml:"ports,omitempty"`
-}
-
-// ServicePortConfig holds the port configuration of a component service
-type ServicePortConfig struct {
-	Port          *int    `yaml:"port,omitempty"`
-	ContainerPort *int    `yaml:"containerPort,omitempty"`
-	Protocol      *string `yaml:"protocol,omitempty"`
+	Name      *string        `yaml:"name"`
+	Namespace *string        `yaml:"namespace,omitempty"`
+	Helm      *HelmConfig    `yaml:"helm,omitempty"`
+	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart           *ChartConfig                 `yaml:"chart,omitempty"`
+	ChartPath       *string                      `yaml:"chartPath,omitempty"`
 	Wait            *bool                        `yaml:"wait,omitempty"`
-	Rollback        *bool                        `yaml:"rollback,omitempty"`
 	Force           *bool                        `yaml:"force,omitempty"`
 	Timeout         *int64                       `yaml:"timeout,omitempty"`
 	TillerNamespace *string                      `yaml:"tillerNamespace,omitempty"`
-	DevSpaceValues  *bool                        `yaml:"devSpaceValues,omitempty"`
-	ValuesFiles     *[]*string                   `yaml:"valuesFiles,omitempty"`
-	Values          *map[interface{}]interface{} `yaml:"values,omitempty"`
-}
-
-// ChartConfig defines the helm chart options
-type ChartConfig struct {
-	Name     *string `yaml:"name,omitempty"`
-	RepoURL  *string `yaml:"repo,omitempty"`
-	Username *string `yaml:"username,omitempty"`
-	Password *string `yaml:"password,omitempty"`
-	Version  *string `yaml:"version,omitempty"`
+	Overrides       *[]*string                   `yaml:"overrides,omitempty"`
+	OverrideValues  *map[interface{}]interface{} `yaml:"overrideValues,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
@@ -248,8 +154,8 @@ type ImageConfig struct {
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
 	Disabled   *bool         `yaml:"disabled,omitempty"`
-	Context    *string       `yaml:"context,omitempty"`
-	Dockerfile *string       `yaml:"dockerfile,omitempty"`
+	Context    *string       `yaml:"context"`
+	Dockerfile *string       `yaml:"dockerfile"`
 	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
 	Docker     *DockerConfig `yaml:"docker,omitempty"`
 	Options    *BuildOptions `yaml:"options,omitempty"`

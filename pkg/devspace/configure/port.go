@@ -21,7 +21,7 @@ func GetNameOfFirstHelmDeployment() string {
 		}
 	}
 
-	return configutil.DefaultDevspaceDeploymentName
+	return "devspace"
 }
 
 // AddPort adds a port to the config

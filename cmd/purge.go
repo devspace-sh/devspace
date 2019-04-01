@@ -4,12 +4,9 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
-	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +18,6 @@ type PurgeCmd struct {
 
 // PurgeCmdFlags holds the possible down cmd flags
 type PurgeCmdFlags struct {
-	config     string
 	deployment string
 }
 
@@ -46,17 +42,12 @@ local chart, including persistent volume claims!
 	}
 
 	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml')")
 
 	rootCmd.AddCommand(cobraCmd)
 }
 
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -81,62 +72,5 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	deleteDevSpace(kubectl, deployments)
-}
-
-func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
-	config := configutil.GetConfig()
-	if deployments != nil && len(deployments) == 0 {
-		deployments = nil
-	}
-
-	if config.Deployments != nil {
-		// Reverse them
-		for i := len(*config.Deployments) - 1; i >= 0; i-- {
-			deployConfig := (*config.Deployments)[i]
-
-			// Check if we should skip deleting deployment
-			if deployments != nil {
-				found := false
-
-				for _, value := range deployments {
-					if value == *deployConfig.Name {
-						found = true
-						break
-					}
-				}
-
-				if found == false {
-					continue
-				}
-			}
-
-			var err error
-			var deployClient deploy.Interface
-
-			// Delete kubectl engine
-			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config: %v", err)
-					continue
-				}
-			} else {
-				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create helm deploy config: %v", err)
-					continue
-				}
-			}
-
-			log.StartWait("Deleting deployment " + *deployConfig.Name)
-			err = deployClient.Delete()
-			log.StopWait()
-			if err != nil {
-				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
-			}
-
-			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
-		}
-	}
+	deploy.PurgeDeployments(kubectl, deployments)
 }

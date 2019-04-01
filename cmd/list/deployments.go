@@ -1,8 +1,9 @@
-package status
+package list
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -17,10 +18,10 @@ func newDeploymentsCmd() *cobra.Command {
 
 	return &cobra.Command{
 		Use:   "deployments",
-		Short: "Shows the status of all deployments",
+		Short: "Lists and shows the status of all deployments",
 		Long: `
 #######################################################
-############ devspace status deployments ##############
+############# devspace list deployments ###############
 #######################################################
 Shows the status of all deployments
 #######################################################
@@ -43,10 +44,10 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 
 	var values [][]string
 	var headerValues = []string{
+		"NAME",
 		"TYPE",
+		"DEPLOY",
 		"STATUS",
-		"NAMESPACE",
-		"INFO",
 	}
 
 	config := configutil.GetConfig()
@@ -66,20 +67,31 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 					log.Warnf("Unable to create kubectl deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
-			} else {
+			} else if deployConfig.Helm != nil {
 				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
+			} else if deployConfig.Component != nil {
+				deployClient, err = deployComponent.New(kubectl, deployConfig, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create component deploy config for %s: %v", *deployConfig.Name, err)
+					continue
+				}
 			}
 
-			addValues, err := deployClient.Status()
+			status, err := deployClient.Status()
 			if err != nil {
 				log.Warnf("Error retrieving status for deployment %s: %v", *deployConfig.Name, err)
 			}
 
-			values = append(values, addValues...)
+			values = append(values, []string{
+				status.Name,
+				status.Type,
+				status.Target,
+				status.Status,
+			})
 		}
 	}
 

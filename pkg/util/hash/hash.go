@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
+	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
@@ -160,6 +161,13 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+// String hashes a given string
+func String(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
 
 func hashFileCRC32(filePath string, polynomial uint32) (string, error) {

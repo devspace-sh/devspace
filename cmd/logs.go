@@ -16,7 +16,6 @@ type LogsCmd struct {
 	labelSelector     string
 	container         string
 	pod               string
-	config            string
 	pick              bool
 	follow            bool
 	lastAmountOfLines int
@@ -53,18 +52,12 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().BoolVarP(&cmd.pick, "pick", "p", false, "Select a pod to stream logs from")
 	logsCmd.Flags().BoolVarP(&cmd.follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.lastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
-	logsCmd.Flags().StringVar(&cmd.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
 
 	return logsCmd
 }
 
 // RunLogs executes the functionality devspace logs
 func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	if configutil.ConfigPath != cmd.config {
-		configutil.ConfigPath = cmd.config
-	}
-
 	// Set config root
 	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
