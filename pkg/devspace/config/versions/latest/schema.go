@@ -93,15 +93,15 @@ type RollingUpdateConfig struct {
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name           *string                      `yaml:"name,omitempty"`
-	Image          *string                      `yaml:"image,omitempty"`
-	Resources      *map[interface{}]interface{} `yaml:"resources,omitempty"`
-	Env            *[]*v1.EnvVar                `yaml:"env,omitempty"`
-	VolumeMounts   *[]*VolumeMountConfig        `yaml:"volumeMounts,omitempty"`
-	LifenessProbe  *map[interface{}]interface{} `yaml:"lifenessProbe,omitempty"`
-	ReadinessProbe *map[interface{}]interface{} `yaml:"readinessProbe,omitempty"`
-	Command        *[]*string                   `yaml:"command,omitempty"`
-	Args           *[]*string                   `yaml:"args,omitempty"`
+	Name           *string                         `yaml:"name,omitempty"`
+	Image          *string                         `yaml:"image,omitempty"`
+	Resources      *map[interface{}]interface{}    `yaml:"resources,omitempty"`
+	Env            *[]*map[interface{}]interface{} `yaml:"env,omitempty"`
+	VolumeMounts   *[]*VolumeMountConfig           `yaml:"volumeMounts,omitempty"`
+	LifenessProbe  *map[interface{}]interface{}    `yaml:"lifenessProbe,omitempty"`
+	ReadinessProbe *map[interface{}]interface{}    `yaml:"readinessProbe,omitempty"`
+	Command        *[]*string                      `yaml:"command,omitempty"`
+	Args           *[]*string                      `yaml:"args,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -248,8 +248,8 @@ type ImageConfig struct {
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
 	Disabled   *bool         `yaml:"disabled,omitempty"`
-	Context    *string       `yaml:"context"`
-	Dockerfile *string       `yaml:"dockerfile"`
+	Context    *string       `yaml:"context,omitempty"`
+	Dockerfile *string       `yaml:"dockerfile,omitempty"`
 	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
 	Docker     *DockerConfig `yaml:"docker,omitempty"`
 	Options    *BuildOptions `yaml:"options,omitempty"`

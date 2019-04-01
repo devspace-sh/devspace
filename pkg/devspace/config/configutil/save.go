@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/pkg/errors"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
@@ -12,18 +15,31 @@ import (
 
 // SaveBaseConfig writes the data of a config to its yaml file
 func SaveBaseConfig() error {
-	// default and overwrite values
-	configToIgnore := latest.New()
+	// cloned config
+	clonedConfig := latest.Config{}
 
-	// generates config without default and overwrite values
-	configMapRaw, _, err := Split(config, configRaw, configToIgnore)
+	// Copy config
+	err := util.Convert(config, &clonedConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "convert")
+	}
+
+	// Erase default values
+	if clonedConfig.Dev != nil && *clonedConfig.Dev == (latest.DevConfig{}) {
+		clonedConfig.Dev = nil
+	}
+	if clonedConfig.Cluster != nil && *clonedConfig.Cluster == (latest.Cluster{}) {
+		clonedConfig.Cluster = nil
+	}
+	if clonedConfig.Deployments != nil && len(*clonedConfig.Deployments) == 0 {
+		clonedConfig.Deployments = nil
+	}
+	if clonedConfig.Images != nil && len(*clonedConfig.Images) == 0 {
+		clonedConfig.Images = nil
 	}
 
 	// Convert to string
-	configMap, _ := configMapRaw.(map[interface{}]interface{})
-	configYaml, err := yaml.Marshal(configMap)
+	configYaml, err := yaml.Marshal(clonedConfig)
 	if err != nil {
 		return err
 	}
@@ -45,6 +61,15 @@ func SaveBaseConfig() error {
 
 		// We have to save the config in the configs.yaml
 		if configDefinition.Config.Data != nil {
+			// Convert to map[interface{}]interface{}
+			configMap := make(map[interface{}]interface{})
+
+			// Copy config
+			err := util.Convert(clonedConfig, &configMap)
+			if err != nil {
+				return errors.Wrap(err, "convert config map")
+			}
+
 			configDefinition.Config.Data = configMap
 			configYaml, err := yaml.Marshal(configs)
 			if err != nil {

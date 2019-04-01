@@ -52,7 +52,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 		}
 
 		containerPath := "."
-		if syncPath.ContainerPath == nil {
+		if syncPath.ContainerPath != nil {
 			containerPath = *syncPath.ContainerPath
 		}
 
@@ -92,7 +92,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			log.Fatalf("Sync error: %s", err.Error())
 		}
 
-		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, *syncPath.ContainerPath, pod.Namespace, pod.Name)
+		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
 		syncConfigs = append(syncConfigs, syncConfig)
 	}
 

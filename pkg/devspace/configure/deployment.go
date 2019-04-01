@@ -124,7 +124,9 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 		}
 	}
 
-	return nil, retDeploymentConfig, nil
+	// Check if we should create pull secret
+	retImageConfig := GetImageConfigFromImageName(imageName, "", "")
+	return retImageConfig, retDeploymentConfig, nil
 }
 
 // GetPredefinedComponentDeployment returns deployment that uses a predefined component

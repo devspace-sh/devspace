@@ -196,7 +196,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if newDeployment != nil {
 		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
 
-		if newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
+		if cmd.flags.useCloud && newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
 			(*newDeployment.Component.Containers)[0].Resources = &map[interface{}]interface{}{
 				"limits": map[interface{}]interface{}{
 					"cpu":    "400m",

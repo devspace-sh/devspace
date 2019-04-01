@@ -25,12 +25,12 @@ const DefaultImageName = "devspace"
 // GetImageConfigFromImageName returns an image config based on the image
 func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.ImageConfig {
 	// Configure pull secret
-	createPullSecret := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	createPullSecret := dockerfile != "" || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question: "Do you want to enable automatic creation of pull secrets for this image?",
-		Options:  []string{"yes", "no"},
+		Options:  []string{"no", "yes"},
 	}) == "yes"
 
-	if dockerfile != "" || createPullSecret {
+	if createPullSecret {
 		// Figure out tag
 		imageTag := ""
 		splittedImage := strings.Split(imageName, ":")
