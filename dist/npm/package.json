@@ -6,7 +6,8 @@
     "scripts": {
         "postinstall": "node index.js install",
         "preuninstall": "node index.js uninstall",
-        "prepare": "node index.js update-version"
+        "prepare": "node index.js update-version",
+        "test": "node index.js noop"
     },
     "dependencies": {
         "request": "^2.81.0"

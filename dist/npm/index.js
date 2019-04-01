@@ -4,6 +4,12 @@ var path = require('path');
 var exec = require('child_process').exec;
 var request = require('request');
 
+
+if (action == "noop") {
+    console.log("Successfully ran noop command");
+    process.exit(0);
+}
+
 const downloadPathTemplate = "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
 const ARCH_MAPPING = {
     "ia32": "386",

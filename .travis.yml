@@ -56,8 +56,6 @@ jobs:
     language: node_js
     before_deploy:
     - cd dist/npm
-    install: skip
-    script: skip
     deploy:
       provider: npm
       email: "npm@devspace.cloud"
