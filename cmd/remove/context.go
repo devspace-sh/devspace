@@ -52,7 +52,7 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		log.Fatalf("Error getting cloud context: %v", err)
 	}
 
-	// Delete all spaces
+	// Delete all contexts
 	if cmd.All {
 		spaces, err := provider.GetSpaces()
 		if err != nil {

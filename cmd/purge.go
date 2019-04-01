@@ -13,37 +13,32 @@ import (
 
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
-	flags *PurgeCmdFlags
+	Deployments string
 }
 
-// PurgeCmdFlags holds the possible down cmd flags
-type PurgeCmdFlags struct {
-	deployment string
-}
+// NewPurgeCmd creates a new purge command
+func NewPurgeCmd() *cobra.Command {
+	cmd := &PurgeCmd{}
 
-func init() {
-	cmd := &PurgeCmd{
-		flags: &PurgeCmdFlags{},
-	}
-
-	cobraCmd := &cobra.Command{
+	purgeCmd := &cobra.Command{
 		Use:   "purge",
-		Short: "Delete all deployed kubernetes resources",
+		Short: "Delete deployed resources",
 		Long: `
 #######################################################
 ################### devspace purge ####################
 #######################################################
-Deletes the deployed kuberenetes resources. 
-Warning: will delete everything that is defined in the 
-local chart, including persistent volume claims!
+Deletes the deployed kuberenetes resources:
+
+devspace purge
+devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVarP(&cmd.flags.deployment, "deployment", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
+	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 
-	rootCmd.AddCommand(cobraCmd)
+	return purgeCmd
 }
 
 // Run executes the purge command logic
@@ -65,8 +60,8 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	deployments := []string{}
-	if cmd.flags.deployment != "" {
-		deployments = strings.Split(cmd.flags.deployment, ",")
+	if cmd.Deployments != "" {
+		deployments = strings.Split(cmd.Deployments, ",")
 		for index := range deployments {
 			deployments[index] = strings.TrimSpace(deployments[index])
 		}

@@ -28,6 +28,11 @@ import (
 const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
 
 const (
+	// Cluster options
+	useDevSpaceCloud  = "DevSpace Cloud (managed cluster)"
+	useCurrentContext = "Use current kubectl context (no server-side component)"
+
+	// Dockerfile not found options
 	createDockerfileOption = "Create a Dockerfile for me"
 	enterDockerfileOption  = "Enter path to your Dockerfile"
 	enterManifestsOption   = "Enter path to your Kubernetes manifests"
@@ -37,27 +42,21 @@ const (
 
 // InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
-	providerName *string
+	// Flags
+	Reconfigure bool
+	Dockerfile  string
+	Context     string
 
-	flags               *InitCmdFlags
+	providerName        *string
+	useCloud            bool
 	dockerfileGenerator *generator.DockerfileGenerator
 }
 
-// InitCmdFlags are the flags available for the init-command
-type InitCmdFlags struct {
-	reconfigure bool
+// NewInitCmd creates a new init command
+func NewInitCmd() *cobra.Command {
+	cmd := &InitCmd{}
 
-	dockerfile string
-	context    string
-
-	useCloud bool
-}
-
-func init() {
-	cmd := &InitCmd{
-		flags: &InitCmdFlags{},
-	}
-	cobraCmd := &cobra.Command{
+	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initializes DevSpace in the current folder",
 		Long: `
@@ -71,19 +70,19 @@ folder. Creates a devspace.yaml with all configuration.
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
-	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", false, "Change existing configuration")
+	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
+	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
+	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", image.DefaultDockerfilePath, "Dockerfile to use for initialization")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.context, "context", "", "Context path to use for intialization")
-	cobraCmd.Flags().StringVar(&cmd.flags.dockerfile, "dockerfile", image.DefaultDockerfilePath, "Dockerfile to use for initialization")
+	return initCmd
 }
 
 // Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if config already exists
 	configExists := configutil.ConfigExists()
-	if configExists && cmd.flags.reconfigure == false {
+	if configExists && cmd.Reconfigure == false {
 		log.Fatalf("Config devspace.yaml already exists. Please run `devspace init --reconfigure` to reinitialize the project")
 	}
 
@@ -120,7 +119,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if dockerfile exists
 	addFromDockerfile := true
 
-	_, err = os.Stat(cmd.flags.dockerfile)
+	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
 		selectedOption := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:     "Seems like you do not have a Dockerfile. What do you want to do?",
@@ -136,12 +135,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		if selectedOption == createDockerfileOption {
 			// Containerize application if necessary
-			err = generator.ContainerizeApplication(cmd.flags.dockerfile, ".", "")
+			err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "")
 			if err != nil {
 				log.Fatalf("Error containerizing application: %v", err)
 			}
 		} else if selectedOption == enterDockerfileOption {
-			cmd.flags.dockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			cmd.Dockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 				Question: "Please enter a path to your dockerfile (e.g. ./MyDockerfile)",
 			})
 		} else if selectedOption == enterManifestsOption {
@@ -179,12 +178,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Check if dockerfile exists now
 	if addFromDockerfile {
-		_, err = os.Stat(cmd.flags.dockerfile)
+		_, err = os.Stat(cmd.Dockerfile)
 		if err != nil {
-			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.flags.dockerfile)
+			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, "", cmd.flags.dockerfile, cmd.flags.context)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -196,7 +195,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if newDeployment != nil {
 		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
 
-		if cmd.flags.useCloud && newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
+		if cmd.useCloud && newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
 			(*newDeployment.Component.Containers)[0].Resources = &map[interface{}]interface{}{
 				"limits": map[interface{}]interface{}{
 					"cpu":    "400m",
@@ -234,7 +233,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.Done("Project successfully initialized")
 
-	if cmd.flags.useCloud {
+	if cmd.useCloud {
 		log.Infof("\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	} else {
 		log.Infof("Run:\n- `%s` to develop application\n- `%s` to deploy application", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
@@ -244,15 +243,15 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 func (cmd *InitCmd) checkIfDevSpaceCloud() {
 	// Check if kubectl exists
 	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
-		cmd.flags.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		cmd.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:     "Which Kubernetes cluster do you want to use?",
-			DefaultValue: "DevSpace Cloud (managed cluster)",
-			Options:      []string{"DevSpace Cloud (managed cluster)", "Use current kubectl context (no server-side component)"},
-		}) == "DevSpace Cloud (managed cluster)"
+			DefaultValue: useDevSpaceCloud,
+			Options:      []string{useDevSpaceCloud, useCurrentContext},
+		}) == useDevSpaceCloud
 	}
 
 	// Check if DevSpace Cloud should be used
-	if cmd.flags.useCloud == false {
+	if cmd.useCloud == false {
 		cmd.configureCluster()
 	} else {
 		// Get provider configuration

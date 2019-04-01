@@ -7,20 +7,13 @@ import (
 )
 
 // UpgradeCmd is a struct that defines a command call for "upgrade"
-type UpgradeCmd struct {
-	flags *UpgradeCmdFlags
-}
+type UpgradeCmd struct{}
 
-// UpgradeCmdFlags are the flags available for the upgrade-command
-type UpgradeCmdFlags struct {
-}
+// NewUpgradeCmd creates a new upgrade command
+func NewUpgradeCmd() *cobra.Command {
+	cmd := &UpgradeCmd{}
 
-func init() {
-	cmd := &UpgradeCmd{
-		flags: &UpgradeCmdFlags{},
-	}
-
-	cobraCmd := &cobra.Command{
+	upgradeCmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade the DevSpace CLI to the newest version",
 		Long: `
@@ -32,7 +25,8 @@ Upgrades the DevSpace CLI to the newest version
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
-	rootCmd.AddCommand(cobraCmd)
+
+	return upgradeCmd
 }
 
 // Run executes the command logic

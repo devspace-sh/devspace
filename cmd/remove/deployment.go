@@ -19,12 +19,15 @@ func newDeploymentCmd() *cobra.Command {
 
 	deploymentCmd := &cobra.Command{
 		Use:   "deployment",
-		Short: "Removes one or all deployments from the devspace",
+		Short: "Removes one or all deployments from devspace configuration",
 		Long: `
 #######################################################
 ############ devspace remove deployment ###############
 #######################################################
-Removes one or all deployments from a devspace:
+Removes one or all deployments from the devspace
+configuration (If you want to delete the deployed 
+resources, run 'devspace purge -d deployment_name'):
+
 devspace remove deployment devspace-default
 devspace remove deployment --all
 #######################################################
