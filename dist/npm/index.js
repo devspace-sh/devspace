@@ -42,23 +42,24 @@ const requestHeaders = {
 let packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
 
 if (action == "update-version") {
-    const releasesURL = "https://api.github.com/repos/devspace-cloud/devspace/releases";
-    request({uri: releasesURL, headers: requestHeaders, json: true}, function(err, res, releases) {
+    const releasesURL = "https://github.com/devspace-cloud/devspace/releases";
+    
+    request({uri: releasesURL, headers: requestHeaders}, function(err, res, releasePage) {
             if (res.statusCode !== 200) {
                 console.error("Error requesting URL " + releasesURL + " (Status Code: " + res.statusCode + ")");
                 console.error(err);
                 process.exit(1);
             }
+            const latestVersion = releasePage.replace(/^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s, "$1");
             
-            if (releases[0] && releases[0].name) {
-                const latestVersion = releases[0].name.replace(/^v/, "");
+            if (releasePage != latestVersion && latestVersion) {
                 packageJson.version = latestVersion;
 
                 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
 
                 process.exit(0);
             } else {
-                console.error("Unable to identify latest release name")
+                console.error("Unable to identify latest devspace version")
                 process.exit(1);
             }
         });
