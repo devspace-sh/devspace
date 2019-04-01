@@ -1,0 +1,14 @@
+{
+    "name": "devspace",
+    "version": "3.2.1",
+    "description": "DevSpace CLI - the swiss-army knife for Kubernetes. DevSpace CLI accelerates developing, deploying and debugging applications with Docker and Kubernetes.",
+    "main": "index.js",
+    "scripts": {
+        "postinstall": "node index.js install",
+        "preuninstall": "node index.js uninstall",
+        "prepare": "node index.js update-version"
+    },
+    "dependencies": {
+        "request": "^2.81.0"
+    }
+}
