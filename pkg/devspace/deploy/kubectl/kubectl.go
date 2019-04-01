@@ -9,6 +9,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -18,6 +19,7 @@ import (
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
 	KubeClient *kubernetes.Clientset // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
+	Name       string
 	CmdPath    string
 	Context    string
 	Namespace  string
@@ -60,6 +62,7 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 	}
 
 	return &DeployConfig{
+		Name:       *deployConfig.Name,
 		KubeClient: kubectl,
 		CmdPath:    cmdPath,
 		Context:    context,
@@ -70,9 +73,19 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 }
 
 // Status prints the status of all matched manifests from kubernetes
-func (d *DeployConfig) Status() ([][]string, error) {
+func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	// TODO: parse kubectl get output into the required string array
-	return [][]string{}, nil
+	manifests := strings.Join(d.Manifests, ",")
+	if len(manifests) > 20 {
+		manifests = manifests[:20] + "..."
+	}
+
+	return &deploy.StatusResult{
+		Name:   d.Name,
+		Type:   "Manifests",
+		Target: manifests,
+		Status: "N/A",
+	}, nil
 }
 
 // Delete deletes all matched manifests from kubernetes

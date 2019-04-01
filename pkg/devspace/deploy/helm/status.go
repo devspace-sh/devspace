@@ -1,16 +1,18 @@
 package helm
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 )
 
 // Status gets the status of the deployment
-func (d *DeployConfig) Status() ([][]string, error) {
-	var values [][]string
-	config := configutil.GetConfig()
+func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
+	var (
+		deployTargetStr = d.getDeployTarget()
+	)
 
 	// Get HelmClient
 	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
@@ -18,67 +20,63 @@ func (d *DeployConfig) Status() ([][]string, error) {
 		return nil, err
 	}
 
-	namespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return nil, err
-	}
-	if d.DeploymentConfig.Namespace != nil {
-		namespace = *d.DeploymentConfig.Namespace
-	}
-
+	// Get all releases
 	releases, err := helmClient.Client.ListReleases()
 	if err != nil {
-		values = append(values, []string{
-			*d.DeploymentConfig.Name,
-			"Error",
-			namespace,
-			err.Error(),
-		})
-
-		return values, nil
+		return &deploy.StatusResult{
+			Name:   *d.DeploymentConfig.Name,
+			Type:   "Helm",
+			Target: deployTargetStr,
+			Status: fmt.Sprintf("Error: %v", err),
+		}, nil
 	}
 
 	if releases == nil || len(releases.Releases) == 0 {
-		values = append(values, []string{
-			*d.DeploymentConfig.Name,
-			"Not Found",
-			namespace,
-			"No release found",
-		})
-
-		return values, nil
+		return &deploy.StatusResult{
+			Name:   *d.DeploymentConfig.Name,
+			Type:   "Helm",
+			Target: deployTargetStr,
+			Status: "Not deployed",
+		}, nil
 	}
 
 	for _, release := range releases.Releases {
 		if release.GetName() == *d.DeploymentConfig.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
-				values = append(values, []string{
-					*d.DeploymentConfig.Name,
-					"Error",
-					namespace,
-					"HELM STATUS:" + release.Info.Status.Code.String(),
-				})
-
-				return values, nil
+				return &deploy.StatusResult{
+					Name:   *d.DeploymentConfig.Name,
+					Type:   "Helm",
+					Target: deployTargetStr,
+					Status: "Status:" + release.Info.Status.Code.String(),
+				}, nil
 			}
 
-			values = append(values, []string{
-				*d.DeploymentConfig.Name,
-				"Deployed",
-				namespace,
-				"Deployed: " + time.Unix(release.Info.LastDeployed.Seconds, 0).String(),
-			})
-
-			return values, nil
+			return &deploy.StatusResult{
+				Name:   *d.DeploymentConfig.Name,
+				Type:   "Helm",
+				Target: deployTargetStr,
+				Status: "Deployed " + time.Since(time.Unix(release.Info.LastDeployed.Seconds, 0)).String() + " ago",
+			}, nil
 		}
 	}
 
-	values = append(values, []string{
-		*d.DeploymentConfig.Name,
-		"Not Found",
-		namespace,
-		"No release found",
-	})
+	return &deploy.StatusResult{
+		Name:   *d.DeploymentConfig.Name,
+		Type:   "Helm",
+		Target: deployTargetStr,
+		Status: "Not deployed",
+	}, nil
+}
 
-	return values, nil
+func (d *DeployConfig) getDeployTarget() string {
+	if d.DeploymentConfig.Helm == nil || d.DeploymentConfig.Helm.Chart == nil {
+		return "N/A"
+	}
+
+	retString := *d.DeploymentConfig.Helm.Chart.Name
+	if d.DeploymentConfig.Helm.Chart.Version != nil {
+		retString += " (" + *d.DeploymentConfig.Helm.Chart.Version + ")"
+	}
+
+	return retString
 }

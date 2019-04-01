@@ -4,13 +4,9 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
-	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
-	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 )
@@ -76,68 +72,5 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	deleteDevSpace(kubectl, deployments)
-}
-
-func deleteDevSpace(kubectl *kubernetes.Clientset, deployments []string) {
-	config := configutil.GetConfig()
-	if deployments != nil && len(deployments) == 0 {
-		deployments = nil
-	}
-
-	if config.Deployments != nil {
-		// Reverse them
-		for i := len(*config.Deployments) - 1; i >= 0; i-- {
-			deployConfig := (*config.Deployments)[i]
-
-			// Check if we should skip deleting deployment
-			if deployments != nil {
-				found := false
-
-				for _, value := range deployments {
-					if value == *deployConfig.Name {
-						found = true
-						break
-					}
-				}
-
-				if found == false {
-					continue
-				}
-			}
-
-			var err error
-			var deployClient deploy.Interface
-
-			// Delete kubectl engine
-			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config: %v", err)
-					continue
-				}
-			} else if deployConfig.Helm != nil {
-				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create helm deploy config: %v", err)
-					continue
-				}
-			} else if deployConfig.Component != nil {
-				deployClient, err = deployComponent.New(kubectl, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create component deploy config: %v", err)
-					continue
-				}
-			}
-
-			log.StartWait("Deleting deployment " + *deployConfig.Name)
-			err = deployClient.Delete()
-			log.StopWait()
-			if err != nil {
-				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
-			}
-
-			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
-		}
-	}
+	deploy.PurgeDeployments(kubectl, deployments)
 }

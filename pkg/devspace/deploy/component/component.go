@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -55,8 +56,14 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 }
 
 // Status gets the status of the deployment
-func (d *DeployConfig) Status() ([][]string, error) {
-	return d.helmConfig.Status()
+func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
+	status, err := d.helmConfig.Status()
+	if err != nil {
+		return nil, err
+	}
+
+	status.Type = "Component"
+	return status, nil
 }
 
 // Delete deletes the release

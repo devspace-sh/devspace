@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
@@ -80,7 +81,7 @@ func (cmd *ResetCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *ResetCmd) deleteDevSpaceDeployments() {
-	deleteDevSpace(cmd.kubectl, nil)
+	deploy.PurgeDeployments(cmd.kubectl, nil)
 }
 
 func (cmd *ResetCmd) deleteImageFiles() {
