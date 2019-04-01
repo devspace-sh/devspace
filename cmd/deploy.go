@@ -17,11 +17,6 @@ import (
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	flags *DeployCmdFlags
-}
-
-// DeployCmdFlags holds the possible down cmd flags
-type DeployCmdFlags struct {
 	Namespace     string
 	KubeContext   string
 	DockerTarget  string
@@ -30,12 +25,11 @@ type DeployCmdFlags struct {
 	SwitchContext bool
 }
 
-func init() {
-	cmd := &DeployCmd{
-		flags: &DeployCmdFlags{},
-	}
+// NewDeployCmd creates a new deploy command
+func NewDeployCmd() *cobra.Command {
+	cmd := &DeployCmd{}
 
-	cobraCmd := &cobra.Command{
+	deployCmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy the project",
 		Long: `
@@ -44,6 +38,7 @@ func init() {
 #######################################################
 Deploys the current project to a Space or namespace:
 
+devspace deploy
 devspace deploy --namespace=deploy
 devspace deploy --namespace=deploy
 devspace deploy --kube-context=deploy-context
@@ -52,15 +47,15 @@ devspace deploy --kube-context=deploy-context
 		Run:  cmd.Run,
 	}
 
-	cobraCmd.Flags().StringVar(&cmd.flags.Namespace, "namespace", "", "The namespace to deploy to")
-	cobraCmd.Flags().StringVar(&cmd.flags.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	cobraCmd.Flags().StringVar(&cmd.flags.DockerTarget, "docker-target", "", "The docker target to use for building")
+	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to deploy to")
+	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	deployCmd.Flags().StringVar(&cmd.DockerTarget, "docker-target", "", "The docker target to use for building")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
+	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
+	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 
-	rootCmd.AddCommand(cobraCmd)
+	return deployCmd
 }
 
 // Run executes the down command logic
@@ -81,7 +76,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.prepareConfig()
 
 	// Create kubectl client
-	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.SwitchContext)
+	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -114,7 +109,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.flags.ForceBuild, log.GetInstance())
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.ForceBuild, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +123,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force deployment of all defined deployments
-	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.flags.ForceDeploy, log.GetInstance())
+	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,29 +153,29 @@ func (cmd *DeployCmd) prepareConfig() {
 	// Load Config and modify it
 	config := configutil.GetConfigWithoutDefaults(true)
 
-	if cmd.flags.Namespace != "" {
+	if cmd.Namespace != "" {
 		config.Cluster = &v1.Cluster{
-			Namespace:   &cmd.flags.Namespace,
+			Namespace:   &cmd.Namespace,
 			KubeContext: config.Cluster.KubeContext,
 			APIServer:   config.Cluster.APIServer,
 			CaCert:      config.Cluster.CaCert,
 			User:        config.Cluster.User,
 		}
 
-		log.Infof("Using %s namespace for deploying", cmd.flags.Namespace)
+		log.Infof("Using %s namespace for deploying", cmd.Namespace)
 	}
-	if cmd.flags.KubeContext != "" {
+	if cmd.KubeContext != "" {
 		config.Cluster = &v1.Cluster{
 			Namespace:   config.Cluster.Namespace,
-			KubeContext: &cmd.flags.KubeContext,
+			KubeContext: &cmd.KubeContext,
 			APIServer:   config.Cluster.APIServer,
 			CaCert:      config.Cluster.CaCert,
 			User:        config.Cluster.User,
 		}
 
-		log.Infof("Using %s kube context for deploying", cmd.flags.KubeContext)
+		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
 	}
-	if cmd.flags.DockerTarget != "" {
+	if cmd.DockerTarget != "" {
 		if config.Images != nil {
 			for _, imageConf := range *config.Images {
 				if imageConf.Build == nil {
@@ -189,7 +184,7 @@ func (cmd *DeployCmd) prepareConfig() {
 				if imageConf.Build.Options == nil {
 					imageConf.Build.Options = &v1.BuildOptions{}
 				}
-				imageConf.Build.Options.Target = &cmd.flags.DockerTarget
+				imageConf.Build.Options.Target = &cmd.DockerTarget
 			}
 		}
 	}
