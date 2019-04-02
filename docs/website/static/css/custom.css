@@ -85,11 +85,6 @@ body blockquote {
     display: none;
 }
 
-.navPusher .docMainWrapper {
-  max-width: 1600px;
-  padding: 0 5%;
-}
-
 @media only screen and (min-width: 1024px) {
   .docsNavContainer {
     height: unset;

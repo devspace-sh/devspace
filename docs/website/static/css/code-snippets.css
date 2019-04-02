@@ -1,3 +1,7 @@
+.hljs.language-bash .hljs-built_in {
+    color: #abb2bf;
+}
+
 body .hljs {
     padding-left: 44px;
 }

@@ -1,0 +1,55 @@
+.navPusher {
+    padding-top: 100px;
+}
+
+.navPusher .docMainWrapper {
+    max-width: 100%;
+    padding: 0;
+}
+
+.separateOnPageNav .headerWrapper.wrapper {
+  max-width: 1600px;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer,
+.separateOnPageNav .navPusher .onPageNav {
+    flex: 0 1 50%;
+    overflow: initial;
+}
+
+.separateOnPageNav .navPusher .mainContainer {
+    flex: 1 0 770px;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer,
+.separateOnPageNav .navPusher .mainContainer,
+.separateOnPageNav .navPusher .onPageNav {
+    top: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer .toc,
+.separateOnPageNav .navPusher .mainContainer,
+.separateOnPageNav .navPusher .onPageNav {
+    padding: 30px;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer .toc .navGroups {
+    margin-top: -5px;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer .toc {
+    width: 280px;
+    height: calc(100vh - 100px);
+    position: sticky;
+    top: 0;
+    margin-left: auto;
+    margin-right: 0;
+    padding-right: 0;
+    overflow: hidden;
+}
+
+.separateOnPageNav .navPusher .docsNavContainer .toc:hover {
+    overflow: auto;
+}
