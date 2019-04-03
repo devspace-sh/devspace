@@ -45,12 +45,13 @@ If you have multiple applications inside a single project directory (i.e. monore
 1. Make sure each of your services has a Dockerfile. You can run `devspace containerize` in the sub-folder of each of the services to create a Dockerfile. [Learn more below.](#creating-a-dockerfile)
 2. Run `devspace init` in the top-level root directory of your project
 3. During the init process, choose the option `Enter path to your Dockerfile` and enter the relative path to the Dockerfile of one of your microservices.
-4. To add each of the remaining services as deployments, run `devspace add deployment [service-name] --dockerfile="./path/to/your/service/Dockerfile" --image="dscr.io/[username]/[service-name]"`
+4. To add each of the remaining services as deployments, run `devspace add deployment [service-name] --dockerfile="./path/to/your/service/Dockerfile"`
 
 If you already have Helm charts or Kubernetes manifests, you can also add them as deployment using the following commands:
 ```bash
 devspace add deployment [service-name] --chart="./path/to/your/service/chart"
 devspace add deployment [service-name] --manifests="./path/to/your/service/manifests/**"
+devspace add deployment [service-name] --image="hub.docker.com/[docker-username]/[my-image]"
 ```
 
 ## Creating a Dockerfile
