@@ -247,7 +247,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 		tags = active.Deploy.ImageTags
 	}
 
-	match := func(key, value string) bool {
+	match := func(path, key, value string) bool {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")
@@ -258,7 +258,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 		return false
 	}
 
-	replace := func(value string) interface{} {
+	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")

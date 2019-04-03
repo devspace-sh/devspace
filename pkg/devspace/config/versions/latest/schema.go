@@ -27,10 +27,10 @@ func New() config.Config {
 // Config defines the configuration
 type Config struct {
 	Version     *string                  `yaml:"version"`
-	Cluster     *Cluster                 `yaml:"cluster,omitempty"`
-	Dev         *DevConfig               `yaml:"dev,omitempty"`
-	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Images      *map[string]*ImageConfig `yaml:"images,omitempty"`
+	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Dev         *DevConfig               `yaml:"dev,omitempty"`
+	Cluster     *Cluster                 `yaml:"cluster,omitempty"`
 }
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster

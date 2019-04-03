@@ -20,64 +20,73 @@ import (
 )
 
 // VarMatchRegex is the regex to check if a value matches the devspace var format
-var VarMatchRegex = regexp.MustCompile("^\\$\\{[^\\}]+\\}$")
+var VarMatchRegex = regexp.MustCompile("^(.*)(\\$\\{[^\\}]+\\})(.*)$")
 
 // VarEnvPrefix is the prefix environment variables should have in order to use them
 const VarEnvPrefix = "DEVSPACE_VAR_"
 
-func varReplaceFn(value string) interface{} {
+// LoadedVars holds all variables that were loaded
+var LoadedVars = make(map[string]string)
+
+func varReplaceFn(path, value string) interface{} {
+	// Save old value
+	LoadedVars[path] = value
+
+	matched := VarMatchRegex.FindStringSubmatch(value)
+	if len(matched) != 4 {
+		return ""
+	}
+
+	value = matched[2]
 	varName := strings.TrimSpace(value[2 : len(value)-1])
-	retString := ""
 
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error reading generated config: %v", err)
 	}
 
-	// Get current config
-	currentConfig := generatedConfig.GetActive()
-
+	// Find value for variable
+	varValue := ""
 	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
-		retString = os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
-
-		// Check if we can convert val
-		if retString == "true" {
-			currentConfig.Vars[varName] = true
-			return true
-		} else if retString == "false" {
-			currentConfig.Vars[varName] = false
-			return false
-		} else if i, err := strconv.Atoi(retString); err == nil {
-			currentConfig.Vars[varName] = i
-			return i
+		envVarValue := os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
+		varValue = envVarValue
+	} else {
+		// Get current config
+		currentConfig := generatedConfig.GetActive()
+		if _, ok := currentConfig.Vars[varName]; !ok {
+			currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
+				Question: ptr.String("Please enter a value for " + varName),
+			})
 		}
 
-		currentConfig.Vars[varName] = retString
-		return retString
+		varValue = currentConfig.Vars[varName]
+
+		// Save config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving generated config: %v", err)
+		}
 	}
 
-	if configVal, ok := currentConfig.Vars[value]; ok {
-		return configVal
+	// Add matched groups again
+	varValue = matched[1] + varValue + matched[3]
+
+	// Check if we can convert val
+	if i, err := strconv.Atoi(varValue); err == nil {
+		return i
+	} else if b, err := strconv.ParseBool(varValue); err == nil {
+		return b
 	}
 
-	currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
-		Question: ptr.String("Please enter a value for " + varName),
-	})
-
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Error saving generated config: %v", err)
-	}
-
-	return currentConfig.Vars[value]
+	return varValue
 }
 
-func varMatchFn(key, value string) bool {
+func varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
 // AskQuestion asks the user a question depending on the variable options
-func AskQuestion(variable *configs.Variable) interface{} {
+func AskQuestion(variable *configs.Variable) string {
 	params := &stdinutil.GetFromStdinParams{}
 
 	if variable == nil {
@@ -100,18 +109,7 @@ func AskQuestion(variable *configs.Variable) interface{} {
 		}
 	}
 
-	configVal := *stdinutil.GetFromStdin(params)
-
-	// Check if we can convert configVal
-	if configVal == "true" {
-		return true
-	} else if configVal == "false" {
-		return false
-	} else if i, err := strconv.Atoi(configVal); err == nil {
-		return i
-	}
-
-	return configVal
+	return *stdinutil.GetFromStdin(params)
 }
 
 func loadConfigFromPath(path string) (*latest.Config, error) {
@@ -175,7 +173,7 @@ func LoadConfigs(configs *configs.Configs, path string) error {
 }
 
 // CustomResolveVars resolves variables with a custom replace function
-func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string) bool, replaceFn func(string) interface{}) ([]byte, error) {
+func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, string) bool, replaceFn func(string, string) interface{}) ([]byte, error) {
 	rawConfig := make(map[interface{}]interface{})
 
 	err := yaml.Unmarshal(yamlFileContent, &rawConfig)
