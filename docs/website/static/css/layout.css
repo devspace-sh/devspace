@@ -13,12 +13,13 @@
 
 .separateOnPageNav .navPusher .docsNavContainer,
 .separateOnPageNav .navPusher .onPageNav {
-    flex: 0 1 50%;
+    flex: 0 1 100%;
     overflow: initial;
 }
 
 .separateOnPageNav .navPusher .mainContainer {
     flex: 1 0 770px;
+    max-width: 770px;
 }
 
 .separateOnPageNav .navPusher .docsNavContainer,
