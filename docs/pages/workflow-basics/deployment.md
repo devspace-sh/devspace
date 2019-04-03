@@ -12,8 +12,8 @@ The configuration for this command can be found in the `deployments` section wit
 Running `devspace deploy` will do the following:
 1. Build all Docker [`images` that you specified in `devspace.yaml`](/docs/image-building/configuration)
 2. Push the Docker images to any [Docker registry](/docs/image-building/authentication)
-2. Create [image pull secrets](/docs/image-building/pull-secrets) for your Docker registries
-3. Deploy all deployments defined in `devspace.yaml` in the specified order
+3. Create [image pull secrets](/docs/image-building/pull-secrets) for your Docker registries
+4. Deploy all deployments defined in `devspace.yaml` in the specified order
 
 ## Types of deployments
 DevSpace CLI lets you define the following types of deployments:
