@@ -35,6 +35,10 @@
     padding: 30px;
 }
 
+.separateOnPageNav .navPusher .onPageNav {
+    padding-left: 0;
+}
+
 .separateOnPageNav .navPusher .docsNavContainer .toc .navGroups {
     margin-top: -5px;
 }
