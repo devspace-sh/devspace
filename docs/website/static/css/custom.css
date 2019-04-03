@@ -26,6 +26,10 @@ body h6 {
     margin-bottom: 0.3em;
 }
 
+body h3 {
+    font-size: 1.2em;
+}
+
 body p {
     margin: 0.5em 0;
 }
