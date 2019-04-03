@@ -1,22 +1,36 @@
+var firstCall = true;
+
 const highlightActiveOnPageLink = function() {
-    const anchors = document.querySelectorAll("h2 > .anchor, h3 > .anchor");
     var activeHash;
 
-    if (document.scrollingElement.scrollTop < 100 && anchors.length > 0) {
-        activeHash = anchors[0].attributes.id.value;
-    } else {
-        for (let i = 0; i < anchors.length; i++) {
-            const anchor = anchors[i];
+    if (firstCall) {
+        firstCall = false;
 
-            if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.8) {
-                activeHash = anchor.attributes.id.value;
+        if (location.hash.length > 0) {
+            activeHash = location.hash.substr(1);
+        }
+        window.addEventListener('scroll', highlightActiveOnPageLink);
+    }
+
+    if (!activeHash) {
+        const anchors = document.querySelectorAll("h2 > .anchor, h3 > .anchor");
+
+        if (document.scrollingElement.scrollTop < 100 && anchors.length > 0) {
+            activeHash = anchors[0].attributes.id.value;
+        } else {
+            for (let i = 0; i < anchors.length; i++) {
+                const anchor = anchors[i];
+
+                if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.5) {
+                    activeHash = anchor.attributes.id.value;
+                }
             }
         }
-    }
     
-    if (!activeHash) {
-        const firstOnPageNavLink = document.querySelectorAll(".toc-headings:first-child > li:first-child > a");
-        activeHash = firstOnPageNavLink.attributes.href.value.substr(1);
+        if (!activeHash) {
+            const firstOnPageNavLink = document.querySelectorAll(".toc-headings:first-child > li:first-child > a");
+            activeHash = firstOnPageNavLink.attributes.href.value.substr(1);
+        }
     }
 
     const allLinks = document.querySelectorAll("a");
@@ -34,5 +48,4 @@ const highlightActiveOnPageLink = function() {
     }
 };
 
-window.addEventListener('scroll', highlightActiveOnPageLink);
 window.addEventListener('DOMContentLoaded', highlightActiveOnPageLink);
