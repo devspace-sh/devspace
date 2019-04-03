@@ -4,7 +4,7 @@
 }
 
 /* large title for DevSpace Cloud */
-.navGroups .navGroup:nth-child(10)::before {
+.navGroups .navGroup:nth-child(11)::before {
     display: block;
     margin: 1.4em 0 0.5em;
     padding: 0.5em 0 0.4em;
@@ -14,7 +14,7 @@
     content: "DevSpace Cloud";
 }
 
-.navGroups .navGroup:nth-child(10)::before {
+.navGroups .navGroup:nth-child(11)::before {
     content: "DevSpace Cloud";
 }
 
@@ -29,6 +29,10 @@
     position: absolute;
     top: 10px;
     background: #e7edf1;
+}
+
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after {
+    top: 13px;
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
