@@ -115,12 +115,6 @@
     height: 20px;
 }
 
-@media screen and (max-width: 1023px) {
-    .collapsible .arrow {
-        margin-left: 12px;
-    }
-}
-
 /* nav link currently active */
 .toc .toggleNav ul li.navListItemActive a {
     color: #00bdff!important;
@@ -137,12 +131,41 @@
     color: #1c65f7;
 }
 
-@media(max-width: 1023px) {
-    .docsNavContainer {
-        position: absolute;
-    }
+/* OnPage Nav */ 
+.separateOnPageNav .navPusher .onPageNav > .toc-headings {
+    padding-top: 55px;
+}
 
-    .toc {
-        padding: 30px 0 10px;
-    }
+.separateOnPageNav .navPusher .onPageNav > .toc-headings::before {
+    content: "Contents";
+    font-family: "Raleway", sans-serif;
+    position: absolute;
+    margin-top: -60px;
+    margin-left: -15px;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.separateOnPageNav .navPusher .onPageNav ul {
+    margin: 0;
+}
+
+.separateOnPageNav .navPusher .onPageNav a.active {
+    color: #1c65f7;
+    position: relative;
+}
+
+.separateOnPageNav .navPusher .onPageNav a.active::before {
+    width: 3px;
+    height: 100%;
+    position: absolute;
+    left: -15px;
+    top: -5px;
+    padding: 5px 0;
+    background: #1c65f7;
+    content: " ";
+}
+
+.separateOnPageNav .navPusher .onPageNav .toc-headings .toc-headings a.active::before {
+    left: -35px;
 }
