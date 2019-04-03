@@ -6,6 +6,11 @@ body .hljs {
     padding-left: 44px;
 }
 
+body .hljs-comment,
+body .hljs-quote {
+    color: #727986;
+}
+
 code.-hide-lines .line {
     display: none;
 }
