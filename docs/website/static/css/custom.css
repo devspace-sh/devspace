@@ -44,6 +44,10 @@ body details,
     box-shadow: 0 0 20px rgba(35,51,102,.2);
 }
 
+small {
+    font-size: 0.8em;
+}
+
 pre {
     margin-top: 0.4em;
 }

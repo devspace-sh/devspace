@@ -4,7 +4,7 @@ title: 3. Develop with DevSpace
 
 DevSpace CLI also allows you to develop applications directly inside a Kubernetes cluster.
 
-The biggest advantages of developing directly inside kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
+The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
 
 > Using DevSpace CLI to develop applications directly inside Kubernetes works with any Kubernetes cluster, i.e. cloud managed, bare-metal, minikube etc.
 
