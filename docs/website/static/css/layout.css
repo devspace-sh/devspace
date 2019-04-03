@@ -3,7 +3,8 @@
 }
 
 .navPusher .docMainWrapper {
-    max-width: 100%;
+    display: flex;
+    width: 100%;
     padding: 0;
 }
 
@@ -81,4 +82,45 @@
     border-radius: 2px;
     -moz-transition: background 250ms ease;
     -webkit-transition: background 250ms ease;
+}
+
+@media only screen and (max-width: 1023px) {
+    .navPusher .docMainWrapper {
+        flex-direction: column;
+    }
+
+    .separateOnPageNav .navPusher .docsNavContainer {
+        height: 50px;
+        position: absolute;
+        top: 100px;
+    }
+    
+    .separateOnPageNav .navPusher .docsNavContainer.docsSliderActive {
+        min-height: 100%;
+    }
+    
+    .separateOnPageNav .navPusher .docsNavContainer .toc {
+        width: 100%;
+        height: auto;
+        padding: 0;
+    }
+
+    .separateOnPageNav .navPusher .docsNavContainer .toc .navBreadcrumb {
+        border-bottom: 1px solid #ccc;
+    }
+
+    .separateOnPageNav .navPusher .docsNavContainer .toc .navGroups {
+        padding-top: 10px;
+    }
+
+    .separateOnPageNav .navPusher .mainContainer {
+        max-width: 100%;
+        padding-top: 60px;
+    }
+
+    .separateOnPageNav .navPusher .onPageNav {
+        position: absolute;
+        top: 100px;
+        padding: 50px 20px;
+    }
 }
