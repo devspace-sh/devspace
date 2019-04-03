@@ -2,48 +2,139 @@
 title: Containerize a project
 ---
 
-DevSpace requires your project to have at least one Dockerfile that can be built with docker. If you don't have a working Dockerfile, DevSpace can help you create one.
+If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes.
 
-# Containerize your existing application
+## Containerize a project
+The easiest way to containerize an existing project is to run this command:
+```bash
+devspace init
+```
 
-DevSpace can create a default Dockerfile for your project based on the primary programming language it has detected. In order to generate a Dockerfile for your project run this command in your shell at the project root:
+During the initialization process, DevSpace CLI will ask you the following question:
+```bash
+? Seems like you do not have a Dockerfile. What do you want to do?  [Use arrows to move, type to filter]
+> Create a Dockerfile for me                            
+  Enter path to your Dockerfile
+  Enter path to your Kubernetes manifests
+  Enter path to your Helm chart
+  Use existing image (e.g. from Docker Hub)
+```
+If you already have a Dockerfile, let DevSpace CLI use this Dockerfile for packaging your application. If you do not have a Dockerfile yet, you can choose the first option and let DevSpace CLI create a Dockerfile for you. 
+
+In order to create a Dockerfile for your project, DevSpace CLI will ask for the programming language of your application:
+```bash
+? Select programming language of project  [Use arrows to move, type to filter]
+  csharp                       
+  go                                     
+  java                         
+> javascript                               
+  none
+  php
+  python
+```
+
+Additionally, DevSpace CLI will ask about the port your application is running on:
+```bash
+? Which port is the container listening on? (Enter to skip)
+```
+
+With the answers to the above questions, DevSpace CLI will not only generate a Dockerfile for you but also add the configuration file `devspace.yaml`. You can freely edit your Dockerfile as well as the DevSpace configuration using any text editor or IDE.
+
+## Containerize a project containing multiple microservices
+If you have multiple applications inside a single project directory (i.e. monorepo) and you want to deploy these applications together as a set of microservices, the following procedure is recommended to initialize your project:
+1. Make sure each of your services has a Dockerfile. You can run `devspace containerize` in the sub-folder of each of the services to create a Dockerfile. [Learn more below.](#creating-a-dockerfile)
+2. Run `devspace init` in the top-level root directory of your project
+3. During the init process, choose the option `Enter path to your Dockerfile` and enter the relative path to the Dockerfile of one of your microservices.
+4. To add each of the remaining services as deployments, run `devspace add deployment [service-name] --dockerfile="./path/to/your/service/Dockerfile" --image="dscr.io/[username]/[service-name]"`
+
+If you already have Helm charts or Kubernetes manifests, you can also add them as deployment using the following commands:
+```bash
+devspace add deployment [service-name] --chart="./path/to/your/service/chart"
+devspace add deployment [service-name] --manifests="./path/to/your/service/manifests/**"
+```
+
+## Creating a Dockerfile
+DevSpace CLI lets you create a Dockerfile for a project without fully initializing your project. In order to generate a Dockerfile for a project run this command inside the root directory of your project:
 ```bash
 devspace containerize
 ```
 
-DevSpace will ask you which programming language your project uses and based on the answer a predefined Dockerfile template will be created for your project. On command completion, you should see the created Dockerfile at your project root. In order to verify that the Dockerfile is working, you can run the following command:
-```bash
-docker build .
-```
+DevSpace will ask you which programming language your project uses to create a basic Dockerfile for your project. On command completion, you should see the created Dockerfile inside your project directory. 
 
-If you see an output similar to this, everything is working correctly:
-```bash
-$ docker build .
-Sending build context to Docker daemon  283.6kB
-Step 1/9 : FROM node:8.11.4
- ---> 8198006b2b57
-[...]
-Step 9/9 : CMD ["npm", "start"]
- ---> 277ddaad567a
-Successfully built 277ddaad567a
-```
-
-# Troubleshooting
-
-In general it is a good idea to look at the official [docker documentation](https://docs.docker.com/develop/) and the [best practices how to write a Dockerfile](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/). Some other common issues to look out for are listed below:
+### Customizing your Dockerfile
 
 <details>
 <summary>
-### application cannot be accessed with space url
+#### Changing the entrypoint (start script) in your Dockerfile
 </summary>
 
-This could be caused by several problems. Run `devspace analyze` and check if there are any issues during container startup. If not [routing](/docs/cloud/spaces/configure-networking) to your container could be an issue. Make sure your container is listening on `0.0.0.0` and not `localhost` and on the same port as specified in `chart/values.yaml` under components.service.containerPort.
+A common issue why a container cannot be executed and this problem is usually discovered only later is because of a wrongly defined entrypoint that is not existent. In the nodejs Dockerfile example:
+
+```Dockerfile
+FROM node:8.11.4
+
+RUN mkdir /app
+WORKDIR /app
+
+COPY package.json .
+RUN npm install
+
+COPY . .
+
+# This is the command that will be executed 
+CMD ["npm", "start"]
+```
+
+the line `CMD ["npm", "start"]` specifies the executed command on container start. If your `package.json` has no start script defined, the container will fail to execute. Let's say you want to change the start command to `node index.js`, you would rewrite the Dockerfile like this:
+
+```Dockerfile
+FROM node:8.11.4
+
+RUN mkdir /app
+WORKDIR /app
+
+COPY package.json .
+RUN npm install
+
+COPY . .
+
+# This is the command that will be executed 
+CMD ["node", "index.js"]
+```
+
+</details>
+
+
+### Troubleshooting your Dockerfile
+In order to verify that your Dockerfile is working corretly, you can simply build it with this command:
+```bash
+docker build .
+```
+*Running the above command requires Docker to be installed on your computer.*
+
+> In general it is a good idea to look at the official [Docker documentation](https://docs.docker.com/develop/) and the [best practices how to write a Dockerfile](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/).
+
+#### Common issues with your Dockerfile
+
+<details>
+<summary>
+##### HTTP status code 40x or 50x when accessing your application
+</summary>
+
+This could be caused by several problems. Run the following command to automatically detect issues with your deployments: 
+```bash
+devspace analyze
+```
+If this command does not report any issues, check the following:
+1. **Bind Address**: Make sure your application is binding on `0.0.0.0` and not `localhost` 
+2. **Port**: Make sure your application listens on the same port as specified in `chart/values.yaml` under `components[*].service.containerPort`
+3. **Kubernetes networking**: Verify that your ingresses and services are configure correctly. Learn more about [Kubernetes networking](/docs/cloud/spaces/configure-networking).
 
 </details>
 
 <details>
 <summary>
-### No such file or directory
+##### Error: No such file or directory
 </summary>
 
 A common issue why a docker build with the predefined docker files is because some files are missing in the project we assume you habe. Take a look a the nodejs example Dockerfile:
@@ -86,44 +177,4 @@ CMD ["node", "index.js"]
 ```
 
 and skip the dependency installation. Bear in mind that you also have to change the entrypoint of the container, since `npm start` will not work without a `package.json`.
-</details>
-<details>
-<summary>
-### Entrypoint
-</summary>
-
-A common issue why a container cannot be executed and this problem is usually discovered only later is because of a wrongly defined entrypoint that is not existent. In the nodejs Dockerfile example:
-
-```Dockerfile
-FROM node:8.11.4
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY package.json .
-RUN npm install
-
-COPY . .
-
-# This is the command that will be executed 
-CMD ["npm", "start"]
-```
-
-the line `CMD ["npm", "start"]` specifies the executed command on container start. If your `package.json` has no start script defined, the container will fail to execute. Let's say you want to change the start command to `node index.js`, you would rewrite the Dockerfile like this:
-
-```Dockerfile
-FROM node:8.11.4
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY package.json .
-RUN npm install
-
-COPY . .
-
-# This is the command that will be executed 
-CMD ["node", "index.js"]
-```
-
 </details>
