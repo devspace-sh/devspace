@@ -1,5 +1,5 @@
 ---
-title: Debugging with DevSpace
+title: Debug with DevSpace
 ---
 
 CONTENT
