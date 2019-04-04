@@ -138,7 +138,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		// Create ingress if there is none
 		err = cloud.CreateIngress(client)
 		if err != nil {
-			log.Fatalf("Error creating ingress: %v", err)
+			log.Warnf("Error creating ingress: %v", err)
 		}
 
 		log.Donef("Successfully deployed!")
