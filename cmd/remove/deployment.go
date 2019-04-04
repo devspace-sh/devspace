@@ -18,7 +18,7 @@ func newDeploymentCmd() *cobra.Command {
 	cmd := &deploymentCmd{}
 
 	deploymentCmd := &cobra.Command{
-		Use:   "deployment",
+		Use:   "deployment [deployment-name]",
 		Short: "Removes one or all deployments from devspace configuration",
 		Long: `
 #######################################################
@@ -79,10 +79,14 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		deployUtil.PurgeDeployments(kubectl, deployments)
 	}
 
-	err = configure.RemoveDeployment(cmd.RemoveAll, name)
+	found, err := configure.RemoveDeployment(cmd.RemoveAll, name)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Donef("Successfully removed deployment %s", args[0])
+	if found {
+		log.Donef("Successfully removed deployment %s", args[0])
+	} else {
+		log.Warnf("Couldn't find deployment %s", args[0])
+	}
 }

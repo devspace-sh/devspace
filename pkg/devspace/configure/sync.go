@@ -92,7 +92,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 	config.Dev.Sync = &syncConfig
 
-	err = configutil.SaveBaseConfig()
+	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -129,7 +129,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 
 		config.Dev.Sync = &newSyncPaths
 
-		err = configutil.SaveBaseConfig()
+		err = configutil.SaveLoadedConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %v", err)
 		}

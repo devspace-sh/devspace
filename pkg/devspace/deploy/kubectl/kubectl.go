@@ -173,7 +173,7 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 }
 
 func replaceManifest(manifest Manifest, tags map[string]string) {
-	match := func(key, value string) bool {
+	match := func(path, key, value string) bool {
 		if key == "image" {
 			if _, ok := tags[value]; ok {
 				return true
@@ -183,7 +183,7 @@ func replaceManifest(manifest Manifest, tags map[string]string) {
 		return false
 	}
 
-	replace := func(value string) interface{} {
+	replace := func(path, value string) interface{} {
 		return value + ":" + tags[value]
 	}
 

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
@@ -13,15 +14,38 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// SaveBaseConfig writes the data of a config to its yaml file
-func SaveBaseConfig() error {
-	// cloned config
-	clonedConfig := latest.Config{}
+func replaceVar(path, value string) interface{} {
+	oldValue, _ := LoadedVars[path]
+	return oldValue
+}
+
+func matchVar(path, key, value string) bool {
+	_, ok := LoadedVars[path+"."+key]
+	return ok
+}
+
+// RestoreVars restores the variables in the config
+func RestoreVars(config *latest.Config) (*latest.Config, error) {
+	configMap := make(map[interface{}]interface{})
 
 	// Copy config
-	err := util.Convert(config, &clonedConfig)
+	err := util.Convert(config, &configMap)
 	if err != nil {
-		return errors.Wrap(err, "convert")
+		return nil, errors.Wrap(err, "convert cloned config")
+	}
+
+	// Restore old vars values
+	if len(LoadedVars) > 0 {
+		walk.Walk(configMap, matchVar, replaceVar)
+	}
+
+	// Cloned config
+	clonedConfig := &latest.Config{}
+
+	// Copy config
+	err = util.Convert(configMap, clonedConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
 	// Erase default values
@@ -38,8 +62,24 @@ func SaveBaseConfig() error {
 		clonedConfig.Images = nil
 	}
 
+	return clonedConfig, nil
+}
+
+// SaveLoadedConfig writes the data of a config to its yaml file
+func SaveLoadedConfig() error {
+	// RestoreVars restores the variables in the config
+	clonedConfig, err := RestoreVars(config)
+	if err != nil {
+		return errors.Wrap(err, "restore vars")
+	}
+
+	return SaveConfig(clonedConfig)
+}
+
+// SaveConfig saves the config to file
+func SaveConfig(config *latest.Config) error {
 	// Convert to string
-	configYaml, err := yaml.Marshal(clonedConfig)
+	configYaml, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
@@ -61,16 +101,7 @@ func SaveBaseConfig() error {
 
 		// We have to save the config in the configs.yaml
 		if configDefinition.Config.Data != nil {
-			// Convert to map[interface{}]interface{}
-			configMap := make(map[interface{}]interface{})
-
-			// Copy config
-			err := util.Convert(clonedConfig, &configMap)
-			if err != nil {
-				return errors.Wrap(err, "convert config map")
-			}
-
-			configDefinition.Config.Data = configMap
+			configDefinition.Config.Data = config
 			configYaml, err := yaml.Marshal(configs)
 			if err != nil {
 				return err

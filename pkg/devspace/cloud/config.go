@@ -1,25 +1,22 @@
 package cloud
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/pkg/errors"
+
 	yaml "gopkg.in/yaml.v2"
 )
-
-// DevSpaceCloudConfigPath holds the path to the cloud config file
-const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
-
-// DevSpaceKubeContextName is the name for the kube config context
-const DevSpaceKubeContextName = "devspace"
 
 // ProviderConfig holds all the different providers and their configuration
 type ProviderConfig map[string]*Provider
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
 const DevSpaceCloudProviderName = "app.devspace.cloud"
+
+// DevSpaceKubeContextName is the name for the kube config context
+const DevSpaceKubeContextName = "devspace"
 
 // GraphqlEndpoint is the endpoint where to execute graphql requests
 const GraphqlEndpoint = "/graphql"
@@ -39,16 +36,13 @@ var DevSpaceCloudProviderConfig = &Provider{
 
 // ParseCloudConfig parses the cloud configuration and returns a map containing the configurations
 func ParseCloudConfig() (ProviderConfig, error) {
-	homedir, err := homedir.Dir()
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := ioutil.ReadFile(filepath.Join(homedir, DevSpaceCloudConfigPath))
+	data, err := config.ReadCloudsConfig()
 	if os.IsNotExist(err) {
 		return ProviderConfig{
 			DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
 		}, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "read clouds config")
 	}
 
 	cloudConfig := make(ProviderConfig)
@@ -71,16 +65,10 @@ func ParseCloudConfig() (ProviderConfig, error) {
 }
 
 // SaveCloudConfig saves the provider configuration to file
-func SaveCloudConfig(config ProviderConfig) error {
-	homedir, err := homedir.Dir()
-	if err != nil {
-		return err
-	}
-
-	cfgPath := filepath.Join(homedir, DevSpaceCloudConfigPath)
+func SaveCloudConfig(providerConfig ProviderConfig) error {
 	saveConfig := ProviderConfig{}
 
-	for name, provider := range config {
+	for name, provider := range providerConfig {
 		host := provider.Host
 		if name == DevSpaceCloudProviderName {
 			host = ""
@@ -98,10 +86,5 @@ func SaveCloudConfig(config ProviderConfig) error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Dir(cfgPath), 0755)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(cfgPath, out, 0600)
+	return config.SaveCloudsConfig(out)
 }

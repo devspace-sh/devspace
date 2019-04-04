@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	v1 "k8s.io/api/core/v1"
@@ -45,7 +46,7 @@ func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error 
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
 func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.Logger) error {
-	if IsMinikube() {
+	if minikube.IsMinikube() {
 		return nil
 	}
 

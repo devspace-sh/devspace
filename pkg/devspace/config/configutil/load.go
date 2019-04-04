@@ -10,7 +10,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/mgutz/ansi"
 
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
@@ -20,64 +23,99 @@ import (
 )
 
 // VarMatchRegex is the regex to check if a value matches the devspace var format
-var VarMatchRegex = regexp.MustCompile("^\\$\\{[^\\}]+\\}$")
+var VarMatchRegex = regexp.MustCompile("^(.*)(\\$\\{[^\\}]+\\})(.*)$")
 
 // VarEnvPrefix is the prefix environment variables should have in order to use them
 const VarEnvPrefix = "DEVSPACE_VAR_"
 
-func varReplaceFn(value string) interface{} {
-	varName := strings.TrimSpace(value[2 : len(value)-1])
-	retString := ""
+// LoadedVars holds all variables that were loaded
+var LoadedVars = make(map[string]string)
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error reading generated config: %v", err)
-	}
-
-	// Get current config
-	currentConfig := generatedConfig.GetActive()
-
-	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
-		retString = os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
-
-		// Check if we can convert val
-		if retString == "true" {
-			currentConfig.Vars[varName] = true
-			return true
-		} else if retString == "false" {
-			currentConfig.Vars[varName] = false
-			return false
-		} else if i, err := strconv.Atoi(retString); err == nil {
-			currentConfig.Vars[varName] = i
-			return i
-		}
-
-		currentConfig.Vars[varName] = retString
-		return retString
-	}
-
-	if configVal, ok := currentConfig.Vars[value]; ok {
-		return configVal
-	}
-
-	currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
-		Question: ptr.String("Please enter a value for " + varName),
-	})
-
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Error saving generated config: %v", err)
-	}
-
-	return currentConfig.Vars[value]
+// PredefinedVars holds all predefined variables that can be used in the config
+var PredefinedVars = map[string]*string{
+	PredefinedVarUsername: nil,
+	PredefinedVarSpace:    nil,
 }
 
-func varMatchFn(key, value string) bool {
+const (
+	// PredefinedVarSpace holds the space name
+	PredefinedVarSpace = "DEVSPACE_SPACE"
+	// PredefinedVarUsername holds the devspace cloud username
+	PredefinedVarUsername = "DEVSPACE_USERNAME"
+)
+
+func varReplaceFn(path, value string) interface{} {
+	// Save old value
+	LoadedVars[path] = value
+
+	matched := VarMatchRegex.FindStringSubmatch(value)
+	if len(matched) != 4 {
+		return ""
+	}
+
+	value = matched[2]
+	varName := strings.TrimSpace(value[2 : len(value)-1])
+
+	// Find value for variable
+	varValue := ""
+	if val, ok := PredefinedVars[strings.ToUpper(varName)]; ok {
+		if val == nil {
+			upperVarName := strings.ToUpper(varName)
+			if upperVarName == PredefinedVarSpace {
+				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarSpace, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+			} else if upperVarName == PredefinedVarUsername {
+				log.Fatalf("Not logged in, but predefined var %s is used.\n\nPlease run `%s` to login", PredefinedVarUsername, ansi.Color("devspace login", "white+b"))
+			}
+
+			log.Fatalf("Try to access predefined devspace variable '%s', however the value has no value", varName)
+		}
+
+		varValue = *val
+	} else if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
+		envVarValue := os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
+		varValue = envVarValue
+	} else {
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatalf("Error reading generated config: %v", err)
+		}
+
+		// Get current config
+		currentConfig := generatedConfig.GetActive()
+		if _, ok := currentConfig.Vars[varName]; !ok {
+			currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
+				Question: ptr.String("Please enter a value for " + varName),
+			})
+		}
+
+		varValue = currentConfig.Vars[varName]
+
+		// Save config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatalf("Error saving generated config: %v", err)
+		}
+	}
+
+	// Add matched groups again
+	varValue = matched[1] + varValue + matched[3]
+
+	// Check if we can convert val
+	if i, err := strconv.Atoi(varValue); err == nil {
+		return i
+	} else if b, err := strconv.ParseBool(varValue); err == nil {
+		return b
+	}
+
+	return varValue
+}
+
+func varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
 // AskQuestion asks the user a question depending on the variable options
-func AskQuestion(variable *configs.Variable) interface{} {
+func AskQuestion(variable *configs.Variable) string {
 	params := &stdinutil.GetFromStdinParams{}
 
 	if variable == nil {
@@ -100,18 +138,7 @@ func AskQuestion(variable *configs.Variable) interface{} {
 		}
 	}
 
-	configVal := *stdinutil.GetFromStdin(params)
-
-	// Check if we can convert configVal
-	if configVal == "true" {
-		return true
-	} else if configVal == "false" {
-		return false
-	} else if i, err := strconv.Atoi(configVal); err == nil {
-		return i
-	}
-
-	return configVal
+	return *stdinutil.GetFromStdin(params)
 }
 
 func loadConfigFromPath(path string) (*latest.Config, error) {
@@ -139,7 +166,7 @@ func loadConfigFromPath(path string) (*latest.Config, error) {
 	return newConfig, nil
 }
 
-func loadConfigFromInterface(m map[interface{}]interface{}) (*latest.Config, error) {
+func loadConfigFromInterface(m interface{}) (*latest.Config, error) {
 	yamlFileContent, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -175,7 +202,7 @@ func LoadConfigs(configs *configs.Configs, path string) error {
 }
 
 // CustomResolveVars resolves variables with a custom replace function
-func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string) bool, replaceFn func(string) interface{}) ([]byte, error) {
+func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, string) bool, replaceFn func(string, string) interface{}) ([]byte, error) {
 	rawConfig := make(map[interface{}]interface{})
 
 	err := yaml.Unmarshal(yamlFileContent, &rawConfig)
@@ -194,5 +221,59 @@ func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string) bool
 }
 
 func resolveVars(yamlFileContent []byte) ([]byte, error) {
+	fillPredefinedVars()
 	return CustomResolveVars(yamlFileContent, varMatchFn, varReplaceFn)
+}
+
+func fillPredefinedVars() {
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error reading generated config: %v", err)
+	}
+
+	if generatedConfig.CloudSpace != nil {
+		if generatedConfig.CloudSpace.Name != "" {
+			PredefinedVars[PredefinedVarSpace] = &generatedConfig.CloudSpace.Name
+		}
+		if generatedConfig.CloudSpace.ProviderName != "" {
+			cloudConfigData, err := cloudconfig.ReadCloudsConfig()
+			if err != nil {
+				return
+			}
+
+			dataMap := make(map[interface{}]interface{})
+			err = yaml.Unmarshal(cloudConfigData, dataMap)
+			if err != nil {
+				return
+
+			}
+
+			providerMapRaw, ok := dataMap[generatedConfig.CloudSpace.ProviderName]
+			if !ok {
+				return
+			}
+
+			providerMap, ok := providerMapRaw.(map[interface{}]interface{})
+			if !ok {
+				return
+			}
+
+			tokenRaw, ok := providerMap["token"]
+			if !ok {
+				return
+			}
+
+			token, ok := tokenRaw.(string)
+			if !ok {
+				return
+			}
+
+			accountName, err := cloudtoken.GetAccountName(token)
+			if err != nil {
+				return
+			}
+
+			PredefinedVars[PredefinedVarUsername] = &accountName
+		}
+	}
 }

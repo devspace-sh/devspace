@@ -29,7 +29,7 @@ func newDeploymentCmd() *cobra.Command {
 	cmd := &deploymentCmd{}
 
 	addDeploymentCmd := &cobra.Command{
-		Use:   "deployment",
+		Use:   "deployment [deployment-name]",
 		Short: "Add a deployment",
 		Long: ` 
 #######################################################
@@ -129,47 +129,63 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		newDeployment.Namespace = &cmd.Namespace
 	}
 
-	// Prepend deployment
-	(*config.Deployments) = append([]*latest.DeploymentConfig{newDeployment}, (*config.Deployments)...)
+	// Restore vars in config
+	clonedConfig, err := configutil.RestoreVars(config)
+	if err != nil {
+		log.Fatalf("Error restoring vars: %v", err)
+	}
 
 	// Add image config if necessary
 	if newImage != nil {
 		imageAlreadyExists := false
 
 		// First check if image already exists in another configuration
-		for _, imageConfig := range *config.Images {
-			if *imageConfig.Image == *newImage.Image {
-				imageAlreadyExists = true
-				break
+		if clonedConfig.Images != nil {
+			for _, imageConfig := range *clonedConfig.Images {
+				if *imageConfig.Image == *newImage.Image {
+					imageAlreadyExists = true
+					break
+				}
 			}
 		}
 
-		// Only add if it does not already exist
+		// Only add if it does not already exists
 		if imageAlreadyExists == false {
 			// Deployment name
 			imageName := deploymentName
 
 			// Check if image name exits
-			for i := 0; true; i++ {
-				if _, ok := (*config.Images)[imageName]; ok {
-					if i == 0 {
-						imageName = imageName + "-" + strconv.Itoa(i)
-					} else {
-						imageName = imageName[:len(imageName)-1] + strconv.Itoa(i)
+			if clonedConfig.Images != nil {
+				for i := 0; true; i++ {
+					if _, ok := (*clonedConfig.Images)[imageName]; ok {
+						if i == 0 {
+							imageName = imageName + "-" + strconv.Itoa(i)
+						} else {
+							imageName = imageName[:len(imageName)-1] + strconv.Itoa(i)
+						}
+
+						continue
 					}
 
-					continue
+					break
 				}
-
-				break
+			} else {
+				clonedConfig.Images = &map[string]*latest.ImageConfig{}
 			}
 
-			(*config.Images)[imageName] = newImage
+			(*clonedConfig.Images)[imageName] = newImage
 		}
 	}
 
+	// Prepend deployment
+	if clonedConfig.Deployments == nil {
+		clonedConfig.Deployments = &[]*latest.DeploymentConfig{}
+	}
+
+	(*clonedConfig.Deployments) = append([]*latest.DeploymentConfig{newDeployment}, (*clonedConfig.Deployments)...)
+
 	// Save config
-	err = configutil.SaveBaseConfig()
+	err = configutil.SaveConfig(clonedConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save config file: %s", err.Error())
 	}

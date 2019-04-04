@@ -14,8 +14,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
-	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // ComponentsRepoURL is the repository url
@@ -41,11 +41,11 @@ type ComponentSchema struct {
 // VarMatchRegex is the regex to check if a value matches the devspace var format
 var VarMatchRegex = regexp.MustCompile("^(.*)(\\$\\{[^\\}]+\\})(.*)$")
 
-func (c *ComponentSchema) varMatchFn(key, value string) bool {
+func (c *ComponentSchema) varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
-func (c *ComponentSchema) varReplaceFn(value string) interface{} {
+func (c *ComponentSchema) varReplaceFn(path, value string) interface{} {
 	matched := VarMatchRegex.FindStringSubmatch(value)
 	if len(matched) != 4 {
 		return ""
@@ -73,12 +73,10 @@ func (c *ComponentSchema) varReplaceFn(value string) interface{} {
 	retValue := matched[1] + c.VariableValues[varName] + matched[3]
 
 	// Check if we can convert configVal
-	if retValue == "true" {
-		return true
-	} else if retValue == "false" {
-		return false
-	} else if i, err := strconv.Atoi(retValue); err == nil {
+	if i, err := strconv.Atoi(retValue); err == nil {
 		return i
+	} else if b, err := strconv.ParseBool(retValue); err == nil {
+		return b
 	}
 
 	return retValue
