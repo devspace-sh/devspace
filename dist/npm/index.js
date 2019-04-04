@@ -100,14 +100,24 @@ exec("npm bin", function(err, stdout, stderr) {
 
     try {
         fs.unlinkSync(binaryPath);
-    } catch(ex) {
-        // Ignore errors when deleting the file.
-    }
+    } catch(e) {}
 
     if (action == "install") {
         const spinner = new Spinner('%s Downloading DevSpace CLI... (this may take a minute)');
         spinner.setSpinnerString('|/-\\');
         spinner.start();
+
+        const showRootError = function() {
+            spinner.stop(true);
+            console.error("\n############################################");
+            console.error("Failed to download DevSpace CLI due to permission issues!\n");
+            console.error("There are two options to fix this:");
+            console.error("1. Do not run 'npm install' as root (recommended)");
+            console.error("2. Run this command: npm install --unsafe-perm=true -g devspace");
+            console.error("   You may need to run this command using sudo.");
+            console.error("############################################\n");
+            process.exit(1);
+        };
 
         request({uri: downloadPath, headers: requestHeaders})
             .on('error', function() {
@@ -117,20 +127,23 @@ exec("npm bin", function(err, stdout, stderr) {
             })
             .on('response', function(res) {
                 try {
-                    res.pipe(fs.createWriteStream(binaryPath));
+                    var writeStream = fs.createWriteStream(binaryPath)
+                        .on('error', function(err) {
+                            showRootError();
+                        });
+                    res.pipe(writeStream);
                 } catch(e) {
-                    spinner.stop(true);
-                    console.error("Failed to download DevSpace CLI due to permission issues!\n");
-                    console.error("There are two options to fix this:");
-                    console.error("1. Do not run 'npm install' as root (recommended)");
-                    console.error("2. Run this command: npm install --unsafe-perm=true -g devspace");
-                    console.error("   You may need to run this command using sudo.");
-                    process.exit(1);
+                    showRootError();
                 }
             })
             .on('end', function() {
                 spinner.stop(true);
-                fs.chmodSync(binaryPath, 0755);
+
+                try {
+                    fs.chmodSync(binaryPath, 0755);
+                } catch(e) {
+                    showRootError();
+                }
                 process.exit(0);
             });
     }
