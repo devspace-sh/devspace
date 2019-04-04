@@ -17,7 +17,7 @@
         "workflow-basics/debugging/remote-debuggers"
     ],
     "Build Images": [
-        "image-building/configuration",
+        "image-building/overview",
         "image-building/add-images",
         "image-building/remove-images",
         "image-building/authentication",

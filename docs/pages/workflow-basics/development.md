@@ -8,6 +8,8 @@ devspace dev
 ```
 The configuration for this command can be found in the `dev` section within your `devspace.yaml`.
 
+> It is highly discouraged to run `devspace dev` multiple times in parallel because multiple instances of port-forwarding and code synchronization will disturb each other. Run `devspace enter` to open additional terminals without port-forwarding and code synchronization.
+
 ## Use cases for Kubernetes-based development
 Kubernetes-based development can be useful in the following cases:
 - Your applications needs to access cluster-internal services (e.g. Cluster DNS)

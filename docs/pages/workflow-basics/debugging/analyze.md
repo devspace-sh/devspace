@@ -2,10 +2,8 @@
 title: Analyze issues
 ---
 
-## Analyze your Space to identify issues
-DevSpace CLI can automatically analyze your Space and identify potential issues with your deployments.
+DevSpace CLI can automatically identify and analyze potential issues with your deployments:
 ```bash
-devspace use space [SPACE_NAME]
 devspace analyze
 ```
 Running `devspace analyze` will show a lot of useful debugging information if there is an issue found, including:
@@ -13,10 +11,7 @@ Running `devspace analyze` will show a lot of useful debugging information if th
 - Containers that are not starting due to issues with the entrypoint command
 - Network issues related to unhealthy pods and missing endpoints for services
 
-<details>
-<summary>
-### Show an exemplary output of `devspace analyze`
-</summary>
+## Exemplary output of `devspace analyze`
 ```bash
 $ devspace analyze
 [info]   Loaded config from .devspace/configs.yaml
@@ -59,4 +54,3 @@ npm ERR! This is probably not a problem with npm. There is likely additional log
 npm ERR! A complete log of this run can be found in:
 npm ERR!     /root/.npm/_logs/2019-03-19T22_51_03_656Z-debug.log
 ```
-</details>

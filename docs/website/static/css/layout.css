@@ -1,3 +1,7 @@
+body {
+    overflow-x: hidden;
+}
+
 .navPusher {
     padding-top: 100px;
 }

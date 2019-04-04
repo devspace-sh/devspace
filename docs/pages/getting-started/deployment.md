@@ -123,7 +123,7 @@ This command will do the following:
 ### Learn more about image building with DevSpace
 </summary>
 DevSpace CLI builds and pushes your Docker images before deploying your projects. Follow these links to learn more about how to:
-- [Configure image building](/docs/image-building/configuration)
+- [Configure image building](/docs/image-building/overview)
 - [Add images to be built](/docs/image-building/add-images)
 - [Authenticate with private Docker registries](/docs/image-building/authentication)
 
