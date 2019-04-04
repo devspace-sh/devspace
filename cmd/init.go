@@ -209,7 +209,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	cmd.addDevConfig()
 
 	// Save config
-	err = configutil.SaveBaseConfig()
+	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		log.With(err).Fatalf("Config error: %s", err.Error())
 	}

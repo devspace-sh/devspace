@@ -42,6 +42,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/devspace-cloud/penv v0.0.1 h1:0/6zHd8OShhKXYFCVN+gvazghbSVA9RlMX42JzYHRwU=
 github.com/devspace-cloud/penv v0.0.1/go.mod h1:8Yzd6mKbunJQua487BtMGHBLoVTKzEH2iX83PADg6R8=
+github.com/devspace-cloud/yaml v0.0.0-20190403222254-7cc5a744f8a6 h1:dK/miojlSgNdxqoHGkM5O725l/zXNdR6sidJ83kztTg=
+github.com/devspace-cloud/yaml v0.0.0-20190403222254-7cc5a744f8a6/go.mod h1:2mvlxTa//sqAPmK7xLdb6TrG0cBSJyZOiAT5D+0AKyI=
+github.com/devspace-cloud/yaml v2.1.0+incompatible h1:XC/6ezeGTsKOux8xxeJ1IIPpFiN6tFEBQnVm3JH7ue0=
+github.com/devspace-cloud/yaml v2.1.0+incompatible/go.mod h1:URNnyFUtxWxhQUssOXy1Xy2VCg2JO7MP8+zL+LcBD0A=
 github.com/docker/cli v0.0.0-20181026145426-51668a30f262 h1:koqycNrb60EKQRm25LhMxA9xFlLPCsxU9wphV4jtiuY=
 github.com/docker/cli v0.0.0-20181026145426-51668a30f262/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/distribution v0.0.0-20180327202408-83389a148052 h1:bYklS+YB8BZreSEY+/WqaH+S8upfuYf0Hq/EmNOQMIA=

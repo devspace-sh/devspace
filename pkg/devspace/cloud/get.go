@@ -3,6 +3,8 @@ package cloud
 import (
 	"errors"
 	"fmt"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 )
 
 // Space holds the information about a space in the cloud
@@ -42,21 +44,9 @@ type Registry struct {
 	OwnerID    *int   `json:"owner_id"`
 }
 
-// ClaimSet is the auth token claim set type
-type ClaimSet struct {
-	Subject string `json:"sub"`
-}
-
-// Token describes a JSON Web Token.
-type Token struct {
-	Raw       string
-	Claims    *ClaimSet
-	Signature []byte
-}
-
 // GetAccountName retrieves the account name for the current user
 func (p *Provider) GetAccountName() (string, error) {
-	token, err := ParseTokenClaims(p.Token)
+	token, err := token.ParseTokenClaims(p.Token)
 	if err != nil {
 		return "", err
 	}

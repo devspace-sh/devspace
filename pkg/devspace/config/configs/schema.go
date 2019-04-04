@@ -12,8 +12,8 @@ type ConfigDefinition struct {
 
 // ConfigWrapper specifies if the config is infile or should be loaded from a path
 type ConfigWrapper struct {
-	Path *string                     `yaml:"path,omitempty"`
-	Data map[interface{}]interface{} `yaml:"data,omitempty"`
+	Path *string     `yaml:"path,omitempty"`
+	Data interface{} `yaml:"data,omitempty"`
 }
 
 // VarsWrapper specifies if the vars definition is infile or should be loaded from a path

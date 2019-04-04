@@ -189,12 +189,13 @@ func GetHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest
 }
 
 // RemoveDeployment removes one or all deployments from the config
-func RemoveDeployment(removeAll bool, name string) error {
+func RemoveDeployment(removeAll bool, name string) (bool, error) {
 	if name == "" && removeAll == false {
-		return errors.New("You have to specify either a deployment name or the --all flag")
+		return false, errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
 	config := configutil.GetBaseConfig()
+	found := false
 
 	if config.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
@@ -202,16 +203,18 @@ func RemoveDeployment(removeAll bool, name string) error {
 		for _, deployConfig := range *config.Deployments {
 			if removeAll == false && *deployConfig.Name != name {
 				newDeployments = append(newDeployments, deployConfig)
+			} else {
+				found = true
 			}
 		}
 
 		config.Deployments = &newDeployments
 	}
 
-	err := configutil.SaveBaseConfig()
+	err := configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return false, fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
-	return nil
+	return found, nil
 }

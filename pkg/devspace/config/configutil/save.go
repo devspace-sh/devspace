@@ -24,29 +24,28 @@ func matchVar(path, key, value string) bool {
 	return ok
 }
 
-// SaveBaseConfig writes the data of a config to its yaml file
-func SaveBaseConfig() error {
-	// Convert to map[interface{}]interface{}
+// RestoreVars restores the variables in the config
+func RestoreVars(config *latest.Config) (*latest.Config, error) {
 	configMap := make(map[interface{}]interface{})
 
 	// Copy config
 	err := util.Convert(config, &configMap)
 	if err != nil {
-		return errors.Wrap(err, "convert config map to map interface")
+		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
 	// Restore old vars values
-	if len(LoadedVars) >= 1 {
+	if len(LoadedVars) > 0 {
 		walk.Walk(configMap, matchVar, replaceVar)
 	}
 
 	// Cloned config
-	clonedConfig := latest.Config{}
+	clonedConfig := &latest.Config{}
 
 	// Copy config
-	err = util.Convert(configMap, &clonedConfig)
+	err = util.Convert(configMap, clonedConfig)
 	if err != nil {
-		return errors.Wrap(err, "convert cloned config")
+		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
 	// Erase default values
@@ -63,8 +62,24 @@ func SaveBaseConfig() error {
 		clonedConfig.Images = nil
 	}
 
+	return clonedConfig, nil
+}
+
+// SaveLoadedConfig writes the data of a config to its yaml file
+func SaveLoadedConfig() error {
+	// RestoreVars restores the variables in the config
+	clonedConfig, err := RestoreVars(config)
+	if err != nil {
+		return errors.Wrap(err, "restore vars")
+	}
+
+	return SaveConfig(clonedConfig)
+}
+
+// SaveConfig saves the config to file
+func SaveConfig(config *latest.Config) error {
 	// Convert to string
-	configYaml, err := yaml.Marshal(clonedConfig)
+	configYaml, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
@@ -86,7 +101,7 @@ func SaveBaseConfig() error {
 
 		// We have to save the config in the configs.yaml
 		if configDefinition.Config.Data != nil {
-			configDefinition.Config.Data = configMap
+			configDefinition.Config.Data = config
 			configYaml, err := yaml.Marshal(configs)
 			if err != nil {
 				return err

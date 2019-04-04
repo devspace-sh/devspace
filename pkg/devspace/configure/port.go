@@ -68,7 +68,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 
 	insertOrReplacePortMapping(namespace, labelSelectorMap, serviceName, portMappings)
 
-	err = configutil.SaveBaseConfig()
+	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -122,7 +122,7 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 
 		config.Dev.Ports = &newPortForwards
 
-		err = configutil.SaveBaseConfig()
+		err = configutil.SaveLoadedConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %s", err.Error())
 		}

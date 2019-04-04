@@ -14,8 +14,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
-	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // ComponentsRepoURL is the repository url

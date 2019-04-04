@@ -13,7 +13,7 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/image"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
@@ -132,7 +132,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		}
 
 		// Don't push image in minikube
-		if kubectl.IsMinikube() {
+		if minikube.IsMinikube() {
 			retImageConfig.Image = ptr.String("devspace")
 			retImageConfig.SkipPush = ptr.Bool(true)
 			return retImageConfig, nil
@@ -226,8 +226,9 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
 			ValidationRegexPattern: "^.*$",
 		})
-	} else if cloudProvider != nil { // Is DevSpace Cloud?
-		defaultImageName = registryURL + "/" + dockerUsername + "/" + DefaultImageName
+	} else if cloudProvider != nil {
+		// Is DevSpace Cloud?
+		defaultImageName = registryURL + "/${DevSpace_Username}/" + DefaultImageName
 	} else {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which image name do you want to push to?",
@@ -304,7 +305,7 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 
 	(*config.Images)[nameInConfig] = imageConfig
 
-	err := configutil.SaveBaseConfig()
+	err := configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
 	}
@@ -338,7 +339,7 @@ func RemoveImage(removeAll bool, names []string) error {
 
 	config.Images = &newImageList
 
-	err := configutil.SaveBaseConfig()
+	err := configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %v", err)
 	}

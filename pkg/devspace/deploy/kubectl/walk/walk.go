@@ -1,6 +1,8 @@
 package walk
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // ReplaceFn defines the replace function
 type ReplaceFn func(path, value string) interface{}
@@ -9,7 +11,7 @@ type ReplaceFn func(path, value string) interface{}
 type MatchFn func(path, key, value string) bool
 
 // Walk walks over an interface and replaces keys that match the match function with the replace function
-func Walk(d interface{}, match MatchFn, replace ReplaceFn) {
+func Walk(d map[interface{}]interface{}, match MatchFn, replace ReplaceFn) {
 	doWalk(d, "", match, replace)
 }
 
@@ -17,7 +19,16 @@ func doWalk(d interface{}, path string, match MatchFn, replace ReplaceFn) {
 	switch t := d.(type) {
 	case []interface{}:
 		for idx, val := range t {
-			doWalk(val, fmt.Sprintf("%s[%d]", path, idx), match, replace)
+			newPath := fmt.Sprintf("%s[%d]", path, idx)
+			value, ok := val.(string)
+			if ok == false {
+				doWalk(val, newPath, match, replace)
+				continue
+			}
+
+			if match(path, fmt.Sprintf("[%d]", idx), value) {
+				t[idx] = replace(newPath, value)
+			}
 		}
 	case map[interface{}]interface{}:
 		for k, v := range t {

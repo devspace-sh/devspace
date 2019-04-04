@@ -49,7 +49,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 	config.Dev.Selectors = &servicesConfig
 
 	if save {
-		err = configutil.SaveBaseConfig()
+		err = configutil.SaveLoadedConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %s", err.Error())
 		}
@@ -87,7 +87,7 @@ func RemoveSelector(removeAll bool, name string, labelSelector string, namespace
 
 		config.Dev.Selectors = &newServicesPaths
 
-		err = configutil.SaveBaseConfig()
+		err = configutil.SaveLoadedConfig()
 		if err != nil {
 			return fmt.Errorf("Couldn't save config file: %v", err)
 		}

@@ -10,7 +10,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/mgutz/ansi"
 
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
@@ -28,6 +31,19 @@ const VarEnvPrefix = "DEVSPACE_VAR_"
 // LoadedVars holds all variables that were loaded
 var LoadedVars = make(map[string]string)
 
+// PredefinedVars holds all predefined variables that can be used in the config
+var PredefinedVars = map[string]*string{
+	PredefinedVarUsername: nil,
+	PredefinedVarSpace:    nil,
+}
+
+const (
+	// PredefinedVarSpace holds the space name
+	PredefinedVarSpace = "DEVSPACE_SPACE"
+	// PredefinedVarUsername holds the devspace cloud username
+	PredefinedVarUsername = "DEVSPACE_USERNAME"
+)
+
 func varReplaceFn(path, value string) interface{} {
 	// Save old value
 	LoadedVars[path] = value
@@ -40,17 +56,30 @@ func varReplaceFn(path, value string) interface{} {
 	value = matched[2]
 	varName := strings.TrimSpace(value[2 : len(value)-1])
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error reading generated config: %v", err)
-	}
-
 	// Find value for variable
 	varValue := ""
-	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
+	if val, ok := PredefinedVars[strings.ToUpper(varName)]; ok {
+		if val == nil {
+			upperVarName := strings.ToUpper(varName)
+			if upperVarName == PredefinedVarSpace {
+				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarSpace, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+			} else if upperVarName == PredefinedVarUsername {
+				log.Fatalf("Not logged in, but predefined var %s is used.\n\nPlease run `%s` to login", PredefinedVarUsername, ansi.Color("devspace login", "white+b"))
+			}
+
+			log.Fatalf("Try to access predefined devspace variable '%s', however the value has no value", varName)
+		}
+
+		varValue = *val
+	} else if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
 		envVarValue := os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
 		varValue = envVarValue
 	} else {
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatalf("Error reading generated config: %v", err)
+		}
+
 		// Get current config
 		currentConfig := generatedConfig.GetActive()
 		if _, ok := currentConfig.Vars[varName]; !ok {
@@ -137,7 +166,7 @@ func loadConfigFromPath(path string) (*latest.Config, error) {
 	return newConfig, nil
 }
 
-func loadConfigFromInterface(m map[interface{}]interface{}) (*latest.Config, error) {
+func loadConfigFromInterface(m interface{}) (*latest.Config, error) {
 	yamlFileContent, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -192,5 +221,59 @@ func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, stri
 }
 
 func resolveVars(yamlFileContent []byte) ([]byte, error) {
+	fillPredefinedVars()
 	return CustomResolveVars(yamlFileContent, varMatchFn, varReplaceFn)
+}
+
+func fillPredefinedVars() {
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error reading generated config: %v", err)
+	}
+
+	if generatedConfig.CloudSpace != nil {
+		if generatedConfig.CloudSpace.Name != "" {
+			PredefinedVars[PredefinedVarSpace] = &generatedConfig.CloudSpace.Name
+		}
+		if generatedConfig.CloudSpace.ProviderName != "" {
+			cloudConfigData, err := cloudconfig.ReadCloudsConfig()
+			if err != nil {
+				return
+			}
+
+			dataMap := make(map[interface{}]interface{})
+			err = yaml.Unmarshal(cloudConfigData, dataMap)
+			if err != nil {
+				return
+
+			}
+
+			providerMapRaw, ok := dataMap[generatedConfig.CloudSpace.ProviderName]
+			if !ok {
+				return
+			}
+
+			providerMap, ok := providerMapRaw.(map[interface{}]interface{})
+			if !ok {
+				return
+			}
+
+			tokenRaw, ok := providerMap["token"]
+			if !ok {
+				return
+			}
+
+			token, ok := tokenRaw.(string)
+			if !ok {
+				return
+			}
+
+			accountName, err := cloudtoken.GetAccountName(token)
+			if err != nil {
+				return
+			}
+
+			PredefinedVars[PredefinedVarUsername] = &accountName
+		}
+	}
 }
