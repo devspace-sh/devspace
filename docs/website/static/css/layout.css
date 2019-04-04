@@ -9,6 +9,7 @@ body {
 .navPusher .docMainWrapper {
     display: flex;
     width: 100%;
+    max-width: 100%;
     padding: 0;
 }
 
@@ -18,12 +19,12 @@ body {
 
 .separateOnPageNav .navPusher .docsNavContainer,
 .separateOnPageNav .navPusher .onPageNav {
-    flex: 0 1 100%;
+    flex: 1 0 270px;
     overflow: initial;
 }
 
 .separateOnPageNav .navPusher .mainContainer {
-    flex: 1 0 770px;
+    flex: 0 1 770px;
     max-width: 770px;
 }
 
@@ -126,5 +127,9 @@ body {
         position: absolute;
         top: 100px;
         padding: 50px 20px;
+    }
+
+    .tocToggler {
+        display: none;
     }
 }
