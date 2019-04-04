@@ -2,65 +2,79 @@
 title: Add predefined components
 ---
 
-DevSpace provides some easy and ready to use predefined [components](/docs/chart/basics/components), such as mysql, postgres, mongodb and others. You can list all available components with:
-```json
-$ devspace list available-components
-
- Name       Description                                                                               
- mariadb    MariaDB is a community-developed fork of MySQL intended to remain free under the GNU GPL  
- mongodb    MongoDB document databases provide high availability and easy scalability                 
- mysql      MySQL is a widely used, open-source relational database management system (RDBMS)         
- postgres   The PostgreSQL object-relational database system provides reliability and data integrity  
- redis      Redis is an open source key-value store that functions as a data structure server
-```
-
-> If you want to add an custom container image to the chart take a look at [add custom component](/docs/customization/add-component)
-
-> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
-
-## Add a predefined component
-
-Make sure you are at the root of your devspace project and have initialized the project with `devspace init`. Then run the following command in your project:
+Run the following command to add a predefined component to your deployments:
 ```bash
-devspace add component mysql
+devspace add deployment [deployment-name] --component=[component-name]
+```
+After adding a component, you need to manually redeploy in order to start the newly added component together with the remainder of your deployments.
+```bash
+devspace deploy
 ```
 
-You will be asked several questions about the component you want to add. Afterwards take a look at your `chart/values.yaml`:
+## List of predefined components
+DevSpace CLI provides the following predefined components:
+- mariadb
+- mongodb
+- mysql
+- postgres
+- redis
+
+## Example: Adding mysql
+To add mysql as predefined component to your deployments, run this command:
+```bash
+devspace add deployment database --component=mysql
+```
+
+DevSpace CLI will ask a couple of questions before adding the component.
+```bash
+? Please specify the mysql version you want to use 5.7
+? Please specify the mysql root password my-password-123
+? Please specify the mysql database to create on image startup my_database
+? Please specify the database size in Gi 5Gi
+[done] √ Successfully added database as new deployment
+```
+
+After adding the mysql component as a deployment, your `devspace.yaml` will contain a section similar to this one:
 ```yaml
-components:
-- containers:
-  - env:
-    - name: MYSQL_ROOT_PASSWORD
-      value: mypassword
-    - name: MYSQL_DATABASE
-      value: mydatabase
-    image: mysql:5.7
-    resources:
-      limits:
-        cpu: 100m
-        ephemeralStorage: 1Gi
-        memory: 200Mi
-    volumeMounts:
-    - containerPath: /var/lib/mysql
-      volume:
-        name: mysql-data
-        path: /mysql
-  name: mysql
-  service:
-    name: mysql
-    ports:
-    - containerPort: 3306
-      externalPort: 3306
-- name: default
-  ...
-
-# Define persistent volumes here
-# Then mount them in containers above
-volumes:
-- name: mysql-data
-  size: 5Gi
-
-...
+deployments:
+- name: database
+  component:
+    containers:
+    - image: mysql:5.7
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: my-password-123
+      - name: MYSQL_DATABASE
+        value: my_database
+      volumeMounts:
+      - containerPath: /var/lib/mysql
+        volume:
+          name: mysql-data
+          subPath: /mysql
+    volumes:
+    - name: mysql-data
+      size: 5Gi
+    service:
+      name: mysql
+      ports:
+      - port: 3306
+- ... # your previously defined deployments
 ```
 
-As you can see devspace has added the component. Now redeploy your application with `devspace deploy` and you should be able to access the mysql database **within** your default component via: `mysql://root:yourpassword@mysql:3306/mydatabase`.  
+> DevSpace CLI always **prepends** new components in the deployments array within your `devspace.yaml`, so that the components you need will be deployed before your application will be started.
+
+After adding the mysql database component, you need to redeploy:
+```bash
+devspace deploy
+```
+
+Now, you will be able to access your mysql database from other containers within your Kubernetes namespace using the following connection variables:
+
+| Connection Variable | Value |
+| ---:|---|
+| Host | `mysql` |
+| Port | `3306` |
+| Username | `root` |
+| Password | `my-password-123` |
+| Database | `my_database` |
+| Connection String | `mysql://root:my-password-123@mysql:3306/my_database` |
