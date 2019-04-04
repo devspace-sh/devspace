@@ -2,6 +2,15 @@
 title: Add custom components
 ---
 
+Run the following command to add a custom component to your deployments:
+```bash
+devspace add deployment [deployment-name] --component=[component-name]
+```
+After adding a component, you need to manually redeploy in order to start the newly added component together with the remainder of your deployments.
+```bash
+devspace deploy
+```
+
 On this page a custom [component](/docs/chart/basics/components) is added to the DevSpace chart.
 
 > If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
