@@ -29,7 +29,10 @@ const highlightActiveOnPageLink = function() {
     
         if (!activeHash) {
             const firstOnPageNavLink = document.querySelectorAll(".toc-headings:first-child > li:first-child > a");
-            activeHash = firstOnPageNavLink.attributes.href.value.substr(1);
+
+            if (firstOnPageNavLink.attributes) {
+                activeHash = firstOnPageNavLink.attributes.href.value.substr(1);
+            }
         }
     }
 

@@ -79,14 +79,15 @@
 }
 
 .navGroups .navGroup .navItem {
-    padding: 3px;
+    position: relative;
     margin-top: 2px;
     margin-bottom: 2px;
+    padding: 3px;
     padding-left: 23px;
 }
 
 .toc .toggleNav ul .navListItemActive .navItem {
-    color: #223366!important;
+    color: #1c65f7!important;
     background: #fff;
     border-top: 1px solid #e7edf1;
     border-bottom: 1px solid #e7edf1;
@@ -113,11 +114,6 @@
 .collapsible .arrow svg {
     width: 20px;
     height: 20px;
-}
-
-/* nav link currently active */
-.toc .toggleNav ul li.navListItemActive a {
-    color: #00bdff!important;
 }
 
 /* nav link */
