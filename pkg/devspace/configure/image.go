@@ -228,7 +228,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		})
 	} else if cloudProvider != nil {
 		// Is DevSpace Cloud?
-		defaultImageName = registryURL + "/${DevSpace_Username}/" + DefaultImageName
+		defaultImageName = registryURL + "/${DEVSPACE_USERNAME}/" + DefaultImageName
 	} else {
 		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Which image name do you want to push to?",
