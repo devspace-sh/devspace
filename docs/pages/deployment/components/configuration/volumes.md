@@ -8,56 +8,118 @@ Altough it is recommend to keep your applications as stateless as possible, some
 
 Persistent volumes allow you to define a virtual device which is independent of your containers an can be mounted into the containers. An analogy would be a USB stick (persistent volume) that you plug into a computer (container) which always resets the in-build hard drive on every restart.
 
-When using the [DevSpace Helm Chart], you can edit the `chart/values.yaml` to:
-1. [Define persistent volumes](#define-persistent-volumes)
-2. [Mount these persistent volumes into containers](#mount-persistent-volumes)
+When you want to persist a folder within a container of one of your components, you need to:
+1. [Define a volume](#define-persistent-volumes) within this component
+2. [Mount this volume into the container](#mount-persistent-volumes)
 
-## Define persistent volumes
-You can define persistent volumes in the `volumes` section of `chart/values.yaml`.
+> DevSpace components require you to specify separete volumes for each component, i.e. the volumes of a component can only be mounted by the containers of the same component.
+
+## Define volumes
+DevSpace components allow you to define the following types of Kubernetes volumes:
+- [Persistent volumes](#define-persistent-volumes)
+- [ConfigMap volumes](#define-confimap-volumes)
+- [Secret volumes](#define-secret-volumes)
+
+### Define Persistent Volumes
+In the `devspace.yaml`, you can define persistent volumes in the `volumes` section of your components:
 ```yaml
-volumes:
-- name: nginx
-  size: "2Gi"
-- name: mysql-data
-  size: "5Gi"
+components:
+- name: my-component
+  volumes:
+  - name: nginx
+    size: "2Gi"
+  - name: mysql-data
+    size: "5Gi"
 ```
-The above example defines two volumes, one called `nginx` with size `2 Megabyte` and one called `mysql-data` with size `5 Gigabyte`.
+The above example defines two volumes, one called `nginx` with size `2 Gigabyte` and one called `mysql-data` with size `5 Gigabyte`.
 
 <details>
 <summary>
-### View the specification for volumes
+#### Show specification for Persistent Volumes
 </summary>
 ```yaml
-name: [a-z0-9-]{1,253}      # Name of the volume (used to mount the volume)
-size: [number] + Gi|Mi|Ki   # Size of the volume in Gigabyte, Megabyte or Kilobyte
+volumes:
+- name: [a-z0-9-]{1,253}        # Name of the volume (used to mount the volume)
+  size: [number] + Gi|Mi|Ki     # Size of the volume in Gigabyte, Megabyte or Kilobyte
 ```
 </details>
 
-## Mount persistent volumes
-You can mount persistent volumes for each `container` defined in `components[*].container[*].volumeMounts` section of `chart/values.yaml`.
+### Define ConfigMap Volumes
+Using DevSpace components, you can define Kubernetes ConfigMaps as volumes according to the [Kubernetes ConfigMapVolumeSource specification](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#configmapvolumesource-v1-core):
 ```yaml
 components:
-- name: default
+- name: my-component
+  volumes:
+  - name: nginx-config
+    configMap:
+      name: my-configmap
+```
+
+<details>
+<summary>
+#### Show specification for ConfigMap Volumes
+</summary>
+```yaml
+volumes:
+- name: [a-z0-9-]{1,253}        # Name of the volume (used to mount the volume)
+  configMap:                    # Kubernetes ConfigMapVolumeSource v1
+    name: [a-z0-9-]{1,253}      # Name of the ConfigMap
+    ...
+```
+</details>
+
+### Define Secret Volumes
+Using DevSpace components, you can define Kubernetes Secrets as volumes according to the [Kubernetes SecretVolumeSource specification](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#secretvolumesource-v1-core):
+```yaml
+components:
+- name: my-component
+  volumes:
+  - name: secret-token
+    secret:
+      secretName: my-secret
+```
+
+<details>
+<summary>
+#### Show specification for Secret Volumes
+</summary>
+```yaml
+volumes:
+- name: [a-z0-9-]{1,253}            # Name of the volume (used to mount the volume)
+  secret:                           # Kubernetes SecretVolumeSource v1
+    secretName: [a-z0-9-]{1,253}    # Name of the Secret
+    ...
+```
+</details>
+
+## Mount volumes into containers
+After defining a volume for a component, you can mount it in the containers of the same component within the `volumeMounts` section:
+```yaml
+components:
+- name: my-component
   containers:
   - image: "dscr.io/username/mysql"
     volumeMounts:
     - containerPath: /var/lib/mysql
       volume:
         name: mysql-data
-        path: /mysql
+        subPath: /mysql
         readOnly: false
+  volumes:
+  - name: mysql-data
+    size: "5Gi"
 ```
-The example above would mount the folder `/mysql` within the volume `mysql-data` into the path `/var/lib/mysql` within the first container of the component `default` and allow the container to edit the files within the mounted volume path.
+The example above would create a volume called `mysql-data` for the component `my-component` and mount the folder `/mysql` within this volume into the path `/var/lib/mysql` within a container of this component. By mounting this volume to `/var/lib/mysql`, you allow the container to edit the files and folder contained within `/var/lib/mysql` and restart without losing these changes.
 
 <details>
 <summary>
-### View the specification for volume mounts
+#### View the specification for volume mounts
 </summary>
 ```yaml
 containerPath: [path]       # Path within the container
 volume:                     # Volume to mount
   name: [volume-name]       # Name of the volume as defined in `volumes` within `chart/values.yaml`
-  path: [path]              # Path within the volume
+  subPath: [path]           # Path within the volume
   readOnly: false|true      # Detault: false | set to true for read-only mounting
 ```
 </details>
@@ -89,7 +151,7 @@ kubectl delete persistentvolumeclaim [VOLUME_NAME]
 </summary>
 Generally: **No.**
 
-If you use the DevSpace Helm Chart, it will automatically deploy containers within a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
+The [DevSpace Component Chart](/docs/deployment/components/what-are-components#devspace-component-helm-chart) used to deploy DevSpace components will automatically deploy containers as part of a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
 </details>
 
 <details>
@@ -98,7 +160,6 @@ If you use the DevSpace Helm Chart, it will automatically deploy containers with
 </summary>
 If you want to force-delete everything (including persistent volumes) within a Space, you can run the following commands:
 ```bash
-devspace use space [SPACE_NAME]
 devspace purge
 kubectl delete persistentvolumeclaims --all
 ```
