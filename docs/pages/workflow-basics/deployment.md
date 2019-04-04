@@ -130,6 +130,11 @@ devspace add deployment [deployment-name] --chart="chart-name" --chart-repo="htt
 > Use the `--chart-version` flag to specifiy the char version that you want to deploy.
 </details>
 
+After adding a new deployment, you need to manually redeploy in order to start the newly added component together with the remainder of your previouly existing deployments.
+```bash
+devspace deploy
+```
+
 
 ## Remove deployments
 Instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
