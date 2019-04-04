@@ -2,47 +2,29 @@
 title: What are components?
 ---
 
-On this page the DevSpace helm chart components (defined in `chart/values.yaml`) are explained.
-
-> If you just want to quickly add a database like mysql, postgres, mogodb etc. you can checkout the [predefined components](/docs/customization/predefined-components)
-
-> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
-
-## Component structure
-
-In the DevSpace helm chart a component consists of several parts:
-
-### containers:
-The containers that will run together in a single kubernetes pod. Containers share volumes and the network. For more information about pods and how containers run inside pods take a look at [Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod/)
-
-You can specify several options for each container:
-- image: the docker image to use for the container (if the docker image matches an image defined in `.devspace/config.yaml` the tag will be replaced during `devspace deploy/dev`)
-- env: the environment variables used for this container (see [configure environment variables](/docs/customization/environment-variables) for more information)
-- resources: the resources the container should run with
-- volumeMounts: the paths within the container that should be mounted from a volume (see [persistent volumes](/docs/customization/persistent-volumes) for more information)
-
-### service:
-For each component a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) is created. A service is specified by a name and an array of externalPorts and containerPorts. Other components (or kubernetes pods) can access the component then via the service name:
-
-Take a look at this `values.yaml`:
+Components make deployments to Kubernetes much easier and better maintainable. You can define components in the `deployment` section of your `devspace.yaml`. A basic component looks like this:
 ```yaml
-components:
-# First component your app
-- name: myapp
-  containers:
-  ...
-# Second component the mysql database
-- name: mysql
-  containers:
-  ...
-  service:
-    name: my-mysql-service
-    ports:
-    # Port on the service
-    - externalPort: 1234
-    # Port on the container
-      containerPort: 3306
-...
+deployments:
+- name: quickstart-nodejs
+  component:
+    containers:
+    - image: dscr.io/username/image
+      resources:
+        limits:
+          cpu: "400m"
+          memory: "500Mi"
 ```
 
-In this example the containers within the component myapp can access the mysql component via the address: `mysql://my-mysql-service:1234`
+## How are components deployed?
+DevSpace CLI deploys components using Helm. The chart that will be deployed is the [DevSpace Component Helm Chart](#devspace-component-helm-chart) and the values for the chart are specified directly under the `component` key in respective deployment within your `devspace.yaml`.
+
+## DevSpace Component Helm Chart
+The DevSpace Component Helm Chart is a general purpose Helm chart. Unlike other Helm charts which are designed to deploy one specific application (e.g. a mysql database), the DevSpace Component Helm Chart is more like a base chart that allows you to deploy any application. The benefits of using the DevSpace Component Helm Chart are:
+- Much easier configuration than plain Kubernetes manifests
+- Smart defaults and best practices (e.g. pods with persistent volumes will automatically be deployed as StatefulSets instead of Deployments)
+- Much easier configuration than writing your own Helm chart
+- Better deployment lifecycle management through Helm in comparison to plain Kubernetes manifests, including:
+  - Tracking of Kubernetes resources of a deployment
+  - Well-defined upgrade mechanism
+  - Rollbacks when upgrades fail
+  - Fast cleanup when removing deployments
