@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-var fs = require('fs');
-var path = require('path');
-var exec = require('child_process').exec;
-var request = require('request');
+const fs = require('fs');
+const path = require('path');
+const exec = require('child_process').exec;
+const request = require('request');
+const Spinner = require('cli-spinner').Spinner;
 
 const downloadPathTemplate = "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
 const ARCH_MAPPING = {
@@ -103,18 +104,34 @@ exec("npm bin", function(err, stdout, stderr) {
         // Ignore errors when deleting the file.
     }
 
-
     if (action == "install") {
+        const spinner = new Spinner('%s Downloading DevSpace CLI... (this may take a minute)');
+        spinner.setSpinnerString('|/-\\');
+        spinner.start();
+
         request({uri: downloadPath, headers: requestHeaders})
             .on('error', function() {
+                spinner.stop(true);
                 console.error("Error requesting URL: " + downloadPath);
                 process.exit(1);
             })
             .on('response', function(res) {
-                res.pipe(fs.createWriteStream(binaryPath));
+                try {
+                    res.pipe(fs.createWriteStream(binaryPath));
+                } catch(e) {
+                    spinner.stop(true);
+                    console.error("Failed to download DevSpace CLI due to permission issues!\n");
+                    console.error("There are two options to fix this:");
+                    console.error("1. Do not run 'npm install' as root (recommended)");
+                    console.error("2. Run this command: npm install --unsafe-perm=true -g devspace");
+                    console.error("   You may need to run this command using sudo.");
+                    process.exit(1);
+                }
             })
-            .on('finish', function() {
-                exit(0);
+            .on('end', function() {
+                spinner.stop(true);
+                fs.chmodSync(binaryPath, 0755);
+                process.exit(0);
             });
     }
 });
