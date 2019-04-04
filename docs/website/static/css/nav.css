@@ -32,7 +32,7 @@
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after {
-    top: 13px;
+    top: 14px;
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,

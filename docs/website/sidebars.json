@@ -11,9 +11,10 @@
         "workflow-basics/deployment",
         "workflow-basics/development",
         "workflow-basics/debugging",
-        "workflow-basics/logs",
-        "workflow-basics/analyze",
-        "workflow-basics/enter"
+        "workflow-basics/debugging/analyze",
+        "workflow-basics/debugging/logs",
+        "workflow-basics/debugging/enter",
+        "workflow-basics/debugging/remote-debuggers"
     ],
     "Build Images": [
         "image-building/configuration",
