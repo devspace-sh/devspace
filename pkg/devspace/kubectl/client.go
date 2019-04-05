@@ -14,19 +14,14 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/client-go/util/homedir"
-	describeSettings "k8s.io/kubernetes/pkg/kubectl/describe"
-	describe "k8s.io/kubernetes/pkg/kubectl/describe/versioned"
 	"k8s.io/kubernetes/pkg/util/node"
 )
-
-var isMinikubeVar *bool
 
 // NewClient creates a new kubernetes client
 func NewClient() (*kubernetes.Clientset, error) {
@@ -167,32 +162,6 @@ func getClientConfig(context *string, switchContext bool) (*rest.Config, error) 
 	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, "devspace", &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
 }
 
-// IsMinikube returns true if the Kubernetes cluster is a minikube
-func IsMinikube() bool {
-	if isMinikubeVar == nil {
-		isMinikube := false
-		config := configutil.GetConfig()
-		if config.Cluster.APIServer == nil {
-			if config.Cluster.KubeContext == nil {
-				loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-				kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-				cfg, err := kubeConfig.RawConfig()
-				if err != nil {
-					return false
-				}
-
-				isMinikube = cfg.CurrentContext == "minikube"
-			} else {
-				isMinikube = *config.Cluster.KubeContext == "minikube"
-			}
-		}
-
-		isMinikubeVar = &isMinikube
-	}
-
-	return *isMinikubeVar
-}
-
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
 func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	config := configutil.GetConfig()
@@ -317,25 +286,6 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 	}
 
 	return reason
-}
-
-// DescribePod returns a desription string of a pod (internally calls the kubectl describe function)
-func DescribePod(namespace, name string) (string, error) {
-	newConfig, err := GetClientConfig()
-
-	if err != nil {
-		return "", err
-	}
-
-	newKubectl, err := clientset.NewForConfig(newConfig)
-
-	if err != nil {
-		return "", err
-	}
-
-	podDescriber := &describe.PodDescriber{newKubectl}
-
-	return podDescriber.Describe(namespace, name, describeSettings.DescriberSettings{ShowEvents: true})
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name

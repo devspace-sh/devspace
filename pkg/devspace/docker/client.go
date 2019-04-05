@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
@@ -45,7 +45,7 @@ func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 }
 
 func newDockerClientFromMinikube() (client.CommonAPIClient, error) {
-	if kubectl.IsMinikube() == false {
+	if minikube.IsMinikube() == false {
 		return nil, errors.New("Cluster is not a minikube cluster")
 	}
 

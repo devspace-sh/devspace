@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
+	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -23,52 +24,29 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	flags *DevCmdFlags
+	InitRegistries bool
+
+	ForceBuild  bool
+	ForceDeploy bool
+
+	Sync            bool
+	Terminal        bool
+	ExitAfterDeploy bool
+	SkipPipeline    bool
+	SwitchContext   bool
+	Portforwarding  bool
+	VerboseSync     bool
+	Selector        string
+	Container       string
+	LabelSelector   string
+	Namespace       string
 }
 
-// DevCmdFlags are the flags available for the up-command
-type DevCmdFlags struct {
-	initRegistries  bool
-	build           bool
-	sync            bool
-	terminal        bool
-	deploy          bool
-	exitAfterDeploy bool
-	skipPipeline    bool
-	switchContext   bool
-	portforwarding  bool
-	verboseSync     bool
-	selector        string
-	container       string
-	labelSelector   string
-	namespace       string
-	config          string
-	configOverwrite string
-}
+// NewDevCmd creates a new devspace dev command
+func NewDevCmd() *cobra.Command {
+	cmd := &DevCmd{}
 
-// DevFlagsDefault are the default flags for DevCmdFlags
-var DevFlagsDefault = &DevCmdFlags{
-	initRegistries:  true,
-	build:           false,
-	sync:            true,
-	terminal:        true,
-	switchContext:   false,
-	exitAfterDeploy: false,
-	skipPipeline:    false,
-	deploy:          false,
-	portforwarding:  true,
-	verboseSync:     false,
-	container:       "",
-	namespace:       "",
-	labelSelector:   "",
-}
-
-func init() {
-	cmd := &DevCmd{
-		flags: DevFlagsDefault,
-	}
-
-	cobraCmd := &cobra.Command{
+	devCmd := &cobra.Command{
 		Use:   "dev",
 		Short: "Starts the development mode",
 		Long: `
@@ -84,38 +62,33 @@ Starts your project in development mode:
 #######################################################`,
 		Run: cmd.Run,
 	}
-	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.initRegistries, "init-registries", cmd.flags.initRegistries, "Initialize registries (and install internal one)")
+	devCmd.Flags().BoolVar(&cmd.InitRegistries, "init-registries", true, "Initialize registries (and install internal one)")
 
-	cobraCmd.Flags().BoolVarP(&cmd.flags.build, "force-build", "b", cmd.flags.build, "Forces to build every image")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.deploy, "force-deploy", "d", cmd.flags.deploy, "Forces to deploy every deployment")
+	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
+	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 
-	cobraCmd.Flags().BoolVarP(&cmd.flags.skipPipeline, "skip-pipeline", "x", cmd.flags.skipPipeline, "Skips build & deployment and only starts sync, portforwarding & terminal")
+	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.sync, "sync", cmd.flags.sync, "Enable code synchronization")
-	cobraCmd.Flags().BoolVar(&cmd.flags.verboseSync, "verbose-sync", cmd.flags.verboseSync, "When enabled the sync will log every file change")
+	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
+	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.portforwarding, "portforwarding", cmd.flags.portforwarding, "Enable port forwarding")
+	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.terminal, "terminal", cmd.flags.terminal, "Enable terminal (true or false)")
-	cobraCmd.Flags().StringVarP(&cmd.flags.selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
-	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", cmd.flags.container, "Container name where to open the shell")
-	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
-	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods for terminal")
+	devCmd.Flags().BoolVar(&cmd.Terminal, "terminal", true, "Enable terminal (true or false)")
+	devCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
+	devCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name where to open the shell")
+	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
+	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods for terminal")
 
-	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", cmd.flags.switchContext, "Switch kubectl context to the DevSpace context")
-	cobraCmd.Flags().BoolVar(&cmd.flags.exitAfterDeploy, "exit-after-deploy", cmd.flags.exitAfterDeploy, "Exits the command after building the images and deploying the project")
+	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
+	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
+	return devCmd
 }
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -129,7 +102,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -147,7 +120,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Init image registries
-	if cmd.flags.initRegistries {
+	if cmd.InitRegistries {
 		dockerClient, err := docker.NewClient(false)
 		if err != nil {
 			dockerClient = nil
@@ -160,16 +133,16 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	err = buildAndDeploy(client, cmd.flags, args)
+	err = cmd.buildAndDeploy(client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []string) error {
+func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) error {
 	config := configutil.GetConfig()
 
-	if flags.skipPipeline == false {
+	if cmd.SkipPipeline == false {
 		// Load config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
@@ -177,7 +150,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 		}
 
 		// Build image if necessary
-		mustRedeploy, err := image.BuildAll(client, generatedConfig, true, flags.build, log.GetInstance())
+		mustRedeploy, err := image.BuildAll(client, generatedConfig, true, cmd.ForceBuild, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
@@ -193,7 +166,7 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(client, generatedConfig, true, mustRedeploy || flags.deploy, log.GetInstance())
+			err = deploy.All(client, generatedConfig, true, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}
@@ -207,14 +180,14 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 	}
 
 	// Start services
-	if flags.exitAfterDeploy == false {
+	if cmd.ExitAfterDeploy == false {
 		// Start services
-		err := startServices(client, flags, args, log.GetInstance())
+		err := cmd.startServices(client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Trigger rebuild & redeploy
-				return buildAndDeploy(client, flags, args)
+				return cmd.buildAndDeploy(client, args)
 			}
 
 			return err
@@ -224,8 +197,8 @@ func buildAndDeploy(client *kubernetes.Clientset, flags *DevCmdFlags, args []str
 	return nil
 }
 
-func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []string, log log.Logger) error {
-	if flags.portforwarding {
+func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, log log.Logger) error {
+	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(client, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start portforwarding: %v", err)
@@ -238,8 +211,8 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 		}()
 	}
 
-	if flags.sync {
-		syncConfigs, err := services.StartSync(client, flags.verboseSync, log)
+	if cmd.Sync {
+		syncConfigs, err := services.StartSync(client, cmd.VerboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -256,7 +229,7 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 	autoReloadPaths := GetPaths()
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
-	if flags.skipPipeline == false && len(autoReloadPaths) > 0 {
+	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
 		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
 			once.Do(func() {
@@ -278,20 +251,20 @@ func startServices(client *kubernetes.Clientset, flags *DevCmdFlags, args []stri
 
 	// Build params
 	params := targetselector.CmdParameter{}
-	if flags.selector != "" {
-		params.Selector = &flags.selector
+	if cmd.Selector != "" {
+		params.Selector = &cmd.Selector
 	}
-	if flags.container != "" {
-		params.ContainerName = &flags.container
+	if cmd.Container != "" {
+		params.ContainerName = &cmd.Container
 	}
-	if flags.labelSelector != "" {
-		params.LabelSelector = &flags.labelSelector
+	if cmd.LabelSelector != "" {
+		params.LabelSelector = &cmd.LabelSelector
 	}
-	if flags.namespace != "" {
-		params.Namespace = &flags.namespace
+	if cmd.Namespace != "" {
+		params.Namespace = &cmd.Namespace
 	}
 
-	if flags.terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
+	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
 		return services.StartTerminal(client, params, args, exitChan, log)
 	}
 
@@ -323,13 +296,16 @@ func GetPaths() []string {
 			for _, deployName := range *config.Dev.AutoReload.Deployments {
 				for _, deployConf := range *config.Deployments {
 					if *deployName == *deployConf.Name {
-						if deployConf.Helm != nil && deployConf.Helm.ChartPath != nil {
-							chartPath := *deployConf.Helm.ChartPath
-							if chartPath[len(chartPath)-1] != '/' {
-								chartPath += "/"
-							}
+						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != nil {
+							_, err := os.Stat(*deployConf.Helm.Chart.Name)
+							if err == nil {
+								chartPath := *deployConf.Helm.Chart.Name
+								if chartPath[len(chartPath)-1] != '/' {
+									chartPath += "/"
+								}
 
-							paths = append(paths, chartPath+"**")
+								paths = append(paths, chartPath+"**")
+							}
 						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
 							for _, manifestPath := range *deployConf.Kubectl.Manifests {
 								paths = append(paths, *manifestPath)

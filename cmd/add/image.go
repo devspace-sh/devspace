@@ -30,8 +30,8 @@ Add a new image to your DevSpace configuration
 Examples:
 devspace add image my-image --image=dockeruser/devspaceimage2
 devspace add image my-image --image=dockeruser/devspaceimage2 --tag=alpine
-devspace add image my-image --image=dockeruser/devspaceimage2 --context=C:/Path/To/Context
-devspace add image my-image --image=dockeruser/devspaceimage2 --dockerfile=C:/Path/To/Dockerfile
+devspace add image my-image --image=dockeruser/devspaceimage2 --context=./context
+devspace add image my-image --image=dockeruser/devspaceimage2 --dockerfile=./Dockerfile
 devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=docker
 devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=kaniko
 #######################################################

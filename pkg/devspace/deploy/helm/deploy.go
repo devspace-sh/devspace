@@ -6,29 +6,41 @@ import (
 	"path/filepath"
 	"strings"
 
+	yaml "gopkg.in/yaml.v2"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/pkg/errors"
 )
 
 // Deploy deploys the given deployment with helm
 func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
-	releaseName := *d.DeploymentConfig.Name
-	chartPath := *d.DeploymentConfig.Helm.ChartPath
+	var (
+		releaseName = *d.DeploymentConfig.Name
+		chartPath   = *d.DeploymentConfig.Helm.Chart.Name
+		hash        = ""
+	)
+
+	// Retrieve active generated config
 	activeConfig := generatedConfig.GetActive().Deploy
 	if isDev {
 		activeConfig = generatedConfig.GetActive().Dev
 	}
 
-	// Check if the chart directory has changed
-	hash, err := hash.Directory(chartPath)
-	if err != nil {
-		return fmt.Errorf("Error hashing chart directory: %v", err)
+	// Hash the chart directory if there is any
+	_, err := os.Stat(chartPath)
+	if err == nil {
+		// Check if the chart directory has changed
+		hash, err = hashpkg.Directory(chartPath)
+		if err != nil {
+			return fmt.Errorf("Error hashing chart directory: %v", err)
+		}
 	}
 
 	// Ensure deployment config is there
@@ -38,10 +50,10 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 		}
 	}
 
-	// Check if override is unequal to nil
+	// Check values files for changes
 	overrideChanged := false
-	if d.DeploymentConfig.Helm.Overrides != nil {
-		for _, override := range *d.DeploymentConfig.Helm.Overrides {
+	if d.DeploymentConfig.Helm.ValuesFiles != nil {
+		for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
 			stat, err := os.Stat(*override)
 			if err != nil {
 				return fmt.Errorf("Error stating override file: %s", *override)
@@ -54,6 +66,14 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 		}
 	}
 
+	// Check deployment config for changes
+	configStr, err := yaml.Marshal(d.DeploymentConfig)
+	if err != nil {
+		return errors.Wrap(err, "marshal deployment config")
+	}
+
+	deploymentConfigHash := hashpkg.String(string(configStr))
+
 	// Get HelmClient
 	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
 	if err != nil {
@@ -61,7 +81,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 	}
 
 	// Check if redeploying is necessary
-	reDeploy := forceDeploy || activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || overrideChanged
+	reDeploy := forceDeploy || activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash != deploymentConfigHash || overrideChanged
 	if reDeploy == false {
 		releases, err := helmClient.Client.ListReleases()
 		if err != nil {
@@ -88,8 +108,10 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 
 		// Update config
 		activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash = hash
-		if d.DeploymentConfig.Helm.Overrides != nil {
-			for _, override := range *d.DeploymentConfig.Helm.Overrides {
+		activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash = deploymentConfigHash
+
+		if d.DeploymentConfig.Helm.ValuesFiles != nil {
+			for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
 				stat, err := os.Stat(*override)
 				if err != nil {
 					return fmt.Errorf("Error stating override file: %s", *override)
@@ -109,28 +131,36 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	d.Log.StartWait("Deploying helm chart")
 	defer d.Log.StopWait()
 
-	config := configutil.GetConfig()
+	var (
+		config          = configutil.GetConfig()
+		releaseName     = *d.DeploymentConfig.Name
+		chartPath       = *d.DeploymentConfig.Helm.Chart.Name
+		chartValuesPath = filepath.Join(chartPath, "values.yaml")
+		overwriteValues = map[interface{}]interface{}{}
+	)
 
-	// Get release information
-	releaseName := *d.DeploymentConfig.Name
+	// Get release namespace
 	releaseNamespace := ""
 	if d.DeploymentConfig.Namespace != nil {
 		releaseNamespace = *d.DeploymentConfig.Namespace
 	}
 
-	chartPath := *d.DeploymentConfig.Helm.ChartPath
-	// values := map[interface{}]interface{}{}
-	overwriteValues := map[interface{}]interface{}{}
-
-	valuesPath := filepath.Join(chartPath, "values.yaml")
-	err := yamlutil.ReadYamlFromFile(valuesPath, overwriteValues)
-	if err != nil {
-		return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", valuesPath, err)
+	// Check if its a local chart
+	_, err := os.Stat(chartValuesPath)
+	if err == nil {
+		// Get values yaml when chart is locally
+		_, err := os.Stat(chartValuesPath)
+		if err == nil {
+			err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
+			if err != nil {
+				return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
+			}
+		}
 	}
 
 	// Load override values from path
-	if d.DeploymentConfig.Helm.Overrides != nil {
-		for _, overridePath := range *d.DeploymentConfig.Helm.Overrides {
+	if d.DeploymentConfig.Helm.ValuesFiles != nil {
+		for _, overridePath := range *d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath, err := filepath.Abs(*overridePath)
 			if err != nil {
 				return fmt.Errorf("Error retrieving absolute path from %s: %v", *overridePath, err)
@@ -147,27 +177,27 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	// Load override values from data and merge them
-	if d.DeploymentConfig.Helm.OverrideValues != nil {
-		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.OverrideValues)
+	if d.DeploymentConfig.Helm.Values != nil {
+		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.Values)
 	}
 
-	// Replace image names
-	replaceContainerNames(overwriteValues, generatedConfig, isDev)
+	// Add devspace specific values
+	if d.DeploymentConfig.Helm.DevSpaceValues == nil || *d.DeploymentConfig.Helm.DevSpaceValues == true {
+		// Replace image names
+		replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
-	// Set images and pull secrets values
-	overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
-	overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
-
-	wait := true
-	if d.DeploymentConfig.Helm.Wait != nil && *d.DeploymentConfig.Helm.Wait == false {
-		wait = *d.DeploymentConfig.Helm.Wait
+		// Set images and pull secrets values
+		overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
+		overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 	}
 
-	appRelease, err := helmClient.InstallChartByPath(releaseName, releaseNamespace, chartPath, &overwriteValues, wait, d.DeploymentConfig.Helm.Timeout, d.DeploymentConfig.Helm.Force)
+	// Deploy chart
+	appRelease, err := helmClient.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
 		return fmt.Errorf("Unable to deploy helm chart: %v", err)
 	}
 
+	// Print revision
 	if appRelease != nil {
 		releaseRevision := int(appRelease.Version)
 		d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
@@ -217,7 +247,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 		tags = active.Deploy.ImageTags
 	}
 
-	match := func(key, value string) bool {
+	match := func(path, key, value string) bool {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")
@@ -228,7 +258,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, generate
 		return false
 	}
 
-	replace := func(value string) interface{} {
+	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")

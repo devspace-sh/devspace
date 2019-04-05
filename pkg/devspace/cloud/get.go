@@ -3,6 +3,8 @@ package cloud
 import (
 	"errors"
 	"fmt"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 )
 
 // Space holds the information about a space in the cloud
@@ -42,21 +44,9 @@ type Registry struct {
 	OwnerID    *int   `json:"owner_id"`
 }
 
-// ClaimSet is the auth token claim set type
-type ClaimSet struct {
-	Subject string `json:"sub"`
-}
-
-// Token describes a JSON Web Token.
-type Token struct {
-	Raw       string
-	Claims    *ClaimSet
-	Signature []byte
-}
-
 // GetAccountName retrieves the account name for the current user
 func (p *Provider) GetAccountName() (string, error) {
-	token, err := ParseTokenClaims(p.Token)
+	token, err := token.ParseTokenClaims(p.Token)
 	if err != nil {
 		return "", err
 	}
@@ -103,13 +93,13 @@ func (p *Provider) GetClusters() ([]*Cluster, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query {
-		cluster {
-		  id
-		  owner_id
-		  name
-		  server
-		  ca_cert
-		}
+			cluster {
+				id
+				owner_id
+				name
+				server
+				ca_cert
+			}
 	  }
 	`, nil, &response)
 	if err != nil {
@@ -134,12 +124,12 @@ func (p *Provider) GetProjects() ([]*Project, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query {
-		project {
-		  id
-		  owner_id
-		  cluster_id
-		  name
-		}
+			project {
+				id
+				owner_id
+				cluster_id
+				name
+			}
 	  }
 	`, nil, &response)
 	if err != nil {
@@ -181,26 +171,26 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query {
-		space {
-		  id
-		  name
-		  
-		  kubeContextBykubeContextId {
-			namespace
-			service_account_token
-			
-			clusterByclusterId {
-			  ca_cert
-			  server
+			space {
+				id
+				name
+				
+				kubeContextBykubeContextId {
+					namespace
+					service_account_token
+					
+					clusterByclusterId {
+						ca_cert
+						server
+					}
+					
+					kubeContextDomainsBykubeContextId(limit:1) {
+						url
+					}
+				}
+				
+				created_at
 			}
-			
-			kubeContextDomainsBykubeContextId(limit:1) {
-			  url
-			}
-		  }
-		  
-		  created_at
-		}
 	  }
 	`, nil, &response)
 	if err != nil {
@@ -268,26 +258,26 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query($ID:Int!) {
-		space_by_pk(id:$ID) {
-		  id
-		  name
-		  
-		  kubeContextBykubeContextId {
-			namespace
-			service_account_token
-			
-			clusterByclusterId {
-			  ca_cert
-			  server
+			space_by_pk(id:$ID) {
+				id
+				name
+				
+				kubeContextBykubeContextId {
+					namespace
+					service_account_token
+					
+					clusterByclusterId {
+						ca_cert
+						server
+					}
+					
+					kubeContextDomainsBykubeContextId(limit:1) {
+						url
+					}
+				}
+				
+				created_at
 			}
-			
-			kubeContextDomainsBykubeContextId(limit:1) {
-			  url
-			}
-		  }
-		  
-		  created_at
-		}
 	  }
 	`, map[string]interface{}{
 		"ID": spaceID,
@@ -353,26 +343,26 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 	// Do the request
 	err := p.GrapqhlRequest(`
 	  query($name:String!) {
-		space(where:{name:{_eq:$name}},limit:1){
-		  id
-		  name
-		  
-		  kubeContextBykubeContextId {
-			namespace
-			service_account_token
-			
-			clusterByclusterId {
-			  ca_cert
-			  server
+			space(where:{name:{_eq:$name}},limit:1){
+				id
+				name
+				
+				kubeContextBykubeContextId {
+					namespace
+					service_account_token
+					
+					clusterByclusterId {
+						ca_cert
+						server
+					}
+					
+					kubeContextDomainsBykubeContextId(limit:1) {
+						url
+					}
+				}
+				
+				created_at
 			}
-			
-			kubeContextDomainsBykubeContextId(limit:1) {
-			  url
-			}
-		  }
-		  
-		  created_at
-		}
 	  }
 	`, map[string]interface{}{
 		"name": spaceName,

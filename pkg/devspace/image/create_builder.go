@@ -44,12 +44,7 @@ func CreateBuilder(client *kubernetes.Clientset, generatedConfig *generated.Conf
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
-		lastImageTag := generatedConfig.GetActive().Deploy.ImageTags[*imageConf.Image]
-		if isDev {
-			lastImageTag = generatedConfig.GetActive().Dev.ImageTags[*imageConf.Image]
-		}
-
-		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Image, imageTag, lastImageTag, buildNamespace, dockerClient, client, allowInsecurePush)
+		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Image, imageTag, buildNamespace, imageConf.Build.Kaniko, dockerClient, client, allowInsecurePush)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
 		}

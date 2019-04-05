@@ -11,10 +11,11 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
-	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // ComponentsRepoURL is the repository url
@@ -40,11 +41,11 @@ type ComponentSchema struct {
 // VarMatchRegex is the regex to check if a value matches the devspace var format
 var VarMatchRegex = regexp.MustCompile("^(.*)(\\$\\{[^\\}]+\\})(.*)$")
 
-func (c *ComponentSchema) varMatchFn(key, value string) bool {
+func (c *ComponentSchema) varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
-func (c *ComponentSchema) varReplaceFn(value string) interface{} {
+func (c *ComponentSchema) varReplaceFn(path, value string) interface{} {
 	matched := VarMatchRegex.FindStringSubmatch(value)
 	if len(matched) != 4 {
 		return ""
@@ -72,12 +73,10 @@ func (c *ComponentSchema) varReplaceFn(value string) interface{} {
 	retValue := matched[1] + c.VariableValues[varName] + matched[3]
 
 	// Check if we can convert configVal
-	if retValue == "true" {
-		return true
-	} else if retValue == "false" {
-		return false
-	} else if i, err := strconv.Atoi(retValue); err == nil {
+	if i, err := strconv.Atoi(retValue); err == nil {
 		return i
+	} else if b, err := strconv.ParseBool(retValue); err == nil {
+		return b
 	}
 
 	return retValue
@@ -110,18 +109,8 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 	c.VariableValues[*variable.Name] = *stdinutil.GetFromStdin(params)
 }
 
-// ComponentTemplateSchema is the component template schema
-type ComponentTemplateSchema struct {
-	Components []map[interface{}]interface{} `yaml:"components"`
-	Volumes    []map[interface{}]interface{} `yaml:"volumes"`
-}
-
 // NewComponentGenerator creates a new component generator for the given path
-func NewComponentGenerator(localChartPath string) (*ComponentsGenerator, error) {
-	if localChartPath == "" {
-		localChartPath = "."
-	}
-
+func NewComponentGenerator() (*ComponentsGenerator, error) {
 	homedir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -134,8 +123,7 @@ func NewComponentGenerator(localChartPath string) (*ComponentsGenerator, error) 
 	}
 
 	return &ComponentsGenerator{
-		LocalPath: localChartPath,
-		gitRepo:   gitRepository,
+		gitRepo: gitRepository,
 	}, nil
 }
 
@@ -186,7 +174,7 @@ func (cg *ComponentsGenerator) GetComponent(name string) (*ComponentSchema, erro
 }
 
 // GetComponentTemplate retrieves a component templates
-func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*ComponentTemplateSchema, error) {
+func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.ComponentConfig, error) {
 	component, err := cg.GetComponent(name)
 	if err != nil {
 		return nil, err
@@ -215,7 +203,7 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*ComponentTemp
 		return nil, fmt.Errorf("Error resolving variables: %v", err)
 	}
 
-	componentTemplate := &ComponentTemplateSchema{}
+	componentTemplate := &latest.ComponentConfig{}
 	err = yaml.UnmarshalStrict(yamlFileContent, componentTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("Error unmarshalling yaml: %v", err)

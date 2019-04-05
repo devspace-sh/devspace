@@ -2,38 +2,23 @@ package cmd
 
 import (
 	"os"
-	"runtime"
 	"path/filepath"
+	"runtime"
 
 	"github.com/devspace-cloud/devspace/pkg/util/envutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	helmClient "github.com/devspace-cloud/devspace/pkg/devspace/helm"
-
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
 )
 
 // InstallCmd is a struct that defines a command call for "install"
-type InstallCmd struct {
-	flags    *InstallCmdFlags
-	helm     *helmClient.ClientWrapper
-	kubectl  *kubernetes.Clientset
-	dsConfig *v1.DevConfig
-}
+type InstallCmd struct{}
 
-// InstallCmdFlags are the flags available for the install-command
-type InstallCmdFlags struct {
-}
+// NewInstallCmd creates a new install command
+func NewInstallCmd() *cobra.Command {
+	cmd := &InstallCmd{}
 
-func init() {
-	cmd := &InstallCmd{
-		flags: &InstallCmdFlags{},
-	}
-
-	cobraCmd := &cobra.Command{
+	installCmd := &cobra.Command{
 		Use:   "install",
 		Short: "Installs the DevSpace CLI",
 		Long: `
@@ -46,7 +31,8 @@ variable.
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
-	rootCmd.AddCommand(cobraCmd)
+
+	return installCmd
 }
 
 // Run executes the command logic

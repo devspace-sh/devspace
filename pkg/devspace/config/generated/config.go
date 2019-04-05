@@ -32,9 +32,9 @@ type CloudSpaceConfig struct {
 
 // DevSpaceConfig holds all the information specific to a certain config
 type DevSpaceConfig struct {
-	Dev    CacheConfig            `yaml:"dev,omitempty"`
-	Deploy CacheConfig            `yaml:"deploy,omitempty"`
-	Vars   map[string]interface{} `yaml:"vars,omitempty"`
+	Dev    CacheConfig       `yaml:"dev,omitempty"`
+	Deploy CacheConfig       `yaml:"deploy,omitempty"`
+	Vars   map[string]string `yaml:"vars,omitempty"`
 }
 
 // CacheConfig holds the information if things have to be redeployed or rebuild
@@ -49,6 +49,7 @@ type CacheConfig struct {
 type DeploymentConfig struct {
 	HelmOverrideTimestamps map[string]int64 `yaml:"helmOverrideTimestamps"`
 	HelmChartHash          string           `yaml:"helmChartHash"`
+	DeploymentConfigHash   uint32           `yaml:"deploymentConfigHash"`
 }
 
 // ConfigPath is the relative generated config path
@@ -112,7 +113,7 @@ func InitDevSpaceConfig(config *Config, configName string) {
 				DockerContextPaths:   make(map[string]string),
 				ImageTags:            make(map[string]string),
 			},
-			Vars: make(map[string]interface{}),
+			Vars: make(map[string]string),
 		}
 
 		return
@@ -143,7 +144,7 @@ func InitDevSpaceConfig(config *Config, configName string) {
 		config.Configs[configName].Deploy.Deployments = make(map[string]*DeploymentConfig)
 	}
 	if config.Configs[configName].Vars == nil {
-		config.Configs[configName].Vars = make(map[string]interface{})
+		config.Configs[configName].Vars = make(map[string]string)
 	}
 }
 

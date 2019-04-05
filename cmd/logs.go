@@ -11,15 +11,14 @@ import (
 
 // LogsCmd holds the logs cmd flags
 type LogsCmd struct {
-	selector          string
-	namespace         string
-	labelSelector     string
-	container         string
-	pod               string
-	config            string
-	pick              bool
-	follow            bool
-	lastAmountOfLines int
+	Selector          string
+	Namespace         string
+	LabelSelector     string
+	Container         string
+	Pod               string
+	Pick              bool
+	Follow            bool
+	LastAmountOfLines int
 }
 
 // NewLogsCmd creates a new login command
@@ -45,26 +44,20 @@ devspace logs --namespace=mynamespace
 		Run:  cmd.RunLogs,
 	}
 
-	logsCmd.Flags().StringVarP(&cmd.selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
-	logsCmd.Flags().StringVarP(&cmd.container, "container", "c", "", "Container name within pod where to execute command")
-	logsCmd.Flags().StringVar(&cmd.pod, "pod", "", "Pod to print the logs of")
-	logsCmd.Flags().StringVarP(&cmd.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	logsCmd.Flags().StringVarP(&cmd.namespace, "namespace", "n", "", "Namespace where to select pods")
-	logsCmd.Flags().BoolVarP(&cmd.pick, "pick", "p", false, "Select a pod to stream logs from")
-	logsCmd.Flags().BoolVarP(&cmd.follow, "follow", "f", false, "Attach to logs afterwards")
-	logsCmd.Flags().IntVar(&cmd.lastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
-	logsCmd.Flags().StringVar(&cmd.config, "config", configutil.ConfigPath, "The devspace config file to load (default: '.devspace/config.yaml'")
+	logsCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
+	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
+	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
+	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	logsCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
+	logsCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
+	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
+	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 
 	return logsCmd
 }
 
 // RunLogs executes the functionality devspace logs
 func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	if configutil.ConfigPath != cmd.config {
-		configutil.ConfigPath = cmd.config
-	}
-
 	// Set config root
 	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -79,27 +72,27 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 
 	// Build params
 	params := targetselector.CmdParameter{}
-	if cmd.selector != "" {
-		params.Selector = &cmd.selector
+	if cmd.Selector != "" {
+		params.Selector = &cmd.Selector
 	}
-	if cmd.container != "" {
-		params.ContainerName = &cmd.container
+	if cmd.Container != "" {
+		params.ContainerName = &cmd.Container
 	}
-	if cmd.labelSelector != "" {
-		params.LabelSelector = &cmd.labelSelector
+	if cmd.LabelSelector != "" {
+		params.LabelSelector = &cmd.LabelSelector
 	}
-	if cmd.namespace != "" {
-		params.Namespace = &cmd.namespace
+	if cmd.Namespace != "" {
+		params.Namespace = &cmd.Namespace
 	}
-	if cmd.pod != "" {
-		params.PodName = &cmd.pod
+	if cmd.Pod != "" {
+		params.PodName = &cmd.Pod
 	}
-	if cmd.pick != false {
-		params.Pick = &cmd.pick
+	if cmd.Pick != false {
+		params.Pick = &cmd.Pick
 	}
 
 	// Start terminal
-	err = services.StartLogs(kubectl, params, cmd.follow, int64(cmd.lastAmountOfLines), log.GetInstance())
+	err = services.StartLogs(kubectl, params, cmd.Follow, int64(cmd.LastAmountOfLines), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

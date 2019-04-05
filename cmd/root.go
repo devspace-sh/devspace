@@ -60,6 +60,13 @@ func init() {
 	rootCmd.AddCommand(update.NewUpdateCmd())
 
 	// Add main commands
+	rootCmd.AddCommand(NewInitCmd())
+	rootCmd.AddCommand(NewDevCmd())
+	rootCmd.AddCommand(NewInstallCmd())
+	rootCmd.AddCommand(NewPurgeCmd())
+	rootCmd.AddCommand(NewUpgradeCmd())
+	rootCmd.AddCommand(NewDeployCmd())
+	rootCmd.AddCommand(NewEnterCmd())
 	rootCmd.AddCommand(NewLoginCmd())
 	rootCmd.AddCommand(NewAnalyzeCmd())
 	rootCmd.AddCommand(NewLogsCmd())

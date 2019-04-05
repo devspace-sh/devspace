@@ -83,7 +83,7 @@ require (
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
-	github.com/russross/blackfriday v1.5.1
+	github.com/russross/blackfriday v1.5.1 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.0.6
@@ -122,7 +122,7 @@ require (
 	k8s.io/apiserver v0.0.0-20181204001702-9caa0299108f // indirect
 	k8s.io/cli-runtime v0.0.0-20181121073402-2f0d1d0a58f2 // indirect
 	k8s.io/client-go v10.0.0+incompatible
-	k8s.io/helm v2.12.3+incompatible
+	k8s.io/helm v2.13.1+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20181114233023-0317810137be // indirect
 	k8s.io/kubernetes v1.13.0

@@ -7,17 +7,17 @@ jobs:
   - stage: test
     go_import_path: github.com/devspace-cloud/devspace
     install:
-      - npm install -g codeclimate-test-reporter
+    - npm install -g codeclimate-test-reporter
     os: linux
     go: 1.11.4
     cache:
       directories:
-        - ./vendor
-        - $HOME/.cache/go-build
+      - "./vendor"
+      - "$HOME/.cache/go-build"
     script:
-      - ./scripts/coverage.bash
+    - "./scripts/coverage.bash"
     after_success:
-      - codeclimate-test-reporter < coverage.txt
+    - codeclimate-test-reporter < coverage.txt
   - go: 1.11.4
     os: osx
     stage: deploy
@@ -45,13 +45,25 @@ jobs:
       - release/devspace-linux-ppc64.sha256
       - release/devspace-linux-ppc64le
       - release/devspace-linux-ppc64le.sha256
-#      - release/devspace-freebsd-amd64
-#      - release/devspace-freebsd-amd64.sha256
-#      - release/devspace-freebsd-386
-#      - release/devspace-freebsd-386.sha256
       skip_cleanup: true
       api_key:
-        secure: "KGCqYQmeEirDMoghu88D4hzUaG6ypBIFlY+QBtqlvyIbjbkyoOJ2cYJlcGG3SVssnXHgNQFGa8OZJosjVysNQorYY2P4ckF/V0GM+u0mSAeRcSSrorMOL6c8UQEY5695st2VqZBFtlpW7mNo75pU6Xgkcqhxb4/j/aj0I/+vhHbakFAQXcC6iMsuKQqRkXsh7g/G5/xgc2oxxK7dcfbJqC4QeUddKX0bZdLyml4yVrrI9XR/7bS1h+Q5S6ZyJ2EO3HRE7h6hAuGU21R4lrzRpDJh7Kopg4Fo6zqrU8lF3/Gw+RtmkWGoo6tXn+r6+HBu8xSbkw0NhGdL2iKraE2pOkRDlYZsR1XTNM5WKRMx+cZGY0OJT+Q04/5hs8uIuGwEATOZ2IAj2AWMba750Hx5h18dyLijpvSjNPtPo+ki0MYbMyYuZtlQDqvBfOclLfKoScsHz9ffGf0oz7p9/Z0riLIaMLmQXY5Zq3OSXATnXBAfgwtOppgR1foUKYb0P92uPePYIsmZN+p2HZDgS1nP2++Mg33BCLf+HUVhyekGc+wLbcEZTz49FCPjDRhGZz7FGe1ovvnYmtr00gaUcR6pq2nJGackkTOeuggu5ahmcc6xtFBxRT/JHi+LCeoqESsi6mvF7QEK4Widpn+sFwbAZlhGUVzhYnwfDNM9RK1pF+Q="
+        secure: KGCqYQmeEirDMoghu88D4hzUaG6ypBIFlY+QBtqlvyIbjbkyoOJ2cYJlcGG3SVssnXHgNQFGa8OZJosjVysNQorYY2P4ckF/V0GM+u0mSAeRcSSrorMOL6c8UQEY5695st2VqZBFtlpW7mNo75pU6Xgkcqhxb4/j/aj0I/+vhHbakFAQXcC6iMsuKQqRkXsh7g/G5/xgc2oxxK7dcfbJqC4QeUddKX0bZdLyml4yVrrI9XR/7bS1h+Q5S6ZyJ2EO3HRE7h6hAuGU21R4lrzRpDJh7Kopg4Fo6zqrU8lF3/Gw+RtmkWGoo6tXn+r6+HBu8xSbkw0NhGdL2iKraE2pOkRDlYZsR1XTNM5WKRMx+cZGY0OJT+Q04/5hs8uIuGwEATOZ2IAj2AWMba750Hx5h18dyLijpvSjNPtPo+ki0MYbMyYuZtlQDqvBfOclLfKoScsHz9ffGf0oz7p9/Z0riLIaMLmQXY5Zq3OSXATnXBAfgwtOppgR1foUKYb0P92uPePYIsmZN+p2HZDgS1nP2++Mg33BCLf+HUVhyekGc+wLbcEZTz49FCPjDRhGZz7FGe1ovvnYmtr00gaUcR6pq2nJGackkTOeuggu5ahmcc6xtFBxRT/JHi+LCeoqESsi6mvF7QEK4Widpn+sFwbAZlhGUVzhYnwfDNM9RK1pF+Q=
+      on:
+        repo: devspace-cloud/devspace
+        branch: master
+        tags: true
+  - stage: Publish
+    language: node_js
+    node_js:
+    - "8"
+    before_install:
+    - cd dist/npm
+    deploy:
+      provider: npm
+      email: "npm@devspace.cloud"
+      api_key:
+        secure: "Kd7IOVSD01t1kr02heF5hk3HfE4hWm0Sl6PI2jiCYK2tyrIE7OnS/qFs6k6LFQroXga0bXO7uk3a1XPzmQ4ASY7+2+g7BYUgvp5xcwerYEJNM/g9xc8yfxx2DRM4WGozNxfMao/2Bf0IiWPwpbZ9FX9g0k4ahjtg621juQbeSorFcEa5lZ5Ka5sz/FxqrP02IoX62sFVLI6V5Ua7I1tFYQX60Ml2FWhNUwzfIQROPmPpwv12inUoJWkiyidSgJvIk/i44Taqzn23emW++ajOeFrpNzLiB+8T9apeoG01oaYPY3rVe5irTP2jdhJZ23+pSdLoSHzdjhwh5C9dTSnglWXU4A5tHYqAnznqSrKQXOjUDFswnAQLKJocSW3V5ZrnXFnKa6FEjqaAiowaALpwy0QkqWNPJfBPignn7ZW9/GSSig7DvR+aYma6+FGotC6JAag7S4yzKiw5G1adCKOzG34vzufyvCcsV/WFLrC9TdjRVn8M3zUNuQpPy3F4m4o0WTi8ial4jyCPqRP2vRja5tErpfCjcnJFCFul2e3grZBUP22ZjGFFbZxKtveJ3sQVa5DGr6pNnU8HFa6BdKl7++Ek3sIcIDvS6ZwggzfPcxOir7QfkVybAbWNp4OTs4PFIGHrOIPBFTJ9Xai86s4oQUCW8+NzDqISRDZhaFfjx4I="
+      skip_cleanup: true
       on:
         repo: devspace-cloud/devspace
         branch: master

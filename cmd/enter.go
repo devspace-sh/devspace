@@ -11,27 +11,20 @@ import (
 
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
-	flags *EnterCmdFlags
+	Selector      string
+	Namespace     string
+	LabelSelector string
+	Container     string
+	Pod           string
+	SwitchContext bool
+	Pick          bool
 }
 
-// EnterCmdFlags are the flags available for the enter-command
-type EnterCmdFlags struct {
-	selector      string
-	namespace     string
-	labelSelector string
-	container     string
-	pod           string
-	switchContext bool
-	pick          bool
-	config        string
-}
+// NewEnterCmd creates a new init command
+func NewEnterCmd() *cobra.Command {
+	cmd := &EnterCmd{}
 
-func init() {
-	cmd := &EnterCmd{
-		flags: &EnterCmdFlags{},
-	}
-
-	cobraCmd := &cobra.Command{
+	enterCmd := &cobra.Command{
 		Use:   "enter",
 		Short: "Open a shell to a container",
 		Long: `
@@ -51,25 +44,20 @@ devspace enter bash -l release=test
 #######################################################`,
 		Run: cmd.Run,
 	}
-	rootCmd.AddCommand(cobraCmd)
 
-	cobraCmd.Flags().StringVarP(&cmd.flags.selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
-	cobraCmd.Flags().StringVarP(&cmd.flags.container, "container", "c", "", "Container name within pod where to execute command")
-	cobraCmd.Flags().StringVar(&cmd.flags.pod, "pod", "", "Pod to open a shell to")
-	cobraCmd.Flags().StringVarP(&cmd.flags.labelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	cobraCmd.Flags().StringVarP(&cmd.flags.namespace, "namespace", "n", "", "Namespace where to select pods")
-	cobraCmd.Flags().BoolVar(&cmd.flags.switchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.pick, "pick", "p", false, "Select a pod to stream logs from")
-	cobraCmd.Flags().StringVar(&cmd.flags.config, "config", configutil.ConfigPath, "The DevSpace config file to load (default: '.devspace/config.yaml'")
+	enterCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
+	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
+	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	enterCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
+	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
+	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
+
+	return enterCmd
 }
 
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	if configutil.ConfigPath != cmd.flags.config {
-		configutil.ConfigPath = cmd.flags.config
-	}
-
 	// Set config root
 	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -77,30 +65,30 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get kubectl client
-	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.flags.switchContext)
+	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Build params
 	params := targetselector.CmdParameter{}
-	if cmd.flags.selector != "" {
-		params.Selector = &cmd.flags.selector
+	if cmd.Selector != "" {
+		params.Selector = &cmd.Selector
 	}
-	if cmd.flags.container != "" {
-		params.ContainerName = &cmd.flags.container
+	if cmd.Container != "" {
+		params.ContainerName = &cmd.Container
 	}
-	if cmd.flags.labelSelector != "" {
-		params.LabelSelector = &cmd.flags.labelSelector
+	if cmd.LabelSelector != "" {
+		params.LabelSelector = &cmd.LabelSelector
 	}
-	if cmd.flags.namespace != "" {
-		params.Namespace = &cmd.flags.namespace
+	if cmd.Namespace != "" {
+		params.Namespace = &cmd.Namespace
 	}
-	if cmd.flags.pod != "" {
-		params.PodName = &cmd.flags.pod
+	if cmd.Pod != "" {
+		params.PodName = &cmd.Pod
 	}
-	if cmd.flags.pick != false {
-		params.Pick = &cmd.flags.pick
+	if cmd.Pick != false {
+		params.Pick = &cmd.Pick
 	}
 
 	// Start terminal

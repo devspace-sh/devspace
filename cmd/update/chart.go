@@ -1,6 +1,8 @@
 package update
 
 import (
+	"os"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
@@ -105,16 +107,24 @@ func (cmd *chartCmd) RunChart(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Check if the chart is there
+	chartPath := *helmDeployment.Helm.Chart.Name
+	_, err = os.Stat(chartPath)
+	if err != nil {
+		log.Fatalf("Chart %s is not a local chart path", chartPath)
+	}
+
 	// Create chart generator
-	chartGenerator, err := generator.NewChartGenerator(*helmDeployment.Helm.ChartPath)
+	chartGenerator, err := generator.NewChartGenerator(chartPath)
 	if err != nil {
 		log.Fatalf("Error initializing chart generator: %v", err)
 	}
 
+	// Update the chart
 	err = chartGenerator.Update(cmd.Force)
 	if err != nil {
-		log.Fatalf("Error updating chart %s: %v", *helmDeployment.Helm.ChartPath, err)
+		log.Fatalf("Error updating chart %s: %v", chartPath, err)
 	}
 
-	log.Donef("Successfully updated chart %s", *helmDeployment.Helm.ChartPath)
+	log.Donef("Successfully updated chart %s", chartPath)
 }

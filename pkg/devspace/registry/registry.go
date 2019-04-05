@@ -30,10 +30,10 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 	}
 
 	authToken := passwordOrToken
-
 	if username != "" {
 		authToken = username + ":" + authToken
 	}
+
 	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(authToken))
 	pullSecretDataValue := []byte(`{
 			"auths": {
@@ -55,8 +55,8 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 		Data: pullSecretData,
 		Type: k8sv1.SecretTypeDockerConfigJson,
 	}
-	_, err := kubectl.Core().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
 
+	_, err := kubectl.Core().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
 		if err != nil {
@@ -72,7 +72,6 @@ func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, use
 	}
 
 	pullSecretNames = append(pullSecretNames, pullSecretName)
-
 	return nil
 }
 
