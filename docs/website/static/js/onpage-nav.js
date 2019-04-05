@@ -8,6 +8,20 @@ const highlightActiveOnPageLink = function() {
 
         if (location.hash.length > 0) {
             activeHash = location.hash.substr(1);
+
+            const activeAnchors = document.querySelectorAll(".anchor[id='" + activeHash + "'");
+
+            if (activeAnchors.length > 0) {
+                for (let i = 0; i < activeAnchors.length; i++) {
+                    let activeAnchor = activeAnchors[i];
+
+                    for ( ; activeAnchor && activeAnchor !== document; activeAnchor = activeAnchor.parentElement ) {
+                        if (activeAnchor.tagName == "DETAILS") {
+                            activeAnchor.open = true;
+                        }
+                    }
+                }
+            }
         }
         window.addEventListener('scroll', highlightActiveOnPageLink);
     }
