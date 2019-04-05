@@ -9,6 +9,7 @@
     "Workflow & Basics": [
         "workflow-basics/containerization",
         "workflow-basics/deployment",
+        "workflow-basics/deployment/domains",
         "workflow-basics/development",
         "workflow-basics/debugging",
         "workflow-basics/debugging/analyze",
