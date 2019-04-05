@@ -36,7 +36,7 @@ if (action == "noop") {
     process.exit(0);
 }
 
-const packageJsonPath = path.join(".", "package.json");
+const packageJsonPath = path.join(__dirname, "package.json");
 if (!fs.existsSync(packageJsonPath)) {
     console.error("Unable to find package.json");
     return;
@@ -102,21 +102,13 @@ exec("npm bin", function(err, stdout, stderr) {
         binaryPath = process.argv[3];
     }
 
-    if (platform == "windows") {
-        try {
-            fs.unlinkSync(binaryPath);
-        } catch(e) {}
-    } else {
-        if (action == "uninstall") {
-            try {
-                fs.unlinkSync(binaryPath);
-            } catch(e) {}
-        }
-
-        if (action == "install") {
-            process.exit(0);
-        }
+    if (platform != "windows" && action == "install") {
+        process.exit(0);
     }
+
+    try {
+        fs.unlinkSync(binaryPath);
+    } catch(e) {}
 
     if (action == "install" || action == "force-install") {
         console.log("Download DevSpace CLI release: " + downloadPath + "\n");
