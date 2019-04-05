@@ -1,5 +1,32 @@
 var firstCall = true;
 
+const highlightDetailsOnActiveHash = function(activeHash, doNotOpen) {
+    const activeAnchors = document.querySelectorAll(".anchor[id='" + activeHash + "'");
+    const detailsElements = document.querySelectorAll("details");
+
+    for (let i = 0; i < detailsElements.length; i++) {
+        let detailsElement = detailsElements[i];
+
+        detailsElement.classList.remove("active");
+    }
+
+    if (activeAnchors.length > 0) {
+        for (let i = 0; i < activeAnchors.length; i++) {
+            let element = activeAnchors[i];
+
+            for ( ; element && element !== document; element = element.parentElement ) {
+                if (element.tagName == "DETAILS") {
+                    element.classList.add("active");
+
+                    if (!doNotOpen) {
+                        element.open = true;
+                    }
+                }
+            }
+        }
+    }
+};
+
 const highlightActiveOnPageLink = function() {
     var activeHash;
 
@@ -9,19 +36,7 @@ const highlightActiveOnPageLink = function() {
         if (location.hash.length > 0) {
             activeHash = location.hash.substr(1);
 
-            const activeAnchors = document.querySelectorAll(".anchor[id='" + activeHash + "'");
-
-            if (activeAnchors.length > 0) {
-                for (let i = 0; i < activeAnchors.length; i++) {
-                    let activeAnchor = activeAnchors[i];
-
-                    for ( ; activeAnchor && activeAnchor !== document; activeAnchor = activeAnchor.parentElement ) {
-                        if (activeAnchor.tagName == "DETAILS") {
-                            activeAnchor.open = true;
-                        }
-                    }
-                }
-            }
+            highlightDetailsOnActiveHash(activeHash);
         }
         window.addEventListener('scroll', highlightActiveOnPageLink);
     }
@@ -65,4 +80,25 @@ const highlightActiveOnPageLink = function() {
     }
 };
 
+const hashLinkClickSet = false;
+
+const allowHashLinkClick = function() {
+    if (!hashLinkClickSet) {
+        const hashLinkIcons = document.querySelectorAll(".hash-link-icon");
+        
+        for (let i = 0; i < hashLinkIcons.length; i++) {
+            const hashLinkIcon = hashLinkIcons[i];
+            hashLinkIcon.addEventListener("mousedown", function() {
+                history.pushState(null, null, hashLinkIcon.parentElement.attributes.href.value);
+                highlightActiveOnPageLink();
+                highlightDetailsOnActiveHash(location.hash.substr(1), true);
+            });
+        }
+    }
+};
+
+window.addEventListener('DOMContentLoaded', allowHashLinkClick);
 window.addEventListener('DOMContentLoaded', highlightActiveOnPageLink);
+window.addEventListener('popstate', function (event) {
+    highlightDetailsOnActiveHash(location.hash.substr(1));
+}, false);

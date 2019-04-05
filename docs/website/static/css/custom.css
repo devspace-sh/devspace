@@ -44,6 +44,11 @@ body details,
     box-shadow: 0 0 20px rgba(35,51,102,.2);
 }
 
+body details.active {
+    margin-left: -5px;
+    border-left: solid 5px #1c65f7d3;
+}
+
 small {
     font-size: 0.8em;
 }
