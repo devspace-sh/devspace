@@ -96,13 +96,33 @@ exec("npm bin", function(err, stdout, stderr) {
 
     if (dir == null) callback("Error finding binary installation directory");
 
-    const binaryPath = path.join(dir, binaryName);
+    let binaryPath = path.join(dir, binaryName);
 
-    try {
-        fs.unlinkSync(binaryPath);
-    } catch(e) {}
+    if (process.argv.length > 3) {
+        binaryPath = process.argv[3];
+    }
 
-    if (action == "install") {
+    console.log(binaryPath)
+
+    if (platform == "windows") {
+        try {
+            fs.unlinkSync(binaryPath);
+        } catch(e) {}
+    } else {
+        if (action == "uninstall") {
+            try {
+                fs.unlinkSync(binaryPath);
+            } catch(e) {}
+        }
+
+        if (action == "install") {
+            process.exit(0);
+        }
+    }
+
+    if (action == "install" || action == "force-install") {
+        console.log("Download DevSpace CLI release: " + downloadPath + "\n");
+
         const spinner = new Spinner('%s Downloading DevSpace CLI... (this may take a minute)');
         spinner.setSpinnerString('|/-\\');
         spinner.start();
@@ -127,7 +147,7 @@ exec("npm bin", function(err, stdout, stderr) {
             })
             .on('response', function(res) {
                 try {
-                    var writeStream = fs.createWriteStream(binaryPath)
+                    let writeStream = fs.createWriteStream(binaryPath)
                         .on('error', function(err) {
                             showRootError();
                         });

@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+NPM_GLOBAL_DIR="$(npm root -g)"
+
+/usr/bin/env node $NPM_GLOBAL_DIR/devspace/index.js force-install $0 && $0 "$@"

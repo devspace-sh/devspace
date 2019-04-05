@@ -1,7 +1,10 @@
 {
     "name": "devspace",
-    "version": "0.0.1",
+    "version": "3.3.0",
     "description": "DevSpace CLI - the swiss-army knife for Kubernetes. DevSpace CLI accelerates developing, deploying and debugging applications with Docker and Kubernetes.",
+    "bin": {
+        "devspace": "bin/devspace"
+    },
     "main": "index.js",
     "repository": {
         "type": "git",
