@@ -12,7 +12,6 @@ window.addEventListener('load', function() {
 
   function onResize() {
     width = window.innerWidth;
-    console.log("resize")
 
     var liActive = document.getElementsByClassName("hamburger-active").length;
 
