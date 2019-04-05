@@ -18,21 +18,34 @@
     content: "DevSpace Cloud";
 }
 
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::after {
+.navGroups .navGroup .navListItem::after {
     content: " ";
     display: block;
     width: 13px;
     height: 2px;
     position: absolute;
-    top: 10px;
+    top: 14px;
     background: #e7edf1;
 }
 
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after {
-    top: 14px;
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(3)::after,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n+6)::after,
+.navGroups .navGroup:nth-child(5) .navListItem::after {
+    display: none;
+}
+
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::after,
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::after,
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::after {
+    display: block;
+    top: 18px;
+}
+
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1),
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5),
+.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9) {
+    margin-top: -3px;
+    padding-top: 3px;
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
@@ -40,9 +53,10 @@
 .navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::before,
 .navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::before {
     display: block;
-    margin: 0.8em 0 0 23px;
+    margin: 5px 0 0 23px;
     font-size: 14px;
     font-weight: 600;
+    margin-bottom: 6px;
 }
 
 .navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::before {
@@ -57,7 +71,8 @@
     content: "Configure containers";
 }
 
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n+5) .navItem,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(3) .navItem,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n+6) .navItem,
 .navGroups .navGroup:nth-child(5) .navListItem .navItem {
     padding-left: 36px;
 }
@@ -80,8 +95,6 @@
 
 .navGroups .navGroup .navItem {
     position: relative;
-    margin-top: 2px;
-    margin-bottom: 2px;
     padding: 3px;
     padding-left: 23px;
 }
