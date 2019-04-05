@@ -102,8 +102,6 @@ exec("npm bin", function(err, stdout, stderr) {
         binaryPath = process.argv[3];
     }
 
-    console.log(binaryPath)
-
     if (platform == "windows") {
         try {
             fs.unlinkSync(binaryPath);
