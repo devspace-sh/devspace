@@ -139,8 +139,12 @@ exec("npm bin", function(err, stdout, stderr) {
             console.error("############################################\n");
             process.exit(1);
         };
+        let writeStream = fs.createWriteStream(binaryPath)
+            .on('error', function(err) {
+                showRootError();
+            });
 
-        request({uri: downloadPath, headers: requestHeaders})
+        request({uri: downloadPath, headers: requestHeaders, encoding: null})
             .on('error', function() {
                 spinner.stop(true);
                 console.error("Error requesting URL: " + downloadPath);
@@ -148,16 +152,13 @@ exec("npm bin", function(err, stdout, stderr) {
             })
             .on('response', function(res) {
                 try {
-                    let writeStream = fs.createWriteStream(binaryPath)
-                        .on('error', function(err) {
-                            showRootError();
-                        });
                     res.pipe(writeStream);
                 } catch(e) {
                     showRootError();
                 }
             })
             .on('end', function() {
+                writeStream.end();
                 spinner.stop(true);
 
                 try {
