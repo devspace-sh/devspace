@@ -4,4 +4,8 @@ NPM_GLOBAL_DIR="$(npm root -g)"
 
 echo "Finishing installation for DevSpace CLI"
 
-/usr/bin/env node $NPM_GLOBAL_DIR/devspace/index.js force-install $0 && $0 "$@" && exit 0;
+/usr/bin/env node $NPM_GLOBAL_DIR/devspace/index.js force-install $0 || exit 1;
+
+$0 "$@";
+
+exit 0;
