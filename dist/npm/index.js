@@ -72,6 +72,7 @@ if (action == "update-version") {
     return;
 
 }
+
 let version = packageJson.version;
 let platform = PLATFORM_MAPPING[process.platform];
 let arch = ARCH_MAPPING[process.arch];
@@ -109,6 +110,16 @@ exec("npm bin", function(err, stdout, stderr) {
     try {
         fs.unlinkSync(binaryPath);
     } catch(e) {}
+
+    if (platform == "windows") {
+        try {
+            fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
+        } catch(e) {}
+        
+        try {
+            fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch(e) {}
+    }
 
     if (action == "install" || action == "force-install") {
         console.log("Download DevSpace CLI release: " + downloadPath + "\n");
