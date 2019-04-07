@@ -2,13 +2,13 @@
 title: Environment variables
 ---
 
-Instead of storing configuration data (e.g. database host, username and password) inside your Docker image, you should define such information as environment variables within your Helm chart.
+Instead of storing configuration data (e.g. database host, username and password) inside your Docker image, you should define such information as environment variables.
 
 ## Setting environment variables
-You can define environment variables for your containers in the `components[*].container[*].env` section within `chart/values.yaml`.
+You can define environment variables for your containers in the `env` section the each container within `devspace.yaml`.
 ```yaml
 components:
-- name: default
+- name: database
   containers:
   - image: "dscr.io/username/mysql"
     env:
@@ -17,7 +17,7 @@ components:
     - name: MYSQL_PASSWORD
       value: "my-secret-passwd"
 ```
-The above example would set two environment variables, `MYSQL_USER="my_user"` and `MYSQL_PASSWORD="my-secret-passwd"` within the first container of the `default` component.
+The above example would set two environment variables, `MYSQL_USER="my_user"` and `MYSQL_PASSWORD="my-secret-passwd"` within the first container of the `database` component.
 
 <details>
 <summary>
@@ -25,7 +25,7 @@ The above example would set two environment variables, `MYSQL_USER="my_user"` an
 </summary>
 ```yaml
 name: [a-z0-9-]{1,253}      # Name of the environment variable
-values: [string]            # Option 1: Set static value for the environment variable
+value: [string]             # Option 1: Set static value for the environment variable
 valueFrom:                  # Option 2: Load value from another resource
   secretKeyRef:             # Option 2.1: Use the content of a Kubernetes secret as value
     name: [secret-name]     # Name of the secret
@@ -34,6 +34,7 @@ valueFrom:                  # Option 2: Load value from another resource
     name: [configmap-name]  # Name of the config map
     key: [key-name]         # Key within the config map
 ```
+
 The value of an environment variable can be either set:
 1. By directly inserting the value via `value`
 2. By referencing a key within a secret via `valueFrom.secretKeyRef`
