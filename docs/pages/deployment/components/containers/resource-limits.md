@@ -21,13 +21,14 @@ To limit the resources of a container, simply configure the `limits` within the 
 ```yaml
 deployments:
 - name: backend
-  containers:
-  - image: dscr.io/username/api-server
-    resources:
-      limits:
-        cpu: 400m
-        memory: 500Mi
-        ephemeralStorage: 2Gi
+  component:
+    containers:
+    - image: dscr.io/username/api-server
+      resources:
+        limits:
+          cpu: 400m
+          memory: 500Mi
+          ephemeralStorage: 2Gi
 ```
 The above example would define that this container can use a maximum of:
 - 0.4 Cores
@@ -41,13 +42,14 @@ To allocate/reserve resources for a container, simply configure the `requests` w
 ```yaml
 deployments:
 - name: backend
-  containers:
-  - image: dscr.io/username/api-server
-    resources:
-      requests:
-        cpu: 200m
-        memory: 300Mi
-        ephemeralStorage: 1Gi
+  component:
+    containers:
+    - image: dscr.io/username/api-server
+      resources:
+        requests:
+          cpu: 200m
+          memory: 300Mi
+          ephemeralStorage: 1Gi
 ```
 The above example would define that this container can use a maximum of:
 - 0.2 Cores
