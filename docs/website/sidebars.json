@@ -69,7 +69,6 @@
         "configuration/variables"
     ],
     "CLI Reference": [
-        "cli-commands/overview",
         "cli-commands/analyze",
         "cli-commands/deploy",
         "cli-commands/dev",
@@ -80,7 +79,6 @@
         "cli-commands/login",
         "cli-commands/logs",
         "cli-commands/purge",
-        "cli-commands/reset",
         "cli-commands/upgrade",
         "cli-commands/add/deployment",
         "cli-commands/add/image",
@@ -103,7 +101,6 @@
         "cli-commands/remove/selector",
         "cli-commands/remove/space",
         "cli-commands/remove/sync",
-        "cli-commands/status/deployments",
         "cli-commands/status/sync",
         "cli-commands/update/config",
         "cli-commands/use/config",

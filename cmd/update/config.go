@@ -23,7 +23,7 @@ func newConfigCmd() *cobra.Command {
 Updates the currently active config to the newest
 config version
 
-Note: convert does not upgrade the overwrite configs
+Note: This does not upgrade the overwrite configs
 #######################################################
 	`,
 		Args: cobra.NoArgs,
