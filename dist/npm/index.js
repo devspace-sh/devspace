@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-var fs = require('fs');
-var path = require('path');
-var exec = require('child_process').exec;
-var request = require('request');
+const fs = require('fs');
+const path = require('path');
+const exec = require('child_process').exec;
+const request = require('request');
+const Spinner = require('cli-spinner').Spinner;
 
 const downloadPathTemplate = "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
 const ARCH_MAPPING = {
@@ -35,7 +36,7 @@ if (action == "noop") {
     process.exit(0);
 }
 
-const packageJsonPath = path.join(".", "package.json");
+const packageJsonPath = path.join(__dirname, "package.json");
 if (!fs.existsSync(packageJsonPath)) {
     console.error("Unable to find package.json");
     return;
@@ -71,6 +72,7 @@ if (action == "update-version") {
     return;
 
 }
+
 let version = packageJson.version;
 let platform = PLATFORM_MAPPING[process.platform];
 let arch = ARCH_MAPPING[process.arch];
@@ -95,26 +97,76 @@ exec("npm bin", function(err, stdout, stderr) {
 
     if (dir == null) callback("Error finding binary installation directory");
 
-    const binaryPath = path.join(dir, binaryName);
+    let binaryPath = path.join(dir, binaryName);
+
+    if (process.argv.length > 3) {
+        binaryPath = process.argv[3];
+    }
+
+    if (platform != "windows" && action == "install") {
+        process.exit(0);
+    }
 
     try {
         fs.unlinkSync(binaryPath);
-    } catch(ex) {
-        // Ignore errors when deleting the file.
+    } catch(e) {}
+
+    if (platform == "windows") {
+        try {
+            fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
+        } catch(e) {}
+        
+        try {
+            fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch(e) {}
     }
 
+    if (action == "install" || action == "force-install") {
+        console.log("Download DevSpace CLI release: " + downloadPath + "\n");
 
-    if (action == "install") {
-        request({uri: downloadPath, headers: requestHeaders})
+        const spinner = new Spinner('%s Downloading DevSpace CLI... (this may take a minute)');
+        spinner.setSpinnerString('|/-\\');
+        spinner.start();
+
+        const showRootError = function() {
+            spinner.stop(true);
+            console.error("\n############################################");
+            console.error("Failed to download DevSpace CLI due to permission issues!\n");
+            console.error("There are two options to fix this:");
+            console.error("1. Do not run 'npm install' as root (recommended)");
+            console.error("2. Run this command: npm install --unsafe-perm=true -g devspace");
+            console.error("   You may need to run this command using sudo.");
+            console.error("############################################\n");
+            process.exit(1);
+        };
+        let writeStream = fs.createWriteStream(binaryPath)
+            .on('error', function(err) {
+                showRootError();
+            });
+
+        request({uri: downloadPath, headers: requestHeaders, encoding: null})
             .on('error', function() {
+                spinner.stop(true);
                 console.error("Error requesting URL: " + downloadPath);
                 process.exit(1);
             })
             .on('response', function(res) {
-                res.pipe(fs.createWriteStream(binaryPath));
+                try {
+                    res.pipe(writeStream);
+                } catch(e) {
+                    showRootError();
+                }
             })
-            .on('finish', function() {
-                exit(0);
+            .on('end', function() {
+                writeStream.end();
+                spinner.stop(true);
+
+                try {
+                    fs.chmodSync(binaryPath, 0755);
+                } catch(e) {
+                    showRootError();
+                }
+                process.exit(0);
             });
     }
 });
