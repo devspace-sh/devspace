@@ -85,7 +85,7 @@ dependencies:
 ```
 DevSpace CLI provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
 
-[Learn more about adding packages.](/docs/chart/customization/packages)
+[Learn more about adding predefined components.](/docs/deployment/components/add-predefined-components)
 
 ---
 ## FAQ
@@ -150,7 +150,5 @@ kubectl get po -l name=tiller
 <summary>
 ### Can I use DevSpace without Helm?
 </summary>
-**Yes**. You can [define deployments using plain Kubernetes manifests](/docs/chart/customization/custom-manifests) and DevSpace CLI will run `kubectl apply -f [FILE]` instead of using Helm.
-
-**But:** We highly recommend to use the [DevSpace Helm Chart](/docs/chart/basics/devspace-helm-chart) and add custom [Kubernetes manifests](/docs/chart/customization/custom-manifests), if needed.
+**Yes**. You can simply [add plain Kubernetes manifests as deployments](/docs/deployment/kubernetes-manifests/add-manifests) and DevSpace CLI will run `kubectl apply -f [FILE]` instead of using Helm.
 </details>

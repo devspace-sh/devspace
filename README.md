@@ -72,9 +72,9 @@ devspace dev
 **With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
 Learn more about development with DevSpace:
-- [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/cli/development/synchronization)
-- [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/cli/development/port-forwarding)
-- [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/cli/development/terminal)
+- [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/development/synchronization)
+- [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/development/port-forwarding)
+- [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/development/terminal)
 
 ---
 
@@ -93,10 +93,10 @@ devspace analyze
 - Debug networking issues (e.g. misconfigured services)
 
 Learn more about development with DevSpace:
-- [Automate issue detection with DevSpace](https://devspace.cloud/docs/cli/debugging/analyze)
-- [Stream container logs with DevSpace](https://devspace.cloud/docs/cli/debugging/logs)
-- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/cli/debugging/debuggers)
-- [Start terminal sessions for debugging](https://devspace.cloud/docs/cli/debugging/enter)
+- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/analyze)
+- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/logs)
+- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/debuggers)
+- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/debugging/enter)
 
 </details>
 
@@ -188,7 +188,7 @@ devspace deploy
 
 ### What's next?
 - [Developing applications with DevSpace](https://devspace.cloud/docs/getting-started/development)
-- [Debugging deployments with DevSpace](https://devspace.cloud/docs/cli/debugging/overview)
+- [Debugging deployments with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging)
 - [Customize the DevSpace Helm Chart](https://devspace.cloud/docs/chart/basics/devspace-helm-chart)
 
 <br>

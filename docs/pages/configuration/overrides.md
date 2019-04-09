@@ -15,22 +15,22 @@ To reduce the effort of maintaining many different configuration files with simi
 ```yaml
 config1:
   config:
-    path: .devspace/config.yaml
+    path: ../devspace.yaml
 config2:
   config:
-    path: .devspace/config.yaml
+    path: ../devspace.yaml
   overrides:
   - data:
       images:
         database:
           image: dscr.io/my-username/alternative-db-image
 ```
-The above example defines two configurations `config1` and `config2`. Both will load the same config file `.devspace/config.yaml` but `config2` is slightly different because it will apply an override after loading the config file. This override defines that `images.database.image` should be overriden with the value `dscr.io/my-username/alternative-db-image`.
+The above example defines two configurations `config1` and `config2`. Both will load the same config file `../devspace.yaml` but `config2` is slightly different because it will apply an override after loading the config file. This override defines that `images.database.image` should be overriden with the value `dscr.io/my-username/alternative-db-image`.
 
-[Learn more about defining and using multiple configs.](/docs/cli/configuration/multiple-configs)
+[Learn more about defining and using multiple configs.](/docs/configuration/multiple-configs)
 
 ## Advanced options for config overrides
-Instead of specifying overrides directly inside `.devspace/config.yaml` with `data`, it is also possible to define a file containing the override data and reference this file with `path` instead of using `data`.
+Instead of specifying overrides directly inside `.devspace/configs.yaml` with `data`, it is also possible to define a file containing the override data and reference this file with `path` instead of using `data`.
 
 As shown in the example above, `overrides` is an array which allows you to apply multiple overrides. This can be useful when you want to re-use an override file multiple times but also apply additional overrides which are different between several configs.
 

@@ -32,7 +32,7 @@ dev:
 
 The `selector` field shown above refers to the name of one of the selectors defined in `dev.selectors` and decides which container is to be selected for synchronizing files.
 
-[Learn more about selectors.](/docs/cli/configuration/reference#devselectors)
+[Learn more about selectors.](/docs/configuration/reference#devselectors)
 
 ## Define paths to be excluded from sync
 Sometimes, it is recommended to exclude certain paths from being synchronized, e.g.
@@ -58,12 +58,12 @@ dev:
     - /app/tmp
     excludePaths:
     - Dockerfile
-    - chart/
+    - logs/
 ```
 The above example would configure the sync, so that:
 - `./src/node_modules` would not be uploaded to the container
 - `/app/tmp` wiil not be downloaded from the container
-- `./src/Dockerfile` and `./src/chart/` would not be synchronized at all
+- `./src/Dockerfile` and `./src/logs/` would not be synchronized at all
 
 > Generally, the config options for excluding paths use the same syntax as `.gitignore`
 
