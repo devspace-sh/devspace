@@ -119,7 +119,7 @@ containers:                         # struct   | Options for deploying a DevSpac
   redinessProbe: ...                # struct   | Kubernestes redinessProbe
 ```
 
-### deployments[*].component.containers[*].volumeMounts
+### deployments[\*].component.containers[*].volumeMounts
 ```yaml
 volumeMounts: 
   containerPath: /my/path           # string   | Mount path within the container
