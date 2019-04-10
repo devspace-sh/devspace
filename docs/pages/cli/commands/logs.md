@@ -1,5 +1,0 @@
----
-title: devspace logs
----
-
-content

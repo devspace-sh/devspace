@@ -70,6 +70,7 @@ const siteConfig = {
     '/js/code-block-line-numbers.js',
     '/js/responsive-menu.js',
     '/js/tag-manager.js',
+    '/js/onpage-nav.js',
   ],
 
   stylesheets: [

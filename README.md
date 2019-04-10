@@ -31,13 +31,9 @@ DevSpace can create a Dockerfile for your project based on the detected programm
 devspace init
 ```
 
-Initializes DevSpace and adds a [highly customizable Helm chart](https://devspace.cloud/docs/charts/devspace-helm-chart) to your project.
-
-Customize your Kubernetes deployment easily:
-- [Easily add a database](https://devspace.cloud/docs/chart/customization/predefined-components)
-- [Easily add custom kubernetes yamls](https://devspace.cloud/docs/chart/customization/custom-manifests)
-- [Configure persistent volumes](https://devspace.cloud/docs/charts/persistent-volumes)
-- [Configure environment variables](https://devspace.cloud/docs/charts/environment-variables)
+Initializes your project, i.e.:
+- adds a Dockerfile (if not exsisting)
+- adds a DevSpace configuration for simple Kubernetes deployments
 
 ---
 
@@ -72,9 +68,9 @@ devspace dev
 **With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
 Learn more about development with DevSpace:
-- [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/cli/development/synchronization)
-- [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/cli/development/port-forwarding)
-- [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/cli/development/terminal)
+- [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/development/synchronization)
+- [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/development/port-forwarding)
+- [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/development/terminal)
 
 ---
 
@@ -93,24 +89,23 @@ devspace analyze
 - Debug networking issues (e.g. misconfigured services)
 
 Learn more about development with DevSpace:
-- [Automate issue detection with DevSpace](https://devspace.cloud/docs/cli/debugging/analyze)
-- [Stream container logs with DevSpace](https://devspace.cloud/docs/cli/debugging/logs)
-- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/cli/debugging/debuggers)
-- [Start terminal sessions for debugging](https://devspace.cloud/docs/cli/debugging/enter)
+- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/analyze)
+- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/logs)
+- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/debugging/enter)
+- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/remote-debuggers)
 
 </details>
 
 <br>
 
-## Getting started with DevSpace
-### 1. Install DevSpace & Docker
+## Getting started with DevSpace CLI
+### 1. Install DevSpace CLI & Docker
 
 <details>
-<summary><b>via Windows Powershell</b></summary>
+<summary><b>via NPM</b></summary>
 
 ```
-md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
+npm install -g devspace
 ```
 
 </details>
@@ -135,7 +130,17 @@ sudo mv devspace /usr/local/bin;
 
 </details>
 
-Install Docker if you don't have already
+<details>
+<summary><b>via Windows Powershell</b></summary>
+
+```
+md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
+```
+
+</details>
+
+Install Docker (optional but recommended)
 <details>
     <summary><b>Install Docker</b></summary>
 
@@ -160,7 +165,7 @@ devspace init
 <summary><b>Don't have a project to test DevSpace with?</b> Check out our example project.</summary>
 
 ```
-git clone https://github.com/devspace-cloud/devspace-quickstart-nodejs
+git clone https://github.com/devspace-cloud/quickstart-nodejs
 ```
 
 </details>
@@ -188,8 +193,9 @@ devspace deploy
 
 ### What's next?
 - [Developing applications with DevSpace](https://devspace.cloud/docs/getting-started/development)
-- [Debugging deployments with DevSpace](https://devspace.cloud/docs/cli/debugging/overview)
-- [Customize the DevSpace Helm Chart](https://devspace.cloud/docs/chart/basics/devspace-helm-chart)
+- [Debugging deployments with DevSpace](https://devspace.cloud/docs/getting-started/debugging)
+- [Add predefined components such as databases](https://devspace.cloud/docs/deployment/components/add-predefined-components)
+- [Add custom components](https://devspace.cloud/docs/deployment/components/add-custom-components)
 
 <br>
 
@@ -237,7 +243,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
-1. [Connect your existing Kubernetes clusters to DevSpace Cloud](https://devspace.cloud/docs/cloud/external-clusters/overview) as external clusters. DevSpace Cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
+1. Connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
 2. You just use DevSpace CLI without DevSpace Cloud. That means that you manually need to:
     * enforce resource limits
     * configure secure user permissions

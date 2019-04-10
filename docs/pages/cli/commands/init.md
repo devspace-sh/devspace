@@ -1,5 +1,0 @@
----
-title: devspace init
----
-
-content

@@ -26,6 +26,10 @@ body h6 {
     margin-bottom: 0.3em;
 }
 
+body h3 {
+    font-size: 1.2em;
+}
+
 body p {
     margin: 0.5em 0;
 }
@@ -38,6 +42,15 @@ body ol {
 body details,
 .docs-next {
     box-shadow: 0 0 20px rgba(35,51,102,.2);
+}
+
+body details.active {
+    margin-left: -5px;
+    border-left: solid 5px #1c65f7d3;
+}
+
+small {
+    font-size: 0.8em;
 }
 
 pre {
@@ -83,11 +96,6 @@ body blockquote {
 
 .post p:empty {
     display: none;
-}
-
-.navPusher .docMainWrapper {
-  max-width: 1600px;
-  padding: 0 5%;
 }
 
 @media only screen and (min-width: 1024px) {
