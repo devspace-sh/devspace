@@ -14,20 +14,12 @@
 <br>
 
 ## Automate development and deployment workflows for your entire team
-<details open>
-<summary>
-1. <b>Create a highly customizable configuration for development and deployment workflows</b> with `devspace init`
-</summary>
-    - Based on your existing Dockerfile(s) or images from any Docker registry
-    - Based on your existing Kubernetes manifest(s)
-    - Based on your existing Helm chart(s)
-</details>
+### 1. Create a highly customizable configuration for development and deployment workflows
+- Based on your existing Dockerfile(s) or images from any Docker registry
+- Based on your existing Kubernetes manifest(s)
+- Based on your existing Helm chart(s)
 
-<details open>
-<summary>
-2. <b>Share your workflows</b> via git and let others on your team:
-</summary>
-
+### 2. Share your workflows via git and let others on your team:
 - **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
 - **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
    - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
@@ -38,21 +30,10 @@
 - **Debug deployments** using `devspace analyze`
 - **Develop applications directly inside Kubernetes** using `devspace dev`
 
-</details>
+### 3. Customize your workflows and keep them consistent across your entire team:
 
-<details open>
-<summary>
-3. <b>Customize your workflows</b> and keep them consistent across your entire team:
-</summary>
+### 4. Build CI/CD pipelines</b> faster with DevSpace CLI
 
-</details>
-
-<details open>
-<summary>
-3. <b>Build CI/CD pipelines</b> faster with DevSpace CLI
-</summary>
-
-</details>
 
 <br>
 
