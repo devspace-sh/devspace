@@ -13,7 +13,7 @@
 > Do you like DevSpace CLI? Support the project with a star ⭐️
 
 ## Automate development and deployment workflows for your entire team
-### 1. Create a highly customizable configuration for development and deployment workflows
+### 1. Create a highly customizable configuration for development and deployment workflows within minutes using: `devspace init`
 - Based on your existing Dockerfile(s) or images from any Docker registry
 - Based on your existing Kubernetes manifest(s)
 - Based on your existing Helm chart(s)
