@@ -12,7 +12,6 @@
 
 > Do you like DevSpace CLI? Support the project with a star ⭐️
 <br>
-<br>
 
 ## Automate development and deployment workflows for your entire team
 ### 1. Create a highly customizable configuration for development and deployment workflows
