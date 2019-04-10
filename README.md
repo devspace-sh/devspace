@@ -11,7 +11,6 @@
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/home?status=Just%20found%20out%20about%20%23DevSpace%20CLI%3A%20https%3A//github.com/devspace-cloud/devspace%0A%0AIt%20lets%20you%20build%20cloud%20native%20software%20directly%20on%20top%20of%20%23Kubernetes%20and%20%23Docker%0A%23CloudNative%20%23k8s)
 
 > Do you like DevSpace CLI? Support the project with a star ⭐️
-<br>
 
 ## Automate development and deployment workflows for your entire team
 ### 1. Create a highly customizable configuration for development and deployment workflows
