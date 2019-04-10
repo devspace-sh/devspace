@@ -10,6 +10,8 @@
 [![Slack](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/home?status=Just%20found%20out%20about%20%23DevSpace%20CLI%3A%20https%3A//github.com/devspace-cloud/devspace%0A%0AIt%20lets%20you%20build%20cloud%20native%20software%20directly%20on%20top%20of%20%23Kubernetes%20and%20%23Docker%0A%23CloudNative%20%23k8s)
 
+<b>Do you like DevSpace CLI? Support the project with a star</b> ⭐️
+<br>
 
 ## Automate development and deployment workflows for your entire team
 <details>
@@ -25,26 +27,22 @@
 <summary>
 2. <b>Share your workflows</b> via git and let others on your team:
 </summary>
-    - **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
-    - **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
-       - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
-       - Automatic image tagging and pushing (to any public or private registry)
-       - Automatic image pull secret generation
-       - Automatic deployment of one or multiple Kubernetes manifests and/or Helm charts
-       - Automatic ingress configuration
-    - **Debug deployments** using `devspace analyze`
-    - **Develop applications directly inside Kubernetes** using `devspace dev`
+
+- **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
+- **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
+   - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
+   - Automatic image tagging and pushing (to any public or private registry)
+   - Automatic image pull secret generation
+   - Automatic deployment of one or multiple Kubernetes manifests and/or Helm charts
+   - Automatic ingress configuration
+- **Debug deployments** using `devspace analyze`
+- **Develop applications directly inside Kubernetes** using `devspace dev`
+
 </details>
 
 3. **Customize your workflows** and keep them consistent across your entire team
 
 4. **Build CI/CD pipelines** faster with DevSpace CLI
-
----
-
-<p align="center">
-**Do you like DevSpace CLI? Support the project with a star** ⭐️
-</p>
 
 ## Which workflows can you automate with DevSpace CLI?
 
