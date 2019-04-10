@@ -14,7 +14,7 @@
 <br>
 
 ## Automate development and deployment workflows for your entire team
-<details>
+<details open>
 <summary>
 1. <b>Create a highly customizable configuration for development and deployment workflows</b> with `devspace init`
 </summary>
@@ -23,7 +23,7 @@
     - Based on your existing Helm chart(s)
 </details>
 
-<details>
+<details open>
 <summary>
 2. <b>Share your workflows</b> via git and let others on your team:
 </summary>
@@ -40,9 +40,21 @@
 
 </details>
 
-3. **Customize your workflows** and keep them consistent across your entire team
+<details open>
+<summary>
+3. <b>Customize your workflows</b> and keep them consistent across your entire team:
+</summary>
 
-4. **Build CI/CD pipelines** faster with DevSpace CLI
+</details>
+
+<details open>
+<summary>
+3. <b>Build CI/CD pipelines</b> faster with DevSpace CLI
+</summary>
+
+</details>
+
+<br>
 
 ## Which workflows can you automate with DevSpace CLI?
 
