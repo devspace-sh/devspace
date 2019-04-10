@@ -14,7 +14,7 @@
 ## Automate development and deployment workflows for your entire team
 <details>
 <summary>
-**1. Create a highly customizable configuration for development and deployment workflows with `devspace init`**
+1. <b>Create a highly customizable configuration for development and deployment workflows</b> with `devspace init`
 </summary>
     - Based on your existing Dockerfile(s) or images from any Docker registry
     - Based on your existing Kubernetes manifest(s)
@@ -23,7 +23,7 @@
 
 <details>
 <summary>
-**2. Share your workflows via git and let others on your team:**
+2. <b>Share your workflows</b> via git and let others on your team:
 </summary>
     - **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
     - **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
@@ -36,11 +36,15 @@
     - **Develop applications directly inside Kubernetes** using `devspace dev`
 </details>
 
-**3. Customize your workflows and keep them consistent across your entire team**
+3. **Customize your workflows** and keep them consistent across your entire team
 
-**4. Integrate DevSpace CLI in your CI/CD pipelines**
+4. **Build CI/CD pipelines** faster with DevSpace CLI
 
+---
+
+<p align="center">
 **Do you like DevSpace CLI? Support the project with a star** ⭐️
+</p>
 
 ## Which workflows can you automate with DevSpace CLI?
 
