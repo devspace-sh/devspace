@@ -10,11 +10,32 @@
 [![Slack](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/home?status=Just%20found%20out%20about%20%23DevSpace%20CLI%3A%20https%3A//github.com/devspace-cloud/devspace%0A%0AIt%20lets%20you%20build%20cloud%20native%20software%20directly%20on%20top%20of%20%23Kubernetes%20and%20%23Docker%0A%23CloudNative%20%23k8s)
 
+> Do you like DevSpace CLI? Support the project with a star ⭐️
 
-**How many times do you copy/paste the names of deployments, pods, services etc. per hour when using kubectl?**  
-DevSpace CLI eliminates these cumbersome, repetitive tasks through automating and streamlining certain workflows. The goal of this project is to accelerate developing, deploying and debugging applications with Docker and Kubernetes.
+## Automate development and deployment workflows for your entire team
+### 1. Create deployment and development workflows for Kubernetes within minutes
+- Based on your existing Dockerfile(s) or images from any Docker registry
+- Based on your existing Kubernetes manifest(s)
+- Based on your existing Helm chart(s)
 
-## Which workflows can you automate with DevSpace CLI?
+### 2. Share your workflows via git and let anyone on your team:
+- **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
+   - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
+   - Automatic image tagging, pushing (to any public or private registry) and pull secret generation
+   - Automatic deployment of one or multiple Kubernetes manifests and/or Helm charts
+   - Automatic ingress configuration
+- **Debug deployments** using `devspace analyze`, `devspace logs` and `devspace enter`
+- **Develop applications directly inside Kubernetes** using `devspace dev`
+- **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
+
+### 3. Customize your workflows and keep them consistent across your entire team
+
+### 4. Build CI/CD pipelines</b> faster with DevSpace CLI
+
+
+<br>
+
+## How does DevSpace CLI acclerate and automate my workflow?
 
 <details>
 <summary><b>Containerize</b> any project in minutes</summary>
@@ -24,16 +45,17 @@ DevSpace CLI eliminates these cumbersome, repetitive tasks through automating an
 devspace containerize
 ```
 
-DevSpace can create a Dockerfile for your project based on the detected programming language in your project.
+DevSpace CLI detects your programming language and creates a Dockerfile for your project.
 
 ### Initialize your project
 ```
 devspace init
 ```
 
-Initializes your project, i.e.:
-- adds a Dockerfile (if not exsisting)
-- adds a DevSpace configuration for simple Kubernetes deployments
+DevSpace CLI creates a configuration for deploying and developing with Kubernetes based on:
+- your Dockerfile(s)
+- your Helm chart(s)
+- your Kubernetes manifest(s)
 
 ---
 
@@ -52,14 +74,14 @@ devspace deploy
 2. Creates pull secrets for your image registries
 3. Deploys your project with the newest images (e.g. using Helm)
 
-> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Cloud](https://devspace.cloud) to get a fully managed Kubernetes namespace.
+> DevSpace CLI will use the current kubectl context. If you do not have a Kubernetes cluster, you can use [DevSpace Hosting](https://devspace.cloud) to get a fully managed Kubernetes namespace.
 
 ---
 
 </details>
 
 <details>
-<summary><b>Develop</b> cloud-native software faster then ever</summary>
+<summary><b>Develop</b> cloud-native software faster than ever</summary>
 
 ### Develop in a production-like environment
 ```
@@ -67,7 +89,7 @@ devspace dev
 ```
 **With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
-Learn more about development with DevSpace:
+DevSpace CLI provides the following development features:
 - [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/development/synchronization)
 - [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/development/port-forwarding)
 - [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/development/terminal)
@@ -83,7 +105,7 @@ Learn more about development with DevSpace:
 ```
 devspace analyze
 ```
-**DevSpace automatically analyzes your deployments**, identifies potential issues and helps you resolve them:
+**DevSpace CLI automatically analyzes your deployments**, identifies potential issues and helps you resolve them:
 - Identify reasons for image pull failure
 - View log snapshots of crashed containers
 - Debug networking issues (e.g. misconfigured services)
@@ -140,24 +162,19 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-clou
 
 </details>
 
-Install Docker (optional but recommended)
+#### Install Docker (optional but recommended)
 <details>
-    <summary><b>Install Docker</b></summary>
+<summary><b>Install Docker</b></summary>
 
-DevSpace uses Docker to build container images, so you need Docker on your local computer. If you do not have Docker installed yet, you can download the latest stable releases here:
+DevSpace CLI allows you to build images directly inside Kubernetes pods (using kaniko) but if you have Docker installed, DevSpace CLI can also build images locally using Docker. If you do not have Docker installed yet, you can download the latest stable releases here:
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
 
 </details>
 
-### 2. Containerize your application
-If you don't have a Dockerfile run this command within your project:
-```
-devspace containerize
-```
-
-Then initialize DevSpace with this command in your project:
+### 2. Initialize your application
+Run this command in your project root directory to create a deployment and development configuration for Kubernetes:
 ```
 devspace init
 ```
@@ -170,20 +187,12 @@ git clone https://github.com/devspace-cloud/quickstart-nodejs
 
 </details>
 
-<br>
-
-**What does `devspace containerize & devspace init` do?**  
-DevSpace CLI will automatically detect your programming language and ask for the port your application is listening on. It will then create an Helm chart and a Dockerfile within your project, if you do not already have one.
 
 ### 3. Create a space (optional)
-
-> This step is optional, you can also use your custom kubernetes cluster with DevSpace
-
-This command will create and configure a Kubernetes namespace for you in the devspace cloud:
+If you are using the free managed clusters provided by DevSpace Cloud **or** you connected your own Kubernetes cluster to DevSpace Cloud, you can now create an isolated Kubernetes namespace using the following command:
 ```
 devspace create space my-app
 ```
-DevSpace Cloud will provide a fully managed Kubernetes namespace for you. You can create one Space, which is forever free on [DevSpace Cloud](https://devspace.cloud). 
 
 ### 4. Deploy your application
 Deploy your application to kubernetes:
@@ -240,10 +249,10 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 </details>
 
 <details>
-<summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
+<summary>Can I use DevSpace CLI with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
-1. Connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to create and manage users and Spaces on top of your Kubernetes clusters.
+1. Connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to automatically manage cluster users and permissions. This lets you created isolated namespaces (Spaces) within your Kubernetes clusters.
 2. You just use DevSpace CLI without DevSpace Cloud. That means that you manually need to:
     * enforce resource limits
     * configure secure user permissions
@@ -254,7 +263,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 </details>
 
 <details>
-<summary>Do I need to be a Kubernetes expert to use DevSpace?</summary>
+<summary>Do I need to be a Kubernetes expert to use DevSpace CLI?</summary>
 
 **No.** Altough DevSpace provides a lot of advanced tooling for Kubernetes experts, it is optimized for developer experience which makes it especially easy to use for Kubernetes beginners.
 
@@ -263,13 +272,12 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <details>
 <summary>What is a Space?</summary>
 
-Spaces are smart Kubernetes namespaces which provide the following features:
+Spaces are isolated Kubernetes namespaces which provide the following features:
 - Automatic provisioning via `devspace create space [SPACE_NAME]`
 - Automatic allocation of a subdomain for each Space, e.g. `my-app.devspace.host`
 - Automatic RBAC configuration for better isolation of users
 - Automatic resource limit configuration and enforcement
-- Resource auto-scaling within the configured limits
-- Smart analysis of issues within your Space via `devspace analyze`
+- Dynamic resource auto-scaling within the configured limits
 
 </details>
 
