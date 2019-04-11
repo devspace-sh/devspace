@@ -84,6 +84,12 @@ func CreateIngress(client *kubernetes.Clientset) error {
 		return nil
 	}
 
+	// Get the cluster key
+	key, err := p.GetClusterKey(space.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
 	// Response struct
 	response := struct {
 		ManagerCreateIngressPath bool `json:"manager_createKubeContextDomainIngressPath"`
@@ -91,9 +97,10 @@ func CreateIngress(client *kubernetes.Clientset) error {
 
 	// Do the request
 	err = p.GrapqhlRequest(`
-		mutation($spaceID: Int!, $ingressName: String!, $host: String!, $newPath: String!, $newServiceName: String!, $newServicePort: String!) {
+		mutation($spaceID: Int!, $ingressName: String!, $host: String!, $newPath: String!, $newServiceName: String!, $newServicePort: String!, $key: String) {
 			manager_createKubeContextDomainIngressPath(
 				spaceID: $spaceID,
+				key: $key,
 				ingressName: $ingressName,
 				host: $host,
 				newPath: $newPath,
@@ -102,6 +109,7 @@ func CreateIngress(client *kubernetes.Clientset) error {
 			)
 		}
 	`, map[string]interface{}{
+		"key":            key,
 		"spaceID":        generatedConfig.CloudSpace.SpaceID,
 		"ingressName":    IngressName,
 		"host":           *space.Domain,

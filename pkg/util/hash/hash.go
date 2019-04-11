@@ -15,7 +15,20 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/docker/pkg/longpath"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// BcryptPassword hashes the password with bcrypt and returns the string
+func BcryptPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+// CheckPasswordHash checks if the hash and password match
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
 
 // Directory creates the hash value of a directory
 func Directory(path string) (string, error) {

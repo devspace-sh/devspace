@@ -40,7 +40,7 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 	providerName := args[0]
 
 	// Get provider configuration
-	providerConfig, err := cloudpkg.ParseCloudConfig()
+	providerConfig, err := cloudpkg.LoadCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}

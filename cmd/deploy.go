@@ -122,7 +122,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Force deployment of all defined deployments
+	// Deploy all defined deployments
 	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)

@@ -49,10 +49,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Erase currently used space
 	if args[0] == "none" {
-		// Set tiller env	
-		err = cloudpkg.SetTillerNamespace(nil)	
-		if err != nil {	
-			log.Warnf("Couldn't set tiller namespace environment variable: %v", err)	
+		// Set tiller env
+		err = cloudpkg.SetTillerNamespace(nil)
+		if err != nil {
+			log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 		}
 
 		if !configExists {
@@ -102,15 +102,22 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	err = cloud.UpdateKubeConfig(kubeContext, space, true)
+
+	// Get service account
+	serviceAccount, err := provider.GetServiceAccount(space)
+	if err != nil {
+		log.Fatalf("Error retrieving space service account: %v", err)
+	}
+
+	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, true)
 	if err != nil {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env	
-	err = cloudpkg.SetTillerNamespace(space)	
-	if err != nil {	
-		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)	
+	// Set tiller env
+	err = cloudpkg.SetTillerNamespace(serviceAccount)
+	if err != nil {
+		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
 	if configExists {
@@ -124,7 +131,8 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			SpaceID:      space.SpaceID,
 			ProviderName: space.ProviderName,
 			Name:         space.Name,
-			Namespace:    space.Namespace,
+			Owner:        space.Owner,
+			OwnerID:      space.OwnerID,
 			KubeContext:  kubeContext,
 			Created:      space.Created,
 			Domain:       space.Domain,

@@ -22,10 +22,11 @@ type Config struct {
 // CloudSpaceConfig holds all the informations about a certain cloud space
 type CloudSpaceConfig struct {
 	SpaceID      int     `yaml:"spaceID"`
+	OwnerID      int     `yaml:"ownerID"`
+	Owner        string  `yaml:"owner"`
 	ProviderName string  `yaml:"providerName"`
 	KubeContext  string  `yaml:"kubeContext"`
 	Name         string  `yaml:"name"`
-	Namespace    string  `yaml:"namespace"`
 	Created      string  `yaml:"created"`
 	Domain       *string `yaml:"domain"`
 }
@@ -63,9 +64,9 @@ func LoadConfig() (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		workdir, _ := os.Getwd()
+		var data []byte
 
-		data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
+		data, err = ioutil.ReadFile(ConfigPath)
 		if err != nil {
 			loadedConfig = &Config{
 				ActiveConfig: DefaultConfigName,

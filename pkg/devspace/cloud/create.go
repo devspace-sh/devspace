@@ -6,6 +6,7 @@ import (
 
 // CreateSpace creates a new space and returns the space id
 func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int, error) {
+
 	// Response struct
 	response := struct {
 		CreateSpace *struct {
@@ -38,7 +39,7 @@ func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int,
 }
 
 // CreateProject creates a new project and returns the project id
-func (p *Provider) CreateProject(projectName string, clusterID int) (int, error) {
+func (p *Provider) CreateProject(projectName string) (int, error) {
 	// Response struct
 	response := struct {
 		CreateProject *struct {
@@ -48,14 +49,13 @@ func (p *Provider) CreateProject(projectName string, clusterID int) (int, error)
 
 	// Do the request
 	err := p.GrapqhlRequest(`
-		mutation($clusterID: Int!, $projectName: String!) {
-			manager_createProject(clusterID: $clusterID, projectName: $projectName) {
+		mutation($projectName: String!) {
+			manager_createProject(projectName: $projectName) {
 				ProjectID
 			}
 		}
 	`, map[string]interface{}{
 		"projectName": projectName,
-		"clusterID":   clusterID,
 	}, &response)
 	if err != nil {
 		return 0, err

@@ -89,9 +89,10 @@ func (p *Provider) PrintSpaces(name string) error {
 }
 
 // SetTillerNamespace sets the tiller environment variable
-func SetTillerNamespace(space *Space) error {
-	if space == nil {
+func SetTillerNamespace(serviceAccount *ServiceAccount) error {
+	if serviceAccount == nil {
 		return envutil.SetEnvVar("TILLER_NAMESPACE", "kube-system")
 	}
-	return envutil.SetEnvVar("TILLER_NAMESPACE", space.Namespace)
+
+	return envutil.SetEnvVar("TILLER_NAMESPACE", serviceAccount.Namespace)
 }

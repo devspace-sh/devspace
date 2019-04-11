@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -37,7 +38,7 @@ func (p *Provider) LoginIntoRegistries() error {
 	}
 
 	// Get account name
-	accountName, err := p.GetAccountName()
+	accountName, err := token.GetAccountName(p.Token)
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (p *Provider) LoginIntoRegistry(name string) error {
 	}
 
 	// Get account name
-	accountName, err := p.GetAccountName()
+	accountName, err := token.GetAccountName(p.Token)
 	if err != nil {
 		return err
 	}
