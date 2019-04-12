@@ -56,6 +56,7 @@ func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 		key := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 			Question:               "Please enter your encryption key for cluster " + cluster.Name,
 			ValidationRegexPattern: "^.{6,32}$",
+			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
 		})
 

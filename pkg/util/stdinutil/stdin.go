@@ -15,6 +15,7 @@ type GetFromStdinParams struct {
 	Question               string
 	DefaultValue           string
 	ValidationRegexPattern string
+	ValidationMessage      string
 	Options                []string
 	IsPassword             bool
 }
@@ -73,7 +74,12 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		err := survey.Ask(question, &answers)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "Answer has to match pattern") {
-				log.Info(err.Error())
+				if params.ValidationMessage != "" {
+					log.Info(params.ValidationMessage)
+				} else {
+					log.Info(err.Error())
+				}
+
 				continue
 			}
 

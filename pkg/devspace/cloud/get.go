@@ -38,9 +38,10 @@ type Project struct {
 
 // Cluster is the type that holds the cluster information
 type Cluster struct {
-	ClusterID int    `json:"id"`
-	Owner     *Owner `json:"account"`
-	Name      string `json:"name"`
+	ClusterID int     `json:"id"`
+	Owner     *Owner  `json:"account"`
+	Name      string  `json:"name"`
+	CreatedAt *string `json:"created_at"`
 }
 
 // Owner holds the information about a certain
@@ -131,8 +132,6 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 			}
 
 			name
-			server
-			ca_cert
 		}
 	}
   `, map[string]interface{}{
@@ -173,8 +172,7 @@ func (p *Provider) GetClusters() ([]*Cluster, error) {
 			}
 
 			name
-			server
-			ca_cert
+			created_at
 		}
 	  }
 	`, nil, &response)
@@ -248,10 +246,10 @@ func (p *Provider) GetClusterUser(clusterID int) (*ClusterUser, error) {
 			{cluster_id:{_eq:$clusterID}},
 			{account_id:{_eq:$accountID}}
 		]}) {
-					id
-					account_id
-					cluster_id
-					is_admin
+				id
+				account_id
+				cluster_id
+				is_admin
 			}
 		}
 	`, map[string]interface{}{

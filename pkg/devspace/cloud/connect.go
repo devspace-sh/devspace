@@ -1,0 +1,277 @@
+package cloud
+
+import (
+	"encoding/base64"
+	"fmt"
+	"regexp"
+	"time"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+
+	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/rbac/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
+// ClusterNameValidationRegEx is the cluster name validation regex
+var ClusterNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
+
+const (
+	// DevSpaceCloudNamespace is the namespace to create
+	DevSpaceCloudNamespace = "devspace-cloud"
+
+	// DevSpaceServiceAccount is the service account to create
+	DevSpaceServiceAccount = "devspace-cloud-user"
+
+	// DevSpaceClusterRoleBinding is the name of the clusterrolebinding to create for the service account
+	DevSpaceClusterRoleBinding = "devspace-cloud-user-binding"
+)
+
+type clusterResources struct {
+	PodPolicy     bool
+	NetworkPolicy bool
+	CertManager   bool
+}
+
+// ConnectCluster connects a new cluster to DevSpace Cloud
+func (p *Provider) ConnectCluster(clusterName string) error {
+	// Get cluster name
+	clusterName, err := getClusterName(clusterName)
+	if err != nil {
+		return err
+	}
+
+	// Get kube context to use
+	config, err := kubectl.GetClientConfigBySelect(false)
+	if err != nil {
+		return errors.Wrap(err, "new kubectl client")
+	}
+
+	// Get client from config
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return errors.Wrap(err, "get kubernetes client")
+	}
+
+	// Check available cluster resources
+	_, err = checkResources(client)
+	if err != nil {
+		return errors.Wrap(err, "check resource availability")
+	}
+
+	// Initialize namespace
+	err = initializeNamespace(client)
+	if err != nil {
+		return errors.Wrap(err, "init namespace")
+	}
+
+	key, err := getKey(p)
+	if err != nil {
+		return errors.Wrap(err, "get key")
+	}
+
+	token, caCert, err := getServiceAccountCredentials(client)
+	if err != nil {
+		return errors.Wrap(err, "get service account credentials")
+	}
+
+	encryptedToken, err := EncryptAES([]byte(key), token)
+	if err != nil {
+		return errors.Wrap(err, "encrypt token")
+	}
+
+	// Create cluster remotely
+	_, err = p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken))
+	if err != nil {
+		return errors.Wrap(err, "create cluster")
+	}
+
+	return nil
+}
+
+func getServiceAccountCredentials(client *kubernetes.Clientset) ([]byte, string, error) {
+	log.StartWait("Retrieving service account credentials")
+	defer log.StopWait()
+
+	// Create main service account
+	sa, err := client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	if err != nil {
+		return nil, "", err
+	}
+
+	beginTimeStamp := time.Now()
+	timeout := time.Second * 90
+
+	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < timeout {
+		time.Sleep(time.Second)
+
+		sa, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	if time.Since(beginTimeStamp) >= timeout {
+		return nil, "", errors.New("ServiceAccount did not receive secret in time")
+	}
+
+	// Get secret
+	secret, err := client.Core().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, "", err
+	}
+
+	return secret.Data["token"], base64.StdEncoding.EncodeToString(secret.Data["ca.crt"]), nil
+}
+
+func getKey(provider *Provider) (string, error) {
+	if len(provider.ClusterKey) > 0 {
+		for _, key := range provider.ClusterKey {
+			return key, nil
+		}
+	}
+
+	for true {
+		firstKey := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Please enter a secure encryption key for your cluster credentials",
+			ValidationRegexPattern: "^.{6,32}$",
+			ValidationMessage:      "Key has to be between 6 and 32 characters long",
+			IsPassword:             true,
+		})
+
+		secondKey := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:               "Please re-enter the key",
+			ValidationRegexPattern: "^.{6,32}$",
+			ValidationMessage:      "Key has to be between 6 and 32 characters long",
+			IsPassword:             true,
+		})
+
+		if firstKey != secondKey {
+			log.Info("Keys do not match! Please reenter")
+		}
+
+		hashedKey, err := hash.BcryptPassword(firstKey)
+		if err != nil {
+			return "", errors.Wrap(err, "bcrypt key")
+		}
+
+		return hashedKey, nil
+	}
+
+	// We never reach that point
+	return "", nil
+}
+
+func getClusterName(clusterName string) (string, error) {
+	if clusterName != "" && ClusterNameValidationRegEx.MatchString(clusterName) == false {
+		return "", fmt.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
+	}
+
+	// Ask for cluster name
+	for true {
+		clusterName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question:     "Please enter a cluster name (e.g. my-cluster)",
+			DefaultValue: "my-cluster",
+		})
+
+		if ClusterNameValidationRegEx.MatchString(clusterName) == false {
+			log.Infof("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
+			continue
+		}
+
+		return clusterName, nil
+	}
+
+	return "", errors.New("We should never reach this point")
+}
+
+// This function checks the available resource on the api server
+// Required checks
+// 	rbac.authorization.k8s.io/v1beta1
+// Feature checks
+// 	certmanager.k8s.io/v1alpha1
+// 	networking.k8s.io/v1 networkpolicies
+// 	extensions/v1beta1 podsecuritypolicies
+func checkResources(client *kubernetes.Clientset) (*clusterResources, error) {
+	log.StartWait("Checking cluster resources")
+	defer log.StopWait()
+
+	groupResources, err := client.Discovery().ServerResources()
+	if err != nil {
+		return nil, errors.Wrap(err, "discover server resources")
+	}
+
+	exist := kubectl.GroupVersionExist("rbac.authorization.k8s.io/v1beta1", groupResources)
+	if exist == false {
+		return nil, errors.New("Group version rbac.authorization.k8s.io/v1beta1 does not exist in cluster, but is required. Is RBAC enabled?")
+	}
+
+	return &clusterResources{
+		PodPolicy:     kubectl.ResourceExist("extensions/v1beta1", "podsecuritypolicies", groupResources),
+		NetworkPolicy: kubectl.ResourceExist("networking.k8s.io/v1", "networkpolicies", groupResources),
+		CertManager:   kubectl.GroupVersionExist("certmanager.k8s.io/v1alpha1", groupResources),
+	}, nil
+}
+
+func initializeNamespace(client *kubernetes.Clientset) error {
+	log.StartWait("Initializing namespace")
+	defer log.StopWait()
+
+	// Create devspace-cloud namespace
+	_, err := client.Core().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
+	if err != nil {
+		_, err = client.Core().Namespaces().Create(&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: DevSpaceCloudNamespace,
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "create namespace")
+		}
+	}
+
+	// Create serviceaccount
+	_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	if err != nil {
+		_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: DevSpaceServiceAccount,
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "create service account")
+		}
+	}
+
+	// Create cluster-admin clusterrole binding
+	_, err = client.RbacV1beta1().ClusterRoleBindings().Get(DevSpaceClusterRoleBinding, metav1.GetOptions{})
+	if err != nil {
+		_, err = client.RbacV1beta1().ClusterRoleBindings().Create(&v1beta1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: DevSpaceClusterRoleBinding,
+			},
+			Subjects: []v1beta1.Subject{
+				{
+					Kind:      v1beta1.ServiceAccountKind,
+					Name:      DevSpaceServiceAccount,
+					Namespace: DevSpaceCloudNamespace,
+				},
+			},
+			RoleRef: v1beta1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "create cluster role binding")
+		}
+	}
+
+	return nil
+}

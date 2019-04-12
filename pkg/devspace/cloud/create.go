@@ -1,11 +1,54 @@
 package cloud
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 )
 
+// CreateUserCluster creates a user cluster with the given name
+func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string) (int, error) {
+	// Response struct
+	response := struct {
+		CreateCluster *struct {
+			ClusterID int
+		} `json:"manager_createUserCluster"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation($name:String!,$caCert:String!,$server:String!,$encryptedToken:String!) {
+			manager_createUserCluster(
+				name:$name,
+				caCert:$caCert,
+				server:$server,
+				encryptedToken:$encryptedToken
+			) {
+				ClusterID
+			}
+		}
+	`, map[string]interface{}{
+		"name":           name,
+		"caCert":         caCert,
+		"server":         server,
+		"encryptedToken": encryptedToken,
+	}, &response)
+	if err != nil {
+		return 0, err
+	}
+
+	// Check result
+	if response.CreateCluster == nil {
+		return 0, errors.New("Couldn't create cluster: returned answer is null")
+	}
+
+	return response.CreateCluster.ClusterID, nil
+}
+
 // CreateSpace creates a new space and returns the space id
-func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int, error) {
+func (p *Provider) CreateSpace(name string, projectID int, cluster *Cluster) (int, error) {
+	key, err := p.GetClusterKey(cluster)
+	if err != nil {
+		return 0, errors.Wrap(err, "get cluster key")
+	}
 
 	// Response struct
 	response := struct {
@@ -15,16 +58,17 @@ func (p *Provider) CreateSpace(name string, projectID int, clusterID *int) (int,
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
-		mutation($spaceName: String!, $clusterID: Int, $projectID: Int!) {
-			manager_createSpace(spaceName: $spaceName, clusterID: $clusterID, projectID: $projectID) {
+	err = p.GrapqhlRequest(`
+		mutation($key: String, $spaceName: String!, $clusterID: Int", $projectID: Int!) {
+			manager_createSpace(key: $key, spaceName: $spaceName, clusterID: $clusterID, projectID: $projectID) {
 				SpaceID
 			}
 		}
 	`, map[string]interface{}{
+		"key":       key,
 		"spaceName": name,
 		"projectID": projectID,
-		"clusterID": clusterID,
+		"clusterID": cluster.ClusterID,
 	}, &response)
 	if err != nil {
 		return 0, err

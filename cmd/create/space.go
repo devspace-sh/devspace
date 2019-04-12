@@ -58,8 +58,8 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Check if user has specified a certain provider
 	var cloudProvider *string
-	if cmd.provider != "" {
-		cloudProvider = &cmd.provider
+	if cmd.Provider != "" {
+		cloudProvider = &cmd.Provider
 	}
 
 	// Get provider
@@ -96,14 +96,17 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 	} else {
-		provider.GetUserClusterByName
+		cluster, err = provider.GetClusterByName(cmd.Cluster)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.StartWait("Creating space " + args[0])
 	defer log.StopWait()
 
 	// Create space
-	spaceID, err := provider.CreateSpace(args[0], projectID, nil)
+	spaceID, err := provider.CreateSpace(args[0], projectID, cluster)
 	if err != nil {
 		log.Fatalf("Error creating space: %v", err)
 	}
@@ -134,7 +137,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Set space as active space
-	if cmd.active && configExists {
+	if cmd.Active && configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
