@@ -15,5 +15,7 @@ func NewConnectCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
+	connectCmd.AddCommand(newClusterCmd())
+
 	return connectCmd
 }

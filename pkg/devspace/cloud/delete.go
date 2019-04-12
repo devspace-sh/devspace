@@ -1,11 +1,42 @@
 package cloud
 
 import (
-	"errors"
-
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+
+	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+// DeleteCluster deletes an cluster
+func (p *Provider) DeleteCluster(cluster *Cluster, deleteServices, deleteKubeContexts bool) error {
+	key, err := p.GetClusterKey(cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
+	err = p.GrapqhlRequest(`
+		mutation($key:String!,$clusterID:Int!,$deleteServices:Boolean!,$deleteKubeContexts:Boolean!){
+			manager_deleteCluster(
+				key:$key,
+				clusterID:$clusterID,
+				deleteServices:$deleteServices,
+				deleteKubeContexts:$deleteKubeContexts
+			)
+		}
+	`, map[string]interface{}{
+		"key":                key,
+		"clusterID":          cluster.ClusterID,
+		"deleteServices":     deleteServices,
+		"deleteKubeContexts": deleteKubeContexts,
+	}, &struct {
+		DeleteCluster bool `json:"manager_deleteCluster"`
+	}{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // DeleteSpace deletes a space with the given id
 func (p *Provider) DeleteSpace(spaceID int) error {

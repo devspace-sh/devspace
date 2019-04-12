@@ -11,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
-	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -31,6 +30,9 @@ const (
 
 	// DevSpaceClusterRoleBinding is the name of the clusterrolebinding to create for the service account
 	DevSpaceClusterRoleBinding = "devspace-cloud-user-binding"
+
+	loadBalancerOption = "LoadBalancer (GKE, AKS, EKS etc.)"
+	hostNetworkOption  = "Use host network"
 )
 
 type clusterResources struct {
@@ -87,10 +89,13 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 	}
 
 	// Create cluster remotely
+	log.StartWait("Initialize cluster")
+	defer log.StopWait()
 	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken), availableResources.NetworkPolicy)
 	if err != nil {
 		return errors.Wrap(err, "create cluster")
 	}
+	log.StopWait()
 
 	// Save key
 	p.ClusterKey[clusterID] = key
@@ -105,23 +110,32 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 		return errors.Wrap(err, "initialize core")
 	}
 
+	// Ask if we should use the host network
+	useHostNetwork := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:     "Should the ingress controller use a LoadBalancer or the host network?",
+		DefaultValue: loadBalancerOption,
+		Options: []string{
+			loadBalancerOption,
+			hostNetworkOption,
+		},
+	}) == hostNetworkOption
+
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(clusterID, key, availableResources)
+	err = p.deployServices(clusterID, key, availableResources, useHostNetwork)
 	if err != nil {
 		return err
 	}
 
 	// Set cluster domain to use for spaces
-	err = p.specifyDomain(clusterID, key)
+	err = p.specifyDomain(clusterID, key, useHostNetwork)
 	if err != nil {
 		return err
 	}
 
-	log.Donef("Successfully connected cluster %s to DevSpace Cloud. You can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", clusterName, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
 	return nil
 }
 
-func (p *Provider) specifyDomain(clusterID int, key string) error {
+func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool) error {
 	domain := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
 		Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
 		ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
@@ -150,31 +164,35 @@ func (p *Provider) specifyDomain(clusterID int, key string) error {
 		return errors.Wrap(err, "update cluster domain")
 	}
 
-	log.StartWait("Retrieving loadbalancer ip")
+	if useHostNetwork == false {
+		log.StartWait("Retrieving loadbalancer ip")
 
-	// Make sure loadbalancer is up and running
-	response := &struct {
-		LoadBalancer string `json:"manager_loadBalancerIP"`
-	}{}
+		// Make sure loadbalancer is up and running
+		response := &struct {
+			LoadBalancer string `json:"manager_loadBalancerIP"`
+		}{}
 
-	err = p.GrapqhlRequest(`
-		query($clusterID:Int!,$key:String!) {
-			manager_loadBalancerIP(clusterID:$clusterID,key:$key)
-	  	}
-	`, map[string]interface{}{
-		"clusterID": clusterID,
-		"key":       key,
-	}, &response)
-	if err != nil {
-		log.Warnf("Seems like the loadbalancer ip couldn't be retrieved.\n Make sure the loadbalancer service nginx-ingress-controller in namespace devspace-cloud has an external-ip\n Afterwards please create an A dns record for '*.%s' that points to the external ip", domain)
+		err = p.GrapqhlRequest(`
+			query($clusterID:Int!,$key:String!) {
+				manager_loadBalancerIP(clusterID:$clusterID,key:$key)
+			  }
+		`, map[string]interface{}{
+			"clusterID": clusterID,
+			"key":       key,
+		}, &response)
+		if err != nil {
+			log.Warnf("Seems like the loadbalancer ip couldn't be retrieved. This is the case either because the loadbalancer needs more time to retrieve an external IP or your cluster does not support loadbalancers.\n Make sure the loadbalancer service nginx-ingress-controller in namespace devspace-cloud will get an external-ip\n Afterwards please create an A dns record for '*.%s' that points to the external ip", domain)
+		} else {
+			log.Donef("Please create an A dns record for '*.%s' that points to '%s'", domain, response.LoadBalancer)
+		}
 	} else {
-		log.Donef("Please create an A dns record for '*.%s' that points to '%s'", domain, response.LoadBalancer)
+		log.Donef("Please make sure you have an A dns record for '*.%s' that points to one of your cluster nodes", domain)
 	}
 
 	return nil
 }
 
-func (p *Provider) deployServices(clusterID int, key string, availableResources *clusterResources) error {
+func (p *Provider) deployServices(clusterID int, key string, availableResources *clusterResources, useHostNetwork bool) error {
 	serviceAmount := 3
 	if availableResources.CertManager {
 		serviceAmount = 2
@@ -185,15 +203,17 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 
 	// Deploy admission controller
 	err := p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!) {
+		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
 			manager_deployAdmissionController(
 				clusterID:$clusterID,
-				key:$key
+				key:$key,
+				useHostNetwork:$useHostNetwork
 			)
 		}
 	`, map[string]interface{}{
-		"clusterID": clusterID,
-		"key":       key,
+		"clusterID":      clusterID,
+		"key":            key,
+		"useHostNetwork": useHostNetwork,
 	}, &struct {
 		Deploy bool `json:"manager_deployAdmissionController"`
 	}{})

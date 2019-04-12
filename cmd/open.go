@@ -11,9 +11,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/mgutz/ansi"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // OpenCmd holds the open cmd flags
@@ -92,12 +95,6 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, provider.Name)
-	err = cloud.UpdateKubeConfig(kubeContext, space, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Loop and check if http code is != 502
 	log.StartWait("Getting things ready")
 	defer log.StopWait()
@@ -108,12 +105,41 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	now := time.Now()
-	domain := "https://" + *space.Domain
+	domain := *space.Domain
+	if space.Cluster.Owner == nil {
+		domain = "http://" + domain
+	} else {
+		domain = "http://" + domain
+	}
 
 	// Get kubernetes config
-	config, err := kubectl.GetClientConfigFromContext(kubeContext)
+	config, err := kubectl.GetClientConfig()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Get default namespace
+	devspaceConfig := configutil.GetConfig()
+	namespace, err := configutil.GetDefaultNamespace(devspaceConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// List all ingresses and only create one if there is none already
+	ingressList, err := client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("Error listing ingresses: %v", err)
+	}
+
+	// Skip if there is an ingress already
+	if len(ingressList.Items) == 0 {
+		log.Warnf("Cannot open the application since there were no ingresses found")
+		return
 	}
 
 	for time.Since(now) < time.Minute*4 {
@@ -123,11 +149,14 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Error making request to %s: %v", domain, err)
 		}
 		if resp.StatusCode != http.StatusBadGateway {
-			break
+			log.StopWait()
+			open.Start(domain)
+			log.Donef("Successfully opened %s", domain)
+			os.Exit(0)
 		}
 
 		// Analyze space for issues
-		report, err := analyze.CreateReport(config, space.Namespace, false)
+		report, err := analyze.CreateReport(config, namespace, false)
 		if err != nil {
 			log.Fatalf("Error analyzing space: %v", err)
 		}
@@ -141,10 +170,5 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.StopWait()
-	if time.Since(now) > time.Minute*4 {
-		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
-	}
-
-	open.Start(domain)
-	log.Donef("Successfully opened %s", domain)
+	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
 }

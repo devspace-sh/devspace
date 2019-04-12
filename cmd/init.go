@@ -255,7 +255,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		cmd.configureCluster()
 	} else {
 		// Get provider configuration
-		providerConfig, err := cloud.ParseCloudConfig()
+		providerConfig, err := cloud.LoadCloudConfig()
 		if err != nil {
 			log.Fatalf("Error loading provider config: %v", err)
 		}

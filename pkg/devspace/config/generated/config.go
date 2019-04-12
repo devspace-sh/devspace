@@ -54,7 +54,7 @@ type DeploymentConfig struct {
 }
 
 // ConfigPath is the relative generated config path
-var ConfigPath = "/.devspace/generated.yaml"
+var ConfigPath = ".devspace/generated.yaml"
 
 var loadedConfig *Config
 var loadedConfigOnce sync.Once

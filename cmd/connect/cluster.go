@@ -62,5 +62,5 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 		log.Fatal(err)
 	}
 
-	log.Infof("Successfully connected cluster to DevSpace Cloud. You can create a new space in this cluster with: '%s'", ansi.Color("devspace create space", "white+b"))
+	log.Donef("Successfully connected cluster %s to DevSpace Cloud. You can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", clusterName, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
 }

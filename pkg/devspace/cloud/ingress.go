@@ -46,6 +46,9 @@ func CreateIngress(client *kubernetes.Clientset) error {
 	serviceName := "external"
 	servicePort := "80"
 
+	// Check if we should create an ingress
+	found := false
+
 	for i := len(*config.Deployments) - 1; i >= 0; i-- {
 		deployment := (*config.Deployments)[i]
 		if deployment.Component != nil {
@@ -65,8 +68,14 @@ func CreateIngress(client *kubernetes.Clientset) error {
 				}
 			}
 
+			found = true
 			break
 		}
+	}
+
+	// Don't create an ingress if there is no component
+	if found == false {
+		return nil
 	}
 
 	// Init provider

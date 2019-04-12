@@ -42,7 +42,7 @@ devspace login --token 123456789
 
 // RunLogin executes the functionality devspace login
 func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
-	providerConfig, err := cloud.ParseCloudConfig()
+	providerConfig, err := cloud.LoadCloudConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
