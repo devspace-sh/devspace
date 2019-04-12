@@ -5,7 +5,7 @@ import (
 )
 
 // CreateUserCluster creates a user cluster with the given name
-func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string) (int, error) {
+func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error) {
 	// Response struct
 	response := struct {
 		CreateCluster *struct {
@@ -15,21 +15,23 @@ func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string
 
 	// Do the request
 	err := p.GrapqhlRequest(`
-		mutation($name:String!,$caCert:String!,$server:String!,$encryptedToken:String!) {
+		mutation($name:String!,$caCert:String!,$server:String!,$encryptedToken:String!,$networkPolicyEnabled:Boolean!) {
 			manager_createUserCluster(
 				name:$name,
 				caCert:$caCert,
 				server:$server,
-				encryptedToken:$encryptedToken
+				encryptedToken:$encryptedToken,
+				networkPolicyEnabled:$networkPolicyEnabled
 			) {
 				ClusterID
 			}
 		}
 	`, map[string]interface{}{
-		"name":           name,
-		"caCert":         caCert,
-		"server":         server,
-		"encryptedToken": encryptedToken,
+		"name":                 name,
+		"caCert":               caCert,
+		"server":               server,
+		"encryptedToken":       encryptedToken,
+		"networkPolicyEnabled": networkPolicyEnabled,
 	}, &response)
 	if err != nil {
 		return 0, err

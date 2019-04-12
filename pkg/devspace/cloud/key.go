@@ -27,8 +27,11 @@ func (p *Provider) GetClusterKey(cluster *Cluster) (string, error) {
 	}
 
 	// Verifies the cluster key
-	err := p.VerifyKey(key, cluster.ClusterID)
+	verified, err := p.VerifyKey(key, cluster.ClusterID)
 	if err != nil {
+		return "", errors.Wrap(err, "verify key")
+	}
+	if verified == false {
 		return p.AskForEncryptionKey(cluster)
 	}
 
@@ -65,8 +68,11 @@ func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 			return "", errors.Wrap(err, "bcrypt key")
 		}
 
-		err = p.VerifyKey(hashedKey, cluster.ClusterID)
+		verified, err := p.VerifyKey(hashedKey, cluster.ClusterID)
 		if err != nil {
+			return "", errors.Wrap(err, "verify key")
+		}
+		if verified == false {
 			log.Errorf("Encryption key is incorrect. Please try again")
 			continue
 		}
@@ -87,10 +93,10 @@ func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 }
 
 // VerifyKey verifies the given key for the given cluster
-func (p *Provider) VerifyKey(key string, clusterID int) error {
+func (p *Provider) VerifyKey(key string, clusterID int) (bool, error) {
 	clusterUser, err := p.GetClusterUser(clusterID)
 	if err != nil {
-		return errors.Wrap(err, "get cluster user")
+		return false, errors.Wrap(err, "get cluster user")
 	}
 
 	// Response struct
@@ -111,8 +117,8 @@ func (p *Provider) VerifyKey(key string, clusterID int) error {
 		"key":           key,
 	}, &response)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return response.VerifyKey, nil
 }

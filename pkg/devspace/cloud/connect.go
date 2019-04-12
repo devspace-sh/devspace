@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -59,7 +60,7 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 	}
 
 	// Check available cluster resources
-	_, err = checkResources(client)
+	availableResources, err := checkResources(client)
 	if err != nil {
 		return errors.Wrap(err, "check resource availability")
 	}
@@ -86,11 +87,195 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 	}
 
 	// Create cluster remotely
-	_, err = p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken))
+	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken), availableResources.NetworkPolicy)
 	if err != nil {
 		return errors.Wrap(err, "create cluster")
 	}
 
+	// Save key
+	p.ClusterKey[clusterID] = key
+	err = p.Save()
+	if err != nil {
+		return errors.Wrap(err, "save key")
+	}
+
+	// Initialize roles and pod security policies
+	err = p.initCore(clusterID, key, availableResources.PodPolicy)
+	if err != nil {
+		return errors.Wrap(err, "initialize core")
+	}
+
+	// Deploy admission controller, ingress controller and cert manager
+	err = p.deployServices(clusterID, key, availableResources)
+	if err != nil {
+		return err
+	}
+
+	// Set cluster domain to use for spaces
+	err = p.specifyDomain(clusterID, key)
+	if err != nil {
+		return err
+	}
+
+	log.Donef("Successfully connected cluster %s to DevSpace Cloud. You can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", clusterName, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
+	return nil
+}
+
+func (p *Provider) specifyDomain(clusterID int, key string) error {
+	domain := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
+		ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
+		ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
+	})
+
+	log.StartWait("Updating domain name")
+	defer log.StopWait()
+
+	// Update cluster domain
+	err := p.GrapqhlRequest(`
+		mutation ($clusterID:Int!, $domain:String!) {
+			manager_updateClusterDomain(
+				clusterID:$clusterID,
+				domain:$domain,
+				useSSL:false
+			)
+	  	}
+	`, map[string]interface{}{
+		"clusterID": clusterID,
+		"domain":    domain,
+	}, &struct {
+		UpdateClusterDomain bool `json:"manager_updateClusterDomain"`
+	}{})
+	if err != nil {
+		return errors.Wrap(err, "update cluster domain")
+	}
+
+	log.StartWait("Retrieving loadbalancer ip")
+
+	// Make sure loadbalancer is up and running
+	response := &struct {
+		LoadBalancer string `json:"manager_loadBalancerIP"`
+	}{}
+
+	err = p.GrapqhlRequest(`
+		query($clusterID:Int!,$key:String!) {
+			manager_loadBalancerIP(clusterID:$clusterID,key:$key)
+	  	}
+	`, map[string]interface{}{
+		"clusterID": clusterID,
+		"key":       key,
+	}, &response)
+	if err != nil {
+		log.Warnf("Seems like the loadbalancer ip couldn't be retrieved.\n Make sure the loadbalancer service nginx-ingress-controller in namespace devspace-cloud has an external-ip\n Afterwards please create an A dns record for '*.%s' that points to the external ip", domain)
+	} else {
+		log.Donef("Please create an A dns record for '*.%s' that points to '%s'", domain, response.LoadBalancer)
+	}
+
+	return nil
+}
+
+func (p *Provider) deployServices(clusterID int, key string, availableResources *clusterResources) error {
+	serviceAmount := 3
+	if availableResources.CertManager {
+		serviceAmount = 2
+	}
+
+	log.StartWait(fmt.Sprintf("Deploying admission controller [1/%d]", serviceAmount))
+	defer log.StopWait()
+
+	// Deploy admission controller
+	err := p.GrapqhlRequest(`
+		mutation ($clusterID:Int!, $key:String!) {
+			manager_deployAdmissionController(
+				clusterID:$clusterID,
+				key:$key
+			)
+		}
+	`, map[string]interface{}{
+		"clusterID": clusterID,
+		"key":       key,
+	}, &struct {
+		Deploy bool `json:"manager_deployAdmissionController"`
+	}{})
+	if err != nil {
+		return errors.Wrap(err, "deploy admission controller")
+	}
+
+	log.Done("Deployed admission controller")
+	log.StartWait(fmt.Sprintf("Deploying ingress controller [2/%d]", serviceAmount))
+
+	// Deploy ingress controller
+	err = p.GrapqhlRequest(`
+		mutation ($clusterID:Int!, $key:String!) {
+			manager_deployIngressController(
+				clusterID:$clusterID,
+				key:$key
+			)
+		}
+	`, map[string]interface{}{
+		"clusterID": clusterID,
+		"key":       key,
+	}, &struct {
+		Deploy bool `json:"manager_deployIngressController"`
+	}{})
+	if err != nil {
+		return errors.Wrap(err, "deploy ingress controller")
+	}
+
+	log.Done("Deployed ingress controller")
+
+	if availableResources.CertManager == false {
+		log.StartWait(fmt.Sprintf("Deploying cert manager [3/%d]", serviceAmount))
+
+		// Deploy cert manager
+		err := p.GrapqhlRequest(`
+			mutation ($clusterID:Int!, $key:String!) {
+				manager_deployCertManager(
+					clusterID:$clusterID,
+					key:$key
+				)
+			}
+		`, map[string]interface{}{
+			"clusterID": clusterID,
+			"key":       key,
+		}, &struct {
+			Deploy bool `json:"manager_deployCertManager"`
+		}{})
+		if err != nil {
+			return errors.Wrap(err, "deploy cert manager")
+		}
+
+		log.Done("Deployed cert manager")
+	}
+
+	return nil
+}
+
+func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) error {
+	log.StartWait("Initializing Cluster")
+	defer log.StopWait()
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation ($clusterID:Int!, $key:String!, $enablePodPolicy:Boolean!){
+			manager_initializeCore(
+				clusterID:$clusterID,
+				key:$key,
+				enablePodPolicy:$enablePodPolicy
+			)
+	  	}
+	`, map[string]interface{}{
+		"clusterID":       clusterID,
+		"key":             key,
+		"enablePodPolicy": enablePodPolicy,
+	}, &struct {
+		InitCore bool `json:"manager_initializeCore"`
+	}{})
+	if err != nil {
+		return err
+	}
+
+	log.Info("Initialized cluster")
 	return nil
 }
 
@@ -233,6 +418,8 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 		if err != nil {
 			return errors.Wrap(err, "create namespace")
 		}
+
+		log.Infof("Created namespace '%s'", DevSpaceCloudNamespace)
 	}
 
 	// Create serviceaccount
@@ -246,6 +433,8 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 		if err != nil {
 			return errors.Wrap(err, "create service account")
 		}
+
+		log.Infof("Created service account '%s'", DevSpaceServiceAccount)
 	}
 
 	// Create cluster-admin clusterrole binding
@@ -271,6 +460,8 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 		if err != nil {
 			return errors.Wrap(err, "create cluster role binding")
 		}
+
+		log.Infof("Created cluster role binding '%s'", DevSpaceClusterRoleBinding)
 	}
 
 	return nil
