@@ -62,7 +62,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 	}
 
 	// Replace : with - for usernames
-	spaceName = strings.Replace(providerName, ":", "-", -1)
+	spaceName = strings.Replace(spaceName, ":", "-", -1)
 	return prefix + "-" + strings.ToLower(spaceName)
 }
 

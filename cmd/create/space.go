@@ -1,14 +1,14 @@
 package create
 
 import (
-	"errors"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -68,13 +68,13 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.StartWait("Creating space " + args[0])
+	log.StartWait("Retrieving clusters")
 	defer log.StopWait()
 
 	// Get projects
 	projects, err := provider.GetProjects()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error retrieving projects: %v", err)
 	}
 
 	// Create project if needed
@@ -173,10 +173,10 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 
 	clusters, err := p.GetClusters()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get clusters")
 	}
 	if len(clusters) == 0 {
-		return nil, errors.New("Cannot create project, because no public cluster was found")
+		return nil, errors.New("Cannot create space, because no cluster was found")
 	}
 
 	log.StopWait()
@@ -190,7 +190,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	}
 
 	// Check if user has connected clusters
-	if len(connectedClusters) > 1 {
+	if len(connectedClusters) > 0 {
 		clusterNames := []string{}
 		for _, cluster := range connectedClusters {
 			clusterNames = append(clusterNames, cluster.Name)

@@ -61,7 +61,7 @@ func (p *Provider) CreateSpace(name string, projectID int, cluster *Cluster) (in
 
 	// Do the request
 	err = p.GrapqhlRequest(`
-		mutation($key: String, $spaceName: String!, $clusterID: Int", $projectID: Int!) {
+		mutation($key: String, $spaceName: String!, $clusterID: Int!, $projectID: Int!) {
 			manager_createSpace(key: $key, spaceName: $spaceName, clusterID: $clusterID, projectID: $projectID) {
 				SpaceID
 			}

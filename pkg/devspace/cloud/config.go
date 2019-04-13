@@ -92,9 +92,10 @@ func SaveCloudConfig(providerConfig ProviderConfig) error {
 		}
 
 		saveConfig[name] = &Provider{
-			Name:  "",
-			Host:  host,
-			Token: provider.Token,
+			Name:       "",
+			Host:       host,
+			Token:      provider.Token,
+			ClusterKey: provider.ClusterKey,
 		}
 	}
 
