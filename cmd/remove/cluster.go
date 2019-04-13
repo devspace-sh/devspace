@@ -97,5 +97,11 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 		log.Fatal(err)
 	}
 
+	delete(provider.ClusterKey, cluster.ClusterID)
+	err = provider.Save()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Donef("Successfully deleted cluster %s", args[0])
 }

@@ -73,7 +73,7 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 		return errors.Wrap(err, "init namespace")
 	}
 
-	key, err := getKey(p)
+	key, err := getKey(p, false)
 	if err != nil {
 		return errors.Wrap(err, "get key")
 	}
@@ -203,7 +203,7 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 
 	// Deploy ingress controller
 	err := p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!) {
+		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
 			manager_deployIngressController(
 				clusterID:$clusterID,
 				key:$key,
@@ -226,7 +226,7 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 
 	// Deploy admission controller
 	err = p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
+		mutation ($clusterID:Int!, $key:String!) {
 			manager_deployAdmissionController(
 				clusterID:$clusterID,
 				key:$key
@@ -334,8 +334,8 @@ func getServiceAccountCredentials(client *kubernetes.Clientset) ([]byte, string,
 	return secret.Data["token"], base64.StdEncoding.EncodeToString(secret.Data["ca.crt"]), nil
 }
 
-func getKey(provider *Provider) (string, error) {
-	if len(provider.ClusterKey) > 0 {
+func getKey(provider *Provider, forceQuestion bool) (string, error) {
+	if forceQuestion == false && len(provider.ClusterKey) > 0 {
 		for _, key := range provider.ClusterKey {
 			return key, nil
 		}
@@ -514,7 +514,7 @@ func (p *Provider) ResetKey(clusterName string) error {
 		return errors.Wrap(err, "get kubernetes client")
 	}
 
-	key, err := getKey(p)
+	key, err := getKey(p, true)
 	if err != nil {
 		return errors.Wrap(err, "get key")
 	}
@@ -549,6 +549,13 @@ func (p *Provider) ResetKey(clusterName string) error {
 	}{})
 	if err != nil {
 		return errors.Wrap(err, "update token")
+	}
+
+	// Save key
+	p.ClusterKey[cluster.ClusterID] = key
+	err = p.Save()
+	if err != nil {
+		return errors.Wrap(err, "save key")
 	}
 
 	return nil
