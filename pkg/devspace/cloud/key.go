@@ -63,9 +63,9 @@ func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 			IsPassword:             true,
 		})
 
-		hashedKey, err := hash.BcryptPassword(key)
+		hashedKey, err := hash.Password(key)
 		if err != nil {
-			return "", errors.Wrap(err, "bcrypt key")
+			return "", errors.Wrap(err, "hash key")
 		}
 
 		verified, err := p.VerifyKey(hashedKey, cluster.ClusterID)

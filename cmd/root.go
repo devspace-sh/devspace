@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/create"
 	"github.com/devspace-cloud/devspace/cmd/list"
 	"github.com/devspace-cloud/devspace/cmd/remove"
+	"github.com/devspace-cloud/devspace/cmd/reset"
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
@@ -60,6 +61,7 @@ func init() {
 	rootCmd.AddCommand(use.NewUseCmd())
 	rootCmd.AddCommand(update.NewUpdateCmd())
 	rootCmd.AddCommand(connect.NewConnectCmd())
+	rootCmd.AddCommand(reset.NewResetCmd())
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd())

@@ -80,6 +80,8 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 			if cluster.CreatedAt != nil {
 				createdAt = *cluster.CreatedAt
 			}
+		} else if cmd.All == false {
+			continue
 		}
 
 		values = append(values, []string{

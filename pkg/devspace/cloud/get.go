@@ -39,6 +39,7 @@ type Project struct {
 // Cluster is the type that holds the cluster information
 type Cluster struct {
 	ClusterID int     `json:"id"`
+	Server    *string `json:"server"`
 	Owner     *Owner  `json:"account"`
 	Name      string  `json:"name"`
 	CreatedAt *string `json:"created_at"`
@@ -132,6 +133,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 			}
 
 			name
+			server
 		}
 	}
   `, map[string]interface{}{
@@ -172,6 +174,7 @@ func (p *Provider) GetClusters() ([]*Cluster, error) {
 			}
 
 			name
+			server
 			created_at
 		}
 	  }
@@ -337,6 +340,7 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 				cluster {
 					id
 					name
+
 					account {
 						id
 						name

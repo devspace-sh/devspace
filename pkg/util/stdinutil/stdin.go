@@ -1,12 +1,11 @@
 package stdinutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 )
 
@@ -26,7 +25,6 @@ var DefaultValidationRegexPattern = regexp.MustCompile("^.*$")
 //GetFromStdin asks the user a question and returns the answer
 func GetFromStdin(params *GetFromStdinParams) *string {
 	var prompt survey.Prompt
-	var result *string
 	compiledRegex := DefaultValidationRegexPattern
 	if params.ValidationRegexPattern != "" {
 		compiledRegex = regexp.MustCompile(params.ValidationRegexPattern)
@@ -56,39 +54,30 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 		},
 	}
 
-	if params.Options != nil {
+	if params.Options == nil {
 		question[0].Validate = func(val interface{}) error {
 			// since we are validating an Input, the assertion will always succeed
 			if str, ok := val.(string); !ok || compiledRegex.MatchString(str) == false {
-				return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
+				if params.ValidationMessage != "" {
+					return errors.New(params.ValidationMessage)
+				} else {
+					return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
+				}
+
 			}
 			return nil
 		}
 	}
 
-	for result == nil {
-		// Ask it
-		answers := struct {
-			Question string
-		}{}
-		err := survey.Ask(question, &answers)
-		if err != nil {
-			if strings.HasPrefix(err.Error(), "Answer has to match pattern") {
-				if params.ValidationMessage != "" {
-					log.Info(params.ValidationMessage)
-				} else {
-					log.Info(err.Error())
-				}
-
-				continue
-			}
-
-			// Keyboard interrupt
-			os.Exit(0)
-		}
-
-		result = &answers.Question
+	// Ask it
+	answers := struct {
+		Question string
+	}{}
+	err := survey.Ask(question, &answers)
+	if err != nil {
+		// Keyboard interrupt
+		os.Exit(0)
 	}
 
-	return result
+	return &answers.Question
 }

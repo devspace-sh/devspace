@@ -19,6 +19,7 @@ func NewRemoveCmd() *cobra.Command {
 
 	removeCmd.AddCommand(newDeploymentCmd())
 	removeCmd.AddCommand(newImageCmd())
+	removeCmd.AddCommand(newClusterCmd())
 	removeCmd.AddCommand(newPortCmd())
 	removeCmd.AddCommand(newProviderCmd())
 	removeCmd.AddCommand(newSelectorCmd())

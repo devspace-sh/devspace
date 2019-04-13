@@ -198,13 +198,13 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 		serviceAmount = 2
 	}
 
-	log.StartWait(fmt.Sprintf("Deploying admission controller [1/%d]", serviceAmount))
+	log.StartWait(fmt.Sprintf("Deploying ingress controller [1/%d]", serviceAmount))
 	defer log.StopWait()
 
-	// Deploy admission controller
+	// Deploy ingress controller
 	err := p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
-			manager_deployAdmissionController(
+		mutation ($clusterID:Int!, $key:String!) {
+			manager_deployIngressController(
 				clusterID:$clusterID,
 				key:$key,
 				useHostNetwork:$useHostNetwork
@@ -215,19 +215,19 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 		"key":            key,
 		"useHostNetwork": useHostNetwork,
 	}, &struct {
-		Deploy bool `json:"manager_deployAdmissionController"`
+		Deploy bool `json:"manager_deployIngressController"`
 	}{})
 	if err != nil {
-		return errors.Wrap(err, "deploy admission controller")
+		return errors.Wrap(err, "deploy ingress controller")
 	}
 
-	log.Done("Deployed admission controller")
-	log.StartWait(fmt.Sprintf("Deploying ingress controller [2/%d]", serviceAmount))
+	log.Done("Deployed ingress controller")
+	log.StartWait(fmt.Sprintf("Deploying admission controller [2/%d]", serviceAmount))
 
-	// Deploy ingress controller
+	// Deploy admission controller
 	err = p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!) {
-			manager_deployIngressController(
+		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
+			manager_deployAdmissionController(
 				clusterID:$clusterID,
 				key:$key
 			)
@@ -236,13 +236,13 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 		"clusterID": clusterID,
 		"key":       key,
 	}, &struct {
-		Deploy bool `json:"manager_deployIngressController"`
+		Deploy bool `json:"manager_deployAdmissionController"`
 	}{})
 	if err != nil {
-		return errors.Wrap(err, "deploy ingress controller")
+		return errors.Wrap(err, "deploy admission controller")
 	}
 
-	log.Done("Deployed ingress controller")
+	log.Done("Deployed admission controller")
 
 	if availableResources.CertManager == false {
 		log.StartWait(fmt.Sprintf("Deploying cert manager [3/%d]", serviceAmount))
@@ -358,11 +358,12 @@ func getKey(provider *Provider) (string, error) {
 
 		if firstKey != secondKey {
 			log.Info("Keys do not match! Please reenter")
+			continue
 		}
 
-		hashedKey, err := hash.BcryptPassword(firstKey)
+		hashedKey, err := hash.Password(firstKey)
 		if err != nil {
-			return "", errors.Wrap(err, "bcrypt key")
+			return "", errors.Wrap(err, "hash key")
 		}
 
 		return hashedKey, nil
@@ -482,6 +483,72 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 		}
 
 		log.Infof("Created cluster role binding '%s'", DevSpaceClusterRoleBinding)
+	}
+
+	return nil
+}
+
+// ResetKey resets a cluster key
+func (p *Provider) ResetKey(clusterName string) error {
+	cluster, err := p.GetClusterByName(clusterName)
+	if err != nil {
+		return errors.Wrap(err, "get cluster")
+	}
+	clusterUser, err := p.GetClusterUser(cluster.ClusterID)
+	if err != nil {
+		return errors.Wrap(err, "get cluster user")
+	}
+
+	// Get kube context to use
+	config, err := kubectl.GetClientConfigBySelect(false)
+	if err != nil {
+		return errors.Wrap(err, "new kubectl client")
+	}
+	if config.Host != *cluster.Server {
+		return fmt.Errorf("Selected context does not point to the correct host. Selected %s <> %s", config.Host, *cluster.Server)
+	}
+
+	// Get client from config
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return errors.Wrap(err, "get kubernetes client")
+	}
+
+	key, err := getKey(p)
+	if err != nil {
+		return errors.Wrap(err, "get key")
+	}
+
+	token, _, err := getServiceAccountCredentials(client)
+	if err != nil {
+		return errors.Wrap(err, "get service account credentials")
+	}
+
+	encryptedToken, err := EncryptAES([]byte(key), token)
+	if err != nil {
+		return errors.Wrap(err, "encrypt token")
+	}
+
+	// Update token
+	log.StartWait("Update token")
+	defer log.StopWait()
+
+	// Do the request
+	err = p.GrapqhlRequest(`
+		mutation($clusterUserID:Int!, $encryptedToken:String!) {
+			manager_updateUserClusterUser(
+				clusterUserID:$clusterUserID, 
+				encryptedToken:$encryptedToken
+			)
+	  	}
+	`, map[string]interface{}{
+		"clusterUserID":  clusterUser.ClusterUserID,
+		"encryptedToken": encryptedToken,
+	}, &struct {
+		UpdateClusterUser bool `json:"manager_updateUserClusterUser"`
+	}{})
+	if err != nil {
+		return errors.Wrap(err, "update token")
 	}
 
 	return nil
