@@ -39,19 +39,25 @@ func (p *Provider) DeleteCluster(cluster *Cluster, deleteServices, deleteKubeCon
 }
 
 // DeleteSpace deletes a space with the given id
-func (p *Provider) DeleteSpace(spaceID int) error {
+func (p *Provider) DeleteSpace(space *Space) error {
+	key, err := p.GetClusterKey(space.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
 	// Response struct
 	response := struct {
 		ManagerDeleteSpace bool `json:"manager_deleteSpace"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
-		mutation($spaceID: Int!) {
-			manager_deleteSpace(spaceID: $spaceID)
+	err = p.GrapqhlRequest(`
+		mutation($spaceID: Int!, $key: String!) {
+			manager_deleteSpace(spaceID: $spaceID, key: $key)
 		}
 	`, map[string]interface{}{
-		"spaceID": spaceID,
+		"spaceID": space.SpaceID,
+		"key":     key,
 	}, &response)
 	if err != nil {
 		return err

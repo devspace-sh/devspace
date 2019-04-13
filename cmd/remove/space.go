@@ -73,7 +73,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 		}
 
 		for _, space := range spaces {
-			err = provider.DeleteSpace(space.SpaceID)
+			err = provider.DeleteSpace(space)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -116,7 +116,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Delete space remotely
-	err = provider.DeleteSpace(space.SpaceID)
+	err = provider.DeleteSpace(space)
 	if err != nil {
 		log.Fatalf("Error deleting space: %v", err)
 	}
