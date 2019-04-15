@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -47,6 +48,10 @@ func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, hos
 		}
 
 		if service.Spec.Type == v1.ServiceTypeClusterIP {
+			if service.Spec.ClusterIP == "None" {
+				continue
+			}
+
 			for _, port := range service.Spec.Ports {
 				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port.Port)))
 			}
@@ -66,7 +71,7 @@ func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, hos
 	} else {
 		// Ask user which service
 		splitted := strings.Split(survey.Question(&survey.QuestionOptions{
-			Question: "Please specify the service you want to connect to",
+			Question: fmt.Sprintf("Please specify the service you want to connect '%s' to", ansi.Color(host, "white+b")),
 			Options:  serviceNameList,
 		}), ":")
 

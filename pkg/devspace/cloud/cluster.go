@@ -278,7 +278,7 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 		return err
 	}
 
-	log.Info("Initialized cluster")
+	log.Done("Initialized cluster")
 	return nil
 }
 
@@ -423,7 +423,7 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 			return errors.Wrap(err, "create namespace")
 		}
 
-		log.Infof("Created namespace '%s'", DevSpaceCloudNamespace)
+		log.Donef("Created namespace '%s'", DevSpaceCloudNamespace)
 	}
 
 	// Create serviceaccount
@@ -438,7 +438,7 @@ func initializeNamespace(client *kubernetes.Clientset) error {
 			return errors.Wrap(err, "create service account")
 		}
 
-		log.Infof("Created service account '%s'", DevSpaceServiceAccount)
+		log.Donef("Created service account '%s'", DevSpaceServiceAccount)
 	}
 
 	// Create cluster-admin clusterrole binding
