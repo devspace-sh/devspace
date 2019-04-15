@@ -152,7 +152,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 			OwnerID:      space.Owner.OwnerID,
 			KubeContext:  kubeContext,
 			Created:      space.Created,
-			Domain:       space.Domain,
 		}
 
 		err = generated.SaveConfig(generatedConfig)

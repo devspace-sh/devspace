@@ -1,12 +1,17 @@
 package cloud
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -15,82 +20,53 @@ import (
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func CreateIngress(client *kubernetes.Clientset) error {
-	// First check if the space has a domain
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return errors.Wrap(err, "load generated config")
-	}
-	if generatedConfig.CloudSpace == nil {
-		return nil
+func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, host string) error {
+	// Get default namespace
+	var config *latest.Config
+	if configutil.ConfigExists() {
+		config = configutil.GetConfig()
 	}
 
-	config := configutil.GetConfig()
 	namespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return errors.Wrap(err, "get default namespace")
 	}
 
-	// List all ingresses and only create one if there is none already
-	ingressList, err := client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	// Let user select service
+	serviceNameList := []string{}
+
+	serviceList, err := client.Core().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return errors.Wrap(err, "list ingresses")
+		return errors.Wrap(err, "list services")
 	}
 
-	// Skip if there is an ingress already
-	if len(ingressList.Items) > 0 {
-		return nil
-	}
-
-	// Get service name and port
-	serviceName := "external"
-	servicePort := "80"
-
-	// Check if we should create an ingress
-	found := false
-
-	for i := len(*config.Deployments) - 1; i >= 0; i-- {
-		deployment := (*config.Deployments)[i]
-		if deployment.Component != nil {
-			if deployment.Component.Service != nil && deployment.Component.Service.Name != nil {
-				serviceName = *deployment.Component.Service.Name
-			} else {
-				serviceName = *deployment.Name
+	for _, service := range serviceList.Items {
+		if service.Spec.Type == v1.ServiceTypeClusterIP {
+			for _, port := range service.Spec.Ports {
+				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port.Port)))
 			}
-
-			// Get the first service port
-			if deployment.Component.Service != nil && deployment.Component.Service.Ports != nil && len(*deployment.Component.Service.Ports) > 0 {
-				for _, port := range *deployment.Component.Service.Ports {
-					if port.Port != nil {
-						servicePort = strconv.Itoa(*port.Port)
-						break
-					}
-				}
-			}
-
-			found = true
-			break
 		}
 	}
 
-	// Don't create an ingress if there is no component
-	if found == false {
-		return nil
-	}
+	serviceName := ""
+	servicePort := ""
 
-	// Init provider
-	p, err := GetProvider(&generatedConfig.CloudSpace.ProviderName, log.GetInstance())
-	if err != nil {
-		return errors.Wrap(err, "get provider")
-	}
+	if len(serviceNameList) == 0 {
+		return fmt.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+	} else if len(serviceNameList) == 1 {
+		splitted := strings.Split(serviceNameList[0], ":")
 
-	// Get space
-	space, err := p.GetSpace(generatedConfig.CloudSpace.SpaceID)
-	if err != nil {
-		return errors.Wrap(err, "get space")
-	}
-	if space.Domain == nil {
-		return nil
+		serviceName = splitted[0]
+		servicePort = splitted[1]
+	} else {
+		// Ask user which service
+		splitted := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			Question: "Please specify the service you want to connect to",
+			Options:  serviceNameList,
+		}), ":")
+
+		serviceName = splitted[0]
+		servicePort = splitted[1]
 	}
 
 	// Get the cluster key
@@ -119,9 +95,9 @@ func CreateIngress(client *kubernetes.Clientset) error {
 		}
 	`, map[string]interface{}{
 		"key":            key,
-		"spaceID":        generatedConfig.CloudSpace.SpaceID,
+		"spaceID":        space.SpaceID,
 		"ingressName":    IngressName,
-		"host":           *space.Domain,
+		"host":           host,
 		"newPath":        "",
 		"newServiceName": serviceName,
 		"newServicePort": servicePort,
@@ -135,6 +111,6 @@ func CreateIngress(client *kubernetes.Clientset) error {
 		return errors.New("Mutation returned wrong result")
 	}
 
-	log.Infof("Successfully created ingress in space %s", generatedConfig.CloudSpace.Name)
+	log.Infof("Successfully created ingress in space %s", space.Name)
 	return nil
 }

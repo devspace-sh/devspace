@@ -21,14 +21,13 @@ type Config struct {
 
 // CloudSpaceConfig holds all the informations about a certain cloud space
 type CloudSpaceConfig struct {
-	SpaceID      int     `yaml:"spaceID"`
-	OwnerID      int     `yaml:"ownerID"`
-	Owner        string  `yaml:"owner"`
-	ProviderName string  `yaml:"providerName"`
-	KubeContext  string  `yaml:"kubeContext"`
-	Name         string  `yaml:"name"`
-	Created      string  `yaml:"created"`
-	Domain       *string `yaml:"domain"`
+	SpaceID      int    `yaml:"spaceID"`
+	OwnerID      int    `yaml:"ownerID"`
+	Owner        string `yaml:"owner"`
+	ProviderName string `yaml:"providerName"`
+	KubeContext  string `yaml:"kubeContext"`
+	Name         string `yaml:"name"`
+	Created      string `yaml:"created"`
 }
 
 // DevSpaceConfig holds all the information specific to a certain config

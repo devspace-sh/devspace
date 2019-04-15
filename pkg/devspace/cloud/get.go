@@ -10,13 +10,18 @@ import (
 
 // Space holds the information about a space in the cloud
 type Space struct {
-	SpaceID      int      `yaml:"spaceID"`
-	Name         string   `yaml:"name"`
-	Owner        *Owner   `yaml:"account"`
-	ProviderName string   `yaml:"providerName"`
-	Cluster      *Cluster `yaml:"cluster"`
-	Created      string   `yaml:"created"`
-	Domain       *string  `yaml:"domain"`
+	SpaceID      int            `yaml:"spaceID"`
+	Name         string         `yaml:"name"`
+	Owner        *Owner         `yaml:"account"`
+	ProviderName string         `yaml:"providerName"`
+	Cluster      *Cluster       `yaml:"cluster"`
+	Created      string         `yaml:"created"`
+	Domains      []*SpaceDomain `yaml:"domains"`
+}
+
+// SpaceDomain holds the information about a space domain
+type SpaceDomain struct {
+	URL string `yaml:"url"`
 }
 
 // ServiceAccount holds the information about a service account for a certain space
@@ -309,10 +314,8 @@ type spaceGraphql struct {
 	Owner *Owner `json:"account"`
 
 	KubeContext *struct {
-		Cluster *Cluster `json:"cluster"`
-		Domains []*struct {
-			URL string `json:"url"`
-		} `json:"kube_context_domains"`
+		Cluster *Cluster       `json:"cluster"`
+		Domains []*SpaceDomain `json:"kube_context_domains"`
 	} `json:"kube_context"`
 
 	CreatedAt string `json:"created_at"`
@@ -377,11 +380,10 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 			Name:         spaceConfig.Name,
 			ProviderName: p.Name,
 			Cluster:      spaceConfig.KubeContext.Cluster,
+			Domains:      spaceConfig.KubeContext.Domains,
 			Created:      spaceConfig.CreatedAt,
 		}
-		if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
-			newSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
-		}
+
 		// Exchange space name
 		err = p.exchangeSpaceName(newSpace)
 		if err != nil {
@@ -453,10 +455,8 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 		Name:         spaceConfig.Name,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
+		Domains:      spaceConfig.KubeContext.Domains,
 		Created:      spaceConfig.CreatedAt,
-	}
-	if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
-		retSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
 	}
 
 	// Exchange space name
@@ -550,10 +550,8 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 		Name:         spaceConfig.Name,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
+		Domains:      spaceConfig.KubeContext.Domains,
 		Created:      spaceConfig.CreatedAt,
-	}
-	if spaceConfig.KubeContext.Domains != nil && len(spaceConfig.KubeContext.Domains) > 0 {
-		retSpace.Domain = &spaceConfig.KubeContext.Domains[0].URL
 	}
 
 	// Exchange space name

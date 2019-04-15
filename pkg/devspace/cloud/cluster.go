@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
 
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -164,29 +165,11 @@ func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool)
 		return errors.Wrap(err, "update cluster domain")
 	}
 
+	log.StopWait()
 	if useHostNetwork == false {
-		log.StartWait("Retrieving loadbalancer ip")
-
-		// Make sure loadbalancer is up and running
-		response := &struct {
-			LoadBalancer string `json:"manager_loadBalancerIP"`
-		}{}
-
-		err = p.GrapqhlRequest(`
-			query($clusterID:Int!,$key:String!) {
-				manager_loadBalancerIP(clusterID:$clusterID,key:$key)
-			  }
-		`, map[string]interface{}{
-			"clusterID": clusterID,
-			"key":       key,
-		}, &response)
-		if err != nil {
-			log.Warnf("Seems like the loadbalancer ip couldn't be retrieved. This is the case either because the loadbalancer needs more time to retrieve an external IP or your cluster does not support loadbalancers.\n Make sure the loadbalancer service nginx-ingress-controller in namespace devspace-cloud will get an external-ip\n Afterwards please create an A dns record for '*.%s' that points to the external ip", domain)
-		} else {
-			log.Donef("Please create an A dns record for '*.%s' that points to '%s'", domain, response.LoadBalancer)
-		}
+		log.Donef("Please create an A dns record for '*.%s' that points to external-ip of loadbalancer service 'devspace-cloud/nginx-ingress-controller'. Run `%s` to view the service", domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
 	} else {
-		log.Donef("Please make sure you have an A dns record for '*.%s' that points to one of your cluster nodes", domain)
+		log.Donef("Please make sure you have an A dns record for '*.%s' that points to the external ip of one of your cluster nodes. Run `%s` to view your cluster nodes", domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
 	}
 
 	return nil
