@@ -122,6 +122,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	// If there is no config make sure the current kubectl context is correct
 	if configExists == false {
+		log.StartWait("Retrieve service account data")
+
 		// Change kube context
 		kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 		serviceAccount, err := provider.GetServiceAccount(space)
@@ -132,6 +134,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatalf("Error saving kube config: %v", err)
 		}
+
+		log.StopWait()
 	}
 
 	// Get default namespace
@@ -217,6 +221,9 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 }
 
 func findDomain(client *kubernetes.Clientset, namespace, host string) (string, bool, error) {
+	log.StartWait("Retrieve ingresses")
+	defer log.StopWait()
+
 	// List all ingresses and only create one if there is none already
 	ingressList, err := client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
 	if err != nil {
