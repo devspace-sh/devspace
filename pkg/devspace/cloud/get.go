@@ -68,7 +68,6 @@ type ClusterUser struct {
 type Registry struct {
 	RegistryID int    `json:"id"`
 	URL        string `json:"url"`
-	OwnerID    *int   `json:"owner_id"`
 }
 
 // GetRegistries returns all docker image registries
@@ -84,7 +83,6 @@ func (p *Provider) GetRegistries() ([]*Registry, error) {
 			image_registry {
 				id
 				url
-				owner_id
 			}
 		}
 	`, nil, &response)

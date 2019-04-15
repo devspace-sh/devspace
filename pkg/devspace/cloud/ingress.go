@@ -41,6 +41,11 @@ func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, hos
 	}
 
 	for _, service := range serviceList.Items {
+		// We skip tiller-deploy, because usually you don't want to create an ingress for tiller
+		if service.Name == "tiller-deploy" {
+			continue
+		}
+
 		if service.Spec.Type == v1.ServiceTypeClusterIP {
 			for _, port := range service.Spec.Ports {
 				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port.Port)))

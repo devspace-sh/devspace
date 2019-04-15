@@ -63,10 +63,8 @@ func LoadConfig() (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		var data []byte
-
-		data, err = ioutil.ReadFile(ConfigPath)
-		if err != nil {
+		data, readErr := ioutil.ReadFile(ConfigPath)
+		if readErr != nil {
 			loadedConfig = &Config{
 				ActiveConfig: DefaultConfigName,
 				Configs:      make(map[string]*DevSpaceConfig),

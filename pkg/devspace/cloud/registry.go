@@ -15,10 +15,8 @@ func (p *Provider) GetFirstPublicRegistry() (string, error) {
 
 	registryURL := ""
 	for _, registry := range registries {
-		if registry.OwnerID == nil {
-			registryURL = registry.URL
-			break
-		}
+		registryURL = registry.URL
+		break
 	}
 
 	return registryURL, nil

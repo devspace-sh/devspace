@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -120,7 +121,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// If there is no config make sure the current kubectl context is correct
-	if configExists {
+	if configExists == false {
 		// Change kube context
 		kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 		serviceAccount, err := provider.GetServiceAccount(space)
@@ -154,34 +155,10 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// List all ingresses and only create one if there is none already
-	ingressList, err := client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	// Check if domain exists
+	domain, tls, err := findDomain(client, namespace, host)
 	if err != nil {
-		log.Fatalf("Error listing ingresses: %v", err)
-	}
-
-	// Check ingresses for our domain
-	domain := ""
-	tls := false
-	for _, ingress := range ingressList.Items {
-		for _, rule := range ingress.Spec.Rules {
-			if strings.TrimSpace(rule.Host) == host {
-				domain = host
-			}
-		}
-
-		// Check if tls is enabled
-		if domain != "" {
-			for _, tlsEntry := range ingress.Spec.TLS {
-				for _, host := range tlsEntry.Hosts {
-					if strings.TrimSpace(host) == host {
-						tls = true
-					}
-				}
-			}
-
-			break
-		}
+		log.Fatal(err)
 	}
 
 	// Not found
@@ -189,6 +166,11 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		err = provider.CreateIngress(client, space, host)
 		if err != nil {
 			log.Fatalf("Error creating ingress: %v", err)
+		}
+
+		domain, tls, err = findDomain(client, namespace, host)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
@@ -232,4 +214,38 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	log.StopWait()
 	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
+}
+
+func findDomain(client *kubernetes.Clientset, namespace, host string) (string, bool, error) {
+	// List all ingresses and only create one if there is none already
+	ingressList, err := client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return "", false, fmt.Errorf("Error listing ingresses: %v", err)
+	}
+
+	// Check ingresses for our domain
+	domain := ""
+	tls := false
+	for _, ingress := range ingressList.Items {
+		for _, rule := range ingress.Spec.Rules {
+			if strings.TrimSpace(rule.Host) == host {
+				domain = host
+			}
+		}
+
+		// Check if tls is enabled
+		if domain != "" {
+			for _, tlsEntry := range ingress.Spec.TLS {
+				for _, host := range tlsEntry.Hosts {
+					if strings.TrimSpace(host) == host {
+						tls = true
+					}
+				}
+			}
+
+			break
+		}
+	}
+
+	return domain, tls, nil
 }

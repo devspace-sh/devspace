@@ -120,7 +120,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
-			log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
+			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
 
 		// Check if configs.yaml exists
@@ -131,7 +131,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			// Get configs
 			err = LoadConfigs(&configs, DefaultConfigsPath)
 			if err != nil {
-				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
+				log.Panicf("Error loading %s: %v", DefaultConfigsPath, err)
 			}
 
 			// Get config to load
@@ -172,12 +172,12 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				vars := []*configs.Variable{}
 				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
 				if err != nil {
-					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
+					log.Panicf("Error loading %s: %v", DefaultVarsPath, err)
 				}
 
 				err = yaml.UnmarshalStrict(yamlFileContent, vars)
 				if err != nil {
-					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
+					log.Panicf("Error parsing %s: %v", DefaultVarsPath, err)
 				}
 
 				// Ask questions
@@ -189,7 +189,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 			configRaw, err = loadConfigFromPath(DefaultConfigPath)
 			if err != nil {
-				log.Fatalf("Loading config: %v", err)
+				log.Panicf("Loading config: %v", err)
 			}
 		}
 

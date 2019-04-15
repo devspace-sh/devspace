@@ -333,7 +333,7 @@ func (cmd *InitCmd) connectCluster() {
 
 	connectedClusters := []string{}
 	for _, cluster := range clusters {
-		if cluster.Owner == nil {
+		if cluster.Owner != nil {
 			connectedClusters = append(connectedClusters, cluster.Name)
 		}
 	}
