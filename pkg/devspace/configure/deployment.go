@@ -11,7 +11,7 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +60,7 @@ func GetDockerfileComponentDeployment(name, imageName, dockerfile, context strin
 		if len(ports) == 1 {
 			port = strconv.Itoa(ports[0])
 		} else if len(ports) > 1 {
-			port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			port = survey.Question(&survey.QuestionOptions{
 				Question:     "Which port is the container listening on?",
 				DefaultValue: strconv.Itoa(ports[0]),
 			})
@@ -70,7 +70,7 @@ func GetDockerfileComponentDeployment(name, imageName, dockerfile, context strin
 		}
 	}
 	if port == "" {
-		port = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		port = survey.Question(&survey.QuestionOptions{
 			Question: "Which port is the container listening on? (Enter to skip)",
 		})
 	}
@@ -106,7 +106,7 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 	}
 
 	// Configure port
-	port := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	port := survey.Question(&survey.QuestionOptions{
 		Question: "Which port do you want to expose for this image? (Enter to skip)",
 	})
 	if port != "" {

@@ -11,7 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
@@ -78,7 +78,7 @@ func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
 	}
 
 	for true {
-		kubeContext := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		kubeContext := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      options,

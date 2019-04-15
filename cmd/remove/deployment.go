@@ -6,7 +6,7 @@ import (
 	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		name = args[0]
 	}
 
-	shouldPurgeDeployment := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	shouldPurgeDeployment := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
 		Options: []string{

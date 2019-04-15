@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -112,7 +112,7 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 	}
 
 	// Ask if we should use the host network
-	useHostNetwork := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	useHostNetwork := survey.Question(&survey.QuestionOptions{
 		Question:     "Should the ingress controller use a LoadBalancer or the host network?",
 		DefaultValue: loadBalancerOption,
 		Options: []string{
@@ -137,7 +137,7 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 }
 
 func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool) error {
-	domain := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	domain := survey.Question(&survey.QuestionOptions{
 		Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
 		ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
 		ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
@@ -325,14 +325,14 @@ func getKey(provider *Provider, forceQuestion bool) (string, error) {
 	}
 
 	for true {
-		firstKey := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		firstKey := survey.Question(&survey.QuestionOptions{
 			Question:               "Please enter a secure encryption key for your cluster credentials",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
 		})
 
-		secondKey := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		secondKey := survey.Question(&survey.QuestionOptions{
 			Question:               "Please re-enter the key",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
@@ -363,7 +363,7 @@ func getClusterName(clusterName string) (string, error) {
 
 	// Ask for cluster name
 	for true {
-		clusterName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		clusterName = survey.Question(&survey.QuestionOptions{
 			Question:     "Please enter a cluster name (e.g. my-cluster)",
 			DefaultValue: "my-cluster",
 		})

@@ -8,7 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -60,7 +60,7 @@ func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, hos
 		servicePort = splitted[1]
 	} else {
 		// Ask user which service
-		splitted := strings.Split(*stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		splitted := strings.Split(survey.Question(&survey.QuestionOptions{
 			Question: "Please specify the service you want to connect to",
 			Options:  serviceNameList,
 		}), ":")

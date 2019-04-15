@@ -20,7 +20,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +29,13 @@ const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
 
 const (
 	// Cluster options
-	useDevSpaceCloud  = "DevSpace Cloud (managed cluster)"
-	useCurrentContext = "Use current kubectl context (no server-side component)"
+	useDevSpaceCloud           = "DevSpace Cloud (managed cluster)"
+	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your own cluster)"
+	useCurrentContext          = "Use current kubectl context (no server-side component)"
+
+	// Cluster connect options
+	demoClusterOption    = "Use Demo cluster (managed by DevSpace Cloud)"
+	connectClusterOption = "Connect cluster to DevSpace Cloud"
 
 	// Dockerfile not found options
 	createDockerfileOption = "Create a Dockerfile for me"
@@ -121,7 +126,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
-		selectedOption := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		selectedOption := survey.Question(&survey.QuestionOptions{
 			Question:     "Seems like you do not have a Dockerfile. What do you want to do?",
 			DefaultValue: createDockerfileOption,
 			Options: []string{
@@ -140,12 +145,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				log.Fatalf("Error containerizing application: %v", err)
 			}
 		} else if selectedOption == enterDockerfileOption {
-			cmd.Dockerfile = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			cmd.Dockerfile = survey.Question(&survey.QuestionOptions{
 				Question: "Please enter a path to your dockerfile (e.g. ./MyDockerfile)",
 			})
 		} else if selectedOption == enterManifestsOption {
 			addFromDockerfile = false
-			manifests := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			manifests := survey.Question(&survey.QuestionOptions{
 				Question: "Please enter kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
 			})
 
@@ -155,7 +160,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			}
 		} else if selectedOption == enterHelmChartOption {
 			addFromDockerfile = false
-			chartName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			chartName := survey.Question(&survey.QuestionOptions{
 				Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
 			})
 
@@ -165,7 +170,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			}
 		} else if selectedOption == useExistingImageOption {
 			addFromDockerfile = false
-			existingImageName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			existingImageName := survey.Question(&survey.QuestionOptions{
 				Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
 			})
 
@@ -241,13 +246,24 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) checkIfDevSpaceCloud() {
+	connectCluster := false
+
 	// Check if kubectl exists
 	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
-		cmd.useCloud = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		selectedOption := survey.Question(&survey.QuestionOptions{
 			Question:     "Which Kubernetes cluster do you want to use?",
 			DefaultValue: useDevSpaceCloud,
-			Options:      []string{useDevSpaceCloud, useCurrentContext},
-		}) == useDevSpaceCloud
+			Options:      []string{useDevSpaceCloud, useDevSpaceCloudOwnCluster, useCurrentContext},
+		})
+
+		if selectedOption == useDevSpaceCloud {
+			cmd.useCloud = true
+		} else if selectedOption == useDevSpaceCloudOwnCluster {
+			cmd.useCloud = true
+			connectCluster = true
+		} else {
+			cmd.useCloud = false
+		}
 	}
 
 	// Check if DevSpace Cloud should be used
@@ -270,10 +286,10 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 				options = append(options, providerHost)
 			}
 
-			cmd.providerName = stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			cmd.providerName = ptr.String(survey.Question(&survey.QuestionOptions{
 				Question: "Select cloud provider",
 				Options:  options,
-			})
+			}))
 		}
 
 		// Ensure user is logged in
@@ -296,6 +312,55 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Check if we should connect cluster
+		if connectCluster {
+			cmd.connectCluster()
+		}
+	}
+}
+
+func (cmd *InitCmd) connectCluster() {
+	provider, err := cloud.GetProvider(cmd.providerName, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	clusters, err := provider.GetClusters()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	connectedClusters := []string{}
+	for _, cluster := range clusters {
+		if cluster.Owner == nil {
+			connectedClusters = append(connectedClusters, cluster.Name)
+		}
+	}
+
+	connectCluster := false
+	if len(connectedClusters) == 0 {
+		connectCluster = survey.Question(&survey.QuestionOptions{
+			Question: "You do not have any clusters connected. What do you want to do?",
+			Options:  []string{demoClusterOption, connectClusterOption},
+		}) == connectClusterOption
+	} else {
+		connectedClusters = append(connectedClusters, connectClusterOption)
+
+		connectCluster = survey.Question(&survey.QuestionOptions{
+			Question: "Which cluster do you want to use?",
+			Options:  connectedClusters,
+		}) == connectClusterOption
+	}
+
+	// User selected connect cluster
+	if connectCluster {
+		err = provider.ConnectCluster("")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Done("Successfully connected cluster to DevSpace Cloud")
 	}
 }
 
@@ -323,14 +388,14 @@ func (cmd *InitCmd) configureCluster() {
 		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
 	}
 
-	namespace := stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	namespace := survey.Question(&survey.QuestionOptions{
 		Question:     "Which namespace should the app run in?",
 		DefaultValue: "default",
 	})
 
 	config := configutil.GetConfig()
 	config.Cluster.KubeContext = &currentContext
-	config.Cluster.Namespace = namespace
+	config.Cluster.Namespace = &namespace
 }
 
 func (cmd *InitCmd) addDevConfig() {

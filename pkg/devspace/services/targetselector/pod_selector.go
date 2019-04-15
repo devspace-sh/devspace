@@ -2,7 +2,7 @@ package targetselector
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -33,7 +33,7 @@ func SelectPod(client *kubernetes.Clientset, namespace string, labelSelector *st
 
 			podName := ""
 			if len(options) > 1 {
-				podName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				podName = survey.Question(&survey.QuestionOptions{
 					Question: "Select a pod",
 					Options:  options,
 				})
@@ -71,7 +71,7 @@ func SelectPod(client *kubernetes.Clientset, namespace string, labelSelector *st
 
 		podName := ""
 		if len(options) > 1 {
-			podName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			podName = survey.Question(&survey.QuestionOptions{
 				Question: "Select a pod",
 				Options:  options,
 			})

@@ -5,7 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -199,7 +199,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 		clusterNames = append(clusterNames, DevSpaceCloudHostedCluster)
 
 		// Choose cluster
-		chosenCluster := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		chosenCluster := survey.Question(&survey.QuestionOptions{
 			Question:     "Which cluster should the space created in?",
 			DefaultValue: clusterNames[0],
 			Options:      clusterNames,
@@ -231,7 +231,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	}
 
 	// Choose cluster
-	chosenCluster := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	chosenCluster := survey.Question(&survey.QuestionOptions{
 		Question:     "Which hosted DevSpace cluster should the space created in?",
 		DefaultValue: clusterNames[0],
 		Options:      clusterNames,

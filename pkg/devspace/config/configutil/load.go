@@ -9,7 +9,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -116,7 +116,7 @@ func varMatchFn(path, key, value string) bool {
 
 // AskQuestion asks the user a question depending on the variable options
 func AskQuestion(variable *configs.Variable) string {
-	params := &stdinutil.GetFromStdinParams{}
+	params := &survey.QuestionOptions{}
 
 	if variable == nil {
 		params.Question = "Please enter a value"
@@ -138,7 +138,7 @@ func AskQuestion(variable *configs.Variable) string {
 		}
 	}
 
-	return *stdinutil.GetFromStdin(params)
+	return survey.Question(params)
 }
 
 func loadConfigFromPath(path string) (*latest.Config, error) {

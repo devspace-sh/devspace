@@ -13,9 +13,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // ComponentsRepoURL is the repository url
@@ -84,7 +84,7 @@ func (c *ComponentSchema) varReplaceFn(path, value string) interface{} {
 
 // askQuestion asks the user a question depending on the variable options
 func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
-	params := &stdinutil.GetFromStdinParams{}
+	params := &survey.QuestionOptions{}
 
 	if variable == nil {
 		params.Question = "Please enter a value"
@@ -106,7 +106,7 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 		}
 	}
 
-	c.VariableValues[*variable.Name] = *stdinutil.GetFromStdin(params)
+	c.VariableValues[*variable.Name] = survey.Question(params)
 }
 
 // NewComponentGenerator creates a new component generator for the given path

@@ -16,7 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 )
 
 // DefaultImageName is the default image name
@@ -25,7 +25,7 @@ const DefaultImageName = "devspace"
 // GetImageConfigFromImageName returns an image config based on the image
 func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.ImageConfig {
 	// Configure pull secret
-	createPullSecret := dockerfile != "" || *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	createPullSecret := dockerfile != "" || survey.Question(&survey.QuestionOptions{
 		Question: "Do you want to enable automatic creation of pull secrets for this image?",
 		Options:  []string{"no", "yes"},
 	}) == "yes"
@@ -96,7 +96,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 			// Check if docker cli is installed
 			err := exec.Command("docker").Run()
 			if err == nil {
-				useKaniko = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+				useKaniko = survey.Question(&survey.QuestionOptions{
 					Question:               "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
 					DefaultValue:           "no",
 					ValidationRegexPattern: "^(yes)|(no)$",
@@ -141,7 +141,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 
 	// Check which registry to use
 	if cloudProvider == nil {
-		registryURL = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		registryURL = survey.Question(&survey.QuestionOptions{
 			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
 			DefaultValue:           "hub.docker.com",
 			ValidationRegexPattern: "^.*$",
@@ -180,13 +180,13 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		log.Warn("Installing docker is NOT required\n")
 
 		for {
-			dockerUsername = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			dockerUsername = survey.Question(&survey.QuestionOptions{
 				Question:               "What is your docker hub username?",
 				DefaultValue:           "",
 				ValidationRegexPattern: "^.*$",
 			})
 
-			dockerPassword := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			dockerPassword := survey.Question(&survey.QuestionOptions{
 				Question:               "What is your docker hub password?",
 				DefaultValue:           "",
 				ValidationRegexPattern: "^.*$",
@@ -208,7 +208,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 
 	// Is docker hub?
 	if registryURL == "hub.docker.com" {
-		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		defaultImageName = survey.Question(&survey.QuestionOptions{
 			Question:               "Which image name do you want to use on Docker Hub?",
 			DefaultValue:           dockerUsername + "/devspace",
 			ValidationRegexPattern: "^[a-zA-Z0-9/-]{4,60}$",
@@ -221,7 +221,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 			gcloudProject = strings.TrimSpace(string(project))
 		}
 
-		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		defaultImageName = survey.Question(&survey.QuestionOptions{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
 			ValidationRegexPattern: "^.*$",
@@ -230,7 +230,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		// Is DevSpace Cloud?
 		defaultImageName = registryURL + "/${DEVSPACE_USERNAME}/" + DefaultImageName
 	} else {
-		defaultImageName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		defaultImageName = survey.Question(&survey.QuestionOptions{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
 			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
@@ -240,7 +240,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	// Check if we should create pull secrets for the image
 	createPullSecret := true
 	if cloudProvider == nil {
-		createPullSecret = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		createPullSecret = survey.Question(&survey.QuestionOptions{
 			Question: "Do you want to enable automatic creation of pull secrets for this image?",
 			Options:  []string{"yes", "no"},
 		}) == "yes"

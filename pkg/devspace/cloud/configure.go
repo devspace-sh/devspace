@@ -7,7 +7,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -32,7 +32,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 				options = append(options, providerHost)
 			}
 
-			providerName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			providerName = survey.Question(&survey.QuestionOptions{
 				Question: "Select cloud provider",
 				Options:  options,
 			})

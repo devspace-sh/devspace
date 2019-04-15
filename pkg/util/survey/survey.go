@@ -1,4 +1,4 @@
-package stdinutil
+package survey
 
 import (
 	"errors"
@@ -6,11 +6,11 @@ import (
 	"os"
 	"regexp"
 
-	survey "gopkg.in/AlecAivazis/survey.v1"
+	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
-// GetFromStdinParams defines a question and its answerpatterns
-type GetFromStdinParams struct {
+// QuestionOptions defines a question and its options
+type QuestionOptions struct {
 	Question               string
 	DefaultValue           string
 	ValidationRegexPattern string
@@ -22,32 +22,32 @@ type GetFromStdinParams struct {
 // DefaultValidationRegexPattern is the default regex pattern to validate the input
 var DefaultValidationRegexPattern = regexp.MustCompile("^.*$")
 
-//GetFromStdin asks the user a question and returns the answer
-func GetFromStdin(params *GetFromStdinParams) *string {
-	var prompt survey.Prompt
+// Question asks the user a question and returns the answer
+func Question(params *QuestionOptions) string {
+	var prompt surveypkg.Prompt
 	compiledRegex := DefaultValidationRegexPattern
 	if params.ValidationRegexPattern != "" {
 		compiledRegex = regexp.MustCompile(params.ValidationRegexPattern)
 	}
 
 	if params.Options != nil {
-		prompt = &survey.Select{
+		prompt = &surveypkg.Select{
 			Message: params.Question,
 			Options: params.Options,
 			Default: params.DefaultValue,
 		}
 	} else if params.IsPassword {
-		prompt = &survey.Password{
+		prompt = &surveypkg.Password{
 			Message: params.Question,
 		}
 	} else {
-		prompt = &survey.Input{
+		prompt = &surveypkg.Input{
 			Message: params.Question,
 			Default: params.DefaultValue,
 		}
 	}
 
-	question := []*survey.Question{
+	question := []*surveypkg.Question{
 		{
 			Name:   "question",
 			Prompt: prompt,
@@ -60,10 +60,9 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 			if str, ok := val.(string); !ok || compiledRegex.MatchString(str) == false {
 				if params.ValidationMessage != "" {
 					return errors.New(params.ValidationMessage)
-				} else {
-					return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
 				}
 
+				return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
 			}
 			return nil
 		}
@@ -73,11 +72,11 @@ func GetFromStdin(params *GetFromStdinParams) *string {
 	answers := struct {
 		Question string
 	}{}
-	err := survey.Ask(question, &answers)
+	err := surveypkg.Ask(question, &answers)
 	if err != nil {
 		// Keyboard interrupt
 		os.Exit(0)
 	}
 
-	return &answers.Question
+	return answers.Question
 }

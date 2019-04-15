@@ -5,7 +5,7 @@ import (
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +53,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Verify user is sure to delete the cluster
-	deleteCluster := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	deleteCluster := survey.Question(&survey.QuestionOptions{
 		Question:     fmt.Sprintf("Are you sure you want to delete cluster %s? This action is irreversible", args[0]),
 		DefaultValue: "No",
 		Options: []string{
@@ -72,7 +72,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Delete all spaces?
-	deleteSpaces := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	deleteSpaces := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster spaces?",
 		DefaultValue: "Yes",
 		Options: []string{
@@ -82,7 +82,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}) == "Yes"
 
 	// Delete services
-	deleteServices := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	deleteServices := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster services?",
 		DefaultValue: "Yes",
 		Options: []string{

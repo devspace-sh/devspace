@@ -3,7 +3,7 @@ package cloud
 import (
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
 
@@ -56,7 +56,7 @@ func (p *Provider) GetClusterKey(cluster *Cluster) (string, error) {
 func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 	// Wait till user enters the correct key
 	for true {
-		key := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		key := survey.Question(&survey.QuestionOptions{
 			Question:               "Please enter your encryption key for cluster " + cluster.Name,
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
