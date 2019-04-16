@@ -94,27 +94,22 @@ func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
 
 // VerifyKey verifies the given key for the given cluster
 func (p *Provider) VerifyKey(key string, clusterID int) (bool, error) {
-	clusterUser, err := p.GetClusterUser(clusterID)
-	if err != nil {
-		return false, errors.Wrap(err, "get cluster user")
-	}
-
 	// Response struct
 	response := struct {
-		VerifyKey bool `json:"manager_verifyUserClusterUserKey"`
+		VerifyKey bool `json:"manager_verifyUserClusterKey"`
 	}{}
 
 	// Do the request
-	err = p.GrapqhlRequest(`
-		mutation ($clusterUserID:Int!, $key:String!) {
-			manager_verifyUserClusterUserKey(
-				clusterUserID: $clusterUserID,
+	err := p.GrapqhlRequest(`
+		mutation ($clusterID:Int!, $key:String!) {
+			manager_verifyUserClusterKey(
+				clusterID: $clusterID,
 				key: $key
 			)
 		}
 	`, map[string]interface{}{
-		"clusterUserID": clusterUser.ClusterUserID,
-		"key":           key,
+		"clusterID": clusterID,
+		"key":       key,
 	}, &response)
 	if err != nil {
 		return false, err
