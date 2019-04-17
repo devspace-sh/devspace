@@ -133,7 +133,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	// Set tiller env
 	err = cloud.SetTillerNamespace(serviceAccount)
 	if err != nil {
-		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
 	// Set space as active space

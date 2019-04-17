@@ -246,7 +246,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 }
 
 func (cmd *InitCmd) checkIfDevSpaceCloud() {
-	connectCluster := false
+	cmd.useCloud = true
+	connectCLuster := false
 
 	// Check if kubectl exists
 	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {

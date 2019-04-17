@@ -94,12 +94,12 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		_, err = client.Ping(contextpkg.Background())
 		if err != nil {
 			// Check if docker cli is installed
-			err := exec.Command("docker").Run()
-			if err == nil {
+			runErr := exec.Command("docker").Run()
+			if runErr == nil {
 				useKaniko = survey.Question(&survey.QuestionOptions{
-					Question:               "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
-					DefaultValue:           "no",
-					ValidationRegexPattern: "^(yes)|(no)$",
+					Question:     "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
+					DefaultValue: "no",
+					Options:      []string{"yes", "no"},
 				}) == "yes"
 
 				if useKaniko == false {

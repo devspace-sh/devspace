@@ -52,7 +52,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		// Set tiller env
 		err = cloudpkg.SetTillerNamespace(nil)
 		if err != nil {
-			log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+			// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 		}
 
 		if !configExists {
@@ -117,7 +117,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	// Set tiller env
 	err = cloudpkg.SetTillerNamespace(serviceAccount)
 	if err != nil {
-		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
 	if configExists {
