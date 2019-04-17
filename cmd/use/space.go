@@ -49,10 +49,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Erase currently used space
 	if args[0] == "none" {
-		// Set tiller env	
-		err = cloudpkg.SetTillerNamespace(nil)	
-		if err != nil {	
-			log.Warnf("Couldn't set tiller namespace environment variable: %v", err)	
+		// Set tiller env
+		err = cloudpkg.SetTillerNamespace(nil)
+		if err != nil {
+			// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 		}
 
 		if !configExists {
@@ -107,10 +107,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env	
-	err = cloudpkg.SetTillerNamespace(space)	
-	if err != nil {	
-		log.Warnf("Couldn't set tiller namespace environment variable: %v", err)	
+	// Set tiller env
+	err = cloudpkg.SetTillerNamespace(space)
+	if err != nil {
+		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
 	if configExists {
