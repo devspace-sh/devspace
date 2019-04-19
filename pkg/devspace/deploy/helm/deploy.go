@@ -16,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 )
 
@@ -194,7 +195,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	// Deploy chart
 	appRelease, err := helmClient.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return fmt.Errorf("Unable to deploy helm chart: %v", err)
+		return fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+*d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 
 	// Print revision

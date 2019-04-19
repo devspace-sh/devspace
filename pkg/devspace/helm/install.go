@@ -14,7 +14,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
@@ -145,7 +144,7 @@ func (helmClientWrapper *ClientWrapper) InstallChartByPath(releaseName, releaseN
 					log.Warn("Try to roll back back chart because of previous error")
 					_, rollbackError := helmClientWrapper.Client.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
 					if rollbackError != nil {
-						return nil, fmt.Errorf("Error deploying release %s: %v\nRun `%s` to force the deletion of the space", releaseName, err, ansi.Color("devspace purge", "white+b"))
+						return nil, err
 					}
 				}
 
