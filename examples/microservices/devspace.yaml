@@ -1,0 +1,47 @@
+version: v1beta1
+images:
+  node:
+    image: node
+    skipPush: true
+    build:
+      dockerfile: node/Dockerfile
+      context: node/
+  php:
+    image: php
+    skipPush: true
+    build:
+      dockerfile: php/Dockerfile
+      context: php/
+deployments:
+- name: devspace-node
+  kubectl:
+    manifests:
+    - node/kube/*
+- name: devspace-php
+  helm:
+    chart:
+      name: php/chart
+dev:
+  overrideImages:
+  - name: node
+    entrypoint:
+    - sleep
+    - "9999999999"
+  terminal:
+    labelSelector:
+      release: devspace-node
+  ports:
+  - labelSelector:
+      release: devspace-node
+    forward:
+    - port: 3000
+  sync:
+  - labelSelector:
+      release: devspace-node
+    localSubPath: ./node
+  - labelSelector:
+      release: devspace-php
+    localSubPath: ./php
+cluster:
+  kubeContext: minikube
+  namespace: devspace

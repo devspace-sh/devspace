@@ -1,0 +1,29 @@
+version: v1beta1
+images:
+  default:
+    image: devspace
+    skipPush: true
+deployments:
+- name: devspace-app
+  helm:
+    chart:
+      name: ./chart
+dev:
+  overrideImages:
+  - name: default
+    entrypoint:
+    - sleep
+    - "999999999999"
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: default
+    forward:
+    - port: 3000
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: default
+    excludePaths:
+    - node_modules/
+cluster:
+  kubeContext: minikube
+  namespace: devspace

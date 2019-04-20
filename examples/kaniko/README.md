@@ -5,11 +5,11 @@ This example shows how kaniko can be used instead of docker to build and push an
 # Step 0: Prerequisites
 
 1. Install minikube
-2. Exchange the image `yourdockeruser/devspace` in `.devspace/config` and `chart/values.yaml` with your docker username 
+2. Exchange the image `yourdockeruser/devspace` in `devspace.yaml` and `chart/values.yaml` with your docker username 
 
 # Step 1: Start the devspace
 
-1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `.devspace/config.yaml`).
+1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `devspace.yaml`).
 
 The command does several things in this order:
 - Build the docker image via kaniko build pod and override the entrypoint with sleep 999999999 
@@ -21,7 +21,7 @@ The command does several things in this order:
 
 You should see the following output:
 ```
-[info]   Loaded config from .devspace/configs.yaml
+[info]   Loaded config from devspace.yaml
 [info]   Building image 'devspacecloud/devspace' with engine 'kaniko'
 [done] √ Authentication successful (hub.docker.com)
 [done] √ Kaniko build pod started                        

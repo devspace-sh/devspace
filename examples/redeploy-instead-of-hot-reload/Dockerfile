@@ -1,9 +1,6 @@
-FROM golang:1.11
+FROM golang:1.12-alpine
 
-RUN mkdir -p "$GOPATH/src/app" && ln -s $GOPATH/src/app /app
-ADD . $GOPATH/src/app
+ADD . /go/src/app
+WORKDIR /go/src/app
 
-RUN cd $GOPATH/src/app && cd /app
-
-WORKDIR /app
 CMD ["go", "run", "main.go"]

@@ -203,7 +203,7 @@ func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]
 			}
 
 			// No trace here because it could be a parsing error
-			return nil, errors.Trace(err)
+			return nil, err
 		}
 	}
 

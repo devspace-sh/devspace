@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rjeczalik/notify"
-
 	"github.com/juju/errors"
+	"github.com/rjeczalik/notify"
 )
 
 // IsDirectory is a constant that can be used to determine whether a file is a folder

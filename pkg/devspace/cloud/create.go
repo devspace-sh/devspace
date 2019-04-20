@@ -78,7 +78,7 @@ func (p *Provider) CreateSpace(name string, projectID int, cluster *Cluster) (in
 
 	// Check result
 	if response.CreateSpace == nil {
-		return 0, errors.New("Couldn't create project: returned answer is null")
+		return 0, errors.New("Couldn't create space: returned answer is null")
 	}
 
 	return response.CreateSpace.SpaceID, nil

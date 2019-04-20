@@ -172,12 +172,12 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 				vars := []*configs.Variable{}
 				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
 				if err != nil {
-					log.Panicf("Error loading %s: %v", DefaultVarsPath, err)
+					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
 				}
 
 				err = yaml.UnmarshalStrict(yamlFileContent, vars)
 				if err != nil {
-					log.Panicf("Error parsing %s: %v", DefaultVarsPath, err)
+					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
 				}
 
 				// Ask questions
@@ -189,7 +189,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 
 			configRaw, err = loadConfigFromPath(DefaultConfigPath)
 			if err != nil {
-				log.Panicf("Loading config: %v", err)
+				log.Fatalf("Loading config: %v", err)
 			}
 		}
 

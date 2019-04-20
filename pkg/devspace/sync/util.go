@@ -89,7 +89,7 @@ func roundMtime(mtime time.Time) int64 {
 }
 
 func getRelativeFromFullPath(fullpath string, prefix string) string {
-	return strings.Replace(strings.Replace(fullpath[len(prefix):], "\\", "/", -1), "//", "/", -1)
+	return strings.TrimPrefix(strings.Replace(strings.Replace(fullpath[len(prefix):], "\\", "/", -1), "//", "/", -1), ".")
 }
 
 func pipeStream(w io.Writer, r io.Reader) error {

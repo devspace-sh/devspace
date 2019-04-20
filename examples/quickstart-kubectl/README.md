@@ -24,7 +24,7 @@ The command does several things in this order:
 
 You should see the following output:
 ```
-[info]   Loaded config from .devspace/configs.yaml
+[info]   Loaded config from devspace.yaml
 [info]   Using space quickstart-kubectl                       
 [info]   Building image 'dscr.io/yourname/devspace' with engine 'docker'
 [done] √ Authentication successful (dscr.io)

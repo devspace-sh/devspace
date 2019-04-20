@@ -1,0 +1,44 @@
+version: v1beta1
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    createPullSecret: true
+deployments:
+- name: mysql
+  component:
+    containers:
+    - image: mysql:5.7
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: mypassword
+      - name: MYSQL_DATABASE
+        value: mydatabase
+      volumeMounts:
+      - containerPath: /var/lib/mysql
+        volume:
+          name: mysql-data
+          subPath: /mysql
+    volumes:
+    - name: mysql-data
+      size: 5Gi
+    service:
+      name: mysql
+      ports:
+      - port: 3306
+- name: php-mysql-example
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    service:
+      ports:
+      - port: 80
+dev:
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: php-mysql-example
+    forward:
+    - port: 8080
+      remotePort: 80
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: php-mysql-example
