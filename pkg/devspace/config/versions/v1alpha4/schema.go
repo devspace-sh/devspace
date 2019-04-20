@@ -1,4 +1,4 @@
-package latest
+package v1alpha4
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
@@ -7,7 +7,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta1"
+const Version string = "v1alpha4"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -189,8 +189,6 @@ type ChartConfig struct {
 type KubectlConfig struct {
 	CmdPath   *string    `yaml:"cmdPath,omitempty"`
 	Manifests *[]*string `yaml:"manifests,omitempty"`
-	Kustomize *bool      `yaml:"kustomize,omitempty"`
-	Flags     *[]*string `yaml:"flags,omitempty"`
 }
 
 // DevConfig defines the devspace deployment
@@ -226,13 +224,13 @@ type PortForwardingConfig struct {
 	Selector      *string             `yaml:"selector,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
-	PortMappings  *[]*PortMapping     `yaml:"forward"`
+	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
 }
 
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
-	LocalPort   *int    `yaml:"port"`
-	RemotePort  *int    `yaml:"remotePort,omitempty"`
+	LocalPort   *int    `yaml:"localPort"`
+	RemotePort  *int    `yaml:"remotePort"`
 	BindAddress *string `yaml:"bindAddress,omitempty"`
 }
 

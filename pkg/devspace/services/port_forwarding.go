@@ -21,7 +21,7 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 	if config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))
 
-		for _, portForwarding := range *config.Dev.Ports {
+		for portConfigIndex, portForwarding := range *config.Dev.Ports {
 			selector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Selector:      portForwarding.Selector,
@@ -43,7 +43,17 @@ func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portf
 				addresses := make([]string, len(*portForwarding.PortMappings))
 
 				for index, value := range *portForwarding.PortMappings {
-					ports[index] = strconv.Itoa(*value.LocalPort) + ":" + strconv.Itoa(*value.RemotePort)
+					if value.LocalPort == nil {
+						return nil, fmt.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
+					}
+
+					localPort := strconv.Itoa(*value.LocalPort)
+					remotePort := localPort
+					if value.RemotePort != nil {
+						remotePort = strconv.Itoa(*value.RemotePort)
+					}
+
+					ports[index] = localPort + ":" + remotePort
 					if value.BindAddress == nil {
 						addresses[index] = "127.0.0.1"
 					} else {

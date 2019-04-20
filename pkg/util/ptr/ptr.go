@@ -14,6 +14,11 @@ func ReverseString(val *string) string {
 	return *val
 }
 
+// Int returns a pointer to an int variable
+func Int(val int) *int {
+	return &val
+}
+
 // Int64 returns a pointer to an int64 variable
 func Int64(val int64) *int64 {
 	return &val

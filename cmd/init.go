@@ -410,8 +410,7 @@ func (cmd *InitCmd) addDevConfig() {
 			portMappings := []*latest.PortMapping{}
 			exposedPort := *servicePort.Port
 			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort:  &exposedPort,
-				RemotePort: &exposedPort,
+				LocalPort: &exposedPort,
 			})
 
 			config.Dev.Ports = &[]*latest.PortForwardingConfig{

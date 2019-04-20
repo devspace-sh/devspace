@@ -1,27 +1,26 @@
-version: v1alpha4
+version: v1beta1
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/quickstart
     createPullSecret: true
 deployments:
-  - name: devspace-default
-    kubectl:
-      manifests:
-        - kube
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube
 dev:
   overrideImages:
-    - name: default
-      entrypoint:
-        - sleep
-        - "99999999999"
+  - name: default
+    entrypoint:
+    - sleep
+    - "99999999999"
   ports:
-    - labelSelector:
-        app.kubernetes.io/component: default
-      portMappings:
-        - localPort: 3000
-          remotePort: 3000
+  - labelSelector:
+      app.kubernetes.io/component: default
+    forward:
+    - port: 3000
   sync:
-    - labelSelector:
-        app.kubernetes.io/component: default
-      excludePaths:
-        - node_modules/
+  - labelSelector:
+      app.kubernetes.io/component: default
+    excludePaths:
+    - node_modules/

@@ -7,13 +7,12 @@ This example shows you how to develop and deploy a small node express applicatio
 In order to get things ready do the following:
 1. Install docker
 2. Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-3. Run `devspace login` (If you want to use your own cluster just skip this step)
-4. Exchange the image `dscr.io/yourusername/devspace` in `.devspace/config` and `kube/deployment.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
 5. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just skip this step and devspace will use the current kubectl context)
+4. Exchange the image `dscr.io/yourusername/devspace` in `kube/deployment.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
 
 # Step 1: Develop the application
 
-1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `.devspace/config.yaml`). 
+1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `devspace.yaml`). 
 
 The command does several things in this order:
 - Build the docker image (override the entrypoint with sleep 999999 (don't worry it can still use all cached layers))
@@ -40,15 +39,13 @@ deployment.extensions/devspace configured
 [done] √ Finished deploying devspace-default
 [done] √ Port forwarding started on 3000:3000           
 [done] √ Sync started on /devspace-cloud/devspace/examples/quickstart-kubectl <-> /app (Pod: d4c1654922db400f612a027283b50001/default-7c4dcdfc4-m867d)
-[info]   The Space is now reachable via ingress on this URL: https://yourname.devspace.host
 root@default-7c4dcdfc4-m867d:/app#
 ```
 2. Run `npm start` in the new opened terminal to start the webserver
-3. Go to `localhost:3000` to see the output of the webserver (or https://yourname.devspace.host)
+3. Go to `localhost:3000` to see the output of the webserver
 4. Change something in the `index.js`
 5. You should see the webserver restarting
 6. Refresh the browser to see the changes applied.
-7. If you change the Dockerfile or make changes in the manifest folder, devspace will redeploy the whole application instead of hot reloading (you can change this in the `.devspace/config.yaml`)
 
 # Step 2: Deploy the application
 
@@ -61,5 +58,6 @@ If you experience problems during deploy or want to check if there are any issue
 - `devspace enter` open a terminal to a kubernetes pod (the same as running `kubectl exec ...`)
 - `devspace logs` shows the logs of a devspace (the same as running `kubectl logs ...`)
 - `devspace purge` delete the deployed application
+- `devspace open` to create an ingress and open the application in the browser
 
 See https://devspace.cloud/docs for more advanced documentation
