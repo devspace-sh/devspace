@@ -64,7 +64,7 @@ func varReplaceFn(path, value string) interface{} {
 			if upperVarName == PredefinedVarSpace {
 				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarSpace, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 			} else if upperVarName == PredefinedVarUsername {
-				log.Fatalf("Not logged in, but predefined var %s is used.\n\nPlease run `%s` to login", PredefinedVarUsername, ansi.Color("devspace login", "white+b"))
+				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarUsername, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 			}
 
 			log.Fatalf("Try to access predefined devspace variable '%s', however the value has no value", varName)

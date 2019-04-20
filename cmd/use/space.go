@@ -30,7 +30,7 @@ devspace use space my-space
 devspace use space none    // stop using a space
 #######################################################
 	`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunUseSpace,
 	}
 
