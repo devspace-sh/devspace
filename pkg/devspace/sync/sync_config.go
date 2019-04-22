@@ -42,6 +42,7 @@ type SyncConfig struct {
 	UpstreamLimit        int64
 	DownstreamLimit      int64
 	Verbose              bool
+	CustomLog            log.Logger
 
 	fileIndex *fileIndex
 
@@ -67,9 +68,9 @@ type SyncConfig struct {
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
 	if s.silent == false {
 		if s.Pod != nil {
-			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+			s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
 		} else {
-			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+			s.CustomLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
 		}
 	}
 }
@@ -78,9 +79,9 @@ func (s *SyncConfig) Logf(format string, args ...interface{}) {
 func (s *SyncConfig) Logln(line interface{}) {
 	if s.silent == false {
 		if s.Pod != nil {
-			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+			s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
 		} else {
-			syncLog.
+			s.CustomLog.
 				WithKey("local",
 					s.WatchPath).
 				WithKey("container", s.DestPath).
@@ -119,7 +120,7 @@ func (s *SyncConfig) setup() error {
 	s.fileIndex = newFileIndex()
 	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
-	if syncLog == nil {
+	if s.CustomLog == nil && syncLog == nil {
 		// Check if syncLog already exists
 		stat, err := os.Stat(log.Logdir + "sync.log")
 
@@ -133,6 +134,9 @@ func (s *SyncConfig) setup() error {
 
 		syncLog = log.GetFileLogger("sync")
 		syncLog.SetLevel(logrus.InfoLevel)
+	}
+	if s.CustomLog == nil {
+		s.CustomLog = syncLog
 	}
 
 	err = s.initIgnoreParsers()
@@ -154,7 +158,7 @@ func (s *SyncConfig) setup() error {
 }
 
 // Start starts a new sync instance
-func (s *SyncConfig) Start() error {
+func (s *SyncConfig) Start(wait bool) error {
 	err := s.setup()
 	if err != nil {
 		return errors.Trace(err)
@@ -171,7 +175,11 @@ func (s *SyncConfig) Start() error {
 		return errors.Trace(err)
 	}
 
-	go s.mainLoop()
+	if wait {
+		s.mainLoop()
+	} else {
+		go s.mainLoop()
+	}
 
 	return nil
 }
@@ -214,7 +222,7 @@ func (s *SyncConfig) mainLoop() {
 	go s.startUpstream()
 
 	// Start downstream and do initial sync
-	go func() {
+	func() {
 		defer s.Stop(nil)
 
 		err := s.initialSync()

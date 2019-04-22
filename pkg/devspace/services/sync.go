@@ -13,6 +13,53 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
+// StartSyncFromCmd starts a new sync from command
+func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
+	var (
+		localPath = "."
+	)
+
+	absLocalPath, err := filepath.Abs(localPath)
+	if err != nil {
+		return fmt.Errorf("Unable to resolve localSubPath %s: %v", localPath, err)
+	}
+
+	targetSelector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
+		CmdParameter: cmdParameter,
+	}, true)
+	if err != nil {
+		return err
+	}
+
+	pod, container, err := targetSelector.GetContainer(client)
+	if err != nil {
+		return err
+	}
+
+	if containerPath == "" {
+		containerPath = "."
+	}
+
+	syncConfig := &sync.SyncConfig{
+		Kubectl:      client,
+		Pod:          pod,
+		Container:    container,
+		WatchPath:    absLocalPath,
+		DestPath:     containerPath,
+		ExcludePaths: exclude,
+		CustomLog:    log,
+		Verbose:      false,
+	}
+
+	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
+	err = syncConfig.Start(true)
+	if err != nil {
+		log.Fatalf("Sync error: %s", err.Error())
+	}
+
+	return nil
+}
+
 // StartSync starts the syncing functionality
 func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	config := configutil.GetConfig()
@@ -87,7 +134,7 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			}
 		}
 
-		err = syncConfig.Start()
+		err = syncConfig.Start(false)
 		if err != nil {
 			log.Fatalf("Sync error: %s", err.Error())
 		}
