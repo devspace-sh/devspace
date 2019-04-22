@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -17,6 +18,7 @@ import (
 	v1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // ClusterNameValidationRegEx is the cluster name validation regex
@@ -36,6 +38,22 @@ const (
 	hostNetworkOption  = "Use host network"
 )
 
+// ConnectClusterOptions holds the options for connecting a cluster
+type ConnectClusterOptions struct {
+	DeployAdmissionController bool
+	DeployIngressController   bool
+	DeployCertManager         bool
+
+	UseHostNetwork *bool
+
+	ClusterName string
+	KubeContext string
+	Key         string
+
+	UseDomain bool
+	Domain    string
+}
+
 type clusterResources struct {
 	PodPolicy     bool
 	NetworkPolicy bool
@@ -43,17 +61,30 @@ type clusterResources struct {
 }
 
 // ConnectCluster connects a new cluster to DevSpace Cloud
-func (p *Provider) ConnectCluster(clusterName string) error {
+func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
+	var (
+		config *rest.Config
+	)
+
 	// Get cluster name
-	clusterName, err := getClusterName(clusterName)
+	clusterName, err := getClusterName(options.ClusterName)
 	if err != nil {
 		return err
 	}
 
-	// Get kube context to use
-	config, err := kubectl.GetClientConfigBySelect(false)
-	if err != nil {
-		return errors.Wrap(err, "new kubectl client")
+	// Check what kube context to use
+	if options.KubeContext == "" {
+		// Get kube context to use
+		config, err = kubectl.GetClientConfigBySelect(false)
+		if err != nil {
+			return errors.Wrap(err, "new kubectl client")
+		}
+	} else {
+		// Get kube context to use
+		config, err = kubectl.GetClientConfigFromContext(options.KubeContext)
+		if err != nil {
+			return errors.Wrap(err, "new kubectl client")
+		}
 	}
 
 	// Get client from config
@@ -74,9 +105,11 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 		return errors.Wrap(err, "init namespace")
 	}
 
-	key, err := getKey(p, false)
-	if err != nil {
-		return errors.Wrap(err, "get key")
+	if options.Key == "" {
+		options.Key, err = getKey(p, false)
+		if err != nil {
+			return errors.Wrap(err, "get key")
+		}
 	}
 
 	token, caCert, err := getServiceAccountCredentials(client)
@@ -84,7 +117,7 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 		return errors.Wrap(err, "get service account credentials")
 	}
 
-	encryptedToken, err := EncryptAES([]byte(key), token)
+	encryptedToken, err := EncryptAES([]byte(options.Key), token)
 	if err != nil {
 		return errors.Wrap(err, "encrypt token")
 	}
@@ -99,49 +132,56 @@ func (p *Provider) ConnectCluster(clusterName string) error {
 	log.StopWait()
 
 	// Save key
-	p.ClusterKey[clusterID] = key
+	p.ClusterKey[clusterID] = options.Key
 	err = p.Save()
 	if err != nil {
 		return errors.Wrap(err, "save key")
 	}
 
 	// Initialize roles and pod security policies
-	err = p.initCore(clusterID, key, availableResources.PodPolicy)
+	err = p.initCore(clusterID, options.Key, availableResources.PodPolicy)
 	if err != nil {
 		return errors.Wrap(err, "initialize core")
 	}
 
 	// Ask if we should use the host network
-	useHostNetwork := survey.Question(&survey.QuestionOptions{
-		Question:     "Should the ingress controller use a LoadBalancer or the host network?",
-		DefaultValue: loadBalancerOption,
-		Options: []string{
-			loadBalancerOption,
-			hostNetworkOption,
-		},
-	}) == hostNetworkOption
+	if options.UseHostNetwork == nil {
+		options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
+			Question:     "Should the ingress controller use a LoadBalancer or the host network?",
+			DefaultValue: loadBalancerOption,
+			Options: []string{
+				loadBalancerOption,
+				hostNetworkOption,
+			},
+		}) == hostNetworkOption)
+	}
 
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(clusterID, key, availableResources, useHostNetwork)
+	err = p.deployServices(clusterID, availableResources, options)
 	if err != nil {
 		return err
 	}
 
-	// Set cluster domain to use for spaces
-	err = p.specifyDomain(clusterID, key, useHostNetwork)
-	if err != nil {
-		return err
+	// Set space domain
+	if options.UseDomain {
+		// Set cluster domain to use for spaces
+		err = p.specifyDomain(clusterID, options)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool) error {
-	domain := survey.Question(&survey.QuestionOptions{
-		Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
-		ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
-		ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
-	})
+func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) error {
+	if options.Domain == "" {
+		options.Domain = survey.Question(&survey.QuestionOptions{
+			Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
+			ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
+			ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
+		})
+	}
 
 	log.StartWait("Updating domain name")
 	defer log.StopWait()
@@ -157,7 +197,7 @@ func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool)
 	  	}
 	`, map[string]interface{}{
 		"clusterID": clusterID,
-		"domain":    domain,
+		"domain":    options.Domain,
 	}, &struct {
 		UpdateClusterDomain bool `json:"manager_updateClusterDomain"`
 	}{})
@@ -166,69 +206,73 @@ func (p *Provider) specifyDomain(clusterID int, key string, useHostNetwork bool)
 	}
 
 	log.StopWait()
-	if useHostNetwork == false {
-		log.Donef("Please create an A dns record for '*.%s' that points to external-ip of loadbalancer service 'devspace-cloud/nginx-ingress-controller'. Run `%s` to view the service", domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
+	if *options.UseHostNetwork == false {
+		log.Donef("Please create an A dns record for '*.%s' that points to external-ip of loadbalancer service 'devspace-cloud/nginx-ingress-controller'. Run `%s` to view the service", options.Domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
 	} else {
-		log.Donef("Please make sure you have an A dns record for '*.%s' that points to the external ip of one of your cluster nodes. Run `%s` to view your cluster nodes", domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
+		log.Donef("Please make sure you have an A dns record for '*.%s' that points to the external ip of one of your cluster nodes. Run `%s` to view your cluster nodes", options.Domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
 	}
 
 	return nil
 }
 
-func (p *Provider) deployServices(clusterID int, key string, availableResources *clusterResources, useHostNetwork bool) error {
-	serviceAmount := 3
-	if availableResources.CertManager {
-		serviceAmount = 2
-	}
-
-	log.StartWait(fmt.Sprintf("Deploying ingress controller [1/%d]", serviceAmount))
+func (p *Provider) deployServices(clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
 	defer log.StopWait()
 
-	// Deploy ingress controller
-	err := p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
-			manager_deployIngressController(
-				clusterID:$clusterID,
-				key:$key,
-				useHostNetwork:$useHostNetwork
-			)
+	// Ingress controller
+	if options.DeployIngressController {
+		log.StartWait("Deploying ingress controller")
+
+		// Deploy ingress controller
+		err := p.GrapqhlRequest(`
+			mutation ($clusterID:Int!, $key:String!, $useHostNetwork:Boolean!) {
+				manager_deployIngressController(
+					clusterID:$clusterID,
+					key:$key,
+					useHostNetwork:$useHostNetwork
+				)
+			}
+		`, map[string]interface{}{
+			"clusterID":      clusterID,
+			"key":            options.Key,
+			"useHostNetwork": *options.UseHostNetwork,
+		}, &struct {
+			Deploy bool `json:"manager_deployIngressController"`
+		}{})
+		if err != nil {
+			return errors.Wrap(err, "deploy ingress controller")
 		}
-	`, map[string]interface{}{
-		"clusterID":      clusterID,
-		"key":            key,
-		"useHostNetwork": useHostNetwork,
-	}, &struct {
-		Deploy bool `json:"manager_deployIngressController"`
-	}{})
-	if err != nil {
-		return errors.Wrap(err, "deploy ingress controller")
+
+		log.Done("Deployed ingress controller")
 	}
 
-	log.Done("Deployed ingress controller")
-	log.StartWait(fmt.Sprintf("Deploying admission controller [2/%d]", serviceAmount))
+	// Admission controller
+	if options.DeployAdmissionController {
+		log.StartWait("Deploying admission controller")
 
-	// Deploy admission controller
-	err = p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!) {
-			manager_deployAdmissionController(
-				clusterID:$clusterID,
-				key:$key
-			)
+		// Deploy admission controller
+		err := p.GrapqhlRequest(`
+			mutation ($clusterID:Int!, $key:String!) {
+				manager_deployAdmissionController(
+					clusterID:$clusterID,
+					key:$key
+				)
+			}
+		`, map[string]interface{}{
+			"clusterID": clusterID,
+			"key":       options.Key,
+		}, &struct {
+			Deploy bool `json:"manager_deployAdmissionController"`
+		}{})
+		if err != nil {
+			return errors.Wrap(err, "deploy admission controller")
 		}
-	`, map[string]interface{}{
-		"clusterID": clusterID,
-		"key":       key,
-	}, &struct {
-		Deploy bool `json:"manager_deployAdmissionController"`
-	}{})
-	if err != nil {
-		return errors.Wrap(err, "deploy admission controller")
+
+		log.Done("Deployed admission controller")
 	}
 
-	log.Done("Deployed admission controller")
-
-	if availableResources.CertManager == false {
-		log.StartWait(fmt.Sprintf("Deploying cert manager [3/%d]", serviceAmount))
+	// Cert manager
+	if availableResources.CertManager == false && options.DeployCertManager {
+		log.StartWait("Deploying cert manager")
 
 		// Deploy cert manager
 		err := p.GrapqhlRequest(`
@@ -240,7 +284,7 @@ func (p *Provider) deployServices(clusterID int, key string, availableResources 
 			}
 		`, map[string]interface{}{
 			"clusterID": clusterID,
-			"key":       key,
+			"key":       options.Key,
 		}, &struct {
 			Deploy bool `json:"manager_deployCertManager"`
 		}{})

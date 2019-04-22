@@ -356,7 +356,12 @@ func (cmd *InitCmd) connectCluster() {
 
 	// User selected connect cluster
 	if connectCluster {
-		err = provider.ConnectCluster("")
+		err = provider.ConnectCluster(&cloud.ConnectClusterOptions{
+			DeployAdmissionController: true,
+			DeployIngressController:   true,
+			DeployCertManager:         true,
+			UseDomain:                 true,
+		})
 		if err != nil {
 			log.Fatal(err)
 		}
