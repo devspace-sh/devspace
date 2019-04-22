@@ -5,9 +5,10 @@ images:
     skipPush: true
 deployments:
 - name: devspace-app
-  helm:
-    chart:
-      name: ./chart
+  kubectl:
+    manifests:
+    - kube
+    kustomize: true
 dev:
   overrideImages:
   - name: default
@@ -16,12 +17,12 @@ dev:
     - "999999999999"
   ports:
   - labelSelector:
-      app.kubernetes.io/component: default
+      app: devspace
     forward:
     - port: 3000
   sync:
   - labelSelector:
-      app.kubernetes.io/component: default
+      app: devspace
     excludePaths:
     - node_modules
 cluster:

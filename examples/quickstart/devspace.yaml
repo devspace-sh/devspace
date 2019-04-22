@@ -26,4 +26,4 @@ dev:
   - labelSelector:
       app.kubernetes.io/component: quickstart
     excludePaths:
-    - node_modules/
+    - node_modules

@@ -39,6 +39,8 @@ dev:
   - labelSelector:
       release: devspace-node
     localSubPath: ./node
+    excludePaths:
+    - node_modules
   - labelSelector:
       release: devspace-php
     localSubPath: ./php
