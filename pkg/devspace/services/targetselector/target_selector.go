@@ -106,7 +106,7 @@ func (t *TargetSelector) GetContainer(client *kubernetes.Clientset) (*v1.Pod, *v
 		return nil, nil, err
 	}
 	if pod == nil {
-		return nil, nil, errors.New("Couldn't find a pod")
+		return nil, nil, fmt.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
 	}
 
 	// Select container if necessary
