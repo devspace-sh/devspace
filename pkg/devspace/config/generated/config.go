@@ -58,6 +58,15 @@ var ConfigPath = ".devspace/generated.yaml"
 var loadedConfig *Config
 var loadedConfigOnce sync.Once
 
+var testDontSaveConfig = false
+
+// SetTestConfig sets the config for testing purposes
+func SetTestConfig(config *Config) {
+	loadedConfigOnce.Do(func() {})
+	loadedConfig = config
+	testDontSaveConfig = true
+}
+
 // LoadConfig loads the config from the filesystem
 func LoadConfig() (*Config, error) {
 	var err error
@@ -148,6 +157,10 @@ func InitDevSpaceConfig(config *Config, configName string) {
 
 // SaveConfig saves the config to the filesystem
 func SaveConfig(config *Config) error {
+	if testDontSaveConfig {
+		return nil
+	}
+
 	workdir, _ := os.Getwd()
 
 	data, err := yaml.Marshal(config)

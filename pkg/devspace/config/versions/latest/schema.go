@@ -16,6 +16,11 @@ func (c *Config) GetVersion() string {
 
 // New creates a new config object
 func New() config.Config {
+	return NewRaw()
+}
+
+// NewRaw creates a new config object
+func NewRaw() *Config {
 	return &Config{
 		Version: ptr.String(Version),
 		Cluster: &Cluster{},
@@ -60,10 +65,11 @@ type DockerConfig struct {
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cache        *bool   `yaml:"cache"`
-	SnapshotMode *string `yaml:"snapshotMode,omitempty"`
-	Namespace    *string `yaml:"namespace,omitempty"`
-	PullSecret   *string `yaml:"pullSecret,omitempty"`
+	Cache        *bool      `yaml:"cache"`
+	SnapshotMode *string    `yaml:"snapshotMode,omitempty"`
+	ExtraFlags   *[]*string `yaml:"extraFlags,omitempty"`
+	Namespace    *string    `yaml:"namespace,omitempty"`
+	PullSecret   *string    `yaml:"pullSecret,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images

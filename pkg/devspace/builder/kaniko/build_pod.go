@@ -81,6 +81,13 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 		kanikoArgs = append(kanikoArgs, "--build-arg", newKanikoArg)
 	}
 
+	// Extra flags
+	if b.kanikoOptions.ExtraFlags != nil {
+		for _, flag := range *b.kanikoOptions.ExtraFlags {
+			kanikoArgs = append(kanikoArgs, *flag)
+		}
+	}
+
 	// Cache
 	if !options.NoCache {
 		ref, err := reference.ParseNormalizedNamed(b.ImageName)

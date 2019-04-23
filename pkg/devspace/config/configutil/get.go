@@ -92,6 +92,14 @@ func InitConfig() *latest.Config {
 	return config
 }
 
+// SetTestConfig initializes the config objects
+func SetTestConfig(testConfig *latest.Config) {
+	getConfigOnce.Do(func() {})
+
+	config = testConfig
+	configRaw = testConfig
+}
+
 // GetBaseConfig returns the config unmerged with potential overwrites
 func GetBaseConfig() *latest.Config {
 	GetConfigWithoutDefaults(false)

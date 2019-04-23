@@ -22,6 +22,14 @@ type QuestionOptions struct {
 // DefaultValidationRegexPattern is the default regex pattern to validate the input
 var DefaultValidationRegexPattern = regexp.MustCompile("^.*$")
 
+var nextAnswer *string
+
+// SetNextAnswer will set the next answer for the question function
+// THIS SHOULD BE ONLY USED FOR UNIT TESTS
+func SetNextAnswer(answer string) {
+	nextAnswer = &answer
+}
+
 // Question asks the user a question and returns the answer
 func Question(params *QuestionOptions) string {
 	var prompt surveypkg.Prompt
@@ -72,6 +80,13 @@ func Question(params *QuestionOptions) string {
 	answers := struct {
 		Question string
 	}{}
+
+	if nextAnswer != nil {
+		answer := *nextAnswer
+		nextAnswer = nil
+		return answer
+	}
+
 	err := surveypkg.Ask(question, &answers)
 	if err != nil {
 		// Keyboard interrupt
