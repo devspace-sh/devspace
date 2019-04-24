@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -19,6 +20,10 @@ import (
 const testNamespace = "test-component-deploy"
 
 func TestComponentDeployment(t *testing.T) {
+	if kubeconfig.ConfigExists() == false {
+		t.Skip("No kubeconfig found")
+	}
+
 	// Create fake devspace config
 	testConfig := &latest.Config{
 		Deployments: &[]*latest.DeploymentConfig{
