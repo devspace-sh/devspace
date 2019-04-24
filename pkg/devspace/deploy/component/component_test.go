@@ -111,6 +111,9 @@ func TestComponentDeployment(t *testing.T) {
 	}
 
 	// @Florian test deployHandler.Status & deployHandler.Delete
+
+	// Cleanup
+	kubectl.Core().Namespaces().Delete(testNamespace, &metav1.DeleteOptions{})
 }
 
 // Cleanup and fail
