@@ -62,7 +62,7 @@ func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, l
 
 	manifests := []string{}
 	for _, ptrManifest := range *deployConfig.Kubectl.Manifests {
-		manifest := strings.ReplaceAll(*ptrManifest, "*", "")
+		manifest := strings.Replace(*ptrManifest, "*", "", -1)
 		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize == true {
 			manifest = strings.TrimSuffix(manifest, "kustomization.yaml")
 		}
