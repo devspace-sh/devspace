@@ -108,7 +108,6 @@
         "cli-commands/remove/sync",
         "cli-commands/reset/key",
         "cli-commands/status/sync",
-        "cli-commands/update/chart",
         "cli-commands/update/config",
         "cli-commands/use/config",
         "cli-commands/use/space"
