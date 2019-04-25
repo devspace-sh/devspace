@@ -95,13 +95,11 @@ func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
 			}
 
 			ip := net.ParseIP(url.Hostname())
-			if ip == nil {
-				return nil, fmt.Errorf("Couldn't parse %s: Is not a valid ip address", url.Hostname())
-			}
-
-			if IsPrivateIP(ip) {
-				log.Infof("Clusters with private ips (%s) cannot be used", url.Hostname())
-				continue
+			if ip != nil {
+				if IsPrivateIP(ip) {
+					log.Infof("Clusters with private ips (%s) cannot be used", url.Hostname())
+					continue
+				}
 			}
 		}
 

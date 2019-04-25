@@ -88,7 +88,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if config already exists
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.Reconfigure == false {
-		log.Fatalf("Config devspace.yaml already exists. Please run `devspace init --reconfigure` to reinitialize the project")
+		log.Info("Config devspace.yaml already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		os.Exit(0)
 	}
 
 	// Delete config & overwrite config
