@@ -4,14 +4,15 @@ title: Full Reference
 
 ## version
 ```yaml
-version: v1alpha3                   # string   | Version of the config
+version: v1beta1                   # string   | Version of the config
 ```
 
 <details>
 <summary>
 ### List of supported versions
 </summary>
-- v1alpha4 ***latest***
+- v1beta1   ***latest***
+- v1alpha4
 - v1alpha3
 - v1alpha2 
 - v1alpha1
@@ -58,6 +59,7 @@ docker:                             # struct   | Options for building images wit
 kaniko:                             # struct   | Options for building images with kaniko
   cache: true                       # bool     | Use caching for kaniko build process
   snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
+  flags: []                         # string[] | Array of flags for kaniko build command
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
 ```
@@ -198,6 +200,8 @@ chart:                              # struct   | Chart to deploy
 kubectl:                            # struct   | Options for deploying with "kubectl apply"
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
   manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube/* or manifests/service.yaml)
+  kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
+  flags: []                         # string[] | Array of flags for the "kubectl apply" command
 ```
 [Learn more about configuring deployments with Helm.](/docs/deployment/kubernetes-manifests/what-are-manifests)
 
@@ -238,8 +242,8 @@ terminal:                           # struct   | Options for the terminal proxy
 ```yaml
 ports:                              # struct[] | Array of port forwarding settings for selected pods
 - selector:                         # TODO
-  portMappings:                     # struct[] | Array of port mappings
-  - localPort: 8080                 # int      | Forward this port on your local computer
+  forward:                          # struct[] | Array of ports to be forwarded
+  - port: 8080                      # int      | Forward this port on your local computer
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
@@ -251,6 +255,7 @@ sync:                               # struct[] | Array of file sync settings for
 - selector:                         # TODO
   localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
   containerPath: /app               # string   | Absolute path in the container that should be synchronized with localSubPath
+  waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
