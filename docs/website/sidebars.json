@@ -47,7 +47,8 @@
     "Deploy Manifests": [
         "deployment/kubernetes-manifests/what-are-manifests",
         "deployment/kubernetes-manifests/add-manifests",
-        "deployment/kubernetes-manifests/remove-manifests"
+        "deployment/kubernetes-manifests/remove-manifests",
+        "deployment/kubernetes-manifests/kustomize"
     ],
     "Deploy Helm Charts": [
         "deployment/helm-charts/what-are-helm-charts",
@@ -131,9 +132,11 @@
     "Images": [
         "cloud/images/dscr-io"
     ],
-    "External Clusters": [
-        "cloud/external-clusters/overview",
-        "cloud/external-clusters/connect"
+    "Clusters": [
+        "cloud/clusters/connect",
+        "cloud/clusters/users",
+        "cloud/clusters/limits",
+        "cloud/clusters/access"
     ]
   }
 }

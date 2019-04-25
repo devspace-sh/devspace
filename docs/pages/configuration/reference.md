@@ -1,5 +1,5 @@
 ---
-title: Full Reference
+title: Full reference
 ---
 
 ## version

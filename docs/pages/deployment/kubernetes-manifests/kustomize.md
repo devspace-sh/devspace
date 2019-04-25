@@ -1,0 +1,5 @@
+---
+title: Use kustomize
+---
+
+CONTENT
