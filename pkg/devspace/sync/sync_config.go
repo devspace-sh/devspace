@@ -42,7 +42,13 @@ type SyncConfig struct {
 	UpstreamLimit        int64
 	DownstreamLimit      int64
 	Verbose              bool
-	CustomLog            log.Logger
+
+	// These channels can be used to listen for certain sync events
+	DownstreamInitialSyncDone chan bool
+	UpstreamInitialSyncDone   chan bool
+	SyncDone                  chan bool
+
+	CustomLog log.Logger
 
 	fileIndex *fileIndex
 
@@ -158,7 +164,7 @@ func (s *SyncConfig) setup() error {
 }
 
 // Start starts a new sync instance
-func (s *SyncConfig) Start(wait bool) error {
+func (s *SyncConfig) Start() error {
 	err := s.setup()
 	if err != nil {
 		return errors.Trace(err)
@@ -175,11 +181,7 @@ func (s *SyncConfig) Start(wait bool) error {
 		return errors.Trace(err)
 	}
 
-	if wait {
-		s.mainLoop()
-	} else {
-		go s.mainLoop()
-	}
+	go s.mainLoop()
 
 	return nil
 }
@@ -222,7 +224,7 @@ func (s *SyncConfig) mainLoop() {
 	go s.startUpstream()
 
 	// Start downstream and do initial sync
-	func() {
+	go func() {
 		defer s.Stop(nil)
 
 		err := s.initialSync()
@@ -234,6 +236,7 @@ func (s *SyncConfig) mainLoop() {
 		s.Logf("[Sync] Initial sync completed")
 		s.startDownstream()
 	}()
+
 }
 
 func (s *SyncConfig) startUpstream() {
@@ -291,9 +294,14 @@ func (s *SyncConfig) initialSync() error {
 		return errors.Trace(err)
 	}
 
-	if len(localChanges) > 0 {
-		go s.sendChangesToUpstream(localChanges)
-	}
+	// Upstream initial sync
+	go func() {
+		s.sendChangesToUpstream(localChanges)
+
+		if s.UpstreamInitialSyncDone != nil {
+			close(s.UpstreamInitialSyncDone)
+		}
+	}()
 
 	if len(fileMapClone) > 0 {
 		remoteChanges := make([]*fileInformation, 0, len(fileMapClone))
@@ -305,6 +313,10 @@ func (s *SyncConfig) initialSync() error {
 		if err != nil {
 			return errors.Trace(err)
 		}
+	}
+
+	if s.DownstreamInitialSyncDone != nil {
+		close(s.DownstreamInitialSyncDone)
 	}
 
 	return nil
@@ -485,6 +497,9 @@ func (s *SyncConfig) Stop(fatalError error) {
 		}
 
 		s.Logln("[Sync] Sync stopped")
+		if s.SyncDone != nil {
+			close(s.SyncDone)
+		}
 
 		if fatalError != nil {
 			s.Error(fatalError)

@@ -40,6 +40,7 @@ func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.
 		containerPath = "."
 	}
 
+	syncDone := make(chan bool)
 	syncConfig := &sync.SyncConfig{
 		Kubectl:      client,
 		Pod:          pod,
@@ -48,14 +49,19 @@ func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.
 		DestPath:     containerPath,
 		ExcludePaths: exclude,
 		CustomLog:    log,
+		SyncDone:     syncDone,
 		Verbose:      false,
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
-	err = syncConfig.Start(true)
+
+	err = syncConfig.Start()
 	if err != nil {
 		log.Fatalf("Sync error: %s", err.Error())
 	}
+
+	// Wait till sync is finished
+	<-syncDone
 
 	return nil
 }
@@ -103,13 +109,23 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			containerPath = *syncPath.ContainerPath
 		}
 
+		var upstreamInitialSyncDone chan bool
+		var downstreamInitialSyncDone chan bool
+
+		if syncPath.WaitInitialSync != nil && *syncPath.WaitInitialSync == true {
+			upstreamInitialSyncDone = make(chan bool)
+			downstreamInitialSyncDone = make(chan bool)
+		}
+
 		syncConfig := &sync.SyncConfig{
-			Kubectl:   client,
-			Pod:       pod,
-			Container: container,
-			WatchPath: absLocalPath,
-			DestPath:  containerPath,
-			Verbose:   verboseSync,
+			Kubectl:                   client,
+			Pod:                       pod,
+			Container:                 container,
+			WatchPath:                 absLocalPath,
+			DestPath:                  containerPath,
+			Verbose:                   verboseSync,
+			UpstreamInitialSyncDone:   upstreamInitialSyncDone,
+			DownstreamInitialSyncDone: downstreamInitialSyncDone,
 		}
 
 		if syncPath.ExcludePaths != nil {
@@ -134,12 +150,20 @@ func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) (
 			}
 		}
 
-		err = syncConfig.Start(false)
+		err = syncConfig.Start()
 		if err != nil {
 			log.Fatalf("Sync error: %s", err.Error())
 		}
 
 		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
+
+		if syncPath.WaitInitialSync != nil && *syncPath.WaitInitialSync == true {
+			log.StartWait("Sync: waiting for intial sync to complete")
+			<-syncConfig.UpstreamInitialSyncDone
+			<-syncConfig.DownstreamInitialSyncDone
+			log.StopWait()
+		}
+
 		syncConfigs = append(syncConfigs, syncConfig)
 	}
 

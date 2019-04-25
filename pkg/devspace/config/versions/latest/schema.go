@@ -67,7 +67,7 @@ type DockerConfig struct {
 type KanikoConfig struct {
 	Cache        *bool      `yaml:"cache"`
 	SnapshotMode *string    `yaml:"snapshotMode,omitempty"`
-	ExtraFlags   *[]*string `yaml:"extraFlags,omitempty"`
+	Flags        *[]*string `yaml:"flags,omitempty"`
 	Namespace    *string    `yaml:"namespace,omitempty"`
 	PullSecret   *string    `yaml:"pullSecret,omitempty"`
 }
@@ -251,6 +251,7 @@ type SyncConfig struct {
 	LocalSubPath         *string             `yaml:"localSubPath,omitempty"`
 	ContainerPath        *string             `yaml:"containerPath,omitempty"`
 	ExcludePaths         *[]string           `yaml:"excludePaths,omitempty"`
+	WaitInitialSync      *bool               `yaml:"waitInitialSync,omitempty"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths,omitempty"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths,omitempty"`
 	BandwidthLimits      *BandwidthLimits    `yaml:"bandwidthLimits,omitempty"`
