@@ -30,7 +30,7 @@ devspace use space my-space
 devspace use space none    // stop using a space
 #######################################################
 	`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		Run:  cmd.RunUseSpace,
 	}
 
@@ -102,13 +102,20 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	err = cloud.UpdateKubeConfig(kubeContext, space, true)
+
+	// Get service account
+	serviceAccount, err := provider.GetServiceAccount(space)
+	if err != nil {
+		log.Fatalf("Error retrieving space service account: %v", err)
+	}
+
+	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, true)
 	if err != nil {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
 	// Set tiller env
-	err = cloudpkg.SetTillerNamespace(space)
+	err = cloudpkg.SetTillerNamespace(serviceAccount)
 	if err != nil {
 		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
@@ -124,10 +131,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			SpaceID:      space.SpaceID,
 			ProviderName: space.ProviderName,
 			Name:         space.Name,
-			Namespace:    space.Namespace,
+			Owner:        space.Owner.Name,
+			OwnerID:      space.Owner.OwnerID,
 			KubeContext:  kubeContext,
 			Created:      space.Created,
-			Domain:       space.Domain,
 		}
 
 		err = generated.SaveConfig(generatedConfig)

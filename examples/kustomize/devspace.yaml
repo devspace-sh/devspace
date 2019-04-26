@@ -1,0 +1,30 @@
+version: v1beta1
+images:
+  default:
+    image: devspace
+    skipPush: true
+deployments:
+- name: devspace-app
+  kubectl:
+    manifests:
+    - kube
+    kustomize: true
+dev:
+  overrideImages:
+  - name: default
+    entrypoint:
+    - sleep
+    - "999999999999"
+  ports:
+  - labelSelector:
+      app: devspace
+    forward:
+    - port: 3000
+  sync:
+  - labelSelector:
+      app: devspace
+    excludePaths:
+    - node_modules
+cluster:
+  kubeContext: minikube
+  namespace: devspace

@@ -58,7 +58,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 	return nil
 }
 
-//RemoveSelector removes a service from the devspace
+// RemoveSelector removes a service from the devspace
 func RemoveSelector(removeAll bool, name string, labelSelector string, namespace string) error {
 	config := configutil.GetBaseConfig()
 	labelSelectorMap, err := parseSelectors(labelSelector)

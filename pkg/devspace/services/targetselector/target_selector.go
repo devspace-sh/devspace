@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -106,7 +106,7 @@ func (t *TargetSelector) GetContainer(client *kubernetes.Clientset) (*v1.Pod, *v
 		return nil, nil, err
 	}
 	if pod == nil {
-		return nil, nil, errors.New("Couldn't find a pod")
+		return nil, nil, fmt.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
 	}
 
 	// Select container if necessary
@@ -134,7 +134,7 @@ func (t *TargetSelector) GetContainer(client *kubernetes.Clientset) (*v1.Pod, *v
 			options = append(options, container.Name)
 		}
 
-		containerName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		containerName := survey.Question(&survey.QuestionOptions{
 			Question: "Select a container",
 			Options:  options,
 		})

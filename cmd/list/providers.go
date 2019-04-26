@@ -33,7 +33,7 @@ Lists the providers that exist
 // RunListProviders runs the list providers command logic
 func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string) {
 	// Get provider configuration
-	providerConfig, err := cloud.ParseCloudConfig()
+	providerConfig, err := cloud.LoadCloudConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
@@ -51,7 +51,7 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 		providerRows = append(providerRows, []string{
 			provider.Name,
 			provider.Host,
-			strconv.FormatBool(provider.Token != ""),
+			strconv.FormatBool(provider.Key != ""),
 		})
 	}
 

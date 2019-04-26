@@ -92,6 +92,14 @@ func InitConfig() *latest.Config {
 	return config
 }
 
+// SetTestConfig initializes the config objects
+func SetTestConfig(testConfig *latest.Config) {
+	getConfigOnce.Do(func() {})
+
+	config = testConfig
+	configRaw = testConfig
+}
+
 // GetBaseConfig returns the config unmerged with potential overwrites
 func GetBaseConfig() *latest.Config {
 	GetConfigWithoutDefaults(false)
@@ -120,7 +128,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
-			log.Fatalf("Error loading %s: %v", generated.ConfigPath, err)
+			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
 
 		// Check if configs.yaml exists
@@ -131,7 +139,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			// Get configs
 			err = LoadConfigs(&configs, DefaultConfigsPath)
 			if err != nil {
-				log.Fatalf("Error loading %s: %v", DefaultConfigsPath, err)
+				log.Panicf("Error loading %s: %v", DefaultConfigsPath, err)
 			}
 
 			// Get config to load

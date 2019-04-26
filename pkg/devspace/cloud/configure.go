@@ -7,7 +7,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -18,7 +18,7 @@ var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30
 // GetProvider returns the current specified cloud provider
 func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	// Get provider configuration
-	providerConfig, err := ParseCloudConfig()
+	providerConfig, err := LoadCloudConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 				options = append(options, providerHost)
 			}
 
-			providerName = *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+			providerName = survey.Question(&survey.QuestionOptions{
 				Question: "Select cloud provider",
 				Options:  options,
 			})
@@ -61,26 +61,28 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 		prefix += "-" + strings.ToLower(strings.Replace(providerName, ".", "-", -1))
 	}
 
+	// Replace : with - for usernames
+	spaceName = strings.Replace(spaceName, ":", "-", -1)
 	return prefix + "-" + strings.ToLower(spaceName)
 }
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
-func UpdateKubeConfig(contextName string, spaceConfig *Space, setActive bool) error {
+func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, setActive bool) error {
 	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return err
 	}
-	caCert, err := base64.StdEncoding.DecodeString(spaceConfig.CaCert)
+	caCert, err := base64.StdEncoding.DecodeString(serviceAccount.CaCert)
 	if err != nil {
 		return err
 	}
 
 	cluster := api.NewCluster()
-	cluster.Server = spaceConfig.Server
+	cluster.Server = serviceAccount.Server
 	cluster.CertificateAuthorityData = caCert
 
 	authInfo := api.NewAuthInfo()
-	authInfo.Token = spaceConfig.ServiceAccountToken
+	authInfo.Token = serviceAccount.Token
 
 	config.Clusters[contextName] = cluster
 	config.AuthInfos[contextName] = authInfo
@@ -89,7 +91,7 @@ func UpdateKubeConfig(contextName string, spaceConfig *Space, setActive bool) er
 	context := api.NewContext()
 	context.Cluster = contextName
 	context.AuthInfo = contextName
-	context.Namespace = spaceConfig.Namespace
+	context.Namespace = serviceAccount.Namespace
 
 	config.Contexts[contextName] = context
 

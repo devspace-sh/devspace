@@ -7,7 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 )
 
@@ -94,7 +94,7 @@ func (cmd *chartCmd) RunChart(cobraCmd *cobra.Command, args []string) {
 			deployments = append(deployments, *deploy.Name)
 		}
 
-		deploymentName := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+		deploymentName := survey.Question(&survey.QuestionOptions{
 			Question: "Select a deployment",
 			Options:  deployments,
 		})

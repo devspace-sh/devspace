@@ -8,7 +8,7 @@ This example shows you how to develop a small node express application with devs
 
 # Step 1: Develop the application
 
-1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `.devspace/config.yaml`).
+1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `devspace.yaml`).
 
 The command does several things in this order:
 - Build the docker image (override the entrypoint with sleep 999999999 (don't worry it can still use all cached layers))
@@ -20,7 +20,7 @@ The command does several things in this order:
 
 You should see the following output:
 ```
-[info]   Loaded config from .devspace/configs.yaml
+[info]   Loaded config from devspace.yaml
 [done] √ Create namespace devspace                
 [info]   Building image 'devspace' with engine 'docker'
 Sending build context to Docker daemon  7.498kB

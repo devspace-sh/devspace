@@ -17,6 +17,12 @@ import (
 	"github.com/docker/docker/pkg/longpath"
 )
 
+// Password hashes the password with sha256 and returns the string
+func Password(password string) (string, error) {
+	sha256Bytes := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(sha256Bytes[:]), nil
+}
+
 // Directory creates the hash value of a directory
 func Directory(path string) (string, error) {
 	hash := sha256.New()

@@ -3,7 +3,7 @@ components:
   containers:
   - # Image tag will be automatically updated in runtime
     # when running devspace deploy or devspace dev
-    image: yourdockeruser/devspace
+    image: devspacecloud/devspace
     # Environment variables
     env: []
     # Mount volumes in this container
@@ -15,7 +15,7 @@ components:
     type: ClusterIP
     ports:
     - externalPort: 80
-      containerPort: 3000
+      containerPort: 8080
 
 # Define persistent volumes here
 # Then mount them in containers above

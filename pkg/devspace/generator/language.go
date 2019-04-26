@@ -10,7 +10,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 
 	enry "gopkg.in/src-d/enry.v1"
@@ -73,7 +73,7 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 	log.StopWait()
 
 	// Let the user select the language
-	selectedLanguage := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
+	selectedLanguage := survey.Question(&survey.QuestionOptions{
 		Question:     "Select programming language of project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,

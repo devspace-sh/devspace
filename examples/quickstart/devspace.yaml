@@ -1,0 +1,29 @@
+version: v1beta1
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    createPullSecret: true
+deployments:
+- name: quickstart
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    service:
+      ports:
+      - port: 3000
+dev:
+  overrideImages:
+  - name: default
+    entrypoint:
+    - sleep
+    - "999999999999"
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: quickstart
+    forward:
+    - port: 3000
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: quickstart
+    excludePaths:
+    - node_modules

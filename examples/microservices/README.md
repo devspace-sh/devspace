@@ -8,7 +8,7 @@ This example shows you how to develop two microservices in a single repo with de
 
 # Step 1: Start the devspace
 
-1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint of the node image is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `.devspace/config.yaml`).
+1. Run `devspace dev` to start the application in development mode. In development mode the image entrypoint of the node image is overwritten with `sleep 999999999` to avoid the container colliding with the commands you run inside the container (You can change this behaviour in the `devspace.yaml`).
 
 The command does several things in this order:
 - Build the docker images (override the entrypoint of node image with sleep 999999999 (don't worry it can still use all cached layers))

@@ -2,8 +2,8 @@ package v1alpha3
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 )
 
 // Upgrade upgrades the config

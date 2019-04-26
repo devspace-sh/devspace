@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"os"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"

@@ -62,7 +62,7 @@ While initializing your project, DevSpace CLI will ask you a couple of questions
 
 ```yaml
 # Config version
-version: v1alpha4
+version: v1beta1
 
 # Development-specific configuration (will be explained later)
 dev: ...

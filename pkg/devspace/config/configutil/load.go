@@ -9,7 +9,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -64,7 +64,7 @@ func varReplaceFn(path, value string) interface{} {
 			if upperVarName == PredefinedVarSpace {
 				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarSpace, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 			} else if upperVarName == PredefinedVarUsername {
-				log.Fatalf("Not logged in, but predefined var %s is used.\n\nPlease run `%s` to login", PredefinedVarUsername, ansi.Color("devspace login", "white+b"))
+				log.Fatalf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", PredefinedVarUsername, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 			}
 
 			log.Fatalf("Try to access predefined devspace variable '%s', however the value has no value", varName)
@@ -116,7 +116,7 @@ func varMatchFn(path, key, value string) bool {
 
 // AskQuestion asks the user a question depending on the variable options
 func AskQuestion(variable *configs.Variable) string {
-	params := &stdinutil.GetFromStdinParams{}
+	params := &survey.QuestionOptions{}
 
 	if variable == nil {
 		params.Question = "Please enter a value"
@@ -138,7 +138,7 @@ func AskQuestion(variable *configs.Variable) string {
 		}
 	}
 
-	return *stdinutil.GetFromStdin(params)
+	return survey.Question(params)
 }
 
 func loadConfigFromPath(path string) (*latest.Config, error) {

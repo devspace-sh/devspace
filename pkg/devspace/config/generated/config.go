@@ -21,13 +21,13 @@ type Config struct {
 
 // CloudSpaceConfig holds all the informations about a certain cloud space
 type CloudSpaceConfig struct {
-	SpaceID      int     `yaml:"spaceID"`
-	ProviderName string  `yaml:"providerName"`
-	KubeContext  string  `yaml:"kubeContext"`
-	Name         string  `yaml:"name"`
-	Namespace    string  `yaml:"namespace"`
-	Created      string  `yaml:"created"`
-	Domain       *string `yaml:"domain"`
+	SpaceID      int    `yaml:"spaceID"`
+	OwnerID      int    `yaml:"ownerID"`
+	Owner        string `yaml:"owner"`
+	ProviderName string `yaml:"providerName"`
+	KubeContext  string `yaml:"kubeContext"`
+	Name         string `yaml:"name"`
+	Created      string `yaml:"created"`
 }
 
 // DevSpaceConfig holds all the information specific to a certain config
@@ -53,20 +53,27 @@ type DeploymentConfig struct {
 }
 
 // ConfigPath is the relative generated config path
-var ConfigPath = "/.devspace/generated.yaml"
+var ConfigPath = ".devspace/generated.yaml"
 
 var loadedConfig *Config
 var loadedConfigOnce sync.Once
+
+var testDontSaveConfig = false
+
+// SetTestConfig sets the config for testing purposes
+func SetTestConfig(config *Config) {
+	loadedConfigOnce.Do(func() {})
+	loadedConfig = config
+	testDontSaveConfig = true
+}
 
 // LoadConfig loads the config from the filesystem
 func LoadConfig() (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		workdir, _ := os.Getwd()
-
-		data, err := ioutil.ReadFile(filepath.Join(workdir, ConfigPath))
-		if err != nil {
+		data, readErr := ioutil.ReadFile(ConfigPath)
+		if readErr != nil {
 			loadedConfig = &Config{
 				ActiveConfig: DefaultConfigName,
 				Configs:      make(map[string]*DevSpaceConfig),
@@ -150,6 +157,10 @@ func InitDevSpaceConfig(config *Config, configName string) {
 
 // SaveConfig saves the config to the filesystem
 func SaveConfig(config *Config) error {
+	if testDontSaveConfig {
+		return nil
+	}
+
 	workdir, _ := os.Getwd()
 
 	data, err := yaml.Marshal(config)

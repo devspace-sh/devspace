@@ -1,16 +1,19 @@
 package kubectl
 
 import (
-	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
+	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -56,6 +59,54 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 // GetClientConfigFromKubectl loads the kubectl client config
 func GetClientConfigFromKubectl() (*rest.Config, error) {
 	return getClientConfig(nil, false)
+}
+
+// GetClientConfigBySelect let's the user select a kube context to use
+func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
+	kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all kube contexts
+	options := make([]string, 0, len(kubeConfig.Contexts))
+	for context := range kubeConfig.Contexts {
+		options = append(options, context)
+	}
+	if len(options) == 0 {
+		return nil, errors.New("No kubectl context found. Make sure kubectl is installed and you have a working kubernetes context configured")
+	}
+
+	for true {
+		kubeContext := survey.Question(&survey.QuestionOptions{
+			Question:     "Which kube context do you want to use",
+			DefaultValue: kubeConfig.CurrentContext,
+			Options:      options,
+		})
+
+		// Check if cluster is in private network
+		if allowPrivate == false {
+			context := kubeConfig.Contexts[kubeContext]
+			cluster := kubeConfig.Clusters[context.Cluster]
+
+			url, err := url.Parse(cluster.Server)
+			if err != nil {
+				return nil, errors.Wrap(err, "url parse")
+			}
+
+			ip := net.ParseIP(url.Hostname())
+			if ip != nil {
+				if IsPrivateIP(ip) {
+					log.Infof("Clusters with private ips (%s) cannot be used", url.Hostname())
+					continue
+				}
+			}
+		}
+
+		return GetClientConfigFromContext(kubeContext)
+	}
+
+	return nil, errors.New("We should not reach this point")
 }
 
 // GetClientConfigFromContext loads the configuration from a kubernetes context

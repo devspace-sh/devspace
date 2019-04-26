@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"os"
+	"sync"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/pkg/errors"
@@ -23,9 +24,16 @@ const GraphqlEndpoint = "/graphql"
 
 // Provider describes the struct to hold the cloud configuration
 type Provider struct {
-	Name  string `yaml:"name,omitempty"`
-	Host  string `yaml:"host,omitempty"`
+	Name string `yaml:"name,omitempty"`
+	Host string `yaml:"host,omitempty"`
+
+	// Key is used to obtain a token from the auth server
+	Key string `yaml:"key,omitempty"`
+
+	// Token is the actual authorization bearer
 	Token string `yaml:"token,omitempty"`
+
+	ClusterKey map[int]string `yaml:"clusterKeys,omitempty"`
 }
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
@@ -34,34 +42,50 @@ var DevSpaceCloudProviderConfig = &Provider{
 	Host: "https://app.devspace.cloud",
 }
 
-// ParseCloudConfig parses the cloud configuration and returns a map containing the configurations
-func ParseCloudConfig() (ProviderConfig, error) {
-	data, err := config.ReadCloudsConfig()
-	if os.IsNotExist(err) {
-		return ProviderConfig{
-			DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
-		}, nil
-	} else if err != nil {
-		return nil, errors.Wrap(err, "read clouds config")
-	}
+var loadedConfig ProviderConfig
+var loadedConfigOnce sync.Once
 
-	cloudConfig := make(ProviderConfig)
-	err = yaml.Unmarshal(data, cloudConfig)
-	if err != nil {
-		return nil, err
-	}
+// LoadCloudConfig parses the cloud configuration and returns a map containing the configurations
+func LoadCloudConfig() (ProviderConfig, error) {
+	var err error
 
-	if _, ok := cloudConfig[DevSpaceCloudProviderName]; ok {
-		cloudConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
-	} else {
-		cloudConfig[DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
-	}
+	loadedConfigOnce.Do(func() {
+		var data []byte
 
-	for configName, config := range cloudConfig {
-		config.Name = configName
-	}
+		data, err = config.ReadCloudsConfig()
+		if os.IsNotExist(err) {
+			loadedConfig = ProviderConfig{
+				DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
+			}
 
-	return cloudConfig, nil
+			err = nil
+			return
+		} else if err != nil {
+			err = errors.Wrap(err, "read clouds config")
+			return
+		}
+
+		loadedConfig = make(ProviderConfig)
+		err = yaml.Unmarshal(data, loadedConfig)
+		if err != nil {
+			return
+		}
+
+		if _, ok := loadedConfig[DevSpaceCloudProviderName]; ok {
+			loadedConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
+		} else {
+			loadedConfig[DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
+		}
+
+		for configName, config := range loadedConfig {
+			config.Name = configName
+			if config.ClusterKey == nil {
+				config.ClusterKey = make(map[int]string)
+			}
+		}
+	})
+
+	return loadedConfig, err
 }
 
 // SaveCloudConfig saves the provider configuration to file
@@ -75,9 +99,11 @@ func SaveCloudConfig(providerConfig ProviderConfig) error {
 		}
 
 		saveConfig[name] = &Provider{
-			Name:  "",
-			Host:  host,
-			Token: provider.Token,
+			Name:       "",
+			Host:       host,
+			Key:        provider.Key,
+			Token:      provider.Token,
+			ClusterKey: provider.ClusterKey,
 		}
 	}
 
@@ -87,4 +113,16 @@ func SaveCloudConfig(providerConfig ProviderConfig) error {
 	}
 
 	return config.SaveCloudsConfig(out)
+}
+
+// Save saves the provider config
+func (p *Provider) Save() error {
+	providerConfig, err := LoadCloudConfig()
+	if err != nil {
+		return errors.Wrap(err, "load cloud config")
+	}
+
+	// Make sure provider is set
+	providerConfig[p.Name] = p
+	return SaveCloudConfig(providerConfig)
 }

@@ -12,6 +12,4 @@ spec:
     spec:
       containers:
       - name: default
-        image: dscr.io/yourusername/devspace
-      imagePullSecrets:
-      - name: devspace-auth-dscr-io
+        image: devspace

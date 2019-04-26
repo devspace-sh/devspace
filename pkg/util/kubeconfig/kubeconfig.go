@@ -13,6 +13,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 )
 
+// ConfigExists checks if a kube config exists
+func ConfigExists() bool {
+	_, err := os.Stat(clientcmd.RecommendedHomeFile)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // ReadKubeConfig reads the kube config from the specified filename or returns a new Config object if not found
 func ReadKubeConfig(filename string) (*api.Config, error) {
 	data, err := ioutil.ReadFile(filename)

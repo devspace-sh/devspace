@@ -8,7 +8,7 @@ import (
 	glob "github.com/bmatcuk/doublestar"
 )
 
-//GetIgnoreRules reads the ignoreRules from the .dockerignore
+// GetIgnoreRules reads the ignoreRules from the .dockerignore
 func GetIgnoreRules(rootDirectory string) ([]string, error) {
 	ignoreRules := []string{}
 

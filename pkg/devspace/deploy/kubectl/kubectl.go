@@ -1,10 +1,12 @@
 package kubectl
 
 import (
-	"errors"
 	"os/exec"
+	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -12,7 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -24,11 +26,13 @@ type DeployConfig struct {
 	Context    string
 	Namespace  string
 	Manifests  []string
-	Log        log.Logger
+
+	Options *latest.KubectlConfig
+	Log     log.Logger
 }
 
 // New creates a new deploy config for kubectl
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
@@ -57,8 +61,13 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 	}
 
 	manifests := []string{}
-	for _, manifest := range *deployConfig.Kubectl.Manifests {
-		manifests = append(manifests, *manifest)
+	for _, ptrManifest := range *deployConfig.Kubectl.Manifests {
+		manifest := strings.Replace(*ptrManifest, "*", "", -1)
+		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize == true {
+			manifest = strings.TrimSuffix(manifest, "kustomization.yaml")
+		}
+
+		manifests = append(manifests, manifest)
 	}
 
 	return &DeployConfig{
@@ -68,6 +77,7 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 		Context:    context,
 		Namespace:  namespace,
 		Manifests:  manifests,
+		Options:    deployConfig.Kubectl,
 		Log:        log,
 	}, nil
 }
@@ -90,65 +100,107 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 
 // Delete deletes all matched manifests from kubernetes
 func (d *DeployConfig) Delete() error {
-	d.Log.StartWait("Loading manifests")
-	manifests, err := loadManifests(d.Manifests, d.Log)
-	if err != nil {
-		return err
-	}
-
-	joinedManifests, err := joinManifests(manifests)
-	if err != nil {
-		return err
-	}
-
-	stringReader := strings.NewReader(joinedManifests)
-	args := d.getCmdArgs("delete", "--ignore-not-found=true")
-
-	cmd := exec.Command(d.CmdPath, args...)
-
-	cmd.Stdin = stringReader
-	cmd.Stdout = d.Log
-	cmd.Stderr = d.Log
-
 	d.Log.StartWait("Deleting manifests with kubectl")
 	defer d.Log.StopWait()
-	return cmd.Run()
+
+	for _, manifest := range d.Manifests {
+		replacedManifest, err := d.getReplacedManifest(manifest, nil)
+		if err != nil {
+			return err
+		}
+
+		args := d.getCmdArgs("delete", "--ignore-not-found=true")
+		stringReader := strings.NewReader(replacedManifest)
+
+		cmd := exec.Command(d.CmdPath, args...)
+
+		cmd.Stdin = stringReader
+		cmd.Stdout = d.Log
+		cmd.Stderr = d.Log
+
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
 func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
-	d.Log.StartWait("Loading manifests")
-	manifests, err := loadManifests(d.Manifests, d.Log)
-	if err != nil {
-		return err
-	}
+	d.Log.StartWait("Applying manifests with kubectl")
+	defer d.Log.StopWait()
 
 	activeConfig := generatedConfig.GetActive().Deploy
 	if isDev {
 		activeConfig = generatedConfig.GetActive().Dev
 	}
 
-	for _, manifest := range manifests {
-		replaceManifest(manifest, activeConfig.ImageTags)
+	for _, manifest := range d.Manifests {
+		replacedManifest, err := d.getReplacedManifest(manifest, activeConfig.ImageTags)
+		if err != nil {
+			return err
+		}
+
+		stringReader := strings.NewReader(replacedManifest)
+		args := d.getCmdArgs("apply", "--force")
+		if d.Options.Flags != nil {
+			for _, flag := range *d.Options.Flags {
+				args = append(args, *flag)
+			}
+		}
+
+		cmd := exec.Command(d.CmdPath, args...)
+
+		cmd.Stdin = stringReader
+		cmd.Stdout = d.Log
+		cmd.Stderr = d.Log
+
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
 	}
 
-	joinedManifests, err := joinManifests(manifests)
+	return nil
+}
+
+func (d *DeployConfig) getReplacedManifest(manifest string, imageTags map[string]string) (string, error) {
+	manifestYamlBytes, err := d.dryRun(manifest)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	stringReader := strings.NewReader(joinedManifests)
-	args := d.getCmdArgs("apply", "--force")
+	// Split output into the yamls
+	splitted := regexp.MustCompile(`(^|\n)apiVersion`).Split(string(manifestYamlBytes), -1)
+	replaceManifests := []string{}
 
-	cmd := exec.Command(d.CmdPath, args...)
+	for _, resource := range splitted {
+		if resource == "" {
+			continue
+		}
 
-	cmd.Stdin = stringReader
-	cmd.Stdout = d.Log
-	cmd.Stderr = d.Log
+		// Parse yaml
+		manifestYaml := map[interface{}]interface{}{}
+		err = yaml.Unmarshal([]byte("apiVersion"+resource), &manifestYaml)
+		if err != nil {
+			return "", errors.Wrap(err, "unmarshal yaml")
+		}
 
-	d.Log.StartWait("Applying manifests with kubectl")
-	defer d.Log.StopWait()
-	return cmd.Run()
+		if len(imageTags) > 0 {
+			replaceManifest(manifestYaml, imageTags)
+		}
+
+		replacedManifest, err := yaml.Marshal(manifestYaml)
+		if err != nil {
+			return "", errors.Wrap(err, "marshal yaml")
+		}
+
+		replaceManifests = append(replaceManifests, string(replacedManifest))
+	}
+
+	return strings.Join(replaceManifests, "\n---\n"), nil
 }
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {
@@ -158,7 +210,7 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 		args = append(args, "--context", d.Context)
 	}
 	if d.Namespace != "" {
-		args = append(args, "-n", d.Namespace)
+		args = append(args, "--namespace", d.Namespace)
 	}
 
 	args = append(args, method)
@@ -172,7 +224,41 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 	return args
 }
 
-func replaceManifest(manifest Manifest, tags map[string]string) {
+func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
+	args := []string{"create"}
+
+	if d.Context != "" {
+		args = append(args, "--context", d.Context)
+	}
+	if d.Namespace != "" {
+		args = append(args, "--namespace", d.Namespace)
+	}
+
+	args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+
+	if d.Options.Kustomize != nil && *d.Options.Kustomize == true {
+		args = append(args, "--kustomize")
+	} else {
+		args = append(args, "--filename")
+	}
+
+	args = append(args, manifest)
+
+	// Execute command
+	output, err := exec.Command(d.CmdPath, args...).Output()
+	if err != nil {
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			return nil, errors.New(string(exitError.Stderr))
+		}
+
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func replaceManifest(manifest map[interface{}]interface{}, tags map[string]string) {
 	match := func(path, key, value string) bool {
 		if key == "image" {
 			if _, ok := tags[value]; ok {
@@ -187,5 +273,5 @@ func replaceManifest(manifest Manifest, tags map[string]string) {
 		return value + ":" + tags[value]
 	}
 
-	walk.Walk(map[interface{}]interface{}(manifest), match, replace)
+	walk.Walk(manifest, match, replace)
 }

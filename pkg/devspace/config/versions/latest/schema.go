@@ -7,7 +7,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1alpha4"
+const Version string = "v1beta1"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -16,6 +16,11 @@ func (c *Config) GetVersion() string {
 
 // New creates a new config object
 func New() config.Config {
+	return NewRaw()
+}
+
+// NewRaw creates a new config object
+func NewRaw() *Config {
 	return &Config{
 		Version: ptr.String(Version),
 		Cluster: &Cluster{},
@@ -60,10 +65,11 @@ type DockerConfig struct {
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cache        *bool   `yaml:"cache"`
-	SnapshotMode *string `yaml:"snapshotMode,omitempty"`
-	Namespace    *string `yaml:"namespace,omitempty"`
-	PullSecret   *string `yaml:"pullSecret,omitempty"`
+	Cache        *bool      `yaml:"cache"`
+	SnapshotMode *string    `yaml:"snapshotMode,omitempty"`
+	Flags        *[]*string `yaml:"flags,omitempty"`
+	Namespace    *string    `yaml:"namespace,omitempty"`
+	PullSecret   *string    `yaml:"pullSecret,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images
@@ -189,6 +195,8 @@ type ChartConfig struct {
 type KubectlConfig struct {
 	CmdPath   *string    `yaml:"cmdPath,omitempty"`
 	Manifests *[]*string `yaml:"manifests,omitempty"`
+	Kustomize *bool      `yaml:"kustomize,omitempty"`
+	Flags     *[]*string `yaml:"flags,omitempty"`
 }
 
 // DevConfig defines the devspace deployment
@@ -224,13 +232,13 @@ type PortForwardingConfig struct {
 	Selector      *string             `yaml:"selector,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
-	PortMappings  *[]*PortMapping     `yaml:"portMappings"`
+	PortMappings  *[]*PortMapping     `yaml:"forward"`
 }
 
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
-	LocalPort   *int    `yaml:"localPort"`
-	RemotePort  *int    `yaml:"remotePort"`
+	LocalPort   *int    `yaml:"port"`
+	RemotePort  *int    `yaml:"remotePort,omitempty"`
 	BindAddress *string `yaml:"bindAddress,omitempty"`
 }
 
@@ -243,6 +251,7 @@ type SyncConfig struct {
 	LocalSubPath         *string             `yaml:"localSubPath,omitempty"`
 	ContainerPath        *string             `yaml:"containerPath,omitempty"`
 	ExcludePaths         *[]string           `yaml:"excludePaths,omitempty"`
+	WaitInitialSync      *bool               `yaml:"waitInitialSync,omitempty"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths,omitempty"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths,omitempty"`
 	BandwidthLimits      *BandwidthLimits    `yaml:"bandwidthLimits,omitempty"`

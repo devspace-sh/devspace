@@ -1,0 +1,21 @@
+version: v1beta1
+images:
+  default:
+    image: devspace
+    skipPush: true
+deployments:
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube/**
+dev:
+  terminal:
+    disabled: true
+    labelSelector:
+      app.kubernetes.io/component: default
+  autoReload:
+    paths:
+    - ./**
+cluster:
+  kubeContext: minikube
+  namespace: devspace

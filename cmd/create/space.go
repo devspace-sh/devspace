@@ -1,21 +1,24 @@
 package create
 
 import (
-	"errors"
-	"strconv"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
+// DevSpaceCloudHostedCluster is the option that is shown during cluster select to select the hosted devspace cloud clusters
+const DevSpaceCloudHostedCluster = "DevSpace Cloud Hosted"
+
 type spaceCmd struct {
-	active   bool
-	provider string
+	Active   bool
+	Provider string
+	Cluster  string
 }
 
 func newSpaceCmd() *cobra.Command {
@@ -38,8 +41,9 @@ devspace create space myspace
 		Run:  cmd.RunCreateSpace,
 	}
 
-	spaceCmd.Flags().BoolVar(&cmd.active, "active", true, "Use the new Space as active Space for the current project")
-	spaceCmd.Flags().StringVar(&cmd.provider, "provider", "", "The cloud provider to use")
+	spaceCmd.Flags().BoolVar(&cmd.Active, "active", true, "Use the new Space as active Space for the current project")
+	spaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
+	spaceCmd.Flags().StringVar(&cmd.Cluster, "cluster", "", "The cluster to create a space in")
 
 	return spaceCmd
 }
@@ -54,8 +58,8 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Check if user has specified a certain provider
 	var cloudProvider *string
-	if cmd.provider != "" {
-		cloudProvider = &cmd.provider
+	if cmd.Provider != "" {
+		cloudProvider = &cmd.Provider
 	}
 
 	// Get provider
@@ -64,13 +68,13 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.StartWait("Creating space " + args[0])
+	log.StartWait("Retrieving clusters")
 	defer log.StopWait()
 
 	// Get projects
 	projects, err := provider.GetProjects()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error retrieving projects: %v", err)
 	}
 
 	// Create project if needed
@@ -84,11 +88,25 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		projectID = projects[0].ProjectID
 	}
 
+	var cluster *cloud.Cluster
+
+	if cmd.Cluster == "" {
+		cluster, err = getCluster(provider)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		cluster, err = provider.GetClusterByName(cmd.Cluster)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	log.StartWait("Creating space " + args[0])
 	defer log.StopWait()
 
 	// Create space
-	spaceID, err := provider.CreateSpace(args[0], projectID, nil)
+	spaceID, err := provider.CreateSpace(args[0], projectID, cluster)
 	if err != nil {
 		log.Fatalf("Error creating space: %v", err)
 	}
@@ -99,21 +117,27 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error retrieving space information: %v", err)
 	}
 
+	// Get service account
+	serviceAccount, err := provider.GetServiceAccount(space)
+	if err != nil {
+		log.Fatalf("Error retrieving space service account: %v", err)
+	}
+
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	err = cloud.UpdateKubeConfig(kubeContext, space, true)
+	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, true)
 	if err != nil {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
 	// Set tiller env
-	err = cloud.SetTillerNamespace(space)
+	err = cloud.SetTillerNamespace(serviceAccount)
 	if err != nil {
 		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
 	}
 
 	// Set space as active space
-	if cmd.active && configExists {
+	if cmd.Active && configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
@@ -124,10 +148,10 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 			SpaceID:      space.SpaceID,
 			ProviderName: space.ProviderName,
 			Name:         space.Name,
-			Namespace:    space.Namespace,
+			Owner:        space.Owner.Name,
+			OwnerID:      space.Owner.OwnerID,
 			KubeContext:  kubeContext,
 			Created:      space.Created,
-			Domain:       space.Domain,
 		}
 
 		err = generated.SaveConfig(generatedConfig)
@@ -142,45 +166,85 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	log.Infof("\nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
 }
 
-func createProject(p *cloud.Provider) (int, error) {
+func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
+	log.StartWait("Retrieving clusters")
+	defer log.StopWait()
+
 	clusters, err := p.GetClusters()
 	if err != nil {
-		return 0, err
+		return nil, errors.Wrap(err, "get clusters")
 	}
 	if len(clusters) == 0 {
-		return 0, errors.New("Cannot create project, because no public cluster was found")
+		return nil, errors.New("Cannot create space, because no cluster was found")
 	}
 
-	clusterID := clusters[0].ClusterID
-	if len(clusters) > 1 {
-		clusterNames := map[string]*cloud.Cluster{}
-		for idx, cluster := range clusters {
-			if cluster.Name == nil {
-				clusterNames["Cluster-"+strconv.Itoa(idx)] = cluster
-			} else {
-				clusterNames[*cluster.Name] = cluster
+	log.StopWait()
+
+	// Check if the user has access to a connected cluster
+	connectedClusters := make([]*cloud.Cluster, 0, len(clusters))
+	for _, cluster := range clusters {
+		if cluster.Owner != nil {
+			connectedClusters = append(connectedClusters, cluster)
+		}
+	}
+
+	// Check if user has connected clusters
+	if len(connectedClusters) > 0 {
+		clusterNames := []string{}
+		for _, cluster := range connectedClusters {
+			clusterNames = append(clusterNames, cluster.Name)
+		}
+
+		// Add devspace cloud option
+		clusterNames = append(clusterNames, DevSpaceCloudHostedCluster)
+
+		// Choose cluster
+		chosenCluster := survey.Question(&survey.QuestionOptions{
+			Question:     "Which cluster should the space created in?",
+			DefaultValue: clusterNames[0],
+			Options:      clusterNames,
+		})
+		if chosenCluster != DevSpaceCloudHostedCluster {
+			for _, cluster := range connectedClusters {
+				if cluster.Name == chosenCluster {
+					return cluster, nil
+				}
 			}
 		}
+	}
 
-		clustersArr := []string{}
-		for name := range clusterNames {
-			clustersArr = append(clustersArr, name)
+	// Select a devspace cluster
+	devSpaceClusters := make([]*cloud.Cluster, 0, len(clusters))
+	for _, cluster := range clusters {
+		if cluster.Owner == nil {
+			devSpaceClusters = append(devSpaceClusters, cluster)
 		}
-
-		log.StopWait()
-		chosenCluster := *stdinutil.GetFromStdin(&stdinutil.GetFromStdinParams{
-			Question:     "Which cluster do you want to use?",
-			DefaultValue: clustersArr[0],
-			Options:      clustersArr,
-		})
-
-		clusterID = clusterNames[chosenCluster].ClusterID
 	}
 
-	projectID, err := p.CreateProject("default", clusterID)
-	if err != nil {
-		return 0, err
+	if len(devSpaceClusters) == 1 {
+		return devSpaceClusters[0], nil
 	}
 
-	return projectID, err
+	clusterNames := []string{}
+	for _, cluster := range devSpaceClusters {
+		clusterNames = append(clusterNames, cluster.Name)
+	}
+
+	// Choose cluster
+	chosenCluster := survey.Question(&survey.QuestionOptions{
+		Question:     "Which hosted DevSpace cluster should the space created in?",
+		DefaultValue: clusterNames[0],
+		Options:      clusterNames,
+	})
+	for _, cluster := range devSpaceClusters {
+		if cluster.Name == chosenCluster {
+			return cluster, nil
+		}
+	}
+
+	return nil, errors.New("No cluster selected")
+}
+
+func createProject(p *cloud.Provider) (int, error) {
+	return p.CreateProject("default")
 }

@@ -43,6 +43,13 @@ type SyncConfig struct {
 	DownstreamLimit      int64
 	Verbose              bool
 
+	// These channels can be used to listen for certain sync events
+	DownstreamInitialSyncDone chan bool
+	UpstreamInitialSyncDone   chan bool
+	SyncDone                  chan bool
+
+	CustomLog log.Logger
+
 	fileIndex *fileIndex
 
 	ignoreMatcher         gitignore.IgnoreParser
@@ -67,9 +74,9 @@ type SyncConfig struct {
 func (s *SyncConfig) Logf(format string, args ...interface{}) {
 	if s.silent == false {
 		if s.Pod != nil {
-			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+			s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
 		} else {
-			syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
+			s.CustomLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Infof(format, args...)
 		}
 	}
 }
@@ -78,9 +85,9 @@ func (s *SyncConfig) Logf(format string, args ...interface{}) {
 func (s *SyncConfig) Logln(line interface{}) {
 	if s.silent == false {
 		if s.Pod != nil {
-			syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
+			s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Info(line)
 		} else {
-			syncLog.
+			s.CustomLog.
 				WithKey("local",
 					s.WatchPath).
 				WithKey("container", s.DestPath).
@@ -119,7 +126,7 @@ func (s *SyncConfig) setup() error {
 	s.fileIndex = newFileIndex()
 	s.ExcludePaths = append(s.ExcludePaths, "/.devspace/logs")
 
-	if syncLog == nil {
+	if s.CustomLog == nil && syncLog == nil {
 		// Check if syncLog already exists
 		stat, err := os.Stat(log.Logdir + "sync.log")
 
@@ -133,6 +140,9 @@ func (s *SyncConfig) setup() error {
 
 		syncLog = log.GetFileLogger("sync")
 		syncLog.SetLevel(logrus.InfoLevel)
+	}
+	if s.CustomLog == nil {
+		s.CustomLog = syncLog
 	}
 
 	err = s.initIgnoreParsers()
@@ -226,6 +236,7 @@ func (s *SyncConfig) mainLoop() {
 		s.Logf("[Sync] Initial sync completed")
 		s.startDownstream()
 	}()
+
 }
 
 func (s *SyncConfig) startUpstream() {
@@ -283,9 +294,14 @@ func (s *SyncConfig) initialSync() error {
 		return errors.Trace(err)
 	}
 
-	if len(localChanges) > 0 {
-		go s.sendChangesToUpstream(localChanges)
-	}
+	// Upstream initial sync
+	go func() {
+		s.sendChangesToUpstream(localChanges)
+
+		if s.UpstreamInitialSyncDone != nil {
+			close(s.UpstreamInitialSyncDone)
+		}
+	}()
 
 	if len(fileMapClone) > 0 {
 		remoteChanges := make([]*fileInformation, 0, len(fileMapClone))
@@ -297,6 +313,10 @@ func (s *SyncConfig) initialSync() error {
 		if err != nil {
 			return errors.Trace(err)
 		}
+	}
+
+	if s.DownstreamInitialSyncDone != nil {
+		close(s.DownstreamInitialSyncDone)
 	}
 
 	return nil
@@ -477,6 +497,9 @@ func (s *SyncConfig) Stop(fatalError error) {
 		}
 
 		s.Logln("[Sync] Sync stopped")
+		if s.SyncDone != nil {
+			close(s.SyncDone)
+		}
 
 		if fatalError != nil {
 			s.Error(fatalError)
