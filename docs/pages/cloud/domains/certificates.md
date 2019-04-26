@@ -1,5 +1,5 @@
 ---
-title: SSL Certificates (TLS)
+title: SSL certificates (TLS)
 ---
 
 In DevSpace cloud, SSL certificates for custom domains are automatically generated with the help of the [cert-manager](https://github.com/jetstack/cert-manager). Behind the scenes a [lets encrypt](https://letsencrypt.org/) certificate will be created for you. In order to create the certificate, it is essential that your custom domain points to the correct IP adress and that your space has enough resources left to start the cert-manager challenge resolver pod.

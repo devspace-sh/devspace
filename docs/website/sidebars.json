@@ -47,7 +47,8 @@
     "Deploy Manifests": [
         "deployment/kubernetes-manifests/what-are-manifests",
         "deployment/kubernetes-manifests/add-manifests",
-        "deployment/kubernetes-manifests/remove-manifests"
+        "deployment/kubernetes-manifests/remove-manifests",
+        "deployment/kubernetes-manifests/kustomize"
     ],
     "Deploy Helm Charts": [
         "deployment/helm-charts/what-are-helm-charts",
@@ -79,6 +80,7 @@
         "cli-commands/login",
         "cli-commands/logs",
         "cli-commands/purge",
+        "cli-commands/sync",
         "cli-commands/upgrade",
         "cli-commands/add/deployment",
         "cli-commands/add/image",
@@ -86,7 +88,9 @@
         "cli-commands/add/provider",
         "cli-commands/add/selector",
         "cli-commands/add/sync",
+        "cli-commands/connect/cluster",
         "cli-commands/create/space",
+        "cli-commands/list/clusters",
         "cli-commands/list/configs",
         "cli-commands/list/ports",
         "cli-commands/list/providers",
@@ -94,6 +98,7 @@
         "cli-commands/list/spaces",
         "cli-commands/list/sync",
         "cli-commands/list/vars",
+        "cli-commands/remove/cluster",
         "cli-commands/remove/deployment",
         "cli-commands/remove/image",
         "cli-commands/remove/port",
@@ -101,6 +106,7 @@
         "cli-commands/remove/selector",
         "cli-commands/remove/space",
         "cli-commands/remove/sync",
+        "cli-commands/reset/key",
         "cli-commands/status/sync",
         "cli-commands/update/config",
         "cli-commands/use/config",
@@ -125,9 +131,11 @@
     "Images": [
         "cloud/images/dscr-io"
     ],
-    "External Clusters": [
-        "cloud/external-clusters/overview",
-        "cloud/external-clusters/connect"
+    "Clusters": [
+        "cloud/clusters/connect",
+        "cloud/clusters/users",
+        "cloud/clusters/limits",
+        "cloud/clusters/access"
     ]
   }
 }
