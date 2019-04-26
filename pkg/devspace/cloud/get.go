@@ -106,7 +106,13 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 	}
 
 	clusterName = clusterNameSplitted[0]
-	accountName, err := token.GetAccountName(p.Token)
+
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
+	accountName, err := token.GetAccountName(bearerToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -239,8 +245,13 @@ func (p *Provider) GetClusterUser(clusterID int) (*ClusterUser, error) {
 		ClusterUser []*ClusterUser `json:"cluster_user"`
 	}{}
 
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
 	// Get account id
-	accountID, err := token.GetAccountID(p.Token)
+	accountID, err := token.GetAccountID(bearerToken)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +485,13 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 	}
 
 	spaceName = spaceNameSplitted[0]
-	accountName, err := token.GetAccountName(p.Token)
+
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
+	accountName, err := token.GetAccountName(bearerToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -562,7 +579,12 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 }
 
 func (p *Provider) exchangeSpaceName(space *Space) error {
-	userAccountName, err := token.GetAccountName(p.Token)
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	userAccountName, err := token.GetAccountName(bearerToken)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}
@@ -580,7 +602,12 @@ func (p *Provider) exchangeClusterName(cluster *Cluster) error {
 		return nil
 	}
 
-	userAccountName, err := token.GetAccountName(p.Token)
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	userAccountName, err := token.GetAccountName(bearerToken)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}

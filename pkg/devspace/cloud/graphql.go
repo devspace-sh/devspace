@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/machinebox/graphql"
+	"github.com/pkg/errors"
 )
 
 // GrapqhlRequest does a new graphql request and stores the result in the response
@@ -18,8 +19,14 @@ func (p *Provider) GrapqhlRequest(request string, vars map[string]interface{}, r
 		}
 	}
 
+	// Get token
+	token, err := p.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
 	// Set token
-	req.Header.Set("Authorization", "Bearer "+p.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	// Run the graphql request
 	return graphQlClient.Run(context.Background(), req, response)
