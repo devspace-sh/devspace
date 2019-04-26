@@ -22,13 +22,12 @@ func NewLoginCmd() *cobra.Command {
 #######################################################
 ################### devspace login ####################
 #######################################################
-If no --token is supplied the browser will be opened 
+If no --key is supplied the browser will be opened 
 and the login page is shown
 
 Example:
 devspace login
-devspace login my.custom.cloud
-devspace login --key 123456789
+devspace login --key myaccesskey
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
