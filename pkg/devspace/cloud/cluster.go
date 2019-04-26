@@ -207,9 +207,9 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 
 	log.StopWait()
 	if *options.UseHostNetwork == false {
-		log.Donef("Please create an A dns record for '*.%s' that points to external-ip of loadbalancer service 'devspace-cloud/nginx-ingress-controller'. Run `%s` to view the service", options.Domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
+		log.Donef("Please create an A dns record for '*.%s' that points to external ip of the loadbalancer service 'devspace-cloud/nginx-ingress-controller'.\n Run `%s` to view the service", options.Domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
 	} else {
-		log.Donef("Please make sure you have an A dns record for '*.%s' that points to the external ip of one of your cluster nodes. Run `%s` to view your cluster nodes", options.Domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
+		log.Donef("Please create an A dns record for '*.%s' that points to the external ip of one of your cluster nodes.\n Run `%s` to view your cluster nodes and their ip adresses. \n Please make also sure the ports 80 and 443 can be accessed on these nodes from the internet", options.Domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
 	}
 
 	return nil
