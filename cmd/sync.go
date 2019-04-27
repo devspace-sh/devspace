@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -59,12 +58,6 @@ devspace sync --container-path=/my-path
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	_, err := configutil.SetDevSpaceRoot()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Get kubectl client
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
