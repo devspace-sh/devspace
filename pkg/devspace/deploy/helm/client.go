@@ -10,14 +10,14 @@ import (
 
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
-	KubeClient       *kubernetes.Clientset
+	KubeClient       kubernetes.Interface
 	TillerNamespace  string
 	DeploymentConfig *v1.DeploymentConfig
 	Log              log.Logger
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl kubernetes.Interface, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	config := configutil.GetConfig()
 	tillerNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {

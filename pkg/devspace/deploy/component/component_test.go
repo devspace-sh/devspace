@@ -117,7 +117,7 @@ func TestComponentDeployment(t *testing.T) {
 }
 
 // Cleanup and fail
-func failTest(kubectl *kubernetes.Clientset, t *testing.T, err error) {
+func failTest(kubectl kubernetes.Interface, t *testing.T, err error) {
 	kubectl.Core().Namespaces().Delete(testNamespace, &metav1.DeleteOptions{})
 	t.Fatal(err)
 }

@@ -63,7 +63,7 @@ func NewTargetSelector(sp *SelectorParameter, allowPick bool) (*TargetSelector, 
 }
 
 // GetPod retrieves a pod
-func (t *TargetSelector) GetPod(client *kubernetes.Clientset) (*v1.Pod, error) {
+func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 	if t.pick == false && t.podName != nil {
 		pod, err := client.Core().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
 		if err != nil {
@@ -100,7 +100,7 @@ func (t *TargetSelector) GetPod(client *kubernetes.Clientset) (*v1.Pod, error) {
 }
 
 // GetContainer retrieves a container and pod
-func (t *TargetSelector) GetContainer(client *kubernetes.Clientset) (*v1.Pod, *v1.Container, error) {
+func (t *TargetSelector) GetContainer(client kubernetes.Interface) (*v1.Pod, *v1.Container, error) {
 	pod, err := t.GetPod(client)
 	if err != nil {
 		return nil, nil, err

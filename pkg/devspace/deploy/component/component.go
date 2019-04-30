@@ -24,7 +24,7 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	// Convert the values
 	values := map[interface{}]interface{}{}
 	err := util.Convert(deployConfig.Component, &values)

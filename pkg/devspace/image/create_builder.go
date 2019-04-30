@@ -15,7 +15,7 @@ import (
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConf *latest.ImageConfig, imageTag string, isDev bool) (builder.Interface, error) {
+func CreateBuilder(client kubernetes.Interface, generatedConfig *generated.Config, imageConf *latest.ImageConfig, imageTag string, isDev bool) (builder.Interface, error) {
 	config := configutil.GetConfig()
 	var imageBuilder builder.Interface
 

@@ -18,11 +18,11 @@ import (
 )
 
 // CopyToContainer copies a local folder to a container path
-func CopyToContainer(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
+func CopyToContainer(Kubectl kubernetes.Interface, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string) error {
 	return copyToContainerTestable(Kubectl, Pod, Container, LocalPath, ContainerPath, ExcludePaths, false)
 }
 
-func copyToContainerTestable(Kubectl *kubernetes.Clientset, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string, testing bool) error {
+func copyToContainerTestable(Kubectl kubernetes.Interface, Pod *k8sv1.Pod, Container *k8sv1.Container, LocalPath, ContainerPath string, ExcludePaths []string, testing bool) error {
 	stat, err := os.Lstat(LocalPath)
 
 	if err != nil {

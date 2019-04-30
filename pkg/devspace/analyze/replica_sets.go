@@ -9,7 +9,7 @@ import (
 )
 
 // ReplicaSets checks replica sets for problems
-func ReplicaSets(client *kubernetes.Clientset, namespace string) ([]string, error) {
+func ReplicaSets(client kubernetes.Interface, namespace string) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing replica sets")

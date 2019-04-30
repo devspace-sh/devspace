@@ -23,7 +23,7 @@ var pullSecretNames = []string{}
 var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // CreatePullSecret creates an image pull secret for a registry
-func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
+func CreatePullSecret(kubectl kubernetes.Interface, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
 	pullSecretName := GetRegistryAuthSecretName(registryURL)
 	if registryURL == "hub.docker.com" || registryURL == "" {
 		registryURL = "https://index.docker.io/v1/"

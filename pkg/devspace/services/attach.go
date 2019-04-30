@@ -13,7 +13,7 @@ import (
 )
 
 // StartAttach starts attaching to the first pod devspace finds or does nothing
-func StartAttach(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, interrupt chan error, log log.Logger) error {
+func StartAttach(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, interrupt chan error, log log.Logger) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}

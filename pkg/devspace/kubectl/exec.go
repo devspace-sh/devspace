@@ -17,7 +17,7 @@ import (
 )
 
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
-func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
@@ -71,7 +71,7 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 }
 
 // ExecStream executes a command and streams the output to the given streams
-func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func ExecStream(client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	kubeconfig, err := GetClientConfig()
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func ExecStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, 
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func ExecBuffered(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
+func ExecBuffered(kubectlClient kubernetes.Interface, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
 	stdoutReader, stdoutWriter, _ := os.Pipe()
 	stderrReader, stderrWriter, _ := os.Pipe()
 

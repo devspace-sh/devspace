@@ -14,7 +14,7 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
+func StartSyncFromCmd(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
 	var (
 		localPath = "."
 	)
@@ -67,7 +67,7 @@ func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.
 }
 
 // StartSync starts the syncing functionality
-func StartSync(client *kubernetes.Clientset, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
+func StartSync(client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	config := configutil.GetConfig()
 	if config.Dev.Sync == nil {
 		return []*sync.SyncConfig{}, nil

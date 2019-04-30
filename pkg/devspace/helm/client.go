@@ -36,7 +36,7 @@ type ClientWrapper struct {
 	Client    *k8shelm.Client
 	Settings  *helmenvironment.EnvSettings
 	Namespace string
-	kubectl   *kubernetes.Clientset
+	kubectl   kubernetes.Interface
 }
 
 // NewClient creates a new helm client

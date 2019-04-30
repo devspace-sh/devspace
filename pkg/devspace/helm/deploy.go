@@ -14,7 +14,7 @@ import (
 )
 
 // WaitForReleasePodToGetReady waits for the release pod to get ready
-func WaitForReleasePodToGetReady(client *kubernetes.Clientset, releaseName, releaseNamespace string, releaseRevision int) (*k8sv1.Pod, error) {
+func WaitForReleasePodToGetReady(client kubernetes.Interface, releaseName, releaseNamespace string, releaseRevision int) (*k8sv1.Pod, error) {
 	for true {
 		time.Sleep(4 * time.Second)
 
@@ -78,7 +78,7 @@ func WaitForReleasePodToGetReady(client *kubernetes.Clientset, releaseName, rele
 	return nil, nil
 }
 
-func waitForPodReady(kubectl *kubernetes.Clientset, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
+func waitForPodReady(kubectl kubernetes.Interface, pod *k8sv1.Pod, maxWaitTime time.Duration, checkInterval time.Duration) error {
 	for maxWaitTime > 0 {
 		pod, err := kubectl.Core().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 
