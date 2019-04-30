@@ -21,7 +21,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	}
 
 	// Get all releases
-	releases, err := helmClient.Client.ListReleases()
+	releases, err := helmClient.ListReleases()
 	if err != nil {
 		return &deploy.StatusResult{
 			Name:   *d.DeploymentConfig.Name,

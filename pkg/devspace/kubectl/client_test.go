@@ -16,41 +16,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-const testNamespace = "test-ns"
-
 func createTestConfig() {
 	// Create fake devspace config
-	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
-				Component: &latest.ComponentConfig{
-					Containers: &[]*latest.ContainerConfig{
-						{
-							Image: ptr.String("nginx"),
-						},
-					},
-					Service: &latest.ServiceConfig{
-						Ports: &[]*latest.ServicePortConfig{
-							{
-								Port: ptr.Int(3000),
-							},
-						},
-					},
-				},
-			},
-		},
-		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
-			},
-		},
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String(testNamespace),
-		},
-	}
-	configutil.SetTestConfig(testConfig)
+	testConfig := &latest.Config{}
+	configutil.SetFakeConfig(testConfig)
 }
 
 func createTestResources(client kubernetes.Interface) error {
@@ -91,7 +60,7 @@ func createTestResources(client kubernetes.Interface) error {
 			UpdatedReplicas:    1,
 		},
 	}
-	_, err := client.ExtensionsV1beta1().Deployments(testNamespace).Create(deploy)
+	_, err := client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Create(deploy)
 	if err != nil {
 		return errors.Wrap(err, "create deployment")
 	}
@@ -115,7 +84,7 @@ func createTestResources(client kubernetes.Interface) error {
 			},
 		},
 	}
-	_, err = client.Core().Pods(testNamespace).Create(p)
+	_, err = client.Core().Pods(configutil.TestNamespace).Create(p)
 	if err != nil {
 		return errors.Wrap(err, "create pod")
 	}
@@ -133,7 +102,7 @@ func TestGetPodStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	podList, err := client.Core().Pods(testNamespace).List(metav1.ListOptions{})
+	podList, err := client.Core().Pods(configutil.TestNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("error retrieving list: %v", err)
 	}
@@ -154,7 +123,7 @@ func TestGetNewestRunningPod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pod, err := GetNewestRunningPod(client, "app.kubernetes.io/name=devspace-app", testNamespace, time.Minute)
+	pod, err := GetNewestRunningPod(client, "app.kubernetes.io/name=devspace-app", configutil.TestNamespace, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +143,7 @@ func TestLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = Logs(client, testNamespace, "test-pod", "test", false, ptr.Int64(100))
+	_, err = Logs(client, configutil.TestNamespace, "test-pod", "test", false, ptr.Int64(100))
 	if err != nil && err.Error() != "Request url is empty" {
 		t.Fatal(err)
 	}

@@ -84,7 +84,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 	// Check if redeploying is necessary
 	reDeploy := forceDeploy || activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash != deploymentConfigHash || overrideChanged
 	if reDeploy == false {
-		releases, err := helmClient.Client.ListReleases()
+		releases, err := helmClient.ListReleases()
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 	return nil
 }
 
-func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.ClientWrapper, isDev bool) error {
+func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.Client, isDev bool) error {
 	d.Log.StartWait("Deploying helm chart")
 	defer d.Log.StopWait()
 

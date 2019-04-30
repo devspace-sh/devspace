@@ -28,13 +28,7 @@ repositories:
 
 // Ensure that tiller is running
 func ensureTiller(kubectlClient kubernetes.Interface, tillerNamespace string, upgrade bool) error {
-	tillerOptions := &helminstaller.Options{
-		Namespace:                    tillerNamespace,
-		MaxHistory:                   10,
-		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.3",
-		ServiceAccount:               TillerServiceAccountName,
-		AutoMountServiceAccountToken: true,
-	}
+	tillerOptions := getTillerOptions(tillerNamespace)
 
 	// Create tillerNamespace if necessary
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
@@ -72,6 +66,16 @@ func ensureTiller(kubectlClient kubernetes.Interface, tillerNamespace string, up
 	}
 
 	return waitUntilTillerIsStarted(kubectlClient, tillerNamespace)
+}
+
+func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Options) {
+	return &helminstaller.Options{
+		Namespace:                    tillerNamespace,
+		MaxHistory:                   10,
+		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.3",
+		ServiceAccount:               TillerServiceAccountName,
+		AutoMountServiceAccountToken: true,
+	}
 }
 
 func createTiller(kubectlClient kubernetes.Interface, tillerNamespace string, tillerOptions *helminstaller.Options) error {

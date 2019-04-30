@@ -55,6 +55,11 @@ func ConfigExists() bool {
 
 // configExistsInPath checks wheter a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
+	// Needed for testing
+	if config != nil {
+		return true
+	}
+
 	// Check devspace.yaml
 	_, err := os.Stat(filepath.Join(path, DefaultConfigPath))
 	if err == nil {
@@ -90,14 +95,6 @@ func InitConfig() *latest.Config {
 	})
 
 	return config
-}
-
-// SetTestConfig initializes the config objects
-func SetTestConfig(testConfig *latest.Config) {
-	getConfigOnce.Do(func() {})
-
-	config = testConfig
-	configRaw = testConfig
 }
 
 // GetBaseConfig returns the config unmerged with potential overwrites
