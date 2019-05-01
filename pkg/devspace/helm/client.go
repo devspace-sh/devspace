@@ -46,14 +46,21 @@ type Client struct {
 	kubectl kubernetes.Interface
 }
 
+var helmClients = map[string]*Client{}
+
 // NewClient creates a new helm client
 // NOTE: This is not safe to use in goroutines and could cause multiple creation of the same client
 func NewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+	if client, ok := helmClients[tillerNamespace]; ok {
+		return client, nil
+	}
+
 	client, err := createNewClient(tillerNamespace, log, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
 
+	helmClients[tillerNamespace] = client
 	return client, nil
 }
 

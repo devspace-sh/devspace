@@ -13,7 +13,7 @@ import (
 
 // DeployConfig holds the informations for deploying a component
 type DeployConfig struct {
-	helmConfig *helm.DeployConfig
+	HelmConfig *helm.DeployConfig
 }
 
 // DevSpaceChartConfig is the config that holds the devspace chart information
@@ -46,18 +46,18 @@ func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, lo
 	}
 
 	return &DeployConfig{
-		helmConfig: helmConfig,
+		HelmConfig: helmConfig,
 	}, nil
 }
 
 // Deploy deploys the given deployment with helm
 func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
-	return d.helmConfig.Deploy(generatedConfig, isDev, forceDeploy)
+	return d.HelmConfig.Deploy(generatedConfig, isDev, forceDeploy)
 }
 
 // Status gets the status of the deployment
 func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
-	status, err := d.helmConfig.Status()
+	status, err := d.HelmConfig.Status()
 	if err != nil {
 		return nil, err
 	}
@@ -68,5 +68,5 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 
 // Delete deletes the release
 func (d *DeployConfig) Delete() error {
-	return d.helmConfig.Delete()
+	return d.HelmConfig.Delete()
 }

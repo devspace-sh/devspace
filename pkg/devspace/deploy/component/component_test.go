@@ -1,52 +1,48 @@
 package component
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// Test namespace to create
-const testNamespace = "test-component-deploy"
-
 func TestComponentDeployment(t *testing.T) {
-	// Create fake devspace config
-	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
-				Component: &latest.ComponentConfig{
-					Containers: &[]*latest.ContainerConfig{
-						{
-							Image: ptr.String("nginx"),
-						},
-					},
-					Service: &latest.ServiceConfig{
-						Ports: &[]*latest.ServicePortConfig{
-							{
-								Port: ptr.Int(3000),
-							},
-						},
+	deployConfig := &latest.DeploymentConfig{
+		Name: ptr.String("test-deployment"),
+		Component: &latest.ComponentConfig{
+			Containers: &[]*latest.ContainerConfig{
+				{
+					Image: ptr.String("nginx"),
+				},
+			},
+			Service: &latest.ServiceConfig{
+				Ports: &[]*latest.ServicePortConfig{
+					{
+						Port: ptr.Int(3000),
 					},
 				},
 			},
+		},
+	}
+
+	// Create fake devspace config
+	testConfig := &latest.Config{
+		Deployments: &[]*latest.DeploymentConfig{
+			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
 		Images: &map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
 				Image: ptr.String("nginx"),
 			},
-		},
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String(testNamespace),
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
@@ -67,23 +63,14 @@ func TestComponentDeployment(t *testing.T) {
 	generated.InitDevSpaceConfig(generatedConfig, "default")
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
-
-	// Create test namespace
-	_, err := client.Core().Namespaces().Create(&v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testNamespace,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kubeClient := fake.NewSimpleClientset()
+	helmClient := helm.NewFakeClient(kubeClient, configutil.TestNamespace)
 
 	// Init handler
-	deployHandler, err := New(client, (*testConfig.Deployments)[0], log.Discard)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deployHandler, err := New(kubeClient, deployConfig, log.GetInstance())
+
+	// Use fake helm client
+	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
 	err = deployHandler.Deploy(generatedConfig, false, true)
@@ -91,15 +78,17 @@ func TestComponentDeployment(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check if deployment test-deployment is there and a service with the same name
-	_, err = client.Core().Services(testNamespace).Get("test-deployment", metav1.GetOptions{})
+	// Status
+	status, err := deployHandler.Status()
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.ExtensionsV1beta1().Deployments(testNamespace).Get("test-deployment", metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
+	if strings.HasPrefix(status.Status, "Deployed") == false {
+		t.Fatalf("Unexpected deployment status: %s != Deployed", status.Status)
 	}
 
-	// @Florian test deployHandler.Status & deployHandler.Delete
+	err = deployHandler.Delete()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
