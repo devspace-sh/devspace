@@ -139,7 +139,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) error {
+func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) error {
 	config := configutil.GetConfig()
 
 	if cmd.SkipPipeline == false {
@@ -197,7 +197,7 @@ func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) e
 	return nil
 }
 
-func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, log log.Logger) error {
+func (cmd *DevCmd) startServices(client kubernetes.Interface, args []string, log log.Logger) error {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(client, log)
 		if err != nil {

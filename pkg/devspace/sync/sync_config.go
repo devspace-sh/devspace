@@ -31,7 +31,7 @@ const ErrorAck string = "ERROR"
 
 // SyncConfig holds the necessary information for the syncing process
 type SyncConfig struct {
-	Kubectl              *kubernetes.Clientset
+	Kubectl              kubernetes.Interface
 	Pod                  *k8sv1.Pod
 	Container            *k8sv1.Container
 	WatchPath            string

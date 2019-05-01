@@ -75,16 +75,18 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 
 	deploymentConfigHash := hashpkg.String(string(configStr))
 
-	// Get HelmClient
-	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
-	if err != nil {
-		return fmt.Errorf("Error creating helm client: %v", err)
+	if d.Helm == nil {
+		// Get HelmClient
+		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
+		if err != nil {
+			return fmt.Errorf("Error creating helm client: %v", err)
+		}
 	}
 
 	// Check if redeploying is necessary
 	reDeploy := forceDeploy || activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash != deploymentConfigHash || overrideChanged
 	if reDeploy == false {
-		releases, err := helmClient.Client.ListReleases()
+		releases, err := d.Helm.ListReleases()
 		if err != nil {
 			return err
 		}
@@ -102,7 +104,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 
 	// Check if re-deployment is necessary
 	if reDeploy {
-		err = d.internalDeploy(generatedConfig, helmClient, isDev)
+		err = d.internalDeploy(generatedConfig, isDev)
 		if err != nil {
 			return err
 		}
@@ -128,7 +130,7 @@ func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDep
 	return nil
 }
 
-func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.ClientWrapper, isDev bool) error {
+func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, isDev bool) error {
 	d.Log.StartWait("Deploying helm chart")
 	defer d.Log.StopWait()
 
@@ -193,7 +195,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmCli
 	}
 
 	// Deploy chart
-	appRelease, err := helmClient.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
+	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
 		return fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+*d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}

@@ -27,7 +27,7 @@ const DefaultDockerfilePath = "./Dockerfile"
 const DefaultContextPath = "./"
 
 // BuildAll builds all images
-func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceRebuild bool, log log.Logger) (bool, error) {
+func BuildAll(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	config := configutil.GetConfig()
 	re := false
 
@@ -51,7 +51,7 @@ func BuildAll(client *kubernetes.Clientset, generatedConfig *generated.Config, i
 }
 
 // Build builds an image with the specified engine
-func Build(client *kubernetes.Clientset, generatedConfig *generated.Config, imageConfigName string, imageConf *v1.ImageConfig, isDev, forceRebuild bool, log log.Logger) (bool, error) {
+func Build(client kubernetes.Interface, generatedConfig *generated.Config, imageConfigName string, imageConf *v1.ImageConfig, isDev, forceRebuild bool, log log.Logger) (bool, error) {
 	var (
 		dockerfilePath, contextPath = getDockerfileAndContext(imageConfigName, imageConf, isDev)
 		imageName, engineName       = *imageConf.Image, ""

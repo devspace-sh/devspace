@@ -35,7 +35,7 @@ type Builder struct {
 
 	allowInsecureRegistry bool
 	kanikoOptions         *latest.KanikoConfig
-	kubectl               *kubernetes.Clientset
+	kubectl               kubernetes.Interface
 	dockerClient          client.CommonAPIClient
 }
 
@@ -43,7 +43,7 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, allowInsecureRegistry bool) (*Builder, error) {
 	return &Builder{
 		PullSecretName: pullSecretName,
 		ImageName:      imageName + ":" + imageTag,

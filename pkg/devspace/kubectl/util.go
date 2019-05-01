@@ -49,7 +49,7 @@ func IsPrivateIP(ip net.IP) bool {
 }
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
-func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error {
+func EnsureDefaultNamespace(client kubernetes.Interface, log log.Logger) error {
 	config := configutil.GetConfig()
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
@@ -74,7 +74,7 @@ func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error 
 }
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
-func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.Logger) error {
+func EnsureGoogleCloudClusterRoleBinding(client kubernetes.Interface, log log.Logger) error {
 	if minikube.IsMinikube() {
 		return nil
 	}

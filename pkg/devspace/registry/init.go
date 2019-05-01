@@ -12,7 +12,7 @@ import (
 )
 
 // InitRegistries initializes all registries
-func InitRegistries(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, log log.Logger) error {
+func InitRegistries(dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
 	err := CreatePullSecrets(dockerClient, client, log)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func InitRegistries(dockerClient client.CommonAPIClient, client *kubernetes.Clie
 }
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, log log.Logger) error {
+func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Images != nil {
@@ -46,7 +46,7 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client *kubernetes.C
 	return nil
 }
 
-func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client *kubernetes.Clientset, registryURL string, log log.Logger) error {
+func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client kubernetes.Interface, registryURL string, log log.Logger) error {
 	config := configutil.GetConfig()
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {

@@ -5,19 +5,23 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
-	KubeClient       *kubernetes.Clientset
+	// Public because we can switch them to fake clients for testing
+	Kube kubernetes.Interface
+	Helm helm.Interface
+
 	TillerNamespace  string
 	DeploymentConfig *v1.DeploymentConfig
 	Log              log.Logger
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl kubernetes.Interface, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	config := configutil.GetConfig()
 	tillerNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
@@ -28,7 +32,7 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 	}
 
 	return &DeployConfig{
-		KubeClient:       kubectl,
+		Kube:             kubectl,
 		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
 		Log:              log,
@@ -38,18 +42,22 @@ func New(kubectl *kubernetes.Clientset, deployConfig *v1.DeploymentConfig, log l
 // Delete deletes the release
 func (d *DeployConfig) Delete() error {
 	// Delete with helm engine
-	isDeployed := helm.IsTillerDeployed(d.KubeClient, d.TillerNamespace)
+	isDeployed := helm.IsTillerDeployed(d.Kube, d.TillerNamespace)
 	if isDeployed == false {
 		return nil
 	}
 
-	// Get HelmClient
-	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
-	if err != nil {
-		return err
+	if d.Helm == nil {
+		var err error
+
+		// Get HelmClient
+		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
+		if err != nil {
+			return errors.Wrap(err, "new helm client")
+		}
 	}
 
-	_, err = helmClient.DeleteRelease(*d.DeploymentConfig.Name, true)
+	_, err := d.Helm.DeleteRelease(*d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}

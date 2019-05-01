@@ -15,7 +15,7 @@ import (
 )
 
 // AttachStreamWithTransport attaches to a certain container
-func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client *kubernetes.Clientset, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
@@ -68,7 +68,7 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 }
 
 // AttachStream attaches to a container in a certain pod
-func AttachStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func AttachStream(client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	kubeconfig, err := GetClientConfig()
 	if err != nil {
 		return err

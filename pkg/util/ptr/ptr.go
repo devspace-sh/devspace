@@ -19,6 +19,11 @@ func Int(val int) *int {
 	return &val
 }
 
+// Int32 returns a pointer to an int32 variable
+func Int32(val int32) *int32 {
+	return &val
+}
+
 // Int64 returns a pointer to an int64 variable
 func Int64(val int64) *int64 {
 	return &val

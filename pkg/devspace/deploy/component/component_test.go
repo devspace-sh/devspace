@@ -1,49 +1,42 @@
 package component
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
-// Test namespace to create
-const testNamespace = "test-component-deploy"
-
 func TestComponentDeployment(t *testing.T) {
-	if kubeconfig.ConfigExists() == false {
-		t.Skip("No kubeconfig found")
+	deployConfig := &latest.DeploymentConfig{
+		Name: ptr.String("test-deployment"),
+		Component: &latest.ComponentConfig{
+			Containers: &[]*latest.ContainerConfig{
+				{
+					Image: ptr.String("nginx"),
+				},
+			},
+			Service: &latest.ServiceConfig{
+				Ports: &[]*latest.ServicePortConfig{
+					{
+						Port: ptr.Int(3000),
+					},
+				},
+			},
+		},
 	}
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
 		Deployments: &[]*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
-				Component: &latest.ComponentConfig{
-					Containers: &[]*latest.ContainerConfig{
-						{
-							Image: ptr.String("nginx"),
-						},
-					},
-					Service: &latest.ServiceConfig{
-						Ports: &[]*latest.ServicePortConfig{
-							{
-								Port: ptr.Int(3000),
-							},
-						},
-					},
-				},
-			},
+			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
 		Images: &map[string]*latest.ImageConfig{
@@ -51,11 +44,8 @@ func TestComponentDeployment(t *testing.T) {
 				Image: ptr.String("nginx"),
 			},
 		},
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String(testNamespace),
-		},
 	}
-	configutil.SetTestConfig(testConfig)
+	configutil.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
@@ -72,52 +62,33 @@ func TestComponentDeployment(t *testing.T) {
 	}
 	generated.InitDevSpaceConfig(generatedConfig, "default")
 
-	// Init kubectl config
-	kubectl, err := kubectl.NewClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create test namespace
-	_, err = kubectl.Core().Namespaces().Create(&v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testNamespace,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create the fake client.
+	kubeClient := fake.NewSimpleClientset()
+	helmClient := helm.NewFakeClient(kubeClient, configutil.TestNamespace)
 
 	// Init handler
-	deployHandler, err := New(kubectl, (*testConfig.Deployments)[0], log.Discard)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deployHandler, err := New(kubeClient, deployConfig, log.GetInstance())
+
+	// Use fake helm client
+	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
 	err = deployHandler.Deploy(generatedConfig, false, true)
 	if err != nil {
-		failTest(kubectl, t, err)
+		t.Fatal(err)
 	}
 
-	// Check if deployment test-deployment is there and a service with the same name
-	_, err = kubectl.Core().Services(testNamespace).Get("test-deployment", metav1.GetOptions{})
+	// Status
+	status, err := deployHandler.Status()
 	if err != nil {
-		failTest(kubectl, t, err)
+		t.Fatal(err)
 	}
-	_, err = kubectl.ExtensionsV1beta1().Deployments(testNamespace).Get("test-deployment", metav1.GetOptions{})
+	if strings.HasPrefix(status.Status, "Deployed") == false {
+		t.Fatalf("Unexpected deployment status: %s != Deployed", status.Status)
+	}
+
+	err = deployHandler.Delete()
 	if err != nil {
-		failTest(kubectl, t, err)
+		t.Fatal(err)
 	}
-
-	// @Florian test deployHandler.Status & deployHandler.Delete
-
-	// Cleanup
-	kubectl.Core().Namespaces().Delete(testNamespace, &metav1.DeleteOptions{})
-}
-
-// Cleanup and fail
-func failTest(kubectl *kubernetes.Clientset, t *testing.T, err error) {
-	kubectl.Core().Namespaces().Delete(testNamespace, &metav1.DeleteOptions{})
-	t.Fatal(err)
 }

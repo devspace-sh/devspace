@@ -14,7 +14,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
+func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Deployments != nil {
@@ -60,7 +60,7 @@ func All(client *kubernetes.Clientset, generatedConfig *generated.Config, isDev,
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(client *kubernetes.Clientset, deployments []string) {
+func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 	config := configutil.GetConfig()
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil

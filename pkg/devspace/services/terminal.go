@@ -14,7 +14,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) error {
+func StartTerminal(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) error {
 	command := getCommand(args)
 
 	selectorParameter := &targetselector.SelectorParameter{

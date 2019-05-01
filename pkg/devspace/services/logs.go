@@ -15,12 +15,12 @@ import (
 )
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+func StartLogs(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
 	return StartLogsWithWriter(client, cmdParameter, follow, tail, log, os.Stdout, os.Stderr)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func StartLogsWithWriter(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
+func StartLogsWithWriter(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}

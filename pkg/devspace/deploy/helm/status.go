@@ -12,16 +12,19 @@ import (
 func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	var (
 		deployTargetStr = d.getDeployTarget()
+		err             error
 	)
 
-	// Get HelmClient
-	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
-	if err != nil {
-		return nil, err
+	if d.Helm == nil {
+		// Get HelmClient
+		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Get all releases
-	releases, err := helmClient.Client.ListReleases()
+	releases, err := d.Helm.ListReleases()
 	if err != nil {
 		return &deploy.StatusResult{
 			Name:   *d.DeploymentConfig.Name,

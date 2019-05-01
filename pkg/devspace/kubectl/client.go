@@ -27,7 +27,7 @@ import (
 )
 
 // NewClient creates a new kubernetes client
-func NewClient() (*kubernetes.Clientset, error) {
+func NewClient() (kubernetes.Interface, error) {
 	config, err := getClientConfig(nil, false)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func NewClient() (*kubernetes.Clientset, error) {
 }
 
 // NewClientFromContext creates a new kubernetes client
-func NewClientFromContext(context string) (*kubernetes.Clientset, error) {
+func NewClientFromContext(context string) (kubernetes.Interface, error) {
 	config, err := getClientConfig(&context, false)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func NewClientFromContext(context string) (*kubernetes.Clientset, error) {
 }
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
-func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
+func NewClientWithContextSwitch(switchContext bool) (kubernetes.Interface, error) {
 	config, err := getClientConfig(nil, switchContext)
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func getClientConfig(context *string, switchContext bool) (*rest.Config, error) 
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+func GetNewestRunningPod(kubectl kubernetes.Interface, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	config := configutil.GetConfig()
 
 	if namespace == "" {
@@ -340,22 +340,19 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
-func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace string) (*k8sv1.PodList, error) {
+func GetPodsFromDeployment(kubectl kubernetes.Interface, deployment, namespace string) (*k8sv1.PodList, error) {
 	deploy, err := kubectl.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
-
 	// Deployment not there
 	if err != nil {
 		return nil, err
 	}
 
 	matchLabels := deploy.Spec.Selector.MatchLabels
-
 	if len(matchLabels) <= 0 {
 		return nil, errors.New("No matchLabels defined deployment")
 	}
 
 	matchLabelString := ""
-
 	for k, v := range matchLabels {
 		if len(matchLabelString) > 0 {
 			matchLabelString += ","
@@ -370,7 +367,7 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 }
 
 // ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
-func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+func ForwardPorts(kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
 	fw, err := NewPortForwarder(kubectlClient, pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
@@ -380,7 +377,7 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 }
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+func NewPortForwarder(kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
 	config, err := GetClientConfig()
 	if err != nil {
 		return nil, err

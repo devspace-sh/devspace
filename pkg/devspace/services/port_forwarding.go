@@ -16,7 +16,7 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(client *kubernetes.Clientset, log log.Logger) ([]*portforward.PortForwarder, error) {
+func StartPortForwarding(client kubernetes.Interface, log log.Logger) ([]*portforward.PortForwarder, error) {
 	config := configutil.GetConfig()
 	if config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))

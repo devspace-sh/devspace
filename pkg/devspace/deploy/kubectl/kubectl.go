@@ -20,7 +20,7 @@ import (
 
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
-	KubeClient *kubernetes.Clientset // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
+	KubeClient kubernetes.Interface // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
 	Name       string
 	CmdPath    string
 	Context    string
@@ -32,7 +32,7 @@ type DeployConfig struct {
 }
 
 // New creates a new deploy config for kubectl
-func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
