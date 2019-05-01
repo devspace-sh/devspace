@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,27 +12,37 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"k8s.io/helm/pkg/getter"
+	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/repo"
 
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
-	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
+
+// Interface is the client interface for helm
+type Interface interface {
+	UpdateRepos() error
+	InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error)
+	DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error)
+	ListReleases() (*rls.ListReleasesResponse, error)
+}
 
 // Client holds the necessary information for helm
 type Client struct {
 	Settings  *helmenvironment.EnvSettings
 	Namespace string
 
-	helm    *k8shelm.Client
+	helm    k8shelm.Interface
 	kubectl kubernetes.Interface
 }
 
@@ -115,6 +124,10 @@ func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool)
 
 	log.StopWait()
 
+	return create(tillerNamespace, helmClient, kubectlClient)
+}
+
+func create(tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -181,10 +194,6 @@ func (client *Client) UpdateRepos() error {
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 
-			if re.Config.Name == "local" {
-				return
-			}
-
 			err := re.DownloadIndexFile(client.Settings.Home.String())
 			if err != nil {
 				log.Errorf("Unable to download repo index: %v", err)
@@ -197,17 +206,19 @@ func (client *Client) UpdateRepos() error {
 }
 
 // ReleaseExists checks if the given release name exists
-func (client *Client) ReleaseExists(releaseName string) (bool, error) {
-	_, err := client.helm.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
+func ReleaseExists(helm helm.Interface, releaseName string) bool {
+	releases, err := helm.ListReleases()
 	if err != nil {
-		if strings.Contains(err.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
-			return false, nil
-		}
-
-		return false, err
+		return false
 	}
 
-	return true, nil
+	for _, release := range releases.Releases {
+		if release.Name == releaseName {
+			return true
+		}
+	}
+
+	return false
 }
 
 // DeleteRelease deletes a helm release and optionally purges it

@@ -94,10 +94,7 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		return nil, fmt.Errorf("cannot load requirements: %v", err)
 	}
 
-	releaseExists, err := client.ReleaseExists(releaseName)
-	if err != nil {
-		return nil, err
-	}
+	releaseExists := ReleaseExists(client.helm, releaseName)
 
 	overwriteValues := []byte("")
 
