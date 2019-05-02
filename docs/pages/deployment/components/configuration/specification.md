@@ -1,5 +1,5 @@
 ---
-title: Component Specification
+title: Component specification
 ---
 
 ## component

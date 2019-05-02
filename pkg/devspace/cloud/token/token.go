@@ -7,14 +7,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ClaimSet is the auth token claim set type
 type ClaimSet struct {
-	Subject  string `json:"sub"`
-	Admin    bool   `json:"admin"`
-	IssuedAt int64  `json:"iat"`
-	Hasura   Hasura `json:"https://hasura.io/jwt/claims"`
+	Subject    string `json:"sub"`
+	Admin      bool   `json:"admin"`
+	IssuedAt   int64  `json:"iat"`
+	Expiration int64  `json:"exp"`
+	Hasura     Hasura `json:"https://hasura.io/jwt/claims"`
 }
 
 // Hasura holds the hasura configuration
@@ -29,6 +31,21 @@ type Token struct {
 	Raw       string
 	Claims    *ClaimSet
 	Signature []byte
+}
+
+// IsTokenValid checks if the token is still valid
+func IsTokenValid(token string) bool {
+	t, err := ParseTokenClaims(token)
+	if err != nil {
+		return false
+	}
+
+	// Check if expired
+	if time.Now().Add(time.Second*60).Unix() > t.Claims.Expiration {
+		return false
+	}
+
+	return true
 }
 
 // GetAccountID retrieves the account id for the current user from the token

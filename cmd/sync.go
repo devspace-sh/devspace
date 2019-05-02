@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -20,6 +19,7 @@ type SyncCmd struct {
 
 	Exclude       []string
 	ContainerPath string
+	LocalPath     string
 }
 
 // NewSyncCmd creates a new init command
@@ -37,6 +37,7 @@ Starts a bi-directionaly sync between the target container
 and the current path:
 
 devspace sync
+devspace sync --local-path=subfolder --container-path=/app
 devspace sync --exclude=node_modules --exclude=test
 devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
@@ -52,6 +53,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
+	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
 
 	return syncCmd
@@ -59,12 +61,6 @@ devspace sync --container-path=/my-path
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
-	// Set config root
-	_, err := configutil.SetDevSpaceRoot()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Get kubectl client
 	kubectl, err := kubectl.NewClient()
 	if err != nil {
@@ -93,7 +89,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err = services.StartSyncFromCmd(kubectl, params, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
+	err = services.StartSyncFromCmd(kubectl, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

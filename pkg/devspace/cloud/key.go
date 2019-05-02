@@ -54,6 +54,8 @@ func (p *Provider) GetClusterKey(cluster *Cluster) (string, error) {
 
 // AskForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
 func (p *Provider) AskForEncryptionKey(cluster *Cluster) (string, error) {
+	log.StopWait()
+
 	// Wait till user enters the correct key
 	for true {
 		key := survey.Question(&survey.QuestionOptions{

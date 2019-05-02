@@ -1,5 +1,5 @@
 ---
-title: Configure Networking
+title: Configure networking
 ---
 
 In DevSpace cloud by default an [ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) is created for each space that routes incoming traffic to an url specific to that space. By default this is https://your-space-name.devspace.host .  

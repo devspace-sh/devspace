@@ -14,11 +14,7 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
-	var (
-		localPath = "."
-	)
-
+func StartSyncFromCmd(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, log log.Logger) error {
 	absLocalPath, err := filepath.Abs(localPath)
 	if err != nil {
 		return fmt.Errorf("Unable to resolve localSubPath %s: %v", localPath, err)

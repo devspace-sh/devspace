@@ -56,7 +56,12 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 
 	values := [][]string{}
 
-	accountID, err := token.GetAccountID(p.Token)
+	bearerToken, err := p.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	accountID, err := token.GetAccountID(bearerToken)
 	if err != nil {
 		return errors.Wrap(err, "get account id")
 	}

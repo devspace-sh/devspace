@@ -24,10 +24,16 @@ const GraphqlEndpoint = "/graphql"
 
 // Provider describes the struct to hold the cloud configuration
 type Provider struct {
-	Name       string         `yaml:"name,omitempty"`
-	Host       string         `yaml:"host,omitempty"`
-	Token      string         `yaml:"token,omitempty"`
-	ClusterKey map[int]string `yaml:"key,omitempty"`
+	Name string `yaml:"name,omitempty"`
+	Host string `yaml:"host,omitempty"`
+
+	// Key is used to obtain a token from the auth server
+	Key string `yaml:"key,omitempty"`
+
+	// Token is the actual authorization bearer
+	Token string `yaml:"token,omitempty"`
+
+	ClusterKey map[int]string `yaml:"clusterKeys,omitempty"`
 }
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
@@ -52,6 +58,7 @@ func LoadCloudConfig() (ProviderConfig, error) {
 				DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
 			}
 
+			err = nil
 			return
 		} else if err != nil {
 			err = errors.Wrap(err, "read clouds config")
@@ -94,6 +101,7 @@ func SaveCloudConfig(providerConfig ProviderConfig) error {
 		saveConfig[name] = &Provider{
 			Name:       "",
 			Host:       host,
+			Key:        provider.Key,
 			Token:      provider.Token,
 			ClusterKey: provider.ClusterKey,
 		}

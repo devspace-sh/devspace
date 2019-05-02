@@ -19,11 +19,10 @@ The configuration for port forwarding can be set within the `dev.ports` section 
 dev:
   ports:
     selector: default
-    portMappings:
-    - localPort: 8080
+    forward:
+    - port: 8080
       remotePort: 80
-    - localPort: 3000
-      remotePort: 3000
+    - port: 3000
   selectors:
   - name: default
     # This tells devspace to select pods that have the following labels

@@ -51,7 +51,7 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 		providerRows = append(providerRows, []string{
 			provider.Name,
 			provider.Host,
-			strconv.FormatBool(provider.Token != ""),
+			strconv.FormatBool(provider.Key != ""),
 		})
 	}
 

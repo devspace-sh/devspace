@@ -8,7 +8,7 @@ import (
 
 // LoginCmd holds the login cmd flags
 type LoginCmd struct {
-	Token string
+	Key string
 }
 
 // NewLoginCmd creates a new login command
@@ -22,20 +22,19 @@ func NewLoginCmd() *cobra.Command {
 #######################################################
 ################### devspace login ####################
 #######################################################
-If no --token is supplied the browser will be opened 
+If no --key is supplied the browser will be opened 
 and the login page is shown
 
 Example:
 devspace login
-devspace login my.custom.cloud
-devspace login --token 123456789
+devspace login --key myaccesskey
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunLogin,
 	}
 
-	loginCmd.Flags().StringVar(&cmd.Token, "token", "", "Token to use for login")
+	loginCmd.Flags().StringVar(&cmd.Key, "key", "", "Access key to use")
 
 	return loginCmd
 }
@@ -52,8 +51,8 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
 		providerName = args[0]
 	}
 
-	if cmd.Token != "" {
-		err = cloud.ReLogin(providerConfig, providerName, &cmd.Token, log.GetInstance())
+	if cmd.Key != "" {
+		err = cloud.ReLogin(providerConfig, providerName, &cmd.Key, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error logging in: %v", err)
 		}
