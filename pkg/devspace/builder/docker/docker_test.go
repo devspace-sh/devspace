@@ -1,52 +1,63 @@
 package docker
 
 import (
-	"fmt"
-	"ioutil"
-	"log"
+	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/covexo/devspace/pkg/devspace/builder/docker"
-	"github.com/covexo/devspace/pkg/util/randutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/otiai10/copy"
 )
 
 func TestDockerBuild(t *testing.T) {
-	
+	t.Log()
+
 	// @Florian
 	// 1. Write test dockerfile and context to a temp folder
-	// 2. Build image
-	// 3. Don't push image
-	// 4. Cleanup temp folder
 	dir, err := ioutil.TempDir("", "testDocker")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("Error creating temporary directory: %v", err)
 	}
 
-	defer os.RemoveAll(dir) // clean up
+	copy.Copy("./../../../../examples/minikube", dir)
 
-	Copy("./../../../examples/quickstart", dir.path)
-
-	tmpfn := filepath.Join(dir, "Dockerfile")
-	err = ioutil.WriteFile(tmpfn, content, 0666)
+	wdBackup, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	dockerClient, err := dockerclient.NewClient(true)
+	// 4. Cleanup temp folder
+	defer os.Chdir(wdBackup)
+	defer os.RemoveAll(dir)
+
+	dockerClient, err := docker.NewClient(true)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating docker client: %v", err)
+		t.Fatalf("Error creating docker client: %v", err)
 	}
 
 	// Get image tag
 	imageTag, err := randutil.GenerateRandomString(7)
 	if err != nil {
-		return false, fmt.Errorf("Image building failed: %v", err)
+		t.Fatalf("Generating imageTag failed: %v", err)
 	}
 
-	imageBuilder, err = docker.NewBuilder(dockerClient, *imageConf.Image, imageTag)
+	// 2. Build image
+	// 3. Don't push image
+	imageBuilder, err := NewBuilder(dockerClient, "testimage", imageTag)
+	if err != nil {
+		t.Fatalf("Builder creation failed: %v", err)
+	}
+
+	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, nil)
+	if err != nil {
+		t.Fatalf("Image building failed: %v", err)
+	}
+
 }
 
 func TestDockerbuildWithEntryppointOverrid(t *testing.T) {
