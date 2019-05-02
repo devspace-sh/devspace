@@ -31,7 +31,6 @@ import (
 
 // Interface is the client interface for helm
 type Interface interface {
-	UpdateRepos() error
 	InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error)
 	DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error)
 	ListReleases() (*rls.ListReleasesResponse, error)
