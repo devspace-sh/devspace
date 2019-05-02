@@ -29,13 +29,12 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	var labelSelectorMap map[string]*string
 	var err error
 
+	config := configutil.GetBaseConfig()
 	if labelSelector != "" && serviceName != "" {
 		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
 	}
 
 	if labelSelector == "" {
-		config := configutil.GetBaseConfig()
-
 		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
 			services := *config.Dev.Selectors
 

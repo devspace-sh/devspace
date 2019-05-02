@@ -57,6 +57,9 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		name = args[0]
 	}
 
+	// Load base config
+	configutil.GetBaseConfig()
+
 	shouldPurgeDeployment := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
