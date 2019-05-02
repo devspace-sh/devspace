@@ -59,7 +59,7 @@ func TestDockerBuild(t *testing.T) {
 
 }
 
-func TestDockerbuildWithEntryppointOverrid(t *testing.T) {
+func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	t.Log()
 
 	// 1. Write test dockerfile and context to a temp folder
