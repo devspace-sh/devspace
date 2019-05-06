@@ -8,7 +8,7 @@ import (
 type Interface interface {
 	Delete() error
 	Status() (*StatusResult, error)
-	Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error
+	Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error
 }
 
 // StatusResult holds the status of a deployment

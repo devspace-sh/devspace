@@ -122,14 +122,14 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 		defer log.StopWait()
 
 		for imagesToBuild > 0 {
-			log.StartWait(fmt.Sprintf("Building %d images", imagesToBuild))
+			log.StartWait(fmt.Sprintf("Building %d images...", imagesToBuild))
 
 			select {
 			case err := <-errChan:
 				return nil, err
 			case done := <-cacheChan:
 				imagesToBuild--
-				log.Donef("Done building image %s", done.imageName)
+				log.Donef("Done building image %s:%s", done.imageName, done.imageTag)
 
 				// Update config
 				cache.ImageTags[done.imageName] = done.imageTag

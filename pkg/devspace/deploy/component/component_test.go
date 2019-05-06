@@ -73,7 +73,7 @@ func TestComponentDeployment(t *testing.T) {
 	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
-	err = deployHandler.Deploy(generatedConfig, false, true)
+	err = deployHandler.Deploy(&generatedConfig.GetActive().Deploy, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
