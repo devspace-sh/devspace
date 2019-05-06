@@ -14,7 +14,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
+func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Deployments != nil {

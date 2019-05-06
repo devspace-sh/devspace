@@ -16,12 +16,16 @@ import (
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	Namespace     string
-	KubeContext   string
-	DockerTarget  string
-	ForceBuild    bool
-	ForceDeploy   bool
-	SwitchContext bool
+	Namespace    string
+	KubeContext  string
+	DockerTarget string
+
+	CreateImagePullSecrets bool
+
+	ForceBuild      bool
+	BuildSequential bool
+	ForceDeploy     bool
+	SwitchContext   bool
 }
 
 // NewDeployCmd creates a new deploy command
@@ -46,12 +50,15 @@ devspace deploy --kube-context=deploy-context
 		Run:  cmd.Run,
 	}
 
+	deployCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
+
 	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	deployCmd.Flags().StringVar(&cmd.DockerTarget, "docker-target", "", "The docker target to use for building")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
+	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 
 	return deployCmd
@@ -92,13 +99,16 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
-	// Create docker client
-	dockerClient, err := docker.NewClient(false)
+	// Create the image pull secrets and add them to the default service account
+	if cmd.CreateImagePullSecrets {
+		// Create docker client
+		dockerClient, err := docker.NewClient(false)
 
-	// Create pull secrets and private registry if necessary
-	err = registry.InitRegistries(dockerClient, client, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
+		// Create pull secrets and private registry if necessary
+		err = registry.CreatePullSecrets(dockerClient, client, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Load generated config
@@ -108,13 +118,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.ForceBuild, log.GetInstance())
+	builtImages, err := image.BuildAll(client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Save config if an image was built
-	if mustRedeploy == true {
+	if len(builtImages) > 0 {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatalf("Error saving generated config: %v", err)
@@ -122,7 +132,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
+	err = deploy.All(client, generatedConfig, false, cmd.ForceDeploy, builtImages, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

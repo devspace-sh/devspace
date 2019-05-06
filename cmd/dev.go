@@ -24,10 +24,11 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	InitRegistries bool
+	CreateImagePullSecrets bool
 
-	ForceBuild  bool
-	ForceDeploy bool
+	ForceBuild      bool
+	BuildSequential bool
+	ForceDeploy     bool
 
 	Sync            bool
 	Terminal        bool
@@ -63,9 +64,11 @@ Starts your project in development mode:
 		Run: cmd.Run,
 	}
 
-	devCmd.Flags().BoolVar(&cmd.InitRegistries, "init-registries", true, "Initialize registries (and install internal one)")
+	devCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
+	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
@@ -119,14 +122,14 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
-	// Init image registries
-	if cmd.InitRegistries {
+	// Create the image pull secrets and add them to the default service account
+	if cmd.CreateImagePullSecrets {
 		dockerClient, err := docker.NewClient(false)
 		if err != nil {
 			dockerClient = nil
 		}
 
-		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
+		err = registry.CreatePullSecrets(dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -150,13 +153,13 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 		}
 
 		// Build image if necessary
-		mustRedeploy, err := image.BuildAll(client, generatedConfig, true, cmd.ForceBuild, log.GetInstance())
+		builtImages, err := image.BuildAll(client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
 
 		// Save config if an image was built
-		if mustRedeploy == true {
+		if len(builtImages) > 0 {
 			err := generated.SaveConfig(generatedConfig)
 			if err != nil {
 				return fmt.Errorf("Error saving generated config: %v", err)
@@ -166,7 +169,7 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(client, generatedConfig, true, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
+			err = deploy.All(client, generatedConfig, true, cmd.ForceDeploy, builtImages, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}

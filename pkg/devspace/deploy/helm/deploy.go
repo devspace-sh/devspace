@@ -8,7 +8,6 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
@@ -135,7 +134,7 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, isDev b
 	defer d.Log.StopWait()
 
 	var (
-		config          = configutil.GetConfig()
+		// config          = configutil.GetConfig()
 		releaseName     = *d.DeploymentConfig.Name
 		chartPath       = *d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = filepath.Join(chartPath, "values.yaml")
@@ -190,8 +189,8 @@ func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, isDev b
 		replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
 		// Set images and pull secrets values
-		overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
-		overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
+		// overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
+		// overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 	}
 
 	// Deploy chart

@@ -1,6 +1,8 @@
 package builder
 
-import "github.com/docker/docker/api/types"
+import (
+	"github.com/docker/docker/api/types"
+)
 
 // Interface defines methods for builders (e.g. docker, kaniko)
 type Interface interface {
