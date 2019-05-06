@@ -19,7 +19,7 @@ The command does several things in this order:
 - Open a terminal to the node pod
 
 ```
-[info]   Loaded config from .devspace/configs.yaml
+[info]   Loaded config from devspace-configs.yaml
 [done] √ Create namespace devspace                
 [info]   Building image 'node' with engine 'docker'
 Sending build context to Docker daemon  5.473kB

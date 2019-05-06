@@ -13,7 +13,7 @@ The exemplary command above would configure a synchronization between the local 
 
 > Is is highly recommended to use a **relative** path within your project for the flag `--local` and an **absolute** path within your container for the `--container` flag.
 
-Besides using the convenience command `devspace add sync`, you can also edit the configuration option in `dev.sync` within the config file `.devspace/config.yaml`. Running the exemplary command shown above would produce the following config:
+Besides using the convenience command `devspace add sync`, you can also edit the configuration option in `dev.sync` within the config file `devspace.yaml`. Running the exemplary command shown above would produce the following config:
 
 ```yaml
 dev:
@@ -68,7 +68,7 @@ The above example would configure the sync, so that:
 > Generally, the config options for excluding paths use the same syntax as `.gitignore`
 
 ## Remove sync paths
-You can use the command `devspace remove sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace CLI to remove the sync configurations where `localSubPath=[LOCAL_PATH]` and `containerPath=[CONTAINER_PATH]` from `dev.sync` in `.devspace/config.yaml`
+You can use the command `devspace remove sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]` to tell DevSpace CLI to remove the sync configurations where `localSubPath=[LOCAL_PATH]` and `containerPath=[CONTAINER_PATH]` from `dev.sync` in `devspace.yaml`
 ```bash
 devspace remove sync --local="./src" --container="/app"
 ```
