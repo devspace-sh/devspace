@@ -45,6 +45,8 @@ type ImageCache struct {
 	ContextHash    string `yaml:"contextHash,omitempty"`
 	EntrypointHash string `yaml:"entrypointHash,omitempty"`
 
+	CustomFilesHash string `yaml:"customFilesHash,omitempty"`
+
 	ImageName string `yaml:"imageName,omitempty"`
 	Tag       string `yaml:"tag,omitempty"`
 }
@@ -105,6 +107,15 @@ func LoadConfig() (*Config, error) {
 	return loadedConfig, err
 }
 
+// NewCache returns a new cache object
+func NewCache() *CacheConfig {
+	return &CacheConfig{
+		Deployments: make(map[string]*DeploymentCache),
+		Images:      make(map[string]*ImageCache),
+		Vars:        make(map[string]string),
+	}
+}
+
 // GetActive returns the currently active devspace config
 func (config *Config) GetActive() *CacheConfig {
 	return config.Configs[config.ActiveConfig]
@@ -131,12 +142,7 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
 	if _, ok := config.Configs[configName]; ok == false {
-		config.Configs[configName] = &CacheConfig{
-			Deployments: make(map[string]*DeploymentCache),
-			Images:      make(map[string]*ImageCache),
-			Vars:        make(map[string]string),
-		}
-
+		config.Configs[configName] = NewCache()
 		return
 	}
 

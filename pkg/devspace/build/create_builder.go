@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/custom"
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -17,7 +19,7 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 	var imageBuilder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
-
+		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(false)
 		if err != nil {
