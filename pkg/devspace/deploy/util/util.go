@@ -66,13 +66,13 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 		deployments = nil
 	}
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Errorf("Error loading generated.yaml: %v", err)
-		return
-	}
-
 	if config.Deployments != nil {
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Errorf("Error loading generated.yaml: %v", err)
+			return
+		}
+
 		// Reverse them
 		for i := len(*config.Deployments) - 1; i >= 0; i-- {
 			deployConfig := (*config.Deployments)[i]
@@ -125,6 +125,11 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 			}
 
 			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
+		}
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Errorf("Error saving generated.yaml: %v", err)
 		}
 	}
 }
