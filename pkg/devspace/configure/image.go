@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -54,10 +54,10 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 				Disabled: ptr.Bool(true),
 			}
 		} else {
-			if dockerfile != build.DefaultDockerfilePath {
+			if dockerfile != helper.DefaultDockerfilePath {
 				retImageConfig.Dockerfile = &dockerfile
 			}
-			if context != "" && context != build.DefaultContextPath {
+			if context != "" && context != helper.DefaultContextPath {
 				retImageConfig.Context = &context
 			}
 		}
@@ -254,10 +254,10 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	retImageConfig.Image = &defaultImageName
 
 	// Set image specifics
-	if dockerfile != "" && dockerfile != build.DefaultDockerfilePath {
+	if dockerfile != "" && dockerfile != helper.DefaultDockerfilePath {
 		retImageConfig.Dockerfile = &dockerfile
 	}
-	if context != "" && context != build.DefaultContextPath {
+	if context != "" && context != helper.DefaultContextPath {
 		retImageConfig.Context = &context
 	}
 	if createPullSecret {

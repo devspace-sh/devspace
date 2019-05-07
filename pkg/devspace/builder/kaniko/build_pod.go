@@ -8,10 +8,8 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 
 	"fmt"
-	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/docker/distribution/reference"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +40,7 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Build.Kaniko
 
 	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
@@ -54,9 +52,6 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 	if b.PullSecretName != "" {
 		pullSecretName = b.PullSecretName
 	}
-
-	randString, _ := randutil.GenerateRandomString(12)
-	buildID := strings.ToLower(randString)
 
 	// additional options to pass to kaniko
 	kanikoArgs := []string{

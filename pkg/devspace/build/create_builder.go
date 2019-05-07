@@ -8,11 +8,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (builder.Interface, error) {
+func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log log.Logger) (builder.Interface, error) {
 	var imageBuilder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
@@ -23,7 +24,9 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
-		imageBuilder, err = kaniko.NewBuilder(dockerClient, client, imageConfigName, imageConf, imageTag, isDev)
+		log.StartWait("Creating kaniko builder")
+		defer log.StopWait()
+		imageBuilder, err = kaniko.NewBuilder(dockerClient, client, imageConfigName, imageConf, imageTag, isDev, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
 		}

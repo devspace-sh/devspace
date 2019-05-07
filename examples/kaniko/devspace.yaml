@@ -1,4 +1,4 @@
-version: v1beta1
+version: v1beta2
 images:
   default:
     image: devspacecloud/devspace
@@ -6,24 +6,24 @@ images:
       kaniko:
         cache: true
 deployments:
-- name: devspace-default
-  helm:
-    chart:
-      name: ./chart
+  - name: devspace-default
+    helm:
+      chart:
+        name: ./chart
 dev:
   overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
+    - name: default
+      entrypoint:
+        - sleep
+        - "999999999999"
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: default
-    forward:
-    - port: 8080
+    - labelSelector:
+        app.kubernetes.io/component: default
+      forward:
+        - port: 8080
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: default
+    - labelSelector:
+        app.kubernetes.io/component: default
 cluster:
   kubeContext: minikube
   namespace: devspace

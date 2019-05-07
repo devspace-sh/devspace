@@ -2,6 +2,7 @@ package kaniko
 
 import (
 	"io"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -15,7 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 
 	"fmt"
 	"os"
@@ -55,7 +56,7 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
+func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
 	config := configutil.GetConfig()
 
 	buildNamespace, err := configutil.GetDefaultNamespace(config)
@@ -77,7 +78,7 @@ func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interfac
 		pullSecretName = *imageConf.Build.Kaniko.PullSecret
 	}
 
-	return &Builder{
+	builder := &Builder{
 		PullSecretName: pullSecretName,
 		FullImageName:  *imageConf.Image + ":" + imageTag,
 		BuildNamespace: buildNamespace,
@@ -87,7 +88,15 @@ func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interfac
 		kubectl:      kubectl,
 		dockerClient: dockerClient,
 		helper:       helper.NewBuildHelper(EngineName, imageConfigName, imageConf, imageTag, isDev),
-	}, nil
+	}
+
+	// create pull secret
+	err = builder.createPullSecret(log)
+	if err != nil {
+		return nil, errors.Wrap(err, "create pull secret")
+	}
+
+	return builder, nil
 }
 
 // Build implements the interface
@@ -133,16 +142,9 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 
 // BuildImage builds a dockerimage within a kaniko pod
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
-	log.StartWait("Creating kaniko pull secret")
-	defer log.StopWait()
-	err := b.createPullSecret(log)
-	if err != nil {
-		return errors.Wrap(err, "create pull secret")
-	}
-
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		dockerfilePath, err := helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
 		if err != nil {
 			return err
 		}
@@ -165,7 +167,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	}
 
 	// Generate the build pod spec
-	buildPod, err := b.getBuildPod(options, dockerfilePath)
+	randString, _ := randutil.GenerateRandomString(12)
+	buildID := strings.ToLower(randString)
+	buildPod, err := b.getBuildPod(buildID, options, dockerfilePath)
 	if err != nil {
 		return errors.Wrap(err, "get build pod")
 	}
@@ -173,7 +177,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
-
 		deleteErr := b.kubectl.Core().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
@@ -186,39 +189,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	intr := interrupt.New(nil, deleteBuildPod)
 	err = intr.Run(func() error {
 		defer log.StopWait()
-
-		pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
-			LabelSelector: "devspace-build=true",
-		})
-		if err != nil {
-			return errors.Wrap(err, "list pods in build namespace")
-		}
-
-		if len(pods.Items) > 0 {
-			log.StartWait("Deleting old build pods")
-
-			for _, pod := range pods.Items {
-				// Delete older build pods when they already exist
-				err := b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{
-					GracePeriodSeconds: ptr.Int64(0),
-				})
-				if err != nil {
-					return errors.Wrap(err, "delete build pod")
-				}
-			}
-
-			// Wait till all pods are deleted
-			for true {
-				time.Sleep(time.Second * 3)
-
-				pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
-					LabelSelector: "devspace-build=true",
-				})
-				if err != nil || len(pods.Items) == 0 {
-					break
-				}
-			}
-		}
 
 		buildPodCreated, err := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
 		if err != nil {
@@ -328,6 +298,17 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	})
 
 	if err != nil {
+		// Delete all build pods on error
+		pods, getErr := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
+			LabelSelector: "devspace-build=true",
+		})
+		if getErr != nil {
+			return err
+		}
+		for _, pod := range pods.Items {
+			b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
+		}
+
 		return err
 	}
 

@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -78,7 +78,7 @@ folder. Creates a devspace.yaml with all configuration.
 
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
 	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
-	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", build.DefaultDockerfilePath, "Dockerfile to use for initialization")
+	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", helper.DefaultDockerfilePath, "Dockerfile to use for initialization")
 
 	return initCmd
 }

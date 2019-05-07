@@ -14,12 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// DefaultDockerfilePath is the default dockerfile path to use
-const DefaultDockerfilePath = "./Dockerfile"
-
-// DefaultContextPath is the default context path to use
-const DefaultContextPath = "./"
-
 type imageNameAndTag struct {
 	imageConfigName string
 	imageName       string
@@ -72,7 +66,7 @@ func All(client kubernetes.Interface, isDev, forceRebuild, sequential bool, log 
 		}
 
 		// Create new builder
-		builder, err := CreateBuilder(client, imageConfigName, &cImageConf, imageTag, isDev)
+		builder, err := CreateBuilder(client, imageConfigName, &cImageConf, imageTag, isDev, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "create builder")
 		}
