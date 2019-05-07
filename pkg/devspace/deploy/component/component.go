@@ -67,6 +67,6 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 }
 
 // Delete deletes the release
-func (d *DeployConfig) Delete() error {
-	return d.HelmConfig.Delete()
+func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
+	return d.HelmConfig.Delete(cache)
 }

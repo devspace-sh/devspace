@@ -14,9 +14,9 @@ const DefaultConfigName = "default"
 
 // Config specifies the runtime config struct
 type Config struct {
-	ActiveConfig string                     `yaml:"activeConfig,omitempty"`
-	Configs      map[string]*DevSpaceConfig `yaml:"configs,omitempty"`
-	CloudSpace   *CloudSpaceConfig          `yaml:"space"`
+	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
+	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
+	CloudSpace   *CloudSpaceConfig       `yaml:"space"`
 }
 
 // CloudSpaceConfig holds all the informations about a certain cloud space
@@ -30,26 +30,32 @@ type CloudSpaceConfig struct {
 	Created      string `yaml:"created"`
 }
 
-// DevSpaceConfig holds all the information specific to a certain config
-type DevSpaceConfig struct {
-	Dev    CacheConfig       `yaml:"dev,omitempty"`
-	Deploy CacheConfig       `yaml:"deploy,omitempty"`
-	Vars   map[string]string `yaml:"vars,omitempty"`
-}
-
-// CacheConfig holds the information if things have to be redeployed or rebuild
+// CacheConfig holds all the information specific to a certain config
 type CacheConfig struct {
-	Deployments          map[string]*DeploymentConfig `yaml:"deployments"`
-	DockerfileTimestamps map[string]int64             `yaml:"dockerfileTimestamps"`
-	DockerContextPaths   map[string]string            `yaml:"dockerContextPaths"`
-	ImageTags            map[string]string            `yaml:"imageTags"`
+	Deployments map[string]*DeploymentCache `yaml:"deployments"`
+	Images      map[string]*ImageCache      `yaml:"images"`
+	Vars        map[string]string           `yaml:"vars,omitempty"`
 }
 
-// DeploymentConfig holds the information about a specific deployment
-type DeploymentConfig struct {
-	HelmOverrideTimestamps map[string]int64 `yaml:"helmOverrideTimestamps"`
-	HelmChartHash          string           `yaml:"helmChartHash"`
-	DeploymentConfigHash   uint32           `yaml:"deploymentConfigHash"`
+// ImageCache holds the cache related information about a certain image
+type ImageCache struct {
+	ImageConfigHash string `yaml:"imageConfigHash"`
+
+	DockerfileHash string `yaml:"dockerfileHash"`
+	ContextHash    string `yaml:"contextHash"`
+	EntrypointHash string `yaml:"entrypointHash"`
+
+	ImageName string `yaml:"imageName"`
+	Tag       string `yaml:"tag"`
+}
+
+// DeploymentCache holds the information about a specific deployment
+type DeploymentCache struct {
+	DeploymentConfigHash string `yaml:"deploymentConfigHash"`
+
+	HelmOverridesHash    string `yaml:"helmOverridesHash"`
+	HelmChartHash        string `yaml:"helmChartHash"`
+	KubectlManifestsHash string `yaml:"kubectlManifestsHash"`
 }
 
 // ConfigPath is the relative generated config path
@@ -76,7 +82,7 @@ func LoadConfig() (*Config, error) {
 		if readErr != nil {
 			loadedConfig = &Config{
 				ActiveConfig: DefaultConfigName,
-				Configs:      make(map[string]*DevSpaceConfig),
+				Configs:      make(map[string]*CacheConfig),
 			}
 		} else {
 			loadedConfig = &Config{}
@@ -89,7 +95,7 @@ func LoadConfig() (*Config, error) {
 				loadedConfig.ActiveConfig = DefaultConfigName
 			}
 			if loadedConfig.Configs == nil {
-				loadedConfig.Configs = make(map[string]*DevSpaceConfig)
+				loadedConfig.Configs = make(map[string]*CacheConfig)
 			}
 		}
 
@@ -100,55 +106,45 @@ func LoadConfig() (*Config, error) {
 }
 
 // GetActive returns the currently active devspace config
-func (config *Config) GetActive() *DevSpaceConfig {
+func (config *Config) GetActive() *CacheConfig {
 	return config.Configs[config.ActiveConfig]
+}
+
+// GetImageCache returns the image cache if it exists and creates one if not
+func (cache *CacheConfig) GetImageCache(imageConfigName string) *ImageCache {
+	if _, ok := cache.Images[imageConfigName]; !ok {
+		cache.Images[imageConfigName] = &ImageCache{}
+	}
+
+	return cache.Images[imageConfigName]
+}
+
+// GetDeploymentCache returns the deployment cache if it exists and creates one if not
+func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentCache {
+	if _, ok := cache.Deployments[deploymentName]; !ok {
+		cache.Deployments[deploymentName] = &DeploymentCache{}
+	}
+
+	return cache.Deployments[deploymentName]
 }
 
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
 	if _, ok := config.Configs[configName]; ok == false {
-		config.Configs[configName] = &DevSpaceConfig{
-			Dev: CacheConfig{
-				Deployments:          make(map[string]*DeploymentConfig),
-				DockerfileTimestamps: make(map[string]int64),
-				DockerContextPaths:   make(map[string]string),
-				ImageTags:            make(map[string]string),
-			},
-			Deploy: CacheConfig{
-				Deployments:          make(map[string]*DeploymentConfig),
-				DockerfileTimestamps: make(map[string]int64),
-				DockerContextPaths:   make(map[string]string),
-				ImageTags:            make(map[string]string),
-			},
-			Vars: make(map[string]string),
+		config.Configs[configName] = &CacheConfig{
+			Deployments: make(map[string]*DeploymentCache),
+			Images:      make(map[string]*ImageCache),
+			Vars:        make(map[string]string),
 		}
 
 		return
 	}
 
-	if config.Configs[configName].Dev.DockerfileTimestamps == nil {
-		config.Configs[configName].Dev.DockerfileTimestamps = make(map[string]int64)
+	if config.Configs[configName].Deployments == nil {
+		config.Configs[configName].Deployments = make(map[string]*DeploymentCache)
 	}
-	if config.Configs[configName].Deploy.DockerfileTimestamps == nil {
-		config.Configs[configName].Deploy.DockerfileTimestamps = make(map[string]int64)
-	}
-	if config.Configs[configName].Dev.DockerContextPaths == nil {
-		config.Configs[configName].Dev.DockerContextPaths = make(map[string]string)
-	}
-	if config.Configs[configName].Deploy.DockerContextPaths == nil {
-		config.Configs[configName].Deploy.DockerContextPaths = make(map[string]string)
-	}
-	if config.Configs[configName].Dev.ImageTags == nil {
-		config.Configs[configName].Dev.ImageTags = make(map[string]string)
-	}
-	if config.Configs[configName].Deploy.ImageTags == nil {
-		config.Configs[configName].Deploy.ImageTags = make(map[string]string)
-	}
-	if config.Configs[configName].Dev.Deployments == nil {
-		config.Configs[configName].Dev.Deployments = make(map[string]*DeploymentConfig)
-	}
-	if config.Configs[configName].Deploy.Deployments == nil {
-		config.Configs[configName].Deploy.Deployments = make(map[string]*DeploymentConfig)
+	if config.Configs[configName].Images == nil {
+		config.Configs[configName].Images = make(map[string]*ImageCache)
 	}
 	if config.Configs[configName].Vars == nil {
 		config.Configs[configName].Vars = make(map[string]string)

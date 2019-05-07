@@ -36,25 +36,18 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Ensure deployment config is there
-	if _, ok := cache.Deployments[*d.DeploymentConfig.Name]; ok == false {
-		cache.Deployments[*d.DeploymentConfig.Name] = &generated.DeploymentConfig{
-			HelmOverrideTimestamps: make(map[string]int64),
-		}
-	}
+	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
 
 	// Check values files for changes
-	overrideChanged := false
+	helmOverridesHash := ""
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
 		for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
-			stat, err := os.Stat(*override)
+			hash, err := hashpkg.Directory(*override)
 			if err != nil {
-				return fmt.Errorf("Error stating override file: %s", *override)
+				return fmt.Errorf("Error stating override file %s: %v", *override, err)
 			}
 
-			if cache.Deployments[*d.DeploymentConfig.Name].HelmOverrideTimestamps[*override] != stat.ModTime().Unix() {
-				overrideChanged = true
-				break
-			}
+			helmOverridesHash += hash
 		}
 	}
 
@@ -75,18 +68,18 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Check if redeploying is necessary
-	reDeploy := forceDeploy || cache.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || cache.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash != deploymentConfigHash || overrideChanged
-	if reDeploy == false {
+	forceDeploy = forceDeploy || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
+	if forceDeploy == false {
 		releases, err := d.Helm.ListReleases()
 		if err != nil {
 			return err
 		}
 
-		reDeploy = true
+		forceDeploy = true
 		if releases != nil {
 			for _, release := range releases.Releases {
 				if release.GetName() == releaseName {
-					reDeploy = false
+					forceDeploy = false
 					break
 				}
 			}
@@ -94,26 +87,16 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Deploy
-	wasDeployed, err := d.internalDeploy(cache, reDeploy, builtImages)
+	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages)
 	if err != nil {
 		return err
 	}
 
 	if wasDeployed {
 		// Update config
-		cache.Deployments[*d.DeploymentConfig.Name].HelmChartHash = hash
-		cache.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash = deploymentConfigHash
-
-		if d.DeploymentConfig.Helm.ValuesFiles != nil {
-			for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
-				stat, err := os.Stat(*override)
-				if err != nil {
-					return fmt.Errorf("Error stating override file: %s", *override)
-				}
-
-				cache.Deployments[*d.DeploymentConfig.Name].HelmOverrideTimestamps[*override] = stat.ModTime().Unix()
-			}
-		}
+		deployCache.HelmChartHash = hash
+		deployCache.DeploymentConfigHash = deploymentConfigHash
+		deployCache.HelmOverridesHash = helmOverridesHash
 	} else {
 		d.Log.Infof("Skipping chart %s", chartPath)
 	}
@@ -206,21 +189,27 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 }
 
 func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *generated.CacheConfig, builtImages map[string]string) bool {
-	tags := cache.ImageTags
 	shouldRedeploy := false
 
 	match := func(path, key, value string) bool {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")
-		if _, ok := tags[image[0]]; ok {
-			if builtImages != nil {
-				if _, ok := builtImages[image[0]]; ok {
-					shouldRedeploy = true
-				}
-			}
+		if len(image) > 2 {
+			return false
+		}
 
-			return true
+		// Search for image name
+		for _, imageCache := range cache.Images {
+			if imageCache.ImageName == image[0] {
+				if builtImages != nil {
+					if _, ok := builtImages[image[0]]; ok {
+						shouldRedeploy = true
+					}
+				}
+
+				return true
+			}
 		}
 
 		return false
@@ -228,9 +217,16 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 
 	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
-
 		image := strings.Split(value, ":")
-		return image[0] + ":" + tags[image[0]]
+
+		// Search for image name
+		for _, imageCache := range cache.Images {
+			if imageCache.ImageName == image[0] {
+				return image[0] + ":" + imageCache.Tag
+			}
+		}
+
+		return value
 	}
 
 	walk.Walk(overwriteValues, match, replace)

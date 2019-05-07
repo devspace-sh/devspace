@@ -47,7 +47,7 @@ func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, 
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig, isDev, forceDeploy)
+			err = deployClient.Deploy(generatedConfig.GetActive(), forceDeploy, builtImages)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
@@ -64,6 +64,12 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 	config := configutil.GetConfig()
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
+	}
+
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Errorf("Error loading generated.yaml: %v", err)
+		return
 	}
 
 	if config.Deployments != nil {
@@ -112,7 +118,7 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 			}
 
 			log.StartWait("Deleting deployment " + *deployConfig.Name)
-			err = deployClient.Delete()
+			err = deployClient.Delete(generatedConfig.GetActive())
 			log.StopWait()
 			if err != nil {
 				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)

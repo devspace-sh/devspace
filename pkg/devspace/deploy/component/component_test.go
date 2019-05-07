@@ -50,11 +50,11 @@ func TestComponentDeployment(t *testing.T) {
 	// Create fake generated config
 	generatedConfig := &generated.Config{
 		ActiveConfig: "default",
-		Configs: map[string]*generated.DevSpaceConfig{
-			"default": &generated.DevSpaceConfig{
-				Deploy: generated.CacheConfig{
-					ImageTags: map[string]string{
-						"default": "1.15", // This will be appended to nginx during deploy
+		Configs: map[string]*generated.CacheConfig{
+			"default": &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"default": &generated.ImageCache{
+						Tag: "1.15", // This will be appended to nginx during deploy
 					},
 				},
 			},
@@ -73,7 +73,7 @@ func TestComponentDeployment(t *testing.T) {
 	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
-	err = deployHandler.Deploy(&generatedConfig.GetActive().Deploy, false, nil)
+	err = deployHandler.Deploy(generatedConfig.GetActive(), false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestComponentDeployment(t *testing.T) {
 		t.Fatalf("Unexpected deployment status: %s != Deployed", status.Status)
 	}
 
-	err = deployHandler.Delete()
+	err = deployHandler.Delete(generatedConfig.GetActive())
 	if err != nil {
 		t.Fatal(err)
 	}

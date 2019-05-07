@@ -21,8 +21,9 @@ const DefaultDockerfilePath = "./Dockerfile"
 const DefaultContextPath = "./"
 
 type imageNameAndTag struct {
-	imageName string
-	imageTag  string
+	imageConfigName string
+	imageName       string
+	imageTag        string
 }
 
 // BuildAll builds all images
@@ -30,7 +31,6 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 	var (
 		config      = configutil.GetConfig()
 		builtImages = make(map[string]string)
-		cache       *generated.CacheConfig
 
 		// Parallel build
 		errChan   = make(chan error)
@@ -48,21 +48,17 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 	}
 
 	// Update config
-	if isDev {
-		cache = &generatedConfig.GetActive().Dev
-	} else {
-		cache = &generatedConfig.GetActive().Deploy
-	}
+	cache := generatedConfig.GetActive()
 
 	imagesToBuild := 0
-	for imageName, imageConf := range *config.Images {
+	for imageConfigName, imageConf := range *config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
-			log.Infof("Skipping building image %s", imageName)
+			log.Infof("Skipping building image %s", imageConfigName)
 			continue
 		}
 
 		// Create new builder
-		builder := newBuilderConfig(client, imageName, imageConf, isDev)
+		builder := newBuilderConfig(client, imageConfigName, imageConf, isDev)
 
 		// Check if rebuild is needed
 		needRebuild, err := builder.shouldRebuild(cache)
@@ -70,7 +66,7 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
 		}
 		if forceRebuild == false && needRebuild == false {
-			log.Infof("Skip building image '%s'", imageName)
+			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
 
@@ -90,8 +86,10 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				return nil, err
 			}
 
-			// Update config
-			cache.ImageTags[builder.imageName] = imageTag
+			// Update cache
+			imageCache := cache.GetImageCache(imageConfigName)
+			imageCache.ImageName = builder.imageName
+			imageCache.Tag = imageTag
 
 			// Track built images
 			builtImages[builder.imageName] = imageTag
@@ -111,8 +109,9 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 
 				// Send the reponse
 				cacheChan <- imageNameAndTag{
-					imageName: builder.imageName,
-					imageTag:  imageTag,
+					imageConfigName: imageConfigName,
+					imageName:       builder.imageName,
+					imageTag:        imageTag,
 				}
 			}()
 		}
@@ -131,8 +130,10 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				imagesToBuild--
 				log.Donef("Done building image %s:%s", done.imageName, done.imageTag)
 
-				// Update config
-				cache.ImageTags[done.imageName] = done.imageTag
+				// Update cache
+				imageCache := cache.GetImageCache(done.imageConfigName)
+				imageCache.ImageName = done.imageName
+				imageCache.Tag = done.imageTag
 
 				// Track built images
 				builtImages[done.imageName] = done.imageTag

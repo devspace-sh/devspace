@@ -15,12 +15,13 @@ import (
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
 )
 
 type builderConfig struct {
 	client kubernetes.Interface
-	isDev  bool
 
 	imageConfigName string
 	imageConf       *v1.ImageConfig
@@ -30,6 +31,8 @@ type builderConfig struct {
 
 	imageName  string
 	engineName string
+
+	entrypoint *[]*string
 }
 
 func newBuilderConfig(client kubernetes.Interface, imageConfigName string, imageConf *v1.ImageConfig, isDev bool) *builderConfig {
@@ -38,9 +41,24 @@ func newBuilderConfig(client kubernetes.Interface, imageConfigName string, image
 		imageName, engineName       = *imageConf.Image, ""
 	)
 
+	// Check if we should overwrite entrypoint
+	var entrypoint *[]*string
+	if isDev {
+		config := configutil.GetConfig()
+
+		if config.Dev != nil && config.Dev.OverrideImages != nil {
+			for _, imageOverrideConfig := range *config.Dev.OverrideImages {
+				if *imageOverrideConfig.Name == imageConfigName {
+					entrypoint = imageOverrideConfig.Entrypoint
+					break
+				}
+			}
+		}
+	}
+
 	return &builderConfig{
-		client:          client,
-		isDev:           isDev,
+		client: client,
+
 		imageConfigName: imageConfigName,
 		imageConf:       imageConf,
 
@@ -49,6 +67,8 @@ func newBuilderConfig(client kubernetes.Interface, imageConfigName string, image
 
 		imageName:  imageName,
 		engineName: engineName,
+
+		entrypoint: entrypoint,
 	}
 }
 
@@ -115,23 +135,8 @@ func (b *builderConfig) Build(imageTag string, log log.Logger) error {
 		}
 	}
 
-	// Check if we should overwrite entrypoint
-	var entrypoint *[]*string
-	if b.isDev {
-		config := configutil.GetConfig()
-
-		if config.Dev != nil && config.Dev.OverrideImages != nil {
-			for _, imageOverrideConfig := range *config.Dev.OverrideImages {
-				if *imageOverrideConfig.Name == b.imageConfigName {
-					entrypoint = imageOverrideConfig.Entrypoint
-					break
-				}
-			}
-		}
-	}
-
 	// Build Image
-	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, buildOptions, entrypoint)
+	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, buildOptions, b.entrypoint)
 	if err != nil {
 		return fmt.Errorf("Error during image build: %v", err)
 	}
@@ -153,12 +158,14 @@ func (b *builderConfig) Build(imageTag string, log log.Logger) error {
 }
 
 func (b *builderConfig) shouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	mustRebuild := true
-
-	// Get dockerfile timestamp
-	dockerfileInfo, err := os.Stat(b.dockerfilePath)
+	// Hash dockerfile
+	_, err := os.Stat(b.dockerfilePath)
 	if err != nil {
 		return false, fmt.Errorf("Dockerfile %s missing: %v", b.dockerfilePath, err)
+	}
+	dockerfileHash, err := hash.Directory(b.dockerfilePath)
+	if err != nil {
+		return false, errors.Wrap(err, "hash dockerfile")
 	}
 
 	// Hash context path
@@ -176,21 +183,38 @@ func (b *builderConfig) shouldRebuild(cache *generated.CacheConfig) (bool, error
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
 	excludes = append(excludes, ".devspace/")
 
-	hash, err := hash.DirectoryExcludes(contextDir, excludes)
+	contextHash, err := hash.DirectoryExcludes(contextDir, excludes)
 	if err != nil {
 		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
 	}
 
-	// only rebuild Docker image when Dockerfile or context has changed since latest build
-	mustRebuild = cache.DockerfileTimestamps[b.dockerfilePath] != dockerfileInfo.ModTime().Unix() || cache.DockerContextPaths[b.contextPath] != hash
+	imageCache := cache.GetImageCache(b.imageConfigName)
 
-	cache.DockerfileTimestamps[b.dockerfilePath] = dockerfileInfo.ModTime().Unix()
-	cache.DockerContextPaths[b.contextPath] = hash
-
-	// Check if there is an image tag for this image
-	if _, ok := cache.ImageTags[*b.imageConf.Image]; ok == false {
-		return true, nil
+	// Hash image config
+	configStr, err := yaml.Marshal(*b.imageConf)
+	if err != nil {
+		return false, errors.Wrap(err, "marshal image config")
 	}
+
+	imageConfigHash := hash.String(string(configStr))
+
+	// Hash entrypoint
+	entrypointHash := ""
+	if b.entrypoint != nil {
+		for _, str := range *b.entrypoint {
+			entrypointHash += *str
+		}
+
+		entrypointHash = hash.String(string(entrypointHash))
+	}
+
+	// only rebuild Docker image when Dockerfile or context has changed since latest build
+	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ContextHash != contextHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+
+	imageCache.DockerfileHash = dockerfileHash
+	imageCache.ContextHash = contextHash
+	imageCache.ImageConfigHash = imageConfigHash
+	imageCache.EntrypointHash = entrypointHash
 
 	return mustRebuild, nil
 }
