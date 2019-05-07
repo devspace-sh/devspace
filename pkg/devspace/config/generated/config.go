@@ -16,46 +16,46 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
-	CloudSpace   *CloudSpaceConfig       `yaml:"space"`
+	CloudSpace   *CloudSpaceConfig       `yaml:"space,omitempty"`
 }
 
 // CloudSpaceConfig holds all the informations about a certain cloud space
 type CloudSpaceConfig struct {
-	SpaceID      int    `yaml:"spaceID"`
-	OwnerID      int    `yaml:"ownerID"`
-	Owner        string `yaml:"owner"`
-	ProviderName string `yaml:"providerName"`
-	KubeContext  string `yaml:"kubeContext"`
-	Name         string `yaml:"name"`
-	Created      string `yaml:"created"`
+	SpaceID      int    `yaml:"spaceID,omitempty"`
+	OwnerID      int    `yaml:"ownerID,omitempty"`
+	Owner        string `yaml:"owner,omitempty"`
+	ProviderName string `yaml:"providerName,omitempty"`
+	KubeContext  string `yaml:"kubeContext,omitempty"`
+	Name         string `yaml:"name,omitempty"`
+	Created      string `yaml:"created,omitempty"`
 }
 
 // CacheConfig holds all the information specific to a certain config
 type CacheConfig struct {
-	Deployments map[string]*DeploymentCache `yaml:"deployments"`
-	Images      map[string]*ImageCache      `yaml:"images"`
+	Deployments map[string]*DeploymentCache `yaml:"deployments,omitempty"`
+	Images      map[string]*ImageCache      `yaml:"images,omitempty"`
 	Vars        map[string]string           `yaml:"vars,omitempty"`
 }
 
 // ImageCache holds the cache related information about a certain image
 type ImageCache struct {
-	ImageConfigHash string `yaml:"imageConfigHash"`
+	ImageConfigHash string `yaml:"imageConfigHash,omitempty"`
 
-	DockerfileHash string `yaml:"dockerfileHash"`
-	ContextHash    string `yaml:"contextHash"`
-	EntrypointHash string `yaml:"entrypointHash"`
+	DockerfileHash string `yaml:"dockerfileHash,omitempty"`
+	ContextHash    string `yaml:"contextHash,omitempty"`
+	EntrypointHash string `yaml:"entrypointHash,omitempty"`
 
-	ImageName string `yaml:"imageName"`
-	Tag       string `yaml:"tag"`
+	ImageName string `yaml:"imageName,omitempty"`
+	Tag       string `yaml:"tag,omitempty"`
 }
 
 // DeploymentCache holds the information about a specific deployment
 type DeploymentCache struct {
-	DeploymentConfigHash string `yaml:"deploymentConfigHash"`
+	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`
 
-	HelmOverridesHash    string `yaml:"helmOverridesHash"`
-	HelmChartHash        string `yaml:"helmChartHash"`
-	KubectlManifestsHash string `yaml:"kubectlManifestsHash"`
+	HelmOverridesHash    string `yaml:"helmOverridesHash,omitempty"`
+	HelmChartHash        string `yaml:"helmChartHash,omitempty"`
+	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`
 }
 
 // ConfigPath is the relative generated config path

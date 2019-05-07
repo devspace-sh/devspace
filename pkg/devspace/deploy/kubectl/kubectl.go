@@ -189,6 +189,9 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		}
 	}
 
+	deployCache.KubectlManifestsHash = manifestsHash
+	deployCache.DeploymentConfigHash = deploymentConfigHash
+
 	return nil
 }
 
