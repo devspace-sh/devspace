@@ -131,7 +131,7 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				return nil, err
 			case done := <-cacheChan:
 				imagesToBuild--
-				log.Donef("Done building image %s (%s:%s)", done.imageConfigName, done.imageName, done.imageTag)
+				log.Donef("Done building image %s:%s", done.imageName, done.imageTag)
 
 				// Update cache
 				imageCache := cache.GetImageCache(done.imageConfigName)
