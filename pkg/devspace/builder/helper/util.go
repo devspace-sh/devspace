@@ -1,4 +1,4 @@
-package builder
+package helper
 
 import (
 	"archive/tar"
@@ -9,8 +9,48 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/docker/docker/pkg/archive"
 )
+
+// DefaultDockerfilePath is the default dockerfile path to use
+const DefaultDockerfilePath = "./Dockerfile"
+
+// DefaultContextPath is the default context path to use
+const DefaultContextPath = "./"
+
+// GetDockerfileAndContext retrieves the dockerfile and context
+func GetDockerfileAndContext(imageConfigName string, imageConf *latest.ImageConfig, isDev bool) (string, string) {
+	var (
+		config         = configutil.GetConfig()
+		dockerfilePath = DefaultDockerfilePath
+		contextPath    = DefaultContextPath
+	)
+
+	if imageConf.Dockerfile != nil {
+		dockerfilePath = *imageConf.Dockerfile
+	}
+
+	if imageConf.Context != nil {
+		contextPath = *imageConf.Context
+	}
+
+	if isDev && config.Dev != nil && config.Dev.OverrideImages != nil {
+		for _, overrideConfig := range *config.Dev.OverrideImages {
+			if *overrideConfig.Name == imageConfigName {
+				if overrideConfig.Dockerfile != nil {
+					dockerfilePath = *overrideConfig.Dockerfile
+				}
+				if overrideConfig.Context != nil {
+					contextPath = *overrideConfig.Context
+				}
+			}
+		}
+	}
+
+	return dockerfilePath, contextPath
+}
 
 // OverwriteDockerfileInBuildContext will overwrite the dockerfile with the dockerfileCtx
 func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.ReadCloser, relDockerfile string) (io.ReadCloser, error) {

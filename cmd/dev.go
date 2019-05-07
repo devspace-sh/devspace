@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
@@ -13,7 +14,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -153,7 +153,7 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 		}
 
 		// Build image if necessary
-		builtImages, err := image.BuildAll(client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		builtImages, err := build.All(client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
@@ -325,8 +325,8 @@ func GetPaths() []string {
 				for imageConfName, imageConf := range *config.Images {
 					if *imageName == imageConfName {
 						dockerfilePath := "./Dockerfile"
-						if imageConf.Build != nil && imageConf.Build.Dockerfile != nil {
-							dockerfilePath = *imageConf.Build.Dockerfile
+						if imageConf.Dockerfile != nil {
+							dockerfilePath = *imageConf.Dockerfile
 						}
 
 						paths = append(paths, dockerfilePath)

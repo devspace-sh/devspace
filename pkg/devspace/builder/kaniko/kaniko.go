@@ -1,7 +1,11 @@
 package kaniko
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"io"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -10,7 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"fmt"
@@ -27,54 +31,92 @@ import (
 	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
+// EngineName is the name of the building engine
+const EngineName = "kaniko"
+
+var (
+	_, stdout, stderr = dockerterm.StdStreams()
+)
+
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
+	helper *helper.BuildHelper
+
 	PullSecretName string
-	ImageName      string
+	FullImageName  string
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	kanikoOptions         *latest.KanikoConfig
 	kubectl               kubernetes.Interface
 	dockerClient          client.CommonAPIClient
-	log                   log.Logger
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, allowInsecureRegistry bool, log log.Logger) (*Builder, error) {
+func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
+	config := configutil.GetConfig()
+
+	buildNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return nil, errors.New("Error retrieving default namespace")
+	}
+
+	if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
+		buildNamespace = *imageConf.Build.Kaniko.Namespace
+	}
+
+	allowInsecurePush := false
+	if imageConf.Build.Kaniko.Insecure != nil {
+		allowInsecurePush = *imageConf.Build.Kaniko.Insecure
+	}
+
+	pullSecretName := ""
+	if imageConf.Build.Kaniko.PullSecret != nil {
+		pullSecretName = *imageConf.Build.Kaniko.PullSecret
+	}
+
 	return &Builder{
 		PullSecretName: pullSecretName,
-		ImageName:      imageName + ":" + imageTag,
+		FullImageName:  *imageConf.Image + ":" + imageTag,
 		BuildNamespace: buildNamespace,
 
-		allowInsecureRegistry: allowInsecureRegistry,
-		kanikoOptions:         kanikoOptions,
-		kubectl:               kubectl,
-		dockerClient:          dockerClient,
-		log:                   log,
+		allowInsecureRegistry: allowInsecurePush,
+
+		kubectl:      kubectl,
+		dockerClient: dockerClient,
+		helper:       helper.NewBuildHelper(EngineName, imageConfigName, imageConf, imageTag, isDev),
 	}, nil
 }
 
+// Build implements the interface
+func (b *Builder) Build(log logpkg.Logger) error {
+	return b.helper.Build(b, log)
+}
+
+// ShouldRebuild determines if an image has to be rebuilt
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
+	return b.helper.ShouldRebuild(cache)
+}
+
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
-func (b *Builder) Authenticate() (*types.AuthConfig, error) {
+func (b *Builder) createPullSecret(log logpkg.Logger) error {
 	username, password := "", ""
 
 	if b.PullSecretName != "" {
-		return nil, nil
+		return nil
 	}
 
-	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	email := "noreply@devspace.cloud"
 	authConfig, err := docker.GetAuthConfig(b.dockerClient, registryURL, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	username = authConfig.Username
@@ -86,21 +128,40 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		password = authConfig.IdentityToken
 	}
 
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, b.log)
+	return registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, log)
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
-	var err error
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
+	log.StartWait("Creating kaniko pull secret")
+	defer log.StopWait()
+	err := b.createPullSecret(log)
+	if err != nil {
+		return errors.Wrap(err, "create pull secret")
+	}
 
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
 		if err != nil {
 			return err
 		}
 
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
+	}
+
+	// Buildoptions
+	options := &types.ImageBuildOptions{}
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Kaniko != nil && b.helper.ImageConf.Build.Kaniko.Options != nil {
+		if b.helper.ImageConf.Build.Kaniko.Options.BuildArgs != nil {
+			options.BuildArgs = *b.helper.ImageConf.Build.Kaniko.Options.BuildArgs
+		}
+		if b.helper.ImageConf.Build.Kaniko.Options.Target != nil {
+			options.Target = *b.helper.ImageConf.Build.Kaniko.Options.Target
+		}
+		if b.helper.ImageConf.Build.Kaniko.Options.Network != nil {
+			options.NetworkMode = *b.helper.ImageConf.Build.Kaniko.Options.Network
+		}
 	}
 
 	// Generate the build pod spec
@@ -118,13 +179,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		})
 
 		if deleteErr != nil {
-			b.log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
+			log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
 		}
 	}
 
 	intr := interrupt.New(nil, deleteBuildPod)
 	err = intr.Run(func() error {
-		defer b.log.StopWait()
+		defer log.StopWait()
 
 		pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
 			LabelSelector: "devspace-build=true",
@@ -134,7 +195,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		if len(pods.Items) > 0 {
-			b.log.StartWait("Deleting old build pods")
+			log.StartWait("Deleting old build pods")
 
 			for _, pod := range pods.Items {
 				// Delete older build pods when they already exist
@@ -165,7 +226,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		now := time.Now()
-		b.log.StartWait("Waiting for build init container to start")
+		log.StartWait("Waiting for build init container to start")
 
 		for {
 			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
@@ -185,7 +246,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
 		}
 
-		b.log.StartWait("Uploading files to build container")
+		log.StartWait("Uploading files to build container")
 
 		// Copy complete context
 		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], contextPath, kanikoContextPath, ignoreRules)
@@ -205,8 +266,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return fmt.Errorf("Error executing command in init container: %v", err)
 		}
 
-		b.log.Done("Uploaded files to container")
-		b.log.StartWait("Waiting for kaniko container to start")
+		log.Done("Uploaded files to container")
+		log.StartWait("Waiting for kaniko container to start")
 
 		now = time.Now()
 		for true {
@@ -221,20 +282,27 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			}
 		}
 
-		b.log.StopWait()
-		b.log.Done("Build pod has started")
+		log.StopWait()
+		log.Done("Build pod has started")
 
-		_, stdout, stderr := dockerterm.StdStreams()
-		stdoutLogger := kanikoLogger{out: stdout}
-		stderrLogger := kanikoLogger{out: stderr}
+		// Determine output writer
+		var writer io.Writer
+		if log == logpkg.GetInstance() {
+			writer = stdout
+		} else {
+			writer = log
+		}
+
+		stdoutLogger := kanikoLogger{out: writer}
+		stderrLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		err = services.StartLogsWithWriter(b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log.GetInstance(), stdoutLogger, stderrLogger)
+		err = services.StartLogsWithWriter(b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log, stdoutLogger, stderrLogger)
 		if err != nil {
 			return fmt.Errorf("Error during printling build logs: %v", err)
 		}
 
-		b.log.StartWait("Checking build status")
+		log.StartWait("Checking build status")
 		for true {
 			time.Sleep(time.Second)
 
@@ -253,9 +321,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 				break
 			}
 		}
-		b.log.StopWait()
+		log.StopWait()
 
-		b.log.Done("Done building image")
+		log.Done("Done building image")
 		return nil
 	})
 
@@ -263,10 +331,5 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		return err
 	}
 
-	return nil
-}
-
-// PushImage is required to implement builder.Interface
-func (b *Builder) PushImage() error {
 	return nil
 }

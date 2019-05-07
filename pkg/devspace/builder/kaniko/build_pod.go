@@ -43,7 +43,9 @@ var defaultResources = &availableResources{
 }
 
 func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
-	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	kanikoOptions := b.helper.ImageConf.Build.Kaniko
+
+	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +62,12 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 	kanikoArgs := []string{
 		"--dockerfile=" + kanikoContextPath + "/" + filepath.Base(dockerfilePath),
 		"--context=dir://" + kanikoContextPath,
-		"--destination=" + b.ImageName,
+		"--destination=" + b.FullImageName,
 	}
 
 	// Set snapshot mode
-	if b.kanikoOptions.SnapshotMode != nil {
-		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*b.kanikoOptions.SnapshotMode)
+	if kanikoOptions.SnapshotMode != nil {
+		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*kanikoOptions.SnapshotMode)
 	} else {
 		kanikoArgs = append(kanikoArgs, "--snapshotMode=time")
 	}
@@ -82,15 +84,15 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 	}
 
 	// Extra flags
-	if b.kanikoOptions.Flags != nil {
-		for _, flag := range *b.kanikoOptions.Flags {
+	if kanikoOptions.Flags != nil {
+		for _, flag := range *kanikoOptions.Flags {
 			kanikoArgs = append(kanikoArgs, *flag)
 		}
 	}
 
 	// Cache
 	if !options.NoCache {
-		ref, err := reference.ParseNormalizedNamed(b.ImageName)
+		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
 		if err != nil {
 			return nil, err
 		}

@@ -1,4 +1,4 @@
-package image
+package build
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ type imageNameAndTag struct {
 	imageTag        string
 }
 
-// BuildAll builds all images
-func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+// All builds all images
+func All(client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		config      = configutil.GetConfig()
 		builtImages = make(map[string]string)
@@ -51,27 +51,16 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 	cache := generatedConfig.GetActive()
 
 	imagesToBuild := 0
-	for imageConfigName, imageConf := range *config.Images {
+	for key, imageConf := range *config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
-			log.Infof("Skipping building image %s", imageConfigName)
+			log.Infof("Skipping building image %s", key)
 			continue
 		}
 
 		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
 		cImageConf := *imageConf
-
-		// Create new builder
-		builder := newBuilderConfig(client, imageConfigName, &cImageConf, isDev)
-
-		// Check if rebuild is needed
-		needRebuild, err := builder.shouldRebuild(cache)
-		if err != nil {
-			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
-		}
-		if forceRebuild == false && needRebuild == false {
-			log.Infof("Skip building image '%s'", imageConfigName)
-			continue
-		}
+		imageName := *cImageConf.Image
+		imageConfigName := key
 
 		// Get image tag
 		imageTag, err := randutil.GenerateRandomString(7)
@@ -82,20 +71,37 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 			imageTag = *imageConf.Tag
 		}
 
+		// Create new builder
+		builder, err := CreateBuilder(client, imageConfigName, &cImageConf, imageTag, isDev)
+		if err != nil {
+			return nil, errors.Wrap(err, "create builder")
+		}
+
+		// Check if rebuild is needed
+		needRebuild, err := builder.ShouldRebuild(cache)
+		if err != nil {
+			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
+		}
+		if forceRebuild == false && needRebuild == false {
+			log.Infof("Skip building image '%s'", imageConfigName)
+			continue
+		}
+
+		// Sequential or parallel build?
 		if sequential {
 			// Build the image
-			err = builder.Build(imageTag, log)
+			err = builder.Build(log)
 			if err != nil {
 				return nil, err
 			}
 
 			// Update cache
 			imageCache := cache.GetImageCache(imageConfigName)
-			imageCache.ImageName = builder.imageName
+			imageCache.ImageName = imageName
 			imageCache.Tag = imageTag
 
 			// Track built images
-			builtImages[builder.imageName] = imageTag
+			builtImages[imageName] = imageTag
 		} else {
 			imagesToBuild++
 			go func() {
@@ -104,16 +110,16 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				streamLog := logpkg.NewStreamLogger(buff, logrus.InfoLevel)
 
 				// Build the image
-				err := builder.Build(imageTag, streamLog)
+				err := builder.Build(streamLog)
 				if err != nil {
-					errChan <- fmt.Errorf("Error building image %s:%s: %s %v", builder.imageName, imageTag, buff.String(), err)
+					errChan <- fmt.Errorf("Error building image %s:%s: %s %v", imageName, imageTag, buff.String(), err)
 					return
 				}
 
 				// Send the reponse
 				cacheChan <- imageNameAndTag{
-					imageConfigName: builder.imageConfigName,
-					imageName:       builder.imageName,
+					imageConfigName: imageConfigName,
+					imageName:       imageName,
 					imageTag:        imageTag,
 				}
 			}()
@@ -131,7 +137,7 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				return nil, err
 			case done := <-cacheChan:
 				imagesToBuild--
-				log.Donef("Done building image %s:%s", done.imageName, done.imageTag)
+				log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 				// Update cache
 				imageCache := cache.GetImageCache(done.imageConfigName)

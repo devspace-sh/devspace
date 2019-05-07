@@ -7,12 +7,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -54,17 +54,11 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 				Disabled: ptr.Bool(true),
 			}
 		} else {
-			if dockerfile != image.DefaultDockerfilePath {
-				if retImageConfig.Build == nil {
-					retImageConfig.Build = &latest.BuildConfig{}
-				}
-				retImageConfig.Build.Dockerfile = &dockerfile
+			if dockerfile != build.DefaultDockerfilePath {
+				retImageConfig.Dockerfile = &dockerfile
 			}
-			if context != "" && context != image.DefaultContextPath {
-				if retImageConfig.Build == nil {
-					retImageConfig.Build = &latest.BuildConfig{}
-				}
-				retImageConfig.Build.Context = &context
+			if context != "" && context != build.DefaultContextPath {
+				retImageConfig.Context = &context
 			}
 		}
 
@@ -134,7 +128,17 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		// Don't push image in minikube
 		if minikube.IsMinikube() {
 			retImageConfig.Image = ptr.String("devspace")
-			retImageConfig.SkipPush = ptr.Bool(true)
+			if retImageConfig.Build != nil && retImageConfig.Build.Kaniko != nil {
+				retImageConfig.Build.Kaniko = nil
+			}
+			if retImageConfig.Build == nil {
+				retImageConfig.Build = &latest.BuildConfig{}
+			}
+			if retImageConfig.Build.Docker == nil {
+				retImageConfig.Build.Docker = &latest.DockerConfig{}
+			}
+
+			retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
 			return retImageConfig, nil
 		}
 	}
@@ -250,19 +254,11 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	retImageConfig.Image = &defaultImageName
 
 	// Set image specifics
-	if dockerfile != "" && dockerfile != image.DefaultDockerfilePath {
-		if retImageConfig.Build == nil {
-			retImageConfig.Build = &latest.BuildConfig{}
-		}
-
-		retImageConfig.Build.Dockerfile = &dockerfile
+	if dockerfile != "" && dockerfile != build.DefaultDockerfilePath {
+		retImageConfig.Dockerfile = &dockerfile
 	}
-	if context != "" && context != image.DefaultContextPath {
-		if retImageConfig.Build == nil {
-			retImageConfig.Build = &latest.BuildConfig{}
-		}
-
-		retImageConfig.Build.Context = &context
+	if context != "" && context != build.DefaultContextPath {
+		retImageConfig.Context = &context
 	}
 	if createPullSecret {
 		retImageConfig.CreatePullSecret = &createPullSecret
@@ -271,28 +267,35 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	return retImageConfig, nil
 }
 
-//AddImage adds an image to the devspace
+// AddImage adds an image to the devspace
 func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
 	config := configutil.GetBaseConfig()
 
 	imageConfig := &v1.ImageConfig{
 		Image: &name,
-		Build: &v1.BuildConfig{},
 	}
 
 	if tag != "" {
 		imageConfig.Tag = &tag
 	}
 	if contextPath != "" {
-		imageConfig.Build.Context = &contextPath
+		imageConfig.Context = &contextPath
 	}
 	if dockerfilePath != "" {
-		imageConfig.Build.Dockerfile = &dockerfilePath
+		imageConfig.Dockerfile = &dockerfilePath
 	}
 
 	if buildEngine == "docker" {
+		if imageConfig.Build == nil {
+			imageConfig.Build = &v1.BuildConfig{}
+		}
+
 		imageConfig.Build.Docker = &v1.DockerConfig{}
 	} else if buildEngine == "kaniko" {
+		if imageConfig.Build == nil {
+			imageConfig.Build = &v1.BuildConfig{}
+		}
+
 		imageConfig.Build.Kaniko = &v1.KanikoConfig{}
 	} else if buildEngine != "" {
 		log.Errorf("BuildEngine %v unknown. Please select one of docker|kaniko", buildEngine)

@@ -1,4 +1,4 @@
-package latest
+package v1beta1
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
@@ -7,7 +7,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta2"
+const Version string = "v1beta1"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -43,43 +43,33 @@ type ImageConfig struct {
 	Image            *string      `yaml:"image"`
 	Tag              *string      `yaml:"tag,omitempty"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
-	Dockerfile       *string      `yaml:"dockerfile,omitempty"`
-	Context          *string      `yaml:"context,omitempty"`
+	Insecure         *bool        `yaml:"insecure,omitempty"`
+	SkipPush         *bool        `yaml:"skipPush,omitempty"`
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
-	Disabled *bool         `yaml:"disabled,omitempty"`
-	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
-	Docker   *DockerConfig `yaml:"docker,omitempty"`
-	Custom   *CustomConfig `yaml:"custom,omitempty"`
+	Disabled   *bool         `yaml:"disabled,omitempty"`
+	Dockerfile *string       `yaml:"dockerfile,omitempty"`
+	Context    *string       `yaml:"context,omitempty"`
+	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker     *DockerConfig `yaml:"docker,omitempty"`
+	Options    *BuildOptions `yaml:"options,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	PreferMinikube *bool         `yaml:"preferMinikube,omitempty"`
-	SkipPush       *bool         `yaml:"skipPush,omitempty"`
-	Options        *BuildOptions `yaml:"options,omitempty"`
-}
-
-// CustomConfig tells the DevSpace CLI to build with a custom build script
-type CustomConfig struct {
-	Command   *string    `yaml:"command,omitempty"`
-	Flags     *[]*string `yaml:"flags,omitempty"`
-	ImageFlag *string    `yaml:"imageFlag,omitempty"`
-	OnChange  *[]*string `yaml:"onChange,omitempty"`
+	PreferMinikube *bool `yaml:"preferMinikube,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cache        *bool         `yaml:"cache,omitempty"`
-	SnapshotMode *string       `yaml:"snapshotMode,omitempty"`
-	Flags        *[]*string    `yaml:"flags,omitempty"`
-	Namespace    *string       `yaml:"namespace,omitempty"`
-	Insecure     *bool         `yaml:"insecure,omitempty"`
-	PullSecret   *string       `yaml:"pullSecret,omitempty"`
-	Options      *BuildOptions `yaml:"options,omitempty"`
+	Cache        *bool      `yaml:"cache"`
+	SnapshotMode *string    `yaml:"snapshotMode,omitempty"`
+	Flags        *[]*string `yaml:"flags,omitempty"`
+	Namespace    *string    `yaml:"namespace,omitempty"`
+	PullSecret   *string    `yaml:"pullSecret,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images

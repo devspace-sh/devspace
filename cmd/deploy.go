@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -54,7 +54,6 @@ devspace deploy --kube-context=deploy-context
 
 	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	deployCmd.Flags().StringVar(&cmd.DockerTarget, "docker-target", "", "The docker target to use for building")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
@@ -118,7 +117,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Force image build
-	builtImages, err := image.BuildAll(client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	builtImages, err := build.All(client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -177,19 +176,6 @@ func (cmd *DeployCmd) prepareConfig() {
 		}
 
 		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
-	}
-	if cmd.DockerTarget != "" {
-		if config.Images != nil {
-			for _, imageConf := range *config.Images {
-				if imageConf.Build == nil {
-					imageConf.Build = &v1.BuildConfig{}
-				}
-				if imageConf.Build.Options == nil {
-					imageConf.Build.Options = &v1.BuildOptions{}
-				}
-				imageConf.Build.Options.Target = &cmd.DockerTarget
-			}
-		}
 	}
 
 	// Set defaults now
