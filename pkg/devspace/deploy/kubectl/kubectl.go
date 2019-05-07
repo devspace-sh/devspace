@@ -132,7 +132,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error {
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
 
 	// Hash the manifests
@@ -141,7 +141,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err := hash.Directory(manifest)
 		if err != nil {
-			return fmt.Errorf("Error hashing %s: %v", manifest, err)
+			return false, fmt.Errorf("Error hashing %s: %v", manifest, err)
 		}
 
 		manifestsHash += hash
@@ -150,7 +150,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Hash the deployment config
 	configStr, err := yaml.Marshal(d.DeploymentConfig)
 	if err != nil {
-		return errors.Wrap(err, "marshal deployment config")
+		return false, errors.Wrap(err, "marshal deployment config")
 	}
 
 	deploymentConfigHash := hash.String(string(configStr))
@@ -159,10 +159,12 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	d.Log.StartWait("Applying manifests with kubectl")
 	defer d.Log.StopWait()
 
+	wasDeployed := false
+
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if shouldRedeploy || forceDeploy {
@@ -182,8 +184,10 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 			err = cmd.Run()
 			if err != nil {
-				return err
+				return false, err
 			}
+
+			wasDeployed = true
 		} else {
 			d.Log.Infof("Skipping manifest %s", manifest)
 		}
@@ -192,7 +196,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	deployCache.KubectlManifestsHash = manifestsHash
 	deployCache.DeploymentConfigHash = deploymentConfigHash
 
-	return nil
+	return wasDeployed, nil
 }
 
 func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.CacheConfig, builtImages map[string]string) (bool, string, error) {

@@ -18,7 +18,7 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error {
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	var (
 		releaseName = *d.DeploymentConfig.Name
 		chartPath   = *d.DeploymentConfig.Helm.Chart.Name
@@ -31,7 +31,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err = hashpkg.Directory(chartPath)
 		if err != nil {
-			return fmt.Errorf("Error hashing chart directory: %v", err)
+			return false, fmt.Errorf("Error hashing chart directory: %v", err)
 		}
 	}
 
@@ -44,7 +44,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
 			hash, err := hashpkg.Directory(*override)
 			if err != nil {
-				return fmt.Errorf("Error stating override file %s: %v", *override, err)
+				return false, fmt.Errorf("Error stating override file %s: %v", *override, err)
 			}
 
 			helmOverridesHash += hash
@@ -54,7 +54,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Check deployment config for changes
 	configStr, err := yaml.Marshal(d.DeploymentConfig)
 	if err != nil {
-		return errors.Wrap(err, "marshal deployment config")
+		return false, errors.Wrap(err, "marshal deployment config")
 	}
 
 	deploymentConfigHash := hashpkg.String(string(configStr))
@@ -63,7 +63,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	if d.Helm == nil {
 		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
 		if err != nil {
-			return fmt.Errorf("Error creating helm client: %v", err)
+			return false, fmt.Errorf("Error creating helm client: %v", err)
 		}
 	}
 
@@ -72,7 +72,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	if forceDeploy == false {
 		releases, err := d.Helm.ListReleases()
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		forceDeploy = true
@@ -89,7 +89,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Deploy
 	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if wasDeployed {
@@ -98,10 +98,10 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		deployCache.DeploymentConfigHash = deploymentConfigHash
 		deployCache.HelmOverridesHash = helmOverridesHash
 	} else {
-		d.Log.Infof("Skipping chart %s", chartPath)
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }
 
 func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
@@ -168,7 +168,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		return false, nil
 	}
 
-	d.Log.StartWait("Deploying helm chart")
+	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", *d.DeploymentConfig.Helm.Chart.Name, *d.DeploymentConfig.Name))
 	defer d.Log.StopWait()
 
 	// Deploy chart

@@ -73,9 +73,12 @@ func TestComponentDeployment(t *testing.T) {
 	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
-	err = deployHandler.Deploy(generatedConfig.GetActive(), false, nil)
+	wasDeployed, err := deployHandler.Deploy(generatedConfig.GetActive(), false, nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if wasDeployed == false {
+		t.Fatal("Expected that component was deployed")
 	}
 
 	// Status

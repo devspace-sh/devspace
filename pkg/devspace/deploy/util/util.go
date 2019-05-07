@@ -21,38 +21,43 @@ func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, 
 		for _, deployConfig := range *config.Deployments {
 			var deployClient deploy.Interface
 			var err error
+			var method string
 
 			if deployConfig.Kubectl != nil {
-				log.Info("Deploying " + *deployConfig.Name + " with kubectl")
-
 				deployClient, err = kubectl.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
-			} else if deployConfig.Helm != nil {
-				log.Info("Deploying " + *deployConfig.Name + " with helm")
 
+				method = "kubectl"
+			} else if deployConfig.Helm != nil {
 				deployClient, err = helm.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
-			} else if deployConfig.Component != nil {
-				log.Info("Deploying " + *deployConfig.Name + " component with helm")
 
+				method = "helm"
+			} else if deployConfig.Component != nil {
 				deployClient, err = component.New(client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
+
+				method = "component"
 			} else {
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig.GetActive(), forceDeploy, builtImages)
+			wasDeployed, err := deployClient.Deploy(generatedConfig.GetActive(), forceDeploy, builtImages)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
 
-			log.Donef("Finished deploying %s", *deployConfig.Name)
+			if wasDeployed {
+				log.Donef("Successfully deployed %s with %s", *deployConfig.Name, method)
+			} else {
+				log.Infof("Skipping deployment %s", *deployConfig.Name)
+			}
 		}
 	}
 

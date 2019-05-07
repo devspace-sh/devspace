@@ -51,7 +51,7 @@ func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, lo
 }
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error {
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	return d.HelmConfig.Deploy(cache, forceDeploy, builtImages)
 }
 
