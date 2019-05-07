@@ -51,8 +51,8 @@ func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, lo
 }
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
-	return d.HelmConfig.Deploy(generatedConfig, isDev, forceDeploy)
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error {
+	return d.HelmConfig.Deploy(cache, forceDeploy, builtImages)
 }
 
 // Status gets the status of the deployment
@@ -67,6 +67,6 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 }
 
 // Delete deletes the release
-func (d *DeployConfig) Delete() error {
-	return d.HelmConfig.Delete()
+func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
+	return d.HelmConfig.Delete(cache)
 }

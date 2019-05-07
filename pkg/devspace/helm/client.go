@@ -218,9 +218,11 @@ func ReleaseExists(helm helm.Interface, releaseName string) bool {
 		return false
 	}
 
-	for _, release := range releases.Releases {
-		if release.Name == releaseName {
-			return true
+	if releases != nil {
+		for _, release := range releases.Releases {
+			if release.Name == releaseName {
+				return true
+			}
 		}
 	}
 

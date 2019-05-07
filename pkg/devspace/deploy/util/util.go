@@ -14,7 +14,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, log log.Logger) error {
+func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	config := configutil.GetConfig()
 
 	if config.Deployments != nil {
@@ -47,7 +47,7 @@ func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, 
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			err = deployClient.Deploy(generatedConfig, isDev, forceDeploy)
+			err = deployClient.Deploy(generatedConfig.GetActive(), forceDeploy, builtImages)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
@@ -67,6 +67,12 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 	}
 
 	if config.Deployments != nil {
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Errorf("Error loading generated.yaml: %v", err)
+			return
+		}
+
 		// Reverse them
 		for i := len(*config.Deployments) - 1; i >= 0; i-- {
 			deployConfig := (*config.Deployments)[i]
@@ -112,13 +118,18 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 			}
 
 			log.StartWait("Deleting deployment " + *deployConfig.Name)
-			err = deployClient.Delete()
+			err = deployClient.Delete(generatedConfig.GetActive())
 			log.StopWait()
 			if err != nil {
 				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
 			}
 
 			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
+		}
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Errorf("Error saving generated.yaml: %v", err)
 		}
 	}
 }

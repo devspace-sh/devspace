@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,9 +13,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/pkg/term"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
+	"github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
 
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -39,13 +41,23 @@ type Builder struct {
 	imageURL   string
 	authConfig *types.AuthConfig
 	client     client.CommonAPIClient
+
+	out io.Writer
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(client client.CommonAPIClient, imageName, imageTag string) (*Builder, error) {
+func NewBuilder(client client.CommonAPIClient, imageName, imageTag string, out log.Logger) (*Builder, error) {
+	var writer io.Writer
+	if out == log.GetInstance() {
+		writer = stdout
+	} else {
+		writer = out
+	}
+
 	return &Builder{
 		imageURL: imageName + ":" + imageTag,
 		client:   client,
+		out:      writer,
 	}, nil
 }
 
@@ -58,7 +70,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	}
 
 	ctx := context.Background()
-	outStream := command.NewOutStream(stdout)
+	outStream := command.NewOutStream(b.out)
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -197,7 +209,7 @@ func (b *Builder) PushImage() error {
 		return err
 	}
 
-	outStream := command.NewOutStream(stdout)
+	outStream := command.NewOutStream(b.out)
 	err = jsonmessage.DisplayJSONMessagesStream(out, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 	if err != nil {
 		return err

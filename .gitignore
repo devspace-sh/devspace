@@ -1,5 +1,4 @@
 # Dependencies
-/vendor/
 /.vendor-new/
 
 # Created by devspace init

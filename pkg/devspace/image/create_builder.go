@@ -8,14 +8,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(client kubernetes.Interface, generatedConfig *generated.Config, imageConf *latest.ImageConfig, imageTag string, isDev bool) (builder.Interface, error) {
+func CreateBuilder(client kubernetes.Interface, imageConf *latest.ImageConfig, imageTag string, log logpkg.Logger) (builder.Interface, error) {
 	config := configutil.GetConfig()
 	var imageBuilder builder.Interface
 
@@ -44,7 +44,7 @@ func CreateBuilder(client kubernetes.Interface, generatedConfig *generated.Confi
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
-		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Image, imageTag, buildNamespace, imageConf.Build.Kaniko, dockerClient, client, allowInsecurePush)
+		imageBuilder, err = kaniko.NewBuilder(pullSecret, *imageConf.Image, imageTag, buildNamespace, imageConf.Build.Kaniko, dockerClient, client, allowInsecurePush, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -59,7 +59,7 @@ func CreateBuilder(client kubernetes.Interface, generatedConfig *generated.Confi
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
-		imageBuilder, err = docker.NewBuilder(dockerClient, *imageConf.Image, imageTag)
+		imageBuilder, err = docker.NewBuilder(dockerClient, *imageConf.Image, imageTag, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker builder: %v", err)
 		}

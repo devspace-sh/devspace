@@ -37,13 +37,14 @@ type Builder struct {
 	kanikoOptions         *latest.KanikoConfig
 	kubectl               kubernetes.Interface
 	dockerClient          client.CommonAPIClient
+	log                   log.Logger
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, allowInsecureRegistry bool) (*Builder, error) {
+func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, allowInsecureRegistry bool, log log.Logger) (*Builder, error) {
 	return &Builder{
 		PullSecretName: pullSecretName,
 		ImageName:      imageName + ":" + imageTag,
@@ -53,6 +54,7 @@ func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kani
 		kanikoOptions:         kanikoOptions,
 		kubectl:               kubectl,
 		dockerClient:          dockerClient,
+		log:                   log,
 	}, nil
 }
 
@@ -84,7 +86,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		password = authConfig.IdentityToken
 	}
 
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, log.GetInstance())
+	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, b.log)
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
@@ -116,13 +118,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		})
 
 		if deleteErr != nil {
-			log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
+			b.log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
 		}
 	}
 
 	intr := interrupt.New(nil, deleteBuildPod)
 	err = intr.Run(func() error {
-		defer log.StopWait()
+		defer b.log.StopWait()
 
 		pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
 			LabelSelector: "devspace-build=true",
@@ -132,7 +134,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		if len(pods.Items) > 0 {
-			log.StartWait("Deleting old build pods")
+			b.log.StartWait("Deleting old build pods")
 
 			for _, pod := range pods.Items {
 				// Delete older build pods when they already exist
@@ -163,7 +165,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		now := time.Now()
-		log.StartWait("Waiting for build init container to start")
+		b.log.StartWait("Waiting for build init container to start")
 
 		for {
 			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
@@ -183,7 +185,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
 		}
 
-		log.StartWait("Uploading files to build container")
+		b.log.StartWait("Uploading files to build container")
 
 		// Copy complete context
 		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], contextPath, kanikoContextPath, ignoreRules)
@@ -203,8 +205,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return fmt.Errorf("Error executing command in init container: %v", err)
 		}
 
-		log.Done("Uploaded files to container")
-		log.StartWait("Waiting for kaniko container to start")
+		b.log.Done("Uploaded files to container")
+		b.log.StartWait("Waiting for kaniko container to start")
 
 		now = time.Now()
 		for true {
@@ -219,8 +221,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			}
 		}
 
-		log.StopWait()
-		log.Done("Build pod has started")
+		b.log.StopWait()
+		b.log.Done("Build pod has started")
 
 		_, stdout, stderr := dockerterm.StdStreams()
 		stdoutLogger := kanikoLogger{out: stdout}
@@ -232,7 +234,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 			return fmt.Errorf("Error during printling build logs: %v", err)
 		}
 
-		log.StartWait("Checking build status")
+		b.log.StartWait("Checking build status")
 		for true {
 			time.Sleep(time.Second)
 
@@ -251,9 +253,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 				break
 			}
 		}
-		log.StopWait()
+		b.log.StopWait()
 
-		log.Done("Done building image")
+		b.log.Done("Done building image")
 		return nil
 	})
 

@@ -2,6 +2,7 @@ package helm
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -40,7 +41,7 @@ func New(kubectl kubernetes.Interface, deployConfig *v1.DeploymentConfig, log lo
 }
 
 // Delete deletes the release
-func (d *DeployConfig) Delete() error {
+func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	// Delete with helm engine
 	isDeployed := helm.IsTillerDeployed(d.Kube, d.TillerNamespace)
 	if isDeployed == false {
@@ -62,5 +63,7 @@ func (d *DeployConfig) Delete() error {
 		return err
 	}
 
+	// Delete from cache
+	delete(cache.Deployments, *d.DeploymentConfig.Name)
 	return nil
 }

@@ -5,27 +5,21 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/docker/docker/client"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
-
-// InitRegistries initializes all registries
-func InitRegistries(dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
-	err := CreatePullSecrets(dockerClient, client, log)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // CreatePullSecrets creates the image pull secrets
 func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
 	config := configutil.GetConfig()
-
 	if config.Images != nil {
+		pullSecrets := []string{}
+
 		for _, imageConf := range *config.Images {
 			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
 				registryURL, err := GetRegistryFromImageName(*imageConf.Image)
@@ -39,7 +33,61 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.In
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
 				}
+
+				pullSecrets = append(pullSecrets, GetRegistryAuthSecretName(registryURL))
 			}
+		}
+
+		if len(pullSecrets) > 0 {
+			err := addPullSecretsToServiceAccount(client, pullSecrets, log)
+			if err != nil {
+				return errors.Wrap(err, "add pull secrets to service account")
+			}
+		}
+	}
+
+	return nil
+}
+
+func addPullSecretsToServiceAccount(client kubernetes.Interface, pullSecrets []string, log log.Logger) error {
+	config := configutil.GetConfig()
+
+	// Add secrets to default service account in default namespace
+	namespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return errors.Wrap(err, "get default namespace")
+	}
+
+	// Get default service account
+	serviceaccount, err := client.Core().ServiceAccounts(namespace).Get("default", metav1.GetOptions{})
+	if err != nil {
+		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", namespace, err)
+		return nil
+	}
+
+	// Check if all pull secrets are there
+	changed := false
+	for _, newPullSecret := range pullSecrets {
+		found := false
+
+		for _, pullSecret := range serviceaccount.ImagePullSecrets {
+			if pullSecret.Name == newPullSecret {
+				found = true
+				break
+			}
+		}
+
+		if found == false {
+			changed = true
+			serviceaccount.ImagePullSecrets = append(serviceaccount.ImagePullSecrets, v1.LocalObjectReference{Name: newPullSecret})
+		}
+	}
+
+	// Should we update the service account?
+	if changed {
+		_, err := client.Core().ServiceAccounts(namespace).Update(serviceaccount)
+		if err != nil {
+			return errors.Wrap(err, "update service account")
 		}
 	}
 
@@ -54,7 +102,6 @@ func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client kub
 	}
 
 	username, password := "", ""
-
 	if dockerClient != nil {
 		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
 		if authConfig != nil {

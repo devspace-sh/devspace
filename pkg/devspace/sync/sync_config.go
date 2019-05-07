@@ -99,9 +99,9 @@ func (s *SyncConfig) Logln(line interface{}) {
 // Error handles a sync error with context
 func (s *SyncConfig) Error(err error) {
 	if s.Pod != nil {
-		syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+		s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 	} else {
-		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+		s.CustomLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 	}
 
 	if s.errorChan != nil {
