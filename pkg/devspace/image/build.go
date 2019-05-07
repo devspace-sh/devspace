@@ -57,8 +57,11 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 			continue
 		}
 
+		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
+		cImageConf := *imageConf
+
 		// Create new builder
-		builder := newBuilderConfig(client, imageConfigName, imageConf, isDev)
+		builder := newBuilderConfig(client, imageConfigName, &cImageConf, isDev)
 
 		// Check if rebuild is needed
 		needRebuild, err := builder.shouldRebuild(cache)
@@ -109,7 +112,7 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 
 				// Send the reponse
 				cacheChan <- imageNameAndTag{
-					imageConfigName: imageConfigName,
+					imageConfigName: builder.imageConfigName,
 					imageName:       builder.imageName,
 					imageTag:        imageTag,
 				}
@@ -128,7 +131,7 @@ func BuildAll(client kubernetes.Interface, isDev, forceRebuild, sequential bool,
 				return nil, err
 			case done := <-cacheChan:
 				imagesToBuild--
-				log.Donef("Done building image %s:%s", done.imageName, done.imageTag)
+				log.Donef("Done building image %s (%s:%s)", done.imageConfigName, done.imageName, done.imageTag)
 
 				// Update cache
 				imageCache := cache.GetImageCache(done.imageConfigName)
