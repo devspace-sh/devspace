@@ -14,7 +14,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(config *latest.Config, client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
+func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	if config.Deployments != nil {
 		for _, deployConfig := range *config.Deployments {
 			var deployClient deploy.Interface
@@ -46,7 +46,7 @@ func All(config *latest.Config, client kubernetes.Interface, generatedConfig *ge
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
-			wasDeployed, err := deployClient.Deploy(generatedConfig.GetActive(), forceDeploy, builtImages)
+			wasDeployed, err := deployClient.Deploy(cache, forceDeploy, builtImages)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
 			}
@@ -63,18 +63,12 @@ func All(config *latest.Config, client kubernetes.Interface, generatedConfig *ge
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, client kubernetes.Interface, deployments []string) {
+func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
 
 	if config.Deployments != nil {
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Errorf("Error loading generated.yaml: %v", err)
-			return
-		}
-
 		// Reverse them
 		for i := len(*config.Deployments) - 1; i >= 0; i-- {
 			deployConfig := (*config.Deployments)[i]
@@ -120,18 +114,13 @@ func PurgeDeployments(config *latest.Config, client kubernetes.Interface, deploy
 			}
 
 			log.StartWait("Deleting deployment " + *deployConfig.Name)
-			err = deployClient.Delete(generatedConfig.GetActive())
+			err = deployClient.Delete(cache)
 			log.StopWait()
 			if err != nil {
 				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
 			}
 
 			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
-		}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Errorf("Error saving generated.yaml: %v", err)
 		}
 	}
 }

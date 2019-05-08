@@ -121,7 +121,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build images
-	builtImages, err := build.All(config, client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	builtImages, err := build.All(config, generatedConfig.GetActive(), client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(config, client, generatedConfig, false, cmd.ForceDeploy, builtImages, log.GetInstance())
+	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

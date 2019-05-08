@@ -2,6 +2,7 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -79,7 +80,18 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			deployments = []string{args[0]}
 		}
 
-		deployUtil.PurgeDeployments(config, kubectl, deployments)
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Errorf("Error loading generated.yaml: %v", err)
+			return
+		}
+
+		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Errorf("Error saving generated.yaml: %v", err)
+		}
 	}
 
 	found, err := configure.RemoveDeployment(cmd.RemoveAll, name)

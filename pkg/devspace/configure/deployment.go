@@ -16,14 +16,10 @@ import (
 )
 
 // GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
-func GetDockerfileComponentDeployment(config *latest.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
+	var err error
 	if imageName == "" {
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "load generated config")
-		}
-
 		var providerName *string
 		if generatedConfig.CloudSpace != nil {
 			providerName = &generatedConfig.CloudSpace.ProviderName

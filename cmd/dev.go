@@ -155,7 +155,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 		}
 
 		// Build image if necessary
-		builtImages, err := build.All(config, client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		builtImages, err := build.All(config, generatedConfig.GetActive(), client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
@@ -171,7 +171,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(config, client, generatedConfig, true, cmd.ForceDeploy, builtImages, log.GetInstance())
+			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}

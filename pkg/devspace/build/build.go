@@ -21,7 +21,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -34,14 +34,6 @@ func All(config *latest.Config, client kubernetes.Interface, isDev, forceRebuild
 	if sequential == false && len(*config.Images) <= 1 {
 		sequential = true
 	}
-
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "load generated config")
-	}
-
-	// Update config
-	cache := generatedConfig.GetActive()
 
 	imagesToBuild := 0
 	for key, imageConf := range *config.Images {
