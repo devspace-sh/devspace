@@ -17,9 +17,11 @@ import (
 func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	if config.Deployments != nil {
 		for _, deployConfig := range *config.Deployments {
-			var deployClient deploy.Interface
-			var err error
-			var method string
+			var (
+				deployClient deploy.Interface
+				err          error
+				method       string
+			)
 
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(config, client, deployConfig, log)
@@ -71,7 +73,11 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 	if config.Deployments != nil {
 		// Reverse them
 		for i := len(*config.Deployments) - 1; i >= 0; i-- {
-			deployConfig := (*config.Deployments)[i]
+			var (
+				err          error
+				deployClient deploy.Interface
+				deployConfig = (*config.Deployments)[i]
+			)
 
 			// Check if we should skip deleting deployment
 			if deployments != nil {
@@ -88,9 +94,6 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 					continue
 				}
 			}
-
-			var err error
-			var deployClient deploy.Interface
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
