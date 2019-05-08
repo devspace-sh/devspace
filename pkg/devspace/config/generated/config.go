@@ -32,9 +32,10 @@ type CloudSpaceConfig struct {
 
 // CacheConfig holds all the information specific to a certain config
 type CacheConfig struct {
-	Deployments map[string]*DeploymentCache `yaml:"deployments,omitempty"`
-	Images      map[string]*ImageCache      `yaml:"images,omitempty"`
-	Vars        map[string]string           `yaml:"vars,omitempty"`
+	Deployments  map[string]*DeploymentCache `yaml:"deployments,omitempty"`
+	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
+	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
+	Vars         map[string]string           `yaml:"vars,omitempty"`
 }
 
 // ImageCache holds the cache related information about a certain image
@@ -80,31 +81,39 @@ func LoadConfig() (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		data, readErr := ioutil.ReadFile(ConfigPath)
-		if readErr != nil {
-			loadedConfig = &Config{
-				ActiveConfig: DefaultConfigName,
-				Configs:      make(map[string]*CacheConfig),
-			}
-		} else {
-			loadedConfig = &Config{}
-			err = yaml.Unmarshal(data, loadedConfig)
-			if err != nil {
-				return
-			}
-
-			if loadedConfig.ActiveConfig == "" {
-				loadedConfig.ActiveConfig = DefaultConfigName
-			}
-			if loadedConfig.Configs == nil {
-				loadedConfig.Configs = make(map[string]*CacheConfig)
-			}
-		}
-
-		InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+		loadedConfig, err = LoadConfigFromPath(ConfigPath)
 	})
 
 	return loadedConfig, err
+}
+
+// LoadConfigFromPath loads the generated config from a given path
+func LoadConfigFromPath(path string) (*Config, error) {
+	var loadedConfig *Config
+
+	data, readErr := ioutil.ReadFile(path)
+	if readErr != nil {
+		loadedConfig = &Config{
+			ActiveConfig: DefaultConfigName,
+			Configs:      make(map[string]*CacheConfig),
+		}
+	} else {
+		loadedConfig = &Config{}
+		err := yaml.Unmarshal(data, loadedConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		if loadedConfig.ActiveConfig == "" {
+			loadedConfig.ActiveConfig = DefaultConfigName
+		}
+		if loadedConfig.Configs == nil {
+			loadedConfig.Configs = make(map[string]*CacheConfig)
+		}
+	}
+
+	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+	return loadedConfig, nil
 }
 
 // NewCache returns a new cache object
@@ -164,14 +173,12 @@ func SaveConfig(config *Config) error {
 	}
 
 	workdir, _ := os.Getwd()
-
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
 
 	configPath := filepath.Join(workdir, ConfigPath)
-
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)
 	if err != nil {
 		return err

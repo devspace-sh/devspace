@@ -123,7 +123,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
 	excludes = append(excludes, ".devspace/")
 
-	contextHash, err := hash.DirectoryExcludes(contextDir, excludes)
+	contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
 	if err != nil {
 		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
 	}

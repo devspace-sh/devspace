@@ -1,8 +1,10 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	git "gopkg.in/src-d/go-git.v4"
 )
 
@@ -18,6 +20,30 @@ func NewGitRepository(localPath string, remoteURL string) *GitRepository {
 		LocalPath: localPath,
 		RemotURL:  remoteURL,
 	}
+}
+
+// GetRemote retrieves the remote origin
+func (gr *GitRepository) GetRemote() (string, error) {
+	_, err := os.Stat(gr.LocalPath + "/.git")
+	if err != nil {
+		return "", err
+	}
+
+	repo, err := git.PlainOpen(gr.LocalPath)
+	if err != nil {
+		return "", errors.Wrap(err, "git open")
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", errors.Wrap(err, "get remotes")
+	}
+
+	if len(remotes) == 0 {
+		return "", fmt.Errorf("Couldn't determine git remote in %s", gr.LocalPath)
+	}
+
+	return remotes[0].String(), nil
 }
 
 // HasUpdate checks if there is an update to the repository
