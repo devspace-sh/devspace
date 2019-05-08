@@ -14,7 +14,7 @@ The example above would tell DevSpace CLI to forward the local port `8080` to th
 > Local ports must be unique across all port forwarding configurations.
 
 ## Configure port forwarding
-The configuration for port forwarding can be set within the `dev.ports` section of `.devspace/config.yaml`.
+The configuration for port forwarding can be set within the `dev.ports` section of `devspace.yaml`.
 ```yaml
 dev:
   ports:

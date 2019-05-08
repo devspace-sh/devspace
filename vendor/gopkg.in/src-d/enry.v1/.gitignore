@@ -1,0 +1,7 @@
+.linguist
+benchmarks/output
+.ci
+Makefile.main
+.shared
+.idea
+.docsrv-resources

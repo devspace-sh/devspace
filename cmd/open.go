@@ -149,7 +149,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get kubernetes config
-	config, err := kubectl.GetClientConfig()
+	config, err := kubectl.GetClientConfig(devspaceConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	// Not found
 	if domain == "" {
-		err = provider.CreateIngress(client, space, host)
+		err = provider.CreateIngress(devspaceConfig, client, space, host)
 		if err != nil {
 			log.Fatalf("Error creating ingress: %v", err)
 		}
@@ -220,7 +220,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
 }
 
-func findDomain(client *kubernetes.Clientset, namespace, host string) (string, bool, error) {
+func findDomain(client kubernetes.Interface, namespace, host string) (string, bool, error) {
 	log.StartWait("Retrieve ingresses")
 	defer log.StopWait()
 

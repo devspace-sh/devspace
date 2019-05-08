@@ -1,8 +1,10 @@
-version: v1beta1
+version: v1beta2
 images:
   default:
     image: devspace
-    skipPush: true
+    build:
+      docker:
+        skipPush: true
 deployments:
 - name: devspace-app
   kubectl:

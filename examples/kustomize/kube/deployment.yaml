@@ -3,12 +3,12 @@ kind: Deployment
 metadata:
   name: my-app
 spec:
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
         app.kubernetes.io/component: default
     spec:
       containers:
-      - name: default
-        image: devspace
+        - name: default
+          image: devspace

@@ -18,7 +18,7 @@ The command does several things in this order:
 
 You should see the following output:
 ```
-[info]   Loaded config from .devspace/configs.yaml
+[info]   Loaded config from devspace-configs.yaml
 [info]   Using space redeploy                       
 [info]   Skip building image 'default'         
 [info]   Deploying devspace-default with kubectl

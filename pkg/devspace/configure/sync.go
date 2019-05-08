@@ -44,7 +44,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 			}
 			labelSelectorMap = *service.LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
 		}
 	}
 

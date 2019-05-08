@@ -7,8 +7,8 @@ Using multiple configs is great for deploying to different environments but havi
 To reduce the effort of maintaining many different configuration files with similar contents, DevSpace allows you to define config overrides for your configs. This allows yo to:
 
 1. Create one config file (base config)
-2. Define multiple configs in `.devspace/configs.yaml` which all load the same config file (using the `path` option for each config)
-3. Define config overrides for the different configs in `.devspace/configs.yaml`
+2. Define multiple configs in `devspace-configs.yaml` which all load the same config file (using the `path` option for each config)
+3. Define config overrides for the different configs in `devspace-configs.yaml`
 
 ## Defining configs with overrides
 
@@ -30,7 +30,7 @@ The above example defines two configurations `config1` and `config2`. Both will 
 [Learn more about defining and using multiple configs.](/docs/configuration/multiple-configs)
 
 ## Advanced options for config overrides
-Instead of specifying overrides directly inside `.devspace/configs.yaml` with `data`, it is also possible to define a file containing the override data and reference this file with `path` instead of using `data`.
+Instead of specifying overrides directly inside `devspace-configs.yaml` with `data`, it is also possible to define a file containing the override data and reference this file with `path` instead of using `data`.
 
 As shown in the example above, `overrides` is an array which allows you to apply multiple overrides. This can be useful when you want to re-use an override file multiple times but also apply additional overrides which are different between several configs.
 

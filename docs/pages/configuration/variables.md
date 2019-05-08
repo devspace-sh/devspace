@@ -9,7 +9,7 @@ Additionally, dynamic configs can be very useful when defining secrets as enviro
 > To be able to define dynamic configs, you need to be familiar with the basics of [using multiple configs](/docs/configuration/multiple-configs).
 
 ## Define config variables
-Config variables are placeholders with the format `${VAR_NAME}`. They have to be defined in the `vars` section of the `.devspace/configs.yaml`. You can then refer to these variables from within your configuration. You can use config variables within config files, within configs defined with `config.data` and within your overrides specified as `path` or `data`.
+Config variables are placeholders with the format `${VAR_NAME}`. They have to be defined in the `vars` section of the `devspace-configs.yaml`. You can then refer to these variables from within your configuration. You can use config variables within config files, within configs defined with `config.data` and within your overrides specified as `path` or `data`.
 ```
 config1:
   config:

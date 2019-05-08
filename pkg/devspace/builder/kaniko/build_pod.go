@@ -8,10 +8,8 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 
 	"fmt"
-	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/docker/distribution/reference"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,8 +40,10 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
-	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+	kanikoOptions := b.helper.ImageConf.Build.Kaniko
+
+	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -53,19 +53,16 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 		pullSecretName = b.PullSecretName
 	}
 
-	randString, _ := randutil.GenerateRandomString(12)
-	buildID := strings.ToLower(randString)
-
 	// additional options to pass to kaniko
 	kanikoArgs := []string{
 		"--dockerfile=" + kanikoContextPath + "/" + filepath.Base(dockerfilePath),
 		"--context=dir://" + kanikoContextPath,
-		"--destination=" + b.ImageName,
+		"--destination=" + b.FullImageName,
 	}
 
 	// Set snapshot mode
-	if b.kanikoOptions.SnapshotMode != nil {
-		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*b.kanikoOptions.SnapshotMode)
+	if kanikoOptions.SnapshotMode != nil {
+		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*kanikoOptions.SnapshotMode)
 	} else {
 		kanikoArgs = append(kanikoArgs, "--snapshotMode=time")
 	}
@@ -82,15 +79,15 @@ func (b *Builder) getBuildPod(options *types.ImageBuildOptions, dockerfilePath s
 	}
 
 	// Extra flags
-	if b.kanikoOptions.Flags != nil {
-		for _, flag := range *b.kanikoOptions.Flags {
+	if kanikoOptions.Flags != nil {
+		for _, flag := range *kanikoOptions.Flags {
 			kanikoArgs = append(kanikoArgs, *flag)
 		}
 	}
 
 	// Cache
 	if !options.NoCache {
-		ref, err := reference.ParseNormalizedNamed(b.ImageName)
+		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
 		if err != nil {
 			return nil, err
 		}

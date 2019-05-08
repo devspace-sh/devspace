@@ -153,6 +153,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 			KubeContext:  kubeContext,
 			Created:      space.Created,
 		}
+		generatedConfig.Configs = map[string]*generated.CacheConfig{}
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

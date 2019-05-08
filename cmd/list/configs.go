@@ -47,7 +47,7 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 	// Check if configs.yaml exists
 	_, err = os.Stat(configutil.DefaultConfigsPath)
 	if err != nil {
-		log.Info("Please create a .devspace/configs.yaml to specify multiple configurations")
+		log.Infof("Please create a '%s' to specify multiple configurations", configutil.DefaultConfigsPath)
 		return
 	}
 

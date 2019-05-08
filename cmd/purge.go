@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -54,7 +55,10 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
-	kubectl, err := kubectl.NewClient()
+	// Get the config
+	config := configutil.GetConfig()
+
+	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
@@ -67,5 +71,16 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	deploy.PurgeDeployments(kubectl, deployments)
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Errorf("Error loading generated.yaml: %v", err)
+		return
+	}
+
+	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Errorf("Error saving generated.yaml: %v", err)
+	}
 }

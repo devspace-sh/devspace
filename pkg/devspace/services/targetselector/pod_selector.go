@@ -9,7 +9,7 @@ import (
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client *kubernetes.Clientset, namespace string, labelSelector *string) (*v1.Pod, error) {
+func SelectPod(client kubernetes.Interface, namespace string, labelSelector *string) (*v1.Pod, error) {
 	if labelSelector != nil {
 		podList, err := client.Core().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: *labelSelector,

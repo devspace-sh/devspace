@@ -13,7 +13,7 @@ import (
 
 // DeployConfig holds the informations for deploying a component
 type DeployConfig struct {
-	helmConfig *helm.DeployConfig
+	HelmConfig *helm.DeployConfig
 }
 
 // DevSpaceChartConfig is the config that holds the devspace chart information
@@ -24,7 +24,7 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 }
 
 // New creates a new helm deployment client
-func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	// Convert the values
 	values := map[interface{}]interface{}{}
 	err := util.Convert(deployConfig.Component, &values)
@@ -33,7 +33,7 @@ func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, l
 	}
 
 	// Create a helm config out of the deployment config
-	helmConfig, err := helm.New(kubectl, &latest.DeploymentConfig{
+	helmConfig, err := helm.New(config, kubectl, &latest.DeploymentConfig{
 		Name:      deployConfig.Name,
 		Namespace: deployConfig.Namespace,
 		Helm: &latest.HelmConfig{
@@ -46,18 +46,18 @@ func New(kubectl *kubernetes.Clientset, deployConfig *latest.DeploymentConfig, l
 	}
 
 	return &DeployConfig{
-		helmConfig: helmConfig,
+		HelmConfig: helmConfig,
 	}, nil
 }
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
-	return d.helmConfig.Deploy(generatedConfig, isDev, forceDeploy)
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
+	return d.HelmConfig.Deploy(cache, forceDeploy, builtImages)
 }
 
 // Status gets the status of the deployment
 func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
-	status, err := d.helmConfig.Status()
+	status, err := d.HelmConfig.Status()
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +67,6 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 }
 
 // Delete deletes the release
-func (d *DeployConfig) Delete() error {
-	return d.helmConfig.Delete()
+func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
+	return d.HelmConfig.Delete(cache)
 }

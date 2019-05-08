@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
@@ -16,12 +17,12 @@ import (
 )
 
 // NewClient creates a new docker client
-func NewClient(preferMinikube bool) (client.CommonAPIClient, error) {
+func NewClient(config *latest.Config, preferMinikube bool) (client.CommonAPIClient, error) {
 	var cli client.CommonAPIClient
 	var err error
 
 	if preferMinikube {
-		cli, err = newDockerClientFromMinikube()
+		cli, err = newDockerClientFromMinikube(config)
 	}
 	if preferMinikube == false || err != nil {
 		cli, err = newDockerClientFromEnvironment()
@@ -44,8 +45,8 @@ func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	return cli, nil
 }
 
-func newDockerClientFromMinikube() (client.CommonAPIClient, error) {
-	if minikube.IsMinikube() == false {
+func newDockerClientFromMinikube(config *latest.Config) (client.CommonAPIClient, error) {
+	if minikube.IsMinikube(config) == false {
 		return nil, errors.New("Cluster is not a minikube cluster")
 	}
 

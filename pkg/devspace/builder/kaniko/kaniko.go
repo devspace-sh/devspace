@@ -1,7 +1,12 @@
 package kaniko
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
+	"io"
+	"strings"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -10,8 +15,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 
 	"fmt"
 	"os"
@@ -27,15 +32,23 @@ import (
 	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
+// EngineName is the name of the building engine
+const EngineName = "kaniko"
+
+var (
+	_, stdout, stderr = dockerterm.StdStreams()
+)
+
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
+	helper *helper.BuildHelper
+
 	PullSecretName string
-	ImageName      string
+	FullImageName  string
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	kanikoOptions         *latest.KanikoConfig
-	kubectl               *kubernetes.Clientset
+	kubectl               kubernetes.Interface
 	dockerClient          client.CommonAPIClient
 }
 
@@ -43,36 +56,74 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(pullSecretName, imageName, imageTag, buildNamespace string, kanikoOptions *latest.KanikoConfig, dockerClient client.CommonAPIClient, kubectl *kubernetes.Clientset, allowInsecureRegistry bool) (*Builder, error) {
-	return &Builder{
+func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+	buildNamespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		return nil, errors.New("Error retrieving default namespace")
+	}
+
+	if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
+		buildNamespace = *imageConf.Build.Kaniko.Namespace
+	}
+
+	allowInsecurePush := false
+	if imageConf.Build.Kaniko.Insecure != nil {
+		allowInsecurePush = *imageConf.Build.Kaniko.Insecure
+	}
+
+	pullSecretName := ""
+	if imageConf.Build.Kaniko.PullSecret != nil {
+		pullSecretName = *imageConf.Build.Kaniko.PullSecret
+	}
+
+	builder := &Builder{
 		PullSecretName: pullSecretName,
-		ImageName:      imageName + ":" + imageTag,
+		FullImageName:  *imageConf.Image + ":" + imageTag,
 		BuildNamespace: buildNamespace,
 
-		allowInsecureRegistry: allowInsecureRegistry,
-		kanikoOptions:         kanikoOptions,
-		kubectl:               kubectl,
-		dockerClient:          dockerClient,
-	}, nil
+		allowInsecureRegistry: allowInsecurePush,
+
+		kubectl:      kubectl,
+		dockerClient: dockerClient,
+		helper:       helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
+	}
+
+	// create pull secret
+	err = builder.createPullSecret(log)
+	if err != nil {
+		return nil, errors.Wrap(err, "create pull secret")
+	}
+
+	return builder, nil
+}
+
+// Build implements the interface
+func (b *Builder) Build(log logpkg.Logger) error {
+	return b.helper.Build(b, log)
+}
+
+// ShouldRebuild determines if an image has to be rebuilt
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
+	return b.helper.ShouldRebuild(cache)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
-func (b *Builder) Authenticate() (*types.AuthConfig, error) {
+func (b *Builder) createPullSecret(log logpkg.Logger) error {
 	username, password := "", ""
 
 	if b.PullSecretName != "" {
-		return nil, nil
+		return nil
 	}
 
-	registryURL, err := registry.GetRegistryFromImageName(b.ImageName)
+	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	email := "noreply@devspace.cloud"
 	authConfig, err := docker.GetAuthConfig(b.dockerClient, registryURL, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	username = authConfig.Username
@@ -84,16 +135,14 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		password = authConfig.IdentityToken
 	}
 
-	return nil, registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, log.GetInstance())
+	return registry.CreatePullSecret(b.kubectl, b.BuildNamespace, registryURL, username, password, email, log)
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
-	var err error
-
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		dockerfilePath, err := helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
 		if err != nil {
 			return err
 		}
@@ -101,8 +150,24 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 	}
 
+	// Buildoptions
+	options := &types.ImageBuildOptions{}
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Kaniko != nil && b.helper.ImageConf.Build.Kaniko.Options != nil {
+		if b.helper.ImageConf.Build.Kaniko.Options.BuildArgs != nil {
+			options.BuildArgs = *b.helper.ImageConf.Build.Kaniko.Options.BuildArgs
+		}
+		if b.helper.ImageConf.Build.Kaniko.Options.Target != nil {
+			options.Target = *b.helper.ImageConf.Build.Kaniko.Options.Target
+		}
+		if b.helper.ImageConf.Build.Kaniko.Options.Network != nil {
+			options.NetworkMode = *b.helper.ImageConf.Build.Kaniko.Options.Network
+		}
+	}
+
 	// Generate the build pod spec
-	buildPod, err := b.getBuildPod(options, dockerfilePath)
+	randString, _ := randutil.GenerateRandomString(12)
+	buildID := strings.ToLower(randString)
+	buildPod, err := b.getBuildPod(buildID, options, dockerfilePath)
 	if err != nil {
 		return errors.Wrap(err, "get build pod")
 	}
@@ -110,7 +175,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
-
 		deleteErr := b.kubectl.Core().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
@@ -123,39 +187,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	intr := interrupt.New(nil, deleteBuildPod)
 	err = intr.Run(func() error {
 		defer log.StopWait()
-
-		pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
-			LabelSelector: "devspace-build=true",
-		})
-		if err != nil {
-			return errors.Wrap(err, "list pods in build namespace")
-		}
-
-		if len(pods.Items) > 0 {
-			log.StartWait("Deleting old build pods")
-
-			for _, pod := range pods.Items {
-				// Delete older build pods when they already exist
-				err := b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{
-					GracePeriodSeconds: ptr.Int64(0),
-				})
-				if err != nil {
-					return errors.Wrap(err, "delete build pod")
-				}
-			}
-
-			// Wait till all pods are deleted
-			for true {
-				time.Sleep(time.Second * 3)
-
-				pods, err := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
-					LabelSelector: "devspace-build=true",
-				})
-				if err != nil || len(pods.Items) == 0 {
-					break
-				}
-			}
-		}
 
 		buildPodCreated, err := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
 		if err != nil {
@@ -198,7 +229,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		}
 
 		// Tell init container we are done
-		_, _, err = kubectl.ExecBuffered(b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
+		_, _, err = kubectl.ExecBuffered(b.helper.Config, b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
 		if err != nil {
 			return fmt.Errorf("Error executing command in init container: %v", err)
 		}
@@ -222,12 +253,19 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 		log.StopWait()
 		log.Done("Build pod has started")
 
-		_, stdout, stderr := dockerterm.StdStreams()
-		stdoutLogger := kanikoLogger{out: stdout}
-		stderrLogger := kanikoLogger{out: stderr}
+		// Determine output writer
+		var writer io.Writer
+		if log == logpkg.GetInstance() {
+			writer = stdout
+		} else {
+			writer = log
+		}
+
+		stdoutLogger := kanikoLogger{out: writer}
+		stderrLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		err = services.StartLogsWithWriter(b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log.GetInstance(), stdoutLogger, stderrLogger)
+		err = services.StartLogsWithWriter(b.helper.Config, b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log, stdoutLogger, stderrLogger)
 		if err != nil {
 			return fmt.Errorf("Error during printling build logs: %v", err)
 		}
@@ -258,13 +296,19 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.
 	})
 
 	if err != nil {
+		// Delete all build pods on error
+		pods, getErr := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
+			LabelSelector: "devspace-build=true",
+		})
+		if getErr != nil {
+			return err
+		}
+		for _, pod := range pods.Items {
+			b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
+		}
+
 		return err
 	}
 
-	return nil
-}
-
-// PushImage is required to implement builder.Interface
-func (b *Builder) PushImage() error {
 	return nil
 }

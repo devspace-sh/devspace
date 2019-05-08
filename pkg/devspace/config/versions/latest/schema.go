@@ -7,7 +7,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta1"
+const Version string = "v1beta2"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -31,11 +31,24 @@ func NewRaw() *Config {
 
 // Config defines the configuration
 type Config struct {
-	Version     *string                  `yaml:"version"`
-	Images      *map[string]*ImageConfig `yaml:"images,omitempty"`
-	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Dev         *DevConfig               `yaml:"dev,omitempty"`
-	Cluster     *Cluster                 `yaml:"cluster,omitempty"`
+	Version      *string                  `yaml:"version"`
+	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
+	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
+	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Dev          *DevConfig               `yaml:"dev,omitempty"`
+	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
+}
+
+// DependencyConfig defines the devspace dependency
+type DependencyConfig struct {
+	Config *string       `yaml:"config"`
+	Source *SourceConfig `yaml:"source"`
+}
+
+// SourceConfig defines the dependency source
+type SourceConfig struct {
+	Git  *string `yaml:"git"`
+	Path *string `yaml:"path"`
 }
 
 // ImageConfig defines the image specification
@@ -43,33 +56,44 @@ type ImageConfig struct {
 	Image            *string      `yaml:"image"`
 	Tag              *string      `yaml:"tag,omitempty"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
-	Insecure         *bool        `yaml:"insecure,omitempty"`
-	SkipPush         *bool        `yaml:"skipPush,omitempty"`
+	Dockerfile       *string      `yaml:"dockerfile,omitempty"`
+	Context          *string      `yaml:"context,omitempty"`
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
-	Disabled   *bool         `yaml:"disabled,omitempty"`
-	Dockerfile *string       `yaml:"dockerfile,omitempty"`
-	Context    *string       `yaml:"context,omitempty"`
-	Kaniko     *KanikoConfig `yaml:"kaniko,omitempty"`
-	Docker     *DockerConfig `yaml:"docker,omitempty"`
-	Options    *BuildOptions `yaml:"options,omitempty"`
+	Disabled *bool         `yaml:"disabled,omitempty"`
+	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
+	Docker   *DockerConfig `yaml:"docker,omitempty"`
+	Custom   *CustomConfig `yaml:"custom,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	PreferMinikube *bool `yaml:"preferMinikube,omitempty"`
+	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty"`
+	SkipPush        *bool         `yaml:"skipPush,omitempty"`
+	DisableFallback *bool         `yaml:"disableFallback,omitempty"`
+	Options         *BuildOptions `yaml:"options,omitempty"`
+}
+
+// CustomConfig tells the DevSpace CLI to build with a custom build script
+type CustomConfig struct {
+	Command   *string    `yaml:"command,omitempty"`
+	Flags     *[]*string `yaml:"flags,omitempty"`
+	ImageFlag *string    `yaml:"imageFlag,omitempty"`
+	OnChange  *[]*string `yaml:"onChange,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cache        *bool      `yaml:"cache"`
-	SnapshotMode *string    `yaml:"snapshotMode,omitempty"`
-	Flags        *[]*string `yaml:"flags,omitempty"`
-	Namespace    *string    `yaml:"namespace,omitempty"`
-	PullSecret   *string    `yaml:"pullSecret,omitempty"`
+	Cache        *bool         `yaml:"cache,omitempty"`
+	SnapshotMode *string       `yaml:"snapshotMode,omitempty"`
+	Flags        *[]*string    `yaml:"flags,omitempty"`
+	Namespace    *string       `yaml:"namespace,omitempty"`
+	Insecure     *bool         `yaml:"insecure,omitempty"`
+	PullSecret   *string       `yaml:"pullSecret,omitempty"`
+	Options      *BuildOptions `yaml:"options,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images
