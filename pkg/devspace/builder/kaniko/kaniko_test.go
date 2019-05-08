@@ -123,16 +123,13 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	}
 
 	// 3. Create test namespace test-kaniko-build
-	_, err = kubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	})
 	if err != nil {
-		_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-		})
-		if err != nil {
-			t.Fatalf("Error creating namespace: %v", err)
-		}
+		t.Fatalf("Error creating namespace: %v", err)
 	}
 	//pod := k8sv1.Pod{}
 	//kubeClient.Core().Pods(namespace).Create(&pod)
