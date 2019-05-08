@@ -50,9 +50,9 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
 	return &Builder{
-		helper: helper.NewBuildHelper(EngineName, imageConfigName, imageConf, imageTag, isDev),
+		helper: helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client: client,
 	}, nil
 }

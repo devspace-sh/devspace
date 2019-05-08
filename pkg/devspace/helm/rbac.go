@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
@@ -23,9 +24,7 @@ const TillerRoleManagerName = "tiller-config-manager"
 
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
-func createTillerRBAC(kubectlClient kubernetes.Interface, tillerNamespace string) error {
-	config := configutil.GetConfig()
-
+func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string) error {
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
 	if err != nil {

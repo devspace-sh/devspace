@@ -3,8 +3,8 @@ package deploy
 import (
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -14,9 +14,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
-	config := configutil.GetConfig()
-
+func All(config *latest.Config, client kubernetes.Interface, generatedConfig *generated.Config, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	if config.Deployments != nil {
 		for _, deployConfig := range *config.Deployments {
 			var deployClient deploy.Interface
@@ -24,21 +22,21 @@ func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, 
 			var method string
 
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(client, deployConfig, log)
+				deployClient, err = kubectl.New(config, client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
 
 				method = "kubectl"
 			} else if deployConfig.Helm != nil {
-				deployClient, err = helm.New(client, deployConfig, log)
+				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
 
 				method = "helm"
 			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(client, deployConfig, log)
+				deployClient, err = component.New(config, client, deployConfig, log)
 				if err != nil {
 					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
 				}
@@ -65,8 +63,7 @@ func All(client kubernetes.Interface, generatedConfig *generated.Config, isDev, 
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(client kubernetes.Interface, deployments []string) {
-	config := configutil.GetConfig()
+func PurgeDeployments(config *latest.Config, client kubernetes.Interface, deployments []string) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -103,19 +100,19 @@ func PurgeDeployments(client kubernetes.Interface, deployments []string) {
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(client, deployConfig, log.GetInstance())
+				deployClient, err = kubectl.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = helm.New(client, deployConfig, log.GetInstance())
+				deployClient, err = helm.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(client, deployConfig, log.GetInstance())
+				deployClient, err = component.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create component deploy config: %v", err)
 					continue

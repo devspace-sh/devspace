@@ -56,9 +56,7 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
-	config := configutil.GetConfig()
-
+func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
 	buildNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return nil, errors.New("Error retrieving default namespace")
@@ -87,7 +85,7 @@ func NewBuilder(dockerClient client.CommonAPIClient, kubectl kubernetes.Interfac
 
 		kubectl:      kubectl,
 		dockerClient: dockerClient,
-		helper:       helper.NewBuildHelper(EngineName, imageConfigName, imageConf, imageTag, isDev),
+		helper:       helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
 	}
 
 	// create pull secret
@@ -231,7 +229,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		}
 
 		// Tell init container we are done
-		_, _, err = kubectl.ExecBuffered(b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
+		_, _, err = kubectl.ExecBuffered(b.helper.Config, b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
 		if err != nil {
 			return fmt.Errorf("Error executing command in init container: %v", err)
 		}
@@ -267,7 +265,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		stderrLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		err = services.StartLogsWithWriter(b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log, stdoutLogger, stderrLogger)
+		err = services.StartLogsWithWriter(b.helper.Config, b.kubectl, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log, stdoutLogger, stderrLogger)
 		if err != nil {
 			return fmt.Errorf("Error during printling build logs: %v", err)
 		}

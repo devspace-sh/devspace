@@ -6,8 +6,8 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
@@ -21,9 +21,8 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
-		config      = configutil.GetConfig()
 		builtImages = make(map[string]string)
 
 		// Parallel build
@@ -66,7 +65,7 @@ func All(client kubernetes.Interface, isDev, forceRebuild, sequential bool, log 
 		}
 
 		// Create new builder
-		builder, err := CreateBuilder(client, imageConfigName, &cImageConf, imageTag, isDev, log)
+		builder, err := CreateBuilder(config, client, imageConfigName, &cImageConf, imageTag, isDev, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "create builder")
 		}

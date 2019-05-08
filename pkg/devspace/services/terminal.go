@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -14,27 +14,23 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) error {
-	command := getCommand(args)
+func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) error {
+	command := getCommand(config, args)
 
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
 
-	if configutil.ConfigExists() {
-		config := configutil.GetConfig()
-
-		if config.Dev != nil && config.Dev.Terminal != nil {
-			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-				Selector:      config.Dev.Terminal.Selector,
-				Namespace:     config.Dev.Terminal.Namespace,
-				LabelSelector: config.Dev.Terminal.LabelSelector,
-				ContainerName: config.Dev.Terminal.ContainerName,
-			}
+	if config != nil && config.Dev != nil && config.Dev.Terminal != nil {
+		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+			Selector:      config.Dev.Terminal.Selector,
+			Namespace:     config.Dev.Terminal.Namespace,
+			LabelSelector: config.Dev.Terminal.LabelSelector,
+			ContainerName: config.Dev.Terminal.ContainerName,
 		}
 	}
 
-	targetSelector, err := targetselector.NewTargetSelector(selectorParameter, true)
+	targetSelector, err := targetselector.NewTargetSelector(config, selectorParameter, true)
 	if err != nil {
 		return err
 	}
@@ -44,7 +40,7 @@ func StartTerminal(client kubernetes.Interface, cmdParameter targetselector.CmdP
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig()
+	kubeconfig, err := kubectl.GetClientConfig(config)
 	if err != nil {
 		return err
 	}
@@ -73,15 +69,12 @@ func StartTerminal(client kubernetes.Interface, cmdParameter targetselector.CmdP
 	return err
 }
 
-func getCommand(args []string) []string {
+func getCommand(config *latest.Config, args []string) []string {
 	var command []string
 
-	if configutil.ConfigExists() {
-		config := configutil.GetConfig()
-		if config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Command != nil && len(*config.Dev.Terminal.Command) > 0 {
-			for _, cmd := range *config.Dev.Terminal.Command {
-				command = append(command, *cmd)
-			}
+	if config != nil && config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Command != nil && len(*config.Dev.Terminal.Command) > 0 {
+		for _, cmd := range *config.Dev.Terminal.Command {
+			command = append(command, *cmd)
 		}
 	}
 

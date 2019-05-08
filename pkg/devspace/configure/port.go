@@ -6,13 +6,11 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
 // GetNameOfFirstHelmDeployment retrieves the first helm deployment name
-func GetNameOfFirstHelmDeployment() string {
-	config := configutil.GetConfig()
-
+func GetNameOfFirstHelmDeployment(config *latest.Config) string {
 	if config.Deployments != nil {
 		for _, deploymentConfig := range *config.Deployments {
 			if deploymentConfig.Helm != nil {
@@ -38,7 +36,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
 			services := *config.Dev.Selectors
 
-			var service *v1.SelectorConfig
+			var service *latest.SelectorConfig
 			if serviceName != "" {
 				service = getServiceWithName(*config.Dev.Selectors, serviceName)
 				if service == nil {
@@ -49,7 +47,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 			}
 			labelSelectorMap = *service.LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
 		}
 	}
 
@@ -65,7 +63,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 		return fmt.Errorf("Error parsing port mappings: %s", err.Error())
 	}
 
-	insertOrReplacePortMapping(namespace, labelSelectorMap, serviceName, portMappings)
+	insertOrReplacePortMapping(config, namespace, labelSelectorMap, serviceName, portMappings)
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
@@ -96,14 +94,14 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 	ports := strings.Split(argPorts, ",")
 
 	if config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 {
-		newPortForwards := make([]*v1.PortForwardingConfig, 0, len(*config.Dev.Ports)-1)
+		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(*config.Dev.Ports)-1)
 
 		for _, v := range *config.Dev.Ports {
 			if removeAll {
 				continue
 			}
 
-			newPortMappings := []*v1.PortMapping{}
+			newPortMappings := []*latest.PortMapping{}
 
 			for _, pm := range *v.PortMappings {
 				if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
@@ -140,11 +138,9 @@ func containsPort(port string, ports []string) bool {
 	return false
 }
 
-func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*string, serviceName string, portMappings []*v1.PortMapping) {
-	config := configutil.GetConfig()
-
+func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSelectorMap map[string]*string, serviceName string, portMappings []*latest.PortMapping) {
 	if config.Dev.Ports == nil {
-		config.Dev.Ports = &[]*v1.PortForwardingConfig{}
+		config.Dev.Ports = &[]*latest.PortForwardingConfig{}
 	}
 
 	// Check if we should add to existing port mapping
@@ -170,7 +166,7 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 		labelSelectorMap = nil
 	}
 
-	portMap := append(*config.Dev.Ports, &v1.PortForwardingConfig{
+	portMap := append(*config.Dev.Ports, &latest.PortForwardingConfig{
 		LabelSelector: &labelSelectorMap,
 		PortMappings:  &portMappings,
 		Namespace:     &namespace,
@@ -180,8 +176,8 @@ func insertOrReplacePortMapping(namespace string, labelSelectorMap map[string]*s
 	config.Dev.Ports = &portMap
 }
 
-func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
-	portMappings := make([]*v1.PortMapping, 0, 1)
+func parsePortMappings(portMappingsString string) ([]*latest.PortMapping, error) {
+	portMappings := make([]*latest.PortMapping, 0, 1)
 	portMappingsSplitted := strings.Split(portMappingsString, ",")
 
 	for _, v := range portMappingsSplitted {
@@ -191,7 +187,7 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 			return nil, fmt.Errorf("Error parsing port mapping: %s", v)
 		}
 
-		portMappingStruct := &v1.PortMapping{}
+		portMappingStruct := &latest.PortMapping{}
 		firstPort, err := strconv.Atoi(portMapping[0])
 
 		if err != nil {
@@ -219,7 +215,7 @@ func parsePortMappings(portMappingsString string) ([]*v1.PortMapping, error) {
 	return portMappings, nil
 }
 
-func getServiceWithName(services []*v1.SelectorConfig, name string) *v1.SelectorConfig {
+func getServiceWithName(services []*latest.SelectorConfig, name string) *latest.SelectorConfig {
 	for _, service := range services {
 		if *service.Name == name {
 			return service

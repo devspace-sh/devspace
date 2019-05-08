@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -71,8 +72,8 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 }
 
 // ExecStream executes a command and streams the output to the given streams
-func ExecStream(client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	kubeconfig, err := GetClientConfig()
+func ExecStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	kubeconfig, err := GetClientConfig(config)
 	if err != nil {
 		return err
 	}
@@ -86,11 +87,11 @@ func ExecStream(client kubernetes.Interface, pod *k8sv1.Pod, container string, c
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func ExecBuffered(kubectlClient kubernetes.Interface, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
+func ExecBuffered(config *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
 	stdoutReader, stdoutWriter, _ := os.Pipe()
 	stderrReader, stderrWriter, _ := os.Pipe()
 
-	err := ExecStream(kubectlClient, pod, container, command, false, nil, stdoutWriter, stderrWriter)
+	err := ExecStream(config, kubectlClient, pod, container, command, false, nil, stdoutWriter, stderrWriter)
 	if err != nil {
 		return nil, nil, err
 	}

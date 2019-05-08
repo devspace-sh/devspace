@@ -8,13 +8,13 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(client kubernetes.Interface, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
+func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
 	var (
 		localPath = "."
 	)
@@ -24,7 +24,7 @@ func StartSyncFromCmd(client kubernetes.Interface, cmdParameter targetselector.C
 		return fmt.Errorf("Unable to resolve localSubPath %s: %v", localPath, err)
 	}
 
-	targetSelector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
+	targetSelector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}, true)
 	if err != nil {
@@ -42,15 +42,16 @@ func StartSyncFromCmd(client kubernetes.Interface, cmdParameter targetselector.C
 
 	syncDone := make(chan bool)
 	syncConfig := &sync.SyncConfig{
-		Kubectl:      client,
-		Pod:          pod,
-		Container:    container,
-		WatchPath:    absLocalPath,
-		DestPath:     containerPath,
-		ExcludePaths: exclude,
-		CustomLog:    log,
-		SyncDone:     syncDone,
-		Verbose:      false,
+		DevSpaceConfig: config,
+		Kubectl:        client,
+		Pod:            pod,
+		Container:      container,
+		WatchPath:      absLocalPath,
+		DestPath:       containerPath,
+		ExcludePaths:   exclude,
+		CustomLog:      log,
+		SyncDone:       syncDone,
+		Verbose:        false,
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
@@ -67,8 +68,7 @@ func StartSyncFromCmd(client kubernetes.Interface, cmdParameter targetselector.C
 }
 
 // StartSync starts the syncing functionality
-func StartSync(client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
-	config := configutil.GetConfig()
+func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
 	if config.Dev.Sync == nil {
 		return []*sync.SyncConfig{}, nil
 	}
@@ -85,7 +85,7 @@ func StartSync(client kubernetes.Interface, verboseSync bool, log log.Logger) ([
 			return nil, fmt.Errorf("Unable to resolve localSubPath %s: %v", localPath, err)
 		}
 
-		selector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
+		selector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
 				Selector:      syncPath.Selector,
 				Namespace:     syncPath.Namespace,
@@ -118,6 +118,7 @@ func StartSync(client kubernetes.Interface, verboseSync bool, log log.Logger) ([
 		}
 
 		syncConfig := &sync.SyncConfig{
+			DevSpaceConfig:            config,
 			Kubectl:                   client,
 			Pod:                       pod,
 			Container:                 container,

@@ -112,7 +112,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	} else if cmd.Chart != "" {
 		newDeployment, err = configure.GetHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
 	} else if cmd.Dockerfile != "" {
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
 	} else if cmd.Image != "" {
 		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image)
 	} else if cmd.Component != "" {

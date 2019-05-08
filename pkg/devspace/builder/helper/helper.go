@@ -5,9 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/docker/cli/cli/command/image/build"
@@ -19,7 +18,8 @@ import (
 // BuildHelper is the helper class to store common functionality used by both the docker and kaniko builder
 type BuildHelper struct {
 	ImageConfigName string
-	ImageConf       *v1.ImageConfig
+	ImageConf       *latest.ImageConfig
+	Config          *latest.Config
 
 	DockerfilePath string
 	ContextPath    string
@@ -36,17 +36,15 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(engineName string, imageConfigName string, imageConf *v1.ImageConfig, imageTag string, isDev bool) *BuildHelper {
+func NewBuildHelper(config *latest.Config, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
-		dockerfilePath, contextPath = GetDockerfileAndContext(imageConfigName, imageConf, isDev)
+		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
 		imageName                   = *imageConf.Image
 	)
 
 	// Check if we should overwrite entrypoint
 	var entrypoint *[]*string
 	if isDev {
-		config := configutil.GetConfig()
-
 		if config.Dev != nil && config.Dev.OverrideImages != nil {
 			for _, imageOverrideConfig := range *config.Dev.OverrideImages {
 				if *imageOverrideConfig.Name == imageConfigName {
@@ -69,6 +67,7 @@ func NewBuildHelper(engineName string, imageConfigName string, imageConf *v1.Ima
 		EngineName: engineName,
 
 		Entrypoint: entrypoint,
+		Config:     config,
 	}
 }
 

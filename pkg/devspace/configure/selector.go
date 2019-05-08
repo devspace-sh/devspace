@@ -19,7 +19,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 			services := *config.Dev.Selectors
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
 		}
 	}
 

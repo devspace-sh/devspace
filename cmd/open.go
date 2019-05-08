@@ -149,7 +149,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get kubernetes config
-	config, err := kubectl.GetClientConfig()
+	config, err := kubectl.GetClientConfig(devspaceConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	// Not found
 	if domain == "" {
-		err = provider.CreateIngress(client, space, host)
+		err = provider.CreateIngress(devspaceConfig, client, space, host)
 		if err != nil {
 			log.Fatalf("Error creating ingress: %v", err)
 		}

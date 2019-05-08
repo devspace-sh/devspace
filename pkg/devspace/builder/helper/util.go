@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/docker/docker/pkg/archive"
 )
@@ -21,9 +20,8 @@ const DefaultDockerfilePath = "./Dockerfile"
 const DefaultContextPath = "./"
 
 // GetDockerfileAndContext retrieves the dockerfile and context
-func GetDockerfileAndContext(imageConfigName string, imageConf *latest.ImageConfig, isDev bool) (string, string) {
+func GetDockerfileAndContext(config *latest.Config, imageConfigName string, imageConf *latest.ImageConfig, isDev bool) (string, string) {
 	var (
-		config         = configutil.GetConfig()
 		dockerfilePath = DefaultDockerfilePath
 		contextPath    = DefaultContextPath
 	)

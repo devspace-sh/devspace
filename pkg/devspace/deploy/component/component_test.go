@@ -67,7 +67,7 @@ func TestComponentDeployment(t *testing.T) {
 	helmClient := helm.NewFakeClient(kubeClient, configutil.TestNamespace)
 
 	// Init handler
-	deployHandler, err := New(kubeClient, deployConfig, log.GetInstance())
+	deployHandler, err := New(testConfig, kubeClient, deployConfig, log.GetInstance())
 
 	// Use fake helm client
 	deployHandler.HelmConfig.Helm = helmClient

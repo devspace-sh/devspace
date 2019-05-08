@@ -34,15 +34,13 @@ type DeployConfig struct {
 }
 
 // New creates a new deploy config for kubectl
-func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
 	if deployConfig.Kubectl.Manifests == nil {
 		return nil, errors.New("No manifests defined for kubectl deploy")
 	}
-
-	config := configutil.GetConfig()
 
 	context := ""
 	if config.Cluster != nil && config.Cluster.KubeContext != nil {

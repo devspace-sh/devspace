@@ -9,20 +9,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/portforward"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(client kubernetes.Interface, log log.Logger) ([]*portforward.PortForwarder, error) {
-	config := configutil.GetConfig()
+func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log log.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))
 
 		for portConfigIndex, portForwarding := range *config.Dev.Ports {
-			selector, err := targetselector.NewTargetSelector(&targetselector.SelectorParameter{
+			selector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Selector:      portForwarding.Selector,
 					Namespace:     portForwarding.Namespace,
@@ -63,7 +62,7 @@ func StartPortForwarding(client kubernetes.Interface, log log.Logger) ([]*portfo
 
 				readyChan := make(chan struct{})
 
-				pf, err := kubectl.NewPortForwarder(client, pod, ports, addresses, make(chan struct{}), readyChan)
+				pf, err := kubectl.NewPortForwarder(config, client, pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
 					log.Fatalf("Error starting port forwarding: %v", err)
 				}

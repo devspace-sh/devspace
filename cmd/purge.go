@@ -54,7 +54,10 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
-	kubectl, err := kubectl.NewClient()
+	// Get the config
+	config := configutil.GetConfig()
+
+	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
@@ -67,5 +70,5 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	deploy.PurgeDeployments(kubectl, deployments)
+	deploy.PurgeDeployments(config, kubectl, deployments)
 }

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -29,15 +28,7 @@ type TargetSelector struct {
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector(sp *SelectorParameter, allowPick bool) (*TargetSelector, error) {
-	var (
-		config *latest.Config
-	)
-
-	if configutil.ConfigExists() {
-		config = configutil.GetConfig()
-	}
-
+func NewTargetSelector(config *latest.Config, sp *SelectorParameter, allowPick bool) (*TargetSelector, error) {
 	// Get namespace
 	namespace, err := sp.GetNamespace(config)
 	if err != nil {
@@ -77,7 +68,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 
 		return pod, nil
 	} else if t.pick == false && t.labelSelector != nil {
-		pod, err := kubectl.GetNewestRunningPod(client, *t.labelSelector, t.namespace, time.Second*120)
+		pod, err := kubectl.GetNewestRunningPod(t.config, client, *t.labelSelector, t.namespace, time.Second*120)
 		if err != nil {
 			return nil, err
 		}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -104,47 +105,48 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
+	// Get the config
+	config := configutil.GetConfig()
+
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
+	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
 	// Create the image pull secrets and add them to the default service account
 	if cmd.CreateImagePullSecrets {
-		dockerClient, err := docker.NewClient(false)
+		dockerClient, err := docker.NewClient(config, false)
 		if err != nil {
 			dockerClient = nil
 		}
 
-		err = registry.CreatePullSecrets(dockerClient, client, log.GetInstance())
+		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Build and deploy images
-	err = cmd.buildAndDeploy(client, args)
+	err = cmd.buildAndDeploy(config, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) error {
-	config := configutil.GetConfig()
-
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Interface, args []string) error {
 	if cmd.SkipPipeline == false {
 		// Load config
 		generatedConfig, err := generated.LoadConfig()
@@ -153,7 +155,7 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 		}
 
 		// Build image if necessary
-		builtImages, err := build.All(client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		builtImages, err := build.All(config, client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
@@ -169,7 +171,7 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(client, generatedConfig, true, cmd.ForceDeploy, builtImages, log.GetInstance())
+			err = deploy.All(config, client, generatedConfig, true, cmd.ForceDeploy, builtImages, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}
@@ -185,12 +187,12 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 	// Start services
 	if cmd.ExitAfterDeploy == false {
 		// Start services
-		err := cmd.startServices(client, args, log.GetInstance())
+		err := cmd.startServices(config, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(client, args)
+				return cmd.buildAndDeploy(config, client, args)
 			}
 
 			return err
@@ -200,9 +202,9 @@ func (cmd *DevCmd) buildAndDeploy(client kubernetes.Interface, args []string) er
 	return nil
 }
 
-func (cmd *DevCmd) startServices(client kubernetes.Interface, args []string, log log.Logger) error {
+func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interface, args []string, log log.Logger) error {
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(client, log)
+		portForwarder, err := services.StartPortForwarding(config, client, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -215,7 +217,7 @@ func (cmd *DevCmd) startServices(client kubernetes.Interface, args []string, log
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -227,7 +229,6 @@ func (cmd *DevCmd) startServices(client kubernetes.Interface, args []string, log
 		}()
 	}
 
-	config := configutil.GetConfig()
 	exitChan := make(chan error)
 	autoReloadPaths := GetPaths()
 
@@ -268,13 +269,13 @@ func (cmd *DevCmd) startServices(client kubernetes.Interface, args []string, log
 	}
 
 	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
-		return services.StartTerminal(client, params, args, exitChan, log)
+		return services.StartTerminal(config, client, params, args, exitChan, log)
 	}
 
 	log.Info("Will now try to print the logs of a running pod...")
 
 	// Start attaching to a running pod
-	err := services.StartAttach(client, params, exitChan, log)
+	err := services.StartAttach(config, client, params, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
 		if _, ok := err.(*reloadError); ok {

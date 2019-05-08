@@ -60,6 +60,8 @@ func createTestResources(client kubernetes.Interface) error {
 }
 
 func TestTillerEnsure(t *testing.T) {
+	config := createFakeConfig()
+
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
@@ -69,37 +71,39 @@ func TestTillerEnsure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ensureTiller(client, configutil.TestNamespace, false)
+	err = ensureTiller(config, client, configutil.TestNamespace, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	isTillerDeployed := IsTillerDeployed(client, configutil.TestNamespace)
+	isTillerDeployed := IsTillerDeployed(config, client, configutil.TestNamespace)
 	if isTillerDeployed == false {
 		t.Fatal("Expected that tiller is deployed")
 	}
 }
 
 func TestTillerCreate(t *testing.T) {
+	config := createFakeConfig()
+
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
 	tillerOptions := getTillerOptions(configutil.TestNamespace)
 
-	err := createTiller(client, configutil.TestNamespace, tillerOptions)
+	err := createTiller(config, client, configutil.TestNamespace, tillerOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestTillerDelete(t *testing.T) {
-	createFakeConfig()
+	config := createFakeConfig()
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
 	// Inject an event into the fake client.
-	err := DeleteTiller(client, configutil.TestNamespace)
+	err := DeleteTiller(config, client, configutil.TestNamespace)
 	if err != nil {
 		t.Fatal(err)
 	}

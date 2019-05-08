@@ -3,7 +3,7 @@ package helm
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -17,13 +17,14 @@ type DeployConfig struct {
 	Helm helm.Interface
 
 	TillerNamespace  string
-	DeploymentConfig *v1.DeploymentConfig
+	DeploymentConfig *latest.DeploymentConfig
 	Log              log.Logger
+
+	config *latest.Config
 }
 
 // New creates a new helm deployment client
-func New(kubectl kubernetes.Interface, deployConfig *v1.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
-	config := configutil.GetConfig()
+func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	tillerNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return nil, err
@@ -37,13 +38,14 @@ func New(kubectl kubernetes.Interface, deployConfig *v1.DeploymentConfig, log lo
 		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
 		Log:              log,
+		config:           config,
 	}, nil
 }
 
 // Delete deletes the release
 func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	// Delete with helm engine
-	isDeployed := helm.IsTillerDeployed(d.Kube, d.TillerNamespace)
+	isDeployed := helm.IsTillerDeployed(d.config, d.Kube, d.TillerNamespace)
 	if isDeployed == false {
 		return nil
 	}
@@ -52,7 +54,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		var err error
 
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.TillerNamespace, d.Log, false)
 		if err != nil {
 			return errors.Wrap(err, "new helm client")
 		}

@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -77,23 +78,26 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
+	// Load Config and modify it
+	config := configutil.GetConfigWithoutDefaults(true)
+
 	// Prepare the config
-	cmd.prepareConfig()
+	cmd.prepareConfig(config)
 
 	// Create kubectl client
-	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
+	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
@@ -101,10 +105,10 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Create the image pull secrets and add them to the default service account
 	if cmd.CreateImagePullSecrets {
 		// Create docker client
-		dockerClient, err := docker.NewClient(false)
+		dockerClient, err := docker.NewClient(config, false)
 
 		// Create pull secrets and private registry if necessary
-		err = registry.CreatePullSecrets(dockerClient, client, log.GetInstance())
+		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -117,7 +121,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build images
-	builtImages, err := build.All(client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	builtImages, err := build.All(config, client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,7 +135,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(client, generatedConfig, false, cmd.ForceDeploy, builtImages, log.GetInstance())
+	err = deploy.All(config, client, generatedConfig, false, cmd.ForceDeploy, builtImages, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,10 +155,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func (cmd *DeployCmd) prepareConfig() {
-	// Load Config and modify it
-	config := configutil.GetConfigWithoutDefaults(true)
-
+func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
 	if cmd.Namespace != "" {
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,

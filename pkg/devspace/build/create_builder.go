@@ -17,20 +17,20 @@ import (
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log log.Logger) (builder.Interface, error) {
+func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log log.Logger) (builder.Interface, error) {
 	var imageBuilder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(false)
+		dockerClient, err := dockerclient.NewClient(config, false)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		imageBuilder, err = kaniko.NewBuilder(dockerClient, client, imageConfigName, imageConf, imageTag, isDev, log)
+		imageBuilder, err = kaniko.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, isDev, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -40,7 +40,7 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 			preferMinikube = *imageConf.Build.Docker.PreferMinikube
 		}
 
-		dockerClient, err := dockerclient.NewClient(preferMinikube)
+		dockerClient, err := dockerclient.NewClient(config, preferMinikube)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
@@ -54,10 +54,10 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 
 			// Fallback to kaniko
 			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
-			return CreateBuilder(client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, isDev, log)
+			return CreateBuilder(config, client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, isDev, log)
 		}
 
-		imageBuilder, err = docker.NewBuilder(dockerClient, imageConfigName, imageConf, imageTag, isDev)
+		imageBuilder, err = docker.NewBuilder(config, dockerClient, imageConfigName, imageConf, imageTag, isDev)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker builder: %v", err)
 		}

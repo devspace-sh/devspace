@@ -53,10 +53,8 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
-		config := configutil.GetConfig()
-
 		// Use default namespace here
-		defaultNamespace, err := configutil.GetDefaultNamespace(config)
+		defaultNamespace, err := configutil.GetDefaultNamespace(client.config)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +184,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 
 	// Only check if the error is time out
 	if strings.Index(errMessage, "timed out waiting") != -1 {
-		config, err := kubectl.GetClientConfig()
+		config, err := kubectl.GetClientConfig(client.config)
 		if err != nil {
 			log.Warnf("Error loading kubectl config: %v", err)
 			return srcErr

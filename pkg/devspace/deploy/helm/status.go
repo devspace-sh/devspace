@@ -17,7 +17,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 
 	if d.Helm == nil {
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.TillerNamespace, d.Log, false)
 		if err != nil {
 			return nil, err
 		}

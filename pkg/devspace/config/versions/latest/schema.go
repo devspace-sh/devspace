@@ -31,11 +31,24 @@ func NewRaw() *Config {
 
 // Config defines the configuration
 type Config struct {
-	Version     *string                  `yaml:"version"`
-	Images      *map[string]*ImageConfig `yaml:"images,omitempty"`
-	Deployments *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Dev         *DevConfig               `yaml:"dev,omitempty"`
-	Cluster     *Cluster                 `yaml:"cluster,omitempty"`
+	Version      *string                  `yaml:"version"`
+	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
+	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
+	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Dev          *DevConfig               `yaml:"dev,omitempty"`
+	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
+}
+
+// DependencyConfig defines the devspace dependency
+type DependencyConfig struct {
+	Config *string       `yaml:"config"`
+	Source *SourceConfig `yaml:"source"`
+}
+
+// SourceConfig defines the dependency source
+type SourceConfig struct {
+	Git  *string `yaml:"git"`
+	Path *string `yaml:"path"`
 }
 
 // ImageConfig defines the image specification

@@ -69,7 +69,7 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *string) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string, cloudProvider *string) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
 		registryURL    = ""
@@ -78,7 +78,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	)
 
 	// Get docker client
-	client, err := docker.NewClient(true)
+	client, err := docker.NewClient(config, true)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -126,7 +126,7 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 		}
 
 		// Don't push image in minikube
-		if minikube.IsMinikube() {
+		if minikube.IsMinikube(config) {
 			retImageConfig.Image = ptr.String("devspace")
 			if retImageConfig.Build != nil && retImageConfig.Build.Kaniko != nil {
 				retImageConfig.Build.Kaniko = nil
