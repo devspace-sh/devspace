@@ -201,7 +201,7 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] {
+			if imageCache.ImageName == image[0] && imageCache.Tag != "" {
 				if builtImages != nil {
 					if _, ok := builtImages[image[0]]; ok {
 						shouldRedeploy = true
