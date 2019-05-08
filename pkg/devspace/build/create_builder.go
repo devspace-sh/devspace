@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
@@ -10,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -43,6 +45,18 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 
+		// Check if docker daemon is running
+		_, err = dockerClient.Ping(context.Background())
+		if err != nil {
+			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.DisableFallback != nil && *imageConf.Build.Docker.DisableFallback {
+				return nil, fmt.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
+			}
+
+			// Fallback to kaniko
+			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
+			return CreateBuilder(client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, isDev, log)
+		}
+
 		imageBuilder, err = docker.NewBuilder(dockerClient, imageConfigName, imageConf, imageTag, isDev)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker builder: %v", err)
@@ -50,4 +64,25 @@ func CreateBuilder(client kubernetes.Interface, imageConfigName string, imageCon
 	}
 
 	return imageBuilder, nil
+}
+
+func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {
+	kanikoConfig := &latest.ImageConfig{
+		Image:            dockerConfig.Image,
+		Tag:              dockerConfig.Tag,
+		Dockerfile:       dockerConfig.Dockerfile,
+		Context:          dockerConfig.Context,
+		CreatePullSecret: dockerConfig.CreatePullSecret,
+		Build: &latest.BuildConfig{
+			Kaniko: &latest.KanikoConfig{
+				Cache: ptr.Bool(true),
+			},
+		},
+	}
+
+	if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
+		kanikoConfig.Build.Kaniko.Options = dockerConfig.Build.Docker.Options
+	}
+
+	return kanikoConfig
 }
