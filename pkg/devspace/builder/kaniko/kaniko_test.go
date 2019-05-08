@@ -22,10 +22,9 @@ import (
 const testNamespace = "test-kaniko-build"
 
 func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
-	// @Florian
 
 	// 1. Write test dockerfile and context to a temp folder
-	dir, err := ioutil.TempDir("", "testDocker")
+	dir, err := ioutil.TempDir("", "testKaniko")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
