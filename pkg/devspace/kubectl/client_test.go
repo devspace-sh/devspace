@@ -16,10 +16,12 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func createTestConfig() {
+func createTestConfig() *latest.Config {
 	// Create fake devspace config
 	testConfig := &latest.Config{}
 	configutil.SetFakeConfig(testConfig)
+
+	return testConfig
 }
 
 func createTestResources(client kubernetes.Interface) error {
@@ -114,7 +116,7 @@ func TestGetPodStatus(t *testing.T) {
 }
 
 func TestGetNewestRunningPod(t *testing.T) {
-	createTestConfig()
+	config := createTestConfig()
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
@@ -123,7 +125,7 @@ func TestGetNewestRunningPod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pod, err := GetNewestRunningPod(client, "app.kubernetes.io/name=devspace-app", configutil.TestNamespace, time.Minute)
+	pod, err := GetNewestRunningPod(config, client, "app.kubernetes.io/name=devspace-app", configutil.TestNamespace, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
