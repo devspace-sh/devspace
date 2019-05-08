@@ -1,19 +1,17 @@
-version: v1beta2
+version: v1beta1
 images:
   node:
     image: node
-    dockerfile: node/Dockerfile
-    context: node/
+    skipPush: true
     build:
-      docker:
-        skipPush: true
+      dockerfile: node/Dockerfile
+      context: node/
   php:
     image: php
-    dockerfile: php/Dockerfile
-    context: php/
+    skipPush: true
     build:
-      docker:
-        skipPush: true
+      dockerfile: php/Dockerfile
+      context: php/
 deployments:
 - name: devspace-node
   kubectl:

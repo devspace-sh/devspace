@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -15,26 +15,30 @@ import (
 )
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
-	return StartLogsWithWriter(config, client, cmdParameter, follow, tail, log, os.Stdout, os.Stderr)
+func StartLogs(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+	return StartLogsWithWriter(client, cmdParameter, follow, tail, log, os.Stdout, os.Stderr)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
+func StartLogsWithWriter(client *kubernetes.Clientset, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
 
-	if config != nil && config.Dev != nil && config.Dev.Terminal != nil {
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Selector:      config.Dev.Terminal.Selector,
-			Namespace:     config.Dev.Terminal.Namespace,
-			LabelSelector: config.Dev.Terminal.LabelSelector,
-			ContainerName: config.Dev.Terminal.ContainerName,
+	if configutil.ConfigExists() {
+		config := configutil.GetConfig()
+
+		if config.Dev != nil && config.Dev.Terminal != nil {
+			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+				Selector:      config.Dev.Terminal.Selector,
+				Namespace:     config.Dev.Terminal.Namespace,
+				LabelSelector: config.Dev.Terminal.LabelSelector,
+				ContainerName: config.Dev.Terminal.ContainerName,
+			}
 		}
 	}
 
-	targetSelector, err := targetselector.NewTargetSelector(config, selectorParameter, true)
+	targetSelector, err := targetselector.NewTargetSelector(selectorParameter, true)
 	if err != nil {
 		return err
 	}
@@ -44,7 +48,7 @@ func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmd
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
 		return err
 	}

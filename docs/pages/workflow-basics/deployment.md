@@ -22,7 +22,7 @@ DevSpace CLI lets you define the following types of deployments:
 - [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
 
 ## Default deployment created by `devspace init`
-When running `devspace init` within your project, DevSpace CLI defines a deployment called `default` within your config file `devspace.yaml` which looks like this:
+When running `devspace init` within your project, DevSpace CLI defines a deployment called `default` within your config file `.devspace/config.yaml` which looks like this:
 ```yaml
 # Defines an array of everything (component, Helm chart, Kubernetes maninfests) 
 # that will be deployed with DevSpace CLI in the specified order

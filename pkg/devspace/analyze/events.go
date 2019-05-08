@@ -17,7 +17,7 @@ import (
 const EventRelevanceTime = 1800 * time.Second
 
 // Events checks the namespace events for warnings
-func Events(client kubernetes.Interface, config *rest.Config, namespace string) ([]string, error) {
+func Events(client *kubernetes.Clientset, config *rest.Config, namespace string) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing events")

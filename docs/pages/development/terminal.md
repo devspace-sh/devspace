@@ -18,7 +18,7 @@ By default, `devspace dev` will deploy your containers but your application will
 
 ## Print logs instead of opening a terminal 
 
-If you rather want to print the container logs instead of opening a terminal to the container you can define this in the `devspace.yaml`:
+If you rather want to print the container logs instead of opening a terminal to the container you can define this in the `.devspace/config.yaml`:
 
 ```yaml
 dev:
@@ -62,7 +62,7 @@ devspace enter -l "release=test"    # --label-sector | Use the label selector "r
 [See the full specification for `devspace enter`.](/docs/cli-commands/enter)
 
 ## Configure the terminal proxy
-The configuration for the terminal proxy can be set within the `dev.terminal` section of `devspace.yaml`.
+The configuration for the terminal proxy can be set within the `dev.terminal` section of `.devspace/config.yaml`.
 ```yaml
 dev:
   selectors:

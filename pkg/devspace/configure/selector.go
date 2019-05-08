@@ -15,11 +15,13 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 	var err error
 
 	if labelSelector == "" {
+		config := configutil.GetConfig()
+
 		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
 			services := *config.Dev.Selectors
 			labelSelectorMap = *services[0].LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
+			labelSelector = "release=" + GetNameOfFirstHelmDeployment()
 		}
 	}
 

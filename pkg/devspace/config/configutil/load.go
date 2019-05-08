@@ -191,7 +191,7 @@ func loadConfigFromInterface(m interface{}) (*latest.Config, error) {
 	return newConfig, nil
 }
 
-// LoadConfigs loads all the configs from devspace-configs.yaml
+// LoadConfigs loads all the configs from the .devspace/configs.yaml
 func LoadConfigs(configs *configs.Configs, path string) error {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {

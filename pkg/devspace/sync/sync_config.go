@@ -8,9 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-
 	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -33,9 +31,7 @@ const ErrorAck string = "ERROR"
 
 // SyncConfig holds the necessary information for the syncing process
 type SyncConfig struct {
-	DevSpaceConfig *latest.Config
-
-	Kubectl              kubernetes.Interface
+	Kubectl              *kubernetes.Clientset
 	Pod                  *k8sv1.Pod
 	Container            *k8sv1.Container
 	WatchPath            string
@@ -103,9 +99,9 @@ func (s *SyncConfig) Logln(line interface{}) {
 // Error handles a sync error with context
 func (s *SyncConfig) Error(err error) {
 	if s.Pod != nil {
-		s.CustomLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+		syncLog.WithKey("pod", s.Pod.Name).WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 	} else {
-		s.CustomLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
+		syncLog.WithKey("local", s.WatchPath).WithKey("container", s.DestPath).Errorf("Error: %v, Stack: %v", err, errors.ErrorStack(err))
 	}
 
 	if s.errorChan != nil {

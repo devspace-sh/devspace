@@ -9,7 +9,7 @@ import (
 )
 
 // StatefulSets checks stateful sets for problems
-func StatefulSets(client kubernetes.Interface, namespace string) ([]string, error) {
+func StatefulSets(client *kubernetes.Clientset, namespace string) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing stateful sets")

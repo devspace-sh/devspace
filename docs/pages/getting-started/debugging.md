@@ -21,7 +21,7 @@ Running `devspace analyze` will show a lot of useful debugging information, incl
 </summary>
 ```bash
 $ devspace analyze
-[info]   Loaded config from devspace-configs.yaml
+[info]   Loaded config from .devspace/configs.yaml
                                            
   ================================================================================
                             Pods (1 potential issue(s))                           

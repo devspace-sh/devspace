@@ -1,12 +1,10 @@
 package builder
 
-import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-)
+import "github.com/docker/docker/api/types"
 
-// Interface defines methods for builders docker, kaniko and custom
+// Interface defines methods for builders (e.g. docker, kaniko)
 type Interface interface {
-	ShouldRebuild(cache *generated.CacheConfig) (bool, error)
-	Build(log log.Logger) error
+	Authenticate() (*types.AuthConfig, error)
+	BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error
+	PushImage() error
 }

@@ -72,9 +72,7 @@ func LoadCloudConfig() (ProviderConfig, error) {
 		}
 
 		if _, ok := loadedConfig[DevSpaceCloudProviderName]; ok {
-			if loadedConfig[DevSpaceCloudProviderName].Host == "" {
-				loadedConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
-			}
+			loadedConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
 		} else {
 			loadedConfig[DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
 		}

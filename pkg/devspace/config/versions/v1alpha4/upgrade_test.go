@@ -3,7 +3,7 @@ package v1alpha4
 import (
 	"testing"
 
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 

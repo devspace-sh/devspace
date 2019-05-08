@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
+	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,24 +26,7 @@ func Password(password string) (string, error) {
 // Directory creates the hash value of a directory
 func Directory(path string) (string, error) {
 	hash := sha256.New()
-
-	// Stat dir / file
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return "", err
-	}
-
-	// Hash file
-	if fileInfo.IsDir() == false {
-		size := strconv.FormatInt(fileInfo.Size(), 10)
-		mTime := strconv.FormatInt(fileInfo.ModTime().UnixNano(), 10)
-		io.WriteString(hash, path+";"+size+";"+mTime)
-
-		return fmt.Sprintf("%x", hash.Sum(nil)), nil
-	}
-
-	// Hash directory
-	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// We ignore errors
 			return nil
@@ -186,11 +170,10 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 }
 
 // String hashes a given string
-func String(s string) string {
-	hash := sha256.New()
-	io.WriteString(hash, s)
-
-	return fmt.Sprintf("%x", hash.Sum(nil))
+func String(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
 
 func hashFileCRC32(filePath string, polynomial uint32) (string, error) {

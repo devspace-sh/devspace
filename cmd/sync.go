@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -63,13 +61,8 @@ devspace sync --container-path=/my-path
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
-	var config *latest.Config
-	if configutil.ConfigExists() {
-		config = configutil.GetConfig()
-	}
-
 	// Get kubectl client
-	kubectl, err := kubectl.NewClient(config)
+	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}

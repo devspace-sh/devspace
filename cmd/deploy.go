@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -17,16 +16,12 @@ import (
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	Namespace    string
-	KubeContext  string
-	DockerTarget string
-
-	CreateImagePullSecrets bool
-
-	ForceBuild      bool
-	BuildSequential bool
-	ForceDeploy     bool
-	SwitchContext   bool
+	Namespace     string
+	KubeContext   string
+	DockerTarget  string
+	ForceBuild    bool
+	ForceDeploy   bool
+	SwitchContext bool
 }
 
 // NewDeployCmd creates a new deploy command
@@ -51,14 +46,12 @@ devspace deploy --kube-context=deploy-context
 		Run:  cmd.Run,
 	}
 
-	deployCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
-
 	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	deployCmd.Flags().StringVar(&cmd.DockerTarget, "docker-target", "", "The docker target to use for building")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
-	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 
 	return deployCmd
@@ -78,40 +71,34 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
-	// Load Config and modify it
-	config := configutil.GetConfigWithoutDefaults(true)
-
 	// Prepare the config
-	cmd.prepareConfig(config)
+	cmd.prepareConfig()
 
 	// Create kubectl client
-	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
+	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
-	// Create the image pull secrets and add them to the default service account
-	if cmd.CreateImagePullSecrets {
-		// Create docker client
-		dockerClient, err := docker.NewClient(config, false)
+	// Create docker client
+	dockerClient, err := docker.NewClient(false)
 
-		// Create pull secrets and private registry if necessary
-		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
+	// Create pull secrets and private registry if necessary
+	err = registry.InitRegistries(dockerClient, client, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Load generated config
@@ -120,14 +107,14 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	// Build images
-	builtImages, err := build.All(config, generatedConfig.GetActive(), client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	// Force image build
+	mustRedeploy, err := image.BuildAll(client, generatedConfig, false, cmd.ForceBuild, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Save config if an image was built
-	if len(builtImages) > 0 {
+	if mustRedeploy == true {
 		err := generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatalf("Error saving generated config: %v", err)
@@ -135,7 +122,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, log.GetInstance())
+	err = deploy.All(client, generatedConfig, false, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -155,7 +142,10 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
+func (cmd *DeployCmd) prepareConfig() {
+	// Load Config and modify it
+	config := configutil.GetConfigWithoutDefaults(true)
+
 	if cmd.Namespace != "" {
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,
@@ -177,6 +167,19 @@ func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
 		}
 
 		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
+	}
+	if cmd.DockerTarget != "" {
+		if config.Images != nil {
+			for _, imageConf := range *config.Images {
+				if imageConf.Build == nil {
+					imageConf.Build = &v1.BuildConfig{}
+				}
+				if imageConf.Build.Options == nil {
+					imageConf.Build.Options = &v1.BuildOptions{}
+				}
+				imageConf.Build.Options.Target = &cmd.DockerTarget
+			}
+		}
 	}
 
 	// Set defaults now

@@ -8,9 +8,12 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/mgutz/ansi"
@@ -18,12 +21,18 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) Deploy(generatedConfig *generated.Config, isDev, forceDeploy bool) error {
 	var (
 		releaseName = *d.DeploymentConfig.Name
 		chartPath   = *d.DeploymentConfig.Helm.Chart.Name
 		hash        = ""
 	)
+
+	// Retrieve active generated config
+	activeConfig := generatedConfig.GetActive().Deploy
+	if isDev {
+		activeConfig = generatedConfig.GetActive().Dev
+	}
 
 	// Hash the chart directory if there is any
 	_, err := os.Stat(chartPath)
@@ -31,81 +40,100 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err = hashpkg.Directory(chartPath)
 		if err != nil {
-			return false, fmt.Errorf("Error hashing chart directory: %v", err)
+			return fmt.Errorf("Error hashing chart directory: %v", err)
 		}
 	}
 
 	// Ensure deployment config is there
-	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
+	if _, ok := activeConfig.Deployments[*d.DeploymentConfig.Name]; ok == false {
+		activeConfig.Deployments[*d.DeploymentConfig.Name] = &generated.DeploymentConfig{
+			HelmOverrideTimestamps: make(map[string]int64),
+		}
+	}
 
 	// Check values files for changes
-	helmOverridesHash := ""
+	overrideChanged := false
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
 		for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
-			hash, err := hashpkg.Directory(*override)
+			stat, err := os.Stat(*override)
 			if err != nil {
-				return false, fmt.Errorf("Error stating override file %s: %v", *override, err)
+				return fmt.Errorf("Error stating override file: %s", *override)
 			}
 
-			helmOverridesHash += hash
+			if activeConfig.Deployments[*d.DeploymentConfig.Name].HelmOverrideTimestamps[*override] != stat.ModTime().Unix() {
+				overrideChanged = true
+				break
+			}
 		}
 	}
 
 	// Check deployment config for changes
 	configStr, err := yaml.Marshal(d.DeploymentConfig)
 	if err != nil {
-		return false, errors.Wrap(err, "marshal deployment config")
+		return errors.Wrap(err, "marshal deployment config")
 	}
 
 	deploymentConfigHash := hashpkg.String(string(configStr))
 
-	// Get HelmClient if necessary
-	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.TillerNamespace, d.Log, false)
-		if err != nil {
-			return false, fmt.Errorf("Error creating helm client: %v", err)
-		}
+	// Get HelmClient
+	helmClient, err := helm.NewClient(d.TillerNamespace, d.Log, false)
+	if err != nil {
+		return fmt.Errorf("Error creating helm client: %v", err)
 	}
 
 	// Check if redeploying is necessary
-	forceDeploy = forceDeploy || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
-	if forceDeploy == false {
-		releases, err := d.Helm.ListReleases()
+	reDeploy := forceDeploy || activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash != hash || activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash != deploymentConfigHash || overrideChanged
+	if reDeploy == false {
+		releases, err := helmClient.Client.ListReleases()
 		if err != nil {
-			return false, err
+			return err
 		}
 
-		forceDeploy = true
+		reDeploy = true
 		if releases != nil {
 			for _, release := range releases.Releases {
 				if release.GetName() == releaseName {
-					forceDeploy = false
+					reDeploy = false
 					break
 				}
 			}
 		}
 	}
 
-	// Deploy
-	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages)
-	if err != nil {
-		return false, err
-	}
+	// Check if re-deployment is necessary
+	if reDeploy {
+		err = d.internalDeploy(generatedConfig, helmClient, isDev)
+		if err != nil {
+			return err
+		}
 
-	if wasDeployed {
 		// Update config
-		deployCache.HelmChartHash = hash
-		deployCache.DeploymentConfigHash = deploymentConfigHash
-		deployCache.HelmOverridesHash = helmOverridesHash
+		activeConfig.Deployments[*d.DeploymentConfig.Name].HelmChartHash = hash
+		activeConfig.Deployments[*d.DeploymentConfig.Name].DeploymentConfigHash = deploymentConfigHash
+
+		if d.DeploymentConfig.Helm.ValuesFiles != nil {
+			for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
+				stat, err := os.Stat(*override)
+				if err != nil {
+					return fmt.Errorf("Error stating override file: %s", *override)
+				}
+
+				activeConfig.Deployments[*d.DeploymentConfig.Name].HelmOverrideTimestamps[*override] = stat.ModTime().Unix()
+			}
+		}
 	} else {
-		return false, nil
+		d.Log.Infof("Skipping chart %s", chartPath)
 	}
 
-	return true, nil
+	return nil
 }
 
-func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) internalDeploy(generatedConfig *generated.Config, helmClient *helm.ClientWrapper, isDev bool) error {
+	d.Log.StartWait("Deploying helm chart")
+	defer d.Log.StopWait()
+
 	var (
+		config          = configutil.GetConfig()
 		releaseName     = *d.DeploymentConfig.Name
 		chartPath       = *d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = filepath.Join(chartPath, "values.yaml")
@@ -126,7 +154,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		if err == nil {
 			err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
 			if err != nil {
-				return false, fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
+				return fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 			}
 		}
 	}
@@ -136,7 +164,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		for _, overridePath := range *d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath, err := filepath.Abs(*overridePath)
 			if err != nil {
-				return false, fmt.Errorf("Error retrieving absolute path from %s: %v", *overridePath, err)
+				return fmt.Errorf("Error retrieving absolute path from %s: %v", *overridePath, err)
 			}
 
 			overwriteValuesFromPath := map[interface{}]interface{}{}
@@ -157,24 +185,17 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Add devspace specific values
 	if d.DeploymentConfig.Helm.DevSpaceValues == nil || *d.DeploymentConfig.Helm.DevSpaceValues == true {
 		// Replace image names
-		shouldRedeploy := replaceContainerNames(overwriteValues, cache, builtImages)
-		if forceDeploy == false && shouldRedeploy {
-			forceDeploy = true
-		}
-	}
+		replaceContainerNames(overwriteValues, generatedConfig, isDev)
 
-	// Deployment is not necessary
-	if forceDeploy == false {
-		return false, nil
+		// Set images and pull secrets values
+		overwriteValues["images"] = getImageValues(config, generatedConfig, isDev)
+		overwriteValues["pullSecrets"] = getPullSecrets(overwriteValues, overwriteValues, config)
 	}
-
-	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", *d.DeploymentConfig.Helm.Chart.Name, *d.DeploymentConfig.Name))
-	defer d.Log.StopWait()
 
 	// Deploy chart
-	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
+	appRelease, err := helmClient.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return false, fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+*d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+*d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 
 	// Print revision
@@ -185,31 +206,54 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		d.Log.Done("Deployed helm chart")
 	}
 
-	return true, nil
+	return nil
 }
 
-func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *generated.CacheConfig, builtImages map[string]string) bool {
-	shouldRedeploy := false
+func getImageValues(config *v1.Config, generatedConfig *generated.Config, isDev bool) map[interface{}]interface{} {
+	active := generatedConfig.GetActive()
+
+	var tags map[string]string
+	if isDev {
+		tags = active.Dev.ImageTags
+	} else {
+		tags = active.Deploy.ImageTags
+	}
+
+	overwriteContainerValues := map[interface{}]interface{}{}
+	if config.Images != nil {
+		for imageName, imageConf := range *config.Images {
+			tag := tags[*imageConf.Image]
+			if imageConf.Tag != nil {
+				tag = *imageConf.Tag
+			}
+
+			overwriteContainerValues[imageName] = map[interface{}]interface{}{
+				"image": *imageConf.Image + ":" + tag,
+				"tag":   tag,
+				"repo":  *imageConf.Image,
+			}
+		}
+	}
+
+	return overwriteContainerValues
+}
+
+func replaceContainerNames(overwriteValues map[interface{}]interface{}, generatedConfig *generated.Config, isDev bool) {
+	active := generatedConfig.GetActive()
+
+	var tags map[string]string
+	if isDev {
+		tags = active.Dev.ImageTags
+	} else {
+		tags = active.Deploy.ImageTags
+	}
 
 	match := func(path, key, value string) bool {
 		value = strings.TrimSpace(value)
 
 		image := strings.Split(value, ":")
-		if len(image) > 2 {
-			return false
-		}
-
-		// Search for image name
-		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] {
-				if builtImages != nil {
-					if _, ok := builtImages[image[0]]; ok {
-						shouldRedeploy = true
-					}
-				}
-
-				return true
-			}
+		if _, ok := tags[image[0]]; ok {
+			return true
 		}
 
 		return false
@@ -217,19 +261,31 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 
 	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
+
 		image := strings.Split(value, ":")
-
-		// Search for image name
-		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] {
-				return image[0] + ":" + imageCache.Tag
-			}
-		}
-
-		return value
+		return image[0] + ":" + tags[image[0]]
 	}
 
 	walk.Walk(overwriteValues, match, replace)
+}
 
-	return shouldRedeploy
+func getPullSecrets(values, overwriteValues map[interface{}]interface{}, config *v1.Config) []interface{} {
+	overwritePullSecrets := []interface{}{}
+	overwritePullSecretsFromFile, overwritePullSecretsExisting := overwriteValues["pullSecrets"]
+	if overwritePullSecretsExisting {
+		overwritePullSecrets = overwritePullSecretsFromFile.([]interface{})
+	}
+
+	pullSecretsFromFile, pullSecretsExisting := values["pullSecrets"]
+
+	if pullSecretsExisting {
+		existingPullSecrets := pullSecretsFromFile.([]interface{})
+		overwritePullSecrets = append(overwritePullSecrets, existingPullSecrets...)
+	}
+
+	for _, autoGeneratedPullSecret := range registry.GetPullSecretNames() {
+		overwritePullSecrets = append(overwritePullSecrets, autoGeneratedPullSecret)
+	}
+
+	return overwritePullSecrets
 }

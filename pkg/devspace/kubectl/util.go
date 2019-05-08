@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -50,7 +49,8 @@ func IsPrivateIP(ip net.IP) bool {
 }
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
-func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, log log.Logger) error {
+func EnsureDefaultNamespace(client *kubernetes.Clientset, log log.Logger) error {
+	config := configutil.GetConfig()
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return fmt.Errorf("Error getting default namespace: %v", err)
@@ -74,14 +74,14 @@ func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, 
 }
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
-func EnsureGoogleCloudClusterRoleBinding(config *latest.Config, client kubernetes.Interface, log log.Logger) error {
-	if minikube.IsMinikube(config) {
+func EnsureGoogleCloudClusterRoleBinding(client *kubernetes.Clientset, log log.Logger) error {
+	if minikube.IsMinikube() {
 		return nil
 	}
 
 	_, err := client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := GetClientConfig(config)
+		clusterConfig, _ := GetClientConfig()
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
 

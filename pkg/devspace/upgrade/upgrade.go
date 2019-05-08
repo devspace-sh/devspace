@@ -16,9 +16,11 @@ var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {
 	indices := reVersion.FindStringIndex(version)
+
 	if indices == nil {
 		return version, errors.New("Version not adopting semver")
 	}
+
 	if indices[0] > 0 {
 		version = version[indices[0]:]
 	}
@@ -35,6 +37,7 @@ func GetVersion() string {
 func SetVersion(verText string) {
 	if len(verText) > 0 {
 		_version, err := eraseVersionPrefix(verText)
+
 		if err != nil {
 			log.Fatalf("Error parsing version: %s", err.Error())
 		}
@@ -46,11 +49,13 @@ func SetVersion(verText string) {
 // CheckForNewerVersion checks if there is a newer version on github and returns the newer version
 func CheckForNewerVersion() (string, error) {
 	latest, found, err := selfupdate.DetectLatest(githubSlug)
+
 	if err != nil {
 		return "", err
 	}
 
 	v := semver.MustParse(version)
+
 	if !found || latest.Version.Equals(v) {
 		return "", nil
 	}
@@ -61,9 +66,11 @@ func CheckForNewerVersion() (string, error) {
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
 func Upgrade() error {
 	newerVersion, err := CheckForNewerVersion()
+
 	if err != nil {
 		return err
 	}
+
 	if newerVersion == "" {
 		log.Println("Current binary is the latest version: ", version)
 		return nil
@@ -73,6 +80,7 @@ func Upgrade() error {
 
 	log.Println("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)
+
 	if err != nil {
 		return err
 	}

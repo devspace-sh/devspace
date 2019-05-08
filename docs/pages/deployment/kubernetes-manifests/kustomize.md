@@ -20,8 +20,8 @@ deployments:
 - name: my-deployment
   kubectl:
     manifests:
-    - my-manifests/
-    - more-manifests/
+    - my-manifests/*
+    - more-manifests/*
     kustomize: true
 ```
 This configuration would tell DevSpace CLI to deploy our application with the following commands:
@@ -30,5 +30,3 @@ kubectl apply -k manifests/
 kubectl apply -k more-manifests/
 ```
 If you only want one of the folders to be deployed via `kustomize`, you will need to put them in separate deployment configurations.
-
-> Note the missing `*` in the `manifests` section of the configuration with `kustomize: true`. Removing the `*` when using kustomize is highly recommended.

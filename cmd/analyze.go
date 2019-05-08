@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -52,13 +51,8 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var devSpaceConfig *latest.Config
-	if configExists {
-		devSpaceConfig = configutil.GetConfig()
-	}
-
 	// Create kubectl client
-	config, err := kubectl.GetClientConfig(devSpaceConfig)
+	config, err := kubectl.GetClientConfig()
 	if err != nil {
 		log.Fatal(err)
 	}

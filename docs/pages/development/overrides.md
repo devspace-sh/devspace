@@ -5,7 +5,7 @@ title: Configure overrides (e.g. entrypoint)
 When developing your application, it is often useful to override the image entrypoints or use a separate Dockerfile. DevSpace applies this special configuration only during `devspace dev` and not during `devspace deploy`. 
 
 ## Configuring a different Dockerfile during `devspace dev`
-You can tell DevSpace to use a different Dockerfile during `devspace dev` within the `dev.overrideImages` section of `devspace.yaml`:
+You can tell DevSpace to use a different Dockerfile during `devspace dev` within the `dev.overrideImages` section of `.devspace/config.yaml`:
 ```yaml
 dev:
   overrideImages:
@@ -28,7 +28,7 @@ You can also configure an entrypoint override, then `devspace dev` will do the f
 
 > Overriding an entrypoint will **not** change your Dockerfile. Image overriding happen entirely in-memory before building the image.
 
-You can configure entrypoint overrides within the `dev.overrideImages` section of `devspace.yaml`. 
+You can configure entrypoint overrides within the `dev.overrideImages` section of `.devspace/config.yaml`. 
 ```yaml
 dev:
   overrideImages:

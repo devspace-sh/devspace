@@ -21,7 +21,13 @@ import (
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func (p *Provider) CreateIngress(config *latest.Config, client kubernetes.Interface, space *Space, host string) error {
+func (p *Provider) CreateIngress(client *kubernetes.Clientset, space *Space, host string) error {
+	// Get default namespace
+	var config *latest.Config
+	if configutil.ConfigExists() {
+		config = configutil.GetConfig()
+	}
+
 	namespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return errors.Wrap(err, "get default namespace")

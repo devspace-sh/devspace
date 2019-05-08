@@ -5,19 +5,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/distribution/reference"
+	"github.com/docker/docker/pkg/term"
 
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
@@ -28,14 +25,10 @@ import (
 
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
-	"github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
 
 	"github.com/docker/docker/pkg/jsonmessage"
 )
-
-// EngineName is the name of the building engine
-const EngineName = "docker"
 
 var (
 	stdin, stdout, stderr = term.StdStreams()
@@ -43,84 +36,29 @@ var (
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	helper *helper.BuildHelper
-
+	imageURL   string
 	authConfig *types.AuthConfig
 	client     client.CommonAPIClient
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
+func NewBuilder(client client.CommonAPIClient, imageName, imageTag string) (*Builder, error) {
 	return &Builder{
-		helper: helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
-		client: client,
+		imageURL: imageName + ":" + imageTag,
+		client:   client,
 	}, nil
-}
-
-// Build implements the interface
-func (b *Builder) Build(log logpkg.Logger) error {
-	return b.helper.Build(b, log)
-}
-
-// ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	return b.helper.ShouldRebuild(cache)
 }
 
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
-	var (
-		fullImageName      = b.helper.ImageName + ":" + b.helper.ImageTag
-		displayRegistryURL = "hub.docker.com"
-	)
-
-	// Display nice registry name
-	registryURL, err := registry.GetRegistryFromImageName(b.helper.ImageName)
-	if err != nil {
-		return err
-	}
-	if registryURL != "" {
-		displayRegistryURL = registryURL
-	}
-
-	// Authenticate
-	if b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false {
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
-		_, err = b.Authenticate()
-		log.StopWait()
-		if err != nil {
-			return fmt.Errorf("Error during image registry authentication: %v", err)
-		}
-
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
-	}
-
-	// Buildoptions
-	options := &types.ImageBuildOptions{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.Options != nil {
-		if b.helper.ImageConf.Build.Docker.Options.BuildArgs != nil {
-			options.BuildArgs = *b.helper.ImageConf.Build.Docker.Options.BuildArgs
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Target != nil {
-			options.Target = *b.helper.ImageConf.Build.Docker.Options.Target
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Network != nil {
-			options.NetworkMode = *b.helper.ImageConf.Build.Docker.Options.Network
-		}
-	}
-
-	// Determine output writer
-	var writer io.Writer
-	if log == logpkg.GetInstance() {
-		writer = stdout
-	} else {
-		writer = log
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, options *types.ImageBuildOptions, entrypoint *[]*string) error {
+	if options == nil {
+		options = &types.ImageBuildOptions{}
 	}
 
 	ctx := context.Background()
-	outStream := command.NewOutStream(writer)
+	outStream := command.NewOutStream(stdout)
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -163,7 +101,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		dockerfilePath, err = builder.CreateTempDockerfile(dockerfilePath, *entrypoint)
 		if err != nil {
 			return err
 		}
@@ -184,7 +122,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 				return errors.Errorf("unable to open Dockerfile: %v", err)
 			}
 
-			buildCtx, err = helper.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
+			buildCtx, err = builder.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
 			if err != nil {
 				return fmt.Errorf("Error overwriting %s: %v", relDockerfile, err)
 			}
@@ -205,7 +143,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
 	response, err := b.client.ImageBuild(ctx, body, types.ImageBuildOptions{
-		Tags:        []string{fullImageName},
+		Tags:        []string{b.imageURL},
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
 		Target:      options.Target,
@@ -222,24 +160,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		return err
 	}
 
-	// Check if we skip push
-	if b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false {
-		err = b.PushImage(writer)
-		if err != nil {
-			return fmt.Errorf("Error during image push: %v", err)
-		}
-
-		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
-	} else {
-		log.Infof("Skip image push for %s", b.helper.ImageName)
-	}
-
 	return nil
 }
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate() (*types.AuthConfig, error) {
-	registryURL, err := registry.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTag)
+	registryURL, err := registry.GetRegistryFromImageName(b.imageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -253,8 +179,8 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 }
 
 // PushImage pushes an image to the specified registry
-func (b *Builder) PushImage(writer io.Writer) error {
-	ref, err := reference.ParseNormalizedNamed(b.helper.ImageName + ":" + b.helper.ImageTag)
+func (b *Builder) PushImage() error {
+	ref, err := reference.ParseNormalizedNamed(b.imageURL)
 	if err != nil {
 		return err
 	}
@@ -271,7 +197,7 @@ func (b *Builder) PushImage(writer io.Writer) error {
 		return err
 	}
 
-	outStream := command.NewOutStream(writer)
+	outStream := command.NewOutStream(stdout)
 	err = jsonmessage.DisplayJSONMessagesStream(out, outStream, outStream.FD(), outStream.IsTerminal(), nil)
 	if err != nil {
 		return err

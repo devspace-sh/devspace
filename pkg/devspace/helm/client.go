@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,51 +13,40 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"k8s.io/helm/pkg/getter"
-	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/repo"
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
 	k8shelm "k8s.io/helm/pkg/helm"
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
-	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
+	helmstoragedriver "k8s.io/helm/pkg/storage/driver"
 )
 
-// Interface is the client interface for helm
-type Interface interface {
-	InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error)
-	DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error)
-	ListReleases() (*rls.ListReleasesResponse, error)
-}
+// Get a client for each tillernamespace only once
+var helmClients = make(map[string]*ClientWrapper)
 
-// Client holds the necessary information for helm
-type Client struct {
+// ClientWrapper holds the necessary information for helm
+type ClientWrapper struct {
+	Client    *k8shelm.Client
 	Settings  *helmenvironment.EnvSettings
 	Namespace string
-
-	helm    k8shelm.Interface
-	kubectl kubernetes.Interface
-
-	config *latest.Config
+	kubectl   *kubernetes.Clientset
 }
-
-var helmClients = map[string]*Client{}
 
 // NewClient creates a new helm client
 // NOTE: This is not safe to use in goroutines and could cause multiple creation of the same client
-func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func NewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
 	if client, ok := helmClients[tillerNamespace]; ok {
 		return client, nil
 	}
 
-	client, err := createNewClient(config, tillerNamespace, log, upgradeTiller)
+	client, err := createNewClient(tillerNamespace, log, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +55,9 @@ func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, up
 	return client, nil
 }
 
-func createNewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*ClientWrapper, error) {
 	// Get kube config
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetClientConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +69,13 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 	}
 
 	// Create tiller if necessary
-	err = ensureTiller(config, kubectlClient, tillerNamespace, upgradeTiller)
+	err = ensureTiller(kubectlClient, tillerNamespace, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
 
 	var tunnel *kube.Tunnel
-	var helmClient *k8shelm.Client
+	var client *k8shelm.Client
 
 	tunnelWaitTime := 2 * 60 * time.Second
 	tunnelCheckInterval := 5 * time.Second
@@ -113,8 +103,9 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 			k8shelm.ConnectTimeout(int64(5 * time.Second)),
 		}
 
-		helmClient = k8shelm.NewClient(helmOptions...)
-		_, err = helmClient.ListReleases(k8shelm.ReleaseListLimit(1))
+		client = k8shelm.NewClient(helmOptions...)
+
+		_, err = client.ListReleases(k8shelm.ReleaseListLimit(1))
 
 		if err == nil {
 			break
@@ -132,10 +123,6 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 
 	log.StopWait()
 
-	return create(config, tillerNamespace, helmClient, kubectlClient)
-}
-
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -158,14 +145,13 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 		}
 	}
 
-	wrapper := &Client{
+	wrapper := &ClientWrapper{
+		Client: client,
 		Settings: &helmenvironment.EnvSettings{
 			Home: helmpath.Home(helmHomePath),
 		},
 		Namespace: tillerNamespace,
-		helm:      helmClient,
 		kubectl:   kubectlClient,
-		config:    config,
 	}
 
 	_, err = os.Stat(stableRepoCachePathAbs)
@@ -180,15 +166,15 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 }
 
 // UpdateRepos will update the helm repositories
-func (client *Client) UpdateRepos() error {
-	allRepos, err := repo.LoadRepositoriesFile(client.Settings.Home.RepositoryFile())
+func (helmClientWrapper *ClientWrapper) UpdateRepos() error {
+	allRepos, err := repo.LoadRepositoriesFile(helmClientWrapper.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
 	}
 
 	repos := []*repo.ChartRepository{}
 	for _, repoData := range allRepos.Repositories {
-		repo, err := repo.NewChartRepository(repoData, getter.All(*client.Settings))
+		repo, err := repo.NewChartRepository(repoData, getter.All(*helmClientWrapper.Settings))
 		if err != nil {
 			return err
 		}
@@ -203,7 +189,11 @@ func (client *Client) UpdateRepos() error {
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 
-			err := re.DownloadIndexFile(client.Settings.Home.String())
+			if re.Config.Name == "local" {
+				return
+			}
+
+			err := re.DownloadIndexFile(helmClientWrapper.Settings.Home.String())
 			if err != nil {
 				log.Errorf("Unable to download repo index: %v", err)
 			}
@@ -215,29 +205,20 @@ func (client *Client) UpdateRepos() error {
 }
 
 // ReleaseExists checks if the given release name exists
-func ReleaseExists(helm helm.Interface, releaseName string) bool {
-	releases, err := helm.ListReleases()
+func (helmClientWrapper *ClientWrapper) ReleaseExists(releaseName string) (bool, error) {
+	_, err := helmClientWrapper.Client.ReleaseHistory(releaseName, k8shelm.WithMaxHistory(1))
 	if err != nil {
-		return false
-	}
-
-	if releases != nil {
-		for _, release := range releases.Releases {
-			if release.Name == releaseName {
-				return true
-			}
+		if strings.Contains(err.Error(), helmstoragedriver.ErrReleaseNotFound(releaseName).Error()) {
+			return false, nil
 		}
+
+		return false, err
 	}
 
-	return false
+	return true, nil
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (client *Client) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
-	return client.helm.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
-}
-
-// ListReleases lists all helm releases
-func (client *Client) ListReleases() (*rls.ListReleasesResponse, error) {
-	return client.helm.ListReleases()
+func (helmClientWrapper *ClientWrapper) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
+	return helmClientWrapper.Client.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
 }

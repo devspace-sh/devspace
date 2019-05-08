@@ -51,7 +51,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	config := configutil.GetConfig()
-	kubectl, err := kubectl.NewClient(config)
+	kubectl, err := kubectl.NewClient()
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
@@ -62,19 +62,19 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployKubectl.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = deployHelm.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployHelm.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
-				deployClient, err = deployComponent.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployComponent.New(kubectl, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create component deploy config for %s: %v", *deployConfig.Name, err)
 					continue

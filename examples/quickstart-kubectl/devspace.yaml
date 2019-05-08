@@ -1,4 +1,4 @@
-version: v1beta2
+version: v1beta1
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/quickstart

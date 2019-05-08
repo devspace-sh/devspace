@@ -48,7 +48,7 @@ var OkayStatus = map[string]string{
 const IgnoreRestartsSince = time.Hour * 2
 
 // Pods analyzes the pods for problems
-func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string, error) {
+func Pods(client *kubernetes.Clientset, namespace string, noWait bool) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing pods")
@@ -162,7 +162,7 @@ type containerProblem struct {
 }
 
 // Pod analyzes the pod for potential problems
-func checkPod(client kubernetes.Interface, pod *v1.Pod) *podProblem {
+func checkPod(client *kubernetes.Clientset, pod *v1.Pod) *podProblem {
 	hasProblem := false
 	podProblem := &podProblem{
 		Name:                  pod.Name,
@@ -222,7 +222,7 @@ func checkPod(client kubernetes.Interface, pod *v1.Pod) *podProblem {
 	return nil
 }
 
-func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
+func getContainerProblem(client *kubernetes.Clientset, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
 	tailLines := int64(50)
 	hasProblem := false
 	containerProblem := &containerProblem{

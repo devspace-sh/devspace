@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -16,7 +15,7 @@ import (
 )
 
 // AttachStreamWithTransport attaches to a certain container
-func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client *kubernetes.Clientset, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
@@ -69,8 +68,8 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 }
 
 // AttachStream attaches to a container in a certain pod
-func AttachStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	kubeconfig, err := GetClientConfig(config)
+func AttachStream(client *kubernetes.Clientset, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	kubeconfig, err := GetClientConfig()
 	if err != nil {
 		return err
 	}
