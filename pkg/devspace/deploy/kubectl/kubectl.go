@@ -223,7 +223,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 		}
 
 		if len(cache.Images) > 0 {
-			shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages)
+			shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages) || shouldRedeploy
 		}
 
 		replacedManifest, err := yaml.Marshal(manifestYaml)

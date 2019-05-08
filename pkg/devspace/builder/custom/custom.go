@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -111,7 +112,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		writer = log
 	}
 
-	log.Infof("Build %s:%s with custom command %s %+v", *b.imageConf.Image, b.imageTag, *b.imageConf.Build.Custom.Command, args)
+	log.Infof("Build %s:%s with custom command %s %s", *b.imageConf.Image, b.imageTag, *b.imageConf.Build.Custom.Command, strings.Join(args, " "))
 
 	err := b.cmd.Run(writer, writer, nil)
 	if err != nil {
