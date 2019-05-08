@@ -46,7 +46,7 @@ func (d *downstream) startShell() error {
 		stderrReader, stderrWriter, _ := os.Pipe()
 
 		go func() {
-			err := kubectl.ExecStream(d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
+			err := kubectl.ExecStream(d.config.DevSpaceConfig, d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
 			if err != nil {
 				d.config.Error(errors.Trace(err))
 			}

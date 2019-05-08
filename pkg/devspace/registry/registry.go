@@ -6,9 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 
@@ -23,7 +20,7 @@ var pullSecretNames = []string{}
 var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // CreatePullSecret creates an image pull secret for a registry
-func CreatePullSecret(kubectl *kubernetes.Clientset, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
+func CreatePullSecret(kubectl kubernetes.Interface, namespace, registryURL, username, passwordOrToken, email string, log log.Logger) error {
 	pullSecretName := GetRegistryAuthSecretName(registryURL)
 	if registryURL == "hub.docker.com" || registryURL == "" {
 		registryURL = "https://index.docker.io/v1/"
@@ -82,30 +79,6 @@ func GetRegistryAuthSecretName(registryURL string) string {
 	}
 
 	return registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-")
-}
-
-// GetImageWithTag returns the image (optional with tag)
-func GetImageWithTag(generatedConfig *generated.Config, imageConfig *v1.ImageConfig, isDev bool) (string, error) {
-	image := *imageConfig.Image
-	if imageConfig.Tag != nil {
-		image = image + ":" + *imageConfig.Tag
-	} else {
-		var config *generated.CacheConfig
-		if isDev {
-			config = &generatedConfig.GetActive().Dev
-		} else {
-			config = &generatedConfig.GetActive().Deploy
-		}
-
-		tag, ok := config.ImageTags[image]
-		if ok == false {
-			return "", fmt.Errorf("Couldn't find image tag in generated.yaml. Did the build succeed?")
-		}
-
-		image = image + ":" + tag
-	}
-
-	return image, nil
 }
 
 // GetPullSecretNames returns all names of auto-generated image pull secrets

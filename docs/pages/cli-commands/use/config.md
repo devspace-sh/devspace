@@ -7,7 +7,7 @@ title: devspace use config
 ################ devspace use config ##################
 #######################################################
 Use a specific DevSpace configuration that is defined
-in .devspace/configs.yaml
+in devspace-configs.yaml
 
 Example:
 devspace use config myconfig

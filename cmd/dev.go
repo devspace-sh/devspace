@@ -6,14 +6,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -24,10 +25,11 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	InitRegistries bool
+	CreateImagePullSecrets bool
 
-	ForceBuild  bool
-	ForceDeploy bool
+	ForceBuild      bool
+	BuildSequential bool
+	ForceDeploy     bool
 
 	Sync            bool
 	Terminal        bool
@@ -63,9 +65,11 @@ Starts your project in development mode:
 		Run: cmd.Run,
 	}
 
-	devCmd.Flags().BoolVar(&cmd.InitRegistries, "init-registries", true, "Initialize registries (and install internal one)")
+	devCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
+	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
@@ -101,47 +105,48 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
+	// Get the config
+	config := configutil.GetConfig()
+
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
+	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(client, log.GetInstance())
+	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(client, log.GetInstance())
+	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
-	// Init image registries
-	if cmd.InitRegistries {
-		dockerClient, err := docker.NewClient(false)
+	// Create the image pull secrets and add them to the default service account
+	if cmd.CreateImagePullSecrets {
+		dockerClient, err := docker.NewClient(config, false)
 		if err != nil {
 			dockerClient = nil
 		}
 
-		err = registry.InitRegistries(dockerClient, client, log.GetInstance())
+		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Build and deploy images
-	err = cmd.buildAndDeploy(client, args)
+	err = cmd.buildAndDeploy(config, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) error {
-	config := configutil.GetConfig()
-
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Interface, args []string) error {
 	if cmd.SkipPipeline == false {
 		// Load config
 		generatedConfig, err := generated.LoadConfig()
@@ -150,13 +155,13 @@ func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) e
 		}
 
 		// Build image if necessary
-		mustRedeploy, err := image.BuildAll(client, generatedConfig, true, cmd.ForceBuild, log.GetInstance())
+		builtImages, err := build.All(config, generatedConfig.GetActive(), client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}
 
 		// Save config if an image was built
-		if mustRedeploy == true {
+		if len(builtImages) > 0 {
 			err := generated.SaveConfig(generatedConfig)
 			if err != nil {
 				return fmt.Errorf("Error saving generated config: %v", err)
@@ -166,7 +171,7 @@ func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) e
 		// Deploy all defined deployments
 		if config.Deployments != nil {
 			// Deploy all
-			err = deploy.All(client, generatedConfig, true, mustRedeploy || cmd.ForceDeploy, log.GetInstance())
+			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}
@@ -182,12 +187,12 @@ func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) e
 	// Start services
 	if cmd.ExitAfterDeploy == false {
 		// Start services
-		err := cmd.startServices(client, args, log.GetInstance())
+		err := cmd.startServices(config, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(client, args)
+				return cmd.buildAndDeploy(config, client, args)
 			}
 
 			return err
@@ -197,9 +202,9 @@ func (cmd *DevCmd) buildAndDeploy(client *kubernetes.Clientset, args []string) e
 	return nil
 }
 
-func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, log log.Logger) error {
+func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interface, args []string, log log.Logger) error {
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(client, log)
+		portForwarder, err := services.StartPortForwarding(config, client, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -212,7 +217,7 @@ func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, lo
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -224,7 +229,6 @@ func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, lo
 		}()
 	}
 
-	config := configutil.GetConfig()
 	exitChan := make(chan error)
 	autoReloadPaths := GetPaths()
 
@@ -265,13 +269,13 @@ func (cmd *DevCmd) startServices(client *kubernetes.Clientset, args []string, lo
 	}
 
 	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
-		return services.StartTerminal(client, params, args, exitChan, log)
+		return services.StartTerminal(config, client, params, args, exitChan, log)
 	}
 
 	log.Info("Will now try to print the logs of a running pod...")
 
 	// Start attaching to a running pod
-	err := services.StartAttach(client, params, exitChan, log)
+	err := services.StartAttach(config, client, params, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
 		if _, ok := err.(*reloadError); ok {
@@ -322,8 +326,8 @@ func GetPaths() []string {
 				for imageConfName, imageConf := range *config.Images {
 					if *imageName == imageConfName {
 						dockerfilePath := "./Dockerfile"
-						if imageConf.Build != nil && imageConf.Build.Dockerfile != nil {
-							dockerfilePath = *imageConf.Build.Dockerfile
+						if imageConf.Dockerfile != nil {
+							dockerfilePath = *imageConf.Dockerfile
 						}
 
 						paths = append(paths, dockerfilePath)

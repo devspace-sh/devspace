@@ -15,7 +15,7 @@ func convertDotDevSpaceConfigToDevSpaceYaml(basePath string) error {
 	// Convert old to new config.yaml
 	_, err := os.Stat(newConfigPath)
 	if os.IsNotExist(err) {
-		// Check if .devspace/config.yaml exists
+		// Check if devspace-configs.yaml exists
 		_, err := os.Stat(oldConfigPath)
 		if os.IsNotExist(err) == false {
 			err := os.Rename(oldConfigPath, newConfigPath)

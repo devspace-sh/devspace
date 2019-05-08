@@ -9,13 +9,13 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -78,7 +78,7 @@ folder. Creates a devspace.yaml with all configuration.
 
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
 	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
-	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", image.DefaultDockerfilePath, "Dockerfile to use for initialization")
+	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", helper.DefaultDockerfilePath, "Dockerfile to use for initialization")
 
 	return initCmd
 }
@@ -189,7 +189,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
 		if err != nil {
 			log.Fatal(err)
 		}

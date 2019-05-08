@@ -326,7 +326,7 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 	return nil
 }
 
-func getServiceAccountCredentials(client *kubernetes.Clientset) ([]byte, string, error) {
+func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, error) {
 	log.StartWait("Retrieving service account credentials")
 	defer log.StopWait()
 
@@ -430,7 +430,7 @@ func getClusterName(clusterName string) (string, error) {
 // 	certmanager.k8s.io/v1alpha1
 // 	networking.k8s.io/v1 networkpolicies
 // 	extensions/v1beta1 podsecuritypolicies
-func checkResources(client *kubernetes.Clientset) (*clusterResources, error) {
+func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 	log.StartWait("Checking cluster resources")
 	defer log.StopWait()
 
@@ -451,7 +451,7 @@ func checkResources(client *kubernetes.Clientset) (*clusterResources, error) {
 	}, nil
 }
 
-func initializeNamespace(client *kubernetes.Clientset) error {
+func initializeNamespace(client kubernetes.Interface) error {
 	log.StartWait("Initializing namespace")
 	defer log.StopWait()
 

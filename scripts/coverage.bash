@@ -7,6 +7,10 @@
 set -e
 
 export GO111MODULE=on
+export GOFLAGS=-mod=vendor
+
+# Update vendor directory
+go mod vendor
 
 # Test if we can build the program
 go build main.go

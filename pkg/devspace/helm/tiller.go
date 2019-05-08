@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,14 +28,8 @@ repositories:
 `
 
 // Ensure that tiller is running
-func ensureTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string, upgrade bool) error {
-	tillerOptions := &helminstaller.Options{
-		Namespace:                    tillerNamespace,
-		MaxHistory:                   10,
-		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.12.3",
-		ServiceAccount:               TillerServiceAccountName,
-		AutoMountServiceAccountToken: true,
-	}
+func ensureTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, upgrade bool) error {
+	tillerOptions := getTillerOptions(tillerNamespace)
 
 	// Create tillerNamespace if necessary
 	_, err := kubectlClient.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
@@ -56,7 +51,7 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string, u
 	_, err = kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		// Create tiller server
-		err = createTiller(kubectlClient, tillerNamespace, tillerOptions)
+		err = createTiller(config, kubectlClient, tillerNamespace, tillerOptions)
 		if err != nil {
 			return err
 		}
@@ -74,14 +69,24 @@ func ensureTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string, u
 	return waitUntilTillerIsStarted(kubectlClient, tillerNamespace)
 }
 
-func createTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string, tillerOptions *helminstaller.Options) error {
+func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Options) {
+	return &helminstaller.Options{
+		Namespace:                    tillerNamespace,
+		MaxHistory:                   10,
+		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.13.1",
+		ServiceAccount:               TillerServiceAccountName,
+		AutoMountServiceAccountToken: true,
+	}
+}
+
+func createTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, tillerOptions *helminstaller.Options) error {
 	log.StartWait("Installing Tiller server")
 	defer log.StopWait()
 
 	// If the service account is already there we do not create it or any roles/rolebindings
 	_, err := kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Get(TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
-		err = createTillerRBAC(kubectlClient, tillerNamespace)
+		err = createTillerRBAC(config, kubectlClient, tillerNamespace)
 		if err != nil {
 			return err
 		}
@@ -97,7 +102,7 @@ func createTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string, t
 	return nil
 }
 
-func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
+func waitUntilTillerIsStarted(kubectlClient kubernetes.Interface, tillerNamespace string) error {
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
 
@@ -120,7 +125,7 @@ func waitUntilTillerIsStarted(kubectlClient *kubernetes.Clientset, tillerNamespa
 	return errors.New("Tiller didn't start in time")
 }
 
-func upgradeTiller(kubectlClient *kubernetes.Clientset, tillerOptions *helminstaller.Options) error {
+func upgradeTiller(kubectlClient kubernetes.Interface, tillerOptions *helminstaller.Options) error {
 	log.StartWait("Upgrading tiller")
 	err := helminstaller.Upgrade(kubectlClient, tillerOptions)
 	log.StopWait()
@@ -132,7 +137,7 @@ func upgradeTiller(kubectlClient *kubernetes.Clientset, tillerOptions *helminsta
 }
 
 // IsTillerDeployed determines if we could connect to a tiller server
-func IsTillerDeployed(client *kubernetes.Clientset, tillerNamespace string) bool {
+func IsTillerDeployed(config *latest.Config, client kubernetes.Interface, tillerNamespace string) bool {
 	deployment, err := client.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
@@ -145,7 +150,7 @@ func IsTillerDeployed(client *kubernetes.Clientset, tillerNamespace string) bool
 	// Check if we have a broken deployment
 	if deployment.Status.ReadyReplicas != deployment.Status.Replicas {
 		// Delete the tiller deployment
-		DeleteTiller(client, tillerNamespace)
+		DeleteTiller(config, client, tillerNamespace)
 
 		return false
 	}
@@ -154,8 +159,7 @@ func IsTillerDeployed(client *kubernetes.Clientset, tillerNamespace string) bool
 }
 
 // DeleteTiller clears the tiller server, the service account and role binding
-func DeleteTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
-	config := configutil.GetConfig()
+func DeleteTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string) error {
 	propagationPolicy := metav1.DeletePropagationForeground
 
 	// Delete deployment

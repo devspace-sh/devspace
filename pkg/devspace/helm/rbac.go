@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
@@ -23,9 +24,7 @@ const TillerRoleManagerName = "tiller-config-manager"
 
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
-func createTillerRBAC(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
-	config := configutil.GetConfig()
-
+func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string) error {
 	// Create service account
 	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
 	if err != nil {
@@ -83,7 +82,7 @@ func createTillerRBAC(kubectlClient *kubernetes.Clientset, tillerNamespace strin
 	return nil
 }
 
-func createTillerServiceAccount(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
+func createTillerServiceAccount(kubectlClient kubernetes.Interface, tillerNamespace string) error {
 	_, err := kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Create(&k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerServiceAccountName,
@@ -94,56 +93,7 @@ func createTillerServiceAccount(kubectlClient *kubernetes.Clientset, tillerNames
 	return err
 }
 
-func addMinimalAccessToTiller(kubectlClient *kubernetes.Clientset, tillerNamespace string) error {
-	_, err := kubectlClient.RbacV1beta1().Roles(tillerNamespace).Create(&k8sv1beta1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      TillerRoleManagerName,
-			Namespace: tillerNamespace,
-		},
-		Rules: []k8sv1beta1.PolicyRule{
-			{
-				APIGroups: []string{
-					k8sv1beta1.APIGroupAll,
-					"extensions",
-					"apps",
-				},
-				Resources: []string{
-					"configmaps",
-				},
-				Verbs: []string{k8sv1beta1.ResourceAll},
-			},
-		},
-	})
-	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
-		return err
-	}
-
-	_, err = kubectlClient.RbacV1beta1().RoleBindings(tillerNamespace).Create(&k8sv1beta1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      TillerRoleManagerName + "-binding",
-			Namespace: tillerNamespace,
-		},
-		Subjects: []k8sv1beta1.Subject{
-			{
-				Kind:      k8sv1beta1.ServiceAccountKind,
-				Name:      TillerServiceAccountName,
-				Namespace: tillerNamespace,
-			},
-		},
-		RoleRef: k8sv1beta1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     TillerRoleManagerName,
-		},
-	})
-	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
-		return err
-	}
-
-	return nil
-}
-
-func addDeployAccessToTiller(kubectlClient *kubernetes.Clientset, tillerNamespace, namespace string) error {
+func addDeployAccessToTiller(kubectlClient kubernetes.Interface, tillerNamespace, namespace string) error {
 	_, err := kubectlClient.RbacV1beta1().Roles(namespace).Create(&k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName,

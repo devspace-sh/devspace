@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -27,8 +28,8 @@ import (
 )
 
 // NewClient creates a new kubernetes client
-func NewClient() (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(nil, false)
+func NewClient(devSpaceConfig *latest.Config) (kubernetes.Interface, error) {
+	config, err := getClientConfig(devSpaceConfig, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func NewClient() (*kubernetes.Clientset, error) {
 }
 
 // NewClientFromContext creates a new kubernetes client
-func NewClientFromContext(context string) (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(&context, false)
+func NewClientFromContext(devSpaceConfig *latest.Config, context string) (kubernetes.Interface, error) {
+	config, err := getClientConfig(devSpaceConfig, &context, false)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +48,8 @@ func NewClientFromContext(context string) (*kubernetes.Clientset, error) {
 }
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
-func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, error) {
-	config, err := getClientConfig(nil, switchContext)
+func NewClientWithContextSwitch(devSpaceConfig *latest.Config, switchContext bool) (kubernetes.Interface, error) {
+	config, err := getClientConfig(devSpaceConfig, nil, switchContext)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func NewClientWithContextSwitch(switchContext bool) (*kubernetes.Clientset, erro
 
 // GetClientConfigFromKubectl loads the kubectl client config
 func GetClientConfigFromKubectl() (*rest.Config, error) {
-	return getClientConfig(nil, false)
+	return getClientConfig(nil, nil, false)
 }
 
 // GetClientConfigBySelect let's the user select a kube context to use
@@ -111,16 +112,16 @@ func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
 
 // GetClientConfigFromContext loads the configuration from a kubernetes context
 func GetClientConfigFromContext(context string) (*rest.Config, error) {
-	return getClientConfig(&context, false)
+	return getClientConfig(nil, &context, false)
 }
 
 // GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
-func GetClientConfig() (*rest.Config, error) {
-	return getClientConfig(nil, false)
+func GetClientConfig(config *latest.Config) (*rest.Config, error) {
+	return getClientConfig(config, nil, false)
 }
 
-func getClientConfig(context *string, switchContext bool) (*rest.Config, error) {
-	if configutil.ConfigExists() == false || context != nil {
+func getClientConfig(config *latest.Config, context *string, switchContext bool) (*rest.Config, error) {
+	if config == nil || context != nil {
 		if context != nil {
 			kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 			if err != nil {
@@ -133,7 +134,6 @@ func getClientConfig(context *string, switchContext bool) (*rest.Config, error) 
 		return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
 	}
 
-	config := configutil.GetConfig()
 	if config.Cluster == nil {
 		return nil, errors.New("Couldn't load cluster config, did you run devspace init")
 	}
@@ -214,9 +214,7 @@ func getClientConfig(context *string, switchContext bool) (*rest.Config, error) 
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetNewestRunningPod(kubectl *kubernetes.Clientset, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
-	config := configutil.GetConfig()
-
+func GetNewestRunningPod(config *latest.Config, kubectl kubernetes.Interface, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	if namespace == "" {
 		defaultNamespace, err := configutil.GetDefaultNamespace(config)
 		if err != nil {
@@ -340,22 +338,19 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
-func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace string) (*k8sv1.PodList, error) {
+func GetPodsFromDeployment(kubectl kubernetes.Interface, deployment, namespace string) (*k8sv1.PodList, error) {
 	deploy, err := kubectl.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
-
 	// Deployment not there
 	if err != nil {
 		return nil, err
 	}
 
 	matchLabels := deploy.Spec.Selector.MatchLabels
-
 	if len(matchLabels) <= 0 {
 		return nil, errors.New("No matchLabels defined deployment")
 	}
 
 	matchLabelString := ""
-
 	for k, v := range matchLabels {
 		if len(matchLabelString) > 0 {
 			matchLabelString += ","
@@ -370,8 +365,8 @@ func GetPodsFromDeployment(kubectl *kubernetes.Clientset, deployment, namespace 
 }
 
 // ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
-func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	fw, err := NewPortForwarder(kubectlClient, pod, ports, addresses, stopChan, readyChan)
+func ForwardPorts(config *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+	fw, err := NewPortForwarder(config, kubectlClient, pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
 	}
@@ -380,8 +375,8 @@ func ForwardPorts(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []s
 }
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func NewPortForwarder(kubectlClient *kubernetes.Clientset, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
-	config, err := GetClientConfig()
+func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+	config, err := GetClientConfig(devSpaceConfig)
 	if err != nil {
 		return nil, err
 	}

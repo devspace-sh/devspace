@@ -31,7 +31,7 @@ func (p *Provider) LoginIntoRegistries() error {
 	}
 
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(false)
+	client, err := docker.NewClient(nil, false)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}
@@ -65,7 +65,7 @@ func (p *Provider) LoginIntoRegistries() error {
 // LoginIntoRegistry logs the user into the user docker registry
 func (p *Provider) LoginIntoRegistry(name string) error {
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(false)
+	client, err := docker.NewClient(nil, false)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}

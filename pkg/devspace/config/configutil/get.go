@@ -55,6 +55,11 @@ func ConfigExists() bool {
 
 // configExistsInPath checks wheter a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
+	// Needed for testing
+	if config != nil {
+		return true
+	}
+
 	// Check devspace.yaml
 	_, err := os.Stat(filepath.Join(path, DefaultConfigPath))
 	if err == nil {
@@ -90,14 +95,6 @@ func InitConfig() *latest.Config {
 	})
 
 	return config
-}
-
-// SetTestConfig initializes the config objects
-func SetTestConfig(testConfig *latest.Config) {
-	getConfigOnce.Do(func() {})
-
-	config = testConfig
-	configRaw = testConfig
 }
 
 // GetBaseConfig returns the config unmerged with potential overwrites
@@ -223,24 +220,26 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			} else {
 				log.Infof("Loaded config from %s", DefaultConfigPath)
 			}
+
+			// Exchange kube context if necessary, but only if we don't load the base config
+			// we do this to avoid saving the kube context on commands like
+			// devspace add deployment && devspace add image etc.
+			if generatedConfig.CloudSpace != nil {
+				if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
+					if generatedConfig.CloudSpace.KubeContext == "" {
+						log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+					}
+
+					config.Cluster = &latest.Cluster{
+						KubeContext: &generatedConfig.CloudSpace.KubeContext,
+					}
+				}
+			}
 		} else {
 			if configDefinition != nil {
 				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
 			} else {
 				log.Infof("Loaded config %s", DefaultConfigPath)
-			}
-		}
-
-		// Exchange kube context if necessary
-		if generatedConfig.CloudSpace != nil {
-			if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
-				if generatedConfig.CloudSpace.KubeContext == "" {
-					log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-				}
-
-				config.Cluster = &latest.Cluster{
-					KubeContext: &generatedConfig.CloudSpace.KubeContext,
-				}
 			}
 		}
 
