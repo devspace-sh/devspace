@@ -6,7 +6,7 @@ images:
       docker:
         skipPush: true
 deployments:
-- name: devspace-app
+- name: default
   helm:
     chart:
       name: ./chart

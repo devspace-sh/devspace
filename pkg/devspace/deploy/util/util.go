@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -15,7 +16,7 @@ import (
 )
 
 // All deploys all deployments in the config
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
+func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
 	if config.Deployments != nil && len(*config.Deployments) > 0 {
 		// Execute before deployments deploy hook
 		err := hook.Execute(config, hook.Before, hook.StageDeployments, hook.All, log)
@@ -24,6 +25,21 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 		}
 
 		for _, deployConfig := range *config.Deployments {
+			if len(deployments) > 0 {
+				shouldSkip := true
+
+				for _, deployment := range deployments {
+					if deployment == strings.TrimSpace(*deployConfig.Name) {
+						shouldSkip = false
+						break
+					}
+				}
+
+				if shouldSkip {
+					continue
+				}
+			}
+
 			var (
 				deployClient deploy.Interface
 				err          error

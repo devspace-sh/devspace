@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -27,6 +29,7 @@ type DeployCmd struct {
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDeploy       bool
+	Deployments       string
 	ForceDependencies bool
 
 	SwitchContext bool
@@ -67,6 +70,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
+	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
 	return deployCmd
 }
@@ -147,8 +151,17 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	// What deployments should be deployed
+	deployments := []string{}
+	if cmd.Deployments != "" {
+		deployments = strings.Split(cmd.Deployments, ",")
+		for index := range deployments {
+			deployments[index] = strings.TrimSpace(deployments[index])
+		}
+	}
+
 	// Deploy all defined deployments
-	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, log.GetInstance())
+	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

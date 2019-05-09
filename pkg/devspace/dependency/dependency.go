@@ -238,7 +238,7 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceDeploy, builtImages, log)
+	err = deploy.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceDeploy, builtImages, nil, log)
 	if err != nil {
 		return err
 	}

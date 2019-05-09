@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ type DevCmd struct {
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDeploy       bool
+	Deployments       string
 	ForceDependencies bool
 
 	Sync            bool
@@ -75,6 +77,7 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
+	devCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
@@ -181,8 +184,17 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 
 		// Deploy all defined deployments
 		if config.Deployments != nil {
+			// What deployments should be deployed
+			deployments := []string{}
+			if cmd.Deployments != "" {
+				deployments = strings.Split(cmd.Deployments, ",")
+				for index := range deployments {
+					deployments[index] = strings.TrimSpace(deployments[index])
+				}
+			}
+
 			// Deploy all
-			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, log.GetInstance())
+			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
 			if err != nil {
 				return fmt.Errorf("Error deploying: %v", err)
 			}
