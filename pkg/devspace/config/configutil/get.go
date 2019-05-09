@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
@@ -370,7 +371,9 @@ func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error 
 			return fmt.Errorf("Name required for variable with index %d", idx)
 		}
 
-		if _, ok := cache.Vars[*variable.Name]; ok {
+		if os.Getenv(VarEnvPrefix+strings.ToUpper(*variable.Name)) != "" {
+			continue
+		} else if _, ok := cache.Vars[*variable.Name]; ok {
 			continue
 		}
 

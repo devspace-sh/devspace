@@ -24,9 +24,10 @@ type VarsWrapper struct {
 
 // Variable describes the var definition
 type Variable struct {
-	Name         *string   `yaml:"name"`
-	Options      *[]string `yaml:"options,omitempty"`
-	Default      *string   `yaml:"default,omitempty"`
-	Question     *string   `yaml:"question,omitempty"`
-	RegexPattern *string   `yaml:"regexPattern,omitempty"`
+	Name              *string   `yaml:"name"`
+	Options           *[]string `yaml:"options,omitempty"`
+	Default           *string   `yaml:"default,omitempty"`
+	Question          *string   `yaml:"question,omitempty"`
+	ValidationPattern *string   `yaml:"validationPattern,omitempty"`
+	ValidationMessage *string   `yaml:"validationMessage,omitempty"`
 }

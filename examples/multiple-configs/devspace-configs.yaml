@@ -1,9 +1,13 @@
-production:
+default:
   config:
     path: shared-config.yaml
+# Use the config with 'devspace use config dev-service1'
 dev-service1:
   config:
     path: shared-config.yaml
+  # Overrides defined overridden fields in the original config
+  # You can specify multiple overrides which are applied in the order
+  # you specify them. Array types are completely overriden and maps will be merged
   overrides:
     - data:
         dev:
@@ -24,6 +28,7 @@ dev-service1:
             - labelSelector:
                 app.kubernetes.io/component: service-1
               localSubPath: ./service1
+# Use the config with 'devspace use config dev-service2'
 dev-service2:
   config:
     path: shared-config.yaml

@@ -101,8 +101,12 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 
 		if variable.Options != nil {
 			params.Options = *variable.Options
-		} else if variable.RegexPattern != nil {
-			params.ValidationRegexPattern = *variable.RegexPattern
+		} else if variable.ValidationPattern != nil {
+			params.ValidationRegexPattern = *variable.ValidationPattern
+
+			if variable.ValidationMessage != nil {
+				params.ValidationMessage = *variable.ValidationMessage
+			}
 		}
 	}
 
