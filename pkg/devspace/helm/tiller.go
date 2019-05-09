@@ -28,7 +28,7 @@ repositories:
 `
 
 // Ensure that tiller is running
-func ensureTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, upgrade bool) error {
+func ensureTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, upgrade bool, log log.Logger) error {
 	tillerOptions := getTillerOptions(tillerNamespace)
 
 	// Create tillerNamespace if necessary
@@ -51,7 +51,7 @@ func ensureTiller(config *latest.Config, kubectlClient kubernetes.Interface, til
 	_, err = kubectlClient.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		// Create tiller server
-		err = createTiller(config, kubectlClient, tillerNamespace, tillerOptions)
+		err = createTiller(config, kubectlClient, tillerNamespace, tillerOptions, log)
 		if err != nil {
 			return err
 		}
@@ -60,13 +60,13 @@ func ensureTiller(config *latest.Config, kubectlClient kubernetes.Interface, til
 	} else if upgrade {
 		// Upgrade tiller if necessary
 		tillerOptions.ImageSpec = ""
-		err = upgradeTiller(kubectlClient, tillerOptions)
+		err = upgradeTiller(kubectlClient, tillerOptions, log)
 		if err != nil {
 			return err
 		}
 	}
 
-	return waitUntilTillerIsStarted(kubectlClient, tillerNamespace)
+	return waitUntilTillerIsStarted(kubectlClient, tillerNamespace, log)
 }
 
 func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Options) {
@@ -79,7 +79,7 @@ func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Opti
 	}
 }
 
-func createTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, tillerOptions *helminstaller.Options) error {
+func createTiller(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string, tillerOptions *helminstaller.Options, log log.Logger) error {
 	log.StartWait("Installing Tiller server")
 	defer log.StopWait()
 
@@ -102,7 +102,7 @@ func createTiller(config *latest.Config, kubectlClient kubernetes.Interface, til
 	return nil
 }
 
-func waitUntilTillerIsStarted(kubectlClient kubernetes.Interface, tillerNamespace string) error {
+func waitUntilTillerIsStarted(kubectlClient kubernetes.Interface, tillerNamespace string, log log.Logger) error {
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
 
@@ -125,7 +125,7 @@ func waitUntilTillerIsStarted(kubectlClient kubernetes.Interface, tillerNamespac
 	return errors.New("Tiller didn't start in time")
 }
 
-func upgradeTiller(kubectlClient kubernetes.Interface, tillerOptions *helminstaller.Options) error {
+func upgradeTiller(kubectlClient kubernetes.Interface, tillerOptions *helminstaller.Options, log log.Logger) error {
 	log.StartWait("Upgrading tiller")
 	err := helminstaller.Upgrade(kubectlClient, tillerOptions)
 	log.StopWait()

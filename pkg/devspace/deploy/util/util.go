@@ -17,9 +17,11 @@ import (
 func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
 	if config.Deployments != nil {
 		for _, deployConfig := range *config.Deployments {
-			var deployClient deploy.Interface
-			var err error
-			var method string
+			var (
+				deployClient deploy.Interface
+				err          error
+				method       string
+			)
 
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(config, client, deployConfig, log)
@@ -63,7 +65,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string) {
+func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string, log log.Logger) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -71,7 +73,11 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 	if config.Deployments != nil {
 		// Reverse them
 		for i := len(*config.Deployments) - 1; i >= 0; i-- {
-			deployConfig := (*config.Deployments)[i]
+			var (
+				err          error
+				deployClient deploy.Interface
+				deployConfig = (*config.Deployments)[i]
+			)
 
 			// Check if we should skip deleting deployment
 			if deployments != nil {
@@ -89,24 +95,21 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 				}
 			}
 
-			var err error
-			var deployClient deploy.Interface
-
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = kubectl.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = helm.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = component.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create component deploy config: %v", err)
 					continue

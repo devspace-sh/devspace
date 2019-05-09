@@ -79,7 +79,7 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 	}
 
 	// Create tiller if necessary
-	err = ensureTiller(config, kubectlClient, tillerNamespace, upgradeTiller)
+	err = ensureTiller(config, kubectlClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,7 @@ func NewUpdateCmd() *cobra.Command {
 
 	updateCmd.AddCommand(newConfigCmd())
 	updateCmd.AddCommand(newChartCmd())
+	updateCmd.AddCommand(newDependenciesCmd())
 
 	return updateCmd
 }

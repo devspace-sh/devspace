@@ -297,11 +297,16 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 		if key == "image" {
 			value = strings.TrimSpace(value)
 
+			image := strings.Split(value, ":")
+			if len(image) > 2 {
+				return false
+			}
+
 			// Search for image name
 			for _, imageCache := range cache.Images {
-				if imageCache.ImageName == value {
+				if imageCache.ImageName == image[0] && imageCache.Tag != "" {
 					if builtImages != nil {
-						if _, ok := builtImages[value]; ok {
+						if _, ok := builtImages[image[0]]; ok {
 							shouldRedeploy = true
 						}
 					}
@@ -316,11 +321,12 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 
 	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
+		image := strings.Split(value, ":")
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == value {
-				return value + ":" + imageCache.Tag
+			if imageCache.ImageName == image[0] {
+				return image[0] + ":" + imageCache.Tag
 			}
 		}
 

@@ -1,0 +1,6 @@
+version: v1beta2
+deployments:
+  - name: dependency2
+    component:
+      containers:
+        - image: nginx

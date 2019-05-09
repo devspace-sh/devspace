@@ -34,5 +34,4 @@ func SetFakeConfig(fakeConfig *latest.Config) {
 	}
 
 	config = fakeConfig
-	configRaw = fakeConfig
 }

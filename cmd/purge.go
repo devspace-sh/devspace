@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -14,7 +15,9 @@ import (
 
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
-	Deployments string
+	Deployments             string
+	AllowCyclicDependencies bool
+	PurgeDependencies       bool
 }
 
 // NewPurgeCmd creates a new purge command
@@ -38,6 +41,8 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
+	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", true, "When enabled purges the dependencies as well")
 
 	return purgeCmd
 }
@@ -60,7 +65,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
+		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	deployments := []string{}
@@ -77,7 +82,16 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+	// Purge deployments
+	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
+
+	// Purge dependencies
+	if cmd.PurgeDependencies {
+		err = dependency.PurgeAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, log.GetInstance())
+		if err != nil {
+			log.Errorf("Error purging dependencies: %v", err)
+		}
+	}
 
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {

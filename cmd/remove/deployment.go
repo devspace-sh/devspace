@@ -86,7 +86,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			return
 		}
 
-		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

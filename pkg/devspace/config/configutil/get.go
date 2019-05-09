@@ -41,8 +41,7 @@ const DefaultDevSpaceSelectorName = "app-selector"
 var LoadedConfig string
 
 // Global config vars
-var config *latest.Config    // merged config
-var configRaw *latest.Config // config from .devspace/config.yaml
+var config *latest.Config // merged config
 
 // Thread-safety helper
 var getConfigOnce sync.Once
@@ -91,7 +90,6 @@ func configExistsInPath(path string) bool {
 func InitConfig() *latest.Config {
 	getConfigOnce.Do(func() {
 		config = latest.New().(*latest.Config)
-		configRaw = latest.New().(*latest.Config)
 	})
 
 	return config
@@ -113,14 +111,118 @@ func GetConfig() *latest.Config {
 	return config
 }
 
+func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated.CacheConfig) (*latest.Config, *configs.ConfigDefinition, error) {
+	var (
+		config           = latest.New().(*latest.Config)
+		configRaw        = latest.New().(*latest.Config)
+		configDefinition *configs.ConfigDefinition
+		configPath       = filepath.Join(basePath, DefaultConfigPath)
+		configsPath      = filepath.Join(basePath, DefaultConfigsPath)
+		varsPath         = filepath.Join(basePath, DefaultVarsPath)
+	)
+
+	// Check if configs.yaml exists
+	_, err := os.Stat(configsPath)
+	if err == nil {
+		configs := configs.Configs{}
+
+		// Get configs
+		err = LoadConfigs(&configs, configsPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Error loading %s: %v", configsPath, err)
+		}
+
+		// Check if active config exists
+		if _, ok := configs[loadConfig]; ok == false {
+			return nil, nil, fmt.Errorf("Config %s couldn't be found", loadConfig)
+		}
+
+		// Get real config definition
+		configDefinition = configs[loadConfig]
+		if configDefinition.Config == nil {
+			return nil, nil, fmt.Errorf("Config %s couldn't be found", loadConfig)
+		}
+
+		// Ask questions
+		if configDefinition.Vars != nil {
+			vars, err := loadVarsFromWrapper(basePath, configDefinition.Vars)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error loading vars: %v", err)
+			}
+
+			err = askQuestions(cache, vars)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
+			}
+		}
+
+		// Load config
+		configRaw, err = loadConfigFromWrapper(basePath, configDefinition.Config)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		_, err := os.Stat(varsPath)
+		if err == nil {
+			vars := []*configs.Variable{}
+			yamlFileContent, err := ioutil.ReadFile(varsPath)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error loading %s: %v", varsPath, err)
+			}
+
+			err = yaml.UnmarshalStrict(yamlFileContent, vars)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error parsing %s: %v", varsPath, err)
+			}
+
+			// Ask questions
+			err = askQuestions(cache, vars)
+			if err != nil {
+				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
+			}
+		}
+
+		configRaw, err = loadConfigFromPath(configPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Loading config: %v", err)
+		}
+	}
+
+	Merge(&config, deepCopy(configRaw))
+	return config, configDefinition, nil
+}
+
+// GetConfigFromPath loads the config from a given base path
+func GetConfigFromPath(basePath string, loadConfig string, cache *generated.CacheConfig) (*latest.Config, error) {
+	config, configDefinition, err := loadBaseConfigFromPath(basePath, loadConfig, cache)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if we should load overrides
+	if configDefinition != nil {
+		if configDefinition.Overrides != nil {
+			for index, configWrapper := range *configDefinition.Overrides {
+				overwriteConfig, err := loadConfigFromWrapper(basePath, configWrapper)
+				if err != nil {
+					return nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
+				}
+
+				Merge(&config, overwriteConfig)
+			}
+		}
+	}
+
+	return config, nil
+}
+
 // GetConfigWithoutDefaults returns the config without setting the default values
 func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 	getConfigOnce.Do(func() {
-		var configDefinition *configs.ConfigDefinition
-
-		// Init configs
-		config = latest.New().(*latest.Config)
-		configRaw = latest.New().(*latest.Config)
+		var (
+			err              error
+			configDefinition *configs.ConfigDefinition
+		)
 
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
@@ -128,84 +230,26 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
 
-		// Check if configs.yaml exists
-		_, err = os.Stat(DefaultConfigsPath)
-		if err == nil {
-			configs := configs.Configs{}
+		// Get config to load
+		LoadedConfig = generatedConfig.ActiveConfig
 
-			// Get configs
-			err = LoadConfigs(&configs, DefaultConfigsPath)
-			if err != nil {
-				log.Panicf("Error loading %s: %v", DefaultConfigsPath, err)
-			}
-
-			// Get config to load
-			LoadedConfig = generatedConfig.ActiveConfig
-
-			// Check if active config exists
-			if _, ok := configs[LoadedConfig]; ok == false {
-				log.Fatalf("No active config selected. Run: \n- `%s` to list all available configs\n- `%s` to use a specific config", ansi.Color("devspace list configs", "white+b"), ansi.Color("devspace use config [NAME]", "white+b"))
-			}
-
-			// Get real config definition
-			configDefinition = configs[LoadedConfig]
-			if configDefinition.Config == nil {
-				log.Fatalf("config %s cannot be found", LoadedConfig)
-			}
-
-			// Ask questions
-			if configDefinition.Vars != nil {
-				vars, err := loadVarsFromWrapper(configDefinition.Vars)
-				if err != nil {
-					log.Fatalf("Error loading vars: %v", err)
-				}
-
-				err = askQuestions(generatedConfig, vars)
-				if err != nil {
-					log.Fatalf("Error filling vars: %v", err)
-				}
-			}
-
-			// Load config
-			configRaw, err = loadConfigFromWrapper(configDefinition.Config)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			_, err := os.Stat(DefaultVarsPath)
-			if err == nil {
-				vars := []*configs.Variable{}
-				yamlFileContent, err := ioutil.ReadFile(DefaultVarsPath)
-				if err != nil {
-					log.Fatalf("Error loading %s: %v", DefaultVarsPath, err)
-				}
-
-				err = yaml.UnmarshalStrict(yamlFileContent, vars)
-				if err != nil {
-					log.Fatalf("Error parsing %s: %v", DefaultVarsPath, err)
-				}
-
-				// Ask questions
-				err = askQuestions(generatedConfig, vars)
-				if err != nil {
-					log.Fatalf("Error filling vars: %v", err)
-				}
-			}
-
-			configRaw, err = loadConfigFromPath(DefaultConfigPath)
-			if err != nil {
-				log.Fatalf("Loading config: %v", err)
-			}
+		// Load base config
+		config, configDefinition, err = loadBaseConfigFromPath(".", LoadedConfig, generatedConfig.GetActive())
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		Merge(&config, deepCopy(configRaw))
+		// Reset loaded config if there was no configs.yaml
+		if configDefinition == nil {
+			LoadedConfig = ""
+		}
 
 		// Check if we should load overrides
 		if loadOverwrites {
 			if configDefinition != nil {
 				if configDefinition.Overrides != nil {
 					for index, configWrapper := range *configDefinition.Overrides {
-						overwriteConfig, err := loadConfigFromWrapper(configWrapper)
+						overwriteConfig, err := loadConfigFromWrapper(".", configWrapper)
 						if err != nil {
 							log.Fatalf("Error loading override config at index %d: %v", index, err)
 						}
@@ -312,28 +356,17 @@ func ValidateOnce() {
 	})
 }
 
-func askQuestions(generatedConfig *generated.Config, vars []*configs.Variable) error {
-	changed := false
-	activeConfig := generatedConfig.GetActive()
-
+func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error {
 	for idx, variable := range vars {
 		if variable.Name == nil {
 			return fmt.Errorf("Name required for variable with index %d", idx)
 		}
 
-		if _, ok := activeConfig.Vars[*variable.Name]; ok {
+		if _, ok := cache.Vars[*variable.Name]; ok {
 			continue
 		}
 
-		activeConfig.Vars[*variable.Name] = AskQuestion(variable)
-		changed = true
-	}
-
-	if changed {
-		err := generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return err
-		}
+		cache.Vars[*variable.Name] = AskQuestion(variable)
 	}
 
 	return nil
