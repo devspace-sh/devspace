@@ -24,10 +24,12 @@ type DeployCmd struct {
 
 	CreateImagePullSecrets bool
 
-	ForceBuild      bool
-	BuildSequential bool
-	ForceDeploy     bool
-	SwitchContext   bool
+	ForceBuild        bool
+	BuildSequential   bool
+	ForceDeploy       bool
+	ForceDependencies bool
+
+	SwitchContext bool
 
 	AllowCyclicDependencies bool
 }
@@ -64,6 +66,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
+	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	return deployCmd
 }
@@ -125,7 +128,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}

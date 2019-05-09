@@ -29,9 +29,10 @@ type DevCmd struct {
 	CreateImagePullSecrets  bool
 	AllowCyclicDependencies bool
 
-	ForceBuild      bool
-	BuildSequential bool
-	ForceDeploy     bool
+	ForceBuild        bool
+	BuildSequential   bool
+	ForceDeploy       bool
+	ForceDependencies bool
 
 	Sync            bool
 	Terminal        bool
@@ -74,6 +75,7 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
+	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 
@@ -158,7 +160,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 		}
 
 		// Dependencies
-		err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error deploying dependencies: %v", err)
 		}
