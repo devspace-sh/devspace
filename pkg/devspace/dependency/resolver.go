@@ -88,6 +88,10 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, update bool)
 
 	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, update)
 	if err != nil {
+		if _, ok := err.(*CyclicError); ok {
+			return nil, err
+		}
+
 		return nil, errors.Wrap(err, "resolve dependencies recursive")
 	}
 

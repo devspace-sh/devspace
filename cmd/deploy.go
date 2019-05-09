@@ -28,6 +28,8 @@ type DeployCmd struct {
 	BuildSequential bool
 	ForceDeploy     bool
 	SwitchContext   bool
+
+	AllowCyclicDependencies bool
 }
 
 // NewDeployCmd creates a new deploy command
@@ -53,6 +55,7 @@ devspace deploy --kube-context=deploy-context
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
+	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
@@ -122,7 +125,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig.GetActive(), false, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}

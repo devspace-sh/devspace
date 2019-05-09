@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
@@ -25,7 +26,8 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	CreateImagePullSecrets bool
+	CreateImagePullSecrets  bool
+	AllowCyclicDependencies bool
 
 	ForceBuild      bool
 	BuildSequential bool
@@ -66,6 +68,7 @@ Starts your project in development mode:
 	}
 
 	devCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
+	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
@@ -152,6 +155,12 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
 			return fmt.Errorf("Error loading generated.yaml: %v", err)
+		}
+
+		// Dependencies
+		err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary

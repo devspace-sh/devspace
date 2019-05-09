@@ -15,9 +15,39 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+// UpdateAll will update all dependencies if there are any
+func UpdateAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, log log.Logger) error {
+	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+		return nil
+	}
+
+	log.StartWait("Update dependencies")
+	defer log.StopWait()
+
+	// Create a new dependency resolver
+	resolver, err := NewResolver(config, cache, allowCyclic, log)
+	if err != nil {
+		return errors.Wrap(err, "new resolver")
+	}
+
+	// Resolve all dependencies
+	_, err = resolver.Resolve(*config.Dependencies, true)
+	if err != nil {
+		if _, ok := err.(*CyclicError); ok {
+			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+		}
+
+		return err
+	}
+
+	return nil
+}
 
 // DeployAll will deploy all dependencies if there are any
 func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
@@ -34,6 +64,10 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 	// Resolve all dependencies
 	dependencies, err := resolver.Resolve(*config.Dependencies, updateDependencies)
 	if err != nil {
+		if _, ok := err.(*CyclicError); ok {
+			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+		}
+
 		return err
 	}
 
@@ -81,6 +115,10 @@ func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic b
 	// Resolve all dependencies
 	dependencies, err := resolver.Resolve(*config.Dependencies, false)
 	if err != nil {
+		if _, ok := err.(*CyclicError); ok {
+			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+		}
+
 		return errors.Wrap(err, "resolve dependencies")
 	}
 
@@ -155,9 +193,6 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 		os.Chdir(currentWorkingDirectory)
 	}()
 
-	log.StartWait("Deploy dependency " + d.ID)
-	defer log.StopWait()
-
 	// Create kubectl client
 	client, err := kubectl.NewClient(d.Config)
 	if err != nil {
@@ -184,17 +219,21 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 
 	log.StopWait()
 
-	// Build images
-	builtImages, err := build.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceBuild, false, log)
-	if err != nil {
-		return err
-	}
-
-	// Save config if an image was built
-	if len(builtImages) > 0 {
-		err := generated.SaveConfig(d.GeneratedConfig)
+	// Check if image build is enabled
+	builtImages := make(map[string]string)
+	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
+		// Build images
+		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceBuild, false, log)
 		if err != nil {
-			return fmt.Errorf("Error saving generated config: %v", err)
+			return err
+		}
+
+		// Save config if an image was built
+		if len(builtImages) > 0 {
+			err := generated.SaveConfig(d.GeneratedConfig)
+			if err != nil {
+				return fmt.Errorf("Error saving generated config: %v", err)
+			}
 		}
 	}
 

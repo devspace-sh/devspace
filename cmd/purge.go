@@ -15,7 +15,9 @@ import (
 
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
-	Deployments string
+	Deployments             string
+	AllowCyclicDependencies bool
+	PurgeDependencies       bool
 }
 
 // NewPurgeCmd creates a new purge command
@@ -39,6 +41,8 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
+	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", true, "When enabled purges the dependencies as well")
 
 	return purgeCmd
 }
@@ -78,11 +82,15 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Purge deployments
 	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
 
-	err = dependency.PurgeAll(config, generatedConfig.GetActive(), false, log.GetInstance())
-	if err != nil {
-		log.Errorf("Error purging dependencies: %v", err)
+	// Purge dependencies
+	if cmd.PurgeDependencies {
+		err = dependency.PurgeAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, log.GetInstance())
+		if err != nil {
+			log.Errorf("Error purging dependencies: %v", err)
+		}
 	}
 
 	err = generated.SaveConfig(generatedConfig)
