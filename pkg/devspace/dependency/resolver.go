@@ -81,13 +81,18 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, update bool)
 	r.log.StartWait("Resolving dependencies")
 	defer r.log.StopWait()
 
-	err := r.resolveRecursive(".", r.DependencyGraph.Root.ID, dependencies, update)
+	currentWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		return nil, errors.Wrap(err, "get current working directory")
+	}
+
+	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, update)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve dependencies recursive")
 	}
 
 	r.log.StopWait()
-	r.log.Donef("Resolved %d dependencies", len(r.DependencyGraph.Nodes))
+	r.log.Donef("Resolved %d dependencies", len(r.DependencyGraph.Nodes)-1)
 	return r.buildDependencyQueue()
 }
 

@@ -9,6 +9,8 @@ dependencies:
       path: dependency1
   - source:
       path: dependency2
+  - source:
+      git: https://github.com/devspace-cloud/example-dependency.git
 cluster:
   kubeContext: minikube
   namespace: devspace

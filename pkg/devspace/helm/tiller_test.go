@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -71,7 +72,7 @@ func TestTillerEnsure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ensureTiller(config, client, configutil.TestNamespace, false)
+	err = ensureTiller(config, client, configutil.TestNamespace, false, log.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestTillerCreate(t *testing.T) {
 
 	tillerOptions := getTillerOptions(configutil.TestNamespace)
 
-	err := createTiller(config, client, configutil.TestNamespace, tillerOptions)
+	err := createTiller(config, client, configutil.TestNamespace, tillerOptions, log.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}

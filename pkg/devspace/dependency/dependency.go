@@ -1,8 +1,10 @@
 package dependency
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -14,16 +16,17 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, log log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
 
 	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, log)
+	resolver, err := NewResolver(config, cache, allowCyclic, logger)
 	if err != nil {
 		return errors.Wrap(err, "new resolver")
 	}
@@ -34,11 +37,24 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 		return err
 	}
 
+	logger.StartWait(fmt.Sprintf("Deploying %d dependencies", len(dependencies)))
+	defer logger.StopWait()
+
 	// Deploy all dependencies
 	for _, dependency := range dependencies {
-		err := dependency.Deploy(createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy, log)
+		buff := &bytes.Buffer{}
+		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+
+		err := dependency.Deploy(createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy, streamLog)
 		if err != nil {
-			return errors.Wrap(err, "deploy dependency "+dependency.ID)
+			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+		}
+
+		// Prettify path if its a path deployment
+		if dependency.DependencyConfig.Source.Path != nil {
+			logger.Infof("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+		} else {
+			logger.Infof("Deployed dependency %s", dependency.ID)
 		}
 	}
 
@@ -46,13 +62,13 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, log log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
 
 	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, log)
+	resolver, err := NewResolver(config, cache, allowCyclic, logger)
 	if err != nil {
 		return err
 	}
@@ -67,9 +83,19 @@ func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic b
 	for i := len(dependencies) - 1; i >= 0; i-- {
 		dependency := dependencies[i]
 
-		err := dependency.Purge(log)
+		buff := &bytes.Buffer{}
+		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+
+		err := dependency.Purge(streamLog)
 		if err != nil {
-			return errors.Wrap(err, "purge dependency "+dependency.ID)
+			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+		}
+
+		// Prettify path if its a path deployment
+		if dependency.DependencyConfig.Source.Path != nil {
+			logger.Infof("Purged dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+		} else {
+			logger.Infof("Purged dependency %s", dependency.ID)
 		}
 	}
 
@@ -201,7 +227,7 @@ func (d *Dependency) Purge(log log.Logger) error {
 	}
 
 	// Purge the deployments
-	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), kubectl, nil)
+	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), kubectl, nil, log)
 
 	err = generated.SaveConfig(d.GeneratedConfig)
 	if err != nil {

@@ -65,7 +65,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string) {
+func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string, log log.Logger) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -97,19 +97,19 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = kubectl.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create kubectl deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = helm.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(config, client, deployConfig, log.GetInstance())
+				deployClient, err = component.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create component deploy config: %v", err)
 					continue

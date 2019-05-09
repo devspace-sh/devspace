@@ -78,7 +78,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
-	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
 
 	err = dependency.PurgeAll(config, generatedConfig.GetActive(), false, log.GetInstance())
 	if err != nil {
