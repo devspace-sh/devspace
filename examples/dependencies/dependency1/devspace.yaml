@@ -1,0 +1,9 @@
+version: v1beta2
+dependencies:
+  - source:
+      path: ../dependency2
+deployments:
+  - name: dependency1
+    component:
+      containers:
+        - image: nginx

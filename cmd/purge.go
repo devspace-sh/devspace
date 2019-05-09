@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -60,7 +61,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
+		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	deployments := []string{}
@@ -78,6 +79,11 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments)
+
+	err = dependency.PurgeAll(config, generatedConfig.GetActive(), false, log.GetInstance())
+	if err != nil {
+		log.Errorf("Error purging dependencies: %v", err)
+	}
 
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {

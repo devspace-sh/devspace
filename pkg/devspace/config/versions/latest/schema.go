@@ -41,14 +41,17 @@ type Config struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Config *string       `yaml:"config"`
+	Config             *string `yaml:"config,omitempty"`
+	SkipBuild          *bool   `yaml:"skipBuild,omitempty"`
+	IgnoreDependencies *bool   `yaml:"ignoreDependencies,omitempty"`
+
 	Source *SourceConfig `yaml:"source"`
 }
 
 // SourceConfig defines the dependency source
 type SourceConfig struct {
-	Git  *string `yaml:"git"`
-	Path *string `yaml:"path"`
+	Git  *string `yaml:"git,omitempty"`
+	Path *string `yaml:"path,omitempty"`
 }
 
 // ImageConfig defines the image specification

@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -118,6 +119,12 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
+	// Dependencies
+	err = dependency.DeployAll(config, generatedConfig.GetActive(), false, false, cmd.CreateImagePullSecrets, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Error deploying dependencies: %v", err)
 	}
 
 	// Build images

@@ -121,7 +121,9 @@ func NewCache() *CacheConfig {
 	return &CacheConfig{
 		Deployments: make(map[string]*DeploymentCache),
 		Images:      make(map[string]*ImageCache),
-		Vars:        make(map[string]string),
+
+		Dependencies: make(map[string]string),
+		Vars:         make(map[string]string),
 	}
 }
 
@@ -160,6 +162,9 @@ func InitDevSpaceConfig(config *Config, configName string) {
 	}
 	if config.Configs[configName].Images == nil {
 		config.Configs[configName].Images = make(map[string]*ImageCache)
+	}
+	if config.Configs[configName].Dependencies == nil {
+		config.Configs[configName].Dependencies = make(map[string]string)
 	}
 	if config.Configs[configName].Vars == nil {
 		config.Configs[configName].Vars = make(map[string]string)

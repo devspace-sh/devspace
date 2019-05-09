@@ -67,11 +67,12 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.CacheConfig, al
 	return &Resolver{
 		DependencyGraph: NewGraph(NewNode(id, nil)),
 
-		BasePath:   basePath,
 		BaseConfig: baseConfig,
 		BaseCache:  baseCache,
 
 		AllowCyclic: allowCyclic,
+
+		log: log,
 	}, nil
 }
 
@@ -80,7 +81,7 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, update bool)
 	r.log.StartWait("Resolving dependencies")
 	defer r.log.StopWait()
 
-	err := r.resolveRecursive(r.DependencyGraph.Root.ID, dependencies, update)
+	err := r.resolveRecursive(".", r.DependencyGraph.Root.ID, dependencies, update)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve dependencies recursive")
 	}
@@ -110,9 +111,9 @@ func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *Resolver) resolveRecursive(parentID string, dependencies []*latest.DependencyConfig, update bool) error {
+func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
 	for _, dependencyConfig := range dependencies {
-		ID := r.getDependencyID(dependencyConfig)
+		ID := r.getDependencyID(basePath, dependencyConfig)
 
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
@@ -124,7 +125,7 @@ func (r *Resolver) resolveRecursive(parentID string, dependencies []*latest.Depe
 				}
 			}
 		} else {
-			dependency, err := r.resolveDependency(dependencyConfig, update)
+			dependency, err := r.resolveDependency(basePath, dependencyConfig, update)
 			if err != nil {
 				return err
 			}
@@ -134,10 +135,13 @@ func (r *Resolver) resolveRecursive(parentID string, dependencies []*latest.Depe
 				return errors.Wrap(err, "insert node")
 			}
 
-			if dependency.Config.Dependencies != nil && len(*dependency.Config.Dependencies) > 0 {
-				err = r.resolveRecursive(ID, *dependency.Config.Dependencies, update)
-				if err != nil {
-					return err
+			// Load dependencies from dependency
+			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
+				if dependency.Config.Dependencies != nil && len(*dependency.Config.Dependencies) > 0 {
+					err = r.resolveRecursive(dependency.LocalPath, ID, *dependency.Config.Dependencies, update)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -146,9 +150,9 @@ func (r *Resolver) resolveRecursive(parentID string, dependencies []*latest.Depe
 	return nil
 }
 
-func (r *Resolver) resolveDependency(dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
+func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
 	var (
-		ID        = r.getDependencyID(dependency)
+		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
 		err       error
 
@@ -179,7 +183,7 @@ func (r *Resolver) resolveDependency(dependency *latest.DependencyConfig, update
 			r.log.Donef("Pulled %s", ID)
 		}
 	} else if dependency.Source.Path != nil {
-		localPath, err = filepath.Abs(*dependency.Source.Path)
+		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(*dependency.Source.Path)))
 		if err != nil {
 			return nil, errors.Wrap(err, "filepath absolute")
 		}
@@ -204,8 +208,8 @@ func (r *Resolver) resolveDependency(dependency *latest.DependencyConfig, update
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
-
 	dGeneratedConfig.ActiveConfig = loadConfig
+
 	return &Dependency{
 		ID:        ID,
 		LocalPath: localPath,
@@ -218,12 +222,12 @@ func (r *Resolver) resolveDependency(dependency *latest.DependencyConfig, update
 	}, nil
 }
 
-func (r *Resolver) getDependencyID(dependency *latest.DependencyConfig) string {
+func (r *Resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
 	if dependency.Source.Git != nil {
 		return strings.TrimSpace(*dependency.Source.Git)
 	} else if dependency.Source.Path != nil {
 		// Check if it's an git repo
-		filePath := filepath.Join(r.BasePath, *dependency.Source.Path)
+		filePath := filepath.Join(basePath, *dependency.Source.Path)
 
 		gitRepo := generator.NewGitRepository(filePath, "")
 		remote, err := gitRepo.GetRemote()
