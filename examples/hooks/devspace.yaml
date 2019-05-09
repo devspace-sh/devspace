@@ -32,18 +32,18 @@ hooks:
         deployments: all
   - command: echo
     flags:
-      - before deployment hooks
+      - before deployment my-deployment
     when:
       before:
-        deployments: hooks
+        deployments: my-deployment
   - command: echo
     flags:
-      - after deployment hooks
+      - after deployment my-deployment
     when:
       after:
-        deployments: hooks
+        deployments: my-deployment
 deployments:
-  - name: hooks
+  - name: my-deployment
     component:
       containers:
         - image: devspace
