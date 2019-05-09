@@ -19,12 +19,12 @@ dev:
     - "999999999999"
   ports:
   - labelSelector:
-      app: devspace
+      app.kubernetes.io/component: default
     forward:
     - port: 3000
   sync:
   - labelSelector:
-      app: devspace
+      app.kubernetes.io/component: default
     excludePaths:
     - node_modules
 cluster:
