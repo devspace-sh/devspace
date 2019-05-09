@@ -7,8 +7,6 @@ import (
 )
 
 func TestWalk(t *testing.T) {
-	// @Florian
-	// Take a look at how the walk function works and transform the below input into the output below
 
 	// Input yaml
 	input := `
