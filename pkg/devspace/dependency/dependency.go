@@ -37,11 +37,13 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 		return err
 	}
 
-	logger.StartWait(fmt.Sprintf("Deploying %d dependencies", len(dependencies)))
 	defer logger.StopWait()
 
 	// Deploy all dependencies
-	for _, dependency := range dependencies {
+	for i := 0; i < len(dependencies); i++ {
+		dependency := dependencies[i]
+
+		logger.StartWait(fmt.Sprintf("Deploying %d dependencies", len(dependencies)-i))
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
@@ -52,11 +54,14 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 
 		// Prettify path if its a path deployment
 		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Infof("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
 		} else {
-			logger.Infof("Deployed dependency %s", dependency.ID)
+			logger.Donef("Deployed dependency %s", dependency.ID)
 		}
 	}
+
+	logger.StopWait()
+	logger.Donef("Successfully deployed %d dependencies", len(dependencies))
 
 	return nil
 }
@@ -79,8 +84,11 @@ func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic b
 		return errors.Wrap(err, "resolve dependencies")
 	}
 
+	defer logger.StopWait()
+
 	// Purge all dependencies
 	for i := len(dependencies) - 1; i >= 0; i-- {
+		logger.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
 		dependency := dependencies[i]
 
 		buff := &bytes.Buffer{}
@@ -93,11 +101,14 @@ func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic b
 
 		// Prettify path if its a path deployment
 		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Infof("Purged dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+			logger.Donef("Purged dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
 		} else {
-			logger.Infof("Purged dependency %s", dependency.ID)
+			logger.Donef("Purged dependency %s", dependency.ID)
 		}
 	}
+
+	logger.StopWait()
+	logger.Donef("Successfully purged %d dependencies", len(dependencies))
 
 	return nil
 }

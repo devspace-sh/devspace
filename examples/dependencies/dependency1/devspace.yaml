@@ -1,4 +1,10 @@
 version: v1beta2
+images:
+  default:
+    image: devspace
+    build:
+      docker:
+        skipPush: true
 dependencies:
   - source:
       path: ../dependency2
@@ -6,4 +12,4 @@ deployments:
   - name: dependency1
     component:
       containers:
-        - image: nginx
+        - image: devspace
