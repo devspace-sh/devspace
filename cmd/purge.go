@@ -34,6 +34,7 @@ func NewPurgeCmd() *cobra.Command {
 Deletes the deployed kuberenetes resources:
 
 devspace purge
+devspace purge --dependencies
 devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
@@ -42,7 +43,7 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
-	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", true, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
 
 	return purgeCmd
 }

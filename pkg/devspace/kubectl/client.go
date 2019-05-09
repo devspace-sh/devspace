@@ -240,8 +240,10 @@ func GetNewestRunningPod(config *latest.Config, kubectl kubernetes.Interface, la
 			var selectedPod *k8sv1.Pod
 
 			for _, pod := range podList.Items {
-				if selectedPod == nil || pod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
-					selectedPod = &pod
+				currentPod := pod
+
+				if selectedPod == nil || currentPod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
+					selectedPod = &currentPod
 				}
 			}
 

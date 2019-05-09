@@ -11,5 +11,5 @@ spec:
         app.kubernetes.io/name: devspace-app
     spec:
       containers:
-      - name: default
-        image: devspace
+        - name: default
+          image: devspace
