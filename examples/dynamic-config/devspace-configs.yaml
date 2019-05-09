@@ -19,7 +19,7 @@ default:
           - Deployment-1
           - Deployment-2
       - name: IMAGE
-        question: Please specify an image name, or enter to use 'nginx'
+        question: Please specify an image name, or press enter to use 'nginx'
         default: nginx
         validationPattern: ^n.*$
-        validationMessage: Only images that start with an 'n' are allowed
+        validationMessage: Only image names that start with a 'n' are allowed
