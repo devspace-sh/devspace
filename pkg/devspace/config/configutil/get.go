@@ -134,7 +134,15 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated
 
 		// Check if active config exists
 		if _, ok := configs[loadConfig]; ok == false {
-			return nil, nil, fmt.Errorf("Config %s couldn't be found", loadConfig)
+			availableConfigs := make([]string, 0, len(configs))
+			for configName := range configs {
+				availableConfigs = append(availableConfigs, configName)
+			}
+			if loadConfig == generated.DefaultConfigName {
+				return nil, nil, fmt.Errorf("No config selected. Please select one of the following configs %v.\n Run '%s'", availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
+			}
+
+			return nil, nil, fmt.Errorf("Config %s couldn't be found. Please select one of the configs %v.\n Run '%s'", loadConfig, availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
 		}
 
 		// Get real config definition

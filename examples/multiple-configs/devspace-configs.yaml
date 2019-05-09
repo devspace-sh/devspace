@@ -1,0 +1,49 @@
+production:
+  config:
+    path: shared-config.yaml
+dev-service1:
+  config:
+    path: shared-config.yaml
+  overrides:
+    - data:
+        dev:
+          overrideImages:
+            - name: service-image-1
+              entrypoint:
+                - sleep
+                - "9999999999"
+          terminal:
+            labelSelector:
+              app.kubernetes.io/component: service-1
+          ports:
+            - labelSelector:
+                app.kubernetes.io/component: service-1
+              forward:
+                - port: 8080
+          sync:
+            - labelSelector:
+                app.kubernetes.io/component: service-1
+              localSubPath: ./service1
+dev-service2:
+  config:
+    path: shared-config.yaml
+  overrides:
+    - data:
+        dev:
+          overrideImages:
+            - name: service-image-2
+              entrypoint:
+                - sleep
+                - "9999999999"
+          terminal:
+            labelSelector:
+              app.kubernetes.io/component: service-2
+          ports:
+            - labelSelector:
+                app.kubernetes.io/component: service-2
+              forward:
+                - port: 8080
+          sync:
+            - labelSelector:
+                app.kubernetes.io/component: service-2
+              localSubPath: ./service2

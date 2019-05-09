@@ -63,7 +63,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 
 		podStatus := kubectl.GetPodStatus(pod)
 		if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-			return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s", pod.Name, podStatus)
+			return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
 		}
 
 		return pod, nil

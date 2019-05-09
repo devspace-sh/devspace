@@ -19,6 +19,11 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 		}
 
 		if podList.Items != nil && len(podList.Items) == 1 {
+			podStatus := kubectl.GetPodStatus(&podList.Items[0])
+			if podStatus != "Running" {
+				return nil, nil
+			}
+
 			return &podList.Items[0], nil
 		} else if podList.Items != nil && len(podList.Items) > 1 {
 			options := []string{}
@@ -57,6 +62,11 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 	}
 
 	if podList.Items != nil && len(podList.Items) == 1 {
+		podStatus := kubectl.GetPodStatus(&podList.Items[0])
+		if podStatus != "Running" {
+			return nil, nil
+		}
+
 		return &podList.Items[0], nil
 	} else if podList.Items != nil && len(podList.Items) > 1 {
 		options := []string{}
