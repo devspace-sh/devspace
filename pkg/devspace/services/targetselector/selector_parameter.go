@@ -58,7 +58,7 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config) (string, error) 
 	return namespace, nil
 }
 
-// GetLabelSelector retrieves the target namespace
+// GetLabelSelector retrieves the label selector of the target
 func (t *SelectorParameter) GetLabelSelector(config *latest.Config) (*string, error) {
 	if t.CmdParameter.LabelSelector != nil {
 		return t.CmdParameter.LabelSelector, nil
