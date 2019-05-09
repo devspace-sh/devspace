@@ -35,8 +35,29 @@ type Config struct {
 	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Hooks        *[]*HookConfig           `yaml:"hooks,omitempty"`
 	Dev          *DevConfig               `yaml:"dev,omitempty"`
 	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
+}
+
+// HookConfig defines a hook
+type HookConfig struct {
+	Command *string    `yaml:"command"`
+	Flags   *[]*string `yaml:"flags,omitempty"`
+
+	When *HookWhenConfig `yaml:"when,omitempty"`
+}
+
+// HookWhenConfig defines when the hook should be executed
+type HookWhenConfig struct {
+	Before *HookWhenAtConfig `yaml:"before,omitempty"`
+	After  *HookWhenAtConfig `yaml:"after,omitempty"`
+}
+
+// HookWhenAtConfig defines at which stage the hook should be executed
+type HookWhenAtConfig struct {
+	Deployments *string `yaml:"deployments,omitempty"`
+	Images      *string `yaml:"images,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

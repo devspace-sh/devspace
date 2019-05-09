@@ -8,6 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
@@ -30,9 +31,20 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 		cacheChan = make(chan imageNameAndTag)
 	)
 
+	// Check if we have at least 1 image to build
+	if config.Images == nil || len(*config.Images) == 0 {
+		return builtImages, nil
+	}
+
 	// Build not in parallel when we only have one image to build
 	if sequential == false && len(*config.Images) <= 1 {
 		sequential = true
+	}
+
+	// Execute before images build hook
+	err := hook.Execute(config, hook.Before, hook.StageImages, hook.All, log)
+	if err != nil {
+		return nil, err
 	}
 
 	imagesToBuild := 0
@@ -133,6 +145,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 				builtImages[done.imageName] = done.imageTag
 			}
 		}
+	}
+
+	// Execute after images build hook
+	err = hook.Execute(config, hook.After, hook.StageImages, hook.All, log)
+	if err != nil {
+		return nil, err
 	}
 
 	return builtImages, nil

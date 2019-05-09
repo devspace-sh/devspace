@@ -1,0 +1,49 @@
+version: v1beta2
+images:
+  default:
+    image: devspace
+    build:
+      docker:
+        skipPush: true
+hooks:
+  - command: echo
+    flags:
+      - before image building
+    when:
+      before:
+        images: all
+  - command: echo
+    flags:
+      - after image building
+    when:
+      after:
+        images: all
+  - command: echo
+    flags:
+      - before deploying
+    when:
+      before:
+        deployments: all
+  - command: echo
+    flags:
+      - after deploying
+    when:
+      after:
+        deployments: all
+  - command: echo
+    flags:
+      - before deployment hooks
+    when:
+      before:
+        deployments: hooks
+  - command: echo
+    flags:
+      - after deployment hooks
+    when:
+      after:
+        deployments: hooks
+deployments:
+  - name: hooks
+    component:
+      containers:
+        - image: devspace

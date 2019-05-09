@@ -9,13 +9,20 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/client-go/kubernetes"
 )
 
 // All deploys all deployments in the config
 func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, log log.Logger) error {
-	if config.Deployments != nil {
+	if config.Deployments != nil && len(*config.Deployments) > 0 {
+		// Execute before deployments deploy hook
+		err := hook.Execute(config, hook.Before, hook.StageDeployments, hook.All, log)
+		if err != nil {
+			return err
+		}
+
 		for _, deployConfig := range *config.Deployments {
 			var (
 				deployClient deploy.Interface
@@ -48,6 +55,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
 			}
 
+			// Execute before deploment deploy hook
+			err = hook.Execute(config, hook.Before, hook.StageDeployments, *deployConfig.Name, log)
+			if err != nil {
+				return err
+			}
+
 			wasDeployed, err := deployClient.Deploy(cache, forceDeploy, builtImages)
 			if err != nil {
 				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
@@ -55,9 +68,21 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 
 			if wasDeployed {
 				log.Donef("Successfully deployed %s with %s", *deployConfig.Name, method)
+
+				// Execute after deploment deploy hook
+				err = hook.Execute(config, hook.After, hook.StageDeployments, *deployConfig.Name, log)
+				if err != nil {
+					return err
+				}
 			} else {
 				log.Infof("Skipping deployment %s", *deployConfig.Name)
 			}
+		}
+
+		// Execute after deployments deploy hook
+		err = hook.Execute(config, hook.After, hook.StageDeployments, hook.All, log)
+		if err != nil {
+			return err
 		}
 	}
 
