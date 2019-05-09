@@ -15,12 +15,12 @@ deployments:
 dev:
   ports:
     - labelSelector:
-        app.kubernetes.io/component: default
+        app.kubernetes.io/component: devspace-default
       forward:
         - port: 8080
   sync:
     - labelSelector:
-        app.kubernetes.io/component: default
+        app.kubernetes.io/component: devspace-default
 cluster:
   kubeContext: minikube
   namespace: devspace

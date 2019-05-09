@@ -152,7 +152,11 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	deploymentConfigHash := hash.String(string(configStr))
-	forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
+
+	// We force the redeploy of kubectl deployments for now, because we don't know if they are already currently deployed or not,
+	// so it is better to force deploy them, which usually takes almost no time and is better than taking the risk of skipping a needed deployment
+	// forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
+	forceDeploy = true
 
 	d.Log.StartWait("Applying manifests with kubectl")
 	defer d.Log.StopWait()
