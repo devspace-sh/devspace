@@ -1,17 +1,18 @@
 ---
-title: Full reference
+title: Full config reference
 ---
 
 ## version
 ```yaml
-version: v1beta1                   # string   | Version of the config
+version: v1beta2                   # string   | Version of the config
 ```
 
 <details>
 <summary>
 ### List of supported versions
 </summary>
-- v1beta1   ***latest***
+- v1beta2   ***latest***
+- v1beta1
 - v1alpha4
 - v1alpha3
 - v1alpha2 
@@ -25,49 +26,61 @@ images:                             # map[string]struct | Images to be built and
   image1:                           # string   | Name of the image
     image: dscr.io/username/image   # string   | Image repository and name 
     tag: v0.0.1                     # string   | Image tag
+    dockerfile: ./Dockerfile        # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
+    context: ./                     # string   | Relative path to the context used for building (Default: ./)
     createPullSecret: true          # bool     | Create a pull secret containing your Docker credentials (Default: true)
-    insecure: false                 # bool     | Allow push/pull to/from insecure registries (Default: false)
-    skipPush: false                 # bool     | Skip pushing image to registry, recommended for minikube (Default: false)
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
 [Learn more about building images with DevSpace.](/docs/image-building/overview)
 
-### images[*].build
+### images[\*].build
 ```yaml
 build:                              # struct   | Build configuration for an image
   disabled: false                   # bool     | Disable image building (Default: false)
-  dockerfile: ./Dockerfile          # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
-  context: ./                       # string   | Relative path to the context used for building (Default: ./)
   kaniko: ...                       # struct   | Build image with kaniko and set options for kaniko
   docker: ...                       # struct   | Build image with docker and set options for docker
-  options: ...                      # struct   | Set build options that are independent of of the build tool used
+  custom: ...                       # struct   | Build image using a custom build script
 ```
 Notice:
-- Setting `docker` or `kaniko` will define the build tool for this image.
-- You **cannot** use `docker` and `kaniko` in combination. 
-- If neither `docker` nor `kaniko` is specified, `docker` will be used by default.
+- Setting `docker`, `kaniko` or `custom` will define the build tool for this image.
+- You **cannot** use `docker`, `kaniko` and `custom` in combination. 
+- If neither `docker`, `kaniko` nor `custom` is specified, `docker` will be used by default.
+- By default `docker` will use `kaniko` as fallback when DevSpace CLI is unable to reach the Docker host.
 
-### images[*].build.docker
+### images[\*].build.docker
 ```yaml
 docker:                             # struct   | Options for building images with Docker
   preferMinikube: true              # bool     | If available, use minikube's in-built docker daemon instaed of local docker daemon (default: true)
+  skipPush: false                   # bool     | Skip pushing image to registry, recommended for minikube (Default: false)
+  disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
+  options: ...                      # struct   | Set build general build options
 ```
 
-### images[*].build.kaniko
+### images[\*].build.kaniko
 ```yaml
 kaniko:                             # struct   | Options for building images with kaniko
   cache: true                       # bool     | Use caching for kaniko build process
   snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
   flags: []                         # string[] | Array of flags for kaniko build command
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
+  insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
+  options: ...                      # struct   | Set build general build options
 ```
-> It is recommended to use Docker for building images when using DevSpace Cloud.
 
-### images[*].build.options
+### images[\*].build.custom
 ```yaml
-build:                              # struct   | Options for building images
+custom:                             # struct   | Options for building images with a custom build script
+  command: "./scripts/builder"      # string   | Path to the build script
+  flags: []                         # string[] | Array of flags for the build script
+  imageFlag: string                 # string   | Name of the flag that DevSpace CLI uses to pass the image name + tag to the build script
+  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
+```
+
+### images[\*].build.\*.options
+```yaml
+options:                              # struct   | Options for building images
   target: ""                        # string   | Target used for multi-stage builds
   network: ""                       # string   | Network mode used for building the image
   buildArgs: {}                     # map[string]string | Key-value map specifying build arguments that will be passed to the build tool (e.g. docker)
@@ -88,7 +101,7 @@ Notice:
 - Setting `component`, `helm` or `kubectl` will define the type of deployment and the deployment tool to be used.
 - You **cannot** use `component`, `helm` and `kubectl` in combination.
 
-### deployments[*].component
+### deployments[\*].component
 ```yaml
 component:                          # struct   | Options for deploying a DevSpace component
   containers: ...                   # struct   | Relative path
@@ -103,7 +116,7 @@ component:                          # struct   | Options for deploying a DevSpac
 ```
 [Learn more about configuring component deployments.](/docs/deployment/components/what-are-components)
 
-### deployments[*].component.containers
+### deployments[\*].component.containers
 ```yaml
 containers:                         # struct   | Options for deploying a DevSpace component
 - name: my-container                # string   | Container name (optional)
@@ -121,7 +134,7 @@ containers:                         # struct   | Options for deploying a DevSpac
   redinessProbe: ...                # struct   | Kubernestes redinessProbe
 ```
 
-### deployments[\*].component.containers[*].volumeMounts
+### deployments[\*].component.containers[\*].volumeMounts
 ```yaml
 volumeMounts: 
   containerPath: /my/path           # string   | Mount path within the container
@@ -131,7 +144,7 @@ volumeMounts:
     readOnly: false                 # bool     | Mount volume as read-only (Default: false)
 ```
 
-### deployments[*].component.autoScaling
+### deployments[\*].component.autoScaling
 ```yaml
 autoScaling: 	                    # struct   | Auto-Scaling configuration
   horizontal:                       # struct   | Configuration for horizontal auto-scaling
@@ -140,7 +153,7 @@ autoScaling: 	                    # struct   | Auto-Scaling configuration
     averageMemory: 1Gi              # string   | Target value for memory (RAM) usage
 ```
 
-### deployments[*].component.rollingUpdate
+### deployments[\*].component.rollingUpdate
 ```yaml
 rollingUpdate: 	                    # struct   | Rolling-Update configuration
   enabled: false                    # bool     | Enable/Disable rolling update (Default: disabled)
@@ -149,7 +162,7 @@ rollingUpdate: 	                    # struct   | Rolling-Update configuration
   partition: 1                      # int      | For partitioned updates of StatefulSets
 ```
 
-### deployments[*].component.volumes
+### deployments[\*].component.volumes
 ```yaml
 volumes: 	                        # struct   | Array of volumes to be created
 - name: my-volume                   # string   | Volume name
@@ -158,7 +171,7 @@ volumes: 	                        # struct   | Array of volumes to be created
   secret: ...                       # struct   | Kubernetes SecretVolumeSource
 ```
 
-### deployments[*].component.service
+### deployments[\*].component.service
 ```yaml
 service: 	                        # struct   | Component service configuration
   name: my-service                  # string   | Name of the service
@@ -169,7 +182,7 @@ service: 	                        # struct   | Component service configuration
     protocol: tcp                   # string   | Traffic protocol (tcp, udp)
 ```
 
-### deployments[*].helm
+### deployments[\*].helm
 ```yaml
 helm:                               # struct   | Options for deploying with Helm
   chart: ...                        # struct   | Relative path 
@@ -185,7 +198,7 @@ helm:                               # struct   | Options for deploying with Helm
 ```
 [Learn more about configuring deployments with Helm.](/docs/deployment/helm-charts/what-are-helm-charts)
 
-### deployments[*].helm.chart
+### deployments[\*].helm.chart
 ```yaml
 chart:                              # struct   | Chart to deploy
   name: my-chart                    # string   | Chart name
@@ -195,7 +208,7 @@ chart:                              # struct   | Chart to deploy
   password: "my-password"           # string   | Password for Helm chart repository
 ```
 
-### deployments[*].kubectl
+### deployments[\*].kubectl
 ```yaml
 kubectl:                            # struct   | Options for deploying with "kubectl apply"
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
@@ -282,6 +295,20 @@ selectors:                          # struct[] | Array of selectors used to sele
   labelSelector: {}                 # map[string]string | Key-value map of Kubernetes labels used to select pods
   ContainerName: ""                 # string   | Name of the container within the selected pod (Default: "" = first container in the pod)
 ```
+
+
+---
+## dependencies
+```yaml
+dependencies:                       # struct[]  | Array of dependencies (other projects containing a devspace.yaml or devspace-configs.yaml) that need to be deployed before this project
+- source:                           # struct    | Defines where to find the dependency (exactly one source is allowed)
+    git: https://github.com/my-repo # string    | URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
+    path: ../../my-projects/repo    # string    | Path to a project on your local computer (not recommended)
+  config: default                   # string    | Name of the config used to deploy this dependency (when multiple configs are defined via devspace-configs.yaml)
+```
+Notice:
+- You **cannot** use `source.git` and `source.path` in combination. 
+
 
 ---
 ## cluster

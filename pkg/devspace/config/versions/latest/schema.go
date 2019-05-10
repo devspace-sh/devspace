@@ -32,17 +32,17 @@ func NewRaw() *Config {
 // Config defines the configuration
 type Config struct {
 	Version      *string                  `yaml:"version"`
-	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Dev          *DevConfig               `yaml:"dev,omitempty"`
+	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Config *string       `yaml:"config"`
 	Source *SourceConfig `yaml:"source"`
+	Config *string       `yaml:"config"`
 }
 
 // SourceConfig defines the dependency source
@@ -55,17 +55,17 @@ type SourceConfig struct {
 type ImageConfig struct {
 	Image            *string      `yaml:"image"`
 	Tag              *string      `yaml:"tag,omitempty"`
-	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
 	Dockerfile       *string      `yaml:"dockerfile,omitempty"`
 	Context          *string      `yaml:"context,omitempty"`
+	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
 	Disabled *bool         `yaml:"disabled,omitempty"`
-	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
 	Docker   *DockerConfig `yaml:"docker,omitempty"`
+	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
 	Custom   *CustomConfig `yaml:"custom,omitempty"`
 }
 
@@ -77,14 +77,6 @@ type DockerConfig struct {
 	Options         *BuildOptions `yaml:"options,omitempty"`
 }
 
-// CustomConfig tells the DevSpace CLI to build with a custom build script
-type CustomConfig struct {
-	Command   *string    `yaml:"command,omitempty"`
-	Flags     *[]*string `yaml:"flags,omitempty"`
-	ImageFlag *string    `yaml:"imageFlag,omitempty"`
-	OnChange  *[]*string `yaml:"onChange,omitempty"`
-}
-
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
 	Cache        *bool         `yaml:"cache,omitempty"`
@@ -94,6 +86,14 @@ type KanikoConfig struct {
 	Insecure     *bool         `yaml:"insecure,omitempty"`
 	PullSecret   *string       `yaml:"pullSecret,omitempty"`
 	Options      *BuildOptions `yaml:"options,omitempty"`
+}
+
+// CustomConfig tells the DevSpace CLI to build with a custom build script
+type CustomConfig struct {
+	Command   *string    `yaml:"command,omitempty"`
+	Flags     *[]*string `yaml:"flags,omitempty"`
+	ImageFlag *string    `yaml:"imageFlag,omitempty"`
+	OnChange  *[]*string `yaml:"onChange,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images
