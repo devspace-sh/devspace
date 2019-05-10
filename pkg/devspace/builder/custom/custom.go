@@ -3,9 +3,9 @@ package custom
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/command"
@@ -56,7 +56,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
 	// Loop over on change globs
 	customFilesHash := ""
 	for _, pattern := range *b.imageConf.Build.Custom.OnChange {
-		files, err := filepath.Glob(*pattern)
+		files, err := doublestar.Glob(*pattern)
 		if err != nil {
 			return false, err
 		}
