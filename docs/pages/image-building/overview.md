@@ -70,7 +70,9 @@ If you are using minikube for development, you usually do not need to push your 
 images:
   default:
     image: my-registry.tld/username/image
-    skipPush: true
+    build:
+      docker:
+        skipPush: true
 ```
 Defining `skipPush: true` tells DevSpace CLI not to push an image after building and tagging it.
 </details>

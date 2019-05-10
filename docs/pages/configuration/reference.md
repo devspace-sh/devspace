@@ -80,7 +80,7 @@ custom:                             # struct   | Options for building images wit
 
 ### images[\*].build.\*.options
 ```yaml
-options:                              # struct   | Options for building images
+options:                            # struct   | Options for building images
   target: ""                        # string   | Target used for multi-stage builds
   network: ""                       # string   | Network mode used for building the image
   buildArgs: {}                     # map[string]string | Key-value map specifying build arguments that will be passed to the build tool (e.g. docker)
