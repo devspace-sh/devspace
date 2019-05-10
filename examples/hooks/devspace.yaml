@@ -7,37 +7,37 @@ images:
         skipPush: true
 hooks:
   - command: echo
-    flags:
+    args:
       - before image building
     when:
       before:
         images: all
   - command: echo
-    flags:
+    args:
       - after image building
     when:
       after:
         images: all
   - command: echo
-    flags:
+    args:
       - before deploying
     when:
       before:
         deployments: all
   - command: echo
-    flags:
+    args:
       - after deploying
     when:
       after:
         deployments: all
   - command: echo
-    flags:
+    args:
       - before deployment my-deployment
     when:
       before:
         deployments: my-deployment
   - command: echo
-    flags:
+    args:
       - after deployment my-deployment
     when:
       after:
