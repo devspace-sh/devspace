@@ -9,7 +9,7 @@ deployments:
 - name: devspace-default
   kubectl:
     manifests:
-    - kube/**
+    - kube
 dev:
   terminal:
     disabled: true
