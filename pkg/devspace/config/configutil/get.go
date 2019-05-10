@@ -222,6 +222,11 @@ func GetConfigFromPath(basePath string, loadConfig string, cache *generated.Cach
 		}
 	}
 
+	err = validate(config)
+	if err != nil {
+		return nil, fmt.Errorf("Error validating config in %s: %v", basePath, err)
+	}
+
 	return config, nil
 }
 
@@ -309,60 +314,85 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 // ValidateOnce ensures that specific values are set in the config
 func ValidateOnce() {
 	validateOnce.Do(func() {
-		if config.Dev != nil {
-			if config.Dev.Selectors != nil {
-				for index, selectorConfig := range *config.Dev.Selectors {
-					if selectorConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed selector at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.Ports != nil {
-				for index, port := range *config.Dev.Ports {
-					if port.Selector == nil && port.LabelSelector == nil {
-						log.Fatalf("Error in config: selector and label selector are nil in port config at index %d", index)
-					}
-					if port.PortMappings == nil {
-						log.Fatalf("Error in config: portMappings is empty in port config at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.Sync != nil {
-				for index, sync := range *config.Dev.Sync {
-					if sync.Selector == nil && sync.LabelSelector == nil {
-						log.Fatalf("Error in config: selector and label selector are nil in sync config at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.OverrideImages != nil {
-				for index, overrideImageConfig := range *config.Dev.OverrideImages {
-					if overrideImageConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed override image config at index %d", index)
-					}
-				}
-			}
-		}
-
-		if config.Deployments != nil {
-			for index, deployConfig := range *config.Deployments {
-				if deployConfig.Name == nil {
-					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
-				}
-				if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
-					log.Fatalf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
-				}
-				if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
-					log.Fatalf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
-				}
-				if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-					log.Fatalf("deployments[%d].kubectl.manifests is required", index)
-				}
-			}
+		err := validate(config)
+		if err != nil {
+			log.Fatal(err)
 		}
 	})
+}
+
+func validate(config *latest.Config) error {
+	if config.Dev != nil {
+		if config.Dev.Selectors != nil {
+			for index, selectorConfig := range *config.Dev.Selectors {
+				if selectorConfig.Name == nil {
+					return fmt.Errorf("Error in config: Unnamed selector at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.Ports != nil {
+			for index, port := range *config.Dev.Ports {
+				if port.Selector == nil && port.LabelSelector == nil {
+					return fmt.Errorf("Error in config: selector and label selector are nil in port config at index %d", index)
+				}
+				if port.PortMappings == nil {
+					return fmt.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.Sync != nil {
+			for index, sync := range *config.Dev.Sync {
+				if sync.Selector == nil && sync.LabelSelector == nil {
+					return fmt.Errorf("Error in config: selector and label selector are nil in sync config at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.OverrideImages != nil {
+			for index, overrideImageConfig := range *config.Dev.OverrideImages {
+				if overrideImageConfig.Name == nil {
+					return fmt.Errorf("Error in config: Unnamed override image config at index %d", index)
+				}
+			}
+		}
+	}
+
+	if config.Hooks != nil {
+		for index, hookConfig := range *config.Hooks {
+			if hookConfig.Command == nil {
+				return fmt.Errorf("hooks[%d].command is required", index)
+			}
+		}
+	}
+
+	if config.Images != nil {
+		for imageConfigName, imageConf := range *config.Images {
+			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == nil {
+				return fmt.Errorf("images.%s.build.custom.command is required", imageConfigName)
+			}
+		}
+	}
+
+	if config.Deployments != nil {
+		for index, deployConfig := range *config.Deployments {
+			if deployConfig.Name == nil {
+				return fmt.Errorf("deployments[%d].name is required", index)
+			}
+			if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
+				return fmt.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
+			}
+			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
+				return fmt.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
+			}
+			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
+				return fmt.Errorf("deployments[%d].kubectl.manifests is required", index)
+			}
+		}
+	}
+
+	return nil
 }
 
 func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error {

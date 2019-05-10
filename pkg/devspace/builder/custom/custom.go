@@ -94,9 +94,9 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		args = append(args, *b.imageConf.Image+":"+b.imageTag)
 	}
 
-	if b.imageConf.Build.Custom.Flags != nil {
-		for _, flag := range *b.imageConf.Build.Custom.Flags {
-			args = append(args, *flag)
+	if b.imageConf.Build.Custom.Args != nil {
+		for _, arg := range *b.imageConf.Build.Custom.Args {
+			args = append(args, *arg)
 		}
 	}
 

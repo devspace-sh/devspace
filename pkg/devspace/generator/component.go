@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
@@ -27,7 +28,7 @@ const ComponentsRepoPath = ".devspace/components"
 // ComponentsGenerator holds the information to create a component
 type ComponentsGenerator struct {
 	LocalPath string
-	gitRepo   *GitRepository
+	gitRepo   *git.Repository
 }
 
 // ComponentSchema is the component schema
@@ -120,7 +121,7 @@ func NewComponentGenerator() (*ComponentsGenerator, error) {
 		return nil, err
 	}
 
-	gitRepository := NewGitRepository(filepath.Join(homedir, ComponentsRepoPath), ComponentsRepoURL)
+	gitRepository := git.NewGitRepository(filepath.Join(homedir, ComponentsRepoPath), ComponentsRepoURL)
 	_, err = gitRepository.Update()
 	if err != nil {
 		return nil, err

@@ -69,9 +69,9 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 			// Build arguments
 			args := []string{}
 
-			if hook.Flags != nil {
-				for _, flag := range *hook.Flags {
-					args = append(args, *flag)
+			if hook.Args != nil {
+				for _, arg := range *hook.Args {
+					args = append(args, *arg)
 				}
 			}
 

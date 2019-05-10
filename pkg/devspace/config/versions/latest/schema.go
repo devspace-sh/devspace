@@ -43,7 +43,7 @@ type Config struct {
 // HookConfig defines a hook
 type HookConfig struct {
 	Command *string    `yaml:"command"`
-	Flags   *[]*string `yaml:"flags,omitempty"`
+	Args    *[]*string `yaml:"args,omitempty"`
 
 	When *HookWhenConfig `yaml:"when,omitempty"`
 }
@@ -104,7 +104,7 @@ type DockerConfig struct {
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
 	Command   *string    `yaml:"command,omitempty"`
-	Flags     *[]*string `yaml:"flags,omitempty"`
+	Args      *[]*string `yaml:"args,omitempty"`
 	ImageFlag *string    `yaml:"imageFlag,omitempty"`
 	OnChange  *[]*string `yaml:"onChange,omitempty"`
 }

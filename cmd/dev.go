@@ -12,6 +12,7 @@ import (
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -147,23 +148,23 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Load config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
 	// Build and deploy images
-	err = cmd.buildAndDeploy(config, client, args)
+	err = cmd.buildAndDeploy(config, generatedConfig, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Interface, args []string) error {
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) error {
 	if cmd.SkipPipeline == false {
-		// Load config
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			return fmt.Errorf("Error loading generated.yaml: %v", err)
-		}
-
 		// Dependencies
-		err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error deploying dependencies: %v", err)
 		}
@@ -214,8 +215,14 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, client kubernetes.Inter
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
+				// Reload base config
+				config, err = configutil.GetConfigFromPath(".", configutil.LoadedConfig, generatedConfig.GetActive())
+				if err != nil {
+					return errors.Wrap(err, "load config")
+				}
+
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(config, client, args)
+				return cmd.buildAndDeploy(config, generatedConfig, client, args)
 			}
 
 			return err

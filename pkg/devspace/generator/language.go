@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
@@ -27,7 +28,7 @@ type DockerfileGenerator struct {
 	Language  string
 	LocalPath string
 
-	gitRepo            *GitRepository
+	gitRepo            *git.Repository
 	supportedLanguages []string
 }
 
@@ -94,7 +95,7 @@ func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*Dockerf
 		return nil, err
 	}
 
-	gitRepository := NewGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
+	gitRepository := git.NewGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
 
 	return &DockerfileGenerator{
 		LocalPath: localPath,
