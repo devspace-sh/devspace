@@ -209,5 +209,11 @@ func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Conf
 		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
 	}
 
+	// Save generated config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Couldn't save generated config: %v", err)
+	}
+
 	return config
 }

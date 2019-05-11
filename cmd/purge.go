@@ -123,5 +123,11 @@ func (cmd *PurgeCmd) loadConfig(generatedConfig *generated.Config) *latest.Confi
 		log.Infof("Using %s namespace", cmd.Namespace)
 	}
 
+	// Save generated config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Couldn't save generated config: %v", err)
+	}
+
 	return config
 }
