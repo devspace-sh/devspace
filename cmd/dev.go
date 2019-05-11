@@ -92,7 +92,7 @@ Starts your project in development mode:
 	devCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
 	devCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name where to open the shell")
 	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
-	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods for terminal")
+	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")

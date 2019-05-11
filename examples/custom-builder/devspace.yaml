@@ -21,6 +21,3 @@ dev:
   sync:
     - labelSelector:
         app.kubernetes.io/component: devspace-default
-cluster:
-  kubeContext: minikube
-  namespace: devspace

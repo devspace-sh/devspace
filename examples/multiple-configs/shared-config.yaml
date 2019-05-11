@@ -23,6 +23,3 @@ deployments:
     component:
       containers:
         - image: service-2
-cluster:
-  kubeContext: minikube
-  namespace: devspace

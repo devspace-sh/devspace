@@ -77,7 +77,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 	for i := 0; i < len(dependencies); i++ {
 		dependency := dependencies[i]
 
-		logger.StartWait(fmt.Sprintf("Deploying %d dependencies", len(dependencies)-i))
+		logger.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
@@ -88,7 +88,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 
 		// Prettify path if its a path deployment
 		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID))+1:])
 		} else {
 			logger.Donef("Deployed dependency %s", dependency.ID)
 		}
