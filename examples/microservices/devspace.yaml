@@ -46,6 +46,3 @@ dev:
   - labelSelector:
       release: devspace-php
     localSubPath: ./php
-cluster:
-  kubeContext: minikube
-  namespace: devspace

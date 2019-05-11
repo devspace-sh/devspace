@@ -18,6 +18,3 @@ dev:
   autoReload:
     paths:
     - ./**
-cluster:
-  kubeContext: minikube
-  namespace: devspace

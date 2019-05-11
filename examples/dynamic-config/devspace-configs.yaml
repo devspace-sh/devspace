@@ -9,8 +9,6 @@ default:
           component:
             containers:
               - image: ${IMAGE}
-      cluster:
-        namespace: devspace
   vars:
     data:
       - name: SELECT

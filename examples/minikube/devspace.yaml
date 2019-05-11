@@ -26,6 +26,3 @@ dev:
       app.kubernetes.io/component: default
     excludePaths:
     - node_modules
-cluster:
-  kubeContext: minikube
-  namespace: devspace

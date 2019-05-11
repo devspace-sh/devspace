@@ -41,6 +41,7 @@ devspace purge -d my-deployment
 		Run:  cmd.Run,
 	}
 
+	purgeCmd.Flags().StringVar(&cmd.Namespace, "namespace", "n", "The namespace to purge the deployments from")
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
