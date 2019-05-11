@@ -2,6 +2,7 @@ package targetselector
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,7 +10,11 @@ import (
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client kubernetes.Interface, namespace string, labelSelector *string) (*v1.Pod, error) {
+func SelectPod(client kubernetes.Interface, namespace string, labelSelector *string, question *string) (*v1.Pod, error) {
+	if question == nil {
+		question = ptr.String(DefaultPodQuestion)
+	}
+
 	if labelSelector != nil {
 		podList, err := client.Core().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: *labelSelector,
@@ -39,7 +44,7 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 			podName := ""
 			if len(options) > 1 {
 				podName = survey.Question(&survey.QuestionOptions{
-					Question: "Select a pod",
+					Question: *question,
 					Options:  options,
 				})
 			} else if len(options) == 1 {
@@ -82,7 +87,7 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 		podName := ""
 		if len(options) > 1 {
 			podName = survey.Question(&survey.QuestionOptions{
-				Question: "Select a pod",
+				Question: *question,
 				Options:  options,
 			})
 		} else if len(options) == 1 {

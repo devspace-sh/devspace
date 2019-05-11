@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
@@ -34,6 +35,8 @@ func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParame
 	if err != nil {
 		return err
 	}
+
+	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
 
 	pod, container, err := targetSelector.GetContainer(client)
 	if err != nil {
