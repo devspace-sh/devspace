@@ -63,7 +63,7 @@ func GetClientConfigFromKubectl() (*rest.Config, error) {
 }
 
 // GetClientConfigBySelect let's the user select a kube context to use
-func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
+func GetClientConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Config, error) {
 	kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return nil, err
@@ -101,6 +101,15 @@ func GetClientConfigBySelect(allowPrivate bool) (*rest.Config, error) {
 					log.Infof("Clusters with private ips (%s) cannot be used", url.Hostname())
 					continue
 				}
+			}
+		}
+
+		if switchContext {
+			kubeConfig.CurrentContext = kubeContext
+
+			err = kubeconfig.WriteKubeConfig(kubeConfig, clientcmd.RecommendedHomeFile)
+			if err != nil {
+				return nil, errors.Wrap(err, "write kube config")
 			}
 		}
 

@@ -51,20 +51,7 @@ func (l *loadingText) getLoadingChar() string {
 	var loadingChar string
 	var max int
 
-	if runtime.GOOS == "windows" {
-		switch l.loadingRune {
-		case 0:
-			loadingChar = "|"
-		case 1:
-			loadingChar = "/"
-		case 2:
-			loadingChar = "-"
-		case 3:
-			loadingChar = "\\"
-		}
-
-		max = 3
-	} else {
+	if runtime.GOOS == "darwin" {
 		switch l.loadingRune {
 		case 0:
 			loadingChar = "⠋"
@@ -89,6 +76,19 @@ func (l *loadingText) getLoadingChar() string {
 		}
 
 		max = 9
+	} else {
+		switch l.loadingRune {
+		case 0:
+			loadingChar = "|"
+		case 1:
+			loadingChar = "/"
+		case 2:
+			loadingChar = "-"
+		case 3:
+			loadingChar = "\\"
+		}
+
+		max = 3
 	}
 
 	l.loadingRune++

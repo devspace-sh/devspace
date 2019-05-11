@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
+const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
 
 const (
 	// Cluster options
@@ -88,7 +88,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if config already exists
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.Reconfigure == false {
-		log.Info("Config devspace.yaml already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		log.Infof("If you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		os.Exit(0)
 	}
 
@@ -230,14 +231,23 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if os.IsNotExist(err) {
 		fsutil.WriteToFile([]byte(configGitignore), ".gitignore")
 	} else {
-		gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+		gitignoreContent, err := ioutil.ReadFile(".gitignore")
 		if err != nil {
-			log.Warnf("Error writing to .gitignore: %v", err)
+			log.Warnf("Error reading .gitignore: %v", err)
 		} else {
-			defer gitignore.Close()
+			gitignoreRegexp := regexp.MustCompile("(?ms)(^|[^!]).devspace/(\\n|$)")
 
-			if _, err = gitignore.WriteString(configGitignore); err != nil {
-				log.Warnf("Error writing to .gitignore: %v", err)
+			if gitignoreRegexp.MatchString(string(gitignoreContent)) == false {
+				gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+				if err != nil {
+					log.Warnf("Error writing to .gitignore: %v", err)
+				} else {
+					defer gitignore.Close()
+
+					if _, err = gitignore.WriteString(configGitignore); err != nil {
+						log.Warnf("Error writing to .gitignore: %v", err)
+					}
+				}
 			}
 		}
 	}

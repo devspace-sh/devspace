@@ -84,35 +84,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	}
 
 	// Check if docker is installed
-	for {
-		_, err = client.Ping(contextpkg.Background())
-		if err != nil {
-			// Check if docker cli is installed
-			runErr := exec.Command("docker").Run()
-			if runErr == nil {
-				useKaniko = survey.Question(&survey.QuestionOptions{
-					Question:     "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
-					DefaultValue: "no",
-					Options:      []string{"yes", "no"},
-				}) == "yes"
-
-				if useKaniko == false {
-					continue
-				}
-			}
-
-			// We use kaniko
-			useKaniko = true
-
-			// Set default build engine to kaniko, if no docker is installed
-			retImageConfig.Build = &latest.BuildConfig{
-				Kaniko: &latest.KanikoConfig{
-					Cache: ptr.Bool(true),
-				},
-			}
+	_, err = client.Ping(contextpkg.Background())
+	if err != nil {
+		// Check if docker cli is installed
+		runErr := exec.Command("docker").Run()
+		if runErr == nil {
+			log.Warn("Docker daemon not running. Start Docker daemon to build images with Docker instead of using the kaniko fallback.")
 		}
-
-		break
 	}
 
 	// If not kaniko get docker hub credentials
