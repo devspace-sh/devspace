@@ -3,6 +3,7 @@ package custom
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/bmatcuk/doublestar"
@@ -101,7 +102,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	}
 
 	if b.cmd == nil {
-		b.cmd = command.NewStreamCommand(*b.imageConf.Build.Custom.Command, args)
+		b.cmd = command.NewStreamCommand(filepath.FromSlash(*b.imageConf.Build.Custom.Command), args)
 	}
 
 	// Determine output writer
