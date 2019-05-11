@@ -203,7 +203,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache)
+	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}

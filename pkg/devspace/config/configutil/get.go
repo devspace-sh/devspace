@@ -246,8 +246,8 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config) (*latest.Config, error) {
-	config, _, err := loadBaseConfigFromPath(basePath, loadConfig, loadOverrides, generatedConfig, log.Discard)
+func GetConfigFromPath(basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, error) {
+	config, _, err := loadBaseConfigFromPath(basePath, loadConfig, loadOverrides, generatedConfig, log)
 	if err != nil {
 		return nil, err
 	}

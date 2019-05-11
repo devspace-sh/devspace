@@ -180,7 +180,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
 	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig)
+	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
