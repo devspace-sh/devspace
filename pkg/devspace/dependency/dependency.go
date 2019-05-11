@@ -22,7 +22,7 @@ import (
 )
 
 // UpdateAll will update all dependencies if there are any
-func UpdateAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, log log.Logger) error {
+func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool, log log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -50,7 +50,7 @@ func UpdateAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic 
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -101,7 +101,7 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, logger log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.Config, allowCyclic bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -159,7 +159,7 @@ type Dependency struct {
 	GeneratedConfig *generated.Config
 
 	DependencyConfig *latest.DependencyConfig
-	DependencyCache  *generated.CacheConfig
+	DependencyCache  *generated.Config
 }
 
 // Deploy deploys the dependency if necessary
@@ -171,11 +171,11 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 	}
 
 	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.DependencyCache.Dependencies[d.ID] {
+	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
 		return nil
 	}
 
-	d.DependencyCache.Dependencies[d.ID] = directoryHash
+	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
 
 	// Switch current working directory
 	currentWorkingDirectory, err := os.Getwd()
@@ -284,7 +284,7 @@ func (d *Dependency) Purge(log log.Logger) error {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
-	delete(d.DependencyCache.Dependencies, d.ID)
+	delete(d.DependencyCache.GetActive().Dependencies, d.ID)
 	log.Donef("Purged dependency %s", d.ID)
 	return nil
 }

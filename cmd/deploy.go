@@ -132,7 +132,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}

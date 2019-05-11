@@ -164,7 +164,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) error {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error deploying dependencies: %v", err)
 		}
@@ -216,7 +216,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Reload base config
-				config, err = configutil.GetConfigFromPath(".", configutil.LoadedConfig, generatedConfig.GetActive())
+				config, err = configutil.GetConfigFromPath(".", configutil.LoadedConfig, true, generatedConfig)
 				if err != nil {
 					return errors.Wrap(err, "load config")
 				}

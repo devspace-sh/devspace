@@ -41,7 +41,7 @@ type Resolver struct {
 
 	BasePath   string
 	BaseConfig *latest.Config
-	BaseCache  *generated.CacheConfig
+	BaseCache  *generated.Config
 
 	AllowCyclic bool
 
@@ -49,7 +49,7 @@ type Resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.CacheConfig, allowCyclic bool, log log.Logger) (*Resolver, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, log log.Logger) (*Resolver, error) {
 	var id string
 
 	basePath, err := filepath.Abs(".")
@@ -203,7 +203,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, r.BaseCache)
+	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}

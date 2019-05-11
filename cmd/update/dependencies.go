@@ -58,7 +58,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	err = dependency.UpdateAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, log.GetInstance())
+	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
