@@ -12,11 +12,11 @@ import (
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
-	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -92,6 +92,7 @@ Starts your project in development mode:
 	devCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
 	devCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name where to open the shell")
 	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
+
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
@@ -114,8 +115,14 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
+	// Load config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
+
 	// Get the config
-	config := configutil.GetConfig()
+	config := cmd.loadConfig(generatedConfig)
 
 	// Create kubectl client and switch context if specified
 	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
@@ -146,12 +153,6 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// Load config
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Build and deploy images
@@ -215,11 +216,8 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
-				// Reload base config
-				config, err = configutil.GetConfigFromPath(".", configutil.LoadedConfig, true, generatedConfig)
-				if err != nil {
-					return errors.Wrap(err, "load config")
-				}
+				// Get the config
+				config := cmd.loadConfig(generatedConfig)
 
 				// Trigger rebuild & redeploy
 				return cmd.buildAndDeploy(config, generatedConfig, client, args)
@@ -382,4 +380,26 @@ type reloadError struct {
 
 func (r *reloadError) Error() string {
 	return ""
+}
+
+func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
+	// Load Config and modify it
+	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if cmd.Namespace != "" {
+		config.Cluster = &v1.Cluster{
+			Namespace:   &cmd.Namespace,
+			KubeContext: config.Cluster.KubeContext,
+			APIServer:   config.Cluster.APIServer,
+			CaCert:      config.Cluster.CaCert,
+			User:        config.Cluster.User,
+		}
+
+		log.Infof("Using %s namespace", cmd.Namespace)
+	}
+
+	return config
 }

@@ -62,7 +62,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
-	deployCmd.Flags().StringVar(&cmd.Namespace, "namespace", "n", "The namespace to deploy to")
+	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
@@ -89,11 +89,14 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
-	// Load Config and modify it
-	config := configutil.GetConfigWithoutDefaults(true)
+	// Load generated config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading generated.yaml: %v", err)
+	}
 
 	// Prepare the config
-	cmd.prepareConfig(config)
+	config := cmd.loadConfig(generatedConfig)
 
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
@@ -123,12 +126,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Dependencies
@@ -181,7 +178,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
+func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
+	// Load Config and modify it
+	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if cmd.Namespace != "" {
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,
@@ -193,6 +196,7 @@ func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
 
 		log.Infof("Using %s namespace for deploying", cmd.Namespace)
 	}
+
 	if cmd.KubeContext != "" {
 		config.Cluster = &v1.Cluster{
 			Namespace:   config.Cluster.Namespace,
@@ -205,6 +209,5 @@ func (cmd *DeployCmd) prepareConfig(config *latest.Config) {
 		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
 	}
 
-	// Set defaults now
-	configutil.ValidateOnce()
+	return config
 }
