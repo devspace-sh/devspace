@@ -107,7 +107,7 @@ require (
 	google.golang.org/appengine v1.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.17.0 // indirect
-	gopkg.in/AlecAivazis/survey.v1 v1.8.2
+	gopkg.in/AlecAivazis/survey.v1 v1.8.4
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.1 // indirect
 	gopkg.in/src-d/enry.v1 v1.6.4
