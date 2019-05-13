@@ -1,10 +1,10 @@
 version: v1beta2
+cluster:
+  kubeContext: minikube
+  namespace: devspace
 images:
   default:
     image: devspace
-    build:
-      docker:
-        skipPush: true
 deployments:
 - name: default
   helm:

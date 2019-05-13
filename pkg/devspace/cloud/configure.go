@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -23,7 +24,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 		return nil, err
 	}
 
-	providerName := DevSpaceCloudProviderName
+	providerName := config.DevSpaceCloudProviderName
 	if useProviderName == nil {
 		// Choose cloud provider
 		if len(providerConfig) > 1 {
@@ -57,7 +58,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 // GetKubeContextNameFromSpace returns the kube context name for a space
 func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 	prefix := DevSpaceKubeContextName
-	if providerName != DevSpaceCloudProviderName {
+	if providerName != config.DevSpaceCloudProviderName {
 		prefix += "-" + strings.ToLower(strings.Replace(providerName, ".", "-", -1))
 	}
 

@@ -79,50 +79,53 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		},
 	},
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
-		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
+		ErrorMessage: fmt.Sprintf("Not logged into Devspace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
+			providerName := cloudconfig.DevSpaceCloudProviderName
 			if generatedConfig.CloudSpace != nil {
 				if generatedConfig.CloudSpace.ProviderName != "" {
-					cloudConfigData, err := cloudconfig.ReadCloudsConfig()
-					if err != nil {
-						return nil, nil
-					}
-
-					dataMap := make(map[interface{}]interface{})
-					err = yaml.Unmarshal(cloudConfigData, dataMap)
-					if err != nil {
-						return nil, nil
-
-					}
-
-					providerMapRaw, ok := dataMap[generatedConfig.CloudSpace.ProviderName]
-					if !ok {
-						return nil, nil
-					}
-
-					providerMap, ok := providerMapRaw.(map[interface{}]interface{})
-					if !ok {
-						return nil, nil
-					}
-
-					tokenRaw, ok := providerMap["token"]
-					if !ok {
-						return nil, nil
-					}
-
-					token, ok := tokenRaw.(string)
-					if !ok {
-						return nil, nil
-					}
-
-					accountName, err := cloudtoken.GetAccountName(token)
-					if err != nil {
-						return nil, nil
-					}
-
-					return &accountName, nil
+					providerName = generatedConfig.CloudSpace.ProviderName
 				}
 			}
+
+			cloudConfigData, err := cloudconfig.ReadCloudsConfig()
+			if err != nil {
+				return nil, nil
+			}
+
+			dataMap := make(map[interface{}]interface{})
+			err = yaml.Unmarshal(cloudConfigData, dataMap)
+			if err != nil {
+				return nil, nil
+
+			}
+
+			providerMapRaw, ok := dataMap[providerName]
+			if !ok {
+				return nil, nil
+			}
+
+			providerMap, ok := providerMapRaw.(map[interface{}]interface{})
+			if !ok {
+				return nil, nil
+			}
+
+			tokenRaw, ok := providerMap["token"]
+			if !ok {
+				return nil, nil
+			}
+
+			token, ok := tokenRaw.(string)
+			if !ok {
+				return nil, nil
+			}
+
+			accountName, err := cloudtoken.GetAccountName(token)
+			if err != nil {
+				return nil, nil
+			}
+
+			return &accountName, nil
 
 			return nil, nil
 		},

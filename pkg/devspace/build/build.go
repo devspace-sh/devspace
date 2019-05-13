@@ -22,7 +22,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -69,7 +69,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 		}
 
 		// Create new builder
-		builder, err := CreateBuilder(config, client, imageConfigName, &cImageConf, imageTag, isDev, log)
+		builder, err := CreateBuilder(config, client, imageConfigName, &cImageConf, imageTag, skipPush, isDev, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "create builder")
 		}

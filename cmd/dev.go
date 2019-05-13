@@ -28,7 +28,7 @@ import (
 
 // DevCmd is a struct that defines a command call for "up"
 type DevCmd struct {
-	CreateImagePullSecrets  bool
+	SkipPush                bool
 	AllowCyclicDependencies bool
 
 	ForceBuild        bool
@@ -71,7 +71,6 @@ Starts your project in development mode:
 		Run: cmd.Run,
 	}
 
-	devCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
@@ -82,6 +81,7 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
+	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
@@ -143,16 +143,14 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	if cmd.CreateImagePullSecrets {
-		dockerClient, err := docker.NewClient(config, false)
-		if err != nil {
-			dockerClient = nil
-		}
+	dockerClient, err := docker.NewClient(config, false)
+	if err != nil {
+		dockerClient = nil
+	}
 
-		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
+	err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Build and deploy images
@@ -165,13 +163,13 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) error {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary
-		builtImages, err := build.All(config, generatedConfig.GetActive(), client, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		builtImages, err := build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			return fmt.Errorf("Error building image: %v", err)
 		}

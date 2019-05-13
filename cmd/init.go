@@ -11,6 +11,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -308,7 +309,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		}
 
 		// Configure cloud provider
-		cmd.providerName = ptr.String(cloud.DevSpaceCloudProviderName)
+		cmd.providerName = ptr.String(cloudconfig.DevSpaceCloudProviderName)
 
 		// Choose cloud provider
 		if len(providerConfig) > 1 {

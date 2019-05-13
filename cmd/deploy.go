@@ -24,8 +24,6 @@ type DeployCmd struct {
 	KubeContext  string
 	DockerTarget string
 
-	CreateImagePullSecrets bool
-
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDeploy       bool
@@ -33,6 +31,7 @@ type DeployCmd struct {
 	ForceDependencies bool
 
 	SwitchContext bool
+	SkipPush      bool
 
 	AllowCyclicDependencies bool
 }
@@ -59,13 +58,14 @@ devspace deploy --kube-context=deploy-context
 		Run:  cmd.Run,
 	}
 
-	deployCmd.Flags().BoolVar(&cmd.CreateImagePullSecrets, "create-image-pull-secrets", true, "Create image pull secrets")
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switches the kube context to the deploy context")
+	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
@@ -116,26 +116,23 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
-	// Create the image pull secrets and add them to the default service account
-	if cmd.CreateImagePullSecrets {
-		// Create docker client
-		dockerClient, err := docker.NewClient(config, false)
+	// Create docker client
+	dockerClient, err := docker.NewClient(config, false)
 
-		// Create pull secrets and private registry if necessary
-		err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
+	// Create pull secrets and private registry if necessary
+	err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.CreateImagePullSecrets, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}
 
 	// Build images
-	builtImages, err := build.All(config, generatedConfig.GetActive(), client, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	builtImages, err := build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,10 +1,13 @@
 version: v1beta2
 images:
   default:
-    image: devspace
-    build:
-      docker:
-        skipPush: true
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    createPullSecret: true
+deployments:
+  - name: my-deployment
+    component:
+      containers:
+        - image: dscr.io/${DEVSPACE_USERNAME}/devspace
 hooks:
   - command: echo
     args:
@@ -42,8 +45,3 @@ hooks:
     when:
       after:
         deployments: my-deployment
-deployments:
-  - name: my-deployment
-    component:
-      containers:
-        - image: devspace

@@ -13,9 +13,6 @@ import (
 // ProviderConfig holds all the different providers and their configuration
 type ProviderConfig map[string]*Provider
 
-// DevSpaceCloudProviderName is the name of the default devspace-cloud provider
-const DevSpaceCloudProviderName = "app.devspace.cloud"
-
 // DevSpaceKubeContextName is the name for the kube config context
 const DevSpaceKubeContextName = "devspace"
 
@@ -38,7 +35,7 @@ type Provider struct {
 
 // DevSpaceCloudProviderConfig holds the information for the devspace-cloud
 var DevSpaceCloudProviderConfig = &Provider{
-	Name: DevSpaceCloudProviderName,
+	Name: config.DevSpaceCloudProviderName,
 	Host: "https://app.devspace.cloud",
 }
 
@@ -55,7 +52,7 @@ func LoadCloudConfig() (ProviderConfig, error) {
 		data, err = config.ReadCloudsConfig()
 		if os.IsNotExist(err) {
 			loadedConfig = ProviderConfig{
-				DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
+				config.DevSpaceCloudProviderName: DevSpaceCloudProviderConfig,
 			}
 
 			err = nil
@@ -71,12 +68,12 @@ func LoadCloudConfig() (ProviderConfig, error) {
 			return
 		}
 
-		if _, ok := loadedConfig[DevSpaceCloudProviderName]; ok {
-			if loadedConfig[DevSpaceCloudProviderName].Host == "" {
-				loadedConfig[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
+		if _, ok := loadedConfig[config.DevSpaceCloudProviderName]; ok {
+			if loadedConfig[config.DevSpaceCloudProviderName].Host == "" {
+				loadedConfig[config.DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
 			}
 		} else {
-			loadedConfig[DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
+			loadedConfig[config.DevSpaceCloudProviderName] = DevSpaceCloudProviderConfig
 		}
 
 		for configName, config := range loadedConfig {
@@ -96,7 +93,7 @@ func SaveCloudConfig(providerConfig ProviderConfig) error {
 
 	for name, provider := range providerConfig {
 		host := provider.Host
-		if name == DevSpaceCloudProviderName {
+		if name == config.DevSpaceCloudProviderName {
 			host = ""
 		}
 

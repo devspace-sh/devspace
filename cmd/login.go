@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -46,7 +47,7 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	providerName := cloud.DevSpaceCloudProviderName
+	providerName := cloudconfig.DevSpaceCloudProviderName
 	if len(args) > 0 {
 		providerName = args[0]
 	}
