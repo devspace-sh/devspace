@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -101,23 +100,6 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
-		}
-
-		// Don't push image in minikube
-		if minikube.IsMinikube(config) {
-			retImageConfig.Image = ptr.String("devspace")
-			if retImageConfig.Build != nil && retImageConfig.Build.Kaniko != nil {
-				retImageConfig.Build.Kaniko = nil
-			}
-			if retImageConfig.Build == nil {
-				retImageConfig.Build = &latest.BuildConfig{}
-			}
-			if retImageConfig.Build.Docker == nil {
-				retImageConfig.Build.Docker = &latest.DockerConfig{}
-			}
-
-			retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
-			return retImageConfig, nil
 		}
 	}
 

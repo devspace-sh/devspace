@@ -18,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -420,18 +419,12 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) configureCluster() {
-	currentContext, err := kubeconfig.GetCurrentContext()
-	if err != nil {
-		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
-	}
-
 	namespace := survey.Question(&survey.QuestionOptions{
 		Question:     "Which namespace should the app run in?",
 		DefaultValue: "default",
 	})
 
 	config := configutil.GetConfig()
-	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = &namespace
 }
 
