@@ -11,4 +11,5 @@ spec:
     spec:
       containers:
         - name: default
-          image: devspace
+          # The correct image tag will be inserted during devspace dev / devspace deploy
+          image: yourusername/devspace

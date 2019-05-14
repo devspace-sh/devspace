@@ -32,9 +32,10 @@ type CloudSpaceConfig struct {
 
 // CacheConfig holds all the information specific to a certain config
 type CacheConfig struct {
-	Deployments map[string]*DeploymentCache `yaml:"deployments,omitempty"`
-	Images      map[string]*ImageCache      `yaml:"images,omitempty"`
-	Vars        map[string]string           `yaml:"vars,omitempty"`
+	Deployments  map[string]*DeploymentCache `yaml:"deployments,omitempty"`
+	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
+	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
+	Vars         map[string]string           `yaml:"vars,omitempty"`
 }
 
 // ImageCache holds the cache related information about a certain image
@@ -44,6 +45,8 @@ type ImageCache struct {
 	DockerfileHash string `yaml:"dockerfileHash,omitempty"`
 	ContextHash    string `yaml:"contextHash,omitempty"`
 	EntrypointHash string `yaml:"entrypointHash,omitempty"`
+
+	CustomFilesHash string `yaml:"customFilesHash,omitempty"`
 
 	ImageName string `yaml:"imageName,omitempty"`
 	Tag       string `yaml:"tag,omitempty"`
@@ -78,31 +81,50 @@ func LoadConfig() (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		data, readErr := ioutil.ReadFile(ConfigPath)
-		if readErr != nil {
-			loadedConfig = &Config{
-				ActiveConfig: DefaultConfigName,
-				Configs:      make(map[string]*CacheConfig),
-			}
-		} else {
-			loadedConfig = &Config{}
-			err = yaml.Unmarshal(data, loadedConfig)
-			if err != nil {
-				return
-			}
-
-			if loadedConfig.ActiveConfig == "" {
-				loadedConfig.ActiveConfig = DefaultConfigName
-			}
-			if loadedConfig.Configs == nil {
-				loadedConfig.Configs = make(map[string]*CacheConfig)
-			}
-		}
-
-		InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+		loadedConfig, err = LoadConfigFromPath(ConfigPath)
 	})
 
 	return loadedConfig, err
+}
+
+// LoadConfigFromPath loads the generated config from a given path
+func LoadConfigFromPath(path string) (*Config, error) {
+	var loadedConfig *Config
+
+	data, readErr := ioutil.ReadFile(path)
+	if readErr != nil {
+		loadedConfig = &Config{
+			ActiveConfig: DefaultConfigName,
+			Configs:      make(map[string]*CacheConfig),
+		}
+	} else {
+		loadedConfig = &Config{}
+		err := yaml.Unmarshal(data, loadedConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		if loadedConfig.ActiveConfig == "" {
+			loadedConfig.ActiveConfig = DefaultConfigName
+		}
+		if loadedConfig.Configs == nil {
+			loadedConfig.Configs = make(map[string]*CacheConfig)
+		}
+	}
+
+	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+	return loadedConfig, nil
+}
+
+// NewCache returns a new cache object
+func NewCache() *CacheConfig {
+	return &CacheConfig{
+		Deployments: make(map[string]*DeploymentCache),
+		Images:      make(map[string]*ImageCache),
+
+		Dependencies: make(map[string]string),
+		Vars:         make(map[string]string),
+	}
 }
 
 // GetActive returns the currently active devspace config
@@ -131,12 +153,7 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
 	if _, ok := config.Configs[configName]; ok == false {
-		config.Configs[configName] = &CacheConfig{
-			Deployments: make(map[string]*DeploymentCache),
-			Images:      make(map[string]*ImageCache),
-			Vars:        make(map[string]string),
-		}
-
+		config.Configs[configName] = NewCache()
 		return
 	}
 
@@ -145,6 +162,9 @@ func InitDevSpaceConfig(config *Config, configName string) {
 	}
 	if config.Configs[configName].Images == nil {
 		config.Configs[configName].Images = make(map[string]*ImageCache)
+	}
+	if config.Configs[configName].Dependencies == nil {
+		config.Configs[configName].Dependencies = make(map[string]string)
 	}
 	if config.Configs[configName].Vars == nil {
 		config.Configs[configName].Vars = make(map[string]string)
@@ -158,14 +178,12 @@ func SaveConfig(config *Config) error {
 	}
 
 	workdir, _ := os.Getwd()
-
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
 
 	configPath := filepath.Join(workdir, ConfigPath)
-
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)
 	if err != nil {
 		return err

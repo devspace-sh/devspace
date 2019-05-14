@@ -1,13 +1,13 @@
-version: v1beta1
+version: v1beta2
 images:
   default:
-    image: devspace
-    skipPush: true
+    image: yourusername/devspace
+    createPullSecret: true
 deployments:
 - name: devspace-default
   kubectl:
     manifests:
-    - kube/**
+    - kube
 dev:
   terminal:
     disabled: true
@@ -16,6 +16,3 @@ dev:
   autoReload:
     paths:
     - ./**
-cluster:
-  kubeContext: minikube
-  namespace: devspace

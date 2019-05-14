@@ -40,7 +40,7 @@ func Question(params *QuestionOptions) string {
 
 	if params.Options != nil {
 		prompt = &surveypkg.Select{
-			Message: params.Question,
+			Message: params.Question + "\n",
 			Options: params.Options,
 			Default: params.DefaultValue,
 		}

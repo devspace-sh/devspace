@@ -67,15 +67,18 @@ func TestComponentDeployment(t *testing.T) {
 	helmClient := helm.NewFakeClient(kubeClient, configutil.TestNamespace)
 
 	// Init handler
-	deployHandler, err := New(kubeClient, deployConfig, log.GetInstance())
+	deployHandler, err := New(testConfig, kubeClient, deployConfig, log.GetInstance())
 
 	// Use fake helm client
 	deployHandler.HelmConfig.Helm = helmClient
 
 	// Deploy
-	err = deployHandler.Deploy(generatedConfig.GetActive(), false, nil)
+	wasDeployed, err := deployHandler.Deploy(generatedConfig.GetActive(), false, nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if wasDeployed == false {
+		t.Fatal("Expected that component was deployed")
 	}
 
 	// Status

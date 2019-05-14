@@ -93,7 +93,7 @@ func (s *StreamLogger) StartWait(message string) {
 			panic(err)
 		}
 
-		_, err = s.stream.Write([]byte(message))
+		_, err = s.stream.Write([]byte(message + "\n"))
 		if err != nil {
 			panic(err)
 		}

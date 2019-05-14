@@ -34,15 +34,13 @@ type DeployConfig struct {
 }
 
 // New creates a new deploy config for kubectl
-func New(kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
 	if deployConfig.Kubectl.Manifests == nil {
 		return nil, errors.New("No manifests defined for kubectl deploy")
 	}
-
-	config := configutil.GetConfig()
 
 	context := ""
 	if config.Cluster != nil && config.Cluster.KubeContext != nil {
@@ -132,7 +130,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error {
+func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
 
 	// Hash the manifests
@@ -141,7 +139,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err := hash.Directory(manifest)
 		if err != nil {
-			return fmt.Errorf("Error hashing %s: %v", manifest, err)
+			return false, fmt.Errorf("Error hashing %s: %v", manifest, err)
 		}
 
 		manifestsHash += hash
@@ -150,19 +148,25 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Hash the deployment config
 	configStr, err := yaml.Marshal(d.DeploymentConfig)
 	if err != nil {
-		return errors.Wrap(err, "marshal deployment config")
+		return false, errors.Wrap(err, "marshal deployment config")
 	}
 
 	deploymentConfigHash := hash.String(string(configStr))
-	forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
+
+	// We force the redeploy of kubectl deployments for now, because we don't know if they are already currently deployed or not,
+	// so it is better to force deploy them, which usually takes almost no time and is better than taking the risk of skipping a needed deployment
+	// forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
+	forceDeploy = true
 
 	d.Log.StartWait("Applying manifests with kubectl")
 	defer d.Log.StopWait()
 
+	wasDeployed := false
+
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if shouldRedeploy || forceDeploy {
@@ -182,8 +186,10 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 			err = cmd.Run()
 			if err != nil {
-				return err
+				return false, err
 			}
+
+			wasDeployed = true
 		} else {
 			d.Log.Infof("Skipping manifest %s", manifest)
 		}
@@ -192,7 +198,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	deployCache.KubectlManifestsHash = manifestsHash
 	deployCache.DeploymentConfigHash = deploymentConfigHash
 
-	return nil
+	return wasDeployed, nil
 }
 
 func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.CacheConfig, builtImages map[string]string) (bool, string, error) {
@@ -219,7 +225,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 		}
 
 		if len(cache.Images) > 0 {
-			shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages)
+			shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages) || shouldRedeploy
 		}
 
 		replacedManifest, err := yaml.Marshal(manifestYaml)
@@ -295,11 +301,16 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 		if key == "image" {
 			value = strings.TrimSpace(value)
 
+			image := strings.Split(value, ":")
+			if len(image) > 2 {
+				return false
+			}
+
 			// Search for image name
 			for _, imageCache := range cache.Images {
-				if imageCache.ImageName == value {
+				if imageCache.ImageName == image[0] && imageCache.Tag != "" {
 					if builtImages != nil {
-						if _, ok := builtImages[value]; ok {
+						if _, ok := builtImages[image[0]]; ok {
 							shouldRedeploy = true
 						}
 					}
@@ -314,11 +325,12 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 
 	replace := func(path, value string) interface{} {
 		value = strings.TrimSpace(value)
+		image := strings.Split(value, ":")
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == value {
-				return value + ":" + imageCache.Tag
+			if imageCache.ImageName == image[0] {
+				return image[0] + ":" + imageCache.Tag
 			}
 		}
 

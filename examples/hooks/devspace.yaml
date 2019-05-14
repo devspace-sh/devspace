@@ -1,0 +1,47 @@
+version: v1beta2
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    createPullSecret: true
+deployments:
+  - name: my-deployment
+    component:
+      containers:
+        - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+hooks:
+  - command: echo
+    args:
+      - before image building
+    when:
+      before:
+        images: all
+  - command: echo
+    args:
+      - after image building
+    when:
+      after:
+        images: all
+  - command: echo
+    args:
+      - before deploying
+    when:
+      before:
+        deployments: all
+  - command: echo
+    args:
+      - after deploying
+    when:
+      after:
+        deployments: all
+  - command: echo
+    args:
+      - before deployment my-deployment
+    when:
+      before:
+        deployments: my-deployment
+  - command: echo
+    args:
+      - after deployment my-deployment
+    when:
+      after:
+        deployments: my-deployment

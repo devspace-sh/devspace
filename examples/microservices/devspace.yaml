@@ -1,17 +1,17 @@
-version: v1beta1
+# This example only works with minikube
+# If you want to try this example in other
+# Clusters you have to exchange the image names
+# and enable image pushing
+version: v1beta2
 images:
   node:
     image: node
-    skipPush: true
-    build:
-      dockerfile: node/Dockerfile
-      context: node/
+    dockerfile: node/Dockerfile
+    context: node/
   php:
     image: php
-    skipPush: true
-    build:
-      dockerfile: php/Dockerfile
-      context: php/
+    dockerfile: php/Dockerfile
+    context: php/
 deployments:
 - name: devspace-node
   kubectl:
@@ -44,6 +44,3 @@ dev:
   - labelSelector:
       release: devspace-php
     localSubPath: ./php
-cluster:
-  kubeContext: minikube
-  namespace: devspace

@@ -75,7 +75,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Check what kube context to use
 	if options.KubeContext == "" {
 		// Get kube context to use
-		config, err = kubectl.GetClientConfigBySelect(false)
+		config, err = kubectl.GetClientConfigBySelect(false, true)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
@@ -363,8 +363,14 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 
 func getKey(provider *Provider, forceQuestion bool) (string, error) {
 	if forceQuestion == false && len(provider.ClusterKey) > 0 {
+		keyMap := make(map[string]bool)
+
 		for _, key := range provider.ClusterKey {
-			return key, nil
+			keyMap[key] = true
+		}
+
+		if len(keyMap) == 1 {
+			return provider.ClusterKey[0], nil
 		}
 	}
 
@@ -527,7 +533,7 @@ func (p *Provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	config, err := kubectl.GetClientConfigBySelect(false)
+	config, err := kubectl.GetClientConfigBySelect(false, false)
 	if err != nil {
 		return errors.Wrap(err, "new kubectl client")
 	}

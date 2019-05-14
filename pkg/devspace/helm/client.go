@@ -43,18 +43,20 @@ type Client struct {
 
 	helm    k8shelm.Interface
 	kubectl kubernetes.Interface
+
+	config *latest.Config
 }
 
 var helmClients = map[string]*Client{}
 
 // NewClient creates a new helm client
 // NOTE: This is not safe to use in goroutines and could cause multiple creation of the same client
-func NewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	if client, ok := helmClients[tillerNamespace]; ok {
 		return client, nil
 	}
 
-	client, err := createNewClient(tillerNamespace, log, upgradeTiller)
+	client, err := createNewClient(config, tillerNamespace, log, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +65,9 @@ func NewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*Cli
 	return client, nil
 }
 
-func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func createNewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	// Get kube config
-	kubeconfig, err := kubectl.GetClientConfig()
+	kubeconfig, err := kubectl.GetClientConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +79,7 @@ func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool)
 	}
 
 	// Create tiller if necessary
-	err = ensureTiller(kubectlClient, tillerNamespace, upgradeTiller)
+	err = ensureTiller(config, kubectlClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +132,10 @@ func createNewClient(tillerNamespace string, log log.Logger, upgradeTiller bool)
 
 	log.StopWait()
 
-	return create(tillerNamespace, helmClient, kubectlClient)
+	return create(config, tillerNamespace, helmClient, kubectlClient)
 }
 
-func create(tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -163,6 +165,7 @@ func create(tillerNamespace string, helmClient k8shelm.Interface, kubectlClient 
 		Namespace: tillerNamespace,
 		helm:      helmClient,
 		kubectl:   kubectlClient,
+		config:    config,
 	}
 
 	_, err = os.Stat(stableRepoCachePathAbs)

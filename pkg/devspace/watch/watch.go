@@ -50,13 +50,12 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 func (w *Watcher) Start() {
 	w.startedMutext.Lock()
 	isStarted := w.started
-	w.startedMutext.Unlock()
 
 	if isStarted {
+		w.startedMutext.Unlock()
 		return
 	}
 
-	w.startedMutext.Lock()
 	w.started = true
 	w.startedMutext.Unlock()
 

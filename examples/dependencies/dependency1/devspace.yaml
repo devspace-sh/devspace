@@ -1,0 +1,13 @@
+version: v1beta2
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    createPullSecret: true
+dependencies:
+  - source:
+      path: ../dependency2
+deployments:
+  - name: dependency1
+    component:
+      containers:
+        - image: dscr.io/${DEVSPACE_USERNAME}/devspace

@@ -163,8 +163,11 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	log.StopWait()
 	log.Infof("Successfully created space %s", space.Name)
+	log.Infof("Your kubectl context has been updated automatically.")
 
-	log.Infof("\nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
+	if configExists {
+		log.Infof("\r          \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
+	}
 }
 
 func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {

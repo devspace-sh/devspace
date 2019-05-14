@@ -2,6 +2,7 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -58,7 +59,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig()
 
 	shouldPurgeDeployment := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
@@ -69,7 +70,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		},
 	}) == "yes"
 	if shouldPurgeDeployment {
-		kubectl, err := kubectl.NewClient()
+		kubectl, err := kubectl.NewClient(config)
 		if err != nil {
 			log.Fatalf("Unable to create new kubectl client: %v", err)
 		}
@@ -79,7 +80,18 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			deployments = []string{args[0]}
 		}
 
-		deployUtil.PurgeDeployments(kubectl, deployments)
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Errorf("Error loading generated.yaml: %v", err)
+			return
+		}
+
+		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
+
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Errorf("Error saving generated.yaml: %v", err)
+		}
 	}
 
 	found, err := configure.RemoveDeployment(cmd.RemoveAll, name)

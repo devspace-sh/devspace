@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,8 +16,7 @@ import (
 )
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
-	config := configutil.GetConfig()
+func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
 	if config.Images != nil {
 		pullSecrets := []string{}
 
@@ -28,7 +28,7 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.In
 				}
 
 				log.StartWait("Creating image pull secret for registry: " + registryURL)
-				err = createPullSecretForRegistry(dockerClient, client, registryURL, log)
+				err = createPullSecretForRegistry(config, dockerClient, client, registryURL, log)
 				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
@@ -39,7 +39,7 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.In
 		}
 
 		if len(pullSecrets) > 0 {
-			err := addPullSecretsToServiceAccount(client, pullSecrets, log)
+			err := addPullSecretsToServiceAccount(config, client, pullSecrets, log)
 			if err != nil {
 				return errors.Wrap(err, "add pull secrets to service account")
 			}
@@ -49,9 +49,7 @@ func CreatePullSecrets(dockerClient client.CommonAPIClient, client kubernetes.In
 	return nil
 }
 
-func addPullSecretsToServiceAccount(client kubernetes.Interface, pullSecrets []string, log log.Logger) error {
-	config := configutil.GetConfig()
-
+func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Interface, pullSecrets []string, log log.Logger) error {
 	// Add secrets to default service account in default namespace
 	namespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
@@ -94,8 +92,7 @@ func addPullSecretsToServiceAccount(client kubernetes.Interface, pullSecrets []s
 	return nil
 }
 
-func createPullSecretForRegistry(dockerClient client.CommonAPIClient, client kubernetes.Interface, registryURL string, log log.Logger) error {
-	config := configutil.GetConfig()
+func createPullSecretForRegistry(config *latest.Config, dockerClient client.CommonAPIClient, client kubernetes.Interface, registryURL string, log log.Logger) error {
 	defaultNamespace, err := configutil.GetDefaultNamespace(config)
 	if err != nil {
 		return err

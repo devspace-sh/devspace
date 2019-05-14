@@ -11,13 +11,13 @@ import (
 )
 
 func TestInstallChart(t *testing.T) {
-	createFakeConfig()
+	config := createFakeConfig()
 
 	// Create the fake client.
 	kubeClient := fake.NewSimpleClientset()
 	helmClient := &helm.FakeClient{}
 
-	client, err := create(configutil.TestNamespace, helmClient, kubeClient)
+	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient)
 	if err != nil {
 		t.Fatal(err)
 	}

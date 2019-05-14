@@ -7,7 +7,7 @@ import (
 // Interface defines the common interface used for the deployment methods
 type Interface interface {
 	Status() (*StatusResult, error)
-	Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) error
+	Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error)
 	Delete(cache *generated.CacheConfig) error
 }
 

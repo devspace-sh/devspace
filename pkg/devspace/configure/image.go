@@ -7,13 +7,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/image"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -54,17 +53,11 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 				Disabled: ptr.Bool(true),
 			}
 		} else {
-			if dockerfile != image.DefaultDockerfilePath {
-				if retImageConfig.Build == nil {
-					retImageConfig.Build = &latest.BuildConfig{}
-				}
-				retImageConfig.Build.Dockerfile = &dockerfile
+			if dockerfile != helper.DefaultDockerfilePath {
+				retImageConfig.Dockerfile = &dockerfile
 			}
-			if context != "" && context != image.DefaultContextPath {
-				if retImageConfig.Build == nil {
-					retImageConfig.Build = &latest.BuildConfig{}
-				}
-				retImageConfig.Build.Context = &context
+			if context != "" && context != helper.DefaultContextPath {
+				retImageConfig.Context = &context
 			}
 		}
 
@@ -75,7 +68,7 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *string) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string, cloudProvider *string) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
 		registryURL    = ""
@@ -84,41 +77,19 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	)
 
 	// Get docker client
-	client, err := docker.NewClient(true)
+	client, err := docker.NewClient(config, true)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
 
 	// Check if docker is installed
-	for {
-		_, err = client.Ping(contextpkg.Background())
-		if err != nil {
-			// Check if docker cli is installed
-			runErr := exec.Command("docker").Run()
-			if runErr == nil {
-				useKaniko = survey.Question(&survey.QuestionOptions{
-					Question:     "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
-					DefaultValue: "no",
-					Options:      []string{"yes", "no"},
-				}) == "yes"
-
-				if useKaniko == false {
-					continue
-				}
-			}
-
-			// We use kaniko
-			useKaniko = true
-
-			// Set default build engine to kaniko, if no docker is installed
-			retImageConfig.Build = &latest.BuildConfig{
-				Kaniko: &latest.KanikoConfig{
-					Cache: ptr.Bool(true),
-				},
-			}
+	_, err = client.Ping(contextpkg.Background())
+	if err != nil {
+		// Check if docker cli is installed
+		runErr := exec.Command("docker").Run()
+		if runErr == nil {
+			log.Warn("Docker daemon not running. Start Docker daemon to build images with Docker instead of using the kaniko fallback.")
 		}
-
-		break
 	}
 
 	// If not kaniko get docker hub credentials
@@ -129,13 +100,6 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
-		}
-
-		// Don't push image in minikube
-		if minikube.IsMinikube() {
-			retImageConfig.Image = ptr.String("devspace")
-			retImageConfig.SkipPush = ptr.Bool(true)
-			return retImageConfig, nil
 		}
 	}
 
@@ -250,19 +214,11 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	retImageConfig.Image = &defaultImageName
 
 	// Set image specifics
-	if dockerfile != "" && dockerfile != image.DefaultDockerfilePath {
-		if retImageConfig.Build == nil {
-			retImageConfig.Build = &latest.BuildConfig{}
-		}
-
-		retImageConfig.Build.Dockerfile = &dockerfile
+	if dockerfile != "" && dockerfile != helper.DefaultDockerfilePath {
+		retImageConfig.Dockerfile = &dockerfile
 	}
-	if context != "" && context != image.DefaultContextPath {
-		if retImageConfig.Build == nil {
-			retImageConfig.Build = &latest.BuildConfig{}
-		}
-
-		retImageConfig.Build.Context = &context
+	if context != "" && context != helper.DefaultContextPath {
+		retImageConfig.Context = &context
 	}
 	if createPullSecret {
 		retImageConfig.CreatePullSecret = &createPullSecret
@@ -271,28 +227,35 @@ func GetImageConfigFromDockerfile(dockerfile, context string, cloudProvider *str
 	return retImageConfig, nil
 }
 
-//AddImage adds an image to the devspace
+// AddImage adds an image to the devspace
 func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
 	config := configutil.GetBaseConfig()
 
 	imageConfig := &v1.ImageConfig{
 		Image: &name,
-		Build: &v1.BuildConfig{},
 	}
 
 	if tag != "" {
 		imageConfig.Tag = &tag
 	}
 	if contextPath != "" {
-		imageConfig.Build.Context = &contextPath
+		imageConfig.Context = &contextPath
 	}
 	if dockerfilePath != "" {
-		imageConfig.Build.Dockerfile = &dockerfilePath
+		imageConfig.Dockerfile = &dockerfilePath
 	}
 
 	if buildEngine == "docker" {
+		if imageConfig.Build == nil {
+			imageConfig.Build = &v1.BuildConfig{}
+		}
+
 		imageConfig.Build.Docker = &v1.DockerConfig{}
 	} else if buildEngine == "kaniko" {
+		if imageConfig.Build == nil {
+			imageConfig.Build = &v1.BuildConfig{}
+		}
+
 		imageConfig.Build.Kaniko = &v1.KanikoConfig{}
 	} else if buildEngine != "" {
 		log.Errorf("BuildEngine %v unknown. Please select one of docker|kaniko", buildEngine)

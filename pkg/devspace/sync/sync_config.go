@@ -8,7 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/juju/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -31,6 +33,8 @@ const ErrorAck string = "ERROR"
 
 // SyncConfig holds the necessary information for the syncing process
 type SyncConfig struct {
+	DevSpaceConfig *latest.Config
+
 	Kubectl              kubernetes.Interface
 	Pod                  *k8sv1.Pod
 	Container            *k8sv1.Container

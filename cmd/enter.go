@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -64,8 +65,14 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// Get config
+	var config *latest.Config
+	if configutil.ConfigExists() {
+		config = configutil.GetConfig()
+	}
+
 	// Get kubectl client
-	kubectl, err := kubectl.NewClientWithContextSwitch(cmd.SwitchContext)
+	kubectl, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -92,7 +99,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err = services.StartTerminal(kubectl, params, args, make(chan error), log.GetInstance())
+	err = services.StartTerminal(config, kubectl, params, args, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

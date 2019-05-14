@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func createFakeConfig() {
+func createFakeConfig() *latest.Config {
 	// Create fake devspace config
 	testConfig := &latest.Config{
 		Deployments: &[]*latest.DeploymentConfig{
@@ -26,14 +26,16 @@ func createFakeConfig() {
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
+
+	return testConfig
 }
 func TestCreateTiller(t *testing.T) {
-	createFakeConfig()
+	config := createFakeConfig()
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
-	err := createTillerRBAC(client, "tiller-namespace")
+	err := createTillerRBAC(config, client, "tiller-namespace")
 	if err != nil {
 		t.Fatal(err)
 	}
