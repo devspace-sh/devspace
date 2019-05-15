@@ -68,6 +68,4 @@ func TestMerge(t *testing.T) {
 	assert.Equal(t, set1[&sameKeySameVal], "commonVal")
 	assert.Equal(t, set1[&equalString1], "set1Val")
 	assert.Equal(t, set1[&equalString2], "set2Val")
-	// @Florian
-	// Merge one map into another and check if the merged values show up in the merged map
 }

@@ -14,6 +14,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
+//@Moretest
+//Coverage is 46% and that's not enough
+
 func TestDockerBuild(t *testing.T) {
 
 	// 1. Write test dockerfile and context to a temp folder

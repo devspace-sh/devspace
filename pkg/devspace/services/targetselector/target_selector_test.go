@@ -17,7 +17,6 @@ func TestTargetSelector(t *testing.T) {
 	namespace := "test"
 	selectedContainerName := "TestContainer2"
 	selectedPodName := "TestPod"
-	// @Florian
 
 	//Create targetSelector
 	config := latest.Config{

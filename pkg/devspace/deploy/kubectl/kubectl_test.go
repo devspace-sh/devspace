@@ -26,6 +26,9 @@ const testNamespace = "test-kubectl-deploy"
 // Test namespace to create
 const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
 
+// @MoreTests
+//When kubectl is testable, test it
+
 func TestKubectlManifests(t *testing.T) {
 	t.Skip("Not yet testable")
 	namespace := "testnamespace"
@@ -36,7 +39,6 @@ func TestKubectlManifests(t *testing.T) {
 	flags := make([]*string, 1)
 	flags0 := "--dry-run"
 	flags[0] = &flags0
-	// @Florian
 	// 1. Create fake config & generated config
 
 	// Create fake devspace config
@@ -124,7 +126,7 @@ func TestKubectlManifests(t *testing.T) {
 }
 
 func TestKubectlManifestsWithKustomize(t *testing.T) {
-	// @Florian
+	// @MoreTests
 	// 1. Create fake config & generated config
 	// 2. Write test kustomize files (see examples) into a temp folder
 	// 3. Init kubectl & create test namespace

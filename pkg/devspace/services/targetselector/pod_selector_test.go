@@ -307,7 +307,6 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 
 /*func TestPodSelection(t *testing.T) {
 	namespace := "test"
-	// @Florian
 	
 	//Create namespace
 	kubeClient := fake.NewSimpleClientset()
