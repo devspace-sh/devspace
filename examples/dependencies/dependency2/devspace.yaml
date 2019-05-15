@@ -4,3 +4,6 @@ deployments:
     component:
       containers:
         - image: nginx
+dependencies:
+  - source:
+      git: https://github.com/devspace-cloud/example-dependency.git

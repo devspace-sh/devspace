@@ -8,7 +8,7 @@ In order to get things ready do the following:
 1. Install docker
 2. Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 5. Run `devspace create space quickstart` to create a new kubernetes namespace in the devspace.cloud (if you want to use your own cluster just skip this step and devspace will use the current kubectl context)
-4. Exchange the image `dscr.io/yourusername/devspace` in `kube/deployment.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
+4. Exchange the image `dscr.io/yourusername/devspace` in `kube/deployment.yaml` and `devspace.yaml` with your username (you can also use a different registry, but make sure you are logged in with `docker login`)
 
 # Step 1: Develop the application
 

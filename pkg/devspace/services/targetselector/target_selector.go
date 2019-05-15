@@ -8,14 +8,24 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
+// DefaultPodQuestion defines the default question for selecting a pod
+const DefaultPodQuestion = "Select a pod"
+
+// DefaultContainerQuestion defines the default question for selecting a container
+const DefaultContainerQuestion = "Select a container"
+
 // TargetSelector is the struct that will select a target
 type TargetSelector struct {
+	PodQuestion       *string
+	ContainerQuestion *string
+
 	namespace string
 	pick      bool
 
@@ -63,7 +73,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 
 		podStatus := kubectl.GetPodStatus(pod)
 		if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-			return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s", pod.Name, podStatus)
+			return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
 		}
 
 		return pod, nil
@@ -82,7 +92,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 	}
 
 	// Ask for pod
-	pod, err := SelectPod(client, t.namespace, nil)
+	pod, err := SelectPod(client, t.namespace, nil, t.PodQuestion)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +135,12 @@ func (t *TargetSelector) GetContainer(client kubernetes.Interface) (*v1.Pod, *v1
 			options = append(options, container.Name)
 		}
 
+		if t.ContainerQuestion == nil {
+			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
+		}
+
 		containerName := survey.Question(&survey.QuestionOptions{
-			Question: "Select a container",
+			Question: *t.ContainerQuestion,
 			Options:  options,
 		})
 		for _, container := range pod.Spec.Containers {

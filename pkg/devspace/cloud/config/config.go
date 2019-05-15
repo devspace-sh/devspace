@@ -8,6 +8,9 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 )
 
+// DevSpaceCloudProviderName is the name of the default devspace-cloud provider
+const DevSpaceCloudProviderName = "app.devspace.cloud"
+
 // DevSpaceCloudConfigPath holds the path to the cloud config file
 const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
 

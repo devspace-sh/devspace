@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -41,7 +41,7 @@ type Resolver struct {
 
 	BasePath   string
 	BaseConfig *latest.Config
-	BaseCache  *generated.CacheConfig
+	BaseCache  *generated.Config
 
 	AllowCyclic bool
 
@@ -49,14 +49,14 @@ type Resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.CacheConfig, allowCyclic bool, log log.Logger) (*Resolver, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, log log.Logger) (*Resolver, error) {
 	var id string
 
 	basePath, err := filepath.Abs(".")
 	if err != nil {
 		return nil, err
 	}
-	gitRepo := generator.NewGitRepository(basePath, "")
+	gitRepo := git.NewGitRepository(basePath, "")
 	remote, err := gitRepo.GetRemote()
 	if err == nil {
 		id = remote
@@ -183,7 +183,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		// Update chart
 		if update {
-			gitRepo := generator.NewGitRepository(localPath, gitPath)
+			gitRepo := git.NewGitRepository(localPath, gitPath)
 			_, err := gitRepo.Update()
 			if err != nil {
 				return nil, errors.Wrap(err, "pull repo")
@@ -203,7 +203,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, r.BaseCache)
+	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
@@ -238,7 +238,7 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		// Check if it's an git repo
 		filePath := filepath.Join(basePath, *dependency.Source.Path)
 
-		gitRepo := generator.NewGitRepository(filePath, "")
+		gitRepo := git.NewGitRepository(filePath, "")
 		remote, err := gitRepo.GetRemote()
 		if err == nil {
 			return remote

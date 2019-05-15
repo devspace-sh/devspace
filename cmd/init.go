@@ -11,13 +11,13 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/"
+const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
 
 const (
 	// Cluster options
@@ -38,11 +38,12 @@ const (
 	connectClusterOption = "Connect cluster to DevSpace Cloud"
 
 	// Dockerfile not found options
-	createDockerfileOption = "Create a Dockerfile for me"
-	enterDockerfileOption  = "Enter path to your Dockerfile"
-	enterManifestsOption   = "Enter path to your Kubernetes manifests"
-	enterHelmChartOption   = "Enter path to your Helm chart"
-	useExistingImageOption = "Use existing image (e.g. from Docker Hub)"
+	useExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
+	createDockerfileOption      = "Create a Dockerfile for me"
+	enterDockerfileOption       = "Enter path to your Dockerfile"
+	enterManifestsOption        = "Enter path to your Kubernetes manifests"
+	enterHelmChartOption        = "Enter path to your Helm chart"
+	useExistingImageOption      = "Use existing image (e.g. from Docker Hub)"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -88,7 +89,8 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Check if config already exists
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.Reconfigure == false {
-		log.Info("Config devspace.yaml already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		log.Infof("\r          \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		os.Exit(0)
 	}
 
@@ -121,14 +123,15 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	var newImage *latest.ImageConfig
 	var newDeployment *latest.DeploymentConfig
+	var selectedOption string
 
 	// Check if dockerfile exists
 	addFromDockerfile := true
 
 	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
-		selectedOption := survey.Question(&survey.QuestionOptions{
-			Question:     "Seems like you do not have a Dockerfile. What do you want to do?",
+		selectedOption = survey.Question(&survey.QuestionOptions{
+			Question:     "This project does not have a Dockerfile. What do you want to do?",
 			DefaultValue: createDockerfileOption,
 			Options: []string{
 				createDockerfileOption,
@@ -138,47 +141,59 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				useExistingImageOption,
 			},
 		})
+	} else {
+		selectedOption = survey.Question(&survey.QuestionOptions{
+			Question:     "How do you want to initialize this project?",
+			DefaultValue: useExistingDockerfileOption,
+			Options: []string{
+				useExistingDockerfileOption,
+				enterDockerfileOption,
+				enterManifestsOption,
+				enterHelmChartOption,
+				useExistingImageOption,
+			},
+		})
+	}
 
-		if selectedOption == createDockerfileOption {
-			// Containerize application if necessary
-			err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "")
-			if err != nil {
-				log.Fatalf("Error containerizing application: %v", err)
-			}
-		} else if selectedOption == enterDockerfileOption {
-			cmd.Dockerfile = survey.Question(&survey.QuestionOptions{
-				Question: "Please enter a path to your dockerfile (e.g. ./MyDockerfile)",
-			})
-		} else if selectedOption == enterManifestsOption {
-			addFromDockerfile = false
-			manifests := survey.Question(&survey.QuestionOptions{
-				Question: "Please enter kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
-			})
+	if selectedOption == createDockerfileOption {
+		// Containerize application if necessary
+		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "")
+		if err != nil {
+			log.Fatalf("Error containerizing application: %v", err)
+		}
+	} else if selectedOption == enterDockerfileOption {
+		cmd.Dockerfile = survey.Question(&survey.QuestionOptions{
+			Question: "Please enter a path to your Dockerfile (e.g. ./MyDockerfile)",
+		})
+	} else if selectedOption == enterManifestsOption {
+		addFromDockerfile = false
+		manifests := survey.Question(&survey.QuestionOptions{
+			Question: "Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
+		})
 
-			newDeployment, err = configure.GetKubectlDeployment(deploymentName, manifests)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else if selectedOption == enterHelmChartOption {
-			addFromDockerfile = false
-			chartName := survey.Question(&survey.QuestionOptions{
-				Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
-			})
+		newDeployment, err = configure.GetKubectlDeployment(deploymentName, manifests)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if selectedOption == enterHelmChartOption {
+		addFromDockerfile = false
+		chartName := survey.Question(&survey.QuestionOptions{
+			Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
+		})
 
-			newDeployment, err = configure.GetHelmDeployment(deploymentName, chartName, "", "")
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else if selectedOption == useExistingImageOption {
-			addFromDockerfile = false
-			existingImageName := survey.Question(&survey.QuestionOptions{
-				Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
-			})
+		newDeployment, err = configure.GetHelmDeployment(deploymentName, chartName, "", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if selectedOption == useExistingImageOption {
+		addFromDockerfile = false
+		existingImageName := survey.Question(&survey.QuestionOptions{
+			Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
+		})
 
-			newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName)
-			if err != nil {
-				log.Fatal(err)
-			}
+		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
@@ -230,14 +245,23 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if os.IsNotExist(err) {
 		fsutil.WriteToFile([]byte(configGitignore), ".gitignore")
 	} else {
-		gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+		gitignoreContent, err := ioutil.ReadFile(".gitignore")
 		if err != nil {
-			log.Warnf("Error writing to .gitignore: %v", err)
+			log.Warnf("Error reading .gitignore: %v", err)
 		} else {
-			defer gitignore.Close()
+			gitignoreRegexp := regexp.MustCompile("(?ms)(^|[^!]).devspace/(\\n|$)")
 
-			if _, err = gitignore.WriteString(configGitignore); err != nil {
-				log.Warnf("Error writing to .gitignore: %v", err)
+			if gitignoreRegexp.MatchString(string(gitignoreContent)) == false {
+				gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+				if err != nil {
+					log.Warnf("Error writing to .gitignore: %v", err)
+				} else {
+					defer gitignore.Close()
+
+					if _, err = gitignore.WriteString(configGitignore); err != nil {
+						log.Warnf("Error writing to .gitignore: %v", err)
+					}
+				}
 			}
 		}
 	}
@@ -245,9 +269,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.Done("Project successfully initialized")
 
 	if cmd.useCloud {
-		log.Infof("\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+		log.Infof("\r          \nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	} else {
-		log.Infof("Run:\n- `%s` to develop application\n- `%s` to deploy application", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		log.Infof("\r          \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 }
 
@@ -284,7 +308,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		}
 
 		// Configure cloud provider
-		cmd.providerName = ptr.String(cloud.DevSpaceCloudProviderName)
+		cmd.providerName = ptr.String(cloudconfig.DevSpaceCloudProviderName)
 
 		// Choose cloud provider
 		if len(providerConfig) > 1 {
@@ -395,18 +419,12 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) configureCluster() {
-	currentContext, err := kubeconfig.GetCurrentContext()
-	if err != nil {
-		log.Fatalf("Couldn't determine current kubernetes context: %v", err)
-	}
-
 	namespace := survey.Question(&survey.QuestionOptions{
 		Question:     "Which namespace should the app run in?",
 		DefaultValue: "default",
 	})
 
 	config := configutil.GetConfig()
-	config.Cluster.KubeContext = &currentContext
 	config.Cluster.Namespace = &namespace
 }
 

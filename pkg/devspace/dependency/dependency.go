@@ -22,7 +22,7 @@ import (
 )
 
 // UpdateAll will update all dependencies if there are any
-func UpdateAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, log log.Logger) error {
+func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool, log log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -50,7 +50,7 @@ func UpdateAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic 
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic, updateDependencies, createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -77,18 +77,18 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 	for i := 0; i < len(dependencies); i++ {
 		dependency := dependencies[i]
 
-		logger.StartWait(fmt.Sprintf("Deploying %d dependencies", len(dependencies)-i))
+		logger.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
-		err := dependency.Deploy(createPullSecrets, forceDeployDependencies, forceBuild, forceDeploy, streamLog)
+		err := dependency.Deploy(skipPush, forceDeployDependencies, forceBuild, forceDeploy, streamLog)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		// Prettify path if its a path deployment
 		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
+			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID))+1:])
 		} else {
 			logger.Donef("Deployed dependency %s", dependency.ID)
 		}
@@ -101,7 +101,7 @@ func DeployAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic,
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.CacheConfig, allowCyclic bool, logger log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.Config, allowCyclic bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -159,11 +159,11 @@ type Dependency struct {
 	GeneratedConfig *generated.Config
 
 	DependencyConfig *latest.DependencyConfig
-	DependencyCache  *generated.CacheConfig
+	DependencyCache  *generated.Config
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuild, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceDeploy bool, log log.Logger) error {
 	// Check if we should redeploy
 	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
 	if err != nil {
@@ -171,11 +171,11 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 	}
 
 	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.DependencyCache.Dependencies[d.ID] {
+	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
 		return nil
 	}
 
-	d.DependencyCache.Dependencies[d.ID] = directoryHash
+	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
 
 	// Switch current working directory
 	currentWorkingDirectory, err := os.Getwd()
@@ -205,16 +205,13 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 		return fmt.Errorf("Unable to create namespace: %v", err)
 	}
 
-	// Create the image pull secrets and add them to the default service account
-	if createPullSecrets {
-		// Create docker client
-		dockerClient, err := docker.NewClient(d.Config, false)
+	// Create docker client
+	dockerClient, err := docker.NewClient(d.Config, false)
 
-		// Create pull secrets and private registry if necessary
-		err = registry.CreatePullSecrets(d.Config, dockerClient, client, log)
-		if err != nil {
-			return err
-		}
+	// Create pull secrets and private registry if necessary
+	err = registry.CreatePullSecrets(d.Config, dockerClient, client, log)
+	if err != nil {
+		return err
 	}
 
 	log.StopWait()
@@ -223,7 +220,7 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 	builtImages := make(map[string]string)
 	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
 		// Build images
-		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceBuild, false, log)
+		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, skipPush, false, forceBuild, false, log)
 		if err != nil {
 			return err
 		}
@@ -238,7 +235,7 @@ func (d *Dependency) Deploy(createPullSecrets bool, forceDependencies, forceBuil
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceDeploy, builtImages, log)
+	err = deploy.All(d.Config, d.GeneratedConfig.GetActive(), client, false, forceDeploy, builtImages, nil, log)
 	if err != nil {
 		return err
 	}
@@ -284,7 +281,7 @@ func (d *Dependency) Purge(log log.Logger) error {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
-	delete(d.DependencyCache.Dependencies, d.ID)
+	delete(d.DependencyCache.GetActive().Dependencies, d.ID)
 	log.Donef("Purged dependency %s", d.ID)
 	return nil
 }

@@ -4,7 +4,12 @@ This example shows you how to develop a small go application with automated repe
 
 # Step 0: Prerequisites
 
+## For local 
 1. Install minikube (no docker required, since devspace uses the built in minikube docker daemon)
+
+## Other
+1. Make sure docker is installed
+2. Replace `yourusername/devspace` with your desired image name in `devspace.yaml` and `kube/deployment.yaml`
 
 # Step 1: Develop the application
 

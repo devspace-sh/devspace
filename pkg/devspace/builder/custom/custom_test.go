@@ -86,7 +86,7 @@ func TestBuild(t *testing.T) {
 		Build: &latest.BuildConfig{
 			Custom: &latest.CustomConfig{
 				Command: ptr.String("my-command"),
-				Flags: &[]*string{
+				Args: &[]*string{
 					ptr.String("flag1"),
 					ptr.String("flag2"),
 				},

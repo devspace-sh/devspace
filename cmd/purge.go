@@ -5,6 +5,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -16,6 +18,7 @@ import (
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
 	Deployments             string
+	Namespace               string
 	AllowCyclicDependencies bool
 	PurgeDependencies       bool
 }
@@ -34,15 +37,17 @@ func NewPurgeCmd() *cobra.Command {
 Deletes the deployed kuberenetes resources:
 
 devspace purge
+devspace purge --dependencies
 devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
 
+	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
-	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", true, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
 
 	return purgeCmd
 }
@@ -60,8 +65,14 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Errorf("Error loading generated.yaml: %v", err)
+		return
+	}
+
 	// Get the config
-	config := configutil.GetConfig()
+	config := cmd.loadConfig(generatedConfig)
 
 	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
@@ -76,18 +87,12 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Errorf("Error loading generated.yaml: %v", err)
-		return
-	}
-
 	// Purge deployments
 	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig.GetActive(), cmd.AllowCyclicDependencies, log.GetInstance())
+		err = dependency.PurgeAll(config, generatedConfig, cmd.AllowCyclicDependencies, log.GetInstance())
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}
@@ -97,4 +102,32 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
+}
+
+func (cmd *PurgeCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
+	// Load Config and modify it
+	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if cmd.Namespace != "" {
+		config.Cluster = &v1.Cluster{
+			Namespace:   &cmd.Namespace,
+			KubeContext: config.Cluster.KubeContext,
+			APIServer:   config.Cluster.APIServer,
+			CaCert:      config.Cluster.CaCert,
+			User:        config.Cluster.User,
+		}
+
+		log.Infof("Using %s namespace", cmd.Namespace)
+	}
+
+	// Save generated config
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		log.Fatalf("Couldn't save generated config: %v", err)
+	}
+
+	return config
 }

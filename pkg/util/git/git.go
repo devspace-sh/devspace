@@ -1,4 +1,4 @@
-package generator
+package git
 
 import (
 	"fmt"
@@ -8,22 +8,37 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
-// GitRepository holds the information about a repository
-type GitRepository struct {
+// Repository holds the information about a repository
+type Repository struct {
 	LocalPath string
 	RemotURL  string
 }
 
 // NewGitRepository creates a new git repository struct with the given parameters
-func NewGitRepository(localPath string, remoteURL string) *GitRepository {
-	return &GitRepository{
+func NewGitRepository(localPath string, remoteURL string) *Repository {
+	return &Repository{
 		LocalPath: localPath,
 		RemotURL:  remoteURL,
 	}
 }
 
+// GetHash retrieves the current HEADs hash
+func (gr *Repository) GetHash() (string, error) {
+	repo, err := git.PlainOpen(gr.LocalPath)
+	if err != nil {
+		return "", errors.Wrap(err, "git open")
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", errors.Wrap(err, "get head")
+	}
+
+	return head.Hash().String(), nil
+}
+
 // GetRemote retrieves the remote origin
-func (gr *GitRepository) GetRemote() (string, error) {
+func (gr *Repository) GetRemote() (string, error) {
 	_, err := os.Stat(gr.LocalPath + "/.git")
 	if err != nil {
 		return "", err
@@ -43,11 +58,16 @@ func (gr *GitRepository) GetRemote() (string, error) {
 		return "", fmt.Errorf("Couldn't determine git remote in %s", gr.LocalPath)
 	}
 
-	return remotes[0].String(), nil
+	urls := remotes[0].Config().URLs
+	if len(urls) == 0 {
+		return "", errors.New("No remotes found")
+	}
+
+	return urls[0], nil
 }
 
 // HasUpdate checks if there is an update to the repository
-func (gr *GitRepository) HasUpdate() (bool, error) {
+func (gr *Repository) HasUpdate() (bool, error) {
 	_, err := os.Stat(gr.LocalPath + "/.git")
 	if err != nil {
 		return true, nil
@@ -72,14 +92,14 @@ func (gr *GitRepository) HasUpdate() (bool, error) {
 
 	remoteHead, err := repo.Reference("refs/remotes/origin/HEAD", true)
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
 	return remoteHead.Hash().String() != repoHead.Hash().String(), nil
 }
 
 // Update pulls the repository or clones it into the local path
-func (gr *GitRepository) Update() (bool, error) {
+func (gr *Repository) Update() (bool, error) {
 	_, repoNotFound := os.Stat(gr.LocalPath + "/.git")
 	if repoNotFound == nil {
 		repo, err := git.PlainOpen(gr.LocalPath)

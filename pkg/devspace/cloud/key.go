@@ -20,7 +20,6 @@ func (p *Provider) GetClusterKey(cluster *Cluster) (string, error) {
 				key = clusterKey
 				break
 			}
-
 		} else {
 			return p.AskForEncryptionKey(cluster)
 		}

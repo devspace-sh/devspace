@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -84,35 +83,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	}
 
 	// Check if docker is installed
-	for {
-		_, err = client.Ping(contextpkg.Background())
-		if err != nil {
-			// Check if docker cli is installed
-			runErr := exec.Command("docker").Run()
-			if runErr == nil {
-				useKaniko = survey.Question(&survey.QuestionOptions{
-					Question:     "Docker seems to be installed but is not running: " + err.Error() + " \nShould we build with kaniko instead?",
-					DefaultValue: "no",
-					Options:      []string{"yes", "no"},
-				}) == "yes"
-
-				if useKaniko == false {
-					continue
-				}
-			}
-
-			// We use kaniko
-			useKaniko = true
-
-			// Set default build engine to kaniko, if no docker is installed
-			retImageConfig.Build = &latest.BuildConfig{
-				Kaniko: &latest.KanikoConfig{
-					Cache: ptr.Bool(true),
-				},
-			}
+	_, err = client.Ping(contextpkg.Background())
+	if err != nil {
+		// Check if docker cli is installed
+		runErr := exec.Command("docker").Run()
+		if runErr == nil {
+			log.Warn("Docker daemon not running. Start Docker daemon to build images with Docker instead of using the kaniko fallback.")
 		}
-
-		break
 	}
 
 	// If not kaniko get docker hub credentials
@@ -123,23 +100,6 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
-		}
-
-		// Don't push image in minikube
-		if minikube.IsMinikube(config) {
-			retImageConfig.Image = ptr.String("devspace")
-			if retImageConfig.Build != nil && retImageConfig.Build.Kaniko != nil {
-				retImageConfig.Build.Kaniko = nil
-			}
-			if retImageConfig.Build == nil {
-				retImageConfig.Build = &latest.BuildConfig{}
-			}
-			if retImageConfig.Build.Docker == nil {
-				retImageConfig.Build.Docker = &latest.DockerConfig{}
-			}
-
-			retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
-			return retImageConfig, nil
 		}
 	}
 

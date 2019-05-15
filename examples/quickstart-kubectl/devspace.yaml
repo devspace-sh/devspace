@@ -1,7 +1,7 @@
 version: v1beta2
 images:
   default:
-    image: dscr.io/${DEVSPACE_USERNAME}/quickstart
+    image: dscr.io/yourusername/quickstart
     createPullSecret: true
 deployments:
 - name: devspace-default

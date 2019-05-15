@@ -11,5 +11,6 @@ spec:
         app.kubernetes.io/name: devspace-app
     spec:
       containers:
-      - name: default
-        image: devspace
+        - name: default
+          # The correct image tag will be inserted during devspace dev / devspace deploy
+          image: yourusername/devspace

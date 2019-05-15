@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
@@ -111,7 +112,7 @@ func GetConfig() *latest.Config {
 	return config
 }
 
-func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated.CacheConfig) (*latest.Config, *configs.ConfigDefinition, error) {
+func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configs.ConfigDefinition, error) {
 	var (
 		config           = latest.New().(*latest.Config)
 		configRaw        = latest.New().(*latest.Config)
@@ -134,7 +135,15 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated
 
 		// Check if active config exists
 		if _, ok := configs[loadConfig]; ok == false {
-			return nil, nil, fmt.Errorf("Config %s couldn't be found", loadConfig)
+			availableConfigs := make([]string, 0, len(configs))
+			for configName := range configs {
+				availableConfigs = append(availableConfigs, configName)
+			}
+			if loadConfig == generated.DefaultConfigName {
+				return nil, nil, fmt.Errorf("No config selected. Please select one of the following configs %v.\n Run '%s'", availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
+			}
+
+			return nil, nil, fmt.Errorf("Config %s couldn't be found. Please select one of the configs %v.\n Run '%s'", loadConfig, availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
 		}
 
 		// Get real config definition
@@ -150,7 +159,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated
 				return nil, nil, fmt.Errorf("Error loading vars: %v", err)
 			}
 
-			err = askQuestions(cache, vars)
+			err = askQuestions(generatedConfig.GetActive(), vars)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
 			}
@@ -176,7 +185,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated
 			}
 
 			// Ask questions
-			err = askQuestions(cache, vars)
+			err = askQuestions(generatedConfig.GetActive(), vars)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
 			}
@@ -189,28 +198,63 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, cache *generated
 	}
 
 	Merge(&config, deepCopy(configRaw))
+
+	// Check if we should load overrides
+	if loadOverwrites {
+		if configDefinition != nil {
+			if configDefinition.Overrides != nil {
+				for index, configWrapper := range *configDefinition.Overrides {
+					overwriteConfig, err := loadConfigFromWrapper(".", configWrapper)
+					if err != nil {
+						return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
+					}
+
+					Merge(&config, overwriteConfig)
+				}
+
+				log.Infof("Loaded config %s from %s with %d overrides", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overrides))
+			} else {
+				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+			}
+		} else {
+			log.Infof("Loaded config from %s", DefaultConfigPath)
+		}
+
+		// Exchange kube context if necessary, but only if we don't load the base config
+		// we do this to avoid saving the kube context on commands like
+		// devspace add deployment && devspace add image etc.
+		if generatedConfig.CloudSpace != nil {
+			if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
+				if generatedConfig.CloudSpace.KubeContext == "" {
+					return nil, nil, fmt.Errorf("No space configured!\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+				}
+
+				config.Cluster = &latest.Cluster{
+					KubeContext: &generatedConfig.CloudSpace.KubeContext,
+				}
+			}
+		}
+	} else {
+		if configDefinition != nil {
+			log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+		} else {
+			log.Infof("Loaded config %s", DefaultConfigPath)
+		}
+	}
+
 	return config, configDefinition, nil
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(basePath string, loadConfig string, cache *generated.CacheConfig) (*latest.Config, error) {
-	config, configDefinition, err := loadBaseConfigFromPath(basePath, loadConfig, cache)
+func GetConfigFromPath(basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, error) {
+	config, _, err := loadBaseConfigFromPath(basePath, loadConfig, loadOverrides, generatedConfig, log)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if we should load overrides
-	if configDefinition != nil {
-		if configDefinition.Overrides != nil {
-			for index, configWrapper := range *configDefinition.Overrides {
-				overwriteConfig, err := loadConfigFromWrapper(basePath, configWrapper)
-				if err != nil {
-					return nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
-				}
-
-				Merge(&config, overwriteConfig)
-			}
-		}
+	err = validate(config)
+	if err != nil {
+		return nil, fmt.Errorf("Error validating config in %s: %v", basePath, err)
 	}
 
 	return config, nil
@@ -234,7 +278,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		LoadedConfig = generatedConfig.ActiveConfig
 
 		// Load base config
-		config, configDefinition, err = loadBaseConfigFromPath(".", LoadedConfig, generatedConfig.GetActive())
+		config, configDefinition, err = loadBaseConfigFromPath(".", LoadedConfig, loadOverwrites, generatedConfig, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -242,49 +286,6 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		// Reset loaded config if there was no configs.yaml
 		if configDefinition == nil {
 			LoadedConfig = ""
-		}
-
-		// Check if we should load overrides
-		if loadOverwrites {
-			if configDefinition != nil {
-				if configDefinition.Overrides != nil {
-					for index, configWrapper := range *configDefinition.Overrides {
-						overwriteConfig, err := loadConfigFromWrapper(".", configWrapper)
-						if err != nil {
-							log.Fatalf("Error loading override config at index %d: %v", index, err)
-						}
-
-						Merge(&config, overwriteConfig)
-					}
-
-					log.Infof("Loaded config %s from %s with %d overrides", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overrides))
-				} else {
-					log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
-				}
-			} else {
-				log.Infof("Loaded config from %s", DefaultConfigPath)
-			}
-
-			// Exchange kube context if necessary, but only if we don't load the base config
-			// we do this to avoid saving the kube context on commands like
-			// devspace add deployment && devspace add image etc.
-			if generatedConfig.CloudSpace != nil {
-				if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
-					if generatedConfig.CloudSpace.KubeContext == "" {
-						log.Fatalf("No space configured\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-					}
-
-					config.Cluster = &latest.Cluster{
-						KubeContext: &generatedConfig.CloudSpace.KubeContext,
-					}
-				}
-			}
-		} else {
-			if configDefinition != nil {
-				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
-			} else {
-				log.Infof("Loaded config %s", DefaultConfigPath)
-			}
 		}
 
 		// Save generated config
@@ -300,60 +301,85 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 // ValidateOnce ensures that specific values are set in the config
 func ValidateOnce() {
 	validateOnce.Do(func() {
-		if config.Dev != nil {
-			if config.Dev.Selectors != nil {
-				for index, selectorConfig := range *config.Dev.Selectors {
-					if selectorConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed selector at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.Ports != nil {
-				for index, port := range *config.Dev.Ports {
-					if port.Selector == nil && port.LabelSelector == nil {
-						log.Fatalf("Error in config: selector and label selector are nil in port config at index %d", index)
-					}
-					if port.PortMappings == nil {
-						log.Fatalf("Error in config: portMappings is empty in port config at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.Sync != nil {
-				for index, sync := range *config.Dev.Sync {
-					if sync.Selector == nil && sync.LabelSelector == nil {
-						log.Fatalf("Error in config: selector and label selector are nil in sync config at index %d", index)
-					}
-				}
-			}
-
-			if config.Dev.OverrideImages != nil {
-				for index, overrideImageConfig := range *config.Dev.OverrideImages {
-					if overrideImageConfig.Name == nil {
-						log.Fatalf("Error in config: Unnamed override image config at index %d", index)
-					}
-				}
-			}
-		}
-
-		if config.Deployments != nil {
-			for index, deployConfig := range *config.Deployments {
-				if deployConfig.Name == nil {
-					log.Fatalf("Error in config: Unnamed deployment at index %d", index)
-				}
-				if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
-					log.Fatalf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
-				}
-				if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
-					log.Fatalf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
-				}
-				if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-					log.Fatalf("deployments[%d].kubectl.manifests is required", index)
-				}
-			}
+		err := validate(config)
+		if err != nil {
+			log.Fatal(err)
 		}
 	})
+}
+
+func validate(config *latest.Config) error {
+	if config.Dev != nil {
+		if config.Dev.Selectors != nil {
+			for index, selectorConfig := range *config.Dev.Selectors {
+				if selectorConfig.Name == nil {
+					return fmt.Errorf("Error in config: Unnamed selector at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.Ports != nil {
+			for index, port := range *config.Dev.Ports {
+				if port.Selector == nil && port.LabelSelector == nil {
+					return fmt.Errorf("Error in config: selector and label selector are nil in port config at index %d", index)
+				}
+				if port.PortMappings == nil {
+					return fmt.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.Sync != nil {
+			for index, sync := range *config.Dev.Sync {
+				if sync.Selector == nil && sync.LabelSelector == nil {
+					return fmt.Errorf("Error in config: selector and label selector are nil in sync config at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.OverrideImages != nil {
+			for index, overrideImageConfig := range *config.Dev.OverrideImages {
+				if overrideImageConfig.Name == nil {
+					return fmt.Errorf("Error in config: Unnamed override image config at index %d", index)
+				}
+			}
+		}
+	}
+
+	if config.Hooks != nil {
+		for index, hookConfig := range *config.Hooks {
+			if hookConfig.Command == nil {
+				return fmt.Errorf("hooks[%d].command is required", index)
+			}
+		}
+	}
+
+	if config.Images != nil {
+		for imageConfigName, imageConf := range *config.Images {
+			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == nil {
+				return fmt.Errorf("images.%s.build.custom.command is required", imageConfigName)
+			}
+		}
+	}
+
+	if config.Deployments != nil {
+		for index, deployConfig := range *config.Deployments {
+			if deployConfig.Name == nil {
+				return fmt.Errorf("deployments[%d].name is required", index)
+			}
+			if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
+				return fmt.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
+			}
+			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
+				return fmt.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
+			}
+			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
+				return fmt.Errorf("deployments[%d].kubectl.manifests is required", index)
+			}
+		}
+	}
+
+	return nil
 }
 
 func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error {
@@ -362,7 +388,9 @@ func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error 
 			return fmt.Errorf("Name required for variable with index %d", idx)
 		}
 
-		if _, ok := cache.Vars[*variable.Name]; ok {
+		if os.Getenv(VarEnvPrefix+strings.ToUpper(*variable.Name)) != "" {
+			continue
+		} else if _, ok := cache.Vars[*variable.Name]; ok {
 			continue
 		}
 
