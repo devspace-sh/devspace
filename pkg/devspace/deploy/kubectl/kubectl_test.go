@@ -27,6 +27,7 @@ const testNamespace = "test-kubectl-deploy"
 const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
 
 func TestKubectlManifests(t *testing.T) {
+	t.Skip("Not yet testable")
 	namespace := "testnamespace"
 	manifests := make([]*string, 1)
 	manifests0 := "kube"
