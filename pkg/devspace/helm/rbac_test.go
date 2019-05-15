@@ -23,6 +23,15 @@ func createFakeConfig() *latest.Config {
 					},
 				},
 			},
+			&latest.DeploymentConfig{
+				Name:      ptr.String("test-deployment"),
+				Namespace: ptr.String(""),
+				Helm: &latest.HelmConfig{
+					Chart: &latest.ChartConfig{
+						Name: ptr.String("stable/nginx"),
+					},
+				},
+			},
 		},
 	}
 	configutil.SetFakeConfig(testConfig)

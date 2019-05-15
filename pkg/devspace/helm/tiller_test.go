@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	
+	"gotest.tools/assert"
 )
 
 func createTestResources(client kubernetes.Interface) error {
@@ -72,7 +74,7 @@ func TestTillerEnsure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ensureTiller(config, client, configutil.TestNamespace, false, log.Discard)
+	err = ensureTiller(config, client, configutil.TestNamespace, true, log.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +83,19 @@ func TestTillerEnsure(t *testing.T) {
 	if isTillerDeployed == false {
 		t.Fatal("Expected that tiller is deployed")
 	}
+
+	//Break deployment
+	deployment, err := client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error breaking deployment: %v", err)
+	}
+	deployment.Status.Replicas = 1
+	deployment.Status.ReadyReplicas = 2
+	client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Update(deployment)
+
+	isTillerDeployed = IsTillerDeployed(config, client, configutil.TestNamespace)
+	assert.Equal(t, false, isTillerDeployed, "Tiller declared deployed despite deployment being broken")
+
 }
 
 func TestTillerCreate(t *testing.T) {

@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -8,6 +9,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/helm/pkg/helm"
+	
+	"gotest.tools/assert"
 )
 
 func TestInstallChart(t *testing.T) {
@@ -46,5 +49,18 @@ func TestInstallChart(t *testing.T) {
 }
 
 func TestAnalyzeError(t *testing.T) {
-	// TODO
+	config := createFakeConfig()
+
+	// Create the fake client.
+	kubeClient := fake.NewSimpleClientset()
+	helmClient := &helm.FakeClient{}
+
+	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inputErr := fmt.Errorf("Some Error")
+	err = client.analyzeError(inputErr, "SomeNamespace")
+	assert.Equal(t, err, inputErr, "output error is not the same as input error despite inputError not including \"timed out waiting\"")
 }
