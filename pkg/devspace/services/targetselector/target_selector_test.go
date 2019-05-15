@@ -101,7 +101,7 @@ func TestTargetSelector(t *testing.T) {
 	}
 	returnedPod, returnedContainer, err = targetSelector.GetContainer(kubeClient)
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
-	assert.Equal(t, fmt.Sprintf("Couldn't get pod %s, because pod has status: %s", selectedPodName, "Stopped"), err.Error(), "Wrong error")
+	assert.Equal(t, fmt.Sprintf("Couldn't get pod %s, because pod has status: %s which is not Running", selectedPodName, "Stopped"), err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
 	assert.Equal(t, true, returnedContainer == nil, "returned container is not nil")
 
