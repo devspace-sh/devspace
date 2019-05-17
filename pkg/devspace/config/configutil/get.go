@@ -447,7 +447,7 @@ func SetDevSpaceRoot() (bool, error) {
 }
 
 // GetSelector returns the service referenced by serviceName
-func GetSelector(selectorName string) (*latest.SelectorConfig, error) {
+func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorConfig, error) {
 	if config.Dev.Selectors != nil {
 		for _, selector := range *config.Dev.Selectors {
 			if *selector.Name == selectorName {
