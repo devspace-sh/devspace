@@ -51,6 +51,11 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 		return nil, err
 	}
 
+	// Set cluster key map
+	if providerConfig[providerName].ClusterKey == nil {
+		providerConfig[providerName].ClusterKey = make(map[int]string)
+	}
+
 	// Return provider config
 	return providerConfig[providerName], nil
 }

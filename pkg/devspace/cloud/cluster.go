@@ -364,13 +364,15 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 func getKey(provider *Provider, forceQuestion bool) (string, error) {
 	if forceQuestion == false && len(provider.ClusterKey) > 0 {
 		keyMap := make(map[string]bool)
+		useKey := ""
 
 		for _, key := range provider.ClusterKey {
 			keyMap[key] = true
+			useKey = key
 		}
 
 		if len(keyMap) == 1 {
-			return provider.ClusterKey[0], nil
+			return useKey, nil
 		}
 	}
 
