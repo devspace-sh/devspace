@@ -30,9 +30,8 @@ func TestGetIgnoreRules(t *testing.T){
 	defer os.RemoveAll(dir)
 
 	fsutil.WriteToFile([]byte("notignore"), "NotDockerIgnore")
-	fsutil.WriteToFile([]byte(`ignoreFile
-	someDir/ignoreFile`), ".dockerignore")
-	fsutil.WriteToFile([]byte("ignoreFile"), "someDir/.dockerignore")
+	fsutil.WriteToFile([]byte(`ignoreFile`), ".dockerignore")
+	fsutil.WriteToFile([]byte(`ignoreFile`), "someDir/.dockerignore")
 
 	ignoreRules, err := GetIgnoreRules(".")
 	if err != nil {
@@ -40,7 +39,7 @@ func TestGetIgnoreRules(t *testing.T){
 	}
 	assert.Equal(t, 2, len(ignoreRules), "Wrong number of ignoreRules")
 	assert.Equal(t, true, contains(ignoreRules, "ignoreFile"))
-	assert.Equal(t, true, contains(ignoreRules, "someDir/ignoreFile"))
+	assert.Equal(t, true, contains(ignoreRules, "someDir/**/ignoreFile"))
 }
 
 func contains(s []string, e string) bool {
