@@ -9,7 +9,6 @@ import (
 )
 
 func TestGetPorts(t *testing.T) {
-	
 	dir, err := ioutil.TempDir("", "testDeploy")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
