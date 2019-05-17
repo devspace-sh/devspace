@@ -245,7 +245,11 @@ node_modules/`))
 		return err
 	}
 
-	err = os.Mkdir("kube", os.ModeDir)
+	fileInfo, err := os.Lstat(".")
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir("kube", fileInfo.Mode())
 	if err != nil {
 		return err
 	}

@@ -246,7 +246,11 @@ node_modules/`))
 		return err
 	}
 
-	err = os.Mkdir("kube", os.ModeDir)
+	fileInfo, err := os.Lstat(".")
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir("kube", fileInfo.Mode())
 	if err != nil {
 		return err
 	}
@@ -276,8 +280,7 @@ spec:
 	if err != nil {
 		return err
 	}
-
-	err = os.Mkdir("chart", os.ModeDir)
+	err = os.Mkdir("chart", fileInfo.Mode())
 	if err != nil {
 		return err
 	}
@@ -309,8 +312,8 @@ description: A Kubernetes-Native Application`))
 	if err != nil {
 		return err
 	}
-
-	err = os.Mkdir("chart/templates", os.ModeDir)
+	
+	err = os.Mkdir("chart/templates", fileInfo.Mode())
 	if err != nil {
 		return err
 	}
