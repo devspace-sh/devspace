@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/otiai10/copy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
@@ -26,8 +25,6 @@ func TestDockerBuild(t *testing.T) {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
 
-	copy.Copy("./../../../../examples/minikube", dir)
-
 	wdBackup, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Error getting current working directory: %v", err)
@@ -40,6 +37,11 @@ func TestDockerBuild(t *testing.T) {
 	// 4. Cleanup temp folder
 	defer os.Chdir(wdBackup)
 	defer os.RemoveAll(dir)
+
+	err = makeTestProject(dir)
+	if err != nil {
+		t.Fatalf("Error creating test project: %v", err)
+	}
 
 	deployConfig := &latest.DeploymentConfig{
 		Name: ptr.String("test-deployment"),
@@ -121,8 +123,6 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
 
-	copy.Copy("./../../../../examples/minikube", dir)
-
 	wdBackup, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Error getting current working directory: %v", err)
@@ -135,6 +135,11 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	// 4. Cleanup temp folder
 	defer os.Chdir(wdBackup)
 	defer os.RemoveAll(dir)
+
+	err = makeTestProject(dir)
+	if err != nil {
+		t.Fatalf("Error creating test project: %v", err)
+	}
 
 	deployConfig := &latest.DeploymentConfig{
 		Name: ptr.String("test-deployment"),
@@ -197,4 +202,144 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
 	}
+}
+
+
+func makeTestProject(dir string) error {
+	file, err := os.Create("package.json")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write([]byte(`{
+  "name": "node-js-sample",
+  "version": "0.0.1",
+  "description": "A sample Node.js app using Express 4",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.13.3",
+    "nodemon": "^1.18.4",
+    "request": "^2.88.0"
+  },
+  "keywords": [
+    "node",
+    "express"
+  ],
+  "license": "MIT"
+}`))
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	file, err = os.Create("index.js")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write([]byte(`var express = require('express');
+var request = require('request');
+var app = express();
+
+app.get('/', async (req, res) => {
+  var body = await new Promise((resolve, reject) => {
+    request('http://php/index.php', (err, res, body) => {
+      if (err) { 
+        reject(err);
+        return;
+      }
+
+      resolve(body);
+    });
+  });
+
+  res.send(body);
+});
+
+app.listen(3000, function () {
+  console.log('Example app listening on port 3000!');
+});`))
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	file, err = os.Create("Dockerfile")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write([]byte(`FROM node:8.11.4
+
+RUN mkdir /app
+WORKDIR /app
+
+COPY package.json .
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "start"]`))
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	file, err = os.Create(".dockerignore")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write([]byte(`Dockerfile
+.devspace/
+chart/
+node_modules/`))
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir("kube", os.ModeDir)
+	if err != nil {
+		return err
+	}
+
+	file, err = os.Create("kube/deployment.yaml")
+	if err != nil {
+		return err
+	}
+	_, err = file.Write([]byte(`apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: devspace
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        release: devspace-node
+    spec:
+      containers:
+      - name: node
+        image: node`))
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
