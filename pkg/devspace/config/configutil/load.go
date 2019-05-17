@@ -126,8 +126,6 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 			}
 
 			return &accountName, nil
-
-			return nil, nil
 		},
 	},
 }
