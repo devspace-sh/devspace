@@ -1,82 +1,28 @@
-package kubectl
+package build
 
 import (
 	"testing"
 	"os"
 	"io/ioutil"
-	//"strings"
-
+	"time"
+	
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	
 	"k8s.io/client-go/kubernetes/fake"
-	k8sv1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"gotest.tools/assert"
 )
 
-// Test namespace to create
-const testNamespace = "test-kubectl-deploy"
+func TestBuild(t *testing.T) {
+	t.Skip("Not yet testable because docker client must be faked")
 
-// Test namespace to create
-const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
-
-// @MoreTests
-//When kubectl is testable, test it
-
-func TestKubectlManifests(t *testing.T) {
-	t.Skip("Not yet testable")
-	namespace := "testnamespace"
-	manifests := make([]*string, 1)
-	manifests0 := "kube"
-	manifests[0] = &manifests0
-
-	flags := make([]*string, 1)
-	flags0 := "--dry-run"
-	flags[0] = &flags0
-	// 1. Create fake config & generated config
-
-	// Create fake devspace config
-	deploymentConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
-		Kubectl: &latest.KubectlConfig{
-			Manifests: &manifests,
-			Flags: &flags,
-		},
-	}
-	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
-			deploymentConfig,
-		},
-		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
-			},
-		},
-	}
-	configutil.SetFakeConfig(testConfig)
-
-	// Create fake generated config
-	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
-			"default": &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
-					},
-				},
-			},
-		},
-	}
-	generated.InitDevSpaceConfig(generatedConfig, "default")
-
-	// 2. Write test manifests into a temp folder
+	//Create tempDir and go into it
 	dir, err := ioutil.TempDir("", "testDeploy")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -91,7 +37,7 @@ func TestKubectlManifests(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	// 8. Delete temp folder
+	// Delete temp folder after test
 	defer os.Chdir(wdBackup)
 	defer os.RemoveAll(dir)
 
@@ -99,46 +45,67 @@ func TestKubectlManifests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating test project: %v", err)
 	}
-
-	// 3. Init kubectl & create test namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
+	
+	// Create fake devspace config
+	testConfig := &latest.Config{
+		Deployments: &[]*latest.DeploymentConfig{
+			&latest.DeploymentConfig{
+				Name:      ptr.String("test-deployment"),
+				Namespace: ptr.String(configutil.TestNamespace),
+				Helm: &latest.HelmConfig{
+					Chart: &latest.ChartConfig{
+						Name: ptr.String("stable/nginx"),
+					},
+				},
+			},
 		},
-	})
-	if err != nil {
-		t.Fatalf("Error creating namespace: %v", err)
 	}
+	configutil.SetFakeConfig(testConfig)
 
-	// 4. Deploy manifests
-	deployConfig, err := New(testConfig, kubeClient, deploymentConfig, log.GetInstance())
-	if err != nil {
-		t.Fatalf("Error creating deployConfig: %v", err)
+	cache := &generated.CacheConfig{
+		Images: make(map[string]*generated.ImageCache) ,
 	}
+	kubeClient := fake.NewSimpleClientset()
 
-	isDeployed, err := deployConfig.Deploy(generatedConfig.Configs["default"], true, nil)
+	//Test without images
+	go makeAllPodsRunning(t, kubeClient, configutil.TestNamespace)
+	images, err := All(testConfig, cache, kubeClient, true, true, true, true, log.GetInstance())
 	if err != nil {
-		t.Fatalf("Error deploying chart: %v", err)
+		t.Fatalf("Error building all 0 images: %v", err)
 	}
-	assert.Equal(t, true, isDeployed, "Manifest is not deployed. No errors returned.")
-	// 5. Validate manifests
-	// 6. Delete manifests
-	// 7. Delete test namespace
+	assert.Equal(t, 0, len(images), "Images returned without any image declared in config")
+
+	//Test with one image
+	(*testConfig.Images) = make(map[string]*latest.ImageConfig)
+	(*testConfig.Images)["firstimg"] = &latest.ImageConfig{
+		Image: ptr.String("firstimg"),
+	}
+	images, err = All(testConfig, cache, kubeClient, true, true, true, false, log.GetInstance())
+	if err != nil {
+		t.Fatalf("Error building all 1 images: %v", err)
+	}
+	assert.Equal(t, false, (*testConfig.Images)["firstimg"] == nil, "Images returned without any image declared in config")
 }
 
-func TestKubectlManifestsWithKustomize(t *testing.T) {
-	// @MoreTests
-	// 1. Create fake config & generated config
-	// 2. Write test kustomize files (see examples) into a temp folder
-	// 3. Init kubectl & create test namespace
-	// 4. Deploy files
-	// 5. Validate deployed resources
-	// 6. Delete deployed files
-	// 7. Delete test namespace
-	// 8. Delete temp folder
-}
+func makeAllPodsRunning(t *testing.T, kubeClient *fake.Clientset, namespace string) {
+	time.Sleep(time.Second)
 
+	podList, err := kubeClient.Core().Pods(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("Error listing pods of fake kubeClient: %v", err)
+	}
+	for _, pod := range podList.Items {
+		pod.Status.InitContainerStatuses = []v1.ContainerStatus{
+		  v1.ContainerStatus{
+				State: v1.ContainerState{
+					Running: &v1.ContainerStateRunning{},
+				},
+			},
+		}
+		kubeClient.Core().Pods(namespace).Update(&pod)
+	}
+
+}
 
 func makeTestProject(dir string) error {
 	file, err := os.Create("package.json")
