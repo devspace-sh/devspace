@@ -73,7 +73,7 @@ kaniko:                             # struct   | Options for building images wit
 ```yaml
 custom:                             # struct   | Options for building images with a custom build script
   command: "./scripts/builder"      # string   | Path to the build script
-  flags: []                         # string[] | Array of flags for the build script
+  args: []                          # string[] | Array of arguments for the build script
   imageFlag: string                 # string   | Name of the flag that DevSpace CLI uses to pass the image name + tag to the build script
   onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
 ```
