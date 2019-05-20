@@ -14,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -47,13 +48,15 @@ type Builder struct {
 
 	authConfig *types.AuthConfig
 	client     client.CommonAPIClient
+	skipPush   bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
-		helper: helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
-		client: client,
+		helper:   helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
+		client:   client,
+		skipPush: skipPush,
 	}, nil
 }
 
@@ -85,8 +88,15 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		displayRegistryURL = registryURL
 	}
 
+	// We skip pushing when it is the minikube client
+	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
+		if minikube.IsMinikube(b.helper.Config) {
+			b.skipPush = true
+		}
+	}
+
 	// Authenticate
-	if b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false {
+	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = b.Authenticate()
 		log.StopWait()
@@ -223,7 +233,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	}
 
 	// Check if we skip push
-	if b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false {
+	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
 		err = b.PushImage(writer)
 		if err != nil {
 			return fmt.Errorf("Error during image push: %v", err)

@@ -1,0 +1,21 @@
+version: v1beta2
+images:
+  service-image-1:
+    image: dscr.io/${DEVSPACE_USERNAME}/service-1
+    dockerfile: service1/Dockerfile
+    context: service1/
+    createPullSecret: true
+  service-image-2:
+    image: dscr.io/${DEVSPACE_USERNAME}/service-2
+    dockerfile: service2/Dockerfile
+    context: service2/
+    createPullSecret: true
+deployments:
+  - name: service-1
+    component:
+      containers:
+        - image: dscr.io/${DEVSPACE_USERNAME}/service-1
+  - name: service-2
+    component:
+      containers:
+        - image: dscr.io/${DEVSPACE_USERNAME}/service-2

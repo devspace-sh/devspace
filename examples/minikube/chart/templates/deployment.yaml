@@ -1,0 +1,16 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: devspace
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: {{ $.Release.Name | quote }}
+        app.kubernetes.io/name: devspace-app
+        helm.sh/chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
+    spec:
+      containers:
+        - name: default
+          image: {{ .Values.image }}

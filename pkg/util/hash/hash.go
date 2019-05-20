@@ -63,7 +63,7 @@ func Directory(path string) (string, error) {
 }
 
 // DirectoryExcludes calculates a hash for a directory and excludes the submitted patterns
-func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error) {
+func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (string, error) {
 	hash := sha256.New()
 
 	// Fix the source path to work with long path names. This is a no-op
@@ -166,13 +166,17 @@ func DirectoryExcludes(srcPath string, excludePatterns []string) (string, error)
 			// Path is enough
 			io.WriteString(hash, filePath)
 		} else {
-			// Check file change
-			checksum, err := hashFileCRC32(filePath, 0xedb88320)
-			if err != nil {
-				return nil
-			}
+			if fast {
+				io.WriteString(hash, filePath+";"+strconv.FormatInt(f.Size(), 10)+";"+strconv.FormatInt(f.ModTime().Unix(), 10))
+			} else {
+				// Check file change
+				checksum, err := hashFileCRC32(filePath, 0xedb88320)
+				if err != nil {
+					return nil
+				}
 
-			io.WriteString(hash, filePath+";"+checksum)
+				io.WriteString(hash, filePath+";"+checksum)
+			}
 		}
 
 		return nil

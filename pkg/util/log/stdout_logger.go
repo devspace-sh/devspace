@@ -159,6 +159,10 @@ func (s *stdoutLogger) StartWait(message string) {
 	defer s.logMutex.Unlock()
 
 	if s.loadingText != nil {
+		if s.loadingText.Message == message {
+			return
+		}
+
 		s.loadingText.Stop()
 		s.loadingText = nil
 	}

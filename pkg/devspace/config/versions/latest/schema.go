@@ -34,21 +34,44 @@ type Config struct {
 	Version      *string                  `yaml:"version"`
 	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Hooks        *[]*HookConfig           `yaml:"hooks,omitempty"`
 	Dev          *DevConfig               `yaml:"dev,omitempty"`
 	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
 }
 
+// HookConfig defines a hook
+type HookConfig struct {
+	Command *string    `yaml:"command"`
+	Args    *[]*string `yaml:"args,omitempty"`
+
+	When *HookWhenConfig `yaml:"when,omitempty"`
+}
+
+// HookWhenConfig defines when the hook should be executed
+type HookWhenConfig struct {
+	Before *HookWhenAtConfig `yaml:"before,omitempty"`
+	After  *HookWhenAtConfig `yaml:"after,omitempty"`
+}
+
+// HookWhenAtConfig defines at which stage the hook should be executed
+type HookWhenAtConfig struct {
+	Deployments *string `yaml:"deployments,omitempty"`
+	Images      *string `yaml:"images,omitempty"`
+}
+
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Source *SourceConfig `yaml:"source"`
-	Config *string       `yaml:"config"`
+	Source             *SourceConfig `yaml:"source"`
+	Config             *string       `yaml:"config"`
+	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
+	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
 }
 
 // SourceConfig defines the dependency source
 type SourceConfig struct {
-	Git  *string `yaml:"git"`
-	Path *string `yaml:"path"`
+	Git  *string `yaml:"git,omitempty"`
+	Path *string `yaml:"path,omitempty"`
 }
 
 // ImageConfig defines the image specification
@@ -91,7 +114,7 @@ type KanikoConfig struct {
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
 	Command   *string    `yaml:"command,omitempty"`
-	Flags     *[]*string `yaml:"flags,omitempty"`
+	Args      *[]*string `yaml:"flags,omitempty"`
 	ImageFlag *string    `yaml:"imageFlag,omitempty"`
 	OnChange  *[]*string `yaml:"onChange,omitempty"`
 }

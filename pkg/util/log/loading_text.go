@@ -16,18 +16,18 @@ const waitInterval = time.Millisecond * 150
 var tty = terminal.SetupTTY(os.Stdin, os.Stdout)
 
 type loadingText struct {
-	Stream  io.Writer
-	Message string
+	Stream         io.Writer
+	Message        string
+	StartTimestamp int64
 
-	startTimestamp int64
-	loadingRune    int
-	isShown        bool
-	stopChan       chan bool
+	loadingRune int
+	isShown     bool
+	stopChan    chan bool
 }
 
 func (l *loadingText) Start() {
 	l.isShown = false
-	l.startTimestamp = time.Now().UnixNano()
+	l.StartTimestamp = time.Now().UnixNano()
 
 	if l.stopChan == nil {
 		l.stopChan = make(chan bool)
@@ -51,20 +51,7 @@ func (l *loadingText) getLoadingChar() string {
 	var loadingChar string
 	var max int
 
-	if runtime.GOOS == "windows" {
-		switch l.loadingRune {
-		case 0:
-			loadingChar = "|"
-		case 1:
-			loadingChar = "/"
-		case 2:
-			loadingChar = "-"
-		case 3:
-			loadingChar = "\\"
-		}
-
-		max = 3
-	} else {
+	if runtime.GOOS == "darwin" {
 		switch l.loadingRune {
 		case 0:
 			loadingChar = "⠋"
@@ -89,6 +76,19 @@ func (l *loadingText) getLoadingChar() string {
 		}
 
 		max = 9
+	} else {
+		switch l.loadingRune {
+		case 0:
+			loadingChar = "|"
+		case 1:
+			loadingChar = "/"
+		case 2:
+			loadingChar = "-"
+		case 3:
+			loadingChar = "\\"
+		}
+
+		max = 3
 	}
 
 	l.loadingRune++
@@ -110,7 +110,7 @@ func (l *loadingText) render() {
 
 	l.Stream.Write([]byte(ansi.Color(string(messagePrefix), "red+b")))
 
-	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.startTimestamp)/int64(time.Second))
+	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.StartTimestamp)/int64(time.Second))
 	message := []byte(l.getLoadingChar() + " " + l.Message)
 	messageSuffix := " (" + timeElapsed + "s)"
 	terminalSize := tty.GetSize()

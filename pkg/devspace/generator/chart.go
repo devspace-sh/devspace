@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/git"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
@@ -19,7 +20,7 @@ const ChartRepoPath = ".devspace/chartRepo"
 // ChartGenerator holds the information to create a chart and update a chart
 type ChartGenerator struct {
 	LocalPath string
-	gitRepo   *GitRepository
+	gitRepo   *git.Repository
 }
 
 // NewChartGenerator creates a new chart generator for the given path
@@ -33,7 +34,7 @@ func NewChartGenerator(localPath string) (*ChartGenerator, error) {
 		return nil, err
 	}
 
-	gitRepository := NewGitRepository(filepath.Join(homedir, ChartRepoPath), ChartRepoURL)
+	gitRepository := git.NewGitRepository(filepath.Join(homedir, ChartRepoPath), ChartRepoURL)
 	return &ChartGenerator{
 		LocalPath: localPath,
 		gitRepo:   gitRepository,

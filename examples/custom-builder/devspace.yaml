@@ -1,3 +1,5 @@
+# Note: This example only works in minikube, since the custom builder
+# does not push the image
 version: v1beta2
 images:
   default:
@@ -15,12 +17,9 @@ deployments:
 dev:
   ports:
     - labelSelector:
-        app.kubernetes.io/component: default
+        app.kubernetes.io/component: devspace-default
       forward:
         - port: 8080
   sync:
     - labelSelector:
-        app.kubernetes.io/component: default
-cluster:
-  kubeContext: minikube
-  namespace: devspace
+        app.kubernetes.io/component: devspace-default

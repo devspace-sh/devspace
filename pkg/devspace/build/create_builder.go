@@ -17,7 +17,7 @@ import (
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log log.Logger) (builder.Interface, error) {
+func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
 	var imageBuilder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
@@ -54,10 +54,10 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 
 			// Fallback to kaniko
 			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
-			return CreateBuilder(config, client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, isDev, log)
+			return CreateBuilder(config, client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, skipPush, isDev, log)
 		}
 
-		imageBuilder, err = docker.NewBuilder(config, dockerClient, imageConfigName, imageConf, imageTag, isDev)
+		imageBuilder, err = docker.NewBuilder(config, dockerClient, imageConfigName, imageConf, imageTag, skipPush, isDev)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker builder: %v", err)
 		}

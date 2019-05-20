@@ -1,0 +1,13 @@
+version: v1beta2
+deployments:
+  - name: root
+    component:
+      containers:
+        - image: nginx
+dependencies:
+  - source:
+      path: dependency1
+  - source:
+      path: dependency2
+  - source:
+      git: https://github.com/devspace-cloud/example-dependency.git

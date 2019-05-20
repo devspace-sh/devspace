@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmatcuk/doublestar"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/command"
@@ -56,7 +57,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
 	// Loop over on change globs
 	customFilesHash := ""
 	for _, pattern := range *b.imageConf.Build.Custom.OnChange {
-		files, err := filepath.Glob(*pattern)
+		files, err := doublestar.Glob(*pattern)
 		if err != nil {
 			return false, err
 		}
@@ -94,14 +95,14 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		args = append(args, *b.imageConf.Image+":"+b.imageTag)
 	}
 
-	if b.imageConf.Build.Custom.Flags != nil {
-		for _, flag := range *b.imageConf.Build.Custom.Flags {
-			args = append(args, *flag)
+	if b.imageConf.Build.Custom.Args != nil {
+		for _, arg := range *b.imageConf.Build.Custom.Args {
+			args = append(args, *arg)
 		}
 	}
 
 	if b.cmd == nil {
-		b.cmd = command.NewStreamCommand(*b.imageConf.Build.Custom.Command, args)
+		b.cmd = command.NewStreamCommand(filepath.FromSlash(*b.imageConf.Build.Custom.Command), args)
 	}
 
 	// Determine output writer
