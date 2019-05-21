@@ -111,12 +111,12 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		waitTimeout = *helmConfig.Timeout
 	}
 
-	wait := true
+	wait := false
 	if helmConfig.Wait != nil {
 		wait = *helmConfig.Wait
 	}
 
-	rollback := true
+	rollback := false
 	if helmConfig.Rollback != nil {
 		rollback = *helmConfig.Rollback
 	}

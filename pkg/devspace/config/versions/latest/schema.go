@@ -138,15 +138,25 @@ type DeploymentConfig struct {
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	Containers          *[]*ContainerConfig  `yaml:"containers,omitempty"`
-	Replicas            *int                 `yaml:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
-	Volumes             *[]*VolumeConfig     `yaml:"volumes,omitempty"`
-	Service             *ServiceConfig       `yaml:"service,omitempty"`
-	ServiceName         *string              `yaml:"serviceName,omitempty"`
-	PodManagementPolicy *string              `yaml:"podManagementPolicy,omitempty"`
-	PullSecrets         *[]*string           `yaml:"pullSecrets,omitempty"`
+	Containers          *[]*ContainerConfig     `yaml:"containers,omitempty"`
+	Replicas            *int                    `yaml:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
+	Volumes             *[]*VolumeConfig        `yaml:"volumes,omitempty"`
+	Service             *ServiceConfig          `yaml:"service,omitempty"`
+	ServiceName         *string                 `yaml:"serviceName,omitempty"`
+	PodManagementPolicy *string                 `yaml:"podManagementPolicy,omitempty"`
+	PullSecrets         *[]*string              `yaml:"pullSecrets,omitempty"`
+	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
+}
+
+// ComponentConfigOptions defines the specific helm options used during deployment of a component
+type ComponentConfigOptions struct {
+	Wait            *bool   `yaml:"wait,omitempty"`
+	Rollback        *bool   `yaml:"rollback,omitempty"`
+	Force           *bool   `yaml:"force,omitempty"`
+	Timeout         *int64  `yaml:"timeout,omitempty"`
+	TillerNamespace *string `yaml:"tillerNamespace,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
