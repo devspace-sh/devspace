@@ -16,7 +16,7 @@ func ReplicaSets(client kubernetes.Interface, namespace string) ([]string, error
 	defer log.StopWait()
 
 	// Get all pods
-	replicaSets, err := client.Apps().ReplicaSets(namespace).List(metav1.ListOptions{})
+	replicaSets, err := client.AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

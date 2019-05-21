@@ -30,7 +30,7 @@ func Events(client kubernetes.Interface, config *rest.Config, namespace string) 
 	}
 
 	// Get all events
-	events, err := client.Core().Events(namespace).List(metav1.ListOptions{})
+	events, err := client.CoreV1().Events(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

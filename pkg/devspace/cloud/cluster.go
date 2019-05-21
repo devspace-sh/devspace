@@ -363,7 +363,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	defer log.StopWait()
 
 	// Create main service account
-	sa, err := client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	sa, err := client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -374,7 +374,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < timeout {
 		time.Sleep(time.Second)
 
-		sa, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+		sa, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -385,7 +385,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	}
 
 	// Get secret
-	secret, err := client.Core().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
+	secret, err := client.CoreV1().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -475,7 +475,7 @@ func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 	defer log.StopWait()
 
 	// Check if cluster has active nodes
-	nodeList, err := client.Core().Nodes().List(metav1.ListOptions{})
+	nodeList, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list cluster nodes")
 	}
@@ -505,9 +505,9 @@ func initializeNamespace(client kubernetes.Interface) error {
 	defer log.StopWait()
 
 	// Create devspace-cloud namespace
-	_, err := client.Core().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.Core().Namespaces().Create(&v1.Namespace{
+		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceCloudNamespace,
 			},
@@ -520,9 +520,9 @@ func initializeNamespace(client kubernetes.Interface) error {
 	}
 
 	// Create serviceaccount
-	_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
+		_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceServiceAccount,
 			},

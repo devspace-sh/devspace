@@ -237,7 +237,7 @@ func GetNewestRunningPod(config *latest.Config, kubectl kubernetes.Interface, la
 	for maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
-		podList, err := kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+		podList, err := kubectl.CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
@@ -370,7 +370,7 @@ func GetPodsFromDeployment(kubectl kubernetes.Interface, deployment, namespace s
 		matchLabelString += k + "=" + v
 	}
 
-	return kubectl.Core().Pods(namespace).List(metav1.ListOptions{
+	return kubectl.CoreV1().Pods(namespace).List(metav1.ListOptions{
 		LabelSelector: matchLabelString,
 	})
 }
@@ -392,7 +392,7 @@ func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.In
 		return nil, err
 	}
 
-	execRequest := kubectlClient.Core().RESTClient().Post().
+	execRequest := kubectlClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).

@@ -30,7 +30,7 @@ func (p *Provider) CreateIngress(config *latest.Config, client kubernetes.Interf
 	// Let user select service
 	serviceNameList := []string{}
 
-	serviceList, err := client.Core().Services(namespace).List(metav1.ListOptions{})
+	serviceList, err := client.CoreV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "list services")
 	}

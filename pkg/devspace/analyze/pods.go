@@ -66,7 +66,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 			loop = false
 
 			// Get all pods
-			pods, err = client.Core().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +104,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 		}
 	} else {
 		// Get all pods
-		pods, err = client.Core().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
