@@ -4,7 +4,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
 	"github.com/pkg/errors"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // DeleteCluster deletes an cluster
@@ -73,7 +72,7 @@ func (p *Provider) DeleteSpace(space *Space) error {
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
 func DeleteKubeContext(space *Space) error {
-	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+	config, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err
 	}
@@ -112,7 +111,7 @@ func DeleteKubeContext(space *Space) error {
 	}
 
 	if hasChanged {
-		return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
+		return kubeconfig.SaveConfig(config)
 	}
 
 	return nil

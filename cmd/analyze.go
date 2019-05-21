@@ -58,7 +58,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client
-	config, err := kubectl.GetClientConfig(devSpaceConfig)
+	client, err := kubectl.NewClient(devSpaceConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.Analyze(config, namespace, !cmd.Wait, log.GetInstance())
+	err = analyze.Analyze(client, namespace, !cmd.Wait, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error during analyze: %v", err)
 	}

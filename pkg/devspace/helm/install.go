@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -25,7 +24,7 @@ import (
 )
 
 // DeploymentTimeout is the timeout to wait for helm to deploy
-const DeploymentTimeout = int64(80)
+const DeploymentTimeout = int64(180)
 
 func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error {
 	missing := []string{}
@@ -184,13 +183,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 
 	// Only check if the error is time out
 	if strings.Index(errMessage, "timed out waiting") != -1 {
-		config, err := kubectl.GetClientConfig(client.config)
-		if err != nil {
-			log.Warnf("Error loading kubectl config: %v", err)
-			return srcErr
-		}
-
-		report, err := analyze.CreateReport(config, releaseNamespace, false)
+		report, err := analyze.CreateReport(client.kubectl, releaseNamespace, false)
 		if err != nil {
 			log.Warnf("Error creating analyze report: %v", err)
 			return srcErr
