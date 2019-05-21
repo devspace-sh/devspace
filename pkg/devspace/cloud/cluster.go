@@ -141,6 +141,9 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Initialize roles and pod security policies
 	err = p.initCore(clusterID, options.Key, availableResources.PodPolicy)
 	if err != nil {
+		// Try to delete cluster if core initialization has failed
+		deleteCluster(p, clusterID, options.Key)
+
 		return errors.Wrap(err, "initialize core")
 	}
 
@@ -169,6 +172,35 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// DeleteCluster deletes an cluster
+func deleteCluster(p *Provider, clusterID int, key string) error {
+	log.StartWait("Rolling back")
+	defer log.StopWait()
+
+	err := p.GrapqhlRequest(`
+		mutation($key:String!,$clusterID:Int!,$deleteServices:Boolean!,$deleteKubeContexts:Boolean!){
+			manager_deleteCluster(
+				key:$key,
+				clusterID:$clusterID,
+				deleteServices:$deleteServices,
+				deleteKubeContexts:$deleteKubeContexts
+			)
+		}
+	`, map[string]interface{}{
+		"key":                key,
+		"clusterID":          clusterID,
+		"deleteServices":     false,
+		"deleteKubeContexts": false,
+	}, &struct {
+		DeleteCluster bool `json:"manager_deleteCluster"`
+	}{})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -441,6 +473,15 @@ func getClusterName(clusterName string) (string, error) {
 func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 	log.StartWait("Checking cluster resources")
 	defer log.StopWait()
+
+	// Check if cluster has active nodes
+	nodeList, err := client.Core().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "list cluster nodes")
+	}
+	if len(nodeList.Items) == 0 {
+		return nil, fmt.Errorf("The cluster specified has no nodes, please choose a cluster where at least one node is up and running")
+	}
 
 	groupResources, err := client.Discovery().ServerResources()
 	if err != nil {
