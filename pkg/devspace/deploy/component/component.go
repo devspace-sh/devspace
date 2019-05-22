@@ -32,13 +32,23 @@ func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *late
 		return nil, err
 	}
 
+	delete(values, "options")
+	if deployConfig.Component.Options == nil {
+		deployConfig.Component.Options = &latest.ComponentConfigOptions{}
+	}
+
 	// Create a helm config out of the deployment config
 	helmConfig, err := helm.New(config, kubectl, &latest.DeploymentConfig{
 		Name:      deployConfig.Name,
 		Namespace: deployConfig.Namespace,
 		Helm: &latest.HelmConfig{
-			Chart:  DevSpaceChartConfig,
-			Values: &values,
+			Chart:           DevSpaceChartConfig,
+			Values:          &values,
+			Wait:            deployConfig.Component.Options.Wait,
+			Rollback:        deployConfig.Component.Options.Rollback,
+			Force:           deployConfig.Component.Options.Force,
+			Timeout:         deployConfig.Component.Options.Timeout,
+			TillerNamespace: deployConfig.Component.Options.TillerNamespace,
 		},
 	}, log)
 	if err != nil {

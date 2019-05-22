@@ -141,6 +141,9 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Initialize roles and pod security policies
 	err = p.initCore(clusterID, options.Key, availableResources.PodPolicy)
 	if err != nil {
+		// Try to delete cluster if core initialization has failed
+		deleteCluster(p, clusterID, options.Key)
+
 		return errors.Wrap(err, "initialize core")
 	}
 
@@ -169,6 +172,35 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// DeleteCluster deletes an cluster
+func deleteCluster(p *Provider, clusterID int, key string) error {
+	log.StartWait("Rolling back")
+	defer log.StopWait()
+
+	err := p.GrapqhlRequest(`
+		mutation($key:String!,$clusterID:Int!,$deleteServices:Boolean!,$deleteKubeContexts:Boolean!){
+			manager_deleteCluster(
+				key:$key,
+				clusterID:$clusterID,
+				deleteServices:$deleteServices,
+				deleteKubeContexts:$deleteKubeContexts
+			)
+		}
+	`, map[string]interface{}{
+		"key":                key,
+		"clusterID":          clusterID,
+		"deleteServices":     false,
+		"deleteKubeContexts": false,
+	}, &struct {
+		DeleteCluster bool `json:"manager_deleteCluster"`
+	}{})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -331,7 +363,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	defer log.StopWait()
 
 	// Create main service account
-	sa, err := client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	sa, err := client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -342,7 +374,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < timeout {
 		time.Sleep(time.Second)
 
-		sa, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+		sa, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -353,7 +385,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	}
 
 	// Get secret
-	secret, err := client.Core().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
+	secret, err := client.CoreV1().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -442,6 +474,15 @@ func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 	log.StartWait("Checking cluster resources")
 	defer log.StopWait()
 
+	// Check if cluster has active nodes
+	nodeList, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "list cluster nodes")
+	}
+	if len(nodeList.Items) == 0 {
+		return nil, fmt.Errorf("The cluster specified has no nodes, please choose a cluster where at least one node is up and running")
+	}
+
 	groupResources, err := client.Discovery().ServerResources()
 	if err != nil {
 		return nil, errors.Wrap(err, "discover server resources")
@@ -464,9 +505,9 @@ func initializeNamespace(client kubernetes.Interface) error {
 	defer log.StopWait()
 
 	// Create devspace-cloud namespace
-	_, err := client.Core().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.Core().Namespaces().Create(&v1.Namespace{
+		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceCloudNamespace,
 			},
@@ -479,9 +520,9 @@ func initializeNamespace(client kubernetes.Interface) error {
 	}
 
 	// Create serviceaccount
-	_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.Core().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
+		_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceServiceAccount,
 			},

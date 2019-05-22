@@ -57,7 +57,7 @@ func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Int
 	}
 
 	// Get default service account
-	serviceaccount, err := client.Core().ServiceAccounts(namespace).Get("default", metav1.GetOptions{})
+	serviceaccount, err := client.CoreV1().ServiceAccounts(namespace).Get("default", metav1.GetOptions{})
 	if err != nil {
 		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", namespace, err)
 		return nil
@@ -83,7 +83,7 @@ func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Int
 
 	// Should we update the service account?
 	if changed {
-		_, err := client.Core().ServiceAccounts(namespace).Update(serviceaccount)
+		_, err := client.CoreV1().ServiceAccounts(namespace).Update(serviceaccount)
 		if err != nil {
 			return errors.Wrap(err, "update service account")
 		}

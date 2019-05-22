@@ -66,7 +66,7 @@ func NewTargetSelector(config *latest.Config, sp *SelectorParameter, allowPick b
 // GetPod retrieves a pod
 func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 	if t.pick == false && t.podName != nil {
-		pod, err := client.Core().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
+		pod, err := client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
