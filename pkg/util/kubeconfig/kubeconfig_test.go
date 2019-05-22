@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -14,9 +15,9 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestGetConfigExists(t *testing.T){
+func TestSaveLoadKubeConfig(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
+	if err != nil { 
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
 
@@ -30,52 +31,26 @@ func TestGetConfigExists(t *testing.T){
 	}
 
 	//Make Backup of config file
-	err = fsutil.Copy(clientcmd.RecommendedHomeFile, "configBackup", true)
+	err = fsutil.Copy(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), "configBackup", true)
 	if !os.IsNotExist(err) {
-		defer fsutil.Copy("configBackup", clientcmd.RecommendedHomeFile, true)
+		os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+		defer fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
+	} else if err != nil{
+		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+	} else {
+		t.Fatalf("Error making backup file: %v", err)
 	}
 
-	// 8. Delete temp folder
+	//Delete temp folder
 	defer os.Chdir(wdBackup)
 	defer os.RemoveAll(dir)
 
-	err = fsutil.WriteToFile([]byte(""), clientcmd.RecommendedHomeFile)
-	if err != nil {
-		t.Fatalf("Error writing into config file: %v", err)
-	}
-	assert.Equal(t, true, ConfigExists(), "Method tells that config doesn't exist despite a config file being created")
-
-	err = os.Remove(clientcmd.RecommendedHomeFile)
-	if err != nil {
-		t.Fatalf("Error deleting config file: %v", err)
-	}
-	assert.Equal(t, false, ConfigExists(), "Method tells that config exists despite a config file being deleted")
-}
-
-func TestWriteReadKubeConfig(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// 8. Delete temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
-
+	//Create object testConfig
 	extensions := make(map[string]runtime.Object)
 	clusters := make(map[string]*api.Cluster)
 	clusters["testCluster"] = &api.Cluster{
-		LocationOfOrigin: "testLoO",
 		Server: "testServer",
+		LocationOfOrigin: "config",
 		InsecureSkipTLSVerify: true,
 		CertificateAuthority: "TestCA",
 		CertificateAuthorityData: []byte("TestCAData"),
@@ -83,7 +58,6 @@ func TestWriteReadKubeConfig(t *testing.T) {
 	}
 	authInfos := make(map[string]*api.AuthInfo)
 	authInfos["testAuthInfo"] = &api.AuthInfo{
-		LocationOfOrigin: "testLoO",
 		ClientCertificate: "testCC",
 		ClientCertificateData: []byte("testCCData"),
 		ClientKey: "testClientKey",
@@ -94,6 +68,7 @@ func TestWriteReadKubeConfig(t *testing.T) {
 		ImpersonateGroups: []string{"testIG"},
 		ImpersonateUserExtra: map[string][]string{"testIUEKey": []string{"testIUE"}},
 		Password: "password",
+		LocationOfOrigin: "config",
 		AuthProvider: &api.AuthProviderConfig{
 			Name: "TestAuthProvider",
 			Config: map[string]string{"testConfigKey": "testConfigValue"},
@@ -113,16 +88,14 @@ func TestWriteReadKubeConfig(t *testing.T) {
 	}
 	contexts := make(map[string]*api.Context)
 	contexts["testContext"] = &api.Context{
-		LocationOfOrigin: "testLoO",
 		Cluster: "testCluster",
+		LocationOfOrigin: "config",
 		AuthInfo: "testAI",
 		Namespace: "testNS",
 		Extensions: extensions,
 	}
 
 	testConfig := &api.Config{
-		Kind: "testKind",
-		APIVersion: "testVersion",
 		Preferences: api.Preferences{
 			Colors: true,
 			Extensions: extensions,
@@ -131,20 +104,71 @@ func TestWriteReadKubeConfig(t *testing.T) {
 		AuthInfos: authInfos,
 		Contexts: contexts,
 		Extensions: extensions,
+		CurrentContext: "testContext",
 	}
 
-	err = WriteKubeConfig(testConfig, "someFile")
+	err = SaveConfig(testConfig)
 	if err != nil {
 		t.Fatalf("Error calling WriteKubeConfig: %v", err)
 	}
 
-	kubeConfig, err := ReadKubeConfig("someFile")
+	kubeConfig, err := LoadRawConfig()
 	if err != nil {
-		t.Fatalf("Error calling ReadKubeConfig: %v", err)
+		t.Fatalf("Error calling LoadRawConfig: %v", err)
 	}
+	
+	//Adapt filepaths of testConfig
+	if kubeConfig != nil && kubeConfig.Clusters != nil && kubeConfig.Clusters["testCluster"] != nil && strings.HasSuffix(kubeConfig.Clusters["testCluster"].CertificateAuthority, testConfig.Clusters["testCluster"].CertificateAuthority) {
+		kubePath := strings.TrimSuffix(kubeConfig.Clusters["testCluster"].CertificateAuthority, testConfig.Clusters["testCluster"].CertificateAuthority)
+		testConfig.Clusters["testCluster"].CertificateAuthority = kubePath + testConfig.Clusters["testCluster"].CertificateAuthority
+		testConfig.AuthInfos["testAuthInfo"].ClientCertificate = kubePath + testConfig.AuthInfos["testAuthInfo"].ClientCertificate
+		testConfig.AuthInfos["testAuthInfo"].ClientKey = kubePath + testConfig.AuthInfos["testAuthInfo"].ClientKey
+		testConfig.AuthInfos["testAuthInfo"].TokenFile = kubePath + testConfig.AuthInfos["testAuthInfo"].TokenFile
+	} else {
+		kubeConfigAsJSON, _ := json.Marshal(kubeConfig)
+		t.Fatalf("Wrong Config returned: %s", string(kubeConfigAsJSON))
+	}
+	
+	//Adapt filepaths of the LOO-fields
+	if kubeConfig != nil && kubeConfig.Clusters != nil && kubeConfig.Clusters["testCluster"] != nil && strings.HasSuffix(kubeConfig.Clusters["testCluster"].LocationOfOrigin, testConfig.Clusters["testCluster"].LocationOfOrigin) {
+		kubePath := strings.TrimSuffix(kubeConfig.Clusters["testCluster"].LocationOfOrigin, testConfig.Clusters["testCluster"].LocationOfOrigin)
+		testConfig.Clusters["testCluster"].LocationOfOrigin = kubePath + testConfig.Clusters["testCluster"].LocationOfOrigin
+		testConfig.Contexts["testContext"].LocationOfOrigin = kubePath + testConfig.Contexts["testContext"].LocationOfOrigin
+		testConfig.AuthInfos["testAuthInfo"].LocationOfOrigin = kubePath + testConfig.AuthInfos["testAuthInfo"].LocationOfOrigin
+	} else {
+		kubeConfigAsJSON, _ := json.Marshal(kubeConfig)
+		t.Fatalf("Wrong Config returned: %s", string(kubeConfigAsJSON))
+	}
+
+	//Compare those two
 	kubeConfigAsJSON, err := json.Marshal(kubeConfig)
+	if err != nil {
+		t.Fatalf("Error parsing to json: %v", err)
+	}
 	testConfigAsJSON, err := json.Marshal(testConfig)
+	if err != nil {
+		t.Fatalf("Error parsing to json: %v", err)
+	}
 	assert.Equal(t, string(testConfigAsJSON), string(kubeConfigAsJSON), "Readed Config doesn't match written config")
 
-	
+	//Now test LoadConfigFromContext
+	fromContextConfig, err := LoadConfigFromContext("hello")
+	if err != nil {
+		t.Fatalf("Error calling LoadConfigFromContext: %v", err)
+	}
+	kubeConfig2, err := fromContextConfig.RawConfig()
+	if err != nil {
+		t.Fatalf("Error calling RawConfig: %v", err)
+	}
+
+	kubeConfigAsJSON, err = json.Marshal(kubeConfig2)
+	if err != nil {
+		t.Fatalf("Error parsing to json: %v", err)
+	}
+	testConfigAsJSON, err = json.Marshal(testConfig)
+	if err != nil {
+		t.Fatalf("Error parsing to json: %v", err)
+	}
+	assert.Equal(t, string(testConfigAsJSON), string(kubeConfigAsJSON), "Readed Config doesn't match written config")
+
 }
