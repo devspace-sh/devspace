@@ -16,7 +16,7 @@ func Logs(client kubernetes.Interface, namespace, podName, containerName string,
 		lines = *tail
 	}
 
-	request := client.Core().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
+	request := client.CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
 		Container: containerName,
 		TailLines: &lines,
 		Previous:  lastContainerLog,

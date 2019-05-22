@@ -23,7 +23,7 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
 
-	execRequest := client.Core().RESTClient().Post().
+	execRequest := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).

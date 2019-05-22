@@ -7,7 +7,6 @@ import (
 	"github.com/mgutz/ansi"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // ReportItem is the struct that holds the problems
@@ -28,8 +27,8 @@ const HeaderChar = "="
 var paddingLeft = newString(" ", PaddingLeft)
 
 // Analyze analyses a given
-func Analyze(config *rest.Config, namespace string, noWait bool, log log.Logger) error {
-	report, err := CreateReport(config, namespace, noWait)
+func Analyze(client kubernetes.Interface, namespace string, noWait bool, log log.Logger) error {
+	report, err := CreateReport(client, namespace, noWait)
 	if err != nil {
 		return err
 	}
@@ -41,12 +40,7 @@ func Analyze(config *rest.Config, namespace string, noWait bool, log log.Logger)
 }
 
 // CreateReport creates a new report about a certain namespace
-func CreateReport(config *rest.Config, namespace string, noWait bool) ([]*ReportItem, error) {
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
+func CreateReport(client kubernetes.Interface, namespace string, noWait bool) ([]*ReportItem, error) {
 	report := []*ReportItem{}
 
 	// Analyze pods
@@ -88,7 +82,7 @@ func CreateReport(config *rest.Config, namespace string, noWait bool) ([]*Report
 
 	if checkEvents {
 		// Analyze events
-		problems, err = Events(client, config, namespace)
+		problems, err = Events(client, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("Error during analyzing events: %v", err)
 		}

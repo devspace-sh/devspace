@@ -21,7 +21,7 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
 
-	attachRequest := client.Core().RESTClient().Post().
+	attachRequest := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).

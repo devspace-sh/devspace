@@ -53,16 +53,16 @@ func CreatePullSecret(kubectl kubernetes.Interface, namespace, registryURL, user
 		Type: k8sv1.SecretTypeDockerConfigJson,
 	}
 
-	_, err := kubectl.Core().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
+	_, err := kubectl.CoreV1().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
 	if err != nil {
-		_, err = kubectl.Core().Secrets(namespace).Create(registryPullSecret)
+		_, err = kubectl.CoreV1().Secrets(namespace).Create(registryPullSecret)
 		if err != nil {
 			return fmt.Errorf("Unable to create image pull secret: %s", err.Error())
 		}
 
 		log.Donef("Created image pull secret %s/%s", namespace, pullSecretName)
 	} else {
-		_, err = kubectl.Core().Secrets(namespace).Update(registryPullSecret)
+		_, err = kubectl.CoreV1().Secrets(namespace).Update(registryPullSecret)
 		if err != nil {
 			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
 		}

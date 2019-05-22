@@ -135,12 +135,12 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 		t.Fatalf("Error creating namespace: %v", err)
 	}
 	//pod := k8sv1.Pod{}
-	//kubeClient.Core().Pods(namespace).Create(&pod)
+	//kubeClient.CoreV1().Pods(namespace).Create(&pod)
 	go func(){
-		buildPod, err := kubeClient.Core().Pods(namespace).Get("", metav1.GetOptions{})
+		buildPod, err := kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
 		for err != nil{
 			time.Sleep(1 * time.Millisecond)
-			buildPod, err = kubeClient.Core().Pods(namespace).Get("", metav1.GetOptions{})
+			buildPod, err = kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
 		}
 		buildPod.Status.InitContainerStatuses = make([]k8sv1.ContainerStatus, 1)
 		buildPod.Status.InitContainerStatuses[0] = k8sv1.ContainerStatus{
@@ -150,7 +150,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 				},
 			},
 		}
-		kubeClient.Core().Pods(namespace).Update(buildPod)
+		kubeClient.CoreV1().Pods(namespace).Update(buildPod)
 	}()
 	
 

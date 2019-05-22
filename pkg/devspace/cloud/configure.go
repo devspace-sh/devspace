@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -51,6 +50,11 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 		return nil, err
 	}
 
+	// Set cluster key map
+	if providerConfig[providerName].ClusterKey == nil {
+		providerConfig[providerName].ClusterKey = make(map[int]string)
+	}
+
 	// Return provider config
 	return providerConfig[providerName], nil
 }
@@ -69,7 +73,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
 func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, setActive bool) error {
-	config, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
+	config, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err
 	}
@@ -100,5 +104,5 @@ func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, setAct
 		config.CurrentContext = contextName
 	}
 
-	return kubeconfig.WriteKubeConfig(config, clientcmd.RecommendedHomeFile)
+	return kubeconfig.SaveConfig(config)
 }
