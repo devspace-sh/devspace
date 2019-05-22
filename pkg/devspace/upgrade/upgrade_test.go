@@ -1,7 +1,12 @@
 package upgrade
 
 import (
+	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
+	
+	"github.com/rhysd/go-github-selfupdate/selfupdate"
 
 	"gotest.tools/assert"
 )
@@ -20,4 +25,62 @@ func TestEraseVersionPrefix(t *testing.T) {
 
 	_, err = eraseVersionPrefix(".0.1hello")
 	assert.Equal(t, true, err != nil, "No error returned with invalid string")
+}
+
+func TestUpgrade(t *testing.T){
+	//Create TmpFolder
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	// Cleanup temp folder
+	defer os.Chdir(wdBackup)
+	defer os.RemoveAll(dir)
+
+	logFile, err := ioutil.TempFile(dir, "log")
+	if err != nil {
+		t.Fatalf("Error creating temporary log file: %v", err)
+	}
+	*(os.Stderr) = *logFile
+
+	latest, found, err := selfupdate.DetectLatest(githubSlug)
+	if err != nil {
+		t.Fatalf("Error searching for version: %v", err)
+	} else if !found {
+		t.Fatalf("No version found.")
+	}
+
+	versionBackup := version
+	version = latest.Version.String()
+	defer func(){version = versionBackup}()
+
+	//Newest version already reached
+	err = Upgrade()
+	assert.Equal(t, false, err != nil, "Upgrade returned error if newest version already reached")
+	err = logFile.Close()
+	if err != nil {
+		t.Fatalf("Error closing temporary log file: %v", err)
+	}
+	logs, err := ioutil.ReadFile(logFile.Name())
+	if err != nil {
+		t.Fatalf("Error reading temporary log file: %v", err)
+	}
+	assert.Equal(t, true, strings.Contains(string(logs), "Current binary is the latest version:  " + version))
+
+	//Invalid githubSlug causes search to return an error
+	githubSlugBackup := githubSlug
+	githubSlug = ""
+	defer func(){githubSlug = githubSlugBackup}()
+	err = Upgrade()
+	assert.Equal(t, true, err != nil, "No error returned if DetectLatest returns one.")
 }
