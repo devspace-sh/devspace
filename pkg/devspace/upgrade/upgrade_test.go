@@ -28,6 +28,7 @@ func TestEraseVersionPrefix(t *testing.T) {
 }
 
 func TestUpgrade(t *testing.T){
+	t.Skip("Skip because of some API-limit")
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
