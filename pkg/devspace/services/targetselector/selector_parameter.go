@@ -40,7 +40,7 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config) (string, error) 
 		return *t.ConfigParameter.Namespace, nil
 	}
 	if t.ConfigParameter.Selector != nil {
-		selector, err := configutil.GetSelector(*t.ConfigParameter.Selector)
+		selector, err := configutil.GetSelector(config, *t.ConfigParameter.Selector)
 		if err != nil {
 			return "", err
 		}
@@ -68,7 +68,7 @@ func (t *SelectorParameter) GetLabelSelector(config *latest.Config) (*string, er
 		return &labelSelector, nil
 	}
 	if t.ConfigParameter.Selector != nil {
-		selector, err := configutil.GetSelector(*t.ConfigParameter.Selector)
+		selector, err := configutil.GetSelector(config, *t.ConfigParameter.Selector)
 		if err != nil {
 			return nil, err
 		}

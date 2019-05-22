@@ -8,29 +8,22 @@ import (
 	"github.com/mgutz/ansi"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // EventRelevanceTime is the time in which events are relevant for us
 const EventRelevanceTime = 1800 * time.Second
 
 // Events checks the namespace events for warnings
-func Events(client kubernetes.Interface, config *rest.Config, namespace string) ([]string, error) {
+func Events(client kubernetes.Interface, namespace string) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing events")
 	defer log.StopWait()
 
-	// Create dynamic client
-	dynamicClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get all events
-	events, err := client.Core().Events(namespace).List(metav1.ListOptions{})
+	events, err := client.CoreV1().Events(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +35,7 @@ func Events(client kubernetes.Interface, config *rest.Config, namespace string) 
 				// This is a bad guess, but works for most resources
 				multiple, _ := meta.UnsafeGuessKindToResource(event.InvolvedObject.GroupVersionKind())
 
-				_, err = dynamicClient.Resource(multiple).Namespace(namespace).Get(event.InvolvedObject.Name, metav1.GetOptions{})
+				_, err = client.CoreV1().RESTClient().Get().AbsPath(makeURLSegments(multiple, namespace, event.InvolvedObject.Name)...).Do().Get()
 				if err == nil {
 					header := ansi.Color(fmt.Sprintf("%s (%s ago) - %s %s: ", event.Type, time.Since(event.LastTimestamp.Time).Round(time.Second).String(), event.InvolvedObject.Kind, event.InvolvedObject.Name), "202+b")
 					problems = append(problems, paddingLeft+fmt.Sprintf("%s\n%s%dx %s \n", header, paddingLeft, int(event.Count), event.Message))
@@ -52,4 +45,26 @@ func Events(client kubernetes.Interface, config *rest.Config, namespace string) 
 	}
 
 	return problems, nil
+}
+
+// Copied from dynamic client
+func makeURLSegments(resource schema.GroupVersionResource, namespace, name string) []string {
+	url := []string{}
+	if len(resource.Group) == 0 {
+		url = append(url, "api")
+	} else {
+		url = append(url, "apis", resource.Group)
+	}
+	url = append(url, resource.Version)
+
+	if len(namespace) > 0 {
+		url = append(url, "namespaces", namespace)
+	}
+	url = append(url, resource.Resource)
+
+	if len(name) > 0 {
+		url = append(url, name)
+	}
+
+	return url
 }

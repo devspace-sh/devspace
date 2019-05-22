@@ -90,7 +90,7 @@ func TestBuild(t *testing.T) {
 func makeAllPodsRunning(t *testing.T, kubeClient *fake.Clientset, namespace string) {
 	time.Sleep(time.Second)
 
-	podList, err := kubeClient.Core().Pods(namespace).List(metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("Error listing pods of fake kubeClient: %v", err)
 	}
@@ -102,7 +102,7 @@ func makeAllPodsRunning(t *testing.T, kubeClient *fake.Clientset, namespace stri
 				},
 			},
 		}
-		kubeClient.Core().Pods(namespace).Update(&pod)
+		kubeClient.CoreV1().Pods(namespace).Update(&pod)
 	}
 
 }

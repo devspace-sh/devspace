@@ -77,7 +77,7 @@ func TestKubectlManifests(t *testing.T) {
 	generated.InitDevSpaceConfig(generatedConfig, "default")
 
 	// 2. Write test manifests into a temp folder
-	dir, err := ioutil.TempDir("", "testDeploy")
+	dir, err := ioutil.TempDir("", "testFolder")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}

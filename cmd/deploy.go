@@ -186,9 +186,6 @@ func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Conf
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,
 			KubeContext: config.Cluster.KubeContext,
-			APIServer:   config.Cluster.APIServer,
-			CaCert:      config.Cluster.CaCert,
-			User:        config.Cluster.User,
 		}
 
 		log.Infof("Using %s namespace for deploying", cmd.Namespace)
@@ -198,9 +195,6 @@ func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Conf
 		config.Cluster = &v1.Cluster{
 			Namespace:   config.Cluster.Namespace,
 			KubeContext: &cmd.KubeContext,
-			APIServer:   config.Cluster.APIServer,
-			CaCert:      config.Cluster.CaCert,
-			User:        config.Cluster.User,
 		}
 
 		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
