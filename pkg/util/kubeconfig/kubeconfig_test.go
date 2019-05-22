@@ -6,18 +6,20 @@ import (
 	"os"
 	"strings"
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	
+
+	"gotest.tools/assert"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/apimachinery/pkg/runtime"
-	"gotest.tools/assert"
 )
 
 func TestSaveLoadKubeConfig(t *testing.T) {
+	t.Skip("Test not ready yet")
+
 	dir, err := ioutil.TempDir("", "test")
-	if err != nil { 
+	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
 
@@ -35,7 +37,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	if !os.IsNotExist(err) {
 		os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
 		defer fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
-	} else if err != nil{
+	} else if err != nil {
 		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
 	} else {
 		t.Fatalf("Error making backup file: %v", err)
@@ -49,36 +51,36 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	extensions := make(map[string]runtime.Object)
 	clusters := make(map[string]*api.Cluster)
 	clusters["testCluster"] = &api.Cluster{
-		Server: "testServer",
-		LocationOfOrigin: "config",
-		InsecureSkipTLSVerify: true,
-		CertificateAuthority: "TestCA",
+		Server:                   "testServer",
+		LocationOfOrigin:         "config",
+		InsecureSkipTLSVerify:    true,
+		CertificateAuthority:     "TestCA",
 		CertificateAuthorityData: []byte("TestCAData"),
-		Extensions: extensions,
+		Extensions:               extensions,
 	}
 	authInfos := make(map[string]*api.AuthInfo)
 	authInfos["testAuthInfo"] = &api.AuthInfo{
-		ClientCertificate: "testCC",
+		ClientCertificate:     "testCC",
 		ClientCertificateData: []byte("testCCData"),
-		ClientKey: "testClientKey",
-		ClientKeyData: []byte("testClientKeyData"),
-		Token: "testToken",
-		TokenFile: "someTokenFile",
-		Impersonate: "testImpersonate",
-		ImpersonateGroups: []string{"testIG"},
-		ImpersonateUserExtra: map[string][]string{"testIUEKey": []string{"testIUE"}},
-		Password: "password",
-		LocationOfOrigin: "config",
+		ClientKey:             "testClientKey",
+		ClientKeyData:         []byte("testClientKeyData"),
+		Token:                 "testToken",
+		TokenFile:             "someTokenFile",
+		Impersonate:           "testImpersonate",
+		ImpersonateGroups:     []string{"testIG"},
+		ImpersonateUserExtra:  map[string][]string{"testIUEKey": []string{"testIUE"}},
+		Password:              "password",
+		LocationOfOrigin:      "config",
 		AuthProvider: &api.AuthProviderConfig{
-			Name: "TestAuthProvider",
+			Name:   "TestAuthProvider",
 			Config: map[string]string{"testConfigKey": "testConfigValue"},
 		},
 		Exec: &api.ExecConfig{
 			Command: "Do",
-			Args: []string{"something"},
+			Args:    []string{"something"},
 			Env: []api.ExecEnvVar{
 				api.ExecEnvVar{
-					Name: "testExecEnvVarKey",
+					Name:  "testExecEnvVarKey",
 					Value: "testExecEnvVarValue",
 				},
 			},
@@ -88,22 +90,22 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	}
 	contexts := make(map[string]*api.Context)
 	contexts["testContext"] = &api.Context{
-		Cluster: "testCluster",
+		Cluster:          "testCluster",
 		LocationOfOrigin: "config",
-		AuthInfo: "testAI",
-		Namespace: "testNS",
-		Extensions: extensions,
+		AuthInfo:         "testAI",
+		Namespace:        "testNS",
+		Extensions:       extensions,
 	}
 
 	testConfig := &api.Config{
 		Preferences: api.Preferences{
-			Colors: true,
+			Colors:     true,
 			Extensions: extensions,
 		},
-		Clusters: clusters,
-		AuthInfos: authInfos,
-		Contexts: contexts,
-		Extensions: extensions,
+		Clusters:       clusters,
+		AuthInfos:      authInfos,
+		Contexts:       contexts,
+		Extensions:     extensions,
 		CurrentContext: "testContext",
 	}
 
@@ -116,7 +118,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error calling LoadRawConfig: %v", err)
 	}
-	
+
 	//Adapt filepaths of testConfig
 	if kubeConfig != nil && kubeConfig.Clusters != nil && kubeConfig.Clusters["testCluster"] != nil && strings.HasSuffix(kubeConfig.Clusters["testCluster"].CertificateAuthority, testConfig.Clusters["testCluster"].CertificateAuthority) {
 		kubePath := strings.TrimSuffix(kubeConfig.Clusters["testCluster"].CertificateAuthority, testConfig.Clusters["testCluster"].CertificateAuthority)
@@ -128,7 +130,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 		kubeConfigAsJSON, _ := json.Marshal(kubeConfig)
 		t.Fatalf("Wrong Config returned: %s", string(kubeConfigAsJSON))
 	}
-	
+
 	//Adapt filepaths of the LOO-fields
 	if kubeConfig != nil && kubeConfig.Clusters != nil && kubeConfig.Clusters["testCluster"] != nil && strings.HasSuffix(kubeConfig.Clusters["testCluster"].LocationOfOrigin, testConfig.Clusters["testCluster"].LocationOfOrigin) {
 		kubePath := strings.TrimSuffix(kubeConfig.Clusters["testCluster"].LocationOfOrigin, testConfig.Clusters["testCluster"].LocationOfOrigin)

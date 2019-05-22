@@ -37,5 +37,5 @@ func LoadRawConfig() (*api.Config, error) {
 
 // SaveConfig writes the kube config back to the specified filename
 func SaveConfig(config *api.Config) error {
-	return clientcmd.WriteToFile(*config, clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+	return clientcmd.ModifyConfig(clientcmd.NewDefaultClientConfigLoadingRules(), *config, false)
 }
