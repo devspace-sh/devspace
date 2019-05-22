@@ -175,7 +175,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
-		deleteErr := b.kubectl.Core().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
+		deleteErr := b.kubectl.CoreV1().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
 
@@ -188,7 +188,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	err = intr.Run(func() error {
 		defer log.StopWait()
 
-		buildPodCreated, err := b.kubectl.Core().Pods(b.BuildNamespace).Create(buildPod)
+		buildPodCreated, err := b.kubectl.CoreV1().Pods(b.BuildNamespace).Create(buildPod)
 		if err != nil {
 			return fmt.Errorf("Unable to create build pod: %s", err.Error())
 		}
@@ -197,7 +197,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		log.StartWait("Waiting for build init container to start")
 
 		for {
-			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, _ = b.kubectl.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil {
 				break
 			}
@@ -239,7 +239,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 		now = time.Now()
 		for true {
-			buildPod, _ = b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, _ = b.kubectl.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
 				break
 			}
@@ -275,7 +275,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 			time.Sleep(time.Second)
 
 			// Check if build was successfull
-			pod, err := b.kubectl.Core().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			pod, err := b.kubectl.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("Error checking if build was successful: %v", err)
 			}
@@ -297,14 +297,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 	if err != nil {
 		// Delete all build pods on error
-		pods, getErr := b.kubectl.Core().Pods(b.BuildNamespace).List(metav1.ListOptions{
+		pods, getErr := b.kubectl.CoreV1().Pods(b.BuildNamespace).List(metav1.ListOptions{
 			LabelSelector: "devspace-build=true",
 		})
 		if getErr != nil {
 			return err
 		}
 		for _, pod := range pods.Items {
-			b.kubectl.Core().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
+			b.kubectl.CoreV1().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
 		}
 
 		return err

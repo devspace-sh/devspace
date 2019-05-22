@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -18,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -280,7 +279,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 	connectCluster := false
 
 	// Check if kubectl exists
-	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
+	if kubeconfig.ConfigExists() {
 		selectedOption := survey.Question(&survey.QuestionOptions{
 			Question:     "Which Kubernetes cluster do you want to use?",
 			DefaultValue: useDevSpaceCloud,

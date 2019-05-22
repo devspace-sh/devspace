@@ -16,7 +16,7 @@ func StatefulSets(client kubernetes.Interface, namespace string) ([]string, erro
 	defer log.StopWait()
 
 	// Get all pods
-	statefulSets, err := client.Apps().StatefulSets(namespace).List(metav1.ListOptions{})
+	statefulSets, err := client.AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -115,9 +115,6 @@ func (cmd *PurgeCmd) loadConfig(generatedConfig *generated.Config) *latest.Confi
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,
 			KubeContext: config.Cluster.KubeContext,
-			APIServer:   config.Cluster.APIServer,
-			CaCert:      config.Cluster.CaCert,
-			User:        config.Cluster.User,
 		}
 
 		log.Infof("Using %s namespace", cmd.Namespace)
