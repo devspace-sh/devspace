@@ -23,7 +23,7 @@ func TestWriteRead(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	// 4. Cleanup temp folder
+	// Cleanup temp folder
 	defer os.Chdir(wdBackup)
 	defer os.RemoveAll(dir)
 	
