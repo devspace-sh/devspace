@@ -1,5 +1,6 @@
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
+github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
@@ -13,6 +14,7 @@ golang.org/x/net/trace
 golang.org/x/net/internal/timeseries
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
+golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 # golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
@@ -26,6 +28,7 @@ golang.org/x/text/transform
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.21.0
 google.golang.org/grpc
+google.golang.org/grpc/reflection
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/codes
@@ -53,6 +56,7 @@ google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
+google.golang.org/grpc/reflection/grpc_reflection_v1alpha
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1

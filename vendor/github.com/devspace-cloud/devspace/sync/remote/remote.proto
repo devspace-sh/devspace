@@ -1,0 +1,51 @@
+// protoc -I . remote.proto  --go_out=plugins=grpc:.
+syntax = "proto3";
+
+package remote;
+
+service Downstream {
+    rpc Compress (stream Path) returns (Empty) {}
+    rpc Download (Empty) returns (stream Chunk) {}
+    rpc Changes (Excluded) returns (stream Change) {}
+}
+
+service Upstream {
+    rpc Upload (stream Chunk) returns (Empty) {}
+    rpc Remove (stream Path) returns (Empty) {}
+}
+
+message Watch {
+    string Path = 1;
+    repeated string Exclude = 2;
+}
+
+enum ChangeType {
+    CHANGE = 0;
+    DELETE = 1;
+}
+
+message Change {
+    ChangeType ChangeType = 1;
+    string Path = 2;
+    int64 Mtime = 3;
+    int64 Size = 4;
+    bool IsDir = 5;
+}
+
+message Excluded {
+    repeated string Paths = 1;
+}
+
+message Path {
+    string Path = 1;
+}
+
+message Chunk {
+    bytes Content = 1;
+} 
+
+message Empty {
+
+}
+
+

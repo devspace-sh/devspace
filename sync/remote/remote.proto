@@ -4,8 +4,7 @@ syntax = "proto3";
 package remote;
 
 service Downstream {
-    rpc Compress (stream Path) returns (Empty) {}
-    rpc Download (Empty) returns (stream Chunk) {}
+    rpc Download (stream Path) returns (stream Chunk) {}
     rpc Changes (Excluded) returns (stream Change) {}
 }
 

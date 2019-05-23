@@ -17,6 +17,8 @@ import (
 	"github.com/juju/ratelimit"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+
+	_ "github.com/devspace-cloud/devspace/sync/remote"
 )
 
 type downstream struct {

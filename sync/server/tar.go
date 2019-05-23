@@ -1,0 +1,222 @@
+package server
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/pkg/errors"
+)
+
+type fileInformation struct {
+	Name  string
+	Size  int64
+	Mtime int64
+
+	Mode int64
+	UID  int
+	GID  int
+}
+
+func untarAll(reader io.Reader, destPath, prefix string) error {
+	gzr, err := gzip.NewReader(reader)
+	if err != nil {
+		return fmt.Errorf("Error decompressing: %v", err)
+	}
+
+	defer gzr.Close()
+	tarReader := tar.NewReader(gzr)
+
+	for {
+		shouldContinue, err := untarNext(tarReader, destPath, prefix)
+		if err != nil {
+			return errors.Wrap(err, "untarNext")
+		} else if shouldContinue == false {
+			return nil
+		}
+	}
+}
+
+func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
+	header, err := tarReader.Next()
+	if err != nil {
+		if err != io.EOF {
+			return false, errors.Wrap(err, "tar reader next")
+		}
+
+		return false, nil
+	}
+
+	relativePath := getRelativeFromFullPath("/"+header.Name, prefix)
+	outFileName := path.Join(destPath, relativePath)
+	baseName := path.Dir(outFileName)
+
+	// Check if newer file is there and then don't override?
+	stat, _ := os.Stat(outFileName)
+
+	if err := os.MkdirAll(baseName, 0755); err != nil {
+		return false, errors.Wrap(err, "mkdir all "+baseName)
+	}
+
+	if header.FileInfo().IsDir() {
+		if err := os.MkdirAll(outFileName, 0755); err != nil {
+			return false, errors.Wrap(err, "mkdir all "+outFileName)
+		}
+
+		return true, nil
+	}
+
+	// Create / Override file
+	outFile, err := os.Create(outFileName)
+	if err != nil {
+		// Try again after 5 seconds
+		time.Sleep(time.Second * 5)
+		outFile, err = os.Create(outFileName)
+		if err != nil {
+			return false, errors.Wrap(err, "create "+outFileName)
+		}
+	}
+
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, tarReader); err != nil {
+		return false, errors.Wrap(err, "io copy tar reader")
+	}
+	if err := outFile.Close(); err != nil {
+		return false, errors.Wrap(err, "out file close")
+	}
+
+	if stat != nil {
+		// Set old permissions correctly
+		_ = os.Chmod(outFileName, stat.Mode())
+
+		// Set owner & group correctly
+		if _, ok := stat.Sys().(*syscall.Stat_t); ok {
+			_ = os.Chown(outFileName, int(stat.Sys().(*syscall.Stat_t).Uid), int(stat.Sys().(*syscall.Stat_t).Gid))
+		}
+	}
+
+	// Set mod time correctly
+	err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
+	if err != nil {
+		return false, errors.Wrap(err, "chtimes")
+	}
+
+	return true, nil
+}
+
+func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileInformation, tw *tar.Writer) error {
+	absFilepath := path.Join(basePath, relativePath)
+
+	if writtenFiles[relativePath] != nil {
+		return nil
+	}
+
+	// We skip files that are suddenly not there anymore
+	stat, err := os.Stat(absFilepath)
+	if err != nil {
+		return nil
+	}
+
+	fileInformation := createFileInformationFromStat(relativePath, stat)
+	if stat.IsDir() {
+		// Recursively tar folder
+		return tarFolder(basePath, fileInformation, writtenFiles, stat, tw)
+	}
+
+	return tarFile(basePath, fileInformation, writtenFiles, stat, tw)
+}
+
+func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer) error {
+	filepath := path.Join(basePath, fileInformation.Name)
+	files, err := ioutil.ReadDir(filepath)
+	if err != nil {
+		return nil
+	}
+
+	if len(files) == 0 && fileInformation.Name != "" {
+		// Case empty directory
+		hdr, _ := tar.FileInfoHeader(stat, filepath)
+		hdr.Name = fileInformation.Name
+		hdr.Mode = fileInformation.Mode
+		hdr.Uid = fileInformation.UID
+		hdr.Gid = fileInformation.GID
+		if err := tw.WriteHeader(hdr); err != nil {
+			return errors.Wrap(err, "tw write header")
+		}
+
+		writtenFiles[fileInformation.Name] = fileInformation
+	}
+
+	for _, f := range files {
+		if err := recursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw); err != nil {
+			return errors.Wrap(err, "recursive tar")
+		}
+	}
+
+	return nil
+}
+
+func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer) error {
+	filepath := path.Join(basePath, fileInformation.Name)
+
+	// Case regular file
+	f, err := os.Open(filepath)
+	if err != nil {
+		return errors.Wrap(err, "open path "+filepath)
+	}
+
+	defer f.Close()
+
+	hdr, err := tar.FileInfoHeader(stat, filepath)
+	if err != nil {
+		return errors.Wrap(err, "tar file info header")
+	}
+	hdr.Name = fileInformation.Name
+	hdr.Mode = fileInformation.Mode
+	hdr.Uid = fileInformation.UID
+	hdr.Gid = fileInformation.GID
+
+	if err := tw.WriteHeader(hdr); err != nil {
+		return errors.Wrap(err, "tw write header")
+	}
+
+	if _, err := io.Copy(tw, f); err != nil {
+		return errors.Wrap(err, "io copy")
+	}
+
+	writtenFiles[fileInformation.Name] = fileInformation
+	return f.Close()
+}
+
+func getRelativeFromFullPath(fullpath string, prefix string) string {
+	return strings.TrimPrefix(strings.Replace(strings.Replace(fullpath[len(prefix):], "\\", "/", -1), "//", "/", -1), ".")
+}
+
+func createFileInformationFromStat(relativePath string, stat os.FileInfo) *fileInformation {
+	fileInformation := &fileInformation{
+		Name:  relativePath,
+		Size:  stat.Size(),
+		Mtime: roundMtime(stat.ModTime()),
+	}
+
+	if _, ok := stat.Sys().(*syscall.Stat_t); ok {
+		fileInformation.Mode = int64(stat.Sys().(*syscall.Stat_t).Mode)
+		fileInformation.UID = int(stat.Sys().(*syscall.Stat_t).Uid)
+		fileInformation.GID = int(stat.Sys().(*syscall.Stat_t).Gid)
+	}
+
+	return fileInformation
+}
+
+// We need this function because tar rounds the mtime on the server as well
+func roundMtime(mtime time.Time) int64 {
+	return mtime.Round(time.Second).Unix()
+}
