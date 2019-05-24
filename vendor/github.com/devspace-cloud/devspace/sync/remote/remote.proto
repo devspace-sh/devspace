@@ -4,8 +4,7 @@ syntax = "proto3";
 package remote;
 
 service Downstream {
-    rpc Compress (stream Path) returns (Empty) {}
-    rpc Download (Empty) returns (stream Chunk) {}
+    rpc Download (stream Path) returns (stream Chunk) {}
     rpc Changes (Excluded) returns (stream Change) {}
 }
 
@@ -27,9 +26,10 @@ enum ChangeType {
 message Change {
     ChangeType ChangeType = 1;
     string Path = 2;
-    int64 Mtime = 3;
-    int64 Size = 4;
-    bool IsDir = 5;
+    int64 MtimeUnix = 3;
+    int64 MtimeUnixNano = 4;
+    int64 Size = 5;
+    bool IsDir = 6;
 }
 
 message Excluded {

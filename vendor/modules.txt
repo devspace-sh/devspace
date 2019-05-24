@@ -43,6 +43,8 @@ github.com/cyphar/filepath-securejoin
 github.com/davecgh/go-spew/spew
 # github.com/devspace-cloud/devspace/sync v0.0.0-00010101000000-000000000000 => ./sync
 github.com/devspace-cloud/devspace/sync/remote
+github.com/devspace-cloud/devspace/sync/util
+github.com/devspace-cloud/devspace/sync/server
 # github.com/devspace-cloud/penv v0.0.1
 github.com/devspace-cloud/penv
 # github.com/docker/cli v0.0.0-20181026145426-51668a30f262
@@ -181,6 +183,7 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes/duration
 # github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 github.com/google/btree
@@ -485,9 +488,11 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 google.golang.org/grpc/credentials/internal
+google.golang.org/grpc/reflection
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
+google.golang.org/grpc/reflection/grpc_reflection_v1alpha
 # gopkg.in/AlecAivazis/survey.v1 v1.8.4
 gopkg.in/AlecAivazis/survey.v1
 gopkg.in/AlecAivazis/survey.v1/core

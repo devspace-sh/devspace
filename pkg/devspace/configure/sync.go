@@ -19,7 +19,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		config.Dev = &v1.DevConfig{}
 	}
 	if config.Dev.Sync == nil {
-		config.Dev.Sync = &[]*v1.SyncConfig{}
+		config.Dev.Sync = &[]*v1.Sync{}
 	}
 
 	var labelSelectorMap map[string]*string
@@ -81,7 +81,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		labelSelectorMap = nil
 	}
 
-	syncConfig := append(*config.Dev.Sync, &v1.SyncConfig{
+	Sync := append(*config.Dev.Sync, &v1.Sync{
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: ptr.String(containerPath),
 		LocalSubPath:  ptr.String(localPath),
@@ -90,7 +90,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		Selector:      &serviceName,
 	})
 
-	config.Dev.Sync = &syncConfig
+	config.Dev.Sync = &Sync
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
@@ -114,7 +114,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 	}
 
 	if config.Dev.Sync != nil && len(*config.Dev.Sync) > 0 {
-		newSyncPaths := make([]*v1.SyncConfig, 0, len(*config.Dev.Sync)-1)
+		newSyncPaths := make([]*v1.Sync, 0, len(*config.Dev.Sync)-1)
 
 		for _, v := range *config.Dev.Sync {
 			if removeAll ||

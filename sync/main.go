@@ -25,7 +25,14 @@ func main() {
 		printUsage()
 	}
 
-	absolutePath, err := filepath.Abs(args[0])
+	// we have to resolve the real local path, because the watcher gives us the real path always
+	realLocalPath, err := filepath.EvalSymlinks(args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
+
+	absolutePath, err := filepath.Abs(realLocalPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)

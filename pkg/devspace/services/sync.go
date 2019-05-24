@@ -41,7 +41,7 @@ func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdPar
 	}
 
 	syncDone := make(chan bool)
-	syncConfig := &sync.SyncConfig{
+	Sync := &sync.Sync{
 		DevSpaceConfig: config,
 		Kubectl:        client,
 		Pod:            pod,
@@ -56,7 +56,7 @@ func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdPar
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", absLocalPath, containerPath, pod.Namespace, pod.Name)
 
-	err = syncConfig.Start()
+	err = Sync.Start()
 	if err != nil {
 		log.Fatalf("Sync error: %s", err.Error())
 	}
@@ -68,12 +68,12 @@ func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdPar
 }
 
 // StartSync starts the syncing functionality
-func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.SyncConfig, error) {
+func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
 	if config.Dev.Sync == nil {
-		return []*sync.SyncConfig{}, nil
+		return []*sync.Sync{}, nil
 	}
 
-	syncConfigs := make([]*sync.SyncConfig, 0, len(*config.Dev.Sync))
+	Syncs := make([]*sync.Sync, 0, len(*config.Dev.Sync))
 	for _, syncPath := range *config.Dev.Sync {
 		localPath := "."
 		if syncPath.LocalSubPath != nil {
@@ -117,7 +117,7 @@ func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync b
 			downstreamInitialSyncDone = make(chan bool)
 		}
 
-		syncConfig := &sync.SyncConfig{
+		Sync := &sync.Sync{
 			DevSpaceConfig:            config,
 			Kubectl:                   client,
 			Pod:                       pod,
@@ -130,28 +130,28 @@ func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync b
 		}
 
 		if syncPath.ExcludePaths != nil {
-			syncConfig.ExcludePaths = *syncPath.ExcludePaths
+			Sync.ExcludePaths = *syncPath.ExcludePaths
 		}
 
 		if syncPath.DownloadExcludePaths != nil {
-			syncConfig.DownloadExcludePaths = *syncPath.DownloadExcludePaths
+			Sync.DownloadExcludePaths = *syncPath.DownloadExcludePaths
 		}
 
 		if syncPath.UploadExcludePaths != nil {
-			syncConfig.UploadExcludePaths = *syncPath.UploadExcludePaths
+			Sync.UploadExcludePaths = *syncPath.UploadExcludePaths
 		}
 
 		if syncPath.BandwidthLimits != nil {
 			if syncPath.BandwidthLimits.Download != nil {
-				syncConfig.DownstreamLimit = *syncPath.BandwidthLimits.Download * 1024
+				Sync.DownstreamLimit = *syncPath.BandwidthLimits.Download * 1024
 			}
 
 			if syncPath.BandwidthLimits.Upload != nil {
-				syncConfig.UpstreamLimit = *syncPath.BandwidthLimits.Upload * 1024
+				Sync.UpstreamLimit = *syncPath.BandwidthLimits.Upload * 1024
 			}
 		}
 
-		err = syncConfig.Start()
+		err = Sync.Start()
 		if err != nil {
 			log.Fatalf("Sync error: %s", err.Error())
 		}
@@ -160,13 +160,13 @@ func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync b
 
 		if syncPath.WaitInitialSync != nil && *syncPath.WaitInitialSync == true {
 			log.StartWait("Sync: waiting for intial sync to complete")
-			<-syncConfig.UpstreamInitialSyncDone
-			<-syncConfig.DownstreamInitialSyncDone
+			<-Sync.UpstreamInitialSyncDone
+			<-Sync.DownstreamInitialSyncDone
 			log.StopWait()
 		}
 
-		syncConfigs = append(syncConfigs, syncConfig)
+		Syncs = append(Syncs, Sync)
 	}
 
-	return syncConfigs, nil
+	return Syncs, nil
 }

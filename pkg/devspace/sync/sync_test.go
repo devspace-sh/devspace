@@ -6,14 +6,14 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/juju/errors"
+	"github.com/devspace-cloud/devspace/sync/server"
+	"github.com/pkg/errors"
 )
 
 func initTestDirs(t *testing.T) (string, string, string) {
@@ -50,23 +50,19 @@ func initTestDirs(t *testing.T) (string, string, string) {
 	return testRemotePath, testLocalPath, outside
 }
 
-func createTestSyncClient(testLocalPath, testRemotePath string) *SyncConfig {
+func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, error) {
 	syncLog = log.GetInstance()
 
-	return &SyncConfig{
-		WatchPath: testLocalPath,
-		DestPath:  testRemotePath,
-		Verbose:   true,
-
-		testing: true,
+	sync, err := NewSync(testLocalPath, getSyncOptions(testCases))
+	if err != nil {
+		return nil, err
 	}
+
+	sync.errorChan = make(chan error)
+	return sync, nil
 }
 
 func TestInitialSync(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping test on non linux platform")
-	}
-
 	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
@@ -74,37 +70,59 @@ func TestInitialSync(t *testing.T) {
 
 	filesToCheck, foldersToCheck := makeBasicTestCases()
 
-	syncClient := createTestSyncClient(local, remote)
+	// Start the client
+	syncClient, err := createTestSyncClient(local, append(filesToCheck, foldersToCheck...))
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer syncClient.Stop(nil)
 
-	syncClient.errorChan = make(chan error)
-	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
+	// Start the downstream server
+	downClientReader, downClientWriter, _ := os.Pipe()
+	downServerReader, downServerWriter, _ := os.Pipe()
+	defer downClientReader.Close()
+	defer downClientWriter.Close()
+	defer downServerReader.Close()
+	defer downServerWriter.Close()
 
-	// Start client
-	err := syncClient.setup()
+	go func() {
+		err := server.StartDownstreamServer(remote, downServerReader, downClientWriter)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// Start downstream client
+	err = syncClient.InitDownstream(downClientReader, downServerWriter)
 	if err != nil {
-		t.Errorf("Couldn't init test sync client: %v", err)
-		return
+		t.Fatal(err)
 	}
 
-	// Start upstream
-	err = syncClient.upstream.start()
+	// Start upstream server
+	upClientReader, upClientWriter, _ := os.Pipe()
+	upServerReader, upServerWriter, _ := os.Pipe()
+	defer upClientReader.Close()
+	defer upClientWriter.Close()
+	defer upServerReader.Close()
+	defer upServerWriter.Close()
+
+	go func() {
+		err := server.StartDownstreamServer(remote, upServerReader, upClientWriter)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// Start upstream client
+	err = syncClient.InitUpstream(upClientReader, upServerWriter)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
-	// Start downstream
-	err = syncClient.downstream.start()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
+	// Create test landscape
 	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	go syncClient.startUpstream()
@@ -112,18 +130,13 @@ func TestInitialSync(t *testing.T) {
 	// Do initial sync
 	err = syncClient.initialSync()
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 }
 
 func TestNormalSync(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping test on non linux systems")
-	}
-
 	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
@@ -133,31 +146,52 @@ func TestNormalSync(t *testing.T) {
 	filesToCheck, foldersToCheck = makeRemoveAndRenameTestCases(filesToCheck, foldersToCheck)
 	sort.Stable(foldersToCheck)
 
-	syncClient := createTestSyncClient(local, remote)
+	syncClient, err := createTestSyncClient(local, append(filesToCheck, foldersToCheck...))
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer syncClient.Stop(nil)
 
-	syncClient.errorChan = make(chan error)
-	setExcludePaths(syncClient, append(filesToCheck, foldersToCheck...))
+	// Start the downstream server
+	downClientReader, downClientWriter, _ := os.Pipe()
+	downServerReader, downServerWriter, _ := os.Pipe()
+	defer downClientReader.Close()
+	defer downClientWriter.Close()
+	defer downServerReader.Close()
+	defer downServerWriter.Close()
 
-	// Start client
-	err := syncClient.setup()
+	go func() {
+		err := server.StartDownstreamServer(remote, downServerReader, downClientWriter)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// Start downstream client
+	err = syncClient.InitDownstream(downClientReader, downServerWriter)
 	if err != nil {
-		t.Errorf("Couldn't init test sync client: %v", err)
-		return
+		t.Fatal(err)
 	}
 
-	// Start upstream
-	err = syncClient.upstream.start()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	// Start upstream server
+	upClientReader, upClientWriter, _ := os.Pipe()
+	upServerReader, upServerWriter, _ := os.Pipe()
+	defer upClientReader.Close()
+	defer upClientWriter.Close()
+	defer upServerReader.Close()
+	defer upServerWriter.Close()
 
-	// Start downstream
-	err = syncClient.downstream.start()
+	go func() {
+		err := server.StartDownstreamServer(remote, upServerReader, upClientWriter)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// Start upstream client
+	err = syncClient.InitUpstream(upClientReader, upServerWriter)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	syncClient.readyChan = make(chan bool)
@@ -189,10 +223,13 @@ func TestNormalSync(t *testing.T) {
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
 }
 
-func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
-	syncClient.ExcludePaths = []string{}
-	syncClient.DownloadExcludePaths = []string{}
-	syncClient.UploadExcludePaths = []string{}
+func getSyncOptions(testCases testCaseList) *Options {
+	options := &Options{
+		ExcludePaths:         []string{},
+		DownloadExcludePaths: []string{},
+		UploadExcludePaths:   []string{},
+		Verbose:              true,
+	}
 
 	for _, testCase := range testCases {
 		/*
@@ -202,22 +239,21 @@ func setExcludePaths(syncClient *SyncConfig, testCases testCaseList) {
 			For example: testFileLocal_RenameToIgnore
 		*/
 		if strings.Contains(testCase.path, "ignore") {
-			syncClient.ExcludePaths = append(syncClient.ExcludePaths, testCase.path)
+			options.ExcludePaths = append(options.ExcludePaths, testCase.path)
 		} else if strings.Contains(testCase.path, "noDownload") {
-			syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, testCase.path)
+			options.DownloadExcludePaths = append(options.DownloadExcludePaths, testCase.path)
 		} else if strings.Contains(testCase.path, "noUpload") {
-			syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, testCase.path)
+			options.UploadExcludePaths = append(options.UploadExcludePaths, testCase.path)
 		} else if strings.HasSuffix(testCase.path, "_RenameToIgnore") {
-			syncClient.ExcludePaths = append(syncClient.ExcludePaths, testCase.path+"After")
+			options.ExcludePaths = append(options.ExcludePaths, testCase.path+"After")
 		} else if strings.HasSuffix(testCase.path, "_RenameToNoDownload") {
-			syncClient.DownloadExcludePaths = append(syncClient.DownloadExcludePaths, testCase.path+"After")
+			options.DownloadExcludePaths = append(options.DownloadExcludePaths, testCase.path+"After")
 		} else if strings.HasSuffix(testCase.path, "_RenameToNoUpload") {
-			syncClient.UploadExcludePaths = append(syncClient.UploadExcludePaths, testCase.path+"After")
+			options.UploadExcludePaths = append(options.UploadExcludePaths, testCase.path+"After")
 		}
 	}
 
-	syncClient.initIgnoreParsers()
-
+	return options
 }
 
 func makeBasicTestCases() (testCaseList, testCaseList) {
@@ -444,26 +480,25 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 	for _, f := range foldersToCheck {
 		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "get parent dir")
 		}
 
 		err = os.Mkdir(path.Join(parentDir, f.path), 0755)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "mk parent dir")
 		}
 	}
 
 	for _, f := range filesToCheck {
 		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "get parent dir from "+f.path)
 		}
 
 		err = ioutil.WriteFile(path.Join(parentDir, f.path), []byte(fileContents), 0666)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "write file")
 		}
-
 	}
 
 	return nil
@@ -515,7 +550,7 @@ func renameSomeTestFilesAndFolders(local string, remote string, outside string, 
 
 			fromParentDir, err := getParentDir(local, remote, outside, f.editLocation)
 			if err != nil {
-				return nil, nil, errors.Trace(err)
+				return nil, nil, errors.Wrap(err, "get parent dir")
 			}
 			fromPath := path.Join(fromParentDir, f.path)
 
@@ -533,7 +568,7 @@ func renameSomeTestFilesAndFolders(local string, remote string, outside string, 
 
 			err = os.Rename(fromPath, toPath)
 			if err != nil {
-				return nil, nil, errors.Trace(err)
+				return nil, nil, errors.Wrap(err, "rename")
 			}
 
 			if strings.HasSuffix(f.path, "_RenameToFullContextAfter") {
@@ -569,7 +604,7 @@ func renameSomeTestFilesAndFolders(local string, remote string, outside string, 
 }
 
 func TestCreateDirInFileMap(t *testing.T) {
-	sync := SyncConfig{
+	sync := Sync{
 		fileIndex: newFileIndex(),
 	}
 
@@ -582,11 +617,11 @@ func TestCreateDirInFileMap(t *testing.T) {
 }
 
 func TestRemoveDirInFileMap(t *testing.T) {
-	sync := SyncConfig{
+	sync := Sync{
 		fileIndex: newFileIndex(),
 	}
 
-	sync.fileIndex.fileMap = map[string]*fileInformation{
+	sync.fileIndex.fileMap = map[string]*FileInformation{
 		"/TestDir": {
 			Name:        "/TestDir",
 			IsDirectory: true,
@@ -606,7 +641,6 @@ func TestRemoveDirInFileMap(t *testing.T) {
 	sync.fileIndex.RemoveDirInFileMap("/TestDir")
 
 	if len(sync.fileIndex.fileMap) != 1 {
-		t.Error("Remove dir in file map failed!")
-		t.Fail()
+		t.Fatal("Remove dir in file map failed!")
 	}
 }

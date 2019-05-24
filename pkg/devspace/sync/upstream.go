@@ -1,107 +1,75 @@
 package sync
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/juju/errors"
 	"github.com/juju/ratelimit"
+	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/sync/remote"
+	"github.com/devspace-cloud/devspace/sync/util"
 	"github.com/rjeczalik/notify"
 )
 
 type upstream struct {
 	events    chan notify.EventInfo
+	symlinks  map[string]*Symlink
 	interrupt chan bool
-	config    *SyncConfig
+	sync      *Sync
 
-	symlinks map[string]*Symlink
-
-	stdinPipe  io.WriteCloser
-	stdoutPipe io.ReadCloser
-	stderrPipe io.ReadCloser
+	reader io.ReadCloser
+	writer io.WriteCloser
+	client remote.UpstreamClient
 }
 
-func (u *upstream) start() error {
-	u.events = make(chan notify.EventInfo, 5000) // High buffer size so we don't miss any fsevents if there are a lot of changes
-	u.symlinks = make(map[string]*Symlink)
-	u.interrupt = make(chan bool, 1)
+// newUpstream creates a new upstream handler with the given parameters
+func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upstream, error) {
+	var (
+		clientReader io.Reader = reader
+		clientWriter io.Writer = writer
+	)
 
-	err := u.startShell()
+	// Apply limits if specified
+	if sync.Options.DownstreamLimit > 0 {
+		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+	}
+	if sync.Options.UpstreamLimit > 0 {
+		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+	}
 
+	// Create client
+	conn, err := util.NewClientConnection(clientReader, clientWriter)
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Wrap(err, "new client connection")
 	}
 
-	return nil
-}
+	return &upstream{
+		events:    make(chan notify.EventInfo, 5000), // High buffer size so we don't miss any fsevents if there are a lot of changes
+		symlinks:  make(map[string]*Symlink),
+		interrupt: make(chan bool, 1),
+		sync:      sync,
 
-func (u *upstream) startShell() error {
-	if u.config.testing == false {
-		stdinReader, stdinWriter, _ := os.Pipe()
-		stdoutReader, stdoutWriter, _ := os.Pipe()
-		stderrReader, stderrWriter, _ := os.Pipe()
-
-		go func() {
-			err := kubectl.ExecStream(u.config.DevSpaceConfig, u.config.Kubectl, u.config.Pod, u.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
-			if err != nil {
-				u.config.Error(err)
-			}
-		}()
-
-		u.stdinPipe = stdinWriter
-		u.stdoutPipe = stdoutReader
-		u.stderrPipe = stderrReader
-
-		//go func() {
-		//	pipeStream(os.Stderr, u.stderrPipe)
-		//}()
-	} else {
-		var err error
-
-		cmd := exec.Command("sh")
-
-		u.stdinPipe, err = cmd.StdinPipe()
-		if err != nil {
-			return err
-		}
-
-		u.stdoutPipe, err = cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-
-		u.stderrPipe, err = cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
-
-		go func() {
-			pipeStream(os.Stderr, u.stderrPipe)
-		}()
-	}
-
-	return nil
+		reader: reader,
+		writer: writer,
+		client: remote.NewUpstreamClient(conn),
+	}, nil
 }
 
 func (u *upstream) mainLoop() error {
 	for {
-		var changes []*fileInformation
-
-		changeAmount := 0
+		var (
+			changes      []*FileInformation
+			changeAmount = 0
+		)
 
 		for {
 			select {
@@ -129,7 +97,7 @@ func (u *upstream) mainLoop() error {
 
 				fileInformations, err := u.getfileInformationFromEvent(events)
 				if err != nil {
-					return errors.Trace(err)
+					return errors.Wrap(err, "get file information from event")
 				}
 
 				changes = append(changes, fileInformations...)
@@ -147,31 +115,30 @@ func (u *upstream) mainLoop() error {
 
 		err := u.applyChanges(changes)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "apply changes")
 		}
 	}
 }
 
-func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*fileInformation, error) {
-	u.config.fileIndex.fileMapMutex.Lock()
-	defer u.config.fileIndex.fileMapMutex.Unlock()
+func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*FileInformation, error) {
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
-	fileMap := u.config.fileIndex.fileMap
-	changes := make([]*fileInformation, 0, len(events))
-
+	fileMap := u.sync.fileIndex.fileMap
+	changes := make([]*FileInformation, 0, len(events))
 	for _, event := range events {
-		fileInfo, ok := event.(*fileInformation)
+		fileInfo, ok := event.(*FileInformation)
 
 		if ok {
 			changes = append(changes, fileInfo)
 		} else {
 			fullpath := event.Path()
-			relativePath := getRelativeFromFullPath(fullpath, u.config.WatchPath)
+			relativePath := getRelativeFromFullPath(fullpath, u.sync.LocalPath)
 
 			// Determine what kind of change we got (Create or Remove)
-			newChange, err := evaluateChange(u.config, fileMap, relativePath, fullpath)
+			newChange, err := evaluateChange(u.sync, fileMap, relativePath, fullpath)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, errors.Wrap(err, "evaluate change")
 			}
 
 			if newChange != nil {
@@ -183,7 +150,7 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*fi
 	return changes, nil
 }
 
-func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relativePath, fullpath string) (*fileInformation, error) {
+func evaluateChange(s *Sync, fileMap map[string]*FileInformation, relativePath, fullpath string) (*FileInformation, error) {
 	stat, err := os.Stat(fullpath)
 
 	// File / Folder exist -> Create File or Folder
@@ -193,11 +160,11 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 		if s.uploadIgnoreMatcher != nil {
 			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
 				// Add to file map and prevent download if local file is newer than the remote one
-				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < roundMtime(stat.ModTime()) {
+				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
 					// Add it to the fileMap
-					s.fileIndex.fileMap[relativePath] = &fileInformation{
+					s.fileIndex.fileMap[relativePath] = &FileInformation{
 						Name:        relativePath,
-						Mtime:       roundMtime(stat.ModTime()),
+						Mtime:       stat.ModTime().Unix(),
 						Size:        stat.Size(),
 						IsDirectory: stat.IsDir(),
 					}
@@ -215,7 +182,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 			// Add symlink to map
 			stat, err = s.upstream.AddSymlink(relativePath, fullpath)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, errors.Wrap(err, "add symlink")
 			}
 			if stat == nil {
 				return nil, nil
@@ -226,7 +193,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 				// Crawl all linked files & folders
 				err = s.upstream.symlinks[fullpath].Crawl()
 				if err != nil {
-					return nil, errors.Trace(err)
+					return nil, errors.Wrap(err, "crawl symlink")
 				}
 			}
 		} else if err != nil {
@@ -235,9 +202,10 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 
 		if shouldUpload(relativePath, stat, s, false) {
 			// New Create Task
-			return &fileInformation{
+			return &FileInformation{
 				Name:        relativePath,
-				Mtime:       roundMtime(stat.ModTime()),
+				Mtime:       stat.ModTime().Unix(),
+				MtimeNano:   stat.ModTime().UnixNano(),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			}, nil
@@ -249,7 +217,7 @@ func evaluateChange(s *SyncConfig, fileMap map[string]*fileInformation, relative
 		// Check if we should remove path remote
 		if shouldRemoveRemote(relativePath, s) {
 			// New Remove Task
-			return &fileInformation{
+			return &FileInformation{
 				Name: relativePath,
 			}, nil
 		}
@@ -262,13 +230,13 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 	// Get real path
 	targetPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
-		u.config.Logf("Warning: resolving symlink of %s: %v", absPath, err)
+		u.sync.log.Infof("Warning: resolving symlink of %s: %v", absPath, err)
 		return nil, nil // fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
 	}
 
 	stat, err := os.Stat(targetPath)
 	if err != nil {
-		u.config.Logf("Warning: stating symlink %s: %v", targetPath, err)
+		u.sync.log.Infof("Warning: stating symlink %s: %v", targetPath, err)
 		return nil, nil // fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
 	}
 
@@ -278,8 +246,8 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 	}
 
 	// Check if symlink is ignored
-	if u.config.ignoreMatcher != nil {
-		if u.config.ignoreMatcher.MatchesPath(relativePath) {
+	if u.sync.ignoreMatcher != nil {
+		if u.sync.ignoreMatcher.MatchesPath(relativePath) {
 			return nil, nil
 		}
 	}
@@ -303,9 +271,9 @@ func (u *upstream) RemoveSymlinks(absPath string) {
 	}
 }
 
-func (u *upstream) applyChanges(changes []*fileInformation) error {
-	var creates []*fileInformation
-	var removes []*fileInformation
+func (u *upstream) applyChanges(changes []*FileInformation) error {
+	var creates []*FileInformation
+	var removes []*FileInformation
 
 	// First we cluster changes into remove and create changes
 	for _, element := range changes {
@@ -318,30 +286,63 @@ func (u *upstream) applyChanges(changes []*fileInformation) error {
 		}
 	}
 
+	// Apply removes
 	if len(removes) > 0 {
-		// Apply removes
 		err := u.applyRemoves(removes)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "apply removes")
 		}
 	}
 
+	// Apply creates
 	if len(creates) > 0 {
-		// Apply creates
 		err := u.applyCreates(creates)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "apply creates")
 		}
 	}
 
-	u.config.Logf("[Upstream] Successfully processed %d change(s)", len(changes))
+	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", len(changes))
 	return nil
 }
 
-func (u *upstream) applyCreates(files []*fileInformation) error {
-	filename, writtenFiles, err := writeTar(files, u.config)
+func (u *upstream) applyCreates(files []*FileInformation) error {
+	reader, writer, err := os.Pipe()
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "create pipe")
+	}
+
+	defer reader.Close()
+	defer writer.Close()
+
+	// Create combined exclude paths
+	excludePaths := make([]string, 0, len(u.sync.Options.ExcludePaths)+len(u.sync.Options.UploadExcludePaths))
+	excludePaths = append(excludePaths, u.sync.Options.ExcludePaths...)
+	excludePaths = append(excludePaths, u.sync.Options.UploadExcludePaths...)
+
+	ignoreMatcher, err := compilePaths(excludePaths)
+	if err != nil {
+		return errors.Wrap(err, "compile paths")
+	}
+
+	// Use compression
+	gw := gzip.NewWriter(writer)
+	defer gw.Close()
+
+	// Create tar writer
+	tarWriter := tar.NewWriter(gw)
+	defer tarWriter.Close()
+
+	writtenFiles := make(map[string]*FileInformation)
+	for _, file := range files {
+		if writtenFiles[file.Name] == nil {
+			err := recursiveTar(u.sync.LocalPath, file.Name, writtenFiles, tarWriter, ignoreMatcher)
+			if err != nil {
+				u.sync.log.Infof("Upstream - Tar failed: %s. Will retry in 4 seconds...", err.Error())
+				time.Sleep(time.Second * 4)
+				return u.applyCreates(files)
+			}
+		}
 	}
 
 	// If we didn't write any files, we are done already
@@ -349,160 +350,96 @@ func (u *upstream) applyCreates(files []*fileInformation) error {
 		return nil
 	}
 
-	// Open the archive
-	f, err := os.Open(filename)
-	if err != nil {
-		return errors.Trace(err)
-	}
+	writer.Close()
+	return u.uploadArchive(reader, writtenFiles)
+}
 
-	defer f.Close()
+func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*FileInformation) error {
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
-	stat, err := f.Stat()
-	if err != nil {
-		return errors.Trace(err)
-	}
+	size := int64(0)
+	for _, c := range writtenFiles {
+		if c.IsDirectory {
+			// Print changes
+			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
+				u.sync.log.Infof("Upstream - Create Folder %s", c.Name)
+			}
 
-	// Print changes
-	if u.config.Verbose || len(writtenFiles) <= 3 {
-		for _, c := range writtenFiles {
-			if c.IsDirectory {
-				u.config.Logf("[Upstream] Create Folder %s", c.Name)
-			} else {
-				u.config.Logf("[Upstream] Create File %s", c.Name)
+			size += c.Size
+		} else {
+			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
+				u.sync.log.Infof("Upstream - Create File %s", c.Name)
 			}
 		}
 	}
 
-	return u.uploadArchive(f, strconv.Itoa(int(stat.Size())), writtenFiles)
-}
+	u.sync.log.Infof("Upstream - Upload %d create changes (size %s)", len(writtenFiles), size)
 
-func (u *upstream) uploadArchive(file *os.File, fileSize string, writtenFiles map[string]*fileInformation) error {
-	u.config.fileIndex.fileMapMutex.Lock()
-	defer u.config.fileIndex.fileMapMutex.Unlock()
-	defer file.Close()
-
-	u.config.Logf("[Upstream] Upload %d create changes (size %s)", len(writtenFiles), fileSize)
-
-	// TODO: Implement timeout to prevent endless loop
-	cmd := "fileSize=" + fileSize + `;
-					tmpFile="/tmp/devspace-upstream";
-					mkdir -p /tmp;
-					mkdir -p '` + u.config.DestPath + `';
-
-					pid=$$;
-					cat </proc/$pid/fd/0 >"$tmpFile" &
-					ddPid=$!;
-
-					echo "` + StartAck + `";
-
-					while true; do
-							bytesRead=$(stat -c "%s" "$tmpFile" 2>/dev/null || printf "0");
-						
-							if [ "$bytesRead" = "$fileSize" ]; then
-									kill $ddPid;
-									break;
-							fi;
-
-							sleep 0.1;
-					done;
-
-					tar xzpf "$tmpFile" -C '` + u.config.DestPath + `/.' 2>/tmp/devspace-upstream-error;
-					echo "` + EndAck + `";
-		` // We need that extra new line or otherwise the command is not sent
-
-	// Write command
-	_, err := u.stdinPipe.Write([]byte(cmd))
+	// Create upload client
+	uploadClient, err := u.client.Upload(context.Background())
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "upload")
 	}
 
-	// Wait till confirmation
-	err = waitTill(StartAck, u.stdoutPipe)
-	if err != nil {
-		return errors.Trace(err)
-	}
+	buf := make([]byte, 16*1024)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			err := uploadClient.Send(&remote.Chunk{
+				Content: buf[:n],
+			})
+			if err != nil {
+				return errors.Wrap(err, "upload send")
+			}
+		}
 
-	// Apply rate limit if specified
-	var uploadWriter io.Writer = u.stdinPipe
-	if u.config.UpstreamLimit > 0 {
-		uploadWriter = ratelimit.Writer(u.stdinPipe, ratelimit.NewBucketWithRate(float64(u.config.UpstreamLimit), u.config.UpstreamLimit))
-	}
-
-	// Send file through stdin to remote
-	_, err = io.Copy(uploadWriter, file)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// Do not remove this line otherwise the delete will fail
-	file.Close()
-
-	// Delete local file
-	err = os.Remove(file.Name())
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// Wait till receive confirmation
-	err = waitTill(EndAck, u.stdoutPipe)
-	if err != nil {
-		return errors.Trace(err)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return errors.Wrap(err, "read tar")
+		}
 	}
 
 	// Update sync filemap
 	for _, element := range writtenFiles {
-		u.config.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
-		u.config.fileIndex.fileMap[element.Name] = element
+		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
+		u.sync.fileIndex.fileMap[element.Name] = element
 	}
 
 	return nil
 }
 
-func (u *upstream) applyRemoves(files []*fileInformation) error {
-	u.config.fileIndex.fileMapMutex.Lock()
-	defer u.config.fileIndex.fileMapMutex.Unlock()
+func (u *upstream) applyRemoves(files []*FileInformation) error {
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
-	u.config.Logf("[Upstream] Handling %d removes", len(files))
+	u.sync.log.Infof("Upstream - Handling %d removes", len(files))
+	fileMap := u.sync.fileIndex.fileMap
 
-	fileMap := u.config.fileIndex.fileMap
+	removeClient, err := u.client.Remove(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "remove client")
+	}
 
-	// Send rm commands with max 50 input args
-	for i := 0; i < len(files); i = i + 50 {
-		rmCommand := "rm -R "
-		removeArguments := 0
-
-		for j := 0; j < 50 && i+j < len(files); j++ {
-			relativePath := files[i+j].Name
-
-			if fileMap[relativePath] != nil {
-				relativePath = strings.Replace(relativePath, "'", "\\'", -1)
-				rmCommand += "'" + u.config.DestPath + relativePath + "' "
-				removeArguments++
-
-				if fileMap[relativePath].IsDirectory {
-					u.config.fileIndex.RemoveDirInFileMap(relativePath)
-				} else {
-					delete(fileMap, relativePath)
-				}
-
-				// Print changes
-				if u.config.Verbose || len(files) <= 3 {
-					u.config.Logf("[Upstream] Remove %s", relativePath)
-				}
-			}
+	for _, file := range files {
+		err = removeClient.Send(&remote.Path{
+			Path: file.Name,
+		})
+		if err != nil {
+			return errors.Wrap(err, "send remove path")
 		}
 
-		if removeArguments > 0 {
-			rmCommand += " >/dev/null 2>/dev/null && printf \"" + EndAck + "\" || printf \"" + EndAck + "\"\n"
+		if fileMap[file.Name] != nil {
+			if fileMap[file.Name].IsDirectory {
+				u.sync.fileIndex.RemoveDirInFileMap(file.Name)
+			} else {
+				delete(fileMap, file.Name)
+			}
 
-			if u.stdinPipe != nil {
-				_, err := u.stdinPipe.Write([]byte(rmCommand))
-
-				if err != nil {
-					return errors.Trace(err)
-				}
-
-				waitTill(EndAck, u.stdoutPipe)
+			// Print changes
+			if u.sync.Options.Verbose || len(files) <= 3 {
+				u.sync.log.Infof("Upstream - Remove %s", file.Name)
 			}
 		}
 	}

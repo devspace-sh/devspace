@@ -5,103 +5,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/juju/errors"
 )
-
-// TODO: CopyToContainer test
-func TestCopyToContainerTestable(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping test on non linux platform")
-	}
-
-	remote, local, _ := initTestDirs(t)
-	excludePaths := []string{}
-
-	// Write local files
-	ioutil.WriteFile(path.Join(local, "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFile2"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "ignoredFile"), []byte(fileContents), 0666)
-	excludePaths = append(excludePaths, "ignoredFile")
-
-	os.Mkdir(path.Join(local, "testFolder"), 0755)
-	os.Mkdir(path.Join(local, "testFolder2"), 0755)
-	os.Mkdir(path.Join(local, "ignoredFolder"), 0755)
-	excludePaths = append(excludePaths, "ignoredFolder")
-
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile1"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "testFile2"), []byte(fileContents), 0666)
-	ioutil.WriteFile(path.Join(local, "testFolder", "ignoredFile"), []byte(fileContents), 0666)
-	excludePaths = append(excludePaths, "testFolder/ignoredFile")
-
-	ioutil.WriteFile(path.Join(local, "ignoredFolder", "testFile1"), []byte(fileContents), 0666)
-
-	err := copyToContainerTestable(nil, nil, nil, local, remote, excludePaths, true)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	filesToCheck := []checkedFileOrFolder{
-		checkedFileOrFolder{
-			path:                "testFile1",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFile2",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "ignoredFile",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/testFile1",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/testFile2",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder/ignoredFile",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-		checkedFileOrFolder{
-			path:                "ignoredFolder/testFile1",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-	}
-	foldersToCheck := []checkedFileOrFolder{
-		checkedFileOrFolder{
-			path:                "testFolder",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "testFolder2",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: true,
-		},
-		checkedFileOrFolder{
-			path:                "ignoredFolder",
-			shouldExistInLocal:  true,
-			shouldExistInRemote: false,
-		},
-	}
-
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
-}
 
 const (
 	editInRemote = 0
