@@ -139,7 +139,12 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 	return true, nil
 }
 
-func recursiveTar(basePath, relativePath string, writtenFiles map[string]*FileInformation, tw *tar.Writer, ignoreMatcher gitignore.IgnoreParser) error {
+// RecursiveTar runs recursively over the given path and basepath and tars the found files and folders
+func RecursiveTar(basePath, relativePath string, writtenFiles map[string]*FileInformation, tw *tar.Writer, ignoreMatcher gitignore.IgnoreParser) error {
+	if writtenFiles == nil {
+		writtenFiles = make(map[string]*FileInformation)
+	}
+
 	absFilepath := path.Join(basePath, relativePath)
 	if writtenFiles[relativePath] != nil {
 		return nil
@@ -169,7 +174,6 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]*FileIn
 func tarFolder(basePath string, fileInformation *FileInformation, writtenFiles map[string]*FileInformation, stat os.FileInfo, tw *tar.Writer, ignoreMatcher gitignore.IgnoreParser) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 	files, err := ioutil.ReadDir(filepath)
-
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
 		return nil
@@ -187,7 +191,7 @@ func tarFolder(basePath string, fileInformation *FileInformation, writtenFiles m
 	}
 
 	for _, f := range files {
-		if err := recursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, ignoreMatcher); err != nil {
+		if err := RecursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, ignoreMatcher); err != nil {
 			return errors.Wrap(err, "recursive tar "+f.Name())
 		}
 	}

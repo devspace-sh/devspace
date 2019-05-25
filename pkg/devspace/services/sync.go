@@ -1,9 +1,6 @@
 package services
 
 import (
-	"fmt"
-	"path/filepath"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 
 	"k8s.io/client-go/kubernetes"
@@ -15,7 +12,7 @@ import (
 
 // StartSyncFromCmd starts a new sync from command
 func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, containerPath string, exclude []string, log log.Logger) error {
-	var (
+	/*var (
 		localPath = "."
 	)
 
@@ -64,12 +61,13 @@ func StartSyncFromCmd(config *latest.Config, client kubernetes.Interface, cmdPar
 	// Wait till sync is finished
 	<-syncDone
 
+	return nil*/
 	return nil
 }
 
 // StartSync starts the syncing functionality
 func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
-	if config.Dev.Sync == nil {
+	/*if config.Dev.Sync == nil {
 		return []*sync.Sync{}, nil
 	}
 
@@ -168,5 +166,6 @@ func StartSync(config *latest.Config, client kubernetes.Interface, verboseSync b
 		Syncs = append(Syncs, Sync)
 	}
 
-	return Syncs, nil
+	return Syncs, nil*/
+	return nil, nil
 }

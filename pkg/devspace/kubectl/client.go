@@ -23,7 +23,12 @@ func NewClient(devSpaceConfig *latest.Config) (kubernetes.Interface, error) {
 		return nil, err
 	}
 
-	return kubernetes.NewForConfig(config)
+	restConfig, err := config.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(restConfig)
 }
 
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
@@ -33,11 +38,16 @@ func NewClientWithContextSwitch(devSpaceConfig *latest.Config, switchContext boo
 		return nil, err
 	}
 
-	return kubernetes.NewForConfig(config)
+	restConfig, err := config.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(restConfig)
 }
 
-// GetClientConfigBySelect let's the user select a kube context to use
-func GetClientConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Config, error) {
+// GetRestConfigBySelect let's the user select a kube context to use
+func GetRestConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Config, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -86,14 +96,14 @@ func GetClientConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Confi
 			}
 		}
 
-		return GetClientConfigFromContext(kubeContext)
+		return GetRestConfigFromContext(kubeContext)
 	}
 
 	return nil, errors.New("We should not reach this point")
 }
 
-// GetClientConfigFromContext loads the configuration from a kubernetes context
-func GetClientConfigFromContext(context string) (*rest.Config, error) {
+// GetRestConfigFromContext loads the configuration from a kubernetes context
+func GetRestConfigFromContext(context string) (*rest.Config, error) {
 	clientConfig, err := kubeconfig.LoadConfigFromContext(context)
 	if err != nil {
 		return nil, err
@@ -102,14 +112,19 @@ func GetClientConfigFromContext(context string) (*rest.Config, error) {
 	return clientConfig.ClientConfig()
 }
 
-// GetClientConfig loads the configuration for kubernetes clients and parses it to *rest.Config
-func GetClientConfig(config *latest.Config) (*rest.Config, error) {
-	return loadClientConfig(config, false)
+// GetRestConfig loads the rest configuration for kubernetes clients and parses it to *rest.Config
+func GetRestConfig(config *latest.Config) (*rest.Config, error) {
+	clientConfig, err := loadClientConfig(config, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientConfig.ClientConfig()
 }
 
-func loadClientConfig(config *latest.Config, switchContext bool) (*rest.Config, error) {
+func loadClientConfig(config *latest.Config, switchContext bool) (clientcmd.ClientConfig, error) {
 	if config == nil {
-		return kubeconfig.LoadConfig().ClientConfig()
+		return kubeconfig.LoadConfig(), nil
 	}
 
 	// Load raw config
@@ -138,5 +153,5 @@ func loadClientConfig(config *latest.Config, switchContext bool) (*rest.Config, 
 		kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace
 	}
 
-	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()).ClientConfig()
+	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
 }

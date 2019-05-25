@@ -233,6 +233,8 @@ func TestNormalSync(t *testing.T) {
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
 
 	t.Log("Rename test is done")
+
+	// @Florian TODO: Test upstream symlinks
 }
 
 func getSyncOptions(testCases testCaseList) *Options {

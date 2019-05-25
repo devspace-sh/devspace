@@ -1,4 +1,4 @@
-module github.com/devspace-cloud/devspace/sync
+module github.com/devspace-cloud/devspace/sync/stub
 
 go 1.12
 

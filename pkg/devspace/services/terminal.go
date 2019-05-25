@@ -43,7 +43,7 @@ func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParame
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return err
 	}

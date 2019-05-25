@@ -320,7 +320,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	excludePaths = append(excludePaths, u.sync.Options.ExcludePaths...)
 	excludePaths = append(excludePaths, u.sync.Options.UploadExcludePaths...)
 
-	ignoreMatcher, err := compilePaths(excludePaths)
+	ignoreMatcher, err := CompilePaths(excludePaths)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}
@@ -336,7 +336,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	writtenFiles := make(map[string]*FileInformation)
 	for _, file := range files {
 		if writtenFiles[file.Name] == nil {
-			err := recursiveTar(u.sync.LocalPath, file.Name, writtenFiles, tarWriter, ignoreMatcher)
+			err := RecursiveTar(u.sync.LocalPath, file.Name, writtenFiles, tarWriter, ignoreMatcher)
 			if err != nil {
 				u.sync.log.Infof("Upstream - Tar failed: %s. Will retry in 4 seconds...", err.Error())
 				time.Sleep(time.Second * 4)

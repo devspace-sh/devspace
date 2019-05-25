@@ -241,7 +241,6 @@ func TestUpstreamServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// TODO: test remove
 	removeClient, err := client.Remove(context.Background())
 	if err != nil {
 		t.Fatal(err)

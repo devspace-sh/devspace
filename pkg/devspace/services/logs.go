@@ -44,7 +44,7 @@ func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmd
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return err
 	}

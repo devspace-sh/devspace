@@ -157,7 +157,7 @@ func (s *Sync) Start() error {
 
 func (s *Sync) initIgnoreParsers() error {
 	if s.Options.ExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.Options.ExcludePaths)
+		ignoreMatcher, err := CompilePaths(s.Options.ExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile exclude paths")
 		}
@@ -166,7 +166,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.DownloadExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.Options.DownloadExcludePaths)
+		ignoreMatcher, err := CompilePaths(s.Options.DownloadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile download exclude paths")
 		}
@@ -175,7 +175,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.UploadExcludePaths != nil {
-		ignoreMatcher, err := compilePaths(s.Options.UploadExcludePaths)
+		ignoreMatcher, err := CompilePaths(s.Options.UploadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile upload exclude paths")
 		}

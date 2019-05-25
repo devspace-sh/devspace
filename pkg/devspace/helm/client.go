@@ -67,7 +67,7 @@ func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, up
 
 func createNewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	// Get kube config
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return nil, err
 	}
