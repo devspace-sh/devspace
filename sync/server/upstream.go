@@ -61,19 +61,28 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 // Upload implements the server upload interface and writes all the data received to a
 // temporary file
 func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
+	writerErrChan := make(chan error)
+
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return errors.Wrap(err, "pipe")
 	}
 
 	defer reader.Close()
+	defer writer.Close()
+
 	go func() {
-		u.writeTar(writer, stream)
+		writerErrChan <- u.writeTar(writer, stream)
 	}()
 
 	err = untarAll(reader, u.UploadPath, "")
 	if err != nil {
 		return errors.Wrap(err, "untar all")
+	}
+
+	err = <-writerErrChan
+	if err != nil {
+		return errors.Wrap(err, "write tar")
 	}
 
 	return stream.SendAndClose(&remote.Empty{})

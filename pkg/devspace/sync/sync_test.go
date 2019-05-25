@@ -77,6 +77,10 @@ func TestInitialSync(t *testing.T) {
 	}
 	defer syncClient.Stop(nil)
 
+	// Set bandwidth limits
+	syncClient.Options.DownstreamLimit = 1024
+	syncClient.Options.UpstreamLimit = 512
+
 	// Start the downstream server
 	downClientReader, downClientWriter, _ := os.Pipe()
 	downServerReader, downServerWriter, _ := os.Pipe()
@@ -107,7 +111,7 @@ func TestInitialSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartDownstreamServer(remote, upServerReader, upClientWriter)
+		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -182,7 +186,7 @@ func TestNormalSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartDownstreamServer(remote, upServerReader, upClientWriter)
+		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -201,26 +205,34 @@ func TestNormalSync(t *testing.T) {
 
 	<-syncClient.readyChan
 
+	t.Log("Sync is ready")
+
 	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 8*time.Second)
+
+	t.Log("Create test is done")
 
 	filesToCheck, foldersToCheck, err = removeSomeTestFilesAndFolders(local, remote, filesToCheck, foldersToCheck, "_Remove")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 8*time.Second)
+
+	t.Log("Delete test is done")
 
 	filesToCheck, foldersToCheck, err = renameSomeTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 20*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+
+	t.Log("Rename test is done")
 }
 
 func getSyncOptions(testCases testCaseList) *Options {
@@ -329,9 +341,8 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 }
 
 func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList) {
-	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
+	for n, array := range []testCaseList{filesToCheck, foldersToCheck} {
 		for _, f := range array {
-
 			if f.path == "testFolder" {
 				continue
 			}
@@ -353,7 +364,6 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 			array = append(array, renameEquivalent)
 
 			isFullyIncluded, _ := regexp.Compile("(testFolder\\/)?(testFile|testFolder)(Local|Remote)$")
-
 			if isFullyIncluded.MatchString(f.path) {
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToOutside",
@@ -465,7 +475,7 @@ func makeDeepTestCases(testCases testCaseList) testCaseList {
 		}
 
 		deepEquivalent := checkedFileOrFolder{
-			path:                path.Join("testFolder/", f.path),
+			path:                filepath.Join("testFolder", f.path),
 			shouldExistInLocal:  f.shouldExistInLocal,
 			shouldExistInRemote: f.shouldExistInRemote,
 			editLocation:        f.editLocation,
@@ -542,7 +552,7 @@ func removeSomeTestFilesAndFolders(local string, remote string, filesToCheck tes
 }
 
 func renameSomeTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList, error) {
-	for n, array := range [2]testCaseList{filesToCheck, foldersToCheck} {
+	for n, array := range []testCaseList{filesToCheck, foldersToCheck} {
 		for n, f := range array {
 			if !strings.Contains(f.path, "_Rename") {
 				continue
@@ -611,8 +621,7 @@ func TestCreateDirInFileMap(t *testing.T) {
 	sync.fileIndex.CreateDirInFileMap("/TestDir1/TestDir2/TestDir3/TestDir4")
 
 	if len(sync.fileIndex.fileMap) != 4 {
-		t.Error("Create dir in file map failed!")
-		t.Fail()
+		t.Fatal("Create dir in file map failed!")
 	}
 }
 

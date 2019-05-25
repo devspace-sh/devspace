@@ -225,7 +225,7 @@ func (s *Sync) startUpstream() {
 
 	err = s.upstream.mainLoop()
 	if err != nil {
-		s.Stop(err)
+		s.Stop(errors.Wrap(err, "upstream"))
 	}
 }
 
@@ -234,7 +234,7 @@ func (s *Sync) startDownstream() {
 
 	err := s.downstream.mainLoop()
 	if err != nil {
-		s.Stop(err)
+		s.Stop(errors.Wrap(err, "downstream"))
 	}
 }
 
@@ -463,7 +463,7 @@ func (s *Sync) Stop(fatalError error) {
 
 		if fatalError != nil {
 			s.Error(fatalError)
-			log.Fatalf("[Sync] Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
+			log.Fatalf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
 		}
 	})
 }

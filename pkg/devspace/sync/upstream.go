@@ -53,7 +53,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 	}
 
 	return &upstream{
-		events:    make(chan notify.EventInfo, 5000), // High buffer size so we don't miss any fsevents if there are a lot of changes
+		events:    make(chan notify.EventInfo, 3000), // High buffer size so we don't miss any fsevents if there are a lot of changes
 		symlinks:  make(map[string]*Symlink),
 		interrupt: make(chan bool, 1),
 		sync:      sync,
@@ -350,7 +350,11 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		return nil
 	}
 
+	// Close the writers
+	tarWriter.Close()
+	gw.Close()
 	writer.Close()
+
 	return u.uploadArchive(reader, writtenFiles)
 }
 
@@ -363,18 +367,18 @@ func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*File
 		if c.IsDirectory {
 			// Print changes
 			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
-				u.sync.log.Infof("Upstream - Create Folder %s", c.Name)
+				u.sync.log.Infof("Upstream - Upload Folder %s", c.Name)
 			}
 
 			size += c.Size
 		} else {
 			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
-				u.sync.log.Infof("Upstream - Create File %s", c.Name)
+				u.sync.log.Infof("Upstream - Upload File %s", c.Name)
 			}
 		}
 	}
 
-	u.sync.log.Infof("Upstream - Upload %d create changes (size %s)", len(writtenFiles), size)
+	u.sync.log.Infof("Upstream - Upload %d create changes (size %d)", len(writtenFiles), size)
 
 	// Create upload client
 	uploadClient, err := u.client.Upload(context.Background())
@@ -395,6 +399,11 @@ func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*File
 		}
 
 		if err == io.EOF {
+			_, err := uploadClient.CloseAndRecv()
+			if err != nil {
+				return errors.Wrap(err, "after upload")
+			}
+
 			break
 		} else if err != nil {
 			return errors.Wrap(err, "read tar")
@@ -442,6 +451,11 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 				u.sync.log.Infof("Upstream - Remove %s", file.Name)
 			}
 		}
+	}
+
+	_, err = removeClient.CloseAndRecv()
+	if err != nil {
+		return errors.Wrap(err, "after deletes")
 	}
 
 	return nil

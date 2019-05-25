@@ -90,8 +90,7 @@ Outer:
 				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 
 			remoteData, err := ioutil.ReadFile(remoteFile)
@@ -107,8 +106,7 @@ Outer:
 				continue FileCheck
 			}
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 
 			if v.shouldExistInLocal {
@@ -141,12 +139,10 @@ Outer:
 				continue Outer
 			}
 			if err != nil && !os.IsNotExist(err) {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			if err == nil && stat.IsDir() == false {
-				t.Errorf("Expected %s to be a dir", localFolder)
-				return
+				t.Fatalf("Expected %s to be a dir", localFolder)
 			}
 
 			stat, err = os.Stat(remoteFolder)
@@ -163,8 +159,7 @@ Outer:
 				return
 			}
 			if err == nil && stat.IsDir() == false {
-				t.Errorf("Expected %s to be a dir", remoteFolder)
-				return
+				t.Fatalf("Expected %s to be a dir", remoteFolder)
 			}
 		}
 
@@ -184,22 +179,20 @@ Outer:
 	t.Log("Remote Path Content:")
 	err := filepath.Walk(remote, printPathAndReturnNil)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	t.Log("Local Path Content:")
 	err = filepath.Walk(local, printPathAndReturnNil)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	if missingFileOrFolder != "" {
-		t.Error("Sync Failed. Missing: " + missingFileOrFolder)
+		t.Fatal("Sync Failed. Missing: " + missingFileOrFolder)
 	} else if unexpectedFileOrFolder != "" {
-		t.Error("Sync Failed. Shouldn't be there: " + unexpectedFileOrFolder)
+		t.Fatal("Sync Failed. Shouldn't be there: " + unexpectedFileOrFolder)
 	} else {
-		t.Error("unexpected")
+		t.Fatal("unexpected")
 	}
 }

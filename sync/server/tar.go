@@ -176,7 +176,10 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 	}
 
 	hdr.Name = fileInformation.Name
-	hdr.ModTime = fileInformation.Mtime
+
+	// We have to cut of the nanoseconds otherwise this sometimes leads to issues on the client side
+	// because the unix value will be rounded up
+	hdr.ModTime = time.Unix(fileInformation.Mtime.Unix(), 0)
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return errors.Wrap(err, "tw write header")

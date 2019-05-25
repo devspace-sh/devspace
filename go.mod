@@ -15,7 +15,6 @@ require (
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
-	github.com/devspace-cloud/devspace/sync v0.0.0-00010101000000-000000000000
 	github.com/devspace-cloud/penv v0.0.1
 	github.com/docker/cli v0.0.0-20181026145426-51668a30f262
 	github.com/docker/distribution v0.0.0-20180327202408-83389a148052
@@ -38,6 +37,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
+	github.com/golang/protobuf v1.3.1
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -62,7 +62,6 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/kevinburke/ssh_config v0.0.0-20180830205328-81db2a75821e // indirect
-	github.com/kisielk/gotool v1.0.0 // indirect
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lxn/win v0.0.0-20181015143721-a7f87360b10e // indirect
@@ -107,6 +106,7 @@ require (
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
+	google.golang.org/grpc v1.21.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.4
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -135,5 +135,3 @@ require (
 )
 
 replace github.com/Nvveen/Gotty => github.com/ijc25/Gotty v0.0.0-20170406111628-a8b993ba6abd
-
-replace github.com/devspace-cloud/devspace/sync => ./sync

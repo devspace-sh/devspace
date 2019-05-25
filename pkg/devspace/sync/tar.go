@@ -58,7 +58,6 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 
 	// Check if newer file is there and then don't override?
 	stat, err := os.Stat(outFileName)
-
 	if err == nil {
 		if stat.ModTime().Unix() > header.FileInfo().ModTime().Unix() {
 			// Update filemap otherwise we download and download again
@@ -69,7 +68,9 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 				IsDirectory: stat.IsDir(),
 			}
 
-			config.log.Infof("Downstream - Don't override %s because file has newer mTime timestamp", relativePath)
+			if stat.IsDir() == false {
+				config.log.Infof("Downstream - Don't override %s because file has newer mTime timestamp", relativePath)
+			}
 			return true, nil
 		}
 	}
@@ -84,7 +85,6 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 		}
 
 		config.fileIndex.CreateDirInFileMap(relativePath)
-
 		return true, nil
 	}
 
@@ -123,7 +123,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 	}
 
 	// Set mod time correctly
-	err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
+	err = os.Chtimes(outFileName, time.Now(), header.ModTime)
 	if err != nil {
 		return false, errors.Wrap(err, "set time")
 	}
@@ -131,7 +131,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 	// Update fileMap so that upstream does not upload the file
 	config.fileIndex.fileMap[relativePath] = &FileInformation{
 		Name:        relativePath,
-		Mtime:       header.FileInfo().ModTime().Unix(),
+		Mtime:       header.ModTime.Unix(),
 		Size:        header.FileInfo().Size(),
 		IsDirectory: false,
 	}
@@ -211,7 +211,7 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 		return errors.Wrap(err, "create tar file info header")
 	}
 	hdr.Name = fileInformation.Name
-	hdr.ModTime = time.Unix(fileInformation.Mtime, fileInformation.MtimeNano)
+	hdr.ModTime = time.Unix(fileInformation.Mtime, 0)
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return errors.Wrap(err, "tar write header")
