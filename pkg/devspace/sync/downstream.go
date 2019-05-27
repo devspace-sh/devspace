@@ -24,6 +24,8 @@ type downstream struct {
 	client remote.DownstreamClient
 }
 
+const downloadFilesBufferSize = 64
+
 // newDownstream creates a new downstream handler with the given parameters
 func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*downstream, error) {
 	var (
@@ -75,21 +77,20 @@ func (d *downstream) populateFileMap() error {
 func (d *downstream) collectChanges() ([]*remote.Change, error) {
 	changes := make([]*remote.Change, 0, 128)
 
-	// Merge downstream and exclude paths
-	excluded := make([]string, 0, len(d.sync.Options.ExcludePaths)+len(d.sync.Options.DownloadExcludePaths))
-	excluded = append(excluded, d.sync.Options.ExcludePaths...)
-	excluded = append(excluded, d.sync.Options.DownloadExcludePaths...)
-
 	// Create a change client and collect all changes
-	changesClient, err := d.client.Changes(context.Background(), &remote.Excluded{Paths: excluded})
+	changesClient, err := d.client.Changes(context.Background(), &remote.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "start retrieving changes")
 	}
 
 	for {
-		change, err := changesClient.Recv()
-		if change != nil && d.shouldKeep(change) {
-			changes = append(changes, change)
+		changeChunk, err := changesClient.Recv()
+		if changeChunk != nil {
+			for _, change := range changeChunk.Changes {
+				if d.shouldKeep(change) {
+					changes = append(changes, change)
+				}
+			}
 		}
 
 		if err == io.EOF {
@@ -103,22 +104,26 @@ func (d *downstream) collectChanges() ([]*remote.Change, error) {
 }
 
 func (d *downstream) mainLoop() error {
-	lastChanges := []*remote.Change{}
+	lastAmountChanges := int64(0)
 
 	for {
 		// Check for changes remotely
-		changes, err := d.collectChanges()
+		changeAmount, err := d.client.ChangesCount(context.Background(), &remote.Empty{})
 		if err != nil {
-			return errors.Wrap(err, "collect changes")
+			return errors.Wrap(err, "count changes")
 		}
 
-		if len(changes) == 0 && len(lastChanges) > 0 {
-			err = d.applyChanges(lastChanges)
+		// Compare change amount
+		if lastAmountChanges > 0 && changeAmount.Amount == lastAmountChanges {
+			changes, err := d.collectChanges()
+			if err != nil {
+				return errors.Wrap(err, "collect changes")
+			}
+
+			err = d.applyChanges(changes)
 			if err != nil {
 				return errors.Wrap(err, "apply changes")
 			}
-
-			lastChanges = []*remote.Change{}
 		}
 
 		select {
@@ -128,7 +133,7 @@ func (d *downstream) mainLoop() error {
 			break
 		}
 
-		lastChanges = append(lastChanges, changes...)
+		lastAmountChanges = changeAmount.Amount
 	}
 }
 
@@ -156,6 +161,11 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 		download = make([]*remote.Change, 0, len(changes)/2)
 		remove   = make([]*remote.Change, 0, len(changes)/2)
 	)
+
+	// Skip if there are no changes
+	if len(changes) == 0 {
+		return nil
+	}
 
 	// determine what to delete and what to download
 	for _, change := range changes {
@@ -222,9 +232,25 @@ func (d *downstream) downloadFiles(writer io.Writer, changes []*remote.Change) e
 	}
 
 	// Send files to download
+	downloadFiles := make([]string, 0, downloadFilesBufferSize)
 	for _, change := range changes {
-		err = downloadClient.Send(&remote.Path{
-			Path: change.Path,
+		downloadFiles = append(downloadFiles, change.Path)
+
+		if len(downloadFiles) >= downloadFilesBufferSize {
+			err = downloadClient.Send(&remote.Paths{
+				Paths: downloadFiles,
+			})
+			if err != nil {
+				return errors.Wrap(err, "send path")
+			}
+
+			downloadFiles = make([]string, 0, downloadFilesBufferSize)
+		}
+	}
+
+	if len(downloadFiles) >= 0 {
+		err = downloadClient.Send(&remote.Paths{
+			Paths: downloadFiles,
 		})
 		if err != nil {
 			return errors.Wrap(err, "send path")

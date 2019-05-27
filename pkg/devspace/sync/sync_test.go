@@ -89,8 +89,13 @@ func TestInitialSync(t *testing.T) {
 	defer downServerReader.Close()
 	defer downServerWriter.Close()
 
+	// Build exclude paths
+	excludePaths := []string{}
+	excludePaths = append(excludePaths, syncClient.Options.ExcludePaths...)
+	excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
+
 	go func() {
-		err := server.StartDownstreamServer(remote, downServerReader, downClientWriter)
+		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,8 +169,13 @@ func TestNormalSync(t *testing.T) {
 	defer downServerReader.Close()
 	defer downServerWriter.Close()
 
+	// Build exclude paths
+	excludePaths := []string{}
+	excludePaths = append(excludePaths, syncClient.Options.ExcludePaths...)
+	excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
+
 	go func() {
-		err := server.StartDownstreamServer(remote, downServerReader, downClientWriter)
+		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter)
 		if err != nil {
 			t.Fatal(err)
 		}

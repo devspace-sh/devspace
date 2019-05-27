@@ -41,7 +41,7 @@ func TestDownstreamServer(t *testing.T) {
 	serverReader, serverWriter := io.Pipe()
 
 	go func() {
-		err := StartDownstreamServer(fromDir, serverReader, clientWriter)
+		err := StartDownstreamServer(fromDir, []string{"emptydir"}, serverReader, clientWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,10 +52,17 @@ func TestDownstreamServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Count changes
 	client := remote.NewDownstreamClient(conn)
-	changesClient, err := client.Changes(context.Background(), &remote.Excluded{
-		Paths: []string{"emptydir"},
-	})
+	amount, err := client.ChangesCount(context.Background(), &remote.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if amount.Amount != 6 {
+		t.Fatalf("Unexpected change amount, expected 6, got %d", amount.Amount)
+	}
+
+	changesClient, err := client.Changes(context.Background(), &remote.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,8 +86,10 @@ func TestDownstreamServer(t *testing.T) {
 			t.Fatal("Expected only changes with type change")
 		}
 
-		err := downloadClient.Send(&remote.Path{
-			Path: change.Path,
+		err := downloadClient.Send(&remote.Paths{
+			Paths: []string{
+				change.Path,
+			},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -132,9 +141,7 @@ func TestDownstreamServer(t *testing.T) {
 	}
 
 	// Check for changes again
-	changesClient, err = client.Changes(context.Background(), &remote.Excluded{
-		Paths: []string{"emptydir"},
-	})
+	changesClient, err = client.Changes(context.Background(), &remote.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,9 +168,7 @@ func TestDownstreamServer(t *testing.T) {
 	log.Println("Get changes again")
 
 	// Check for changes again
-	changesClient, err = client.Changes(context.Background(), &remote.Excluded{
-		Paths: []string{"emptydir"},
-	})
+	changesClient, err = client.Changes(context.Background(), &remote.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,14 +185,18 @@ func TestDownstreamServer(t *testing.T) {
 func getAllChanges(changesClient remote.Downstream_ChangesClient) ([]*remote.Change, error) {
 	changes := make([]*remote.Change, 0, 32)
 	for {
-		change, err := changesClient.Recv()
+		changeChunk, err := changesClient.Recv()
+		if changeChunk != nil {
+			for _, change := range changeChunk.Changes {
+				changes = append(changes, change)
+			}
+		}
+
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return nil, err
 		}
-
-		changes = append(changes, change)
 	}
 
 	return changes, nil

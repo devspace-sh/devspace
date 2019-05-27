@@ -247,8 +247,8 @@ func TestUpstreamServer(t *testing.T) {
 	}
 
 	for path := range fileStructure.Children {
-		removeClient.Send(&remote.Path{
-			Path: path,
+		removeClient.Send(&remote.Paths{
+			Paths: []string{path, path},
 		})
 	}
 

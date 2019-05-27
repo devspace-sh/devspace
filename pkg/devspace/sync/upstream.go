@@ -31,6 +31,8 @@ type upstream struct {
 	client remote.UpstreamClient
 }
 
+const removeFilesBufferSize = 64
+
 // newUpstream creates a new upstream handler with the given parameters
 func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upstream, error) {
 	var (
@@ -431,13 +433,9 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 		return errors.Wrap(err, "remove client")
 	}
 
+	sendFiles := make([]string, 0, removeFilesBufferSize)
 	for _, file := range files {
-		err = removeClient.Send(&remote.Path{
-			Path: file.Name,
-		})
-		if err != nil {
-			return errors.Wrap(err, "send remove path")
-		}
+		sendFiles = append(sendFiles, file.Name)
 
 		if fileMap[file.Name] != nil {
 			if fileMap[file.Name].IsDirectory {
@@ -450,6 +448,26 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 			if u.sync.Options.Verbose || len(files) <= 3 {
 				u.sync.log.Infof("Upstream - Remove %s", file.Name)
 			}
+		}
+
+		if len(sendFiles) >= removeFilesBufferSize {
+			err = removeClient.Send(&remote.Paths{
+				Paths: sendFiles,
+			})
+			if err != nil {
+				return errors.Wrap(err, "send paths")
+			}
+
+			sendFiles = make([]string, 0, removeFilesBufferSize)
+		}
+	}
+
+	if len(sendFiles) > 0 {
+		err = removeClient.Send(&remote.Paths{
+			Paths: sendFiles,
+		})
+		if err != nil {
+			return errors.Wrap(err, "send paths")
 		}
 	}
 

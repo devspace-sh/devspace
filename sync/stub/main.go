@@ -9,15 +9,31 @@ import (
 	"github.com/devspace-cloud/devspace/sync/server"
 )
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "my string representation"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 func printUsage() {
 	fmt.Printf("Usage: sync [--upstream] [--downstream] PATH\n")
 	os.Exit(1)
 }
 
 func main() {
-	isDownstream := flag.Bool("downstream", false, "Starts the downstream service")
-	isUpstream := flag.Bool("upstream", false, "Starts the upstream service")
+	var (
+		excludePaths arrayFlags
 
+		isDownstream = flag.Bool("downstream", false, "Starts the downstream service")
+		isUpstream   = flag.Bool("upstream", false, "Starts the upstream service")
+	)
+
+	flag.Var(&excludePaths, "exclude", "The exclude paths for downstream watching")
 	flag.Parse()
 
 	args := flag.Args()
@@ -39,7 +55,7 @@ func main() {
 	}
 
 	if *isDownstream {
-		err := server.StartDownstreamServer(absolutePath, os.Stdin, os.Stdout)
+		err := server.StartDownstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)

@@ -1,3 +1,7 @@
+# github.com/devspace-cloud/devspace v0.0.0-00010101000000-000000000000 => ../..
+github.com/devspace-cloud/devspace/sync/server
+github.com/devspace-cloud/devspace/sync/remote
+github.com/devspace-cloud/devspace/sync/util
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -24,7 +28,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/transform
-# google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+# google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.21.0
 google.golang.org/grpc
