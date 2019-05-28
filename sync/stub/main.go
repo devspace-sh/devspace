@@ -21,9 +21,11 @@ func (i *arrayFlags) Set(value string) error {
 }
 
 func printUsage() {
-	fmt.Printf("Usage: sync [--upstream] [--downstream] PATH\n")
+	fmt.Printf("Usage: sync [--version] [--upstream] [--downstream] [--exclude] PATH\n")
 	os.Exit(1)
 }
+
+var version string
 
 func main() {
 	var (
@@ -31,10 +33,21 @@ func main() {
 
 		isDownstream = flag.Bool("downstream", false, "Starts the downstream service")
 		isUpstream   = flag.Bool("upstream", false, "Starts the upstream service")
+		showVersion  = flag.Bool("version", false, "Shows the version")
 	)
 
 	flag.Var(&excludePaths, "exclude", "The exclude paths for downstream watching")
 	flag.Parse()
+
+	// Should we just print the version?
+	if *showVersion {
+		if version == "" {
+			version = "latest"
+		}
+
+		fmt.Printf("%s", version)
+		os.Exit(0)
+	}
 
 	args := flag.Args()
 	if len(args) != 1 {

@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -68,12 +67,6 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 		config = configutil.GetConfig()
 	}
 
-	// Get kubectl client
-	kubectl, err := kubectl.NewClient(config)
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
-	}
-
 	// Build params
 	params := targetselector.CmdParameter{}
 	if cmd.Selector != "" {
@@ -96,7 +89,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err = services.StartSyncFromCmd(config, kubectl, params, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
+	err := services.StartSyncFromCmd(config, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -309,13 +310,12 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 }
 
 func (u *upstream) applyCreates(files []*FileInformation) error {
-	reader, writer, err := os.Pipe()
+	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
-		return errors.Wrap(err, "create pipe")
+		return errors.Wrap(err, "create temp file")
 	}
 
-	defer reader.Close()
-	defer writer.Close()
+	defer os.Remove(tempFile.Name())
 
 	// Create combined exclude paths
 	excludePaths := make([]string, 0, len(u.sync.Options.ExcludePaths)+len(u.sync.Options.UploadExcludePaths))
@@ -328,7 +328,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	}
 
 	// Use compression
-	gw := gzip.NewWriter(writer)
+	gw := gzip.NewWriter(tempFile)
 	defer gw.Close()
 
 	// Create tar writer
@@ -355,9 +355,15 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	// Close the writers
 	tarWriter.Close()
 	gw.Close()
-	writer.Close()
+	tempFile.Close()
 
-	return u.uploadArchive(reader, writtenFiles)
+	// Reopen file for reading
+	tempFile, err = os.Open(tempFile.Name())
+	if err != nil {
+		return errors.Wrap(err, "open temp file")
+	}
+
+	return u.uploadArchive(tempFile, writtenFiles)
 }
 
 func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*FileInformation) error {

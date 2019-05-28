@@ -1,6 +1,7 @@
 package util
 
 import (
+	"io/ioutil"
 	"net"
 )
 
@@ -30,6 +31,8 @@ func (lis *StdinListener) Accept() (net.Conn, error) {
 // Close implements interface
 func (lis *StdinListener) Close() error {
 	lis.closed = true
+	ioutil.WriteFile("/tmp/closed", []byte("closed"), 0666)
+
 	return nil
 }
 

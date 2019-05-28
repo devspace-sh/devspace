@@ -39,13 +39,18 @@ func Copy(restConfig *rest.Config, pod *k8sv1.Pod, container, containerPath, loc
 	defer reader.Close()
 	defer writer.Close()
 
+	errorChan := make(chan error)
+	go func() {
+		errorChan <- CopyFromReader(restConfig, pod, container, containerPath, reader)
+	}()
+
 	err = writeTar(writer, localPath, exclude)
 	if err != nil {
 		return errors.Wrap(err, "write tar")
 	}
 
 	writer.Close()
-	return CopyFromReader(restConfig, pod, container, containerPath, reader)
+	return <-errorChan
 }
 
 func writeTar(writer io.Writer, localPath string, exclude []string) error {

@@ -3,10 +3,12 @@ package kubectl
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
+	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -89,35 +91,49 @@ func ExecStream(restConfig *rest.Config, pod *k8sv1.Pod, container string, comma
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
 func ExecBuffered(restConfig *rest.Config, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
-	stdoutReader, stdoutWriter, _ := os.Pipe()
-	stderrReader, stderrWriter, _ := os.Pipe()
+	stdoutOutput, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "create temp file")
+	}
+	defer os.Remove(stdoutOutput.Name())
 
-	kubeExecError := ExecStream(restConfig, pod, container, command, false, input, stdoutWriter, stderrWriter)
+	stderrOutput, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "create temp file")
+	}
+	defer os.Remove(stderrOutput.Name())
+
+	kubeExecError := ExecStream(restConfig, pod, container, command, false, input, stdoutOutput, stderrOutput)
 	if kubeExecError != nil {
 		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
 			return nil, nil, kubeExecError
 		}
 	}
 
-	err := stdoutWriter.Close()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = stderrWriter.Close()
-	if err != nil {
-		return nil, nil, err
-	}
+	stdoutOutput.Close()
+	stderrOutput.Close()
 
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 
-	_, err = stdoutBuffer.ReadFrom(stdoutReader)
+	// Open stdout
+	stdoutOutput, err = os.Open(stdoutOutput.Name())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open stdout file")
+	}
+
+	_, err = stdoutBuffer.ReadFrom(stdoutOutput)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, err = stderrBuffer.ReadFrom(stderrReader)
+	// Open stderr
+	stderrOutput, err = os.Open(stdoutOutput.Name())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open stderr file")
+	}
+
+	_, err = stderrBuffer.ReadFrom(stdoutOutput)
 	if err != nil {
 		return nil, nil, err
 	}

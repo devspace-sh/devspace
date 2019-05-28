@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
@@ -16,10 +16,10 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	config := configutil.GetBaseConfig()
 
 	if config.Dev == nil {
-		config.Dev = &v1.DevConfig{}
+		config.Dev = &latest.DevConfig{}
 	}
 	if config.Dev.Sync == nil {
-		config.Dev.Sync = &[]*v1.Sync{}
+		config.Dev.Sync = &[]*latest.SyncConfig{}
 	}
 
 	var labelSelectorMap map[string]*string
@@ -33,7 +33,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
 			services := *config.Dev.Selectors
 
-			var service *v1.SelectorConfig
+			var service *latest.SelectorConfig
 			if serviceName != "" {
 				service = getServiceWithName(*config.Dev.Selectors, serviceName)
 				if service == nil {
@@ -81,7 +81,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		labelSelectorMap = nil
 	}
 
-	Sync := append(*config.Dev.Sync, &v1.Sync{
+	Sync := append(*config.Dev.Sync, &latest.SyncConfig{
 		LabelSelector: &labelSelectorMap,
 		ContainerPath: ptr.String(containerPath),
 		LocalSubPath:  ptr.String(localPath),
@@ -114,7 +114,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 	}
 
 	if config.Dev.Sync != nil && len(*config.Dev.Sync) > 0 {
-		newSyncPaths := make([]*v1.Sync, 0, len(*config.Dev.Sync)-1)
+		newSyncPaths := make([]*latest.SyncConfig, 0, len(*config.Dev.Sync)-1)
 
 		for _, v := range *config.Dev.Sync {
 			if removeAll ||

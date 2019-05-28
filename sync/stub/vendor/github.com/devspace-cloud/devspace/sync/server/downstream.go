@@ -59,24 +59,26 @@ type Downstream struct {
 
 // Download sends the file at the temp download location to the client
 func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
-	reader, writer, err := os.Pipe()
+	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
-		return errors.Wrap(err, "create pipe")
+		return errors.Wrap(err, "create temp file")
 	}
+	defer os.Remove(tempFile.Name())
 
-	defer reader.Close()
-	defer writer.Close()
-
-	err = d.compress(writer, stream)
+	err = d.compress(tempFile, stream)
 	if err != nil {
 		return errors.Wrap(err, "compress paths")
 	}
 
-	writer.Close()
+	tempFile.Close()
+	tempFile, err = os.Open(tempFile.Name())
+	if err != nil {
+		return errors.Wrap(err, "open temp file")
+	}
 
 	buf := make([]byte, 16*1024)
 	for {
-		n, err := reader.Read(buf)
+		n, err := tempFile.Read(buf)
 		if n > 0 {
 			err := stream.Send(&remote.Chunk{
 				Content: buf[:n],

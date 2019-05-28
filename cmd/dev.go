@@ -243,7 +243,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, cmd.VerboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}

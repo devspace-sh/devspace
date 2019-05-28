@@ -189,6 +189,13 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 		defer writer.Close()
 		defer reader.Close()
 
+		errorChan := make(chan error)
+		go func() {
+			// Untaring all downloaded files to the right location
+			// this can be a lengthy process when we downloaded a lot of files
+			errorChan <- untarAll(reader, d.sync.LocalPath, "", d.sync)
+		}()
+
 		err = d.downloadFiles(writer, download)
 		if err != nil {
 			return errors.Wrap(err, "download")
@@ -197,11 +204,9 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 		// Close the writer to make sure we can read everything
 		writer.Close()
 
-		// Untaring all downloaded files to the right location
-		// this can be a lengthy process when we downloaded a lot of files
-		err = untarAll(reader, d.sync.LocalPath, "", d.sync)
+		err = <-errorChan
 		if err != nil {
-			return errors.Wrap(err, "untar downloaded files")
+			return errors.Wrap(err, "untar files")
 		}
 	}
 
