@@ -18,8 +18,8 @@ import (
 )
 
 // StartDownstreamServer starts a new downstream server with the given reader and writer
-func StartDownstreamServer(remotePath string, excludePaths []string, reader io.Reader, writer io.Writer) error {
-	pipe := util.NewStdStreamJoint(reader, writer)
+func StartDownstreamServer(remotePath string, excludePaths []string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
+	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
 
