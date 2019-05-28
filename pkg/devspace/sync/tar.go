@@ -205,7 +205,9 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
-		return errors.Wrap(err, "open file")
+		// We ignore open file and just treat it as okay
+		// return errors.Wrap(err, "open file")
+		return nil
 	}
 
 	defer f.Close()

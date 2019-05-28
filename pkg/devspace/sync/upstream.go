@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/juju/ratelimit"
 	"github.com/pkg/errors"
+	gitignore "github.com/sabhiram/go-gitignore"
 
 	"github.com/devspace-cloud/devspace/sync/remote"
 	"github.com/devspace-cloud/devspace/sync/util"
@@ -310,12 +310,23 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 }
 
 func (u *upstream) applyCreates(files []*FileInformation) error {
-	tempFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		return errors.Wrap(err, "create temp file")
+	size := int64(0)
+	for _, c := range files {
+		if c.IsDirectory {
+			// Print changes
+			if u.sync.Options.Verbose || len(files) <= 3 {
+				u.sync.log.Infof("Upstream - Upload Folder %s", c.Name)
+			}
+		} else {
+			if u.sync.Options.Verbose || len(files) <= 3 {
+				u.sync.log.Infof("Upstream - Upload File %s", c.Name)
+			}
+
+			size += c.Size
+		}
 	}
 
-	defer os.Remove(tempFile.Name())
+	u.sync.log.Infof("Upstream - Upload %d create changes (size %d)", len(files), size)
 
 	// Create combined exclude paths
 	excludePaths := make([]string, 0, len(u.sync.Options.ExcludePaths)+len(u.sync.Options.UploadExcludePaths))
@@ -327,8 +338,36 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		return errors.Wrap(err, "compile paths")
 	}
 
+	// Create a pipe for reading and writing
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return errors.Wrap(err, "create pipe")
+	}
+
+	defer reader.Close()
+	defer writer.Close()
+
+	errorChan := make(chan error)
+	go func() {
+		errorChan <- u.compress(writer, files, ignoreMatcher)
+	}()
+
+	err = u.uploadArchive(reader)
+	if err != nil {
+		return errors.Wrap(err, "upload archive")
+	}
+
+	return <-errorChan
+}
+
+func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher gitignore.IgnoreParser) error {
+	defer writer.Close()
+
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
+
 	// Use compression
-	gw := gzip.NewWriter(tempFile)
+	gw := gzip.NewWriter(writer)
 	defer gw.Close()
 
 	// Create tar writer
@@ -340,54 +379,21 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		if writtenFiles[file.Name] == nil {
 			err := RecursiveTar(u.sync.LocalPath, file.Name, writtenFiles, tarWriter, ignoreMatcher)
 			if err != nil {
-				u.sync.log.Infof("Upstream - Tar failed: %s. Will retry in 4 seconds...", err.Error())
-				time.Sleep(time.Second * 4)
-				return u.applyCreates(files)
+				return errors.Wrap(err, "recursive tar")
 			}
 		}
 	}
 
-	// If we didn't write any files, we are done already
-	if len(writtenFiles) == 0 {
-		return nil
+	// Update sync filemap
+	for _, element := range writtenFiles {
+		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
+		u.sync.fileIndex.fileMap[element.Name] = element
 	}
 
-	// Close the writers
-	tarWriter.Close()
-	gw.Close()
-	tempFile.Close()
-
-	// Reopen file for reading
-	tempFile, err = os.Open(tempFile.Name())
-	if err != nil {
-		return errors.Wrap(err, "open temp file")
-	}
-
-	return u.uploadArchive(tempFile, writtenFiles)
+	return nil
 }
 
-func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*FileInformation) error {
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
-
-	size := int64(0)
-	for _, c := range writtenFiles {
-		if c.IsDirectory {
-			// Print changes
-			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
-				u.sync.log.Infof("Upstream - Upload Folder %s", c.Name)
-			}
-
-			size += c.Size
-		} else {
-			if u.sync.Options.Verbose || len(writtenFiles) <= 3 {
-				u.sync.log.Infof("Upstream - Upload File %s", c.Name)
-			}
-		}
-	}
-
-	u.sync.log.Infof("Upstream - Upload %d create changes (size %d)", len(writtenFiles), size)
-
+func (u *upstream) uploadArchive(reader io.Reader) error {
 	// Create upload client
 	uploadClient, err := u.client.Upload(context.Background())
 	if err != nil {
@@ -416,12 +422,6 @@ func (u *upstream) uploadArchive(reader io.Reader, writtenFiles map[string]*File
 		} else if err != nil {
 			return errors.Wrap(err, "read tar")
 		}
-	}
-
-	// Update sync filemap
-	for _, element := range writtenFiles {
-		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
-		u.sync.fileIndex.fileMap[element.Name] = element
 	}
 
 	return nil

@@ -59,26 +59,39 @@ type Downstream struct {
 
 // Download sends the file at the temp download location to the client
 func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
-	tempFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		return errors.Wrap(err, "create temp file")
-	}
-	defer os.Remove(tempFile.Name())
+	filesToCompress := make([]string, 0, 128)
+	for {
+		paths, err := stream.Recv()
+		if paths != nil {
+			for _, path := range paths.Paths {
+				filesToCompress = append(filesToCompress, path)
+			}
+		}
 
-	err = d.compress(tempFile, stream)
-	if err != nil {
-		return errors.Wrap(err, "compress paths")
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
 	}
 
-	tempFile.Close()
-	tempFile, err = os.Open(tempFile.Name())
+	// Create os pipe
+	reader, writer, err := os.Pipe()
 	if err != nil {
-		return errors.Wrap(err, "open temp file")
+		return errors.Wrap(err, "create pipe")
 	}
 
+	// Compress archive and send at the same time
+	errorChan := make(chan error)
+	go func() {
+		errorChan <- d.compress(writer, filesToCompress)
+	}()
+
+	// Send compressed archive to client
 	buf := make([]byte, 16*1024)
 	for {
-		n, err := tempFile.Read(buf)
+		n, err := reader.Read(buf)
 		if n > 0 {
 			err := stream.Send(&remote.Chunk{
 				Content: buf[:n],
@@ -89,15 +102,19 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 		}
 
 		if err == io.EOF {
-			return nil
+			break
 		} else if err != nil {
 			return errors.Wrap(err, "read file")
 		}
 	}
+
+	return <-errorChan
 }
 
 // Compress compresses the given files and folders into a tar archive
-func (d *Downstream) compress(writer io.Writer, stream remote.Downstream_DownloadServer) error {
+func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
+	defer writer.Close()
+
 	// Use compression
 	gw := gzip.NewWriter(writer)
 	defer gw.Close()
@@ -105,27 +122,17 @@ func (d *Downstream) compress(writer io.Writer, stream remote.Downstream_Downloa
 	tarWriter := tar.NewWriter(gw)
 	defer tarWriter.Close()
 
-	writtenFiles := make(map[string]*fileInformation)
-	for {
-		paths, err := stream.Recv()
-		if paths != nil {
-			for _, path := range paths.Paths {
-				if _, ok := writtenFiles[path]; ok == false {
-					err := recursiveTar(d.RemotePath, path, writtenFiles, tarWriter, true)
-					if err != nil {
-						return errors.Wrap(err, "recursive tar")
-					}
-				}
+	writtenFiles := make(map[string]bool)
+	for _, path := range files {
+		if _, ok := writtenFiles[path]; ok == false {
+			err := recursiveTar(d.RemotePath, path, writtenFiles, tarWriter, true)
+			if err != nil {
+				return errors.Wrap(err, "recursive tar")
 			}
 		}
-
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
 	}
+
+	return nil
 }
 
 // ChangesCount returns the amount of changes on the remote side
