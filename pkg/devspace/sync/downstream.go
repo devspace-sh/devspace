@@ -191,22 +191,19 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 
 		errorChan := make(chan error)
 		go func() {
-			// Untaring all downloaded files to the right location
-			// this can be a lengthy process when we downloaded a lot of files
-			errorChan <- untarAll(reader, d.sync.LocalPath, "", d.sync)
+			errorChan <- d.downloadFiles(writer, download)
 		}()
 
-		err = d.downloadFiles(writer, download)
+		// Untaring all downloaded files to the right location
+		// this can be a lengthy process when we downloaded a lot of files
+		err = untarAll(reader, d.sync.LocalPath, "", d.sync)
 		if err != nil {
-			return errors.Wrap(err, "download")
+			return errors.Wrap(err, "untar files")
 		}
-
-		// Close the writer to make sure we can read everything
-		writer.Close()
 
 		err = <-errorChan
 		if err != nil {
-			return errors.Wrap(err, "untar files")
+			return errors.Wrap(err, "download files")
 		}
 	}
 
@@ -215,7 +212,9 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 }
 
 // downloadFiles downloads the given files from the remote server and writes the contents into the given writer
-func (d *downstream) downloadFiles(writer io.Writer, changes []*remote.Change) error {
+func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Change) error {
+	defer writer.Close()
+
 	// Print log message
 	if len(changes) <= 3 || d.sync.Options.Verbose {
 		for _, element := range changes {

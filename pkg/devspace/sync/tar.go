@@ -123,10 +123,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 	}
 
 	// Set mod time correctly
-	err = os.Chtimes(outFileName, time.Now(), header.ModTime)
-	if err != nil {
-		return false, errors.Wrap(err, "set time")
-	}
+	_ = os.Chtimes(outFileName, time.Now(), header.ModTime)
 
 	// Update fileMap so that upstream does not upload the file
 	config.fileIndex.fileMap[relativePath] = &FileInformation{
@@ -205,7 +202,9 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
-		return errors.Wrap(err, "open file")
+		// We ignore open file and just treat it as okay
+		// return errors.Wrap(err, "open file")
+		return nil
 	}
 
 	defer f.Close()
@@ -226,7 +225,7 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 	}
 
 	writtenFiles[fileInformation.Name] = fileInformation
-	return f.Close()
+	return nil
 }
 
 func createFileInformationFromStat(relativePath string, stat os.FileInfo) *FileInformation {
