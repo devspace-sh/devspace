@@ -31,7 +31,6 @@ func (a *StdinAddr) String() string {
 type StdStreamJoint struct {
 	in     io.Reader
 	out    io.Writer
-	closed bool
 	local  *StdinAddr
 	remote *StdinAddr
 
@@ -71,8 +70,6 @@ func (s *StdStreamJoint) Write(b []byte) (n int, err error) {
 
 // Close implements interface
 func (s *StdStreamJoint) Close() error {
-	s.closed = true
-
 	if s.exitOnClose {
 		// We kill ourself here because the streams are closed
 		fmt.Fprintf(os.Stderr, "Streams are closed")

@@ -13,7 +13,6 @@ func NewStdinListener() *StdinListener {
 
 // StdinListener implements the listener interface
 type StdinListener struct {
-	closed   bool
 	connChan chan net.Conn
 }
 
@@ -29,7 +28,6 @@ func (lis *StdinListener) Accept() (net.Conn, error) {
 
 // Close implements interface
 func (lis *StdinListener) Close() error {
-	lis.closed = true
 	return nil
 }
 
