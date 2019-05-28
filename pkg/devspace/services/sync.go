@@ -40,7 +40,7 @@ var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/rel
 const SyncHelperContainerPath = "/tmp/sync"
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, log log.Logger) error {
+func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
 	restConfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return errors.Wrap(err, "get kubernetes rest config")
@@ -80,7 +80,7 @@ func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdPara
 	}
 
 	log.StartWait("Starting sync...")
-	syncClient, err := startSync(restConfig, pod, container.Name, syncConfig, false, syncDone, log)
+	syncClient, err := startSync(restConfig, pod, container.Name, syncConfig, verbose, syncDone, log)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")

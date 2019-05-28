@@ -1,8 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"io"
 	"net"
+	"os"
 	"time"
 )
 
@@ -67,6 +69,11 @@ func (s *StdStreamJoint) Write(b []byte) (n int, err error) {
 // Close implements interface
 func (s *StdStreamJoint) Close() error {
 	s.closed = true
+
+	// We kill ourself here because the streams are closed
+	fmt.Fprintf(os.Stderr, "Streams are closed")
+	os.Exit(1)
+
 	return nil
 }
 

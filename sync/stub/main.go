@@ -21,7 +21,7 @@ func (i *arrayFlags) Set(value string) error {
 }
 
 func printUsage() {
-	fmt.Printf("Usage: sync [--version] [--upstream] [--downstream] [--exclude] PATH\n")
+	fmt.Fprintf(os.Stderr, "Usage: sync [--version] [--upstream] [--downstream] [--exclude] PATH\n")
 	os.Exit(1)
 }
 

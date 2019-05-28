@@ -21,6 +21,7 @@ type SyncCmd struct {
 	Exclude       []string
 	ContainerPath string
 	LocalPath     string
+	Verbose       bool
 }
 
 // NewSyncCmd creates a new init command
@@ -56,6 +57,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
+	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
 	return syncCmd
 }
@@ -89,7 +91,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err := services.StartSyncFromCmd(config, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
+	err := services.StartSyncFromCmd(config, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
