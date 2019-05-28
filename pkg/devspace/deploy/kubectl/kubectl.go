@@ -166,7 +166,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
 
 		if shouldRedeploy || forceDeploy {
@@ -186,7 +186,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 			err = cmd.Run()
 			if err != nil {
-				return false, err
+				return false, fmt.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}
 
 			wasDeployed = true
@@ -250,13 +250,11 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 	}
 
 	args = append(args, method)
-
 	if additionalArgs != nil {
 		args = append(args, additionalArgs...)
 	}
 
 	args = append(args, "-f", "-")
-
 	return args
 }
 

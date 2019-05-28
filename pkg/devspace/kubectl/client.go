@@ -148,6 +148,10 @@ func loadClientConfig(config *latest.Config, switchContext bool) (clientcmd.Clie
 		}
 	}
 
+	if _, ok := kubeConfig.Contexts[activeContext]; ok == false {
+		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+	}
+
 	// Change context namespace
 	if config.Cluster != nil && config.Cluster.Namespace != nil {
 		kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace

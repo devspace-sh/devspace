@@ -68,13 +68,13 @@ func main() {
 	}
 
 	if *isDownstream {
-		err := server.StartDownstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout)
+		err := server.StartDownstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)
 		}
 	} else if *isUpstream {
-		err := server.StartUpstreamServer(absolutePath, os.Stdin, os.Stdout)
+		err := server.StartUpstreamServer(absolutePath, os.Stdin, os.Stdout, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)
