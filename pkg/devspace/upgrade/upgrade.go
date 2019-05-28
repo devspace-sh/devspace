@@ -11,6 +11,8 @@ import (
 
 // Version holds the current version tag
 var version string
+var rawVersion string
+
 var githubSlug = "devspace-cloud/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
@@ -31,6 +33,11 @@ func GetVersion() string {
 	return version
 }
 
+// GetRawVersion returns the applications raw version
+func GetRawVersion() string {
+	return rawVersion
+}
+
 // SetVersion sets the application version
 func SetVersion(verText string) {
 	if len(verText) > 0 {
@@ -40,6 +47,7 @@ func SetVersion(verText string) {
 		}
 
 		version = _version
+		rawVersion = verText
 	}
 }
 

@@ -292,7 +292,7 @@ func startStream(kubeconfig *rest.Config, pod *v1.Pod, container string, command
 
 func injectSync(kubeconfig *rest.Config, pod *v1.Pod, container string) error {
 	// Compare sync versions
-	version := upgrade.GetVersion()
+	version := upgrade.GetRawVersion()
 	if version == "" {
 		version = "latest"
 	}
