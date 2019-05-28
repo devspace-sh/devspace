@@ -200,9 +200,9 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 					Merge(&config, overwriteConfig)
 				}
 
-				log.Infof("Loaded config %s from %s with %d overrides", LoadedConfig, constants.DefaultConfigsPath, len(*configDefinition.Overrides))
+				log.Infof("Loaded config %s from %s with %d overrides", loadConfig, constants.DefaultConfigsPath, len(*configDefinition.Overrides))
 			} else {
-				log.Infof("Loaded config %s from %s", LoadedConfig, constants.DefaultConfigsPath)
+				log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
 			}
 		} else {
 			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
@@ -224,7 +224,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		}
 	} else {
 		if configDefinition != nil {
-			log.Infof("Loaded config %s from %s", LoadedConfig, constants.DefaultConfigsPath)
+			log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
 		} else {
 			log.Infof("Loaded config %s", constants.DefaultConfigPath)
 		}
