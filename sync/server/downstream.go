@@ -261,7 +261,16 @@ func walkDir(path string, ignoreMatcher gitignore.IgnoreParser, state map[string
 			continue
 		}
 
-		if f.IsDir() {
+		// Stat is necessary here, because readdir does not follow symlinks and
+		// IsDir() returns false for symlinked folders
+		stat, err := os.Stat(absolutePath)
+		if err != nil {
+			// Woops file is not here anymore -> ignore error
+			return
+		}
+
+		// Check if directory
+		if stat.IsDir() {
 			state[absolutePath] = &remote.Change{
 				Path:  absolutePath,
 				IsDir: true,
@@ -271,9 +280,9 @@ func walkDir(path string, ignoreMatcher gitignore.IgnoreParser, state map[string
 		} else {
 			state[absolutePath] = &remote.Change{
 				Path:          absolutePath,
-				Size:          f.Size(),
-				MtimeUnix:     f.ModTime().Unix(),
-				MtimeUnixNano: f.ModTime().UnixNano(),
+				Size:          stat.Size(),
+				MtimeUnix:     stat.ModTime().Unix(),
+				MtimeUnixNano: stat.ModTime().UnixNano(),
 				IsDir:         false,
 			}
 		}

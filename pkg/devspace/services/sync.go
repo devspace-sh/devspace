@@ -429,7 +429,13 @@ func injectSyncHelper(kubeconfig *rest.Config, pod *v1.Pod, container string, fi
 	}
 
 	hdr.Name = "sync"
+
+	// Set permissions correctly
 	hdr.Mode = 0777
+	hdr.Uid = 0
+	hdr.Uname = "root"
+	hdr.Gid = 0
+	hdr.Gname = "root"
 
 	if err := tarWriter.WriteHeader(hdr); err != nil {
 		return errors.Wrap(err, "tar write header")
