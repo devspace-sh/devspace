@@ -3,7 +3,6 @@ module github.com/devspace-cloud/devspace
 require (
 	cloud.google.com/go v0.34.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
@@ -38,6 +37,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
+	github.com/golang/protobuf v1.3.1
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -81,7 +81,7 @@ require (
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pkg/errors v0.8.0
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
@@ -102,13 +102,11 @@ require (
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
 	github.com/ulikunitz/xz v0.5.5 // indirect
 	github.com/xanzy/ssh-agent v0.2.0 // indirect
-	golang.org/x/net v0.0.0-20181217023233-e147a9138326 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
-	golang.org/x/sys v0.0.0-20181213200352-4d1cda033e06 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
-	google.golang.org/grpc v1.17.0 // indirect
+	google.golang.org/grpc v1.21.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.4
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

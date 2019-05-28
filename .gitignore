@@ -18,3 +18,5 @@
 debug
 .DS_STORE
 .idea
+
+.vscode/ipch

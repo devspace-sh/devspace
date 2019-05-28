@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+
 	"github.com/mgutz/ansi"
 	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
@@ -43,7 +44,7 @@ func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParame
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return err
 	}

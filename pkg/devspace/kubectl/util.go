@@ -87,7 +87,7 @@ func EnsureGoogleCloudClusterRoleBinding(config *latest.Config, client kubernete
 
 	_, err := client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := GetClientConfig(config)
+		clusterConfig, _ := GetRestConfig(config)
 		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
 
@@ -299,7 +299,7 @@ func ForwardPorts(config *latest.Config, kubectlClient kubernetes.Interface, pod
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
 func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
-	config, err := GetClientConfig(devSpaceConfig)
+	config, err := GetRestConfig(devSpaceConfig)
 	if err != nil {
 		return nil, err
 	}

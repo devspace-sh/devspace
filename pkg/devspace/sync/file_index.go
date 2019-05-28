@@ -6,13 +6,13 @@ import (
 )
 
 type fileIndex struct {
-	fileMap      map[string]*fileInformation
+	fileMap      map[string]*FileInformation
 	fileMapMutex sync.Mutex
 }
 
 func newFileIndex() *fileIndex {
 	return &fileIndex{
-		fileMap: make(map[string]*fileInformation),
+		fileMap: make(map[string]*FileInformation),
 	}
 }
 
@@ -28,7 +28,7 @@ func (f *fileIndex) CreateDirInFileMap(dirpath string) {
 		subPath := strings.Join(pathParts[:i], "/")
 
 		if f.fileMap[subPath] == nil && subPath != "" {
-			f.fileMap[subPath] = &fileInformation{
+			f.fileMap[subPath] = &FileInformation{
 				Name:        subPath,
 				IsDirectory: true,
 			}

@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
@@ -208,6 +207,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 			}
 		}
 
+		// Get rest config
+		restConfig, err := kubectl.GetRestConfig(b.helper.Config)
+		if err != nil {
+			return errors.Wrap(err, "get rest config")
+		}
+
 		// Get ignore rules from docker ignore
 		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(contextPath)
 		if ignoreRuleErr != nil {
@@ -217,19 +222,19 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		log.StartWait("Uploading files to build container")
 
 		// Copy complete context
-		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], contextPath, kanikoContextPath, ignoreRules)
+		err = kubectl.Copy(restConfig, buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, contextPath, ignoreRules)
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %v", err)
 		}
 
 		// Copy dockerfile
-		err = sync.CopyToContainer(b.kubectl, buildPod, &buildPod.Spec.InitContainers[0], dockerfilePath, kanikoContextPath, ignoreRules)
+		err = kubectl.Copy(restConfig, buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, ignoreRules)
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %v", err)
 		}
 
 		// Tell init container we are done
-		_, _, err = kubectl.ExecBuffered(b.helper.Config, b.kubectl, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile})
+		_, _, err = kubectl.ExecBuffered(restConfig, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile}, nil)
 		if err != nil {
 			return fmt.Errorf("Error executing command in init container: %v", err)
 		}

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+
 	homedir "github.com/mitchellh/go-homedir"
 )
 
@@ -12,7 +14,7 @@ import (
 const DevSpaceCloudProviderName = "app.devspace.cloud"
 
 // DevSpaceCloudConfigPath holds the path to the cloud config file
-const DevSpaceCloudConfigPath = ".devspace/clouds.yaml"
+var DevSpaceCloudConfigPath = constants.DefaultHomeDevSpaceFolder + "/clouds.yaml"
 
 // ReadCloudsConfig reads the cloud config from the home file
 func ReadCloudsConfig() ([]byte, error) {

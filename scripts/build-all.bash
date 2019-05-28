@@ -64,3 +64,8 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     fi
   done
 done
+
+# build sync helper
+echo "Building sync helper"
+GOARCH=386 GOOS=linux go build -ldflags "-s -w" -o "${DEVSPACE_ROOT}/release/sync" sync/stub/main.go
+shasum -a 256 "${DEVSPACE_ROOT}/release/sync" > "${DEVSPACE_ROOT}/release/sync".sha256

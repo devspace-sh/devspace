@@ -10,10 +10,11 @@ import (
 	"path"
 	"time"
 
-	"github.com/juju/errors"
+	"github.com/pkg/errors"
+	gitignore "github.com/sabhiram/go-gitignore"
 )
 
-func untarAll(reader io.Reader, destPath, prefix string, config *SyncConfig) error {
+func untarAll(reader io.Reader, destPath, prefix string, config *Sync) error {
 	fileCounter := 0
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
@@ -23,32 +24,29 @@ func untarAll(reader io.Reader, destPath, prefix string, config *SyncConfig) err
 	defer gzr.Close()
 
 	tarReader := tar.NewReader(gzr)
-
 	for {
 		shouldContinue, err := untarNext(tarReader, destPath, prefix, config)
-
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "untarNext")
 		} else if shouldContinue == false {
 			return nil
 		}
 
 		fileCounter++
-
 		if fileCounter%500 == 0 {
-			config.Logf("[Downstream] Untared %d files...\n", fileCounter)
+			config.log.Infof("Downstream - Untared %d files...", fileCounter)
 		}
 	}
 }
 
-func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfig) (bool, error) {
+func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bool, error) {
 	config.fileIndex.fileMapMutex.Lock()
 	defer config.fileIndex.fileMapMutex.Unlock()
 
 	header, err := tarReader.Next()
 	if err != nil {
 		if err != io.EOF {
-			return false, errors.Trace(err)
+			return false, errors.Wrap(err, "tar next")
 		}
 
 		return false, nil
@@ -60,33 +58,33 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 
 	// Check if newer file is there and then don't override?
 	stat, err := os.Stat(outFileName)
-
 	if err == nil {
-		if roundMtime(stat.ModTime()) > header.FileInfo().ModTime().Unix() {
+		if stat.ModTime().Unix() > header.FileInfo().ModTime().Unix() {
 			// Update filemap otherwise we download and download again
-			config.fileIndex.fileMap[relativePath] = &fileInformation{
+			config.fileIndex.fileMap[relativePath] = &FileInformation{
 				Name:        relativePath,
-				Mtime:       roundMtime(stat.ModTime()),
+				Mtime:       stat.ModTime().Unix(),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			}
 
-			config.Logf("[Downstream] Don't override %s because file has newer mTime timestamp", relativePath)
+			if stat.IsDir() == false {
+				config.log.Infof("Downstream - Don't override %s because file has newer mTime timestamp", relativePath)
+			}
 			return true, nil
 		}
 	}
 
 	if err := os.MkdirAll(baseName, 0755); err != nil {
-		return false, errors.Trace(err)
+		return false, errors.Wrap(err, "mkdir all base")
 	}
 
 	if header.FileInfo().IsDir() {
 		if err := os.MkdirAll(outFileName, 0755); err != nil {
-			return false, errors.Trace(err)
+			return false, errors.Wrap(err, "mkdir all")
 		}
 
 		config.fileIndex.CreateDirInFileMap(relativePath)
-
 		return true, nil
 	}
 
@@ -100,20 +98,19 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 		// Try again after 5 seconds
 		time.Sleep(time.Second * 5)
 		outFile, err = os.Create(outFileName)
-
 		if err != nil {
-			return false, errors.Trace(err)
+			return false, errors.Wrap(err, "create file")
 		}
 	}
 
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
-		return false, errors.Trace(err)
+		return false, errors.Wrap(err, "copy file to reader")
 	}
 
 	if err := outFile.Close(); err != nil {
-		return false, errors.Trace(err)
+		return false, errors.Wrap(err, "close file")
 	}
 
 	if stat != nil {
@@ -126,16 +123,15 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 	}
 
 	// Set mod time correctly
-	err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
-
+	err = os.Chtimes(outFileName, time.Now(), header.ModTime)
 	if err != nil {
-		return false, errors.Trace(err)
+		return false, errors.Wrap(err, "set time")
 	}
 
 	// Update fileMap so that upstream does not upload the file
-	config.fileIndex.fileMap[relativePath] = &fileInformation{
+	config.fileIndex.fileMap[relativePath] = &FileInformation{
 		Name:        relativePath,
-		Mtime:       header.FileInfo().ModTime().Unix(),
+		Mtime:       header.ModTime.Unix(),
 		Size:        header.FileInfo().Size(),
 		IsDirectory: false,
 	}
@@ -143,97 +139,43 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *SyncConfi
 	return true, nil
 }
 
-func writeTar(files []*fileInformation, config *SyncConfig) (string, map[string]*fileInformation, error) {
-	f, err := ioutil.TempFile("", "")
-
-	if err != nil {
-		return "", nil, errors.Trace(err)
+// RecursiveTar runs recursively over the given path and basepath and tars the found files and folders
+func RecursiveTar(basePath, relativePath string, writtenFiles map[string]*FileInformation, tw *tar.Writer, ignoreMatcher gitignore.IgnoreParser) error {
+	if writtenFiles == nil {
+		writtenFiles = make(map[string]*FileInformation)
 	}
 
-	defer f.Close()
-
-	// Use compression
-	gw := gzip.NewWriter(f)
-	defer gw.Close()
-
-	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
-
-	writtenFiles := make(map[string]*fileInformation)
-
-	for _, element := range files {
-		relativePath := element.Name
-
-		if writtenFiles[relativePath] == nil {
-			err := recursiveTar(config.WatchPath, relativePath, writtenFiles, tarWriter, config)
-
-			if err != nil {
-				config.Logf("[Upstream] Tar failed: %s. Will retry in 4 seconds...\n", err.Error())
-				os.Remove(f.Name())
-
-				time.Sleep(time.Second * 4)
-
-				return writeTar(files, config)
-			}
-		}
-	}
-
-	return f.Name(), writtenFiles, nil
-}
-
-// TODO: Error handling if files are not there
-func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileInformation, tw *tar.Writer, config *SyncConfig) error {
 	absFilepath := path.Join(basePath, relativePath)
-
 	if writtenFiles[relativePath] != nil {
 		return nil
 	}
 
-	config.fileIndex.fileMapMutex.Lock()
-	isExcluded := false
-
 	// Exclude files on the exclude list
-	if config.ignoreMatcher != nil {
-		if config.ignoreMatcher.MatchesPath(relativePath) {
-			isExcluded = true
-		}
-	}
-
-	// Exclude files on the upload exclude list
-	if config.uploadIgnoreMatcher != nil {
-		if config.uploadIgnoreMatcher.MatchesPath(relativePath) {
-			isExcluded = true
-		}
-	}
-	config.fileIndex.fileMapMutex.Unlock()
-
-	if isExcluded {
+	if ignoreMatcher != nil && ignoreMatcher.MatchesPath(relativePath) {
 		return nil
 	}
-
-	stat, err := os.Stat(absFilepath)
 
 	// We skip files that are suddenly not there anymore
+	stat, err := os.Stat(absFilepath)
 	if err != nil {
-		config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
+		// config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
 		return nil
 	}
 
-	fileInformation := createFileInformationFromStat(relativePath, stat, config)
+	fileInformation := createFileInformationFromStat(relativePath, stat)
 	if stat.IsDir() {
 		// Recursively tar folder
-		return tarFolder(basePath, fileInformation, writtenFiles, stat, tw, config)
+		return tarFolder(basePath, fileInformation, writtenFiles, stat, tw, ignoreMatcher)
 	}
 
-	return tarFile(basePath, fileInformation, writtenFiles, stat, tw, config)
+	return tarFile(basePath, fileInformation, writtenFiles, stat, tw)
 }
 
-func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer, config *SyncConfig) error {
+func tarFolder(basePath string, fileInformation *FileInformation, writtenFiles map[string]*FileInformation, stat os.FileInfo, tw *tar.Writer, ignoreMatcher gitignore.IgnoreParser) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 	files, err := ioutil.ReadDir(filepath)
-
 	if err != nil {
-		config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
+		// config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
 		return nil
 	}
 
@@ -241,84 +183,58 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 		// Case empty directory
 		hdr, _ := tar.FileInfoHeader(stat, filepath)
 		hdr.Name = fileInformation.Name
-
-		config.fileIndex.fileMapMutex.Lock()
-		if config.fileIndex.fileMap[fileInformation.Name] != nil {
-			hdr.Mode = fileInformation.RemoteMode
-			hdr.Uid = fileInformation.RemoteUID
-			hdr.Gid = fileInformation.RemoteGID
-		}
-		config.fileIndex.fileMapMutex.Unlock()
-
 		if err := tw.WriteHeader(hdr); err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "tar write header")
 		}
 
 		writtenFiles[fileInformation.Name] = fileInformation
 	}
 
 	for _, f := range files {
-		if err := recursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, config); err != nil {
-			return errors.Trace(err)
+		if err := RecursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, ignoreMatcher); err != nil {
+			return errors.Wrap(err, "recursive tar "+f.Name())
 		}
 	}
 
 	return nil
 }
 
-func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer, config *SyncConfig) error {
+func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map[string]*FileInformation, stat os.FileInfo, tw *tar.Writer) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "open file")
 	}
 
 	defer f.Close()
 
 	hdr, err := tar.FileInfoHeader(stat, filepath)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "create tar file info header")
 	}
 	hdr.Name = fileInformation.Name
-
-	config.fileIndex.fileMapMutex.Lock()
-	if config.fileIndex.fileMap[fileInformation.Name] != nil {
-		hdr.Mode = fileInformation.RemoteMode
-		hdr.Uid = fileInformation.RemoteUID
-		hdr.Gid = fileInformation.RemoteGID
-	}
-	config.fileIndex.fileMapMutex.Unlock()
+	hdr.ModTime = time.Unix(fileInformation.Mtime, 0)
 
 	if err := tw.WriteHeader(hdr); err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "tar write header")
 	}
 
 	if _, err := io.Copy(tw, f); err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "tar copy file")
 	}
 
 	writtenFiles[fileInformation.Name] = fileInformation
 	return f.Close()
 }
 
-func createFileInformationFromStat(relativePath string, stat os.FileInfo, config *SyncConfig) *fileInformation {
-	config.fileIndex.fileMapMutex.Lock()
-	defer config.fileIndex.fileMapMutex.Unlock()
-
-	fileInformation := &fileInformation{
+func createFileInformationFromStat(relativePath string, stat os.FileInfo) *FileInformation {
+	return &FileInformation{
 		Name:        relativePath,
 		Size:        stat.Size(),
-		Mtime:       roundMtime(stat.ModTime()),
+		Mtime:       stat.ModTime().Unix(),
+		MtimeNano:   stat.ModTime().UnixNano(),
 		IsDirectory: stat.IsDir(),
 	}
-
-	if config.fileIndex.fileMap[relativePath] != nil {
-		fileInformation.RemoteMode = config.fileIndex.fileMap[relativePath].RemoteMode
-		fileInformation.RemoteGID = config.fileIndex.fileMap[relativePath].RemoteGID
-		fileInformation.RemoteUID = config.fileIndex.fileMap[relativePath].RemoteUID
-	}
-
-	return fileInformation
 }

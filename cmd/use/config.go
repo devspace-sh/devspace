@@ -3,7 +3,9 @@ package use
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -44,14 +46,14 @@ func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 	}
 
 	configs := configs.Configs{}
-	err = configutil.LoadConfigs(&configs, configutil.DefaultConfigsPath)
+	err = configutil.LoadConfigs(&configs, constants.DefaultConfigsPath)
 	if err != nil {
-		log.Fatalf("Cannot load %s: %v", configutil.DefaultConfigsPath, err)
+		log.Fatalf("Cannot load %s: %v", constants.DefaultConfigsPath, err)
 	}
 
 	// Check if config exists
 	if _, ok := configs[args[0]]; ok == false {
-		log.Fatalf("Config '%s' does not exist in %s", args[0], configutil.DefaultConfigsPath)
+		log.Fatalf("Config '%s' does not exist in %s", args[0], constants.DefaultConfigsPath)
 	}
 
 	// Load generated config
