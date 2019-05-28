@@ -41,7 +41,7 @@ func TestDownstreamServer(t *testing.T) {
 	serverReader, serverWriter := io.Pipe()
 
 	go func() {
-		err := StartDownstreamServer(fromDir, []string{"emptydir"}, serverReader, clientWriter)
+		err := StartDownstreamServer(fromDir, []string{"emptydir"}, serverReader, clientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -190,7 +190,7 @@ func TestUpstreamServer(t *testing.T) {
 	serverReader, serverWriter := io.Pipe()
 
 	go func() {
-		err := StartUpstreamServer(toDir, serverReader, clientWriter)
+		err := StartUpstreamServer(toDir, serverReader, clientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}

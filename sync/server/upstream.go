@@ -14,8 +14,8 @@ import (
 )
 
 // StartUpstreamServer starts a new upstream server with the given reader and writer
-func StartUpstreamServer(uploadPath string, reader io.Reader, writer io.Writer) error {
-	pipe := util.NewStdStreamJoint(reader, writer)
+func StartUpstreamServer(uploadPath string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
+	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
 

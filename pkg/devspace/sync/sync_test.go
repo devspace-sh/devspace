@@ -95,7 +95,7 @@ func TestInitialSync(t *testing.T) {
 	excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
 
 	go func() {
-		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter)
+		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -116,7 +116,7 @@ func TestInitialSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter)
+		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -175,7 +175,7 @@ func TestNormalSync(t *testing.T) {
 	excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
 
 	go func() {
-		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter)
+		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -196,7 +196,7 @@ func TestNormalSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter)
+		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}

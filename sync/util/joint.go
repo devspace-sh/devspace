@@ -34,15 +34,18 @@ type StdStreamJoint struct {
 	closed bool
 	local  *StdinAddr
 	remote *StdinAddr
+
+	exitOnClose bool
 }
 
 // NewStdStreamJoint is used to implement the connection interface so we can connect to the rpc server
-func NewStdStreamJoint(in io.Reader, out io.Writer) *StdStreamJoint {
+func NewStdStreamJoint(in io.Reader, out io.Writer, exitOnClose bool) *StdStreamJoint {
 	return &StdStreamJoint{
-		local:  NewStdinAddr("local"),
-		remote: NewStdinAddr("remote"),
-		in:     in,
-		out:    out,
+		local:       NewStdinAddr("local"),
+		remote:      NewStdinAddr("remote"),
+		in:          in,
+		out:         out,
+		exitOnClose: exitOnClose,
 	}
 }
 
@@ -70,9 +73,11 @@ func (s *StdStreamJoint) Write(b []byte) (n int, err error) {
 func (s *StdStreamJoint) Close() error {
 	s.closed = true
 
-	// We kill ourself here because the streams are closed
-	fmt.Fprintf(os.Stderr, "Streams are closed")
-	os.Exit(1)
+	if s.exitOnClose {
+		// We kill ourself here because the streams are closed
+		fmt.Fprintf(os.Stderr, "Streams are closed")
+		os.Exit(1)
+	}
 
 	return nil
 }
