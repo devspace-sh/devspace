@@ -286,7 +286,9 @@ func startStream(kubeconfig *rest.Config, pod *v1.Pod, container string, command
 			stderr = []byte{}
 		}
 
-		log.Warnf("Error in exec connection %s to pod %s/%s: %s %v", strings.Join(command, " "), pod.Namespace, pod.Name, string(stderr), err)
+		// We currently just kill the currently running command when this happens, maybe in future we should try to reconnect?
+		log.WriteString("\n\r")
+		log.Fatalf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err)
 	}
 }
 
