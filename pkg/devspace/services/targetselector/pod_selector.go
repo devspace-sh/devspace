@@ -16,7 +16,7 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 	}
 
 	if labelSelector != nil {
-		podList, err := client.Core().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: *labelSelector,
 		})
 		if err != nil {
@@ -61,7 +61,7 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 		}
 	}
 
-	podList, err := client.Core().Pods(namespace).List(metav1.ListOptions{})
+	podList, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

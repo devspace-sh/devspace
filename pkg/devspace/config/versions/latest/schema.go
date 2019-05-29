@@ -137,15 +137,25 @@ type DeploymentConfig struct {
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	Containers          *[]*ContainerConfig  `yaml:"containers,omitempty"`
-	Replicas            *int                 `yaml:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
-	Volumes             *[]*VolumeConfig     `yaml:"volumes,omitempty"`
-	Service             *ServiceConfig       `yaml:"service,omitempty"`
-	ServiceName         *string              `yaml:"serviceName,omitempty"`
-	PodManagementPolicy *string              `yaml:"podManagementPolicy,omitempty"`
-	PullSecrets         *[]*string           `yaml:"pullSecrets,omitempty"`
+	Containers          *[]*ContainerConfig     `yaml:"containers,omitempty"`
+	Replicas            *int                    `yaml:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
+	Volumes             *[]*VolumeConfig        `yaml:"volumes,omitempty"`
+	Service             *ServiceConfig          `yaml:"service,omitempty"`
+	ServiceName         *string                 `yaml:"serviceName,omitempty"`
+	PodManagementPolicy *string                 `yaml:"podManagementPolicy,omitempty"`
+	PullSecrets         *[]*string              `yaml:"pullSecrets,omitempty"`
+	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
+}
+
+// ComponentConfigOptions defines the specific helm options used during deployment of a component
+type ComponentConfigOptions struct {
+	Wait            *bool   `yaml:"wait,omitempty"`
+	Rollback        *bool   `yaml:"rollback,omitempty"`
+	Force           *bool   `yaml:"force,omitempty"`
+	Timeout         *int64  `yaml:"timeout,omitempty"`
+	TillerNamespace *string `yaml:"tillerNamespace,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
@@ -327,16 +337,6 @@ type SelectorConfig struct {
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster
 type Cluster struct {
-	KubeContext *string      `yaml:"kubeContext,omitempty"`
-	Namespace   *string      `yaml:"namespace,omitempty"`
-	APIServer   *string      `yaml:"apiServer,omitempty"`
-	CaCert      *string      `yaml:"caCert,omitempty"`
-	User        *ClusterUser `yaml:"user,omitempty"`
-}
-
-// ClusterUser is a user with its username and its client certificate
-type ClusterUser struct {
-	ClientCert *string `yaml:"clientCert,omitempty"`
-	ClientKey  *string `yaml:"clientKey,omitempty"`
-	Token      *string `yaml:"token,omitempty"`
+	KubeContext *string `yaml:"kubeContext,omitempty"`
+	Namespace   *string `yaml:"namespace,omitempty"`
 }

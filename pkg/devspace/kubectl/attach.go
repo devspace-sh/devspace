@@ -21,7 +21,7 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
 
-	attachRequest := client.Core().RESTClient().Post().
+	attachRequest := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -70,7 +70,7 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 
 // AttachStream attaches to a container in a certain pod
 func AttachStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	kubeconfig, err := GetClientConfig(config)
+	kubeconfig, err := GetRestConfig(config)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
-	"k8s.io/client-go/tools/clientcmd"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -18,6 +17,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/mgutz/ansi"
@@ -25,18 +25,6 @@ import (
 
 // ConfigInterface defines the pattern of every config
 type ConfigInterface interface{}
-
-// DefaultConfigsPath is the default configs path to use
-const DefaultConfigsPath = "devspace-configs.yaml"
-
-// DefaultConfigPath is the default config path to use
-const DefaultConfigPath = "devspace.yaml"
-
-// DefaultVarsPath is the default vars path to use
-const DefaultVarsPath = "devspace-vars.yaml"
-
-// DefaultDevSpaceSelectorName is the default app selector
-const DefaultDevSpaceSelectorName = "app-selector"
 
 // LoadedConfig is the config that was loaded from the configs file
 var LoadedConfig string
@@ -61,13 +49,13 @@ func configExistsInPath(path string) bool {
 	}
 
 	// Check devspace.yaml
-	_, err := os.Stat(filepath.Join(path, DefaultConfigPath))
+	_, err := os.Stat(filepath.Join(path, constants.DefaultConfigPath))
 	if err == nil {
 		return true
 	}
 
 	// Check devspace-configs.yaml
-	_, err = os.Stat(filepath.Join(path, DefaultConfigsPath))
+	_, err = os.Stat(filepath.Join(path, constants.DefaultConfigsPath))
 	if err == nil {
 		return true
 	}
@@ -117,9 +105,9 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		config           = latest.New().(*latest.Config)
 		configRaw        = latest.New().(*latest.Config)
 		configDefinition *configs.ConfigDefinition
-		configPath       = filepath.Join(basePath, DefaultConfigPath)
-		configsPath      = filepath.Join(basePath, DefaultConfigsPath)
-		varsPath         = filepath.Join(basePath, DefaultVarsPath)
+		configPath       = filepath.Join(basePath, constants.DefaultConfigPath)
+		configsPath      = filepath.Join(basePath, constants.DefaultConfigsPath)
+		varsPath         = filepath.Join(basePath, constants.DefaultVarsPath)
 	)
 
 	// Check if configs.yaml exists
@@ -212,19 +200,19 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 					Merge(&config, overwriteConfig)
 				}
 
-				log.Infof("Loaded config %s from %s with %d overrides", LoadedConfig, DefaultConfigsPath, len(*configDefinition.Overrides))
+				log.Infof("Loaded config %s from %s with %d overrides", loadConfig, constants.DefaultConfigsPath, len(*configDefinition.Overrides))
 			} else {
-				log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+				log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
 			}
 		} else {
-			log.Infof("Loaded config from %s", DefaultConfigPath)
+			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
 		}
 
 		// Exchange kube context if necessary, but only if we don't load the base config
 		// we do this to avoid saving the kube context on commands like
 		// devspace add deployment && devspace add image etc.
 		if generatedConfig.CloudSpace != nil {
-			if config.Cluster == nil || (config.Cluster.KubeContext == nil && config.Cluster.APIServer == nil) {
+			if config.Cluster == nil || config.Cluster.KubeContext == nil {
 				if generatedConfig.CloudSpace.KubeContext == "" {
 					return nil, nil, fmt.Errorf("No space configured!\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 				}
@@ -236,9 +224,9 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		}
 	} else {
 		if configDefinition != nil {
-			log.Infof("Loaded config %s from %s", LoadedConfig, DefaultConfigsPath)
+			log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
 		} else {
-			log.Infof("Loaded config %s", DefaultConfigPath)
+			log.Infof("Loaded config %s", constants.DefaultConfigPath)
 		}
 	}
 
@@ -465,20 +453,18 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 		return *config.Cluster.Namespace, nil
 	}
 
-	if config == nil || config.Cluster == nil || config.Cluster.APIServer == nil {
-		kubeConfig, err := kubeconfig.ReadKubeConfig(clientcmd.RecommendedHomeFile)
-		if err != nil {
-			return "", err
-		}
+	kubeConfig, err := kubeconfig.LoadRawConfig()
+	if err != nil {
+		return "", err
+	}
 
-		activeContext := kubeConfig.CurrentContext
-		if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
-			activeContext = *config.Cluster.KubeContext
-		}
+	activeContext := kubeConfig.CurrentContext
+	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
+		activeContext = *config.Cluster.KubeContext
+	}
 
-		if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
-			return kubeConfig.Contexts[activeContext].Namespace, nil
-		}
+	if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
+		return kubeConfig.Contexts[activeContext].Namespace, nil
 	}
 
 	return "default", nil

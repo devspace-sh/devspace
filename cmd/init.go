@@ -7,17 +7,17 @@ import (
 	"regexp"
 	"strings"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -98,13 +98,13 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.RemoveAll(".devspace")
 
 	// Delete configs path
-	os.Remove(configutil.DefaultConfigsPath)
+	os.Remove(constants.DefaultConfigsPath)
 
 	// Delete config & overwrite config
-	os.Remove(configutil.DefaultConfigPath)
+	os.Remove(constants.DefaultConfigPath)
 
 	// Delete config & overwrite config
-	os.Remove(configutil.DefaultVarsPath)
+	os.Remove(constants.DefaultVarsPath)
 
 	// Create config
 	config := configutil.InitConfig()
@@ -280,7 +280,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 	connectCluster := false
 
 	// Check if kubectl exists
-	if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
+	if kubeconfig.ConfigExists() {
 		selectedOption := survey.Question(&survey.QuestionOptions{
 			Question:     "Which Kubernetes cluster do you want to use?",
 			DefaultValue: useDevSpaceCloud,

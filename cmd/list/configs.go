@@ -6,8 +6,10 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -45,18 +47,18 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Check if configs.yaml exists
-	_, err = os.Stat(configutil.DefaultConfigsPath)
+	_, err = os.Stat(constants.DefaultConfigsPath)
 	if err != nil {
-		log.Infof("Please create a '%s' to specify multiple configurations", configutil.DefaultConfigsPath)
+		log.Infof("Please create a '%s' to specify multiple configurations", constants.DefaultConfigsPath)
 		return
 	}
 
 	configs := configs.Configs{}
 
 	// Get configs
-	err = configutil.LoadConfigs(&configs, configutil.DefaultConfigsPath)
+	err = configutil.LoadConfigs(&configs, constants.DefaultConfigsPath)
 	if err != nil {
-		log.Fatalf("Error loading %s: %v", configutil.DefaultConfigsPath, err)
+		log.Fatalf("Error loading %s: %v", constants.DefaultConfigsPath, err)
 	}
 
 	// Load generated config

@@ -66,7 +66,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 			loop = false
 
 			// Get all pods
-			pods, err = client.Core().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +104,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 		}
 	} else {
 		// Get all pods
-		pods, err = client.Core().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +252,6 @@ func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStat
 		containerProblem.Ready = false
 
 		if containerStatus.State.Terminated != nil {
-			hasProblem = true
 			containerProblem.Terminated = true
 			containerProblem.TerminatedAt = time.Since(containerStatus.State.Terminated.FinishedAt.Time).Round(time.Second)
 			containerProblem.Reason = containerStatus.State.Terminated.Reason
@@ -260,6 +259,7 @@ func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStat
 
 			containerProblem.LastExitCode = int(containerStatus.State.Terminated.ExitCode)
 			if containerProblem.LastExitCode != 0 {
+				hasProblem = true
 				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {

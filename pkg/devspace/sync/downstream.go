@@ -1,535 +1,376 @@
 package sync
 
 import (
-	"bytes"
-	"fmt"
+	"context"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/juju/errors"
 	"github.com/juju/ratelimit"
+	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/sync/remote"
+	"github.com/devspace-cloud/devspace/sync/util"
 )
 
 type downstream struct {
 	interrupt chan bool
-	config    *SyncConfig
+	sync      *Sync
 
-	stdinPipe  io.WriteCloser
-	stdoutPipe io.ReadCloser
-	stderrPipe io.ReadCloser
+	reader io.ReadCloser
+	writer io.WriteCloser
+	client remote.DownstreamClient
 }
 
-func (d *downstream) start() error {
-	d.interrupt = make(chan bool, 1)
+const downloadFilesBufferSize = 64
 
-	err := d.startShell()
+// newDownstream creates a new downstream handler with the given parameters
+func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*downstream, error) {
+	var (
+		clientReader io.Reader = reader
+		clientWriter io.Writer = writer
+	)
+
+	// Apply limits if specified
+	if sync.Options.DownstreamLimit > 0 {
+		clientReader = ratelimit.Reader(reader, ratelimit.NewBucketWithRate(float64(sync.Options.DownstreamLimit), sync.Options.DownstreamLimit))
+	}
+	if sync.Options.UpstreamLimit > 0 {
+		clientWriter = ratelimit.Writer(writer, ratelimit.NewBucketWithRate(float64(sync.Options.UpstreamLimit), sync.Options.UpstreamLimit))
+	}
+
+	// Create client connection
+	conn, err := util.NewClientConnection(clientReader, clientWriter)
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Wrap(err, "new client connection")
 	}
 
-	return nil
-}
-
-func (d *downstream) startShell() error {
-	if d.config.testing == false {
-		stdinReader, stdinWriter, _ := os.Pipe()
-		stdoutReader, stdoutWriter, _ := os.Pipe()
-		stderrReader, stderrWriter, _ := os.Pipe()
-
-		go func() {
-			err := kubectl.ExecStream(d.config.DevSpaceConfig, d.config.Kubectl, d.config.Pod, d.config.Container.Name, []string{"sh"}, false, stdinReader, stdoutWriter, stderrWriter)
-			if err != nil {
-				d.config.Error(errors.Trace(err))
-			}
-		}()
-
-		d.stdinPipe = stdinWriter
-		d.stdoutPipe = stdoutReader
-		d.stderrPipe = stderrReader
-	} else {
-		var err error
-
-		cmd := exec.Command("sh")
-
-		d.stdinPipe, err = cmd.StdinPipe()
-		if err != nil {
-			return err
-		}
-
-		d.stdoutPipe, err = cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-
-		d.stderrPipe, err = cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return &downstream{
+		interrupt: make(chan bool, 1),
+		sync:      sync,
+		reader:    reader,
+		writer:    writer,
+		client:    remote.NewDownstreamClient(conn),
+	}, nil
 }
 
 func (d *downstream) populateFileMap() error {
-	createFiles, err := d.collectChanges(nil)
+	changes, err := d.collectChanges()
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Wrap(err, "collect changes")
 	}
 
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
+	d.sync.fileIndex.fileMapMutex.Lock()
+	defer d.sync.fileIndex.fileMapMutex.Unlock()
 
-	for _, element := range createFiles {
-		if d.config.fileIndex.fileMap[element.Name] == nil {
-			d.config.fileIndex.fileMap[element.Name] = element
+	for _, element := range changes {
+		if d.sync.fileIndex.fileMap[element.Path] == nil {
+			d.sync.fileIndex.fileMap[element.Path] = parseFileInformation(element)
 		}
 	}
 
 	return nil
 }
 
-func (d *downstream) mainLoop() error {
-	lastAmountChanges := 0
+func (d *downstream) collectChanges() ([]*remote.Change, error) {
+	changes := make([]*remote.Change, 0, 128)
+
+	// Create a change client and collect all changes
+	changesClient, err := d.client.Changes(context.Background(), &remote.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "start retrieving changes")
+	}
 
 	for {
-		removeFiles := d.cloneFileMap()
-
-		// Check for changes remotely
-		createFiles, err := d.collectChanges(removeFiles)
-		if err != nil {
-			return errors.Trace(err)
+		changeChunk, err := changesClient.Recv()
+		if changeChunk != nil {
+			for _, change := range changeChunk.Changes {
+				if d.shouldKeep(change) {
+					changes = append(changes, change)
+				}
+			}
 		}
 
-		amountChanges := len(createFiles) + len(removeFiles)
-		if lastAmountChanges > 0 && amountChanges == lastAmountChanges {
-			err = d.applyChanges(createFiles, removeFiles)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, errors.Wrap(err, "recv change")
+		}
+	}
+
+	return changes, nil
+}
+
+func (d *downstream) mainLoop() error {
+	lastAmountChanges := int64(0)
+
+	for {
+		// Check for changes remotely
+		changeAmount, err := d.client.ChangesCount(context.Background(), &remote.Empty{})
+		if err != nil {
+			return errors.Wrap(err, "count changes")
+		}
+
+		// Compare change amount
+		if lastAmountChanges > 0 && changeAmount.Amount == lastAmountChanges {
+			changes, err := d.collectChanges()
 			if err != nil {
-				return errors.Trace(err)
+				return errors.Wrap(err, "collect changes")
+			}
+
+			err = d.applyChanges(changes)
+			if err != nil {
+				return errors.Wrap(err, "apply changes")
 			}
 		}
 
 		select {
 		case <-d.interrupt:
 			return nil
-		case <-time.After(1300 * time.Millisecond):
+		case <-time.After(1700 * time.Millisecond):
 			break
 		}
 
-		lastAmountChanges = len(createFiles) + len(removeFiles)
+		lastAmountChanges = changeAmount.Amount
 	}
 }
 
-func (d *downstream) cloneFileMap() map[string]*fileInformation {
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
+func (d *downstream) shouldKeep(change *remote.Change) bool {
+	d.sync.fileIndex.fileMapMutex.Lock()
+	defer d.sync.fileIndex.fileMapMutex.Unlock()
 
-	mapClone := make(map[string]*fileInformation)
-
-	for key, value := range d.config.fileIndex.fileMap {
-		if value.IsSymbolicLink {
-			continue
-		}
-
-		mapClone[key] = &fileInformation{
-			Name:        value.Name,
-			Size:        value.Size,
-			Mtime:       value.Mtime,
-			IsDirectory: value.IsDirectory,
-		}
-	}
-
-	return mapClone
-}
-
-func (d *downstream) collectChanges(removeFiles map[string]*fileInformation) ([]*fileInformation, error) {
-	createFiles := make([]*fileInformation, 0, 128)
-	destPathFound := false
-
-	// Write find command to stdin pipe
-	cmd := getFindCommand(d.config.DestPath)
-	_, err := d.stdinPipe.Write([]byte(cmd))
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	buf := make([]byte, 0, 512)
-	overlap := ""
-	done := false
-
-	var downloadReader io.Reader = d.stdoutPipe
-	if d.config.DownstreamLimit > 0 {
-		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
-	}
-
-	for done == false {
-		n, err := downloadReader.Read(buf[:cap(buf)])
-		buf = buf[:n]
-
-		if n == 0 {
-			if err == nil {
-				continue
-			}
-			if err == io.EOF {
-				return nil, errors.Trace(fmt.Errorf("\n[Downstream] Stream closed unexpectedly"))
-			}
-
-			return nil, errors.Trace(err)
-		}
-
-		// Error reading from stdout
-		if err != nil && err != io.EOF {
-			return nil, errors.Trace(err)
-		}
-
-		done, overlap, err = d.parseLines(string(buf), overlap, &createFiles, removeFiles, &destPathFound)
-		if err != nil {
-			if _, ok := err.(parsingError); ok {
-				time.Sleep(time.Second * 4)
-				return d.collectChanges(removeFiles)
-			}
-
-			// No trace here because it could be a parsing error
-			return nil, err
-		}
-	}
-
-	if destPathFound == false {
-		return nil, errors.New("DestPath not found, find command did not execute correctly")
-	}
-
-	return createFiles, nil
-}
-
-func (d *downstream) parseLines(buffer, overlap string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation, destPathFound *bool) (bool, string, error) {
-	lines := strings.Split(buffer, "\n")
-
-	for index, element := range lines {
-		line := ""
-
-		if index == 0 {
-			if len(lines) > 1 {
-				line = overlap + element
-			} else {
-				overlap += element
-			}
-		} else if index == len(lines)-1 {
-			overlap = element
-		} else {
-			line = element
-		}
-
-		if line == EndAck || overlap == EndAck {
-			return true, overlap, nil
-		} else if line == ErrorAck || overlap == ErrorAck {
-			return true, "", parsingError{
-				msg: "Parsing Error",
-			}
-		} else if line != "" {
-			destPath, err := d.evaluateFile(line, createFiles, removeFiles)
-			if destPath {
-				*destPathFound = destPath
-			}
-
-			if err != nil {
-				return true, "", errors.Trace(err)
-			}
-		}
-	}
-
-	return false, overlap, nil
-}
-
-func (d *downstream) evaluateFile(fileline string, createFiles *[]*fileInformation, removeFiles map[string]*fileInformation) (bool, error) {
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
-
-	fileInformation, err := parseFileInformation(fileline, d.config.DestPath)
-
-	// Error parsing line
-	if err != nil {
-		return false, errors.Trace(err)
-	}
-
-	// No file found
-	if fileInformation == nil {
-		return true, nil
-	}
-
-	// File found don't delete it
-	delete(removeFiles, fileInformation.Name)
-
-	// Update mode, gid & uid if exists
-	if d.config.fileIndex.fileMap[fileInformation.Name] != nil {
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteMode = fileInformation.RemoteMode
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteGID = fileInformation.RemoteGID
-		d.config.fileIndex.fileMap[fileInformation.Name].RemoteUID = fileInformation.RemoteUID
+	// Is a delete change?
+	if change.ChangeType == remote.ChangeType_DELETE {
+		return shouldRemoveLocal(filepath.Join(d.sync.LocalPath, change.Path), parseFileInformation(change), d.sync)
 	}
 
 	// Exclude symlinks
-	if fileInformation.IsSymbolicLink {
-		// Add them to the fileMap though
-		d.config.fileIndex.fileMap[fileInformation.Name] = fileInformation
-	}
+	// if fileInformation.IsSymbolicLink {
+	// Add them to the fileMap though
+	// d.config.fileIndex.fileMap[fileInformation.Name] = fileInformation
+	// }
 
 	// Should we download the file / folder?
-	if shouldDownload(fileInformation, d.config) {
-		*createFiles = append(*createFiles, fileInformation)
-	}
-
-	return false, nil
+	return shouldDownload(change, d.sync)
 }
 
-func (d *downstream) applyChanges(createFiles []*fileInformation, removeFiles map[string]*fileInformation) error {
-	var err error
+func (d *downstream) applyChanges(changes []*remote.Change) error {
+	var (
+		download = make([]*remote.Change, 0, len(changes)/2)
+		remove   = make([]*remote.Change, 0, len(changes)/2)
+	)
 
-	downloadFiles := make([]*fileInformation, 0, int(len(createFiles)/2))
-	createFolders := make([]*fileInformation, 0, int(len(createFiles)/2))
-	tempDownloadpath := ""
+	// Skip if there are no changes
+	if len(changes) == 0 {
+		return nil
+	}
 
-	// Determine folder creates and file creates and separate them
-	for _, element := range createFiles {
-		if element.IsDirectory {
-			createFolders = append(createFolders, element)
+	// determine what to delete and what to download
+	for _, change := range changes {
+		if change.ChangeType == remote.ChangeType_DELETE {
+			remove = append(remove, change)
 		} else {
-			downloadFiles = append(downloadFiles, element)
+			download = append(download, change)
 		}
 	}
 
-	// Download files first without locking the fileMap so upstream has more time to process other changes
-	if len(downloadFiles) > 0 {
-		tempDownloadpath, err = d.downloadFiles(downloadFiles)
+	// Remove all files and folders that should be deleted first and we ignore errors
+	d.remove(remove)
 
+	// Extract downloaded archive
+	if len(download) > 0 {
+		reader, writer, err := os.Pipe()
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "create pipe")
 		}
 
-		defer os.Remove(tempDownloadpath)
-	}
+		defer writer.Close()
+		defer reader.Close()
 
-	d.removeFilesAndFolders(removeFiles)
-	d.createFolders(createFolders)
-
-	if len(downloadFiles) > 0 {
-		f, err := os.Open(tempDownloadpath)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		defer f.Close()
+		errorChan := make(chan error)
+		go func() {
+			errorChan <- d.downloadFiles(writer, download)
+		}()
 
 		// Untaring all downloaded files to the right location
 		// this can be a lengthy process when we downloaded a lot of files
-		err = untarAll(f, d.config.WatchPath, d.config.DestPath, d.config)
+		err = untarAll(reader, d.sync.LocalPath, "", d.sync)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Wrap(err, "untar files")
+		}
+
+		err = <-errorChan
+		if err != nil {
+			return errors.Wrap(err, "download files")
 		}
 	}
 
-	d.config.Logf("[Downstream] Successfully processed %d change(s)", len(createFiles)+len(removeFiles))
+	d.sync.log.Infof("Downstream - Successfully processed %d change(s)", len(changes))
 	return nil
 }
 
-func (d *downstream) downloadFiles(files []*fileInformation) (string, error) {
-	var buffer bytes.Buffer
-	lenFiles := len(files)
+// downloadFiles downloads the given files from the remote server and writes the contents into the given writer
+func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Change) error {
+	defer writer.Close()
 
-	if lenFiles > 3 {
+	// Print log message
+	if len(changes) <= 3 || d.sync.Options.Verbose {
+		for _, element := range changes {
+			d.sync.log.Infof("Downstream - Download file %s, size: %d", element.Path, element.Size)
+		}
+	} else if len(changes) > 3 {
 		filesize := int64(0)
-
-		for _, v := range files {
+		for _, v := range changes {
 			filesize += v.Size
 		}
 
-		d.config.Logf("[Downstream] Download %d files (size: %d)", lenFiles, filesize)
+		d.sync.log.Infof("Downstream - Download %d files (size: %d)", len(changes), filesize)
 	}
 
-	// Each file is represented in one line
-	for _, element := range files {
-		if lenFiles <= 3 || d.config.Verbose {
-			d.config.Logf("[Downstream] Download file %s, size: %d", element.Name, element.Size)
-		}
-
-		buffer.WriteString(d.config.DestPath + element.Name)
-		buffer.WriteString("\n")
-	}
-
-	filenames := buffer.String()
-
-	// TODO: Implement timeout to prevent potential endless loop
-	cmd := "fileSize=" + strconv.Itoa(len(filenames)) + `;
-					tmpFileInput="/tmp/devspace-downstream-input";
-					tmpFileOutput="/tmp/devspace-downstream-output";
-					mkdir -p /tmp;
-
-					pid=$$;
-					cat </proc/$pid/fd/0 >"$tmpFileInput" &
-					ddPid=$!;
-
-					echo "` + StartAck + `";
-
-					while true; do
-							bytesRead=$(stat -c "%s" "$tmpFileInput" 2>/dev/null || printf "0");
-						
-							if [ "$bytesRead" = "$fileSize" ]; then
-									kill $ddPid;
-									break;
-							fi;
-
-							sleep 0.1;
-					done;
-					tar -czf "$tmpFileOutput" -T "$tmpFileInput" 2>/tmp/devspace-downstream-error;
-					(>&2 echo "` + StartAck + `");
-					(>&2 echo $(stat -c "%s" "$tmpFileOutput"));
-					(>&2 echo "` + EndAck + `");
-					cat "$tmpFileOutput";
-		` // We need that extra new line, otherwise the command is not executed properly
-
-	// Write command to stdin
-	_, err := d.stdinPipe.Write([]byte(cmd))
+	// Create new download client
+	downloadClient, err := d.client.Download(context.Background())
 	if err != nil {
-		return "", errors.Trace(err)
+		return errors.Wrap(err, "download files")
 	}
 
-	// Wait till remote is ready to receive filenames
-	err = waitTill(StartAck, d.stdoutPipe)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
+	// Send files to download
+	downloadFiles := make([]string, 0, downloadFilesBufferSize)
+	for _, change := range changes {
+		downloadFiles = append(downloadFiles, change.Path)
 
-	// Send filenames to tar to remote
-	_, err = d.stdinPipe.Write([]byte(filenames))
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	// Wait till remote wrote tar and sent us the tar size
-	readString, err := readTill(EndAck, d.stderrPipe)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	// Parse tar size
-	splitted := strings.Split(readString, "\n")
-
-	if splitted[len(splitted)-1] != EndAck {
-		return "", fmt.Errorf("[Downstream] Cannot find %s in %s", EndAck, readString)
-	}
-
-	tarSize, err := strconv.ParseInt(splitted[len(splitted)-2], 10, 64)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-	if tarSize == 0 {
-		return "", errors.New("[Downstream] Empty tar")
-	}
-
-	return d.downloadArchive(tarSize)
-}
-
-func (d *downstream) downloadArchive(tarSize int64) (string, error) {
-	// Open file where tar will be written to
-	tempFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	defer tempFile.Close()
-
-	// Apply rate limit if specified
-	var downloadReader io.Reader = d.stdoutPipe
-	if d.config.DownstreamLimit > 0 {
-		downloadReader = ratelimit.Reader(d.stdoutPipe, ratelimit.NewBucketWithRate(float64(d.config.DownstreamLimit), d.config.DownstreamLimit))
-	}
-
-	// Write From stdout to temp file
-	bytesRead, err := io.CopyN(tempFile, downloadReader, tarSize)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-	if bytesRead != tarSize {
-		return "", fmt.Errorf("[Downstream] Downloaded tar has wrong filesize: got %d, expected: %d", bytesRead, tarSize)
-	}
-
-	return tempFile.Name(), nil
-}
-
-func (d *downstream) removeFilesAndFolders(removeFiles map[string]*fileInformation) {
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
-
-	fileMap := d.config.fileIndex.fileMap
-
-	// Remove Files & Folders
-	numRemoveFiles := len(removeFiles)
-
-	if numRemoveFiles > 3 {
-		d.config.Logf("[Downstream] Remove %d files", numRemoveFiles)
-	}
-
-	for key, value := range removeFiles {
-		absFilepath := filepath.Join(d.config.WatchPath, key)
-
-		if shouldRemoveLocal(absFilepath, value, d.config) {
-			if numRemoveFiles <= 3 || d.config.Verbose {
-				d.config.Logf("[Downstream] Remove %s", key)
+		if len(downloadFiles) >= downloadFilesBufferSize {
+			err = downloadClient.Send(&remote.Paths{
+				Paths: downloadFiles,
+			})
+			if err != nil {
+				return errors.Wrap(err, "send path")
 			}
 
-			if value.IsDirectory {
-				deleteSafeRecursive(d.config.WatchPath, key, fileMap, removeFiles, d.config)
+			downloadFiles = make([]string, 0, downloadFilesBufferSize)
+		}
+	}
+
+	if len(downloadFiles) >= 0 {
+		err = downloadClient.Send(&remote.Paths{
+			Paths: downloadFiles,
+		})
+		if err != nil {
+			return errors.Wrap(err, "send path")
+		}
+	}
+
+	// We finish sending and start receiving the tar
+	err = downloadClient.CloseSend()
+	if err != nil {
+		return errors.Wrap(err, "close send")
+	}
+
+	// Download tar archive into the writer
+	for {
+		chunk, err := downloadClient.Recv()
+		if chunk != nil {
+			_, err := writer.Write(chunk.Content)
+			if err != nil {
+				return errors.Wrap(err, "write chunk")
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "download recv")
+		}
+	}
+
+	return nil
+}
+
+func (d *downstream) remove(remove []*remote.Change) {
+	d.sync.fileIndex.fileMapMutex.Lock()
+	defer d.sync.fileIndex.fileMapMutex.Unlock()
+
+	fileMap := d.sync.fileIndex.fileMap
+
+	// Remove Files & Folders
+	numRemoveFiles := len(remove)
+	if numRemoveFiles > 3 {
+		d.sync.log.Infof("Downstream - Remove %d files", numRemoveFiles)
+	}
+
+	for _, change := range remove {
+		absFilepath := filepath.Join(d.sync.LocalPath, change.Path)
+		if shouldRemoveLocal(absFilepath, parseFileInformation(change), d.sync) {
+			if numRemoveFiles <= 3 || d.sync.Options.Verbose {
+				d.sync.log.Infof("Downstream - Remove %s", change.Path)
+			}
+
+			if change.IsDir {
+				d.deleteSafeRecursive(change.Path, remove)
 			} else {
 				err := os.Remove(absFilepath)
 				if err != nil {
 					if os.IsNotExist(err) == false {
-						d.config.Logf("[Downstream] Skip file delete %s: %v", key, err)
+						d.sync.log.Infof("Downstream - Skip file delete %s: %v", change.Path, err)
 					}
 				}
 			}
 		}
 
-		delete(fileMap, key)
+		delete(fileMap, change.Path)
 	}
 }
 
-func (d *downstream) createFolders(createFolders []*fileInformation) {
-	d.config.fileIndex.fileMapMutex.Lock()
-	defer d.config.fileIndex.fileMapMutex.Unlock()
+func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*remote.Change) {
+	absolutePath := filepath.Join(d.sync.LocalPath, relativePath)
+	relativePath = getRelativeFromFullPath(absolutePath, d.sync.LocalPath)
 
-	fileMap := d.config.fileIndex.fileMap
-	numCreateFolders := len(createFolders)
-
-	// Create Folders
-	if numCreateFolders > 3 {
-		d.config.Logf("[Downstream] Create %d folders", len(createFolders))
+	// Check if path is in delete changes
+	found := false
+	for _, remove := range deleteChanges {
+		if remove.Path == relativePath {
+			found = true
+		}
 	}
 
-	for _, element := range createFolders {
-		if element.IsDirectory {
-			if numCreateFolders <= 3 || d.config.Verbose {
-				d.config.Logln("[Downstream] Create folder: " + element.Name)
-			}
+	// We don't delete the folder or the contents if we haven't tracked it
+	if d.sync.fileIndex.fileMap[relativePath] == nil || found == false {
+		d.sync.log.Infof("Downstream - Skip delete directory %s\n", relativePath)
+		return
+	}
 
-			err := os.MkdirAll(path.Join(d.config.WatchPath, element.Name), 0755)
-			if err != nil {
-				d.config.Error(err)
-			}
+	// Delete directory from fileMap
+	defer delete(d.sync.fileIndex.fileMap, relativePath)
+	files, err := ioutil.ReadDir(absolutePath)
+	if err != nil {
+		return
+	}
 
-			if fileMap[element.Name] == nil {
-				d.config.fileIndex.CreateDirInFileMap(element.Name)
+	// Loop over directory contents and check if we should delete the contents
+	for _, f := range files {
+		childRelativePath := filepath.ToSlash(filepath.Join(relativePath, f.Name()))
+		childAbsFilepath := filepath.Join(d.sync.LocalPath, childRelativePath)
+		if shouldRemoveLocal(childAbsFilepath, d.sync.fileIndex.fileMap[childRelativePath], d.sync) {
+			if f.IsDir() {
+				d.deleteSafeRecursive(childRelativePath, deleteChanges)
+			} else {
+				err = os.Remove(childAbsFilepath)
+				if err != nil {
+					d.sync.log.Infof("Downstream - Skip file delete %s: %v", relativePath, err)
+				}
 			}
+		} else {
+			d.sync.log.Infof("Downstream - Skip delete %s", relativePath)
 		}
+
+		delete(d.sync.fileIndex.fileMap, childRelativePath)
+	}
+
+	// This will not remove the directory if there is still a file or directory in it
+	err = os.Remove(absolutePath)
+	if err != nil {
+		d.sync.log.Infof("Downstream - Skip delete directory %s, because %s", relativePath, err.Error())
 	}
 }

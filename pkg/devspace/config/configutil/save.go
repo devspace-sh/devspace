@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/pkg/errors"
@@ -85,16 +86,16 @@ func SaveConfig(config *latest.Config) error {
 	}
 
 	// Path to save the configuration to
-	savePath := DefaultConfigPath
+	savePath := constants.DefaultConfigPath
 
 	// Check if we have to save to configs.yaml
 	if LoadedConfig != "" {
 		configs := configs.Configs{}
 
 		// Load configs
-		err = LoadConfigs(&configs, DefaultConfigsPath)
+		err = LoadConfigs(&configs, constants.DefaultConfigsPath)
 		if err != nil {
-			return fmt.Errorf("Error loading %s: %v", DefaultConfigsPath, err)
+			return fmt.Errorf("Error loading %s: %v", constants.DefaultConfigsPath, err)
 		}
 
 		configDefinition := configs[LoadedConfig]
@@ -107,7 +108,7 @@ func SaveConfig(config *latest.Config) error {
 				return err
 			}
 
-			err = ioutil.WriteFile(DefaultConfigsPath, configYaml, os.ModePerm)
+			err = ioutil.WriteFile(constants.DefaultConfigsPath, configYaml, os.ModePerm)
 			if err != nil {
 				return err
 			}

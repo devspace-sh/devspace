@@ -243,7 +243,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, cmd.VerboseSync, log)
 		if err != nil {
 			return fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -391,9 +391,6 @@ func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config 
 		config.Cluster = &v1.Cluster{
 			Namespace:   &cmd.Namespace,
 			KubeContext: config.Cluster.KubeContext,
-			APIServer:   config.Cluster.APIServer,
-			CaCert:      config.Cluster.CaCert,
-			User:        config.Cluster.User,
 		}
 
 		log.Infof("Using %s namespace", cmd.Namespace)

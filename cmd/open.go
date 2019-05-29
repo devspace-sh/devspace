@@ -148,13 +148,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Get kubernetes config
-	config, err := kubectl.GetClientConfig(devspaceConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	client, err := kubernetes.NewForConfig(config)
+	// Get kubernetes client
+	client, err := kubectl.NewClient(devspaceConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -203,7 +198,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Analyze space for issues
-		report, err := analyze.CreateReport(config, namespace, false)
+		report, err := analyze.CreateReport(client, namespace, false)
 		if err != nil {
 			log.Fatalf("Error analyzing space: %v", err)
 		}
