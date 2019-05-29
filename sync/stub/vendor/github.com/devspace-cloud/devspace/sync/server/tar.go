@@ -101,23 +101,21 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 	}
 
 	// Set mod time from tar header
-	err = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
-	if err != nil {
-		return false, errors.Wrap(err, "chtimes")
-	}
+	_ = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
 
 	return true, nil
 }
 
-func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileInformation, tw *tar.Writer, skipFolderContents bool) error {
+func recursiveTar(basePath, relativePath string, writtenFiles map[string]bool, tw *tar.Writer, skipFolderContents bool) error {
 	absFilepath := path.Join(basePath, relativePath)
-	if writtenFiles[relativePath] != nil {
+	if _, ok := writtenFiles[relativePath]; ok {
 		return nil
 	}
 
 	// We skip files that are suddenly not there anymore
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
+		// File is suddenly not here anymore is ignored
 		return nil
 	}
 
@@ -130,10 +128,11 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]*fileIn
 	return tarFile(basePath, fileInformation, writtenFiles, stat, tw)
 }
 
-func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer, skipContents bool) error {
+func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer, skipContents bool) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 	files, err := ioutil.ReadDir(filepath)
 	if err != nil {
+		// Ignore this error because it could happen the file is suddenly not there anymore
 		return nil
 	}
 
@@ -146,7 +145,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 			return errors.Wrap(err, "tw write header")
 		}
 
-		writtenFiles[fileInformation.Name] = fileInformation
+		writtenFiles[fileInformation.Name] = true
 	}
 
 	if skipContents == false {
@@ -160,13 +159,15 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 	return nil
 }
 
-func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]*fileInformation, stat os.FileInfo, tw *tar.Writer) error {
+func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
-		return errors.Wrap(err, "open path "+filepath)
+		// We ignore this error here because it could happen that the file is suddenly not here anymore
+		return nil
+		// return errors.Wrap(err, "open path "+filepath)
 	}
 	defer f.Close()
 
@@ -189,8 +190,8 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 		return errors.Wrap(err, "io copy")
 	}
 
-	writtenFiles[fileInformation.Name] = fileInformation
-	return f.Close()
+	writtenFiles[fileInformation.Name] = true
+	return nil
 }
 
 func getRelativeFromFullPath(fullpath string, prefix string) string {
