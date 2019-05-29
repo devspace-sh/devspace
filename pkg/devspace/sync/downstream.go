@@ -129,7 +129,7 @@ func (d *downstream) mainLoop() error {
 		select {
 		case <-d.interrupt:
 			return nil
-		case <-time.After(1300 * time.Millisecond):
+		case <-time.After(1700 * time.Millisecond):
 			break
 		}
 
