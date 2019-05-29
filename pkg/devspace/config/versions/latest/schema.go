@@ -34,44 +34,10 @@ type Config struct {
 	Version      *string                  `yaml:"version"`
 	Images       *map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  *[]*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Hooks        *[]*HookConfig           `yaml:"hooks,omitempty"`
 	Dev          *DevConfig               `yaml:"dev,omitempty"`
 	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
+	Hooks        *[]*HookConfig           `yaml:"hooks,omitempty"`
 	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
-}
-
-// HookConfig defines a hook
-type HookConfig struct {
-	Command *string    `yaml:"command"`
-	Args    *[]*string `yaml:"args,omitempty"`
-
-	When *HookWhenConfig `yaml:"when,omitempty"`
-}
-
-// HookWhenConfig defines when the hook should be executed
-type HookWhenConfig struct {
-	Before *HookWhenAtConfig `yaml:"before,omitempty"`
-	After  *HookWhenAtConfig `yaml:"after,omitempty"`
-}
-
-// HookWhenAtConfig defines at which stage the hook should be executed
-type HookWhenAtConfig struct {
-	Deployments *string `yaml:"deployments,omitempty"`
-	Images      *string `yaml:"images,omitempty"`
-}
-
-// DependencyConfig defines the devspace dependency
-type DependencyConfig struct {
-	Source             *SourceConfig `yaml:"source"`
-	Config             *string       `yaml:"config"`
-	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
-	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
-}
-
-// SourceConfig defines the dependency source
-type SourceConfig struct {
-	Git  *string `yaml:"git,omitempty"`
-	Path *string `yaml:"path,omitempty"`
 }
 
 // ImageConfig defines the image specification
@@ -149,15 +115,6 @@ type ComponentConfig struct {
 	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
 }
 
-// ComponentConfigOptions defines the specific helm options used during deployment of a component
-type ComponentConfigOptions struct {
-	Wait            *bool   `yaml:"wait,omitempty"`
-	Rollback        *bool   `yaml:"rollback,omitempty"`
-	Force           *bool   `yaml:"force,omitempty"`
-	Timeout         *int64  `yaml:"timeout,omitempty"`
-	TillerNamespace *string `yaml:"tillerNamespace,omitempty"`
-}
-
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
 	Name           *string                         `yaml:"name,omitempty"`
@@ -224,6 +181,15 @@ type ServicePortConfig struct {
 	Port          *int    `yaml:"port,omitempty"`
 	ContainerPort *int    `yaml:"containerPort,omitempty"`
 	Protocol      *string `yaml:"protocol,omitempty"`
+}
+
+// ComponentConfigOptions defines the specific helm options used during deployment of a component
+type ComponentConfigOptions struct {
+	Wait            *bool   `yaml:"wait,omitempty"`
+	Rollback        *bool   `yaml:"rollback,omitempty"`
+	Force           *bool   `yaml:"force,omitempty"`
+	Timeout         *int64  `yaml:"timeout,omitempty"`
+	TillerNamespace *string `yaml:"tillerNamespace,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
@@ -307,8 +273,8 @@ type SyncConfig struct {
 	ContainerName        *string             `yaml:"containerName,omitempty"`
 	LocalSubPath         *string             `yaml:"localSubPath,omitempty"`
 	ContainerPath        *string             `yaml:"containerPath,omitempty"`
-	ExcludePaths         *[]string           `yaml:"excludePaths,omitempty"`
 	WaitInitialSync      *bool               `yaml:"waitInitialSync,omitempty"`
+	ExcludePaths         *[]string           `yaml:"excludePaths,omitempty"`
 	DownloadExcludePaths *[]string           `yaml:"downloadExcludePaths,omitempty"`
 	UploadExcludePaths   *[]string           `yaml:"uploadExcludePaths,omitempty"`
 	BandwidthLimits      *BandwidthLimits    `yaml:"bandwidthLimits,omitempty"`
@@ -333,6 +299,40 @@ type SelectorConfig struct {
 	Namespace     *string             `yaml:"namespace,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector"`
 	ContainerName *string             `yaml:"containerName,omitempty"`
+}
+
+// DependencyConfig defines the devspace dependency
+type DependencyConfig struct {
+	Source             *SourceConfig `yaml:"source"`
+	Config             *string       `yaml:"config"`
+	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
+	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
+}
+
+// SourceConfig defines the dependency source
+type SourceConfig struct {
+	Git  *string `yaml:"git,omitempty"`
+	Path *string `yaml:"path,omitempty"`
+}
+
+// HookConfig defines a hook
+type HookConfig struct {
+	Command *string    `yaml:"command"`
+	Args    *[]*string `yaml:"args,omitempty"`
+
+	When *HookWhenConfig `yaml:"when,omitempty"`
+}
+
+// HookWhenConfig defines when the hook should be executed
+type HookWhenConfig struct {
+	Before *HookWhenAtConfig `yaml:"before,omitempty"`
+	After  *HookWhenAtConfig `yaml:"after,omitempty"`
+}
+
+// HookWhenAtConfig defines at which stage the hook should be executed
+type HookWhenAtConfig struct {
+	Images      *string `yaml:"images,omitempty"`
+	Deployments *string `yaml:"deployments,omitempty"`
 }
 
 // Cluster is a struct that contains data for a Kubernetes-Cluster

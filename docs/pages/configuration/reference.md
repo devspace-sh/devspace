@@ -38,8 +38,8 @@ images:                             # map[string]struct | Images to be built and
 ```yaml
 build:                              # struct   | Build configuration for an image
   disabled: false                   # bool     | Disable image building (Default: false)
-  kaniko: ...                       # struct   | Build image with kaniko and set options for kaniko
   docker: ...                       # struct   | Build image with docker and set options for docker
+  kaniko: ...                       # struct   | Build image with kaniko and set options for kaniko
   custom: ...                       # struct   | Build image using a custom build script
 ```
 Notice:
@@ -72,8 +72,8 @@ kaniko:                             # struct   | Options for building images wit
 ### images[\*].build.custom
 ```yaml
 custom:                             # struct   | Options for building images with a custom build script
-  command: "./scripts/builder"      # string   | Path to the build script
-  args: []                          # string[] | Array of arguments for the build script
+  command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
+  args: []                          # string[] | Array of arguments for the custom build command
   imageFlag: string                 # string   | Name of the flag that DevSpace CLI uses to pass the image name + tag to the build script
   onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
 ```
@@ -113,6 +113,7 @@ component:                          # struct   | Options for deploying a DevSpac
   serviceName: my-service           # string   | Service name for headless service (for StatefulSets)
   podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   pullSecrets: ...                  # string[] | Array of PullSecret names
+  options: ...                      # struct   | Options for deploying this component with helm
 ```
 [Learn more about configuring component deployments.](/docs/deployment/components/what-are-components)
 
@@ -180,6 +181,16 @@ service: 	                        # struct   | Component service configuration
   - port: 80                        # int      | Port exposed by the service
     containerPort: 3000             # int      | Port of the container/pod to redirect traffic to
     protocol: tcp                   # string   | Traffic protocol (tcp, udp)
+```
+
+### deployments[\*].component.options
+```yaml
+options: 	                        # struct   | Component service configuration
+  wait: true                        # bool     | Wait for pods to start after deployment (Default: true)
+  rollback: true                    # bool     | Rollback if deployment failed (Default: true)
+  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
+  timeout: 40                       # int      | Timeout to wait for pods to start after deployment (Default: 40)
+  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
 ```
 
 ### deployments[\*].helm
@@ -305,10 +316,28 @@ dependencies:                       # struct[]  | Array of dependencies (other p
     git: https://github.com/my-repo # string    | URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
     path: ../../my-projects/repo    # string    | Path to a project on your local computer (not recommended)
   config: default                   # string    | Name of the config used to deploy this dependency (when multiple configs are defined via devspace-configs.yaml)
+  skipBuild: false                  # bool      | Do not build images of this dependency (= only start deployments)
+  ignoreDependencies: false         # bool      | Do not build and deploy dependencies of this dependency
 ```
 Notice:
 - You **cannot** use `source.git` and `source.path` in combination. 
 
+
+
+---
+## hooks
+```yaml
+hooks:                              # struct[]  | Array of hooks to be executed
+- command: "./scripts/my-hook"      # string    | Command to be executed when this hook is triggered
+  args: []                          # string[]  | Array of arguments for the command of this hook
+  when:                             # struct    | Trigger for executing this hook 
+    before:                         # struct    | Run hook before a certain execution step
+      images: "all"                 # string    | Name of the image you want to run this hook before building OR "all" for running hook before building the first image
+      deployments: "all"            # string    | Name of the deployment you want to run this hook before deploying OR "all" for running hook before deploying the first deployment
+    after:                          # struct    | Run hook after a certain execution step
+      images: "all"                 # string    | Name of the image you want to run this hook after building OR "all" for running hook after building the last image
+      deployments: "all"            # string    | Name of the deployment you want to run this hook after deploying OR "all" for running hook after deploying the last deployment
+```
 
 ---
 ## cluster
@@ -318,14 +347,6 @@ Notice:
 cluster:                            # struct   | Cluster configuration
   kubeContext: ""                   # string   | Name of the Kubernetes context to use (Default: "" = current Kubernetes context used by kubectl)
   namespace: ""                     # string   | Namespace for deploying applications
-  apiServer: ""                     # string   | URL of your Kubernetes API server (master)
-  caCert: ""                        # string   | CA Certificate of your Kubernetes API server
-  user:                             # struct   | Options for user authentication
-    clientCert: ""                  # string   | Use certificate-based authentication using this client certificate
-    clientKey: ""                   # string   | Use certificate-based authentication using this client key
-    token: ""                       # string   | Use token-based authentication using this token
 ```
-Notice:
-- You **cannot** use `clientCert` and `clientKey` in combination with `token`.
 
-> If you want to work with self-managed Kubernetes clusters, it is highly recommended to connect an external cluster to DevSpace Cloud or run your own instance of DevSpace Cloud (coming soon) instead of using the following configuration options.
+> If you want to work with self-managed Kubernetes clusters, it is highly recommended to connect an external cluster to DevSpace Cloud or run your own instance of DevSpace Cloud instead of using the `cluster` configuration options.
