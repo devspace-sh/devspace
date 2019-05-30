@@ -197,7 +197,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		defaultImageName = survey.Question(&survey.QuestionOptions{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
+			ValidationRegexPattern: "^.*$",
 		})
 	}
 
