@@ -437,21 +437,23 @@ func (s *Sync) Stop(fatalError error) {
 			}
 
 			close(s.upstream.interrupt)
-			if s.upstream.reader != nil {
-				s.upstream.reader.Close()
-			}
 			if s.upstream.writer != nil {
 				s.upstream.writer.Close()
+			}
+			if s.upstream.reader != nil {
+				// Closing the reader is hanging on windows so we skip that
+				// s.upstream.reader.Close()
 			}
 		}
 
 		if s.downstream != nil && s.downstream.interrupt != nil {
 			close(s.downstream.interrupt)
-			if s.downstream.reader != nil {
-				s.downstream.reader.Close()
-			}
 			if s.downstream.writer != nil {
 				s.downstream.writer.Close()
+			}
+			if s.downstream.reader != nil {
+				// Closing the reader is hanging on windows so we skip that
+				// s.downstream.reader.Close()
 			}
 		}
 
