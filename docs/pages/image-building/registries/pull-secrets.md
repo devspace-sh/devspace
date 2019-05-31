@@ -1,5 +1,5 @@
 ---
-title: Understand pull secrets
+title: Pull secrets
 ---
 
 When you push images to a private registry, you need to login to this registry beforehand (e.g. using `docker login`). When Kubernetes tries to pull images from a private registry, it also has to provide credentials to be authorized to pull images from this registry. The way to tell Kubernetes these credentials is to create a Kubernetes secret with these credentials. Such a secret is called image pull secret.
