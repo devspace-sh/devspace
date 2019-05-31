@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	
 	"gotest.tools/assert"
 )
 
@@ -40,6 +42,10 @@ func TestUpdate(t *testing.T){
 	err = chartGenerator.Update(false)
 	assert.Equal(t, true, err != nil, "No error when using a corrupted local path")
 
+	err = fsutil.WriteToFile([]byte(""), "templates/someFileThatNeedsToBeCleaned")
+	if err != nil {
+		t.Fatalf("Error writin a file: %v", err)
+	}
 	chartGenerator.LocalPath = dir
 	err = chartGenerator.Update(true)
 	if err != nil {

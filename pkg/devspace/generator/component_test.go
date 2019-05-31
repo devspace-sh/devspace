@@ -53,8 +53,22 @@ func TestComponentGenerator(t *testing.T){
 	if err == nil {
 		t.Fatalf("No Error listing components with a malformed component: %v", err)
 	}
-	assert.Equal(t, 0, len(componentList), "The created component doesn't appear")
+	assert.Equal(t, 0, len(componentList), "Components shown before the first component was created")
 	err = os.Remove("components/malformed")
+	if err != nil {
+		t.Fatalf("Error deleting file: %v", err)
+	}
+
+	err = fsutil.WriteToFile([]byte(`invalidField`), "components/badyaml/component.yaml")
+	if err != nil {
+		t.Fatalf("Error writing file: %v", err)
+	}
+	componentList, err = componentGenerator.ListComponents()
+	if err == nil {
+		t.Fatalf("No Error listing components with a component that has invalid yaml: %v", err)
+	}
+	assert.Equal(t, 0, len(componentList), "Components shown before the first component was created")
+	err = os.RemoveAll("components/badyaml")
 	if err != nil {
 		t.Fatalf("Error deleting file: %v", err)
 	}
@@ -103,4 +117,17 @@ func TestComponentGenerator(t *testing.T){
 		t.Fatalf("Error getting template of template: %v", err)
 	}
 	assert.Equal(t, *template.Replicas, 1234, "Wrong template returned")
+}
+
+func TestVarReplaceFn(t *testing.T){
+	comp := ComponentSchema{
+		VariableValues: map[string]string{
+			"hello": "world",
+			"isThisATest": "true",
+			"OnePlusOne": "2",
+		},
+	}
+	assert.Equal(t, "world", comp.varReplaceFn("", "${hello}"), "Wrong value returned for hello")
+	assert.Equal(t, true, comp.varReplaceFn("", "${isThisATest}"), "Wrong value returned for isThisATest")
+	assert.Equal(t, 2, comp.varReplaceFn("", "${OnePlusOne}"), "Wrong value returned for OnePlusOne")
 }
