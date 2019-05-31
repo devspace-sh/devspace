@@ -85,7 +85,7 @@ func ReLogin(providerConfig ProviderConfig, cloudProvider string, key *string, l
 	log.Donef("Successfully logged into %s", provider.Name)
 
 	// Login into registries
-	err := provider.LoginIntoRegistries()
+	err := provider.LoginIntoRegistries(log)
 	if err != nil {
 		log.Warnf("Error logging into docker registries: %v", err)
 	}
@@ -123,7 +123,7 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 		log.Donef("Successfully logged into %s", provider.Name)
 
 		// Login into registries
-		err = provider.LoginIntoRegistries()
+		err = provider.LoginIntoRegistries(log)
 		if err != nil {
 			log.Warnf("Error logging into docker registries: %v", err)
 		}

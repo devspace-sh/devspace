@@ -37,7 +37,7 @@ func StartAttach(config *latest.Config, client kubernetes.Interface, cmdParamete
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetClientConfig(config)
+	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
 		return err
 	}

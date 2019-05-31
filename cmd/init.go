@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
@@ -97,13 +98,13 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.RemoveAll(".devspace")
 
 	// Delete configs path
-	os.Remove(configutil.DefaultConfigsPath)
+	os.Remove(constants.DefaultConfigsPath)
 
 	// Delete config & overwrite config
-	os.Remove(configutil.DefaultConfigPath)
+	os.Remove(constants.DefaultConfigPath)
 
 	// Delete config & overwrite config
-	os.Remove(configutil.DefaultVarsPath)
+	os.Remove(constants.DefaultVarsPath)
 
 	// Create config
 	config := configutil.InitConfig()

@@ -75,13 +75,13 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Check what kube context to use
 	if options.KubeContext == "" {
 		// Get kube context to use
-		config, err = kubectl.GetClientConfigBySelect(false, true)
+		config, err = kubectl.GetRestConfigBySelect(false, true)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
 	} else {
 		// Get kube context to use
-		config, err = kubectl.GetClientConfigFromContext(options.KubeContext)
+		config, err = kubectl.GetRestConfigFromContext(options.KubeContext)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
@@ -576,7 +576,7 @@ func (p *Provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	config, err := kubectl.GetClientConfigBySelect(false, false)
+	config, err := kubectl.GetRestConfigBySelect(false, false)
 	if err != nil {
 		return errors.Wrap(err, "new kubectl client")
 	}

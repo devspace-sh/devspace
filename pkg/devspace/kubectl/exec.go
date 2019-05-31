@@ -3,15 +3,18 @@ package kubectl
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
+	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
+	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	k8sapi "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
@@ -72,13 +75,13 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 }
 
 // ExecStream executes a command and streams the output to the given streams
-func ExecStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	kubeconfig, err := GetClientConfig(config)
+func ExecStream(restConfig *rest.Config, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	client, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(kubeconfig)
+	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(restConfig)
 	if err != nil {
 		return err
 	}
@@ -87,37 +90,53 @@ func ExecStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.P
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func ExecBuffered(config *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, container string, command []string) ([]byte, []byte, error) {
-	stdoutReader, stdoutWriter, _ := os.Pipe()
-	stderrReader, stderrWriter, _ := os.Pipe()
-
-	err := ExecStream(config, kubectlClient, pod, container, command, false, nil, stdoutWriter, stderrWriter)
+func ExecBuffered(restConfig *rest.Config, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+	stdoutOutput, err := ioutil.TempFile("", "")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "create temp file")
+	}
+	defer os.Remove(stdoutOutput.Name())
+
+	stderrOutput, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "create temp file")
+	}
+	defer os.Remove(stderrOutput.Name())
+
+	kubeExecError := ExecStream(restConfig, pod, container, command, false, input, stdoutOutput, stderrOutput)
+	if kubeExecError != nil {
+		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
+			return nil, nil, kubeExecError
+		}
 	}
 
-	err = stdoutWriter.Close()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = stderrWriter.Close()
-	if err != nil {
-		return nil, nil, err
-	}
+	stdoutOutput.Close()
+	stderrOutput.Close()
 
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 
-	_, err = stdoutBuffer.ReadFrom(stdoutReader)
+	// Open stdout
+	stdoutOutput, err = os.Open(stdoutOutput.Name())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open stdout file")
+	}
+
+	_, err = stdoutBuffer.ReadFrom(stdoutOutput)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, err = stderrBuffer.ReadFrom(stderrReader)
+	// Open stderr
+	stderrOutput, err = os.Open(stdoutOutput.Name())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "open stderr file")
+	}
+
+	_, err = stderrBuffer.ReadFrom(stdoutOutput)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), nil
+	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), kubeExecError
 }

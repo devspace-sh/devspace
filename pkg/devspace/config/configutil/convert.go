@@ -4,13 +4,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/pkg/errors"
 )
 
 func convertDotDevSpaceConfigToDevSpaceYaml(basePath string) error {
 	oldConfigPath := filepath.Join(basePath, ".devspace", "config.yaml")
-	newConfigPath := filepath.Join(basePath, DefaultConfigPath)
+	newConfigPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Convert old to new config.yaml
 	_, err := os.Stat(newConfigPath)
@@ -28,7 +30,7 @@ func convertDotDevSpaceConfigToDevSpaceYaml(basePath string) error {
 	}
 
 	oldConfigsPath := filepath.Join(basePath, ".devspace", "configs.yaml")
-	newConfigsPath := filepath.Join(basePath, DefaultConfigsPath)
+	newConfigsPath := filepath.Join(basePath, constants.DefaultConfigsPath)
 
 	// Convert old to new configs.yaml
 	_, err = os.Stat(newConfigsPath)
@@ -46,7 +48,7 @@ func convertDotDevSpaceConfigToDevSpaceYaml(basePath string) error {
 	}
 
 	oldVarsPath := filepath.Join(basePath, ".devspace", "vars.yaml")
-	newVarsPath := filepath.Join(basePath, DefaultVarsPath)
+	newVarsPath := filepath.Join(basePath, constants.DefaultVarsPath)
 
 	// Convert old to new configs.yaml
 	_, err = os.Stat(newVarsPath)

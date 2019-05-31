@@ -77,7 +77,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	)
 
 	// Get docker client
-	client, err := docker.NewClient(config, true)
+	client, err := docker.NewClient(config, true, log.GetInstance())
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -197,7 +197,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		defaultImageName = survey.Question(&survey.QuestionOptions{
 			Question:               "Which image name do you want to push to?",
 			DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9\\./-]{4,90}$",
+			ValidationRegexPattern: "^.*$",
 		})
 	}
 

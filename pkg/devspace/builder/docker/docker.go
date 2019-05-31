@@ -163,6 +163,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
 
 	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+	excludes = append(excludes, ".devspace/")
+
 	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
 		ExcludePatterns: excludes,
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},

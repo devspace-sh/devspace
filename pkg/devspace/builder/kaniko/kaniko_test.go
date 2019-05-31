@@ -1,21 +1,21 @@
 package kaniko
 
 import (
-	"testing"
-	"os"
 	"io/ioutil"
+	"os"
+	"testing"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
-	"k8s.io/client-go/kubernetes/fake"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const testNamespace = "test-kaniko-build"
@@ -115,7 +115,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	// Create the fake client.
 	kubeClient := fake.NewSimpleClientset()
 
-	dockerClient, err := docker.NewClient(testConfig, true)
+	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -136,23 +136,20 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	}
 	//pod := k8sv1.Pod{}
 	//kubeClient.CoreV1().Pods(namespace).Create(&pod)
-	go func(){
+	go func() {
 		buildPod, err := kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
-		for err != nil{
+		for err != nil {
 			time.Sleep(1 * time.Millisecond)
 			buildPod, err = kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
 		}
 		buildPod.Status.InitContainerStatuses = make([]k8sv1.ContainerStatus, 1)
 		buildPod.Status.InitContainerStatuses[0] = k8sv1.ContainerStatus{
 			State: k8sv1.ContainerState{
-				Running: &k8sv1.ContainerStateRunning{
-
-				},
+				Running: &k8sv1.ContainerStateRunning{},
 			},
 		}
 		kubeClient.CoreV1().Pods(namespace).Update(buildPod)
 	}()
-	
 
 	// 4. Build image with kaniko, but don't push it (In kaniko options use "--no-push" as flag)
 	entrypoint := make([]*string, 3)
@@ -174,7 +171,6 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}
 }
-
 
 func makeTestProject(dir string) error {
 	file, err := os.Create("package.json")
@@ -280,7 +276,7 @@ node_modules/`))
 	if err != nil {
 		return err
 	}
-	
+
 	fileInfo, err := os.Lstat(".")
 	if err != nil {
 		return err

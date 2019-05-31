@@ -24,14 +24,14 @@ func (p *Provider) GetFirstPublicRegistry() (string, error) {
 }
 
 // LoginIntoRegistries logs the user into the user docker registries
-func (p *Provider) LoginIntoRegistries() error {
+func (p *Provider) LoginIntoRegistries(log log.Logger) error {
 	registries, err := p.GetRegistries()
 	if err != nil {
 		return errors.Wrap(err, "get registries")
 	}
 
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(nil, false)
+	client, err := docker.NewClient(nil, false, log)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}
@@ -63,9 +63,9 @@ func (p *Provider) LoginIntoRegistries() error {
 }
 
 // LoginIntoRegistry logs the user into the user docker registry
-func (p *Provider) LoginIntoRegistry(name string) error {
+func (p *Provider) LoginIntoRegistry(name string, log log.Logger) error {
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(nil, false)
+	client, err := docker.NewClient(nil, false, log)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}

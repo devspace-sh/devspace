@@ -11,13 +11,15 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 )
 
 // NewClient creates a new docker client
-func NewClient(config *latest.Config, preferMinikube bool) (client.CommonAPIClient, error) {
+func NewClient(config *latest.Config, preferMinikube bool, log log.Logger) (client.CommonAPIClient, error) {
 	var cli client.CommonAPIClient
 	var err error
 
@@ -26,17 +28,32 @@ func NewClient(config *latest.Config, preferMinikube bool) (client.CommonAPIClie
 	}
 	if preferMinikube == false || err != nil {
 		cli, err = newDockerClientFromEnvironment()
-
 		if err != nil {
-			return nil, err
+			log.Warnf("Error creating docker client from environment: %v", err)
+
+			// Last try to create it without the environment option
+			cli, err = newDockerClient()
+			if err != nil {
+				return nil, fmt.Errorf("Cannot create docker client: %v", err)
+			}
 		}
 	}
 
 	return cli, nil
 }
 
+func newDockerClient() (client.CommonAPIClient, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't create docker client: %s", err)
+	}
+
+	cli.NegotiateAPIVersion(context.Background())
+	return cli, nil
+}
+
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create docker client: %s", err)
 	}

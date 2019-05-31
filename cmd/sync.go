@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -22,6 +21,7 @@ type SyncCmd struct {
 	Exclude       []string
 	ContainerPath string
 	LocalPath     string
+	Verbose       bool
 }
 
 // NewSyncCmd creates a new init command
@@ -57,6 +57,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
+	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
 	return syncCmd
 }
@@ -66,12 +67,6 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var config *latest.Config
 	if configutil.ConfigExists() {
 		config = configutil.GetConfig()
-	}
-
-	// Get kubectl client
-	kubectl, err := kubectl.NewClient(config)
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Build params
@@ -96,7 +91,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err = services.StartSyncFromCmd(config, kubectl, params, cmd.ContainerPath, cmd.Exclude, log.GetInstance())
+	err := services.StartSyncFromCmd(config, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

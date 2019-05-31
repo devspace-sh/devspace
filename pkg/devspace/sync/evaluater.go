@@ -2,10 +2,12 @@ package sync
 
 import (
 	"os"
+
+	"github.com/devspace-cloud/devspace/sync/remote"
 )
 
 // s.fileIndex needs to be locked before this function is called
-func shouldRemoveRemote(relativePath string, s *SyncConfig) bool {
+func shouldRemoveRemote(relativePath string, s *Sync) bool {
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
 		if s.ignoreMatcher.MatchesPath(relativePath) {
@@ -34,7 +36,7 @@ func shouldRemoveRemote(relativePath string, s *SyncConfig) bool {
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitial bool) bool {
+func shouldUpload(relativePath string, stat os.FileInfo, s *Sync, isInitial bool) bool {
 	// Exclude if stat is nil
 	if stat == nil {
 		return false
@@ -73,12 +75,12 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 
 		if isInitial {
 			// File is older locally than remote so don't update remote
-			if roundMtime(stat.ModTime()) <= s.fileIndex.fileMap[relativePath].Mtime {
+			if stat.ModTime().Unix() <= s.fileIndex.fileMap[relativePath].Mtime {
 				return false
 			}
 		} else {
 			// File did not change or was changed by downstream
-			if roundMtime(stat.ModTime()) == s.fileIndex.fileMap[relativePath].Mtime && stat.Size() == s.fileIndex.fileMap[relativePath].Size {
+			if stat.ModTime().Unix() == s.fileIndex.fileMap[relativePath].Mtime && stat.Size() == s.fileIndex.fileMap[relativePath].Size {
 				return false
 			}
 		}
@@ -88,39 +90,20 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *SyncConfig, isInitia
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldDownload(fileInformation *fileInformation, s *SyncConfig) bool {
-	// Exclude files on the exclude list
-	if s.ignoreMatcher != nil {
-		if s.ignoreMatcher.MatchesPath(fileInformation.Name) {
-			return false
-		}
-	}
-
-	// Exclude files on the exclude list
-	if s.downloadIgnoreMatcher != nil {
-		if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-			return false
-		}
-	}
-
-	// Exclude symlinks
-	if fileInformation.IsSymbolicLink {
-		return false
-	}
-
+func shouldDownload(change *remote.Change, s *Sync) bool {
 	// Does file already exist in the filemap?
-	if s.fileIndex.fileMap[fileInformation.Name] != nil {
+	if s.fileIndex.fileMap[change.Path] != nil {
 		// Don't override folders that exist in the filemap
-		if fileInformation.IsDirectory == false {
+		if change.IsDir == false {
 			// Redownload file if mtime is newer than saved one
-			if fileInformation.Mtime > s.fileIndex.fileMap[fileInformation.Name].Mtime {
+			if change.MtimeUnix > s.fileIndex.fileMap[change.Path].Mtime {
 				return true
 			}
 
 			// Redownload file if size changed && file is not older than the one in the fileMap
 			// the mTime check is necessary, because otherwise we would override older local files that
 			// are not overridden initially
-			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size != s.fileIndex.fileMap[fileInformation.Name].Size {
+			if change.MtimeUnix == s.fileIndex.fileMap[change.Path].Mtime && change.Size != s.fileIndex.fileMap[change.Path].Size {
 				return true
 			}
 		}
@@ -136,9 +119,9 @@ func shouldDownload(fileInformation *fileInformation, s *SyncConfig) bool {
 // - The file name is present in the d.config.fileMap map
 // - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
 // - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
-func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *SyncConfig) bool {
+func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *Sync) bool {
 	if fileInformation == nil {
-		s.Logf("Skip %s because fileInformation is nil", absFilepath)
+		s.log.Infof("Skip %s because change is nil", absFilepath)
 		return false
 	}
 
@@ -147,18 +130,18 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// in the beginning of the downstream mainLoop
 
 	// Exclude files on the exclude list
-	if s.downloadIgnoreMatcher != nil {
-		if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-			// s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
-			return false
-		}
-	}
+	//if s.downloadIgnoreMatcher != nil {
+	//	if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
+	// s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
+	//		return false
+	//	}
+	//}
 
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
 		if os.IsNotExist(err) == false {
-			s.Logf("Skip %s because stat returned %v", absFilepath, err)
+			s.log.Infof("Skip %s because stat returned %v", absFilepath, err)
 		}
 
 		return false
@@ -167,7 +150,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 	// We don't delete the file if we haven't tracked it
 	if stat != nil && s.fileIndex.fileMap[fileInformation.Name] != nil {
 		if stat.IsDir() != s.fileIndex.fileMap[fileInformation.Name].IsDirectory || stat.IsDir() != fileInformation.IsDirectory {
-			s.Logf("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
+			s.log.Infof("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
 			return false
 		}
 
@@ -175,13 +158,13 @@ func shouldRemoveLocal(absFilepath string, fileInformation *fileInformation, s *
 			// We don't delete the file if it has changed in the map since we collected changes
 			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
 				// We don't delete the file if it has changed on the filesystem meanwhile
-				if roundMtime(stat.ModTime()) <= fileInformation.Mtime {
+				if stat.ModTime().Unix() <= fileInformation.Mtime {
 					return true
 				}
 
-				s.Logf("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, roundMtime(stat.ModTime()), fileInformation.Mtime)
+				s.log.Infof("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
 			} else {
-				s.Logf("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
+				s.log.Infof("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
 			}
 		} else {
 			return true

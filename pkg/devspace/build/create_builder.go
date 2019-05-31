@@ -23,7 +23,7 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(config, false)
+		dockerClient, err := dockerclient.NewClient(config, false, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
@@ -40,7 +40,7 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 			preferMinikube = *imageConf.Build.Docker.PreferMinikube
 		}
 
-		dockerClient, err := dockerclient.NewClient(config, preferMinikube)
+		dockerClient, err := dockerclient.NewClient(config, preferMinikube, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
