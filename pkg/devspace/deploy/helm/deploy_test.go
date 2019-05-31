@@ -1,21 +1,23 @@
 package helm
 
 import (
-	"testing"
-	"os"
 	"io/ioutil"
+	"os"
+	"reflect"
 	"strings"
+	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	otherhelmpackage "github.com/devspace-cloud/devspace/pkg/devspace/helm"
-	
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	yaml "gopkg.in/yaml.v2"
+
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"gotest.tools/assert"
 )
@@ -135,7 +137,7 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 7. Delete test namespace
-	err =  kubeClient.CoreV1().Namespaces().Delete(namespace, nil)
+	err = kubeClient.CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}
@@ -312,7 +314,7 @@ description: A Kubernetes-Native Application`))
 	if err != nil {
 		return err
 	}
-	
+
 	err = os.Mkdir("chart/templates", fileInfo.Mode())
 	if err != nil {
 		return err
@@ -375,4 +377,91 @@ spec:
 	}
 
 	return nil
+}
+
+func TestReplaceImageNames(t *testing.T) {
+	cache := &generated.CacheConfig{
+		Images: map[string]*generated.ImageCache{
+			"test-1": &generated.ImageCache{
+				ImageName: "dont-replace-me",
+				Tag:       "",
+			},
+			"test-2": &generated.ImageCache{
+				ImageName: "simple-replace",
+				Tag:       "replaced",
+			},
+			"test-3": &generated.ImageCache{
+				ImageName: "prefix/simple-replace",
+				Tag:       "replaced",
+			},
+			"test-4": &generated.ImageCache{
+				ImageName: "test.com/prefix/simple-replace",
+				Tag:       "replaced",
+			},
+			"test-5": &generated.ImageCache{
+				ImageName: "test.com:5000/prefix/simple-replace",
+				Tag:       "replaced",
+			},
+		},
+	}
+	builtImages := map[string]string{
+		"simple-replace": "",
+	}
+
+	input := map[interface{}]interface{}{
+		"imagename": "dont-replace-me",
+		"simple-replace": []interface{}{
+			map[interface{}]interface{}{
+				"replace1": "simple-replace",
+				"replace2": "  simple-replace:tag ",
+				"test":     "ssimple-replace",
+				"other": map[interface{}]interface{}{
+					"replace1": "prefix/simple-replace",
+					"replace2": "test.com/prefix/simple-replace",
+					"replace3": "test.com:5000/prefix/simple-replace:latest",
+				},
+			},
+		},
+	}
+	output := map[interface{}]interface{}{
+		"imagename": "dont-replace-me",
+		"simple-replace": []interface{}{
+			map[interface{}]interface{}{
+				"replace1": "simple-replace:replaced",
+				"replace2": "simple-replace:replaced",
+				"test":     "ssimple-replace",
+				"other": map[interface{}]interface{}{
+					"replace1": "prefix/simple-replace:replaced",
+					"replace2": "test.com/prefix/simple-replace:replaced",
+					"replace3": "test.com:5000/prefix/simple-replace:replaced",
+				},
+			},
+		},
+	}
+
+	shouldRedeploy := replaceContainerNames(input, cache, builtImages)
+	if shouldRedeploy == false {
+		t.Fatal("Expected to redeploy")
+	}
+
+	isEqual := reflect.DeepEqual(input, output)
+	if !isEqual {
+		gotYaml, _ := yaml.Marshal(input)
+		expectedYaml, _ := yaml.Marshal(output)
+
+		t.Fatalf("Replace failed: Got\n %s\n, but expected\n %s", gotYaml, expectedYaml)
+	}
+
+	shouldRedeploy = replaceContainerNames(input, cache, builtImages)
+	if shouldRedeploy == false {
+		t.Fatal("Expected no redeploy")
+	}
+
+	isEqual = reflect.DeepEqual(input, output)
+	if !isEqual {
+		gotYaml, _ := yaml.Marshal(input)
+		expectedYaml, _ := yaml.Marshal(output)
+
+		t.Fatalf("Replace failed: Got\n %s\n, but expected\n %s", gotYaml, expectedYaml)
+	}
 }
