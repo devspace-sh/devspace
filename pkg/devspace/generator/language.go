@@ -165,7 +165,7 @@ func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
 	}
 
 	// Copy dockerfile
-	err = fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, cg.Language), ".", false)
+	err = fsutil.Copy(filepath.Join(cg.gitRepo.LocalPath, language), ".", false)
 	if err != nil {
 		return err
 	}

@@ -206,7 +206,7 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceD
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(d.Config, false)
+	dockerClient, err := docker.NewClient(d.Config, false, log)
 
 	// Create pull secrets and private registry if necessary
 	err = registry.CreatePullSecrets(d.Config, dockerClient, client, log)

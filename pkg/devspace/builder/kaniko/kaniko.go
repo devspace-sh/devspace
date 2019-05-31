@@ -214,11 +214,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		}
 
 		// Get ignore rules from docker ignore
-		ignoreRules, ignoreRuleErr := ignoreutil.GetIgnoreRules(contextPath)
-		if ignoreRuleErr != nil {
-			return fmt.Errorf("Unable to parse .dockerignore files: %s", ignoreRuleErr.Error())
+		ignoreRules, err := ignoreutil.GetIgnoreRules(contextPath)
+		if err != nil {
+			return fmt.Errorf("Unable to parse .dockerignore files: %s", err.Error())
 		}
 
+		ignoreRules = append(ignoreRules, ".devspace/")
 		log.StartWait("Uploading files to build container")
 
 		// Copy complete context
