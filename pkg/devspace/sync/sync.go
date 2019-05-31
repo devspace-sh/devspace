@@ -195,7 +195,6 @@ func (s *Sync) mainLoop() {
 	// Start downstream and do initial sync
 	go func() {
 		defer s.Stop(nil)
-
 		err := s.initialSync()
 		if err != nil {
 			s.Stop(errors.Wrap(err, "initial sync"))

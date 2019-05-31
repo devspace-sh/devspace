@@ -143,7 +143,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(config, false)
+	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
 	if err != nil {
 		dockerClient = nil
 	}
