@@ -143,7 +143,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(config, false)
+	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
 	if err != nil {
 		dockerClient = nil
 	}
@@ -256,7 +256,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	}
 
 	exitChan := make(chan error)
-	autoReloadPaths := GetPaths()
+	autoReloadPaths := GetPaths(config)
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
@@ -316,9 +316,8 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 }
 
 // GetPaths retrieves the watch paths from the config object
-func GetPaths() []string {
+func GetPaths(config *latest.Config) []string {
 	paths := make([]string, 0, 1)
-	config := configutil.GetConfig()
 
 	// Add the deploy manifest paths
 	if config.Dev != nil && config.Dev.AutoReload != nil {

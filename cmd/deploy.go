@@ -117,7 +117,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(config, false)
+	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
 
 	// Create pull secrets and private registry if necessary
 	err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())

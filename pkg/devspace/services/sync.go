@@ -232,7 +232,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(kubeconfig, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
+	go startStream(syncClient, kubeconfig, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {
@@ -258,7 +258,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(kubeconfig, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+	go startStream(syncClient, kubeconfig, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
 
 	err = syncClient.InitDownstream(downStdoutReader, downStdinWriter)
 	if err != nil {
@@ -268,7 +268,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 	return syncClient, nil
 }
 
-func startStream(kubeconfig *rest.Config, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
+func startStream(syncClient *sync.Sync, kubeconfig *rest.Config, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
 	stderr, err := ioutil.TempFile("", "")
 	if err != nil {
 		log.Warnf("Couldn't create temp file for stream %s: %v", strings.Join(command, " "), err)
@@ -286,9 +286,7 @@ func startStream(kubeconfig *rest.Config, pod *v1.Pod, container string, command
 			stderr = []byte{}
 		}
 
-		// We currently just kill the currently running command when this happens, maybe in future we should try to reconnect?
-		log.WriteString("\n\r")
-		log.Fatalf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err)
+		syncClient.Stop(fmt.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err))
 	}
 }
 

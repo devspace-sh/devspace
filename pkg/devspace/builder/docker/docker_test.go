@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 )
 
 //@Moretest
@@ -75,7 +75,7 @@ func TestDockerBuild(t *testing.T) {
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true)
+	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestDockerBuild(t *testing.T) {
 			Docker: &latest.DockerConfig{
 				Options: &latest.BuildOptions{
 					BuildArgs: &buildArgs,
-					Network: &network,
+					Network:   &network,
 				},
 			},
 		},
@@ -110,7 +110,7 @@ func TestDockerBuild(t *testing.T) {
 	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
-	} 
+	}
 
 }
 
@@ -173,7 +173,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true)
+	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -203,7 +203,6 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 		t.Fatalf("Image building failed: %v", err)
 	}
 }
-
 
 func makeTestProject(dir string) error {
 	file, err := os.Create("package.json")
