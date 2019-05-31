@@ -17,5 +17,4 @@ func TestIsMinikube(t *testing.T){
 		},
 	}
 	assert.Equal(t, true, IsMinikube(config), "Minikube config declared as not minikube")
-
 }
