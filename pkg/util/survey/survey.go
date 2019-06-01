@@ -15,6 +15,7 @@ type QuestionOptions struct {
 	DefaultValue           string
 	ValidationRegexPattern string
 	ValidationMessage      string
+	ValidationFunc         func(value string) error
 	Options                []string
 	IsPassword             bool
 }
@@ -64,14 +65,32 @@ func Question(params *QuestionOptions) string {
 
 	if params.Options == nil {
 		question[0].Validate = func(val interface{}) error {
-			// since we are validating an Input, the assertion will always succeed
-			if str, ok := val.(string); !ok || compiledRegex.MatchString(str) == false {
+			str, ok := val.(string)
+			if !ok {
+				return errors.New("Input was not a string")
+			}
+
+			// Check regex
+			if compiledRegex.MatchString(str) == false {
 				if params.ValidationMessage != "" {
 					return errors.New(params.ValidationMessage)
 				}
 
 				return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
 			}
+
+			// Check function
+			if params.ValidationFunc != nil {
+				err := params.ValidationFunc(str)
+				if err != nil {
+					if params.ValidationMessage != "" {
+						return errors.New(params.ValidationMessage)
+					}
+
+					return fmt.Errorf("%v", err)
+				}
+			}
+
 			return nil
 		}
 	}

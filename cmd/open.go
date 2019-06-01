@@ -184,6 +184,9 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
 
+	// Make sure the ingress has some time to take effect
+	time.Sleep(time.Second * 2)
+
 	now := time.Now()
 	for time.Since(now) < time.Minute*4 {
 		// Check if domain is ready

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -172,6 +173,111 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		if err != nil {
 			return err
 		}
+	} else if options.DeployIngressController {
+		err = defaultClusterSpaceDomain(p, client, *options.UseHostNetwork, clusterID, options.Key)
+		if err != nil {
+			log.Warnf("Couldn't configure default cluster space domain: %v", err)
+		}
+	}
+
+	return nil
+}
+
+var waitTimeout = time.Minute * 5
+
+func defaultClusterSpaceDomain(p *Provider, client kubernetes.Interface, useHostNetwork bool, clusterID int, key string) error {
+	if useHostNetwork {
+		log.StartWait("Waiting for loadbalancer to get an ip")
+		defer log.StopWait()
+
+		nodeList, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
+		if err != nil {
+			return errors.Wrap(err, "list nodes")
+		}
+		if len(nodeList.Items) == 0 {
+			return errors.New("Couldn't find a node in cluster")
+		}
+
+		ip := ""
+		for _, node := range nodeList.Items {
+			for _, address := range node.Status.Addresses {
+				if address.Type == v1.NodeExternalIP && address.Address != "" {
+					ip = address.Address
+					break
+				}
+			}
+
+			if ip != "" {
+				break
+			}
+		}
+		if ip == "" {
+			return errors.New("Couldn't find a node with a valid external ip in cluster, make sure your nodes are accessable from the outside")
+		}
+	} else {
+		log.StartWait("Waiting for loadbalancer to get an ip. This sometimes can take a while")
+		defer log.StopWait()
+
+		now := time.Now()
+		hostname := ""
+		ip := ""
+
+		for time.Since(now) < waitTimeout && hostname == "" && ip == "" {
+			// Get loadbalancer
+			services, err := client.CoreV1().Services(constants.DevSpaceCloudNamespace).List(metav1.ListOptions{})
+			if err != nil {
+				return errors.Wrap(err, "list services")
+			}
+
+			// Check loadbalancer for an ip
+			for _, service := range services.Items {
+				if service.Spec.Type == v1.ServiceTypeLoadBalancer {
+					for _, ingress := range service.Status.LoadBalancer.Ingress {
+						if ingress.Hostname != "" {
+							hostname = ingress.Hostname
+						}
+						if ingress.IP != "" {
+							ip = ingress.IP
+						}
+
+						break
+					}
+				}
+
+				if hostname != "" || ip != "" {
+					break
+				}
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+
+		if time.Since(now) >= waitTimeout {
+			return errors.New("Loadbalancer didn't receive a valid ip in time. Skipping configuration of default cluster space url")
+		}
+	}
+
+	// Do the graphql request
+	log.StopWait()
+	log.StartWait("Configure cluster space domain")
+
+	output := struct {
+		UseDefaultClusterDomain string `json:"manager_useDefaultClusterDomain"`
+	}{}
+
+	err := p.GrapqhlRequest(`
+		mutation($key:String!,$clusterID:Int!) {
+			manager_useDefaultClusterDomain(key:$key,clusterID:$clusterID)
+	  	}
+	`, map[string]interface{}{
+		"key":       key,
+		"clusterID": clusterID,
+	}, &output)
+	if err != nil {
+		return err
+	}
+	if output.UseDefaultClusterDomain != "" {
+		log.Donef("The domain '%s' has been successfully configured for your clusters spaces and now points to your clusters ingress controller. The dns change however can take several minutes to take affect", ansi.Color("*."+output.UseDefaultClusterDomain, "white+b"))
 	}
 
 	return nil
