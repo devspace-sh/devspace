@@ -185,7 +185,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	defer log.StopWait()
 
 	// Make sure the ingress has some time to take effect
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
 
 	now := time.Now()
 	for time.Since(now) < time.Minute*4 {
