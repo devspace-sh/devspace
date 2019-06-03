@@ -186,8 +186,8 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 			return errors.Wrap(err, "create pipe")
 		}
 
-		defer writer.Close()
 		defer reader.Close()
+		defer writer.Close()
 
 		errorChan := make(chan error)
 		go func() {

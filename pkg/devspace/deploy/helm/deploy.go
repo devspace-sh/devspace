@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/mgutz/ansi"
@@ -192,18 +192,16 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 	shouldRedeploy := false
 
 	match := func(path, key, value string) bool {
-		value = strings.TrimSpace(value)
-
-		image := strings.Split(value, ":")
-		if len(image) > 2 {
+		image, err := registry.GetStrippedDockerImageName(value)
+		if err != nil {
 			return false
 		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] && imageCache.Tag != "" {
+			if imageCache.ImageName == image && imageCache.Tag != "" {
 				if builtImages != nil {
-					if _, ok := builtImages[image[0]]; ok {
+					if _, ok := builtImages[image]; ok {
 						shouldRedeploy = true
 					}
 				}
@@ -216,13 +214,15 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 	}
 
 	replace := func(path, value string) interface{} {
-		value = strings.TrimSpace(value)
-		image := strings.Split(value, ":")
+		image, err := registry.GetStrippedDockerImageName(value)
+		if err != nil {
+			return false
+		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] {
-				return image[0] + ":" + imageCache.Tag
+			if imageCache.ImageName == image {
+				return image + ":" + imageCache.Tag
 			}
 		}
 

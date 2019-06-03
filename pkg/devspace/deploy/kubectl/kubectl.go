@@ -14,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -297,18 +298,16 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 
 	match := func(path, key, value string) bool {
 		if key == "image" {
-			value = strings.TrimSpace(value)
-
-			image := strings.Split(value, ":")
-			if len(image) > 2 {
+			image, err := registry.GetStrippedDockerImageName(value)
+			if err != nil {
 				return false
 			}
 
 			// Search for image name
 			for _, imageCache := range cache.Images {
-				if imageCache.ImageName == image[0] && imageCache.Tag != "" {
+				if imageCache.ImageName == image && imageCache.Tag != "" {
 					if builtImages != nil {
-						if _, ok := builtImages[image[0]]; ok {
+						if _, ok := builtImages[image]; ok {
 							shouldRedeploy = true
 						}
 					}
@@ -322,13 +321,15 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 	}
 
 	replace := func(path, value string) interface{} {
-		value = strings.TrimSpace(value)
-		image := strings.Split(value, ":")
+		image, err := registry.GetStrippedDockerImageName(value)
+		if err != nil {
+			return false
+		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image[0] {
-				return image[0] + ":" + imageCache.Tag
+			if imageCache.ImageName == image {
+				return image + ":" + imageCache.Tag
 			}
 		}
 

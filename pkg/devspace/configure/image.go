@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -173,10 +174,15 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	// Is docker hub?
 	if registryURL == "hub.docker.com" {
 		defaultImageName = survey.Question(&survey.QuestionOptions{
-			Question:               "Which image name do you want to use on Docker Hub?",
-			DefaultValue:           dockerUsername + "/devspace",
-			ValidationRegexPattern: "^[a-zA-Z0-9/-]{4,60}$",
+			Question:          "Which image name do you want to use on Docker Hub?",
+			DefaultValue:      dockerUsername + "/devspace",
+			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationFunc: func(name string) error {
+				_, err := registry.GetStrippedDockerImageName(name)
+				return err
+			},
 		})
+		defaultImageName, _ = registry.GetStrippedDockerImageName(defaultImageName)
 	} else if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryURL)) { // Is google registry?
 		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
 		gcloudProject := "myGCloudProject"
@@ -186,19 +192,33 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		}
 
 		defaultImageName = survey.Question(&survey.QuestionOptions{
-			Question:               "Which image name do you want to push to?",
-			DefaultValue:           registryURL + "/" + gcloudProject + "/devspace",
-			ValidationRegexPattern: "^.*$",
+			Question:          "Which image name do you want to push to?",
+			DefaultValue:      registryURL + "/" + gcloudProject + "/devspace",
+			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationFunc: func(name string) error {
+				_, err := registry.GetStrippedDockerImageName(name)
+				return err
+			},
 		})
+		defaultImageName, _ = registry.GetStrippedDockerImageName(defaultImageName)
 	} else if cloudProvider != nil {
 		// Is DevSpace Cloud?
 		defaultImageName = registryURL + "/${DEVSPACE_USERNAME}/" + DefaultImageName
 	} else {
+		if dockerUsername == "" {
+			dockerUsername = "myuser"
+		}
+
 		defaultImageName = survey.Question(&survey.QuestionOptions{
-			Question:               "Which image name do you want to push to?",
-			DefaultValue:           registryURL + "/" + dockerUsername + "/devspace",
-			ValidationRegexPattern: "^.*$",
+			Question:          "Which image name do you want to push to?",
+			DefaultValue:      registryURL + "/" + dockerUsername + "/devspace",
+			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationFunc: func(name string) error {
+				_, err := registry.GetStrippedDockerImageName(name)
+				return err
+			},
 		})
+		defaultImageName, _ = registry.GetStrippedDockerImageName(defaultImageName)
 	}
 
 	// Check if we should create pull secrets for the image
