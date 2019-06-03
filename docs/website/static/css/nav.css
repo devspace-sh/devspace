@@ -29,8 +29,10 @@
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(3)::after,
+.navGroups
+  .navGroup:nth-child(2)
+  .navListItem:nth-child(n + 6):nth-child(-n + 9)::after,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5)::after,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n + 6)::after,
 .navGroups .navGroup:nth-child(5) .navListItem::after {
   display: none;
 }
@@ -87,8 +89,11 @@
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(3) .navItem,
+.navGroups
+  .navGroup:nth-child(2)
+  .navListItem:nth-child(n + 6):nth-child(-n + 9)
+  .navItem,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5) .navItem,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(n + 6) .navItem,
 .navGroups .navGroup:nth-child(5) .navListItem .navItem {
   padding-left: 36px;
 }
