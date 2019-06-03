@@ -15,7 +15,8 @@
       "workflow-basics/debugging/analyze",
       "workflow-basics/debugging/logs",
       "workflow-basics/debugging/enter",
-      "workflow-basics/debugging/remote-debuggers"
+      "workflow-basics/debugging/remote-debuggers",
+      "workflow-basics/dependencies"
     ],
     "Build Images": [
       "image-building/overview",
