@@ -64,6 +64,16 @@ rootChild2Child1Child1`
 		t.Fatalf("GetLeaf1: Got id %s, expected %s", leaf.ID, rootChild1.ID)
 	}
 
+	err = testGraph.AddEdge("NotThere", leaf.ID)
+	if err == nil {
+		t.Fatal("No error when adding an edge from a non-existing node")
+	}
+
+	err = testGraph.AddEdge(leaf.ID, "NotThere")
+	if err == nil {
+		t.Fatal("No error when adding an edge to a non-existing node")
+	}
+
 	// Remove node
 	err = testGraph.RemoveNode(leaf.ID)
 	if err != nil {
