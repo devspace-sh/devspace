@@ -95,7 +95,7 @@ func TestWatcher(t *testing.T) {
 	select{
 		case <- callbackCalledChan:
 		case <- time.After(time.Second * 5):
-			t.Fatalf("Timeout of waiting for callback after changing a file")
+			t.Fatalf("Timeout of waiting for callback after deleting a file")
 	}
 
 	watcher.Stop()
