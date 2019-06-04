@@ -4,13 +4,21 @@ title: Pull secrets
 
 When you push images to a private registry, you need to login to this registry beforehand (e.g. using `docker login`). When Kubernetes tries to pull images from a private registry, it also has to provide credentials to be authorized to pull images from this registry. The way to tell Kubernetes these credentials is to create a Kubernetes secret with these credentials. Such a secret is called image pull secret.
 
-> By default, DevSpace CLI automatically creates and manages image pull secrets for all the images within your DevSpace configuration.
+> DevSpace CLI can automatically create image pull secrets and add them to the `default` service account for images within your DevSpace configuration. You can enable this via the `createPullSecret` option in an image configuration.
 
-## Creating your own secrets
-If you are not using dscr.io, it is recommended to create your own image pull secrets.
+Example:
+```yaml
+images:
+  default:
+    image: dscr.io/myusername/devspace
+    # This tells DevSpace to create an image pull secret and add it to the default service account during devspace deploy & devspace dev
+    createPullSecret: true
+```
+
+## Creating pull secrets manually
+If you want to create your pull secret manually you can do this via the following command:
 
 ```bash
-devspace use space [SPACE_NAME]
 kubectl create secret docker-registry my-pull-secret --docker-server=[REGISTRY_URL] --docker-username=[REGISTRY_USERNAME] --docker-password=[REGISTRY_PASSWORD] --docker-email=[YOUR_EMAIL]
 ```
 
@@ -18,20 +26,22 @@ This `kubectl` command would create an image pull secret called `my-pull-secret`
 
 [Learn more about image pull secrets in Kubernetes.](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
 
-To tell DevSpace CLI not to create an additional secret, you can use the config option `createPullSecret` and set it to `false` for the respective image.
-
-```yaml
-images:
-  default:
-    image: my-registry.tld/username/image
-    createPullSecret: false
+However you also have to add it to your service account by running this command:
+```bash
+kubectl edit serviceaccount default
 ```
 
-To use your custom image pull secret, the DevSpace Helm Chart provides an array called `pullSecrets` within `chart/values.yaml`.
-
+Then add the just created pull secret:
 ```yaml
-pullSecrets:
-- my-pull-secret
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: default
+secrets:
+- name: default-token-6k6fc
+imagePullSecrets:
+- name: my-pull-secret
 ```
 
-Adding your pull secret `my-pull-secret` to this array will allow you to pull images with this secret and use the image within your deployment configuration (i.e. in `components[*].containers[*].image`).
+Save and now you should be able to pull images from that registry.

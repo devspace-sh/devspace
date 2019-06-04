@@ -21,6 +21,7 @@
     "Build Images": [
       "image-building/overview",
       "image-building/add-images",
+      "image-building/tagging",
       "image-building/remove-images",
       "image-building/specification",
       "image-building/registries/authentication",
