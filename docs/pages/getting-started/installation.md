@@ -35,7 +35,7 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-clou
 Alternatively, you can simply download the binary for your platform from the [GitHub Releases](https://github.com/devspace-cloud/devspace/releases) page and add the binary to your PATH.
 
 ## Install Docker (optional)
-DevSpace CLI allows you to build images directly inside Kubernetes pods (using kaniko) but if you have Docker installed, DevSpace CLI can also build images locally using Docker. If you do not have Docker installed yet, you can download the latest stable releases here:
+The preferred image building method is Docker, however DevSpace CLI is also able to build images directly inside Kubernetes pods (using kaniko) if you don't have Docker installed. If you want to install Docker, you can download the latest stable releases here:
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
