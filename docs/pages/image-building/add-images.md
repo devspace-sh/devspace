@@ -14,7 +14,6 @@ The command shown above would add a new image to your DevSpace configuration. Th
 images:
   database:                         # from --name
     image: dscr.io/username/image   # from args[0]
-    build:
-      dockerfile: ./db/Dockerfile   # from --dockerfile
-      context: ./db                 # from --context
+    dockerfile: ./db/Dockerfile     # from --dockerfile
+    context: ./db                   # from --context
 ```

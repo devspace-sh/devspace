@@ -139,14 +139,19 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 
 // Login logs the user into DevSpace Cloud
 func (p *Provider) Login(log log.Logger) error {
+	var (
+		url        = p.Host + LoginEndpoint
+		ctx        = context.Background()
+		keyChannel = make(chan string)
+	)
+
+	log.Infof("If the browser does not open automatically please navigate to %s", url)
+
 	log.StartWait("Logging into cloud provider...")
 	defer log.StopWait()
 
-	ctx := context.Background()
-	keyChannel := make(chan string)
-
 	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel)
-	open.Start(p.Host + LoginEndpoint)
+	open.Start(url)
 
 	key := <-keyChannel
 	close(keyChannel)

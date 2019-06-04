@@ -1,5 +1,5 @@
 ---
-title: Registry authentication
+title: Authentication
 ---
 
 DevSpace CLI works with public or private Docker registry. The only thing you need to do is to login to those registries with the `docker login` command.
