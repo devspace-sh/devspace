@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	
 	"gotest.tools/assert"
 )
@@ -43,8 +43,6 @@ func TestContainerizeApplicationWithExistingDockerfile(t *testing.T){
 }
 
 func TestContainerizeApplication(t *testing.T){
-	t.Skip("Question-call interrupts test session, therefore skipped")
-
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -78,41 +76,15 @@ app.listen(3000, function () {
 		t.Fatalf("Error creating javascript file: %v", err)
 	}
 
-
-	//Fake stdin
-    content := []byte("\r\n")
-    tmpfile, err := ioutil.TempFile("", "stdin")
-    if err != nil {
-        t.Fatalf("Error creating temporary stdin file: %v", err)
-    }
-
-	defer tmpfile.Close()
-    defer os.Remove(tmpfile.Name()) // clean up
-
-    if _, err := tmpfile.Write(content); err != nil {
-        t.Fatalf("Error writing temporary stdin file: %v", err)
-    }
-
-    if _, err := tmpfile.Seek(0, 0); err != nil {
-        t.Fatalf("Error setting pointer in temporary stdin file: %v", err)
-    }
-
-    oldStdin := os.Stdin
-    defer func() { os.Stdin = oldStdin }() // Restore original Stdin
-    os.Stdin = tmpfile
-
-	//err = ContainerizeApplication("", "", "")
-	t.Log("App containerized")
+	survey.SetNextAnswer("javascript")
+	err = ContainerizeApplication("", "", "")
 	if err != nil {
 		t.Fatalf("Error containerizing application: %v", err)
 	}
-	time.Sleep(time.Second * 10)
-	t.Log("Finished")
 }
 
 
 func TestDockerfileGenerator(t *testing.T){
-	t.Skip("Doesn't work at the moment")
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -139,7 +111,7 @@ func TestDockerfileGenerator(t *testing.T){
 	}
 
 	t.Log(dockerfileGenerator.gitRepo.LocalPath)
-	dockerfileGenerator.gitRepo.LocalPath = "./gitLocal"
+	//dockerfileGenerator.gitRepo.LocalPath = "./gitLocal"
 	err = fsutil.WriteToFile([]byte(`FROM node:8.11.4
 
 RUN mkdir /app
@@ -151,15 +123,14 @@ RUN npm install
 COPY . .
 
 CMD ["npm", "start"]
-`), "gitLocal/javascript/Dockerfile")
+`), dockerfileGenerator.gitRepo.LocalPath + "/javascript/Dockerfile")
 	if err != nil {
 		t.Fatalf("Error writing to file: %v", err)
 	}
-	err = fsutil.WriteToFile([]byte(`ref: refs/heads/master
-`), "gitLocal/javascript/.git/HEAD")
-	if err != nil {
-		t.Fatalf("Error writing to file: %v", err)
-	}
+	//err = fsutil.WriteToFile([]byte(`ref: refs/heads/master`), "gitLocal/javascript/.git/HEAD")
+	//if err != nil {
+		//t.Fatalf("Error writing to file: %v", err)
+	//}
 
 	//Test IsLanguageSupported with unsupported Language
 	supported := dockerfileGenerator.IsSupportedLanguage("unsupportedLanguage")
@@ -196,7 +167,6 @@ CMD ["npm", "start"]
 }
 
 func TestGetLanguage(t *testing.T) {
-	t.Skip("Doesn't work with travis")
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {

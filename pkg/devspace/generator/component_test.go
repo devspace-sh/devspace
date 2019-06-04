@@ -5,8 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	//"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	
 	"gotest.tools/assert"
 )
@@ -126,8 +128,30 @@ func TestVarReplaceFn(t *testing.T){
 			"isThisATest": "true",
 			"OnePlusOne": "2",
 		},
+		Variables: []configs.Variable{
+			configs.Variable{
+				Name: ptr.String("NeedsQuestion"),
+				Options: &[]string{},
+			},
+			configs.Variable{
+				Name: ptr.String("AlsoNeedsQuestion"),
+				Question: ptr.String("SomeQuestion"),
+				Default: ptr.String("SomeDefault"),
+				ValidationPattern: ptr.String("SomeValidationPattern"),
+				ValidationMessage: ptr.String("SomeValidationMessage"),
+			},
+		},
 	}
+
+	survey.SetNextAnswer("DoesNeedQuestion")
+
 	assert.Equal(t, "world", comp.varReplaceFn("", "${hello}"), "Wrong value returned for hello")
 	assert.Equal(t, true, comp.varReplaceFn("", "${isThisATest}"), "Wrong value returned for isThisATest")
 	assert.Equal(t, 2, comp.varReplaceFn("", "${OnePlusOne}"), "Wrong value returned for OnePlusOne")
+	assert.Equal(t, "DoesNeedQuestion", comp.varReplaceFn("", "${NeedsQuestion}"), "Wrong value returned for NeedsQuestion")
+	
+	survey.SetNextAnswer("DoesNeedQuestionAsWell")
+	assert.Equal(t, "DoesNeedQuestionAsWell", comp.varReplaceFn("", "${AlsoNeedsQuestion}"), "Wrong value returned for AlsoNeedsQuestion")
+	
+	assert.Equal(t, "", comp.varReplaceFn("", "${Doesn'tMatchRegex"), "Wrong value returned for not matching input")
 }
