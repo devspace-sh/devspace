@@ -1,5 +1,5 @@
 ---
-title: Workflow
+title: Hooks
 ---
 
 # TODO @Fabian

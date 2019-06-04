@@ -19,7 +19,7 @@ There are many command parameters how you can modify the behaviour of `devspace 
 dev:
   sync:
   - localSubPath: ./src
-    # Use default selector defined above
+    # Select pods by following labels
     labelSelector:
       app.kubernetes.io/component: default
       app.kubernetes.io/name: devspace-app

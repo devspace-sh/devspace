@@ -2,6 +2,8 @@
 title: Delete Spaces
 ---
 
+# TODO @Fabian
+
 To delete a Space, simply run:
 ```bash
 devspace delete space [SPACE_NAME]

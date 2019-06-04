@@ -72,7 +72,8 @@
       "configuration/reference",
       "configuration/multiple-configs",
       "configuration/overrides",
-      "configuration/variables"
+      "configuration/variables",
+      "configuration/hooks"
     ],
     "CLI Reference": [
       "cli-commands/analyze",
@@ -117,7 +118,6 @@
       "cli-commands/use/config",
       "cli-commands/use/space"
     ],
-    "Overview": ["cloud/intro/overview"],
     "Spaces": [
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
@@ -127,7 +127,11 @@
       "cloud/spaces/domains",
       "cloud/spaces/resource-limits"
     ],
-    "Domains": ["cloud/domains/connect", "cloud/domains/certificates"],
+    "Domains": [
+      "cloud/domains/workflow",
+      "cloud/domains/connect",
+      "cloud/domains/certificates"
+    ],
     "Images": ["cloud/images/dscr-io"],
     "Clusters": [
       "cloud/clusters/connect",

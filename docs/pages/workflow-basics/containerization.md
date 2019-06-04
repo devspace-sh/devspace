@@ -2,6 +2,8 @@
 title: Containerize a project
 ---
 
+# TODO @Fabian
+
 If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes.
 
 ## Containerize a project

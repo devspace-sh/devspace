@@ -1,8 +1,10 @@
 ---
-title: Define dynamic configs
+title: Dynamic config variables
 ---
 
-Dynamic configs let you define variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for different developers.
+# TODO @Fabian
+
+DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace CLI also provides some predefined variables that can be used and are filled automatically. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  
 
 Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.
 

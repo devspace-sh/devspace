@@ -2,6 +2,8 @@
 title: What is a Space?
 ---
 
+# TODO @Fabian
+
 Spaces are smart isolated Kubernetes namespaces which provide the following features:
 - Automatic provisioning via `devspace create space [SPACE_NAME]`
 - Automatic allocation of a subdomain for each Space, e.g. `my-app.devspace.host`

@@ -2,6 +2,8 @@
 title: Add Kubernetes manifests
 ---
 
+# TODO @Fabian
+
 If you already have existing Kubernetes manifests which you like to deploy using DevSpace CLI, you can easily add them to the `deployments` array defined in your `devspace.yaml` using the following command:
 ```bash
 devspace add deployment [deployment-name] --manifests="./path/to/your/manifests/**"

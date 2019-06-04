@@ -2,7 +2,7 @@
 title: Dependencies
 ---
 
-DevSpace CLI allows you to define dependencies between several software projects, e.g. across different git repositories. This makes DevSpace CLI a great tool for building and deploying software that consists of several microservices.
+DevSpace CLI allows you to define dependencies between several software projects that have a `devspace.yaml`, e.g. across different git repositories. This makes DevSpace CLI a great tool for building and deploying software that consists of several microservices.
 
 When a DevSpace project has dependencies, DevSpace CLI will:
 1. Resolve all dependencies in a resursive manner
@@ -14,8 +14,8 @@ The algorithm used by DevSpace CLI for building and deploying dependencies ensur
 
 ## Define Dependencies
 DevSpace CLI is able to work with dependencies from the following sources:
-- `git`: defines a git repository as dependency (**recommended**)
-- `path`: defines a dependency from a path relative to the current project's root directory
+- `git`: defines a git repository as dependency that has a devspace configuration (**recommended**)
+- `path`: defines a dependency from a local path relative to the current project's root directory
 
 > Using `git` as dependency source is recommended because it makes it much easier to share the configuration with other developers on your team without forcing everyone to checkout the dependencies and placing them in the same folder structure.
 
@@ -26,7 +26,7 @@ dependencies:
 - source:
     git: https://github.com/my-api-server
 - source:
-    git: https://github.com/my-auth-server 
+    git: https://myuser:mypass@my-private-git.com/my-auth-server 
 ```
 
 The above example defines two dependencies using git repositories as source. DevSpace CLI will use your locally stored git credentials to clone the repositories into a temporary folder. Using the `devspace.yaml` within a dependency's repository, DevSpace CLI then builds the images defined and deploys the project's deployments.

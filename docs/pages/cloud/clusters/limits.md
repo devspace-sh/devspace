@@ -2,6 +2,8 @@
 title: Configure limits
 ---
 
+# TODO @Fabian
+
 DevSpace Cloud lets you define different kinds of limits:
 - Cluster-wide default limits (via Clusters > Overview > Default Space Limits)
 - Default limits for each cluster user (via Clusters > Users > Settings > Default Space Limits)
