@@ -37,16 +37,10 @@ func TestUpdate(t *testing.T){
 	err = chartGenerator.Update(false)
 	assert.Equal(t, true, err != nil, "No error when updating without devspace.yaml and no force")
 
-	//The method will try to create this folder and fail
-	chartGenerator.LocalPath = "./DoesNotExist"
-	err = chartGenerator.Update(false)
-	assert.Equal(t, true, err != nil, "No error when using a non existent local path")
-
 	err = fsutil.WriteToFile([]byte(""), "templates/someFileThatNeedsToBeCleaned")
 	if err != nil {
 		t.Fatalf("Error writin a file: %v", err)
 	}
-	chartGenerator.LocalPath = dir
 	err = chartGenerator.Update(true)
 	if err != nil {
 		t.Fatalf("Error calling Update with force: %v", err)
