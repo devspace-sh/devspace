@@ -32,10 +32,6 @@
       "image-building/build-tools/kaniko",
       "image-building/build-tools/custom-build-script"
     ],
-    "Deploy Containers": [
-      "deployment/containers/dockerfiles",
-      "deployment/containers/docker-images"
-    ],
     "Deploy Components": [
       "deployment/components/what-are-components",
       "deployment/components/add-predefined-components",

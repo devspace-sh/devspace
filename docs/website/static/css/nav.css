@@ -4,7 +4,7 @@
 }
 
 /* large title for DevSpace Cloud */
-.navGroups .navGroup:nth-child(11)::before {
+.navGroups .navGroup:nth-child(10)::before {
   display: block;
   margin: 1.4em 0 0.5em;
   padding: 0.5em 0 0.4em;
@@ -14,7 +14,7 @@
   content: "DevSpace Cloud";
 }
 
-.navGroups .navGroup:nth-child(11)::before {
+.navGroups .navGroup:nth-child(10)::before {
   content: "DevSpace Cloud";
 }
 
@@ -33,24 +33,24 @@
   .navGroup:nth-child(2)
   .navListItem:nth-child(n + 6):nth-child(-n + 10)::after,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5)::after,
-.navGroups .navGroup:nth-child(5) .navListItem::after {
+.navGroups .navGroup:nth-child(4) .navListItem::after {
   display: none;
 }
 
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(5)::after,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::after,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::after {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::after,
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::after,
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::after {
   display: block;
   top: 18px;
 }
 
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(5),
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(7),
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1),
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5),
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9) {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1),
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5),
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9) {
   margin-top: -3px;
   padding-top: 3px;
 }
@@ -58,9 +58,9 @@
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(5)::before,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::before,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::before,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::before,
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::before {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::before,
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::before,
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
   display: block;
   margin: 5px 0 0 23px;
   font-size: 14px;
@@ -76,15 +76,15 @@
   content: "Build Tools";
 }
 
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(1)::before {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::before {
   content: "Basics";
 }
 
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(5)::before {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::before {
   content: "Configure components";
 }
 
-.navGroups .navGroup:nth-child(5) .navListItem:nth-child(9)::before {
+.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
   content: "Configure containers";
 }
 
@@ -95,7 +95,7 @@
   .navListItem:nth-child(n + 7):nth-child(-n + 10)
   .navItem,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5) .navItem,
-.navGroups .navGroup:nth-child(5) .navListItem .navItem {
+.navGroups .navGroup:nth-child(4) .navListItem .navItem {
   padding-left: 36px;
 }
 
