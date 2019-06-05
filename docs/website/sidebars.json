@@ -13,8 +13,9 @@
       "workflow-basics/development",
       "workflow-basics/debugging",
       "workflow-basics/debugging/analyze",
-      "workflow-basics/debugging/logs",
+      "workflow-basics/debugging/sync",
       "workflow-basics/debugging/enter",
+      "workflow-basics/debugging/logs",
       "workflow-basics/debugging/remote-debuggers",
       "workflow-basics/dependencies"
     ],

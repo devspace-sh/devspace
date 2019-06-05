@@ -1,5 +1,5 @@
 ---
-title: Resource limits
+title: Settings
 ---
 
 # TODO @Fabian

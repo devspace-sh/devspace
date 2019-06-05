@@ -52,7 +52,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	syncCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
-	syncCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
+	syncCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")

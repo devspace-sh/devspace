@@ -2,12 +2,57 @@
 title: Add Kubernetes manifests
 ---
 
-# TODO @Fabian
+DevSpace is able to deploy any kubernetes manifest via `kubectl apply -f`. Make sure you have `kubectl` installed for this to work.
 
-If you already have existing Kubernetes manifests which you like to deploy using DevSpace CLI, you can easily add them to the `deployments` array defined in your `devspace.yaml` using the following command:
-```bash
-devspace add deployment [deployment-name] --manifests="./path/to/your/manifests/**"
+## Deploy via kubectl
+
+A minimal `devspace.yaml` config example can look like this:
+```yaml
+deployments:
+- name: devspace-default
+  kubectl:
+    manifests:
+    - kube
+    - kube2
 ```
-Although you can add each manifest individually, you can also use the Glob format to add define a pattern of manifest paths that you want to deploy with DevSpace CLI. The above pattern would add all files within the `path/to/your/manifests` folder within the root directory of your project. Paths should be relative to the root directory of your project which also contains your `devspace.yaml`.
 
-You can use [globtester.com](http://www.globtester.com/#p=eJzT0y9ILMnQL8nXr8wvLdLPTczLTEstLinW19ICAIcMCZc%3D&r=eJyVzMENgCAMAMBVDAPQBSq7VKiRhAKhlYTt9e3PAe4w5bnFQqq7E7J4ueChk11gDVa7BwjVfLKaQuJe2hKu5hdJwWMEhNcH%2FJEoj5kjf4YH8%2BAw7w%3D%3D&) to verify that your pattern matches the relative paths to your manifests.
+This will translate during deployment into the following commands:
+```bash
+kubectl apply -f kube
+kubectl apply -f kube2
+```
+
+If you have an image defined in your `devspace.yaml` that should be build before deploying like this:
+```yaml
+images:
+  default:
+    # The name defined here is the name DevSpace will search for in kubernetes manifests
+    image: dscr.io/yourusername/devspace
+    createPullSecret: true
+```
+
+DevSpace will search through all the kubernetes manifests that should be deployed before actual deployment and replace any 
+```yaml
+image: dscr.io/yourusername/devspace
+```
+
+with 
+
+```yaml
+image: dscr.io/yourusername/devspace:the-tag-that-was-just-build
+```
+
+The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your kubernetes manifests. This makes sure the just build image will actually be deployed.  
+
+For a complete example using kubectl as deployment method take a look at [quickstart-kubectl](https://github.com/devspace-cloud/devspace/tree/master/examples/quickstart-kubectl)
+
+## Kubectl configuration options
+
+### deployments[\*].kubectl
+```yaml
+kubectl:                            # struct   | Options for deploying with "kubectl apply"
+  cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
+  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
+  kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
+  flags: []                         # string[] | Array of flags for the "kubectl apply" command
+```

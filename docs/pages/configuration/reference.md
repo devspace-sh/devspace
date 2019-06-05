@@ -227,7 +227,7 @@ kubectl:                            # struct   | Options for deploying with "kub
   kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
   flags: []                         # string[] | Array of flags for the "kubectl apply" command
 ```
-[Learn more about configuring deployments with Helm.](/docs/deployment/kubernetes-manifests/what-are-manifests)
+[Learn more about configuring deployments with Kubectl.](/docs/deployment/kubernetes-manifests/what-are-manifests)
 
 
 ---

@@ -2,49 +2,46 @@
 title: Deploy with DevSpace
 ---
 
-DevSpace CLI lets you deploy one or even multiple applications with just a single command:
-```bash
-devspace deploy
-```
-The configuration for this command can be found in the `deployments` section within your `devspace.yaml`.
+DevSpace CLI lets you deploy one or even multiple applications. In DevSpace a **deployment** defines a specific part of an application or a whole application that should be deployed.  The configuration for these deployments can be found in the `deployments` section within your `devspace.yaml`.
 
 ## Deployment process
-Running `devspace deploy` will do the following:
+Running `devspace deploy` or `devspace dev` will do the following:
 1. Build all Docker [`images` that you specified in `devspace.yaml`](/docs/image-building/configuration)
 2. Push the Docker images to any [Docker registry](/docs/image-building/authentication)
-3. Create [image pull secrets](/docs/image-building/pull-secrets) for your Docker registries
-4. Deploy all deployments defined in `devspace.yaml` in the specified order
+3. Create [image pull secrets](/docs/image-building/pull-secrets) if specified
+4. Deploy all deployments defined in the `devspace.yaml` in the specified order with the built images
 
 ## Types of deployments
 DevSpace CLI lets you define the following types of deployments:
-- [Components](/docs/deployment/components/what-are-components) (predefined or custom)
+- [Components (Easy way to deploy common kubernetes resources)](/docs/deployment/components/what-are-components)
 - [Helm charts](/docs/deployment/helm-charts/what-are-helm-charts)
 - [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
+- [Kustomize manifests](/docs/deployment/kubernetes-manifests/kustomize)
 
-## Default deployment created by `devspace init`
-When running `devspace init` within your project, DevSpace CLI defines a deployment called `default` within your config file `devspace.yaml` which looks like this:
+Take a look at the [examples](https://github.com/devspace-cloud/devspace/tree/master/examples) if you want to see an example configuration for a certain deployment method.
+
+## Structure of a deployment
+A standard `devspace.yaml` with a single deployment could look like this:
 ```yaml
-# Defines an array of everything (component, Helm chart, Kubernetes maninfests) 
-# that will be deployed with DevSpace CLI in the specified order
+# An array of deployments (kubectl, helm, component) which will be deployed with DevSpace CLI in the specified order
 deployments:
-- name: quickstart-nodejs               # Name of this deployment
+- name: my-deployment                   # Name of this deployment
+  # Choose ONE of the following three deployment methods
+  kubectl: ...                          # Deploy kubernetes or kustomize manifests (kubectl has to be installed locally)
+  helm: ...                             # Deploy a local or remote helm chart
   component:                            # Deploy a component (alternatives: helm, kubectl)
     containers:                         # Defines an array of containers that run in the same pods started by this component
     - image: dscr.io/username/devspace  # Image of this container
-      resources:
-        limits:
-          cpu: "400m"                   # CPU limit for this container
-          memory: "500Mi"               # Memory/RAM limit for this container
     service:                            # Expose this component with a Kubernetes service
       ports:                            # Array of container ports to expose through the service
       - port: 3000                      # Exposes container port 3000 on service port 3000
 ```
-This `default` deployment is configured to deploy the [Helm chart for DevSpace Components](/docs/deployment/components/what-are-components) using the values specified in the `component` section.
+This deployment is configured to deploy the [Helm chart for DevSpace Components](/docs/deployment/components/what-are-components) using the values specified in the `component` section.
 
-Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace CLI will iterate over the deployment one after another in the specified order. It has been designed this way because the order in which your deployments are starting might be relevant depending on your application.
+Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace CLI will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
 
 ## Add additonal deployments
-If you want to add additional deployments, you have the following options:
+DevSpace provides convenience commands for adding deployments to the `devspace.yaml`. If you don't want to add additional deployments in the config manually, you have the following options:
 
 <details>
 <summary>
@@ -100,7 +97,7 @@ Example using Docker Hub: `devspace add deployment database --image="mysql"`
 ### Add existing Kubernetes manifests
 </summary>
 ```bash
-devspace add deployment [deployment-name] --manifests="./path/to/your/manifests/**"
+devspace add deployment [deployment-name] --manifests="./path/to/your/manifests"
 ```
 If you want to add existing Kubernetes manifests as deployments, you can do so by specifying a glob pattern for the `--manifests` flag as sown above. 
 
@@ -136,8 +133,17 @@ devspace deploy
 ```
 
 
-## Remove deployments
-Instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
+## Removing deployments
+If you want to delete a deployment from kubernetes you can run:
+```bash
+# Removes all deployments remotely
+devspace purge
+# Removes deployment with given name
+devspace purge --deployments=my-deployment-1,my-deployment-2
+```
+
+## Removing deployments from the config
+If you want to remove the deployment from the configuration, DevSpace CLI provides a convenient command `devspace remove deployment`, so instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
 ```bash
 devspace remove deployment [deployment-name]
 ```
