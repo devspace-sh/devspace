@@ -4,9 +4,11 @@ title: Add Kubernetes manifests
 
 DevSpace is able to deploy any kubernetes manifest via `kubectl apply -f`. Make sure you have `kubectl` installed for this to work.
 
+> For a complete example using kubectl as deployment method take a look at [quickstart-kubectl](https://github.com/devspace-cloud/devspace/tree/master/examples/quickstart-kubectl)
+
 ## Deploy via kubectl
 
-A minimal `devspace.yaml` config example can look like this:
+A minimal `devspace.yaml` deployment config example can look like this:
 ```yaml
 deployments:
 - name: devspace-default
@@ -44,9 +46,8 @@ image: dscr.io/yourusername/devspace:the-tag-that-was-just-build
 
 The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your kubernetes manifests. This makes sure the just build image will actually be deployed.  
 
-For a complete example using kubectl as deployment method take a look at [quickstart-kubectl](https://github.com/devspace-cloud/devspace/tree/master/examples/quickstart-kubectl)
 
-## Kubectl configuration options
+## Kubectl deployment configuration options
 
 ### deployments[\*].kubectl
 ```yaml

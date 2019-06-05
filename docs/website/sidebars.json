@@ -10,6 +10,7 @@
       "workflow-basics/containerization",
       "workflow-basics/deployment",
       "workflow-basics/deployment/domains",
+      "workflow-basics/deployment/access-keys",
       "workflow-basics/development",
       "workflow-basics/debugging",
       "workflow-basics/debugging/analyze",
@@ -123,15 +124,10 @@
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
       "cloud/spaces/delete-spaces",
-      "cloud/spaces/configure-networking",
       "cloud/spaces/domains",
       "cloud/spaces/resource-limits"
     ],
-    "Domains": [
-      "cloud/domains/workflow",
-      "cloud/domains/connect",
-      "cloud/domains/certificates"
-    ],
+    "Domains": ["cloud/domains/workflow", "cloud/domains/certificates"],
     "Images": ["cloud/images/dscr-io"],
     "Clusters": [
       "cloud/clusters/connect",

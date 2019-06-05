@@ -18,7 +18,7 @@ DevSpace CLI lets you define the following types of deployments:
 - [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
 - [Kustomize manifests](/docs/deployment/kubernetes-manifests/kustomize)
 
-Take a look at the [examples](https://github.com/devspace-cloud/devspace/tree/master/examples) if you want to see an example configuration for a certain deployment method.
+> Take a look at the [examples](https://github.com/devspace-cloud/devspace/tree/master/examples) if you want to see example configurations for a certain deployment method.
 
 ## Structure of a deployment
 A standard `devspace.yaml` with a single deployment could look like this:

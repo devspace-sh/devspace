@@ -4,7 +4,7 @@ title: How to develop with Kubernetes?
 
 DevSpace CLI provides useful features for developing your application directly in kubernetes. The command `devspace dev` can be used to start an application in development mode and starts services like file synchronization, port forwarding and terminal proxying automatically based on the configuration.  
 
-The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to either develop locally with minikube or in any remote kubernetes cluster.   
+The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to develop in any kubernetes cluster, either locally or in any remote kubernetes cluster.   
   
 When running `devspace dev` will do the following:
 1. Read the `Dockerfile` and apply in-memory [entrypoint overriding](/docs/development/entrypoint-overrides) (optional)
