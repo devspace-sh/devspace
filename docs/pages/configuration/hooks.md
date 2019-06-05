@@ -2,4 +2,4 @@
 title: Hooks
 ---
 
-# TODO @Fabian
+DevSpace allows you to define execution of custom commands during deployment
