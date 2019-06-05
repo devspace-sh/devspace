@@ -62,7 +62,7 @@ While initializing your project, DevSpace CLI will ask you a couple of questions
 
 ```yaml
 # Config version
-version: v1beta1
+version: v1beta2
 
 # Development-specific configuration (will be explained later)
 dev: ...
@@ -113,7 +113,7 @@ devspace deploy
 This command will do the following:
 1. Build the Dockerfiles specified in the `images` section of your `devspace.yaml`
 2. Push the resulting Docker images to the specified registries
-3. Create image pull secrets in your Kubernetes namespace
+3. Create image pull secrets in your Kubernetes namespace 
 4. Deploy everything that is defined unter `deployments` in your `devspace.yaml`
 
 **Congrats you have successfully deployed an application to kubernetes!**
@@ -186,3 +186,4 @@ Learn how to [connect custom domains](/docs/cloud/spaces/domains).
 DevSpace CLI does more than simplify and streamline the process of deploying applications to Kubernetes. It also lets you:
 - [Develop applications directly inside a Kubernetes cluster](/docs/getting-started/development)
 - [Debug and analyze deployed applications](/docs/getting-started/debugging)
+- [Example Configurations](https://github.com/devspace-cloud/devspace/tree/master/examples)

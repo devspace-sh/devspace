@@ -2,7 +2,7 @@
 title: 4. Debug with DevSpace
 ---
 
-DevSpace CLI provides powerful features for debugging applications that are running inside a Kubernetes clusters.
+DevSpace CLI provides useful features for debugging applications that are running inside a Kubernetes clusters.
 
 ## Analyze issues in your namespaces
 DevSpace CLI can automatically analyze Kubernetes namespaces and identify potential issues with your deployments. Simply run this command to let DevSpace CLI look for a variety of issues:

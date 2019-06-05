@@ -2,9 +2,10 @@
 title: Connect external clusters
 ---
 
-DevSpace Cloud provides the option to connect existing Kubernetes clusters. After connecting a cluster, you will be able to:
-- add users to the cluster (by sending an invite link)
-- set user and Space limits for the cluster
+DevSpace Cloud provides the option to connect existing Kubernetes clusters for free. This will enable yout to create [spaces](/docs/cloud/spaces/what-are-spaces) in any kubernetes cluster. After connecting a cluster, you will be able to:
+- create [spaces](/docs/cloud/spaces/what-are-spaces) in that cluster
+- add other users to the cluster (by sending an invite link)
+- set [Space limits](/docs/cloud/spaces/resource-limits) for the cluster and users
 
 ## Connect a new cluster
 You can connect any Kubernetes cluster, by running the following command:
@@ -30,8 +31,9 @@ $ devspace connect cluster
 [done] √ Deployed ingress controller                  
 [done] √ Deployed admission controller                
 [done] √ Deployed cert manager                        
-? DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created space? DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com) dev.my-domain.tld
-[done] √ Please create an A dns record for '*.dev.my-domain.tld' that points to external-ip of loadbalancer service 'devspace-cloud/nginx-ingress-controller'. Run `kubectl get svc nginx-ingress-controller -n devspace-cloud` to view the service
+[done] √ The domain '*.my-cluster.my.devspace.host' has been successfully configured for your clusters spa
+ces and now points to your clusters ingress controller. The dns change however can take several minutes to
+ take affect
 [done] √ Successfully connected cluster to DevSpace Cloud.
 ```
 

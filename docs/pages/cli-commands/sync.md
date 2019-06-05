@@ -25,7 +25,7 @@ Flags:
   -h, --help                    help for sync
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
   -n, --namespace string        Namespace where to select pods
-  -p, --pick                    Select a pod to stream logs from
+  -p, --pick                    Select a pod
       --pod string              Pod to open a shell to
   -s, --selector string         Selector name (in config) to select pod/container for terminal
 ```

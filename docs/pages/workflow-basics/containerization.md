@@ -47,7 +47,7 @@ If you have multiple applications inside a single project directory (i.e. monore
 3. During the init process, choose the option `Enter path to your Dockerfile` and enter the relative path to the Dockerfile of one of your microservices.
 4. To add each of the remaining services as deployments, run `devspace add deployment [service-name] --dockerfile="./path/to/your/service/Dockerfile"`
 
-If you already have Helm charts or Kubernetes manifests, you can also add them as deployment using the following commands:
+If you already have Helm charts or Kubernetes manifests, you can also add them as a deployment using the following commands:
 ```bash
 devspace add deployment [service-name] --chart="./path/to/your/service/chart"
 devspace add deployment [service-name] --manifests="./path/to/your/service/manifests/**"

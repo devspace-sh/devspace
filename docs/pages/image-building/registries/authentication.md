@@ -2,7 +2,7 @@
 title: Authentication
 ---
 
-DevSpace CLI works with public or private Docker registry. The only thing you need to do is to login to those registries with the `docker login` command.
+DevSpace CLI works with all public or private Docker registry. The only thing you need to do is to login to those registries with the `docker login` command.
 
 ## Use Docker Hub
 To use Docker Hub with DevSpace CLI, login to Docker Hub first:
