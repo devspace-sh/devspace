@@ -2,7 +2,7 @@
 title: Configure Space Limits
 ---
 
-When creating a [Space](/docs/cloud/what-are-spaces) DevSpace Cloud will create a namespace within a cluster and apply certain limits to it. In DevSpace Cloud there are Space Limits defined for each cluster, user and space:
+When creating a [Space](/docs/cloud/spaces/what-are-spaces) DevSpace Cloud will create a namespace within a cluster and apply certain limits to it. In DevSpace Cloud there are Space Limits defined for each cluster, user and space:
 - Cluster Space Limits are used as default Space Limits for new users (Can be changed in `Clusters -> Click On Cluser -> Limits`)
 - User Space Limits are used as default Space Limits for new spaces created by the user (Can be changed in `Clusters -> Click On Cluser -> Users -> Change Limits`)
 - Space Limits are actually applied to the namespace and applied during Space intialization (Can be changed in `Clusters -> Click On Cluser -> Spaces -> Click On Space -> Limits`)
