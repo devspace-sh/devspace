@@ -122,7 +122,6 @@
     "Spaces": [
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
-      "cloud/spaces/switch-spaces",
       "cloud/spaces/delete-spaces",
       "cloud/spaces/configure-networking",
       "cloud/spaces/domains",
