@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/add"
+	"github.com/devspace-cloud/devspace/cmd/cleanup"
 	"github.com/devspace-cloud/devspace/cmd/connect"
 	"github.com/devspace-cloud/devspace/cmd/create"
 	"github.com/devspace-cloud/devspace/cmd/list"
@@ -62,6 +63,7 @@ func init() {
 	rootCmd.AddCommand(update.NewUpdateCmd())
 	rootCmd.AddCommand(connect.NewConnectCmd())
 	rootCmd.AddCommand(reset.NewResetCmd())
+	rootCmd.AddCommand(cleanup.NewCleanupCmd())
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd())

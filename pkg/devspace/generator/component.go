@@ -46,10 +46,10 @@ func (c *ComponentSchema) varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
-func (c *ComponentSchema) varReplaceFn(path, value string) interface{} {
+func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) {
 	matched := VarMatchRegex.FindStringSubmatch(value)
 	if len(matched) != 4 {
-		return ""
+		return "", nil
 	}
 
 	value = matched[2]
@@ -75,12 +75,12 @@ func (c *ComponentSchema) varReplaceFn(path, value string) interface{} {
 
 	// Check if we can convert configVal
 	if i, err := strconv.Atoi(retValue); err == nil {
-		return i
+		return i, nil
 	} else if b, err := strconv.ParseBool(retValue); err == nil {
-		return b
+		return b, nil
 	}
 
-	return retValue
+	return retValue, nil
 }
 
 // askQuestion asks the user a question depending on the variable options

@@ -64,7 +64,7 @@ func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log
 
 				pf, err := kubectl.NewPortForwarder(config, client, pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
-					log.Fatalf("Error starting port forwarding: %v", err)
+					return nil, fmt.Errorf("Error starting port forwarding: %v", err)
 				}
 
 				go func() {

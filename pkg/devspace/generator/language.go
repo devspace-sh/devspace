@@ -137,7 +137,7 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 	if len(cg.supportedLanguages) == 0 {
 		files, err := ioutil.ReadDir(cg.gitRepo.LocalPath)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		for _, file := range files {

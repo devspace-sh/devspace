@@ -25,6 +25,7 @@
       "image-building/add-images",
       "image-building/tagging",
       "image-building/remove-images",
+      "image-building/cleanup",
       "image-building/specification",
       "image-building/registries/authentication",
       "image-building/registries/pull-secrets",

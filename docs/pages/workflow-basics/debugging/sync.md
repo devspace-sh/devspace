@@ -17,7 +17,7 @@ The command starts synchronizing files from the current directory with files in 
 4. Watches locally and remotely for changes and uploads or downloads them
 
 There are many command parameters how you can modify the behaviour of `devspace sync`, e.g. excluding files or changing the remote or local path:
-```
+```html
 Usage:
   devspace sync [flags]
 
