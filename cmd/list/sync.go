@@ -93,5 +93,5 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(headerColumnNames, syncPaths)
+	log.PrintTable(log.GetInstance(), headerColumnNames, syncPaths)
 }

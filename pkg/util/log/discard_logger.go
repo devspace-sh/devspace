@@ -78,37 +78,8 @@ func (d *DiscardLogger) StartWait(message string) {}
 // StopWait implements logger interface
 func (d *DiscardLogger) StopWait() {}
 
-// PrintTable implements logger interface
-func (d *DiscardLogger) PrintTable(header []string, values [][]string) {}
-
-// With implements logger interface
-func (d *DiscardLogger) With(obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: d,
-		context: map[string]interface{}{
-			"context-1": obj,
-		},
-	}
-}
-
-// WithKey implements logger interface
-func (d *DiscardLogger) WithKey(key string, obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: d,
-		context: map[string]interface{}{
-			key: obj,
-		},
-	}
-}
-
 // SetLevel implements logger interface
 func (d *DiscardLogger) SetLevel(level logrus.Level) {}
-
-func (d *DiscardLogger) printWithContext(fnType logFunctionType, contextFields map[string]interface{}, args ...interface{}) {
-}
-
-func (d *DiscardLogger) printWithContextf(fnType logFunctionType, contextFields map[string]interface{}, format string, args ...interface{}) {
-}
 
 // Write implements logger interface
 func (d *DiscardLogger) Write(message []byte) (int, error) {

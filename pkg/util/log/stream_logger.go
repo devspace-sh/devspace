@@ -105,11 +105,6 @@ func (s *StreamLogger) StopWait() {
 
 }
 
-// PrintTable implements logger interface
-func (s *StreamLogger) PrintTable(header []string, values [][]string) {
-	// TODO
-}
-
 // Debug implements interface
 func (s *StreamLogger) Debug(args ...interface{}) {
 	s.logMutex.Lock()
@@ -278,46 +273,12 @@ func (s *StreamLogger) Printf(level logrus.Level, format string, args ...interfa
 	}
 }
 
-// With implements interface
-func (s *StreamLogger) With(obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: s,
-		context: map[string]interface{}{
-			"context-1": obj,
-		},
-	}
-}
-
-// WithKey implements interface
-func (s *StreamLogger) WithKey(key string, obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: s,
-		context: map[string]interface{}{
-			key: obj,
-		},
-	}
-}
-
 // SetLevel implements interface
 func (s *StreamLogger) SetLevel(level logrus.Level) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
 	s.level = level
-}
-
-func (s *StreamLogger) printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(fnType, fmt.Sprintln(args...))
-}
-
-func (s *StreamLogger) printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(fnType, fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *StreamLogger) Write(message []byte) (int, error) {

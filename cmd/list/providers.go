@@ -55,5 +55,5 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 		})
 	}
 
-	log.PrintTable(headerColumnNames, providerRows)
+	log.PrintTable(log.GetInstance(), headerColumnNames, providerRows)
 }

@@ -49,5 +49,5 @@ func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Co
 		})
 	}
 
-	log.PrintTable(headerColumnNames, values)
+	log.PrintTable(log.GetInstance(), headerColumnNames, values)
 }
