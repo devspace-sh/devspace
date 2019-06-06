@@ -51,7 +51,6 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 func (w *Watcher) Start() {
 	w.startOnce.Do(func() {
 		go func() {
-		Outer:
 			for {
 				select {
 				case <-w.interrupt:
@@ -60,14 +59,14 @@ func (w *Watcher) Start() {
 					changed, deleted, err := w.Update()
 					if err != nil {
 						w.Log.Errorf("Error during watcher update: %v", err)
-						break Outer
+						return
 					}
 
 					if len(changed) > 0 || len(deleted) > 0 {
 						err = w.Callback(changed, deleted)
 						if err != nil {
 							w.Log.Errorf("Error during watcher callback: %v", err)
-							break Outer
+							return
 						}
 					}
 				}
