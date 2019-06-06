@@ -56,8 +56,8 @@
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(5)::before,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::before,
+.navGroups .navGroup:nth-child(3) .navListItem:nth-child(6)::before,
+.navGroups .navGroup:nth-child(3) .navListItem:nth-child(8)::before,
 .navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::before,
 .navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::before,
 .navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
@@ -68,11 +68,11 @@
   margin-bottom: 6px;
 }
 
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(5)::before {
+.navGroups .navGroup:nth-child(3) .navListItem:nth-child(6)::before {
   content: "Registry";
 }
 
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::before {
+.navGroups .navGroup:nth-child(3) .navListItem:nth-child(8)::before {
   content: "Build Tools";
 }
 
@@ -94,7 +94,7 @@
   .navGroup:nth-child(2)
   .navListItem:nth-child(n + 7):nth-child(-n + 10)
   .navItem,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5) .navItem,
+.navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 6) .navItem,
 .navGroups .navGroup:nth-child(4) .navListItem .navItem {
   padding-left: 36px;
 }
