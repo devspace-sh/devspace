@@ -1,5 +1,5 @@
 ---
-title: Image specification
+title: Configuration Reference
 ---
 
 ## images

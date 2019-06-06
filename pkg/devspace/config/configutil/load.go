@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/git"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -136,13 +135,13 @@ type predefinedVarDefinition struct {
 	Fill         func(generatedConfig *generated.Config) (*string, error)
 }
 
-func varReplaceFn(path, value string) interface{} {
+func varReplaceFn(path, value string) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
 	matched := VarMatchRegex.FindStringSubmatch(value)
 	if len(matched) != 4 {
-		return ""
+		return "", nil
 	}
 
 	value = matched[2]
@@ -152,7 +151,7 @@ func varReplaceFn(path, value string) interface{} {
 	varValue := ""
 	if variable, ok := PredefinedVars[strings.ToUpper(varName)]; ok {
 		if variable.Value == nil {
-			log.Fatal(variable.ErrorMessage)
+			return nil, errors.New(variable.ErrorMessage)
 		}
 
 		varValue = *variable.Value
@@ -162,7 +161,7 @@ func varReplaceFn(path, value string) interface{} {
 	} else {
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
-			log.Fatalf("Error reading generated config: %v", err)
+			return nil, fmt.Errorf("Error reading generated config: %v", err)
 		}
 
 		// Get current config
@@ -178,7 +177,7 @@ func varReplaceFn(path, value string) interface{} {
 		// Save config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Error saving generated config: %v", err)
+			return nil, fmt.Errorf("Error saving generated config: %v", err)
 		}
 	}
 
@@ -187,12 +186,12 @@ func varReplaceFn(path, value string) interface{} {
 
 	// Check if we can convert val
 	if i, err := strconv.Atoi(varValue); err == nil {
-		return i
+		return i, nil
 	} else if b, err := strconv.ParseBool(varValue); err == nil {
-		return b
+		return b, nil
 	}
 
-	return varValue
+	return varValue, nil
 }
 
 func varMatchFn(path, key, value string) bool {
@@ -291,7 +290,7 @@ func LoadConfigs(configs *configs.Configs, path string) error {
 }
 
 // CustomResolveVars resolves variables with a custom replace function
-func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, string) bool, replaceFn func(string, string) interface{}) ([]byte, error) {
+func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, string) bool, replaceFn func(string, string) (interface{}, error)) ([]byte, error) {
 	rawConfig := make(map[interface{}]interface{})
 
 	err := yaml.Unmarshal(yamlFileContent, &rawConfig)
@@ -299,7 +298,10 @@ func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, stri
 		return nil, err
 	}
 
-	walk.Walk(rawConfig, matchFn, replaceFn)
+	err = walk.Walk(rawConfig, matchFn, replaceFn)
+	if err != nil {
+		return nil, err
+	}
 
 	out, err := yaml.Marshal(rawConfig)
 	if err != nil {

@@ -2,8 +2,9 @@ package upgrade
 
 import (
 	"errors"
-	"log"
 	"regexp"
+
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -43,7 +44,8 @@ func SetVersion(verText string) {
 	if len(verText) > 0 {
 		_version, err := eraseVersionPrefix(verText)
 		if err != nil {
-			log.Fatalf("Error parsing version: %s", err.Error())
+			log.Errorf("Error parsing version: %v", err)
+			return
 		}
 
 		version = _version
@@ -73,24 +75,25 @@ func Upgrade() error {
 		return err
 	}
 	if newerVersion == "" {
-		log.Println("Current binary is the latest version: ", version)
+		log.Infof("Current binary is the latest version: %s", version)
 		return nil
 	}
 
 	v := semver.MustParse(version)
 
-	log.Println("Downloading newest version...")
+	log.StartWait("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)
+	log.StopWait()
 	if err != nil {
 		return err
 	}
 
 	if latest.Version.Equals(v) {
 		// latest version is the same as current version. It means current binary is up to date.
-		log.Println("Current binary is the latest version: ", version)
+		log.Infof("Current binary is the latest version: %s", version)
 	} else {
-		log.Println("Successfully updated to version", latest.Version)
-		log.Println("Release note:\n", latest.ReleaseNotes)
+		log.Donef("Successfully updated to version %s", latest.Version)
+		log.Infof("Release note: %s", latest.ReleaseNotes)
 	}
 
 	return nil

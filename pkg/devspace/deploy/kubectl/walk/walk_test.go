@@ -2,8 +2,9 @@ package walk
 
 import (
 	"testing"
-	"gotest.tools/assert" 
-"gopkg.in/yaml.v2"
+
+	"gopkg.in/yaml.v2"
+	"gotest.tools/assert"
 )
 
 func TestWalk(t *testing.T) {
@@ -26,15 +27,15 @@ test2:
 		t.Fatalf("Error parsing input: %v", err)
 	}
 
-	match := MatchFn(func(path, key, value string) bool{
+	match := MatchFn(func(path, key, value string) bool {
 		return key == "image" && value != "dontreplaceme"
 	})
-	replace := ReplaceFn(func(path, value string) (interface{}){
+	replace := ReplaceFn(func(path, value string) (interface{}, error) {
 		if value == "appendtag" {
-			return "appendtag:test"
-		}else {
-			return "replaced"
+			return "appendtag:test", nil
 		}
+
+		return "replaced", nil
 	})
 
 	Walk(inputObj, match, replace)
@@ -56,6 +57,6 @@ test2:
       test5: null
 `
 
-		t.Log(string(output))
+	t.Log(string(output))
 	assert.Equal(t, string(output), expected)
 }

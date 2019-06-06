@@ -464,6 +464,9 @@ func (s *Sync) Stop(fatalError error) {
 
 		if fatalError != nil {
 			s.Error(fatalError)
+
+			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
+			// or runtime error here
 			log.Fatalf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
 		}
 	})

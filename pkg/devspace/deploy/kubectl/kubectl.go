@@ -320,22 +320,24 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 		return false
 	}
 
-	replace := func(path, value string) interface{} {
+	replace := func(path, value string) (interface{}, error) {
 		image, err := registry.GetStrippedDockerImageName(value)
 		if err != nil {
-			return false
+			return false, nil
 		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
 			if imageCache.ImageName == image {
-				return image + ":" + imageCache.Tag
+				return image + ":" + imageCache.Tag, nil
 			}
 		}
 
-		return value
+		return value, nil
 	}
 
-	walk.Walk(manifest, match, replace)
+	// We ignore the error here because the replace function can never throw an error
+	_ = walk.Walk(manifest, match, replace)
+
 	return shouldRedeploy
 }
