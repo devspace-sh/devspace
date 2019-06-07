@@ -90,9 +90,10 @@
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(3) .navItem,
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(4) .navItem,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(5) .navItem,
 .navGroups
   .navGroup:nth-child(2)
-  .navListItem:nth-child(n + 7):nth-child(-n + 10)
+  .navListItem:nth-child(n + 8):nth-child(-n + 12)
   .navItem,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 7) .navItem,
 .navGroups .navGroup:nth-child(4) .navListItem .navItem {

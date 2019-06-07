@@ -11,8 +11,8 @@ DevSpace CLI fully automates the manual work of building, tagging and pushing Do
 1. Build a new image (if the Dockerfile or the Docker context has changed)
 2. Apply [entrypoint overrides](/docs/development/overrides) for development (only when running `devspace dev`)
 3. Tag this new image with an auto-generated tag
-4. Push this image to any [Docker registry](/docs/image-building/authentication) of your choice
-5. Create [image pull secrets](/docs/image-building/pull-secrets) for your registries
+4. Push this image to any [Docker registry](/docs/image-building/registries/authentication) of your choice
+5. Create [image pull secrets](/docs/image-building/registries/pull-secrets) for your registries
 
 ### Replacing image tags before deployment
 After building your images as part of `devspace deploy` or `devspace dev`, DevSpace CLI will continue with deploying your application as defined in the `deployments`. Before deploying, DevSpace CLI will use the newly generated tag and replace every occurence of the same image in your deployment files (e.g. Helm charts or Kubernetes manifests) with the newly generated tag, so that you are always deploying the newest version of your application. This tag replacement happens entirely in-memory, so your deployment files will not be altered.
@@ -27,7 +27,7 @@ There are a couple of configuration options to influence the image building proc
 <summary>
 ### Creating image pull secrets
 </summary>
-To make sure that Kubernetes can pull your image even when you are pushing to a private registry (such as dscr.io), DevSpace CLI will also create an [image pull secret](/docs/image-building/pull-secrets) containing credentials for your registry.
+To make sure that Kubernetes can pull your image even when you are pushing to a private registry (such as dscr.io), DevSpace CLI will also create an [image pull secret](/docs/image-building/registries/pull-secrets) containing credentials for your registry.
 
 ## Default image created by `devspace init`
 When running `devspace init` within your project, DevSpace CLI defines an image called `default` within your config file `devspace.yaml`.
