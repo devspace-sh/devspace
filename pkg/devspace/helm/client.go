@@ -47,11 +47,14 @@ type Client struct {
 	config *latest.Config
 }
 
+var helmClientsMutex sync.Mutex
 var helmClients = map[string]*Client{}
 
 // NewClient creates a new helm client
-// NOTE: This is not safe to use in goroutines and could cause multiple creation of the same client
 func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+	helmClientsMutex.Lock()
+	defer helmClientsMutex.Unlock()
+
 	if client, ok := helmClients[tillerNamespace]; ok {
 		return client, nil
 	}
@@ -132,10 +135,10 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 
 	log.StopWait()
 
-	return create(config, tillerNamespace, helmClient, kubectlClient)
+	return create(config, tillerNamespace, helmClient, kubectlClient, log)
 }
 
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface, log log.Logger) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -170,7 +173,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 
 	_, err = os.Stat(stableRepoCachePathAbs)
 	if err != nil {
-		err = wrapper.UpdateRepos()
+		err = wrapper.UpdateRepos(log)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +183,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 }
 
 // UpdateRepos will update the helm repositories
-func (client *Client) UpdateRepos() error {
+func (client *Client) UpdateRepos(log log.Logger) error {
 	allRepos, err := repo.LoadRepositoriesFile(client.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err

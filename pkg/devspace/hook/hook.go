@@ -90,8 +90,6 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 			if err != nil {
 				return fmt.Errorf("Error executing hook: %v", err)
 			}
-
-			return nil
 		}
 	}
 

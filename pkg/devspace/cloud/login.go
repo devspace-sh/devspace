@@ -41,6 +41,9 @@ func (p *Provider) GetToken() (string, error) {
 	}
 
 	p.Token = string(body)
+	if token.IsTokenValid(p.Token) == false {
+		return "", errors.New("Received invalid token from provider")
+	}
 
 	err = p.Save()
 	if err != nil {

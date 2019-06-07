@@ -6,15 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"gotest.tools/assert"
 )
 
 func TestWatcher(t *testing.T) {
-	t.Skip("Travis blocks because of a data race.")
-	//Create TmpFolder
+	// @Florian remove race conditions
+	t.Skip("Test is wrong")
+
+	// Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -37,14 +39,14 @@ func TestWatcher(t *testing.T) {
 	expectedChanges := &[]string{}
 	expectedDeletions := &[]string{}
 
-	callback := func(changed []string, deleted []string) error{
+	callback := func(changed []string, deleted []string) error {
 		assert.Equal(t, len(*expectedChanges), len(changed), "Wrong changes")
-		for index := range changed{
+		for index := range changed {
 			assert.Equal(t, (*expectedChanges)[index], changed[index], "Wrong changes")
 		}
 
 		assert.Equal(t, len(*expectedDeletions), len(deleted), "Wrong deletions")
-		for index := range deleted{
+		for index := range deleted {
 			assert.Equal(t, (*expectedDeletions)[index], deleted[index], "Wrong deletions")
 		}
 
@@ -61,18 +63,18 @@ func TestWatcher(t *testing.T) {
 
 	*expectedChanges = []string{".", "hello.txt"}
 	fsutil.WriteToFile([]byte("hello"), "hello.txt")
-	select{
-		case <- callbackCalledChan:
-		case <- time.After(time.Second * 5):
-			t.Fatalf("Timeout of waiting for callback after creating a file")
+	select {
+	case <-callbackCalledChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("Timeout of waiting for callback after creating a file")
 	}
-	
+
 	*expectedChanges = []string{".", "watchedsubdir"}
 	fsutil.WriteToFile([]byte("hi"), "watchedsubdir/unwatchedsubfile.txt")
-	select{
-		case <- callbackCalledChan:
-		case <- time.After(time.Second * 5):
-			t.Fatalf("Timeout of waiting for callback after creating a secound file")
+	select {
+	case <-callbackCalledChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("Timeout of waiting for callback after creating a second file")
 	}
 
 	*expectedChanges = []string{"hello.txt"}
@@ -80,10 +82,10 @@ func TestWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error changing file: %v", err)
 	}
-	select{
-		case <- callbackCalledChan:
-		case <- time.After(time.Second * 5):
-			t.Fatalf("Timeout of waiting for callback after changing a file")
+	select {
+	case <-callbackCalledChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("Timeout of waiting for callback after changing a file")
 	}
 
 	*expectedChanges = []string{"."}
@@ -92,12 +94,11 @@ func TestWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error deleting file: %v", err)
 	}
-	select{
-		case <- callbackCalledChan:
-		case <- time.After(time.Second * 5):
-			t.Fatalf("Timeout of waiting for callback after deleting a file")
+	select {
+	case <-callbackCalledChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("Timeout of waiting for callback after deleting a file")
 	}
 
 	watcher.Stop()
-
 }

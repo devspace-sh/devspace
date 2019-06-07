@@ -11,14 +11,14 @@
       "workflow-basics/deployment",
       "workflow-basics/deployment/domains",
       "workflow-basics/deployment/access-keys",
+      "workflow-basics/dependencies",
       "workflow-basics/development",
       "workflow-basics/debugging",
       "workflow-basics/debugging/analyze",
       "workflow-basics/debugging/sync",
       "workflow-basics/debugging/enter",
       "workflow-basics/debugging/logs",
-      "workflow-basics/debugging/remote-debuggers",
-      "workflow-basics/dependencies"
+      "workflow-basics/debugging/remote-debuggers"
     ],
     "Build Images": [
       "image-building/overview",

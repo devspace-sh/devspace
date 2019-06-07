@@ -119,22 +119,6 @@ docker build .
 
 <details>
 <summary>
-##### HTTP status code 40x or 50x when accessing your application
-</summary>
-
-This could be caused by several problems. Run the following command to automatically detect issues with your deployments: 
-```bash
-devspace analyze
-```
-If this command does not report any issues, check the following:
-1. **Bind Address**: Make sure your application is binding on `0.0.0.0` and not `localhost` 
-2. **Port**: Make sure your application listens on the same port as specified in `chart/values.yaml` under `components[*].service.containerPort`
-3. **Kubernetes networking**: Verify that your ingresses and services are configure correctly. Learn more about [Kubernetes networking](/docs/cloud/spaces/configure-networking).
-
-</details>
-
-<details>
-<summary>
 ##### Error: No such file or directory
 </summary>
 

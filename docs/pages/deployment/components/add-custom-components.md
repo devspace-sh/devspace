@@ -25,7 +25,7 @@ deployments:
 ...
 ```
 
-Let's say you want to add a mysql component manually insted of using one of the [predefined components](/docs/customization/predefined-components). You could simply add a new deployment with a similar definition as the default component:
+Let's say you want to add a mysql component manually instead of using one of the [predefined components](/docs/deployment/components/add-predefined-components). You could simply add a new deployment with a similar definition as the default component:
 
 ```yaml
 deployments:

@@ -92,7 +92,6 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 	}
 
 	releaseExists := ReleaseExists(client.helm, releaseName)
-
 	overwriteValues := []byte("")
 
 	if values != nil {

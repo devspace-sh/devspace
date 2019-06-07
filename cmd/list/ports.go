@@ -91,5 +91,5 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(headerColumnNames, portForwards)
+	log.PrintTable(log.GetInstance(), headerColumnNames, portForwards)
 }

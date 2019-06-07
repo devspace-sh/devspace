@@ -7,7 +7,7 @@ DevSpace CLI provides useful features for developing your application directly i
 The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to develop in any kubernetes cluster, either locally or in any remote kubernetes cluster.   
   
 When running `devspace dev` will do the following:
-1. Read the `Dockerfile` and apply in-memory [entrypoint overriding](/docs/development/entrypoint-overrides) (optional)
+1. Read the `Dockerfile` and apply in-memory [entrypoint overriding](/docs/development/overrides) (optional)
 2. Build and push Docker images using the (overridden) `Dockerfile`
 3. Deploy the [deployments](/docs/workflow-basics/deployment) defined in `devspace.yaml`
 4. Start [port forwarding](/docs/development/port-forwarding)

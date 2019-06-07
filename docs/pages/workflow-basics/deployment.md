@@ -7,8 +7,8 @@ DevSpace CLI lets you deploy one or even multiple applications. In DevSpace a **
 ## Deployment process
 Running `devspace deploy` or `devspace dev` will do the following:
 1. Build all Docker [`images` that you specified in `devspace.yaml`](/docs/image-building/configuration)
-2. Push the Docker images to any [Docker registry](/docs/image-building/authentication)
-3. Create [image pull secrets](/docs/image-building/pull-secrets) if specified
+2. Push the Docker images to any [Docker registry](/docs/image-building/registries/authentication)
+3. Create [image pull secrets](/docs/image-building/registries/pull-secrets) if specified
 4. Deploy all deployments defined in the `devspace.yaml` in the specified order with the built images
 
 ## Types of deployments
@@ -74,7 +74,7 @@ devspace add deployment [deployment-name] --dockerfile="" --image="my-registry.t
 ```
 The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace CLI would assume that you want to use the [DevSpace Container Registry](/docs/cloud/images/dscr-io) provided by DevSpace Cloud.
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
 
 </details>
 
@@ -88,7 +88,7 @@ devspace add deployment [deployment-name] --image="my-registry.tld/my-username/i
 ```
 Example using Docker Hub: `devspace add deployment database --image="mysql"`
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
 
 </details>
 

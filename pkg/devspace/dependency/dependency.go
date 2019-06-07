@@ -188,10 +188,8 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceD
 		return errors.Wrap(err, "change working directory")
 	}
 
-	defer func() {
-		// Change back to original working directory
-		os.Chdir(currentWorkingDirectory)
-	}()
+	// Change back to original working directory
+	defer os.Chdir(currentWorkingDirectory)
 
 	// Create kubectl client
 	client, err := kubectl.NewClient(d.Config)
@@ -213,8 +211,6 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceD
 	if err != nil {
 		return err
 	}
-
-	log.StopWait()
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)

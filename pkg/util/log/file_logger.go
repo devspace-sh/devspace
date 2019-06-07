@@ -165,69 +165,8 @@ func (f *fileLogger) StopWait() {
 	// Noop operation
 }
 
-// PrintTable implements logger interface
-func (f *fileLogger) PrintTable(header []string, values [][]string) {
-	//TODO
-}
-
-func (f *fileLogger) With(obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: f,
-		context: map[string]interface{}{
-			"context-1": obj,
-		},
-	}
-}
-
-func (f *fileLogger) WithKey(key string, obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: f,
-		context: map[string]interface{}{
-			key: obj,
-		},
-	}
-}
-
 func (f *fileLogger) SetLevel(level logrus.Level) {
 	f.logger.SetLevel(level)
-}
-
-func (f *fileLogger) printWithContext(fnType logFunctionType, contextFields map[string]interface{}, args ...interface{}) {
-	switch fnType {
-	case doneFn:
-	case infoFn:
-		f.logger.WithFields(contextFields).Info(args...)
-	case debugFn:
-		f.logger.WithFields(contextFields).Debug(args...)
-	case warnFn:
-		f.logger.WithFields(contextFields).Warn(args...)
-	case failFn:
-	case errorFn:
-		f.logger.WithFields(contextFields).Error(args...)
-	case panicFn:
-		f.logger.WithFields(contextFields).Panic(args...)
-	case fatalFn:
-		f.logger.WithFields(contextFields).Fatal(args...)
-	}
-}
-
-func (f *fileLogger) printWithContextf(fnType logFunctionType, contextFields map[string]interface{}, format string, args ...interface{}) {
-	switch fnType {
-	case doneFn:
-	case infoFn:
-		f.logger.WithFields(contextFields).Infof(format, args...)
-	case debugFn:
-		f.logger.WithFields(contextFields).Debugf(format, args...)
-	case warnFn:
-		f.logger.WithFields(contextFields).Warnf(format, args...)
-	case failFn:
-	case errorFn:
-		f.logger.WithFields(contextFields).Errorf(format, args...)
-	case panicFn:
-		f.logger.WithFields(contextFields).Panicf(format, args...)
-	case fatalFn:
-		f.logger.WithFields(contextFields).Fatalf(format, args...)
-	}
 }
 
 func (f *fileLogger) Write(message []byte) (int, error) {

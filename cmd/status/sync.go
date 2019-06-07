@@ -155,7 +155,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(header, values)
+	log.PrintTable(log.GetInstance(), header, values)
 }
 
 func intToTimeString(timeDifference int) string {

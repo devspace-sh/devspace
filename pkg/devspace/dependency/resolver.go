@@ -127,9 +127,13 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
 			err := r.DependencyGraph.AddEdge(parentID, ID)
-			if _, ok := err.(*CyclicError); ok {
-				// Check if cyclic dependencies are allowed
-				if !r.AllowCyclic {
+			if err != nil {
+				if _, ok := err.(*CyclicError); ok {
+					// Check if cyclic dependencies are allowed
+					if !r.AllowCyclic {
+						return err
+					}
+				} else {
 					return err
 				}
 			}

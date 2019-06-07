@@ -8,11 +8,17 @@ There are two ways how a [Space](/docs/cloud/spaces/what-are-spaces) can be crea
 
 Your Space name should only contain the following characters: `a-z`, `0-9`, `-` and space names must be unique for each user (but two users can have a space with the same name). 
 
-> Creating a Space will automatically switch the `kubectl` context and use it for the current project.
+> Creating a Space will automatically switch the `kubectl` context and use it for the current project (if there is any).
 
 ## Accessing Spaces
 
-To configure your local kube context or project to use a certain space just run `devspace use space NAME` anywhere on your computer (or in the project you want to use the space for). This will also change the current `kubectl` context to the space context.  
+To configure your local kube context or project to use a certain space just run the following command anywhere on your computer (or in the project you want to use the space for):
+
+```bash
+devspace use space NAME
+```
+
+> This will also change the current `kubectl` context to the space context.  
 
 To get a list of all your Spaces, run:
 ```bash
