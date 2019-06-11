@@ -3,17 +3,17 @@ title: Limits
 ---
 
 When creating a [Space](/docs/cloud/spaces/what-are-spaces), DevSpace Cloud will create a namespace within a cluster and apply certain limits to it. In DevSpace Cloud there are Space Limits defined for each cluster, user and space:
-- Cluster Space Limits are used as default Space Limits for new users (Can be changed in `Clusters -> Click On Cluser -> Limits`)
-- User Space Limits are used as default Space Limits for new spaces created by the user (Can be changed in `Clusters -> Click On Cluser -> Users -> Change Limits`)
-- Space Limits are actually applied to the namespace and applied during Space intialization (Can be changed in `Clusters -> Click On Cluser -> Spaces -> Click On Space -> Limits`)
+- Cluster Space Limits are used as default Space Limits for new users 
+- User Space Limits are used as default Space Limits for new spaces created by the user 
+- Space Limits are actually applied to the namespace and applied during Space intialization
 
-Space Limits can only be changed by Cluster Admins and Owners. Cluster Users cannot change any of the above limits.
+All Limits can only be changed by Cluster Admins. Cluster Users cannot change any of the above limits.
 
 ## How are limits applied during space creation?
 
 There are two ways how a Space can be created:
 1. By the cluster admin via `Clusters -> Click On Cluser -> Spaces -> Create Space`
-2. By the user himself via `devspace create space` or the UI
+2. By the user himself via `devspace create space` or in the UI
 
 When using the first way, the cluster admin is able to specify all the limits manually during creation. When the user himself creates a space, DevSpace Cloud will do the following:
 1. Checks if the user is allowed to create a space for this cluster based on how many spaces he is allowed to create (Can be changed in `Clusters -> Click On Cluser -> Users -> Change Limits`)
@@ -128,16 +128,16 @@ You can change the Space Limits for clusters, users and spaces always at a later
 
 Navigate to `Clusters -> Click on a Cluster -> Limits`. Change the limits and press apply. The following additional options exist:
 - **Override all cluster users default limits** will override the default space limits of all users to the specified limits
-- **Apply to all cluster spaces** will apply the limits to all cluster spaces and change (!) resource quotas, limit ranges, network policies and redeploy templates.
-- **Force** This option is only necessary if apply the limit to spaces and you want to change the limits to a lower value than what is currently in use already by a space. For example a cluster space has 10 pods and you change the space limits to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than allowed resources currently. 
+- **Apply to all cluster spaces** will apply the limits to all cluster spaces and change (!) resource quotas, limit ranges, network policies and redeploy templates if necessary.
+- **Force** This option is only necessary if you apply the limit to all spaces and you want to change the limits to a lower value than what is currently in use by a space. For example, a cluster space has 10 pods and you change the space pod limit to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than the allowed resources currently.
 
 ### Change User Limits
 
 Navigate to `Clusters -> Click on a Cluster -> Users -> Change Limits`. Change the limits and press apply. The following additional options exist:
 - **Apply to all existing user spaces** will apply the limits to all cluster spaces that were created by the user and change (!) resource quotas, limit ranges, network policies and redeploy templates if necessary.
-- **Force** This option is only necessary if apply the limit to spaces and you want to change the limits to a lower value than what is currently in use already by a space. For example a cluster space has 10 pods and you change the space limits to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than allowed resources currently. 
+- **Force** This option is only necessary if you apply the limit to all spaces and you want to change the limits to a lower value than what is currently in use by a space. For example, a cluster space has 10 pods and you change the space pod limit to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than the allowed resources currently.
 
 ### Change Space Limits
 
 Navigate to `Clusters -> Click on a Cluster -> Spaces -> Click on a Space -> Limits`. Change the limits and press apply. This will change (!) resource quotas, limit ranges, network policies and redeploy templates if necessary. The following additional options exist:
-- **Force** This option is only necessary if apply the limit to spaces and you want to change the limits to a lower value than what is currently in use already by a space. For example a cluster space has 10 pods and you change the space limits to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than allowed resources currently. 
+- **Force** This option is only necessary if you apply the limit to all spaces and you want to change the limits to a lower value than what is currently in use by a space. For example, a cluster space has 10 pods and you change the space pod limit to 5 pods, when checking this checkbox, devspace will apply those limits even though the space uses more than the allowed resources currently.
