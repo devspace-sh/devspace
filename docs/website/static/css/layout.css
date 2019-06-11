@@ -112,6 +112,8 @@ body {
 
     .separateOnPageNav .navPusher .docsNavContainer .toc .navBreadcrumb {
         border-bottom: 1px solid #ccc;
+        position: relative;
+        margin-bottom: 10px;
     }
 
     .separateOnPageNav .navPusher .docsNavContainer .toc .navGroups {
