@@ -81,7 +81,7 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
-	options.ExcludePaths = append(options.ExcludePaths, "/.devspace/")
+	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
 
 	// Initialize log, this is not thread safe !!!
 	if options.Log == nil && syncLog == nil {
