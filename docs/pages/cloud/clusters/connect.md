@@ -4,8 +4,8 @@ title: Connect external clusters
 
 DevSpace Cloud provides the option to connect existing Kubernetes clusters for free. This will enable yout to create [spaces](/docs/cloud/spaces/what-are-spaces) in any kubernetes cluster. After connecting a cluster, you will be able to:
 - create [spaces](/docs/cloud/spaces/what-are-spaces) in that cluster
-- add other users to the cluster (by sending an invite link)
-- set [Space limits](/docs/cloud/spaces/resource-limits) for the cluster and users
+- add other [users](/docs/cloud/clusters/users) to the cluster (by sending an invite link)
+- set [Space limits](/docs/cloud/spaces/resource-limits) for the cluster, users and spaces
 
 ## Connect a new cluster
 You can connect any Kubernetes cluster, by running the following command:
@@ -48,3 +48,5 @@ To remove a connected cluster from DevSpace Cloud, simply run:
 ```bash
 devspace remove cluster [cluster-name]
 ```
+
+The command will ask you if you want to delete the cluster services (Ingress Controller, Cert Manager and Admission Controller) and all spaces. If you choose to delete the cluster services and spaces, all kubernetes resources created by DevSpace Cloud will be **permanently** removed from the cluster.
