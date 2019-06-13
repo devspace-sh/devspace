@@ -70,6 +70,7 @@ func TestDependency(t *testing.T) {
 						Tag: "1.15", // This will be appended to nginx during deploy
 					},
 				},
+				Dependencies: map[string]string{},
 			},
 		},
 	}
