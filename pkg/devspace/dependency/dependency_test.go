@@ -43,11 +43,17 @@ func TestDependency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error writing file: %v", err)
 	}
+	err = fsutil.WriteToFile([]byte(""), "someDir/devspace.yaml")
+	if err != nil {
+		t.Fatalf("Error writing file: %v", err)
+	}
 
 	dependencyTasks := []*latest.DependencyConfig{
 		&latest.DependencyConfig{
-			Source: &latest.SourceConfig{},
-			Config: ptr.String("devspace.yaml"),
+			Source: &latest.SourceConfig{
+				Path: ptr.String("someDir"),
+			},
+			Config: ptr.String("someDir/devspace.yaml"),
 		},
 	}
 
