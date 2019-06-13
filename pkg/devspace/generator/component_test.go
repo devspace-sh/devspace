@@ -30,8 +30,16 @@ func TestComponentGenerator(t *testing.T){
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	componentGenerator, err := NewComponentGenerator()
 	if err != nil {

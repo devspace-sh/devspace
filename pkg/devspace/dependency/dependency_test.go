@@ -28,8 +28,16 @@ func TestDependency(t *testing.T) {
 	}
 
 	// Delete temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	err = fsutil.WriteToFile([]byte(""), "devspace.yaml")
 	if err != nil {
@@ -66,5 +74,15 @@ func TestDependency(t *testing.T) {
 	//if err != nil {
 		//t.Fatalf("Error deploying all dependencies: %v", err)
 	//}
+
+	err = PurgeAll(&latest.Config{}, generatedConfig, true, &log.DiscardLogger{})
+	if err != nil {
+		t.Fatalf("Error purging all dependencies with empty config: %v", err)
+	}
+
+	/*err = PurgeAll(testConfig, generatedConfig, true, &log.DiscardLogger{})
+	if err != nil {
+		t.Fatalf("Error purging all dependencies: %v", err)
+	}*/
 
 }

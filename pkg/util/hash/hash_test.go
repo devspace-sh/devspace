@@ -39,8 +39,16 @@ func TestHashDirectory(t *testing.T) {
 	}
 
 	// 8. Delete temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	//Use on empty dir
 	_, err = Directory(".")
@@ -73,8 +81,16 @@ func TestHashDirectoryExcludes(t *testing.T) {
 	}
 
 	// 8. Delete temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	fsutil.WriteToFile([]byte(""), "inludedFile")
 	fsutil.WriteToFile([]byte(""), "excludedFile")
