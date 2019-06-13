@@ -1,10 +1,10 @@
 package dependency
 
-import(
+import (
 	"io/ioutil"
 	"os"
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -70,19 +70,19 @@ func TestDependency(t *testing.T) {
 		t.Fatalf("Error deploying all dependencies with empty config: %v", err)
 	}
 
-	//err = DeployAll(testConfig, generatedConfig, true, true, true, true, true, true, &log.DiscardLogger{})
-	//if err != nil {
-		//t.Fatalf("Error deploying all dependencies: %v", err)
-	//}
+	err = DeployAll(testConfig, generatedConfig, true, true, true, true, true, true, &log.DiscardLogger{})
+	if err != nil {
+		t.Fatalf("Error deploying all dependencies: %v", err)
+	}
 
 	err = PurgeAll(&latest.Config{}, generatedConfig, true, &log.DiscardLogger{})
 	if err != nil {
 		t.Fatalf("Error purging all dependencies with empty config: %v", err)
 	}
 
-	/*err = PurgeAll(testConfig, generatedConfig, true, &log.DiscardLogger{})
+	err = PurgeAll(testConfig, generatedConfig, true, &log.DiscardLogger{})
 	if err != nil {
 		t.Fatalf("Error purging all dependencies: %v", err)
-	}*/
+	}
 
 }
