@@ -60,7 +60,19 @@ func TestDependency(t *testing.T) {
 	testConfig := &latest.Config{
 		Dependencies: &dependencyTasks,
 	}
-	generatedConfig := &generated.Config{}
+	// Create fake generated config
+	generatedConfig := &generated.Config{
+		ActiveConfig: "default",
+		Configs: map[string]*generated.CacheConfig{
+			"default": &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"default": &generated.ImageCache{
+						Tag: "1.15", // This will be appended to nginx during deploy
+					},
+				},
+			},
+		},
+	}
 	err = UpdateAll(&latest.Config{}, generatedConfig, true, &log.DiscardLogger{})
 	if err != nil {
 		t.Fatalf("Error updating all dependencies with empty config: %v", err)
