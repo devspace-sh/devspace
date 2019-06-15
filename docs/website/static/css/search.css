@@ -1,0 +1,28 @@
+.navSearchWrapper {
+  height: 43px;
+  position: fixed;
+  left: 290px;
+  padding-left: 10px !important;
+  border: none !important;
+}
+
+.navSearchWrapper .algolia-autocomplete {
+  height: 100%;
+}
+
+.navSearchWrapper .aa-dropdown-menu {
+  left: 0 !important;
+  right: auto !important;
+}
+
+@media screen and (min-width: 1600px) {
+  .navSearchWrapper {
+    margin-left: calc(50vw - 770px) !important;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .navSearchWrapper {
+    display: none;
+  }
+}

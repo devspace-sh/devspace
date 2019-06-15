@@ -29,9 +29,11 @@
 }
 
 .navGroups .navGroup:nth-child(2) .navListItem:nth-child(3)::after,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after,
+.navGroups .navGroup:nth-child(2) .navListItem:nth-child(5)::after,
 .navGroups
   .navGroup:nth-child(2)
-  .navListItem:nth-child(n + 6):nth-child(-n + 10)::after,
+  .navListItem:nth-child(n + 8):nth-child(-n + 12)::after,
 .navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 5)::after,
 .navGroups .navGroup:nth-child(4) .navListItem::after {
   display: none;
