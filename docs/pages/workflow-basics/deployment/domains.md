@@ -1,5 +1,5 @@
 ---
-title: Ingresses
+title: Domains & Ingresses
 ---
 
 In Kubernetes, traffic from outside the cluster is being routed like this:

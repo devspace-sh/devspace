@@ -124,10 +124,10 @@ devspace analyze
 
 Learn more about development with DevSpace:
 
-- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/analyze)
-- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/logs)
-- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/debugging/enter)
-- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/remote-debuggers)
+- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/development/analyze)
+- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/development/logs)
+- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/development/enter)
+- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/development/remote-debuggers)
 
 </details>
 

@@ -1,5 +1,5 @@
 ---
-title: Tagging images
+title: Define image tags
 ---
 
 If you have any image defined in your `devspace.yaml`, DevSpace will tag this image after building with a random string and push it to the defined registry. DevSpace will then replace the image name with the just build tag in memory in the resources that should be deployed (kubernetes manifests, helm chart values or component values).  
