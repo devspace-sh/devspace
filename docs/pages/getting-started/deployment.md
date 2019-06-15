@@ -185,5 +185,4 @@ Learn how to [connect custom domains](/docs/cloud/spaces/domains).
 ## What's next?
 DevSpace CLI does more than simplify and streamline the process of deploying applications to Kubernetes. It also lets you:
 - [Develop applications directly inside a Kubernetes cluster](/docs/getting-started/development)
-- [Debug and analyze deployed applications](/docs/getting-started/debugging)
 - [Example Configurations](https://github.com/devspace-cloud/devspace/tree/master/examples)
