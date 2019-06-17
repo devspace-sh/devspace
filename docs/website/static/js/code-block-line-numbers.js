@@ -5,7 +5,7 @@ window.addEventListener("load", function() {
     var lineNumber = 0;
     var lineId;
 
-    el[i].innerHTML = el[i].innerHTML.replace(/(^|\n)/g, function() {
+    el[i].innerHTML = el[i].innerHTML.replace(/(^|<br>(\n)?|\n)/g, function() {
       lineNumber++;
       lineId = "block-" + i + "-line-" + lineNumber;
       return (
