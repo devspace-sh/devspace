@@ -256,7 +256,7 @@
   } */
 
   .navigationSlider.burger-open {
-    height: 50vh;
+    height: 80vh;
     position: absolute;
     top: 0;
     left: 0;
@@ -401,24 +401,14 @@
 
 @media screen and (max-width: 550px) {
   .fixedHeaderContainer .headerWrapper header .navigationSlider {
-    right: 0;
+    right: 15px;
     overflow: hidden;
     position: absolute;
   }
 
-  .fixedHeaderContainer
-    .headerWrapper
-    header
-    .navigationWrapper
-    .slidingNav
-    .nav-site {
-    position: absolute;
-    right: -4px;
-  }
-
   header .burger-open nav.slidingNav .responsive-nav .hamburger-active {
-    right: 8px;
-    top: 23px;
+    right: 25px;
+    top: 25px;
   }
 }
 
