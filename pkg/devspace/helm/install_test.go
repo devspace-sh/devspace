@@ -6,10 +6,11 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/helm/pkg/helm"
-	
+
 	"gotest.tools/assert"
 )
 
@@ -20,7 +21,7 @@ func TestInstallChart(t *testing.T) {
 	kubeClient := fake.NewSimpleClientset()
 	helmClient := &helm.FakeClient{}
 
-	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient)
+	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +32,7 @@ func TestInstallChart(t *testing.T) {
 		},
 	}
 
-	err = client.UpdateRepos()
+	err = client.UpdateRepos(log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestAnalyzeError(t *testing.T) {
 	kubeClient := fake.NewSimpleClientset()
 	helmClient := &helm.FakeClient{}
 
-	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient)
+	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
 	}

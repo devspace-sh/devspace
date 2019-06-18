@@ -1,6 +1,8 @@
 package log
 
 import (
+	"strings"
+
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 )
@@ -125,16 +127,6 @@ func Printf(level logrus.Level, format string, args ...interface{}) {
 	stdoutLog.Printf(level, format, args...)
 }
 
-// With adds context information to the entry
-func With(obj interface{}) *LoggerEntry {
-	return stdoutLog.With(obj)
-}
-
-// WithKey adds context information to the entry
-func WithKey(key string, obj interface{}) *LoggerEntry {
-	return stdoutLog.WithKey(key, obj)
-}
-
 // SetLevel changes the log level of the global logger
 func SetLevel(level logrus.Level) {
 	stdoutLog.SetLevel(level)
@@ -168,6 +160,55 @@ func WriteString(message string) {
 }
 
 // PrintTable prints a table with header columns and string values
-func PrintTable(header []string, values [][]string) {
-	stdoutLog.PrintTable(header, values)
+func PrintTable(s Logger, header []string, values [][]string) {
+	columnLengths := make([]int, len(header))
+
+	for k, v := range header {
+		columnLengths[k] = len(v)
+	}
+
+	// Get maximum column length
+	for _, v := range values {
+		for key, value := range v {
+			if len(value) > columnLengths[key] {
+				columnLengths[key] = len(value)
+			}
+		}
+	}
+
+	s.Write([]byte("\n"))
+
+	// Print Header
+	for key, value := range header {
+		WriteColored(" "+value+"  ", "green+b")
+
+		padding := columnLengths[key] - len(value)
+
+		if padding > 0 {
+			s.Write([]byte(strings.Repeat(" ", padding)))
+		}
+	}
+
+	s.Write([]byte("\n"))
+
+	if len(values) == 0 {
+		s.Write([]byte(" No entries found\n"))
+	}
+
+	// Print Values
+	for _, v := range values {
+		for key, value := range v {
+			s.Write([]byte(" " + value + "  "))
+
+			padding := columnLengths[key] - len(value)
+
+			if padding > 0 {
+				s.Write([]byte(strings.Repeat(" ", padding)))
+			}
+		}
+
+		s.Write([]byte("\n"))
+	}
+
+	s.Write([]byte("\n"))
 }

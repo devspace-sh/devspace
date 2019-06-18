@@ -2,6 +2,8 @@
 title: Deploy existing images
 ---
 
+# TODO @Fabian
+
 DevSpace CLI lets you easily define Kubernetes deployments for any existing Docker image.
 
 ### Add deployments for existing images
@@ -11,7 +13,7 @@ devspace add deployment [deployment-name] --image="my-registry.tld/my-username/i
 ```
 Example using Docker Hub: `devspace add deployment database --image="mysql"`
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
 
 After adding a new deployment, you need to manually redeploy in order to start the newly added component together with the remainder of your previouly existing deployments.
 ```bash

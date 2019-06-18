@@ -2,23 +2,68 @@
 title: Add Helm charts
 ---
 
-DevSpace CLI lets you add existing Helm charts (either from your local filesystem or from a Helm registry) to your deployments.
+DevSpace CLI lets you deploy existing Helm charts (either from your local filesystem or from a Helm registry).
 
-## Add a local Helm chart
-If you built your own Helm chart and it is located inside your project directory, you can simply add it as a deployment using the following command:
-```bash
-devspace add deployment [deployment-name] --chart="./path/to/my/chart"
+> For a complete example using helm as deployment method take a look at [minikube](https://github.com/devspace-cloud/devspace/tree/master/examples/minikube)
+
+## Deploy via helm
+
+A minimal `devspace.yaml` deployment config example can look like this:
+```yaml
+deployments:
+- name: default
+  helm:
+    chart:
+      name: ./chart
 ```
 
-## Add a Helm chart from a Helm repository
-If you want to deploy a Helm chart from a chart repository, you can simply add it as shown in this example:
-```bash
-devspace add deployment [deployment-name] --chart="stable/mysql"
+This tells DevSpace to deploy a local chart in `./chart`. If you want to deploy a remote chart you can also specify:
+```yaml
+deployments:
+- name: default
+  helm:
+    chart:
+      name: redis
+      version: "6.1.4"
+      repo: https://kubernetes-charts.storage.googleapis.com
 ```
 
-You can replace `stable` with the name of your Helm chart repository, if the repository already exists on your local computer. If you want to use a chart from a chart repository that you have not used yet, you can also specify the full repository URL:
-```bash
-devspace add deployment [deployment-name] --chart="chart-name" --chart-repo="https://my-chart-repository.tld"
+If you have an image defined in your `devspace.yaml` that should be build before deploying like this:
+```yaml
+images:
+  default:
+    # The name defined here is the name DevSpace will search for in kubernetes manifests
+    image: dscr.io/yourusername/devspace
+    createPullSecret: true
 ```
 
-> Use the `--chart-version` flag to specifiy the char version that you want to deploy.
+DevSpace will search through all the override values defined in the local chart at `localchartpath/values.yaml` or defined in `deployments[].helm.values` or `deployments[].helm.valuesFiles` and replace the image name `dscr.io/yourusername/devspace` with the image name and the just build tag.  
+
+The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your configuration files. This makes sure the just build image will actually be deployed.  
+
+## Helm deployment configuration options
+
+### deployments[\*].helm
+```yaml
+helm:                               # struct   | Options for deploying with Helm
+  chart: ...                        # struct   | Relative path 
+  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
+  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
+  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
+  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
+  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
+  devSpaceValues: true              # bool     | If DevSpace CLI should replace images overrides and values.yaml before deploying (Default: true)
+  valuesFiles:                      # string[] | Array of paths to values files
+  - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
+  values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
+```
+
+### deployments[\*].helm.chart
+```yaml
+chart:                              # struct   | Chart to deploy
+  name: my-chart                    # string   | Chart name
+  version: v1.0.1                   # string   | Chart version
+  repo: "https://my-repo.tld/"      # string   | Helm chart repository
+  username: "my-username"           # string   | Username for Helm chart repository
+  password: "my-password"           # string   | Password for Helm chart repository
+```

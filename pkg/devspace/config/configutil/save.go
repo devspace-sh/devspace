@@ -15,9 +15,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func replaceVar(path, value string) interface{} {
+func replaceVar(path, value string) (interface{}, error) {
 	oldValue, _ := LoadedVars[path]
-	return oldValue
+	return oldValue, nil
 }
 
 func matchVar(path, key, value string) bool {

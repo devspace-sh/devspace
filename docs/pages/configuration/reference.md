@@ -28,7 +28,7 @@ images:                             # map[string]struct | Images to be built and
     tag: v0.0.1                     # string   | Image tag
     dockerfile: ./Dockerfile        # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
     context: ./                     # string   | Relative path to the context used for building (Default: ./)
-    createPullSecret: true          # bool     | Create a pull secret containing your Docker credentials (Default: true)
+    createPullSecret: true          # bool     | Create a pull secret containing your Docker credentials (Default: false)
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
@@ -186,10 +186,10 @@ service: 	                        # struct   | Component service configuration
 ### deployments[\*].component.options
 ```yaml
 options: 	                        # struct   | Component service configuration
-  wait: true                        # bool     | Wait for pods to start after deployment (Default: true)
-  rollback: true                    # bool     | Rollback if deployment failed (Default: true)
+  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
+  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
-  timeout: 40                       # int      | Timeout to wait for pods to start after deployment (Default: 40)
+  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
 ```
 
@@ -197,12 +197,12 @@ options: 	                        # struct   | Component service configuration
 ```yaml
 helm:                               # struct   | Options for deploying with Helm
   chart: ...                        # struct   | Relative path 
-  wait: true                        # bool     | Wait for pods to start after deployment (Default: true)
-  rollback: true                    # bool     | Rollback if deployment failed (Default: true)
+  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
+  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
-  timeout: 40                       # int      | Timeout to wait for pods to start after deployment (Default: 40)
+  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
-  devSpaceValues: true              # bool     | If DevSpace CLI should append pullSecrets and set images to values.yaml before deployment (Default: true)
+  devSpaceValues: true              # bool     | If DevSpace CLI should replace images overrides and values.yaml before deploying (Default: true)
   valuesFiles:                      # string[] | Array of paths to values files
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
   values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
@@ -223,11 +223,11 @@ chart:                              # struct   | Chart to deploy
 ```yaml
 kubectl:                            # struct   | Options for deploying with "kubectl apply"
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
-  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube/* or manifests/service.yaml)
+  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
   kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
   flags: []                         # string[] | Array of flags for the "kubectl apply" command
 ```
-[Learn more about configuring deployments with Helm.](/docs/deployment/kubernetes-manifests/what-are-manifests)
+[Learn more about configuring deployments with Kubectl.](/docs/deployment/kubernetes-manifests/what-are-manifests)
 
 
 ---
@@ -257,6 +257,8 @@ overrideImages:                     # struct[] | Array of override settings for 
 ```yaml
 terminal:                           # struct   | Options for the terminal proxy
   disabled: false                   # bool     | Disable terminal proxy / only start port-forwarding and code sync if defined (Default: false)
+  labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
+  container: ""                     # string   | Container name to use
   selector:                         # TODO
   command: []                       # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
@@ -266,6 +268,8 @@ terminal:                           # struct   | Options for the terminal proxy
 ```yaml
 ports:                              # struct[] | Array of port forwarding settings for selected pods
 - selector:                         # TODO
+  labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
+  container: ""                     # string   | Container name to use
   forward:                          # struct[] | Array of ports to be forwarded
   - port: 8080                      # int      | Forward this port on your local computer
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
@@ -278,7 +282,9 @@ ports:                              # struct[] | Array of port forwarding settin
 sync:                               # struct[] | Array of file sync settings for selected pods
 - selector:                         # TODO
   localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
-  containerPath: /app               # string   | Absolute path in the container that should be synchronized with localSubPath
+  containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
+  labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
+  container: ""                     # string   | Container name to use
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
@@ -313,7 +319,7 @@ selectors:                          # struct[] | Array of selectors used to sele
 ```yaml
 dependencies:                       # struct[]  | Array of dependencies (other projects containing a devspace.yaml or devspace-configs.yaml) that need to be deployed before this project
 - source:                           # struct    | Defines where to find the dependency (exactly one source is allowed)
-    git: https://github.com/my-repo # string    | URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
+    git: https://github.com/my-repo # string    | HTTP(S) URL of the git repository (recommended method for referencing dependencies, must have the format of the git remote repo as usually checked out via git clone)
     path: ../../my-projects/repo    # string    | Path to a project on your local computer (not recommended)
   config: default                   # string    | Name of the config used to deploy this dependency (when multiple configs are defined via devspace-configs.yaml)
   skipBuild: false                  # bool      | Do not build images of this dependency (= only start deployments)

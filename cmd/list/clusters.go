@@ -93,7 +93,7 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	}
 
 	if len(values) > 0 {
-		log.PrintTable(headerColumnNames, values)
+		log.PrintTable(log.GetInstance(), headerColumnNames, values)
 	} else {
 		log.Infof("No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b"))
 	}

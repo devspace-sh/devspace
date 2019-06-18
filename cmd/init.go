@@ -220,15 +220,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 	if newDeployment != nil {
 		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
-
-		if cmd.useCloud && newDeployment.Component != nil && newDeployment.Component.Containers != nil && len(*newDeployment.Component.Containers) > 0 {
-			(*newDeployment.Component.Containers)[0].Resources = &map[interface{}]interface{}{
-				"limits": map[interface{}]interface{}{
-					"cpu":    "400m",
-					"memory": "500Mi",
-				},
-			}
-		}
 	}
 
 	// Add the development configuration
@@ -237,7 +228,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Save config
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
-		log.With(err).Fatalf("Config error: %s", err.Error())
+		log.Fatalf("Config error: %v", err)
 	}
 
 	// Check if .gitignore exists

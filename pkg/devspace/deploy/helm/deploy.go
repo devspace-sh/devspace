@@ -213,23 +213,24 @@ func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *g
 		return false
 	}
 
-	replace := func(path, value string) interface{} {
+	replace := func(path, value string) (interface{}, error) {
 		image, err := registry.GetStrippedDockerImageName(value)
 		if err != nil {
-			return false
+			return false, nil
 		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
 			if imageCache.ImageName == image {
-				return image + ":" + imageCache.Tag
+				return image + ":" + imageCache.Tag, nil
 			}
 		}
 
-		return value
+		return value, nil
 	}
 
-	walk.Walk(overwriteValues, match, replace)
+	// We ignore the error here because our replace function never throws an error
+	_ = walk.Walk(overwriteValues, match, replace)
 
 	return shouldRedeploy
 }

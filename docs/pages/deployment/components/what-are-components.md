@@ -2,7 +2,7 @@
 title: What are components?
 ---
 
-Components make deployments to Kubernetes much easier and better maintainable. You can define components in the `deployment` section of your `devspace.yaml`. A basic component looks like this:
+Components are a convenience deployment method of DevSpace to deploy common kubernetes resources without the hassle of defining complex kubernetes yamls. You can define components in the `deployment` section of your `devspace.yaml`. A basic component looks like this:
 ```yaml
 deployments:
 - name: quickstart-nodejs

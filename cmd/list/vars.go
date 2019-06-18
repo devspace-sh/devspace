@@ -73,5 +73,5 @@ func (cmd *configsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(headerColumnNames, varRow)
+	log.PrintTable(log.GetInstance(), headerColumnNames, varRow)
 }

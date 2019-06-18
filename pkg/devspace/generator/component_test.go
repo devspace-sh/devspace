@@ -9,11 +9,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	
+
 	"gotest.tools/assert"
 )
 
-func TestComponentGenerator(t *testing.T){
+func TestComponentGenerator(t *testing.T) {
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -129,22 +129,22 @@ func TestComponentGenerator(t *testing.T){
 	assert.Equal(t, *template.Replicas, 1234, "Wrong template returned")
 }
 
-func TestVarReplaceFn(t *testing.T){
+func TestVarReplaceFn(t *testing.T) {
 	comp := ComponentSchema{
 		VariableValues: map[string]string{
-			"hello": "world",
+			"hello":       "world",
 			"isThisATest": "true",
-			"OnePlusOne": "2",
+			"OnePlusOne":  "2",
 		},
 		Variables: []configs.Variable{
 			configs.Variable{
-				Name: ptr.String("NeedsQuestion"),
+				Name:    ptr.String("NeedsQuestion"),
 				Options: &[]string{},
 			},
 			configs.Variable{
-				Name: ptr.String("AlsoNeedsQuestion"),
-				Question: ptr.String("SomeQuestion"),
-				Default: ptr.String("SomeDefault"),
+				Name:              ptr.String("AlsoNeedsQuestion"),
+				Question:          ptr.String("SomeQuestion"),
+				Default:           ptr.String("SomeDefault"),
 				ValidationPattern: ptr.String("SomeValidationPattern"),
 				ValidationMessage: ptr.String("SomeValidationMessage"),
 			},
@@ -153,13 +153,20 @@ func TestVarReplaceFn(t *testing.T){
 
 	survey.SetNextAnswer("DoesNeedQuestion")
 
-	assert.Equal(t, "world", comp.varReplaceFn("", "${hello}"), "Wrong value returned for hello")
-	assert.Equal(t, true, comp.varReplaceFn("", "${isThisATest}"), "Wrong value returned for isThisATest")
-	assert.Equal(t, 2, comp.varReplaceFn("", "${OnePlusOne}"), "Wrong value returned for OnePlusOne")
-	assert.Equal(t, "DoesNeedQuestion", comp.varReplaceFn("", "${NeedsQuestion}"), "Wrong value returned for NeedsQuestion")
-	
+	val, _ := comp.varReplaceFn("", "${hello}")
+	assert.Equal(t, "world", val, "Wrong value returned for hello")
+
+	val, _ = comp.varReplaceFn("", "${isThisATest}")
+	assert.Equal(t, true, val, "Wrong value returned for isThisATest")
+	val, _ = comp.varReplaceFn("", "${OnePlusOne}")
+	assert.Equal(t, 2, val, "Wrong value returned for OnePlusOne")
+	val, _ = comp.varReplaceFn("", "${NeedsQuestion}")
+	assert.Equal(t, "DoesNeedQuestion", val, "Wrong value returned for NeedsQuestion")
+
 	survey.SetNextAnswer("DoesNeedQuestionAsWell")
-	assert.Equal(t, "DoesNeedQuestionAsWell", comp.varReplaceFn("", "${AlsoNeedsQuestion}"), "Wrong value returned for AlsoNeedsQuestion")
-	
-	assert.Equal(t, "", comp.varReplaceFn("", "${Doesn'tMatchRegex"), "Wrong value returned for not matching input")
+	val, _ = comp.varReplaceFn("", "${AlsoNeedsQuestion}")
+	assert.Equal(t, "DoesNeedQuestionAsWell", val, "Wrong value returned for AlsoNeedsQuestion")
+
+	val, _ = comp.varReplaceFn("", "${Doesn'tMatchRegex")
+	assert.Equal(t, "", val, "Wrong value returned for not matching input")
 }

@@ -58,3 +58,4 @@ See the following guides to learn more:
 - [Configure port-forwarding](/docs/development/port-forwarding)
 - [Use a separate Dockerfile for development](/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev)
 - [Override entrypoints during development](/docs/development/overrides#configuring-entrypoint-overrides)
+- [Example Configurations](https://github.com/devspace-cloud/devspace/tree/master/examples)

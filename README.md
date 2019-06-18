@@ -1,8 +1,7 @@
-[![DevSpace Logo](docs/website/static/img/github-readme-header.svg)](https://devspace.cloud/)
----
+## [![DevSpace Logo](docs/website/static/img/github-readme-header.svg)](https://devspace.cloud/)
 
-[Website](https://devspace.cloud/) • 
-[Documentation](https://devspace.cloud/docs) • 
+[Website](https://devspace.cloud/) •
+[Documentation](https://devspace.cloud/docs) •
 [Slack](https://devspace.cloud/slack)
 
 [![Build Status](https://travis-ci.org/devspace-cloud/devspace.svg?branch=master)](https://travis-ci.org/devspace-cloud/devspace)
@@ -13,25 +12,27 @@
 > Do you like DevSpace CLI? Support the project with a star ⭐️
 
 ## Automate development and deployment workflows for your entire team
+
 ### 1. Create deployment and development workflows for Kubernetes within minutes
+
 - Based on your existing Dockerfile(s) or images from any Docker registry
 - Based on your existing Kubernetes manifest(s)
 - Based on your existing Helm chart(s)
 
 ### 2. Share your workflows via git and let anyone on your team:
+
 - **Deploy to Kubernetes** based on your deployment configuration by running a single command: `devspace deploy`
-   - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
-   - Automatic image tagging, pushing (to any public or private registry) and pull secret generation
-   - Automatic deployment of one or multiple Kubernetes manifests and/or Helm charts
-   - Automatic ingress configuration
+  - Automatic image building (using Docker for local image building or kaniko for in-cluster image building)
+  - Automatic image tagging, pushing (to any public or private registry) and pull secret generation
+  - Automatic deployment of one or multiple Kubernetes manifests and/or Helm charts
+  - Automatic ingress configuration
 - **Debug deployments** using `devspace analyze`, `devspace logs` and `devspace enter`
 - **Develop applications directly inside Kubernetes** using `devspace dev`
-- **Create private and isolated namespaces** with a single command: `devspace create space my-space` 
+- **Create private and isolated namespaces** with a single command: `devspace create space my-space`
 
 ### 3. Customize your workflows and keep them consistent across your entire team
 
 ### 4. Build CI/CD pipelines</b> faster with DevSpace CLI
-
 
 <br>
 
@@ -41,6 +42,7 @@
 <summary><b>Containerize</b> any project in minutes</summary>
 
 ### Containerize your project
+
 ```
 devspace containerize
 ```
@@ -48,11 +50,13 @@ devspace containerize
 DevSpace CLI detects your programming language and creates a Dockerfile for your project.
 
 ### Initialize your project
+
 ```
 devspace init
 ```
 
 DevSpace CLI creates a configuration for deploying and developing with Kubernetes based on:
+
 - your Dockerfile(s)
 - your Helm chart(s)
 - your Kubernetes manifest(s)
@@ -65,11 +69,13 @@ DevSpace CLI creates a configuration for deploying and developing with Kubernete
 <summary><b>Deploy</b> containerized applications with ease</summary>
 
 ### Deploy your application
+
 ```
 devspace deploy
 ```
 
 #### What does `devspace deploy` do?
+
 1. Builds, tags and pushes one or even multiple Docker images
 2. Creates pull secrets for your image registries
 3. Deploys your project with the newest images (e.g. using Helm)
@@ -84,12 +90,15 @@ devspace deploy
 <summary><b>Develop</b> cloud-native software faster than ever</summary>
 
 ### Develop in a production-like environment
+
 ```
 devspace dev
 ```
+
 **With DevSpace, you can build and test your application directly inside Kubernetes.** Thanks to our real-time code sync, you can even use hot reloading tools (e.g. nodemon) to refresh your running application without having to waste time on re-building and re-deploying your application every time you change your code. With DevSpace, your containers are updated in real-time without any delay. It works in any container with and without volumes.
 
 DevSpace CLI provides the following development features:
+
 - [Real-time code synchronization for hot reloading](https://devspace.cloud/docs/development/synchronization)
 - [Automatic port forwarding for access via localhost](https://devspace.cloud/docs/development/port-forwarding)
 - [Terminal proxy for running commands in your containers](https://devspace.cloud/docs/development/terminal)
@@ -102,25 +111,30 @@ DevSpace CLI provides the following development features:
 <summary><b>Debug</b> deployments without hassle</summary>
 
 ### Speed up finding and solving issues
+
 ```
 devspace analyze
 ```
+
 **DevSpace CLI automatically analyzes your deployments**, identifies potential issues and helps you resolve them:
+
 - Identify reasons for image pull failure
 - View log snapshots of crashed containers
 - Debug networking issues (e.g. misconfigured services)
 
 Learn more about development with DevSpace:
-- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/analyze)
-- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/logs)
-- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/debugging/enter)
-- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/debugging/remote-debuggers)
+
+- [Automate issue detection with DevSpace](https://devspace.cloud/docs/workflow-basics/development/analyze)
+- [Stream container logs with DevSpace](https://devspace.cloud/docs/workflow-basics/development/logs)
+- [Start terminal sessions for debugging](https://devspace.cloud/docs/workflow-basics/development/enter)
+- [Use the debugger of your IDE with DevSpace](https://devspace.cloud/docs/workflow-basics/development/remote-debuggers)
 
 </details>
 
 <br>
 
 ## Getting started with DevSpace CLI
+
 ### 1. Install DevSpace CLI & Docker
 
 <details>
@@ -163,10 +177,12 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-clou
 </details>
 
 #### Install Docker (optional but recommended)
+
 <details>
 <summary><b>Install Docker</b></summary>
 
-DevSpace CLI allows you to build images directly inside Kubernetes pods (using kaniko) but if you have Docker installed, DevSpace CLI can also build images locally using Docker. If you do not have Docker installed yet, you can download the latest stable releases here:
+The preferred image building method is Docker, however DevSpace CLI is also able to build images directly inside Kubernetes pods (using kaniko) if you don't have Docker installed. If you want to install Docker, you can download the latest stable releases here:
+
 - **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
 - **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
 - **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
@@ -174,10 +190,13 @@ DevSpace CLI allows you to build images directly inside Kubernetes pods (using k
 </details>
 
 ### 2. Initialize your application
+
 Run this command in your project root directory to create a deployment and development configuration for Kubernetes:
+
 ```
 devspace init
 ```
+
 <details>
 <summary><b>Don't have a project to test DevSpace with?</b> Check out our example project.</summary>
 
@@ -187,20 +206,24 @@ git clone https://github.com/devspace-cloud/quickstart-nodejs
 
 </details>
 
-
 ### 3. Create a space (optional)
+
 If you are using the free managed clusters provided by DevSpace Cloud **or** you connected your own Kubernetes cluster to DevSpace Cloud, you can now create an isolated Kubernetes namespace using the following command:
+
 ```
 devspace create space my-app
 ```
 
 ### 4. Deploy your application
+
 Deploy your application to kubernetes:
+
 ```
 devspace deploy
 ```
 
 ### What's next?
+
 - [Developing applications with DevSpace](https://devspace.cloud/docs/getting-started/development)
 - [Debugging deployments with DevSpace](https://devspace.cloud/docs/getting-started/debugging)
 - [Add predefined components such as databases](https://devspace.cloud/docs/deployment/components/add-predefined-components)
@@ -209,25 +232,31 @@ devspace deploy
 <br>
 
 ## Contributing
+
 Help us make DevSpace CLI the best tool for developing, deploying and debugging Kubernetes apps.
 
 ### Reporting Issues
+
 If you find a bug while working with the DevSpace CLI, please [open an issue on GitHub](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug:) and let us know what went wrong. We will try to fix it as quickly as we can.
 
 ### Feedback & Feature Requests
+
 You are more than welcome to open issues in this project to:
+
 - [give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
 - [suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
 - [ask a question on Slack](https://devspace.cloud/slack)
 
 ### Contributing Code
+
 This project is mainly written in Golang. If you want to contribute code:
+
 1. Ensure you are running golang version 1.11.4 or greater for go module support
 2. Set the following environment variables:
-    ```
-    GO111MODULE=on
-    GOFLAGS=-mod=vendor
-    ```
+   ```
+   GO111MODULE=on
+   GOFLAGS=-mod=vendor
+   ```
 3. Check-out the project: `git clone https://github.com/devspace-cloud/devspace && cd devspace`
 4. Run `go clean -modcache`
 5. Run `go mod vendor`
@@ -237,10 +266,10 @@ This project is mainly written in Golang. If you want to contribute code:
 
 See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 
-
 <br>
 
 ## FAQ
+
 <details>
 <summary>Do I need a Kubernetes cluster to use DevSpace?</summary>
 
@@ -252,13 +281,14 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>Can I use DevSpace CLI with my existing Kubernetes clusters?</summary>
 
 **Yes.** You have two options:
+
 1. Connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to automatically manage cluster users and permissions. This lets you created isolated namespaces (Spaces) within your Kubernetes clusters.
 2. You just use DevSpace CLI without DevSpace Cloud. That means that you manually need to:
-    * enforce resource limits
-    * configure secure user permissions
-    * isolate namespaces of different users
-    * connect domains and configure ingresses
-    * install and manage basic cluster services (e.g. ingress controller, cert-manager for TLS, monitoring and log aggregation tools)
+   - enforce resource limits
+   - configure secure user permissions
+   - isolate namespaces of different users
+   - connect domains and configure ingresses
+   - install and manage basic cluster services (e.g. ingress controller, cert-manager for TLS, monitoring and log aggregation tools)
 
 </details>
 
@@ -273,6 +303,7 @@ See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 <summary>What is a Space?</summary>
 
 Spaces are isolated Kubernetes namespaces which provide the following features:
+
 - Automatic provisioning via `devspace create space [SPACE_NAME]`
 - Automatic allocation of a subdomain for each Space, e.g. `my-app.devspace.host`
 - Automatic RBAC configuration for better isolation of users
@@ -293,7 +324,7 @@ DevSpace CLI is an open-source command-line tool that provides everything you ne
 <details>
 <summary>What is DevSpace Cloud?</summary>
 
-DevSpace Cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace CLI or GUI. 
+DevSpace Cloud is a developer platform for Kubernetes that lets you create and manage Spaces via DevSpace CLI or GUI.
 
 > The Spaces you create with DevSpace Cloud either run on a Kubernetes cluster within DevSpace Cloud or on your own Kubernetes clusters after connecting them to the platform.
 
@@ -311,4 +342,5 @@ DevSpace Cloud is a developer platform for Kubernetes that lets you create and m
 <br>
 
 ## License
+
 You can use the DevSpace CLI for any private or commercial projects because it is licensed under the Apache 2.0 open source license.

@@ -1,5 +1,5 @@
 ---
-title: View logs
+title: View container logs
 ---
 
 To view the logs of a container, run this command:

@@ -52,7 +52,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	enterCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
 	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
-	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
+	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
 
 	return enterCmd
 }

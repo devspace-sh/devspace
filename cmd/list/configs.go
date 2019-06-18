@@ -98,5 +98,5 @@ func (cmd *configsCmd) RunListConfigs(cobraCmd *cobra.Command, args []string) {
 		})
 	}
 
-	log.PrintTable(headerColumnNames, configRows)
+	log.PrintTable(log.GetInstance(), headerColumnNames, configRows)
 }

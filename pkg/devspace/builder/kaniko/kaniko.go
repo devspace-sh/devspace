@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/ignoreutil"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 
@@ -22,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	dockerterm "github.com/docker/docker/pkg/term"
@@ -214,9 +214,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		}
 
 		// Get ignore rules from docker ignore
-		ignoreRules, err := ignoreutil.GetIgnoreRules(contextPath)
+		ignoreRules, err := build.ReadDockerignore(contextPath)
 		if err != nil {
-			return fmt.Errorf("Unable to parse .dockerignore files: %s", err.Error())
+			return err
 		}
 
 		ignoreRules = append(ignoreRules, ".devspace/")

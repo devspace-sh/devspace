@@ -1,5 +1,5 @@
 ---
-title: Connect domains (via ingress)
+title: Domains & Ingresses
 ---
 
 In Kubernetes, traffic from outside the cluster is being routed like this:
@@ -21,13 +21,6 @@ How to configure a service for one of your deployments, depends on the kind of d
   - **local chart**: [create a service manifest](#create-a-service-manifest) and add it to the `templates/` folder of the chart
   - **chart from a registry**: set the appropriate config option in your `values.yaml` (depends on the Helm chart you are using)
 
-<details>
-<summary>
-### Create a service manifest
-</summary>
-
-</details>
-
 ## Configure ingresses
 Ingresses define how external traffic from outside the Kubernetes cluster will be routed once it arrives at the cluster.
 
@@ -36,10 +29,11 @@ There are two options to configure an ingress:
 2. Configure an ingress [manually](#configure-ingresses-manually)
 
 ### Configure ingresses with DevSpace Cloud UI
-To configure an ingress with DevSpace Cloud, you simply need to connect a domain to the respective Space:
+This obviously only works if you use DevSpace CLI in combination with DevSpace Cloud. To configure an ingress with DevSpace Cloud, you need to connect a domain to the respective Space:
 1. Go to: [https://app.devspace.cloud/spaces](https://app.devspace.cloud/spaces)
-2. Open the tab "Network" for the Space you want to connect the domain to
-3. Connect a domain as explained in the UI
+2. Open the tab "Domains" for the Space you want to connect the domain to
+3. Connect a domain as explained in the UI (if there is not one already)
+4. Run `devspace open` in your project and select the service you want to connect to.
 
 ### Configure ingresses manually
 If you are not using DevSpace Cloud, you will need to manually create ingresses. The following yaml show how the manifest for an ingress can look like:

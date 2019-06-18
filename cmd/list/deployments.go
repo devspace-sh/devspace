@@ -95,5 +95,5 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		}
 	}
 
-	log.PrintTable(headerValues, values)
+	log.PrintTable(log.GetInstance(), headerValues, values)
 }

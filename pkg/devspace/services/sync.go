@@ -88,7 +88,7 @@ func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdPara
 
 	err = syncClient.Start()
 	if err != nil {
-		log.Fatalf("Sync error: %s", err.Error())
+		return fmt.Errorf("Sync error: %v", err)
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)

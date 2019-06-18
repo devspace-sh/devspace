@@ -21,9 +21,10 @@ type Watcher struct {
 	Callback     Callback
 	Log          log.Logger
 
-	started       bool
-	startedMutext sync.Mutex
-	stopChan      chan bool
+	startOnce sync.Once
+	closeOnce sync.Once
+
+	interrupt chan bool
 }
 
 // New watches a given glob paths array for changes
@@ -34,7 +35,7 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 		Callback:     callback,
 		FileMap:      make(map[string]os.FileInfo),
 		Log:          log,
-		stopChan:     make(chan bool),
+		interrupt:    make(chan bool),
 	}
 
 	// Initialize filemap
@@ -48,55 +49,37 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 
 // Start starts the watching process every second
 func (w *Watcher) Start() {
-	w.startedMutext.Lock()
-	isStarted := w.started
-
-	if isStarted {
-		w.startedMutext.Unlock()
-		return
-	}
-
-	w.started = true
-	w.startedMutext.Unlock()
-
-	go func() {
-	Outer:
-		for {
-			select {
-			case <-w.stopChan:
-				break Outer
-			case <-time.After(w.PollInterval):
-				changed, deleted, err := w.Update()
-				if err != nil {
-					w.Log.Errorf("Error during watcher update: %v", err)
-					break Outer
-				}
-
-				if len(changed) > 0 || len(deleted) > 0 {
-					err = w.Callback(changed, deleted)
+	w.startOnce.Do(func() {
+		go func() {
+			for {
+				select {
+				case <-w.interrupt:
+					return
+				case <-time.After(w.PollInterval):
+					changed, deleted, err := w.Update()
 					if err != nil {
-						w.Log.Errorf("Error during watcher callback: %v", err)
-						break Outer
+						w.Log.Errorf("Error during watcher update: %v", err)
+						return
+					}
+
+					if len(changed) > 0 || len(deleted) > 0 {
+						err = w.Callback(changed, deleted)
+						if err != nil {
+							w.Log.Errorf("Error during watcher callback: %v", err)
+							return
+						}
 					}
 				}
 			}
-		}
-
-		w.startedMutext.Lock()
-		w.started = false
-		w.startedMutext.Unlock()
-	}()
+		}()
+	})
 }
 
 // Stop stopps the watcher
 func (w *Watcher) Stop() {
-	w.startedMutext.Lock()
-	isStarted := w.started
-	w.startedMutext.Unlock()
-
-	if isStarted {
-		w.stopChan <- true
-	}
+	w.closeOnce.Do(func() {
+		close(w.interrupt)
+	})
 }
 
 // Update updates the filemap and returns if there was a change

@@ -62,7 +62,7 @@ While initializing your project, DevSpace CLI will ask you a couple of questions
 
 ```yaml
 # Config version
-version: v1beta1
+version: v1beta2
 
 # Development-specific configuration (will be explained later)
 dev: ...
@@ -101,7 +101,7 @@ devspace create space my-app
 ```
 This command would create a Space called `my-app`. If you are using DevSpace Cloud with your own cluster (connected cluster), this namespace would be created within your own Kubernetes cluster but the Space would be isolated and managed by DevSpace Cloud.
 
-> DevSpace CLI automatically uses the Space you just created for all following commands. Learn how to [switch between different Spaces](/docs/cloud/spaces/switch-spaces).
+> DevSpace CLI automatically uses the Space you just created for all following commands. Learn how to [switch between different Spaces](/docs/cloud/spaces/create-spaces#switch-between-spaces).
 
 
 ## Deploy your application
@@ -113,7 +113,7 @@ devspace deploy
 This command will do the following:
 1. Build the Dockerfiles specified in the `images` section of your `devspace.yaml`
 2. Push the resulting Docker images to the specified registries
-3. Create image pull secrets in your Kubernetes namespace
+3. Create image pull secrets in your Kubernetes namespace 
 4. Deploy everything that is defined unter `deployments` in your `devspace.yaml`
 
 **Congrats you have successfully deployed an application to kubernetes!**
@@ -125,9 +125,9 @@ This command will do the following:
 DevSpace CLI builds and pushes your Docker images before deploying your projects. Follow these links to learn more about how to:
 - [Configure image building](/docs/image-building/overview)
 - [Add images to be built](/docs/image-building/add-images)
-- [Authenticate with private Docker registries](/docs/image-building/authentication)
+- [Authenticate with private Docker registries](/docs/image-building/registries/authentication)
 
-DevSpace CLI will also create image pull secrets, if you configure this. Learn more about [image pull secrets](/docs/image-building/pull-secrets).
+DevSpace CLI will also create image pull secrets, if you configure this. Learn more about [image pull secrets](/docs/image-building/registries/pull-secrets).
 </details>
 
 <details>
@@ -185,4 +185,4 @@ Learn how to [connect custom domains](/docs/cloud/spaces/domains).
 ## What's next?
 DevSpace CLI does more than simplify and streamline the process of deploying applications to Kubernetes. It also lets you:
 - [Develop applications directly inside a Kubernetes cluster](/docs/getting-started/development)
-- [Debug and analyze deployed applications](/docs/getting-started/debugging)
+- [Example Configurations](https://github.com/devspace-cloud/devspace/tree/master/examples)

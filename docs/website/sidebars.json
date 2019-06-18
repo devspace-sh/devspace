@@ -10,28 +10,27 @@
       "workflow-basics/containerization",
       "workflow-basics/deployment",
       "workflow-basics/deployment/domains",
+      "workflow-basics/deployment/ci-cd-pipelines",
+      "workflow-basics/deployment/dependencies",
       "workflow-basics/development",
-      "workflow-basics/debugging",
-      "workflow-basics/debugging/analyze",
-      "workflow-basics/debugging/logs",
-      "workflow-basics/debugging/enter",
-      "workflow-basics/debugging/remote-debuggers",
-      "workflow-basics/dependencies"
+      "workflow-basics/development/analyze",
+      "workflow-basics/development/logs",
+      "workflow-basics/development/enter",
+      "workflow-basics/development/sync",
+      "workflow-basics/development/remote-debuggers"
     ],
     "Build Images": [
       "image-building/overview",
       "image-building/add-images",
       "image-building/remove-images",
+      "image-building/tagging",
+      "image-building/cleanup",
       "image-building/specification",
       "image-building/registries/authentication",
       "image-building/registries/pull-secrets",
       "image-building/build-tools/docker",
       "image-building/build-tools/kaniko",
       "image-building/build-tools/custom-build-script"
-    ],
-    "Deploy Containers": [
-      "deployment/containers/dockerfiles",
-      "deployment/containers/docker-images"
     ],
     "Deploy Components": [
       "deployment/components/what-are-components",
@@ -71,7 +70,8 @@
       "configuration/reference",
       "configuration/multiple-configs",
       "configuration/overrides",
-      "configuration/variables"
+      "configuration/variables",
+      "configuration/hooks"
     ],
     "CLI Reference": [
       "cli-commands/analyze",
@@ -116,17 +116,14 @@
       "cli-commands/use/config",
       "cli-commands/use/space"
     ],
-    "Overview": ["cloud/intro/overview"],
     "Spaces": [
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
-      "cloud/spaces/switch-spaces",
       "cloud/spaces/delete-spaces",
-      "cloud/spaces/configure-networking",
       "cloud/spaces/domains",
       "cloud/spaces/resource-limits"
     ],
-    "Domains": ["cloud/domains/connect", "cloud/domains/certificates"],
+    "Domains": ["cloud/domains/workflow", "cloud/domains/certificates"],
     "Images": ["cloud/images/dscr-io"],
     "Clusters": [
       "cloud/clusters/connect",

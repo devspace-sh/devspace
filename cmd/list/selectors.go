@@ -85,5 +85,5 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 		})
 	}
 
-	log.PrintTable(headerColumnNames, selectors)
+	log.PrintTable(log.GetInstance(), headerColumnNames, selectors)
 }

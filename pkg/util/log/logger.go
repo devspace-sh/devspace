@@ -4,6 +4,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Level type
+type logFunctionType uint32
+
+const (
+	panicFn logFunctionType = iota
+	fatalFn
+	errorFn
+	warnFn
+	infoFn
+	debugFn
+	failFn
+	doneFn
+)
+
 // Logger defines the common logging interface
 type Logger interface {
 	Debug(args ...interface{})
@@ -33,18 +47,11 @@ type Logger interface {
 	StartWait(message string)
 	StopWait()
 
-	PrintTable(header []string, values [][]string)
-
-	With(object interface{}) *LoggerEntry
-	WithKey(key string, object interface{}) *LoggerEntry
-
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
 	Write(message []byte) (int, error)
 	WriteString(message string)
-	SetLevel(level logrus.Level)
 
-	printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{})
-	printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{})
+	SetLevel(level logrus.Level)
 }

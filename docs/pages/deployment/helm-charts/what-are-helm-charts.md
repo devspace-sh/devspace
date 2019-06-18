@@ -4,7 +4,7 @@ title: What are Helm charts?
 
 [Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts.
 
-> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/customization/custom-manifests)
+> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](/docs/deployment/kubernetes-manifests/add-manifests)
 
 ## Structure of an Helm chart
 The following structure shows the most important parts of an Helm chart:
@@ -124,8 +124,6 @@ If you changed your chart (e.g. edited the values.yaml), you can simply run `dev
 Generally: **No.** 
 
 The problem with adding an ingress to your Helm chart is that you cannot share your code with other developers because the same hostname (domain) can only be used by one person, otherwise there would be two ingresses using the same domain which will cause problems with the Kubernetes-internal traffic routing. 
-
-> DevSpace automatically takes care of creating and configuring ingresses within your Spaces. [Learn more about how to connect domains to your Spaces](/docs/cloud/domains/connect)
 
 You can, however, manually create ingresses or manually edit any ingress that has been automatically created. Use the following command to edit an ingress manually:
 ```bash

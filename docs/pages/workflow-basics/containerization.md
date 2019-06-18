@@ -47,7 +47,7 @@ If you have multiple applications inside a single project directory (i.e. monore
 3. During the init process, choose the option `Enter path to your Dockerfile` and enter the relative path to the Dockerfile of one of your microservices.
 4. To add each of the remaining services as deployments, run `devspace add deployment [service-name] --dockerfile="./path/to/your/service/Dockerfile"`
 
-If you already have Helm charts or Kubernetes manifests, you can also add them as deployment using the following commands:
+If you already have Helm charts or Kubernetes manifests, you can also add them as a deployment using the following commands:
 ```bash
 devspace add deployment [service-name] --chart="./path/to/your/service/chart"
 devspace add deployment [service-name] --manifests="./path/to/your/service/manifests/**"
@@ -116,22 +116,6 @@ docker build .
 > In general it is a good idea to look at the official [Docker documentation](https://docs.docker.com/develop/) and the [best practices how to write a Dockerfile](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/).
 
 #### Common issues with your Dockerfile
-
-<details>
-<summary>
-##### HTTP status code 40x or 50x when accessing your application
-</summary>
-
-This could be caused by several problems. Run the following command to automatically detect issues with your deployments: 
-```bash
-devspace analyze
-```
-If this command does not report any issues, check the following:
-1. **Bind Address**: Make sure your application is binding on `0.0.0.0` and not `localhost` 
-2. **Port**: Make sure your application listens on the same port as specified in `chart/values.yaml` under `components[*].service.containerPort`
-3. **Kubernetes networking**: Verify that your ingresses and services are configure correctly. Learn more about [Kubernetes networking](/docs/cloud/spaces/configure-networking).
-
-</details>
 
 <details>
 <summary>

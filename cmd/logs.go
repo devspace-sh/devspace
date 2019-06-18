@@ -50,7 +50,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	logsCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
-	logsCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod to stream logs from")
+	logsCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 

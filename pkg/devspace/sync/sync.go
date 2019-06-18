@@ -81,7 +81,7 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
-	options.ExcludePaths = append(options.ExcludePaths, "/.devspace/")
+	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
 
 	// Initialize log, this is not thread safe !!!
 	if options.Log == nil && syncLog == nil {
@@ -464,6 +464,9 @@ func (s *Sync) Stop(fatalError error) {
 
 		if fatalError != nil {
 			s.Error(fatalError)
+
+			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
+			// or runtime error here
 			log.Fatalf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
 		}
 	})

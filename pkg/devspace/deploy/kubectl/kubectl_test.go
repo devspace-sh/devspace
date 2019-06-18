@@ -1,20 +1,21 @@
 package kubectl
 
 import (
-	"testing"
-	"os"
 	"io/ioutil"
+	"os"
+	"testing"
+
 	//"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"gotest.tools/assert"
 )
@@ -45,7 +46,7 @@ func TestKubectlManifests(t *testing.T) {
 		Name: ptr.String("test-deployment"),
 		Kubectl: &latest.KubectlConfig{
 			Manifests: &manifests,
-			Flags: &flags,
+			Flags:     &flags,
 		},
 	}
 	testConfig := &latest.Config{
@@ -146,7 +147,6 @@ func TestKubectlManifestsWithKustomize(t *testing.T) {
 	// 7. Delete test namespace
 	// 8. Delete temp folder
 }
-
 
 func makeTestProject(dir string) error {
 	file, err := os.Create("package.json")

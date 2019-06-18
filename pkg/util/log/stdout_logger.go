@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"sync"
 
 	goansi "github.com/k0kubun/go-ansi"
@@ -186,60 +185,6 @@ func (s *stdoutLogger) StopWait() {
 	}
 }
 
-// PrintTable implements logger interface
-func (s *stdoutLogger) PrintTable(header []string, values [][]string) {
-	columnLengths := make([]int, len(header))
-
-	for k, v := range header {
-		columnLengths[k] = len(v)
-	}
-
-	// Get maximum column length
-	for _, v := range values {
-		for key, value := range v {
-			if len(value) > columnLengths[key] {
-				columnLengths[key] = len(value)
-			}
-		}
-	}
-
-	s.Write([]byte("\n"))
-
-	// Print Header
-	for key, value := range header {
-		WriteColored(" "+value+"  ", "green+b")
-
-		padding := columnLengths[key] - len(value)
-
-		if padding > 0 {
-			s.Write([]byte(strings.Repeat(" ", padding)))
-		}
-	}
-
-	s.Write([]byte("\n"))
-
-	if len(values) == 0 {
-		s.Write([]byte(" No entries found\n"))
-	}
-
-	// Print Values
-	for _, v := range values {
-		for key, value := range v {
-			s.Write([]byte(" " + value + "  "))
-
-			padding := columnLengths[key] - len(value)
-
-			if padding > 0 {
-				s.Write([]byte(strings.Repeat(" ", padding)))
-			}
-		}
-
-		s.Write([]byte("\n"))
-	}
-
-	s.Write([]byte("\n"))
-}
-
 func (s *stdoutLogger) Debug(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
@@ -419,51 +364,11 @@ func (s *stdoutLogger) Printf(level logrus.Level, format string, args ...interfa
 	}
 }
 
-func (s *stdoutLogger) With(obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: s,
-		context: map[string]interface{}{
-			"context-1": obj,
-		},
-	}
-}
-
-func (s *stdoutLogger) WithKey(key string, obj interface{}) *LoggerEntry {
-	return &LoggerEntry{
-		logger: s,
-		context: map[string]interface{}{
-			key: obj,
-		},
-	}
-}
-
 func (s *stdoutLogger) SetLevel(level logrus.Level) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
 	s.level = level
-}
-
-func (s *stdoutLogger) printWithContext(fnType logFunctionType, context map[string]interface{}, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(fnType, fmt.Sprintln(args...))
-
-	if s.fileLogger != nil && s.level >= fnTypeInformationMap[fnType].logLevel {
-		s.fileLogger.printWithContext(fnType, context, args...)
-	}
-}
-
-func (s *stdoutLogger) printWithContextf(fnType logFunctionType, context map[string]interface{}, format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(fnType, fmt.Sprintf(format, args...)+"\n")
-
-	if s.fileLogger != nil && s.level >= fnTypeInformationMap[fnType].logLevel {
-		s.fileLogger.printWithContextf(fnType, context, format, args...)
-	}
 }
 
 func (s *stdoutLogger) Write(message []byte) (int, error) {
