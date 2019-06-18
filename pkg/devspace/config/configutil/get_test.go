@@ -393,7 +393,7 @@ func TestSetSetDevspaceRoot(t *testing.T) {
 	assert.Equal(t, currentDir, dir, "Dir changed with config found in current dir")
 
 	//Config found in parent dir
-	err = os.Mkdir("SomeSubdir", os.ModeTemporary)
+	err = os.Mkdir("SomeSubdir", 0755)
 	if err != nil {
 		t.Fatalf("Error making temporary subdir: %v", err)
 	}
