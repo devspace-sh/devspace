@@ -44,9 +44,9 @@ func TestListAvailableComponents(t *testing.T) {
 	//Backup components
 	homedir, err := homedir.Dir()
 	assert.NilError(t, err, "Error getting homedir")
-	fsutil.Copy(filepath.Join(homedir, generator.ComponentsRepoPath), dir, true)
+	err = os.Rename(filepath.Join(homedir, generator.ComponentsRepoPath, "components"), filepath.Join(dir, "backup"))
 	assert.NilError(t, err, "Error making a backup for the components")
-	defer fsutil.Copy(dir, filepath.Join(homedir, generator.ComponentsRepoPath), true)
+	defer fsutil.Copy(filepath.Join(dir, "backup"), filepath.Join(homedir, generator.ComponentsRepoPath, "components"), true)
 
 	//Delete components
 	err = os.RemoveAll(filepath.Join(homedir, generator.ComponentsRepoPath, "components"))
@@ -56,5 +56,5 @@ func TestListAvailableComponents(t *testing.T) {
 
 	availableComponents, err := ListAvailableComponents()
 	assert.NilError(t, err, "Error listing available components")
-	assert.Equal(t, 0, len(availableComponents), "Unexpected available components")
+	assert.Equal(t, 0, len(availableComponents), "Unexpected number of available components")
 }
