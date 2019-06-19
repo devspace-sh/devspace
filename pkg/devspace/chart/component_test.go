@@ -51,7 +51,7 @@ func TestListAvailableComponents(t *testing.T) {
 	//Delete components
 	err = os.RemoveAll(filepath.Join(homedir, generator.ComponentsRepoPath, "components"))
 	assert.NilError(t, err, "Error removing the components")
-	err = os.Mkdir(filepath.Join(homedir, generator.ComponentsRepoPath, "components"), 0755)
+	err = os.MkdirAll(filepath.Join(homedir, generator.ComponentsRepoPath, "components"), 0755)
 	assert.NilError(t, err, "Error removing the components")
 
 	availableComponents, err := ListAvailableComponents()
