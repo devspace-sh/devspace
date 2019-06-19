@@ -7,15 +7,16 @@ Instead of storing configuration data (e.g. database host, username and password
 ## Setting environment variables
 You can define environment variables for your containers in the `env` section the each container within `devspace.yaml`.
 ```yaml
-components:
+deployments:
 - name: database
-  containers:
-  - image: "dscr.io/username/mysql"
-    env:
-    - name: MYSQL_USER
-      value: "my_user"
-    - name: MYSQL_PASSWORD
-      value: "my-secret-passwd"
+  component:
+    containers:
+    - image: "dscr.io/username/mysql"
+      env:
+      - name: MYSQL_USER
+        value: "my_user"
+      - name: MYSQL_PASSWORD
+        value: "my-secret-passwd"
 ```
 The above example would set two environment variables, `MYSQL_USER="my_user"` and `MYSQL_PASSWORD="my-secret-passwd"` within the first container of the `database` component.
 

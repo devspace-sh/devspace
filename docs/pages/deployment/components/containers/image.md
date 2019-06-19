@@ -4,11 +4,12 @@ title: Image
 
 Components deploy pods which are a set of containers. These containers are created based on Docker images. To define the image for a container, simply set the `image` value for the container:
 ```yaml
-components:
+deployments:
 - name: my-backend
-  containers:
-  - image: dscr.io/username/my-backend-image
-  - image: nginx:1.15
+  component:
+    containers:
+    - image: dscr.io/username/my-backend-image
+    - image: nginx:1.15
 ```
 The example above would create a pod with two containers:
 1. The first container would be create from the image `dscr.io/username/my-backend-image`
