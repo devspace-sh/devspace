@@ -3,6 +3,7 @@ package configutil
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -10,8 +11,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -333,6 +335,89 @@ dev-service1:
 		t.Fatalf("Error loading generated config: %v", err)
 	}
 	assert.Equal(t, generatedConfig.GetActive().Vars["hello"], "world", "Vars not initialized")
+}
+
+func TestGetConfigFromPath(t *testing.T){
+	configBackup := config
+	defer func() { config = configBackup }()
+	config = nil
+
+	//Create tempDir and go into it
+	dir, err := ioutil.TempDir("", "testDir")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	// Delete temp folder after test
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
+
+	configString := `version: v1beta2
+cluster:
+  kubeContext: someKubeContext
+  namespace: someNS
+images:
+  default:
+    image: defaultImage
+deployments:
+- name: default
+  helm:
+    chart:
+      name: ./chart
+hooks:
+- command: echo
+dev:
+  selectors:
+  - name: someSelector
+  overrideImages:
+  - name: default
+    entrypoint:
+    - sleep
+    - "999999999999"
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: default
+    forward:
+    - port: 3000
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: default
+    excludePaths:
+    - node_modules
+`
+
+	fsutil.WriteToFile([]byte(configString), filepath.Join("SubDir", constants.DefaultConfigPath))
+
+	getConfigOnce = sync.Once{}
+	validateOnce = sync.Once{}
+	config, err = GetConfigFromPath("SubDir", "", true, &generated.Config{}, &log.DiscardLogger{})
+	assert.NilError(t, err, "Error from function GetConfigFromPath")
+	if config == nil {
+		t.Fatal("Config is nil after initializing")
+	}
+	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
+	assert.Equal(t, *config.Cluster.KubeContext, "someKubeContext", "Initialized config has wrong kubeContext of cluster")
+	assert.Equal(t, *config.Cluster.Namespace, "someNS", "Initialized config has wrong namespace of cluster")
+	assert.Equal(t, len(*config.Images), 1, "Initialized config has wrong number of images")
+	assert.Equal(t, *(*config.Images)["default"].Image, "defaultImage", "Initialized config has wrong image")
+	
 }
 
 func TestSetSetDevspaceRoot(t *testing.T) {
