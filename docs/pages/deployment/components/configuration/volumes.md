@@ -17,7 +17,7 @@ When you want to persist a folder within a container of one of your components, 
 ## Define volumes
 DevSpace components allow you to define the following types of Kubernetes volumes:
 - [Persistent volumes](#define-persistent-volumes)
-- [ConfigMap volumes](#define-confimap-volumes)
+- [ConfigMap volumes](#define-configmap-volumes)
 - [Secret volumes](#define-secret-volumes)
 
 ### Define Persistent Volumes
