@@ -11,7 +11,7 @@
   "devDependencies": {
     "docusaurus": "^1.11.1"
   },
-  "dependencies": {
-    "@devspace/react-components": "0.0.13"
+  "optionalDependencies": {
+    "@devspace/react-components": "0.1.2"
   }
 }
