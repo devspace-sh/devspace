@@ -6,8 +6,6 @@
  */
 
 const React = require("react");
-const Chat = require("@devspace/react-components").Chat;
-const Analytics = require("@devspace/react-components").Analytics;
 
 class Footer extends React.Component {
   docUrl(doc, language) {
@@ -24,10 +22,24 @@ class Footer extends React.Component {
   }
 
   render() {
+    let chatAndAnalytics = "";
+
+    try {
+      const Chat = require("@devspace/react-components").Chat;
+      const Analytics = require("@devspace/react-components").Analytics;
+
+      chatAndAnalytics = (
+        <div>
+          <Chat />
+          <Analytics />
+        </div>
+      );
+    } catch (e) {}
+
     return (
       <footer className="nav-footer" id="footer">
-        <Chat />
-        <Analytics />
+        {`chatAndAnalytics`}
+
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-58VC97L"
