@@ -9,6 +9,9 @@
     "rename-version": "docusaurus-rename-version"
   },
   "devDependencies": {
-    "docusaurus": "^1.11.0"
+    "docusaurus": "^1.11.1"
+  },
+  "dependencies": {
+    "@devspace/react-components": "0.0.13"
   }
 }
