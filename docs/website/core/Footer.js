@@ -38,7 +38,7 @@ class Footer extends React.Component {
 
     return (
       <footer className="nav-footer" id="footer">
-        {`chatAndAnalytics`}
+        {chatAndAnalytics}
 
         <noscript>
           <iframe
