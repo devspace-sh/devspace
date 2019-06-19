@@ -292,7 +292,7 @@ spec:
 		return err
 	}
 	_, err = file.Write([]byte(`name: my-app
-version: v0.0.1
+version: v0.0.2
 description: A Kubernetes-Native Application`))
 	if err != nil {
 		return err
