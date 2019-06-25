@@ -118,7 +118,7 @@ func TestShouldRebuild(t *testing.T) {
 		expectedErrorString = "Dockerfile Doesn'tExist missing: stat Doesn'tExist: no such file or directory"
 	}
 	shouldRebuild, err := helper.ShouldRebuild(cache)
-	assert.Error(t, err, "Dockerfile Doesn'tExist missing: CreateFile Doesn'tExist: The system cannot find the file specified.")
+	assert.Error(t, err, expectedErrorString)
 	assert.Equal(t, false, shouldRebuild, "After an error occurred a rebuild is recommended.")
 
 	helper.DockerfilePath = "IsFile"
