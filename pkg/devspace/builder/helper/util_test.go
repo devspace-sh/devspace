@@ -3,6 +3,7 @@ package helper
 import (
 	"io/ioutil"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -46,8 +47,12 @@ func TestCreateTempDockerfile(t *testing.T) {
 	_, err = CreateTempDockerfile("", []*string{nil})
 	assert.Error(t, err, "Entrypoint is empty", "Wrong error or wrong error returned when trying to create a temporary Dockerfile with only nil entrypoints")
 
+	expectedErrorString := "open Doesn'tExist: The system cannot find the file specified."
+	if runtime.GOOS != "windows" {
+		expectedErrorString = "open Doesn'tExist: no such file or directory"
+	}
 	_, err = CreateTempDockerfile("Doesn'tExist", []*string{ptr.String("echo")})
-	assert.Error(t, err, "open Doesn'tExist: The system cannot find the file specified.", "Wrong or no error when trying to create a dockerfile from an non existent dockerfile")
+	assert.Error(t, err, expectedErrorString, "Wrong or no error when trying to create a dockerfile from an non existent dockerfile")
 
 	err = fsutil.WriteToFile([]byte(""), "Exists")
 	dockerfilepath, err := CreateTempDockerfile("Exists", []*string{ptr.String("echo")})
