@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -112,6 +113,10 @@ func TestShouldRebuild(t *testing.T) {
 		Images: map[string]*generated.ImageCache{},
 	}
 
+	expectedErrorString := "Dockerfile Doesn'tExist missing: CreateFile Doesn'tExist: The system cannot find the file specified."
+	if runtime.GOOS != "windows" {
+		expectedErrorString = "Dockerfile Doesn'tExist missing: stat Doesn'tExist: no such file or directory"
+	}
 	shouldRebuild, err := helper.ShouldRebuild(cache)
 	assert.Error(t, err, "Dockerfile Doesn'tExist missing: CreateFile Doesn'tExist: The system cannot find the file specified.")
 	assert.Equal(t, false, shouldRebuild, "After an error occurred a rebuild is recommended.")
