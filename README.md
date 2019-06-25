@@ -176,23 +176,8 @@ wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-clou
 
 </details>
 
-#### Install Docker (optional but recommended)
-
-<details>
-<summary><b>Install Docker</b></summary>
-
-The preferred image building method is Docker, however DevSpace CLI is also able to build images directly inside Kubernetes pods (using kaniko) if you don't have Docker installed. If you want to install Docker, you can download the latest stable releases here:
-
-- **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
-- **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
-- **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
-
-</details>
-
 ### 2. Initialize your application
-
 Run this command in your project root directory to create a deployment and development configuration for Kubernetes:
-
 ```
 devspace init
 ```

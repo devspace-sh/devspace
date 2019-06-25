@@ -11,20 +11,18 @@ The challenge resolver pod needs `100m` cpu and `200Mi` memory resources. If you
 Example `chart/values.yaml`:
 
 ```yaml
-components:
+deployments:
 - name: default
-  containers:
-  - image: dscr.io/myuser/devspace
-    resources:
-      limits:
-        # Lower this
-        cpu: "300m"
-        # Lower this
-        memory: "300Mi"
-        ephemeralStorage: "1Gi"
-    ...
-  service:
-    ...
+  component:
+  - containers:
+    - image: dscr.io/myuser/devspace
+      resources:
+        limits:
+          # Lower this
+          cpu: "300m"
+          # Lower this
+          memory: "300Mi"
+          ephemeralStorage: "1Gi"
 ...
 ```
 
