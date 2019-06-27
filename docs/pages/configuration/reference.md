@@ -181,6 +181,8 @@ service: 	                        # struct   | Component service configuration
   - port: 80                        # int      | Port exposed by the service
     containerPort: 3000             # int      | Port of the container/pod to redirect traffic to
     protocol: tcp                   # string   | Traffic protocol (tcp, udp)
+  externalIPs:                      # array    | Array of externalIPs for the service (discouraged)
+  - 123.45.67.890                   # string   | ExternalIP to expose the service on
 ```
 
 ### deployments[\*].component.options

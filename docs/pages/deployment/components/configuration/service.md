@@ -45,6 +45,8 @@ type: ClusterIP             # Type of the service (default: ClusterIP, only Clus
 ports:
 - port: [number]            # External port exposed by the service
   containerPort: [number]   # Port of the container that the service redirects traffic to (default: value of port option)
+externalIPs:
+- 123.45.67.890             # ExternalIP to expose the service on (discouraged)
 ```
 </details>
 
