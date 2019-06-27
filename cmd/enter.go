@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -69,6 +72,16 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var config *latest.Config
 	if configutil.ConfigExists() {
 		config = configutil.GetConfig()
+
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = cloud.ActivateSpace(generatedConfig, true, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Get kubectl client
