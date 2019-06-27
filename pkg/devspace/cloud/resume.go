@@ -75,6 +75,8 @@ func ResumeSpace(config *latest.Config, generatedConfig *generated.Config, loop 
 			if !continueWaiting {
 				break
 			}
+
+			time.Sleep(1 * time.Second)
 		}
 	}
 
