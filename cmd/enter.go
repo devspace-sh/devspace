@@ -78,7 +78,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		err = cloud.ActivateSpace(generatedConfig, true, log.GetInstance())
+		err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

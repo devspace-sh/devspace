@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -124,6 +125,12 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Get the config
 	config := cmd.loadConfig(generatedConfig)
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create kubectl client and switch context if specified
 	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)

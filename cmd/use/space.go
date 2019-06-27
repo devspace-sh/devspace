@@ -143,6 +143,12 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Signal that we are working on the space if there is any
+		err = cloud.ResumeSpace(configutil.GetConfig(), generatedConfig, false, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Donef("Successfully configured config to use space %s", space.Name)

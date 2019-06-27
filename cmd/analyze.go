@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -55,6 +57,17 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	var devSpaceConfig *latest.Config
 	if configExists {
 		devSpaceConfig = configutil.GetConfig()
+
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Signal that we are working on the space if there is any
+		err = cloud.ResumeSpace(devSpaceConfig, generatedConfig, true, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Create kubectl client
