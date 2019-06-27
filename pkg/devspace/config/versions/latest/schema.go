@@ -3,7 +3,6 @@ package latest
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	v1 "k8s.io/api/core/v1"
 )
 
 // Version is the current api version
@@ -163,10 +162,10 @@ type RollingUpdateConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name      *string                   `yaml:"name,omitempty"`
-	Size      *string                   `yaml:"size,omitempty"`
-	ConfigMap *v1.ConfigMapVolumeSource `yaml:"configMap,omitempty"`
-	Secret    *v1.SecretVolumeSource    `yaml:"secret,omitempty"`
+	Name      *string                      `yaml:"name,omitempty"`
+	Size      *string                      `yaml:"size,omitempty"`
+	ConfigMap *map[interface{}]interface{} `yaml:"configMap,omitempty"`
+	Secret    *map[interface{}]interface{} `yaml:"secret,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
