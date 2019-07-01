@@ -142,6 +142,17 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	var devspaceConfig *latest.Config
 	if configExists {
 		devspaceConfig = configutil.GetConfig()
+
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Signal that we are working on the space if there is any
+		err = cloud.ResumeSpace(devspaceConfig, generatedConfig, true, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	namespace, err := configutil.GetDefaultNamespace(devspaceConfig)
 	if err != nil {

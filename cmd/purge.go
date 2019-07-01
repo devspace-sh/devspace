@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -73,6 +74,12 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Get the config
 	config := cmd.loadConfig(generatedConfig)
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
