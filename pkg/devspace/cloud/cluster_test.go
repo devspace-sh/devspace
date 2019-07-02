@@ -167,3 +167,49 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 	assert.NilError(t, err, "Error decoding returned cert")
 	assert.Equal(t, string(flag), string(decodedCert), "Wrong cert returned")
 }
+
+func TestGetKey(t *testing.T) {
+	provider := &Provider{
+		ClusterKey: map[int]string{
+			5: "onlyKey",
+		},
+	}
+	returnedKey, err := getKey(provider, false)
+	assert.NilError(t, err, "Error getting the only clusteKey without forcing a question")
+	assert.Equal(t, returnedKey, "onlyKey", "Wrong key returned from Clusterkey with only one item")
+}
+
+type checkResourcesTestCase struct {
+	name         string
+	createdNodes []*k8sv1.Node
+	expectedErr  string
+}
+
+func TestCheckResources(t *testing.T) {
+	testCases := []checkResourcesTestCase{
+		checkResourcesTestCase{
+			name:         "Test without nodes",
+			createdNodes: []*k8sv1.Node{},
+			expectedErr:  "The cluster specified has no nodes, please choose a cluster where at least one node is up and running",
+		},
+		checkResourcesTestCase{
+			name:         "Test without group versions",
+			createdNodes: []*k8sv1.Node{&k8sv1.Node{}},
+			expectedErr:  "Group version rbac.authorization.k8s.io/v1beta1 does not exist in cluster, but is required. Is RBAC enabled?",
+		},
+	}
+
+	for _, testCase := range testCases {
+		kubeClient := fake.NewSimpleClientset()
+		for _, node := range testCase.createdNodes {
+			kubeClient.CoreV1().Nodes().Create(node)
+		}
+
+		_, err := checkResources(kubeClient)
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error checking resources in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from checking resources in testCase %s", testCase.name)
+		}
+	}
+}
