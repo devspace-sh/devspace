@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -98,6 +99,12 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Prepare the config
 	config := cmd.loadConfig(generatedConfig)
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)

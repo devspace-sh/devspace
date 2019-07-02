@@ -219,10 +219,9 @@ func defaultClusterSpaceDomain(p *Provider, client kubernetes.Interface, useHost
 		defer log.StopWait()
 
 		now := time.Now()
-		hostname := ""
-		ip := ""
 
-		for time.Since(now) < waitTimeout && hostname == "" && ip == "" {
+	Outer:
+		for time.Since(now) < waitTimeout {
 			// Get loadbalancer
 			services, err := client.CoreV1().Services(constants.DevSpaceCloudNamespace).List(metav1.ListOptions{})
 			if err != nil {
@@ -234,18 +233,12 @@ func defaultClusterSpaceDomain(p *Provider, client kubernetes.Interface, useHost
 				if service.Spec.Type == v1.ServiceTypeLoadBalancer {
 					for _, ingress := range service.Status.LoadBalancer.Ingress {
 						if ingress.Hostname != "" {
-							hostname = ingress.Hostname
+							break Outer
 						}
 						if ingress.IP != "" {
-							ip = ingress.IP
+							break Outer
 						}
-
-						break
 					}
-				}
-
-				if hostname != "" || ip != "" {
-					break
 				}
 			}
 
