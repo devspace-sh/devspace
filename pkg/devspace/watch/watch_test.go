@@ -27,6 +27,8 @@ type testCaseChange struct {
 }
 
 func TestWatcher(t *testing.T) {
+	t.Skip("Test has a data race")
+
 	watchedPaths := []string{".", "hello.txt", "watchedsubdir"}
 	testCases := []testCase{
 		{
