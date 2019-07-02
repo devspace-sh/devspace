@@ -23,12 +23,12 @@ type QuestionOptions struct {
 // DefaultValidationRegexPattern is the default regex pattern to validate the input
 var DefaultValidationRegexPattern = regexp.MustCompile("^.*$")
 
-var nextAnswer *string
+var nextAnswers []*string
 
 // SetNextAnswer will set the next answer for the question function
 // THIS SHOULD BE ONLY USED FOR UNIT TESTS
 func SetNextAnswer(answer string) {
-	nextAnswer = &answer
+	nextAnswers = append(nextAnswers, &answer)
 }
 
 // Question asks the user a question and returns the answer
@@ -100,9 +100,9 @@ func Question(params *QuestionOptions) string {
 		Question string
 	}{}
 
-	if nextAnswer != nil {
-		answer := *nextAnswer
-		nextAnswer = nil
+	if len(nextAnswers) != 0 {
+		answer := *nextAnswers[0]
+		nextAnswers = nextAnswers[1:]
 		return answer
 	}
 
