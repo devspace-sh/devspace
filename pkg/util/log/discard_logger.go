@@ -8,7 +8,9 @@ import (
 )
 
 // DiscardLogger just discards every log statement
-type DiscardLogger struct{}
+type DiscardLogger struct {
+	PanicOnExit bool
+}
 
 // Debug implements logger interface
 func (d *DiscardLogger) Debug(args ...interface{}) {}
@@ -36,11 +38,19 @@ func (d *DiscardLogger) Errorf(format string, args ...interface{}) {}
 
 // Fatal implements logger interface
 func (d *DiscardLogger) Fatal(args ...interface{}) {
+	if d.PanicOnExit {
+		d.Panic(args...)
+	}
+
 	os.Exit(1)
 }
 
 // Fatalf implements logger interface
 func (d *DiscardLogger) Fatalf(format string, args ...interface{}) {
+	if d.PanicOnExit {
+		d.Panicf(format, args...)
+	}
+
 	os.Exit(1)
 }
 
