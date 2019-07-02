@@ -121,7 +121,8 @@
       "cloud/spaces/create-spaces",
       "cloud/spaces/delete-spaces",
       "cloud/spaces/domains",
-      "cloud/spaces/resource-limits"
+      "cloud/spaces/resource-limits",
+      "cloud/spaces/pause-spaces"
     ],
     "Domains": ["cloud/domains/workflow", "cloud/domains/certificates"],
     "Images": ["cloud/images/dscr-io"],
