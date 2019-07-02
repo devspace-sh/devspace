@@ -7,7 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var stdoutLog = &stdoutLogger{
+var defaultLog Logger = &stdoutLogger{
 	level: logrus.DebugLevel,
 }
 
@@ -16,12 +16,12 @@ var Discard = &DiscardLogger{}
 
 // StartWait prints a wait message until StopWait is called
 func StartWait(message string) {
-	stdoutLog.StartWait(message)
+	defaultLog.StartWait(message)
 }
 
 // StopWait stops printing the wait message
 func StopWait() {
-	stdoutLog.StopWait()
+	defaultLog.StopWait()
 }
 
 // PrintLogo prints the devspace logo
@@ -39,124 +39,132 @@ func PrintLogo() {
 
 // Debug prints debug information
 func Debug(args ...interface{}) {
-	stdoutLog.Debug(args...)
+	defaultLog.Debug(args...)
 }
 
 // Debugf prints formatted debug information
 func Debugf(format string, args ...interface{}) {
-	stdoutLog.Debugf(format, args...)
+	defaultLog.Debugf(format, args...)
 }
 
 // Info prints info information
 func Info(args ...interface{}) {
-	stdoutLog.Info(args...)
+	defaultLog.Info(args...)
 }
 
 // Infof prints formatted information
 func Infof(format string, args ...interface{}) {
-	stdoutLog.Infof(format, args...)
+	defaultLog.Infof(format, args...)
 }
 
 // Warn prints warning information
 func Warn(args ...interface{}) {
-	stdoutLog.Warn(args...)
+	defaultLog.Warn(args...)
 }
 
 // Warnf prints formatted warning information
 func Warnf(format string, args ...interface{}) {
-	stdoutLog.Warnf(format, args...)
+	defaultLog.Warnf(format, args...)
 }
 
 // Error prints error information
 func Error(args ...interface{}) {
-	stdoutLog.Error(args...)
+	defaultLog.Error(args...)
 }
 
 // Errorf prints formatted error information
 func Errorf(format string, args ...interface{}) {
-	stdoutLog.Errorf(format, args...)
+	defaultLog.Errorf(format, args...)
 }
 
 // Fatal prints fatal error information
 func Fatal(args ...interface{}) {
-	stdoutLog.Fatal(args...)
+	defaultLog.Fatal(args...)
 }
 
 // Fatalf prints formatted fatal error information
 func Fatalf(format string, args ...interface{}) {
-	stdoutLog.Fatalf(format, args...)
+	defaultLog.Fatalf(format, args...)
 }
 
 // Panic prints panic information
 func Panic(args ...interface{}) {
-	stdoutLog.Panic(args...)
+	defaultLog.Panic(args...)
 }
 
 // Panicf prints formatted panic information
 func Panicf(format string, args ...interface{}) {
-	stdoutLog.Panicf(format, args...)
+	defaultLog.Panicf(format, args...)
 }
 
 // Done prints done information
 func Done(args ...interface{}) {
-	stdoutLog.Done(args...)
+	defaultLog.Done(args...)
 }
 
 // Donef prints formatted info information
 func Donef(format string, args ...interface{}) {
-	stdoutLog.Donef(format, args...)
+	defaultLog.Donef(format, args...)
 }
 
 // Fail prints error information
 func Fail(args ...interface{}) {
-	stdoutLog.Fail(args...)
+	defaultLog.Fail(args...)
 }
 
 // Failf prints formatted error information
 func Failf(format string, args ...interface{}) {
-	stdoutLog.Failf(format, args...)
+	defaultLog.Failf(format, args...)
 }
 
 // Print prints information
 func Print(level logrus.Level, args ...interface{}) {
-	stdoutLog.Print(level, args...)
+	defaultLog.Print(level, args...)
 }
 
 // Printf prints formatted information
 func Printf(level logrus.Level, format string, args ...interface{}) {
-	stdoutLog.Printf(level, format, args...)
+	defaultLog.Printf(level, format, args...)
 }
 
 // SetLevel changes the log level of the global logger
 func SetLevel(level logrus.Level) {
-	stdoutLog.SetLevel(level)
+	defaultLog.SetLevel(level)
 }
 
 // StartFileLogging logs the output of the global logger to the file default.log
 func StartFileLogging() {
-	stdoutLog.fileLogger = GetFileLogger("default")
+	defaultLogStdout, ok := defaultLog.(*stdoutLogger)
+	if ok {
+		defaultLogStdout.fileLogger = GetFileLogger("default")
+	}
 
 	OverrideRuntimeErrorHandler()
 }
 
 // GetInstance returns the Logger instance
 func GetInstance() Logger {
-	return stdoutLog
+	return defaultLog
+}
+
+// SetInstance sets the default logger instance
+func SetInstance(logger Logger) {
+	defaultLog = logger
 }
 
 // WriteColored writes a message in color
 func WriteColored(message string, color string) {
-	stdoutLog.Write([]byte(ansi.Color(message, color)))
+	defaultLog.Write([]byte(ansi.Color(message, color)))
 }
 
 // Write writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
 func Write(message []byte) {
-	stdoutLog.Write(message)
+	defaultLog.Write(message)
 }
 
 // WriteString writes to the stdout log without formatting the message, but takes care of locking the log and halting a possible wait message
 func WriteString(message string) {
-	stdoutLog.WriteString(message)
+	defaultLog.WriteString(message)
 }
 
 // PrintTable prints a table with header columns and string values
