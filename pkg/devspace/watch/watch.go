@@ -116,13 +116,19 @@ func (w *Watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []st
 
 	// Get changed paths
 	for file, fileInfo := range newState {
-		if oldFileInfo, ok := w.FileMap[file]; !ok || oldFileInfo.Size() != fileInfo.Size() || oldFileInfo.ModTime().UnixNano() != fileInfo.ModTime().UnixNano() {
-			if strings.HasPrefix(file, ".devspace") {
+		oldFileInfo, ok := w.FileMap[file]
+
+		// If existed before
+		if ok && oldFileInfo.IsDir() == fileInfo.IsDir() {
+			// If directory or file with same size and modification date
+			if oldFileInfo.IsDir() || (oldFileInfo.Size() == fileInfo.Size() && oldFileInfo.ModTime().UnixNano() == fileInfo.ModTime().UnixNano()) {
 				continue
 			}
-
-			changed = append(changed, file)
+		} else if strings.HasPrefix(file, ".devspace") {
+			continue
 		}
+
+		changed = append(changed, file)
 	}
 
 	// Get deleted paths
