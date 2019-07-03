@@ -1,6 +1,5 @@
 package main
 
-/*
 import (
 	"os"
 
@@ -17,26 +16,4 @@ func main() {
 
 	cmd.Execute()
 	os.Exit(0)
-}
-*/
-
-import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-)
-
-func main() {
-	log.Info("Start bois")
-
-	client, err := docker.NewClient(nil, false, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	authConfig, err := docker.GetAuthConfig(client, "", true)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Infof("%#v", *authConfig)
 }
