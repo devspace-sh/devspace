@@ -137,7 +137,7 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 	} else if branch != "" {
 		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/remotes/origin/%s", branch)))
 		if err != nil {
-			return fmt.Errorf("Error resolving tag revision: %v", err)
+			return fmt.Errorf("Error resolving branch revision: %v", err)
 		}
 	} else if revision != "" {
 		h := plumbing.NewHash(revision)
