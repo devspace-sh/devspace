@@ -206,7 +206,7 @@ func TestDeployAll(t *testing.T) {
 			allowCyclicParam: true,
 			expectedLog: `
 Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+"\\someDir"),
+			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir + string(os.PathSeparator) + "someDir"),
 		},
 	}
 
@@ -312,7 +312,7 @@ func TestPurgeAll(t *testing.T) {
 			allowCyclicParam: true,
 			expectedLog: `
 Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+"\\someDir"),
+			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir + string(os.PathSeparator) + "someDir"),
 		},
 	}
 
