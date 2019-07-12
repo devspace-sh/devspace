@@ -50,6 +50,9 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
 	}
 
 	providerName := cloudconfig.DevSpaceCloudProviderName
+	if providerConfig.Default != "" {
+		providerName = providerConfig.Default
+	}
 	if cmd.Provider != "" {
 		providerName = cmd.Provider
 	}

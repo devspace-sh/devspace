@@ -40,6 +40,7 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 
 	headerColumnNames := []string{
 		"Name",
+		"IsDefault",
 		"Host",
 		"Is logged in",
 	}
@@ -50,6 +51,7 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 	for _, provider := range providerConfig.Providers {
 		providerRows = append(providerRows, []string{
 			provider.Name,
+			strconv.FormatBool(provider.Name == providerConfig.Default),
 			provider.Host,
 			strconv.FormatBool(provider.Key != ""),
 		})
