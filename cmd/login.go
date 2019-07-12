@@ -9,7 +9,8 @@ import (
 
 // LoginCmd holds the login cmd flags
 type LoginCmd struct {
-	Key string
+	Key      string
+	Provider string
 }
 
 // NewLoginCmd creates a new login command
@@ -31,25 +32,26 @@ devspace login
 devspace login --key myaccesskey
 #######################################################
 	`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.NoArgs,
 		Run:  cmd.RunLogin,
 	}
 
 	loginCmd.Flags().StringVar(&cmd.Key, "key", "", "Access key to use")
+	loginCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Provider to use")
 
 	return loginCmd
 }
 
 // RunLogin executes the functionality devspace login
 func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
-	providerConfig, err := cloud.LoadCloudConfig()
+	providerConfig, err := cloudconfig.ParseProviderConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	providerName := cloudconfig.DevSpaceCloudProviderName
-	if len(args) > 0 {
-		providerName = args[0]
+	if cmd.Provider != "" {
+		providerName = cmd.Provider
 	}
 
 	if cmd.Key != "" {

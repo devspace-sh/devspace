@@ -26,7 +26,9 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	providerName := config.DevSpaceCloudProviderName
 	if useProviderName == nil {
 		// Choose cloud provider
-		if len(providerConfig.Providers) > 1 {
+		if providerConfig.Default != "" {
+			providerName = providerConfig.Default
+		} else if len(providerConfig.Providers) > 1 {
 			options := []string{}
 			for _, providerHost := range providerConfig.Providers {
 				options = append(options, providerHost.Name)
