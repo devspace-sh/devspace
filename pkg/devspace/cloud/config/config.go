@@ -4,40 +4,177 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/legacy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 
 	homedir "github.com/mitchellh/go-homedir"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // DevSpaceCloudProviderName is the name of the default devspace-cloud provider
 const DevSpaceCloudProviderName = "app.devspace.cloud"
 
-// DevSpaceCloudConfigPath holds the path to the cloud config file
-var DevSpaceCloudConfigPath = constants.DefaultHomeDevSpaceFolder + "/clouds.yaml"
+// LegacyDevSpaceCloudConfigPath holds the path to the cloud config file
+var LegacyDevSpaceCloudConfigPath = constants.DefaultHomeDevSpaceFolder + "/clouds.yaml"
 
-// ReadCloudsConfig reads the cloud config from the home file
-func ReadCloudsConfig() ([]byte, error) {
-	homedir, err := homedir.Dir()
-	if err != nil {
-		return nil, err
-	}
+// DevSpaceProvidersConfigPath is the path to the providers config
+var DevSpaceProvidersConfigPath = constants.DefaultHomeDevSpaceFolder + "/providers.yaml"
 
-	return ioutil.ReadFile(filepath.Join(homedir, DevSpaceCloudConfigPath))
+// DevSpaceCloudProviderConfig holds the information for the devspace-cloud
+var DevSpaceCloudProviderConfig = &latest.Provider{
+	Name: DevSpaceCloudProviderName,
+	Host: "https://app.devspace.cloud",
 }
 
-// SaveCloudsConfig saves the cloud config
-func SaveCloudsConfig(data []byte) error {
+var loadedConfig *latest.Config
+var loadConfigOnce sync.Once
+
+// GetProvider returns a provider from the loaded config
+func GetProvider(config *latest.Config, provider string) *latest.Provider {
+	for _, p := range config.Providers {
+		if p.Name == provider {
+			return p
+		}
+	}
+
+	return nil
+}
+
+// SaveProviderConfig saves the cloud config
+func SaveProviderConfig(config *latest.Config) error {
 	homedir, err := homedir.Dir()
 	if err != nil {
 		return err
 	}
 
-	cfgPath := filepath.Join(homedir, DevSpaceCloudConfigPath)
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	cfgPath := filepath.Join(homedir, DevSpaceProvidersConfigPath)
 	err = os.MkdirAll(filepath.Dir(cfgPath), 0755)
 	if err != nil {
 		return err
 	}
 
 	return ioutil.WriteFile(cfgPath, data, 0600)
+}
+
+// ParseProviderConfig reads the provider config and parses it
+func ParseProviderConfig() (*latest.Config, error) {
+	var err error
+	loadConfigOnce.Do(func() {
+		loadedConfig, err = loadProviderConfig()
+	})
+
+	return loadedConfig, err
+}
+
+func loadProviderConfig() (*latest.Config, error) {
+	homedir, err := homedir.Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	configPath := filepath.Join(homedir, DevSpaceProvidersConfigPath)
+	_, err = os.Stat(configPath)
+	if os.IsNotExist(err) {
+		// Check for legacy config
+		legacyPath := filepath.Join(homedir, LegacyDevSpaceCloudConfigPath)
+		_, err = os.Stat(legacyPath)
+		if os.IsNotExist(err) {
+			return &latest.Config{
+				Version: latest.Version,
+				Providers: []*latest.Provider{
+					DevSpaceCloudProviderConfig,
+				},
+			}, nil
+		} else if err != nil {
+			return nil, err
+		}
+
+		return loadLegacyConfig(legacyPath)
+	} else if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &latest.Config{
+		Version:   latest.Version,
+		Providers: []*latest.Provider{},
+	}
+	err = yaml.Unmarshal(data, config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure default config is there
+	defaultConfigFound := false
+	for _, provider := range config.Providers {
+		if provider.Name == DevSpaceCloudProviderName {
+			defaultConfigFound = true
+		}
+		if provider.Host == "" {
+			provider.Host = DevSpaceCloudProviderConfig.Host
+		}
+	}
+	if !defaultConfigFound {
+		config.Providers = append(config.Providers, DevSpaceCloudProviderConfig)
+	}
+
+	return config, nil
+}
+
+func loadLegacyConfig(path string) (*latest.Config, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	config := make(legacy.Config)
+	err = yaml.Unmarshal(data, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := config[DevSpaceCloudProviderName]; ok {
+		if config[DevSpaceCloudProviderName].Host == "" {
+			config[DevSpaceCloudProviderName].Host = DevSpaceCloudProviderConfig.Host
+		}
+	} else {
+		config[DevSpaceCloudProviderName] = &legacy.Provider{
+			Name: DevSpaceCloudProviderName,
+			Host: "https://app.devspace.cloud",
+		}
+	}
+
+	newConfig := &latest.Config{
+		Version:   latest.Version,
+		Providers: []*latest.Provider{},
+	}
+
+	for configName, config := range config {
+		config.Name = configName
+		if config.ClusterKey == nil {
+			config.ClusterKey = make(map[int]string)
+		}
+
+		newConfig.Providers = append(newConfig.Providers, &latest.Provider{
+			Name:       config.Name,
+			Host:       config.Host,
+			Key:        config.Key,
+			Token:      config.Token,
+			ClusterKey: config.ClusterKey,
+		})
+	}
+
+	return newConfig, nil
 }

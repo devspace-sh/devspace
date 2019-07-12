@@ -18,7 +18,7 @@ var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30
 // GetProvider returns the current specified cloud provider
 func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	// Get provider configuration
-	providerConfig, err := LoadCloudConfig()
+	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -26,10 +26,10 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	providerName := config.DevSpaceCloudProviderName
 	if useProviderName == nil {
 		// Choose cloud provider
-		if len(providerConfig) > 1 {
+		if len(providerConfig.Providers) > 1 {
 			options := []string{}
-			for providerHost := range providerConfig {
-				options = append(options, providerHost)
+			for _, providerHost := range providerConfig.Providers {
+				options = append(options, providerHost.Name)
 			}
 
 			providerName = survey.Question(&survey.QuestionOptions{
@@ -51,12 +51,13 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	}
 
 	// Set cluster key map
-	if providerConfig[providerName].ClusterKey == nil {
-		providerConfig[providerName].ClusterKey = make(map[int]string)
+	provider := config.GetProvider(providerConfig, providerName)
+	if provider.ClusterKey == nil {
+		provider.ClusterKey = make(map[int]string)
 	}
 
 	// Return provider config
-	return providerConfig[providerName], nil
+	return &Provider{*provider}, nil
 }
 
 // GetKubeContextNameFromSpace returns the kube context name for a space

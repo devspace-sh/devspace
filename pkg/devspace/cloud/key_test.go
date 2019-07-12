@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -106,7 +107,9 @@ func TestGetClusterKey(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := Provider{
-			ClusterKey: testCase.setClusterKeys,
+			latest.Provider{
+				ClusterKey: testCase.setClusterKeys,
+			},
 		}
 
 		if testCase.setAnswers == nil {

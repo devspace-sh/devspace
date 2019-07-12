@@ -1,7 +1,8 @@
 package remove
 
 import (
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -40,18 +41,26 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 	providerName := args[0]
 
 	// Get provider configuration
-	providerConfig, err := cloudpkg.LoadCloudConfig()
+	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
-
-	if _, ok := providerConfig[providerName]; ok == false {
+	if config.GetProvider(providerConfig, providerName) == nil {
 		log.Failf("Couldn't find cloud provider %s", providerName)
 	}
 
-	delete(providerConfig, providerName)
+	newProviders := make([]*latest.Provider, 0, len(providerConfig.Providers)-1)
+	for _, provider := range providerConfig.Providers {
+		if provider.Name == providerName {
+			continue
+		}
 
-	err = cloudpkg.SaveCloudConfig(providerConfig)
+		newProviders = append(newProviders, provider)
+	}
+
+	providerConfig.Providers = newProviders
+
+	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
 	}

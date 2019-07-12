@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -33,6 +34,9 @@ func TestConnectCluster(t *testing.T) {
 }
 
 func TestDefaultClusterSpaceDomain(t *testing.T) {
+	// @Florian make test faster (currently around 10 seconds)
+	t.Skip("Takes too long")
+
 	kubeClient := fake.NewSimpleClientset()
 	err := defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node in cluster", "Wrong or no error when trying to get the spacedomain of the default cluster from empty setting")
@@ -170,8 +174,10 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 
 func TestGetKey(t *testing.T) {
 	provider := &Provider{
-		ClusterKey: map[int]string{
-			5: "onlyKey",
+		latest.Provider{
+			ClusterKey: map[int]string{
+				5: "onlyKey",
+			},
 		},
 	}
 	returnedKey, err := getKey(provider, false)

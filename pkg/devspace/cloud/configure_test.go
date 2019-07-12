@@ -7,42 +7,17 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gotest.tools/assert"
 )
 
-func TestGetProvider(t *testing.T) {
-	loadedConfigOnce.Do(func() {})
-	loadedConfig = ProviderConfig{}
-
-	_, err := GetProvider(ptr.String("Doesn'tExist"), &log.DiscardLogger{})
-	assert.Error(t, err, "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ", "Wrong or not error returned when getting a non-existent provider")
-
-	loadedConfig["Exists"] = &Provider{
-		Key: "someKey",
-	}
-	loadedConfig["SecoundOption"] = &Provider{}
-	survey.SetNextAnswer("Exists")
-
-	provider, err := GetProvider(nil, &log.DiscardLogger{})
-	assert.NilError(t, err, "Error getting valid logged in provider")
-	assert.Equal(t, loadedConfig["Exists"], provider, "Srong provider returned")
-	assert.Equal(t, false, provider.ClusterKey == nil, "ClusterKey of provider not set")
-}
-
 func TestGetKubeContextNameFromSpace(t *testing.T) {
 	assert.Equal(t, GetKubeContextNameFromSpace("space:Name", "provider.Name"), DevSpaceKubeContextName+"-provider-name-space-name", "Wrong KubeContextName returned")
 }
 
 func TestUpdateKubeConfig(t *testing.T) {
-	loadedConfigOnce.Do(func() {})
-	loadedConfig = ProviderConfig{}
-
 	err := UpdateKubeConfig("", &ServiceAccount{CaCert: "Undecodable"}, false)
 	assert.Error(t, err, "illegal base64 data at input byte 8", "No or wrong error when trying to update kube config with an undecodable cacert in the serviceaccount")
 
