@@ -60,6 +60,11 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 
 	providerConfig.Providers = newProviders
 
+	// Change default provider if necessary
+	if providerConfig.Default == providerName {
+		providerConfig.Default = config.DevSpaceCloudProviderName
+	}
+
 	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
