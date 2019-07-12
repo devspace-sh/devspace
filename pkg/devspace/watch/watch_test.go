@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -27,13 +28,11 @@ type testCaseChange struct {
 }
 
 func TestWatcher(t *testing.T) {
-	t.Skip("Test has a data race")
-
 	watchedPaths := []string{".", "hello.txt", "watchedsubdir"}
 	testCases := []testCase{
 		{
 			name:            "Create text file",
-			expectedChanges: []string{".", "hello.txt"},
+			expectedChanges: []string{"hello.txt"},
 			changes: []testCaseChange{
 				{
 					path:    "hello.txt",
@@ -43,7 +42,7 @@ func TestWatcher(t *testing.T) {
 		},
 		{
 			name:            "Create file in folder",
-			expectedChanges: []string{".", "watchedsubdir"},
+			expectedChanges: []string{"watchedsubdir"},
 			changes: []testCaseChange{
 				{
 					path:    "watchedsubdir/unwatchedsubfile.txt",
@@ -63,7 +62,7 @@ func TestWatcher(t *testing.T) {
 		},
 		{
 			name:              "Delete file",
-			expectedChanges:   []string{"."},
+			expectedChanges:   []string{},
 			expectedDeletions: []string{"hello.txt"},
 			changes: []testCaseChange{
 				{
@@ -90,11 +89,19 @@ func TestWatcher(t *testing.T) {
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	var (
-		callbackCalledChan = make(chan bool)
+		callbackCalledChan = make(chan error)
 		expectedChanges    = &[]string{}
 		expectedDeletions  = &[]string{}
 		changeLock         sync.Mutex
@@ -104,17 +111,27 @@ func TestWatcher(t *testing.T) {
 		changeLock.Lock()
 		defer changeLock.Unlock()
 
-		assert.Equal(t, len(*expectedChanges), len(changed), "Wrong changes")
-		for index := range changed {
-			assert.Equal(t, (*expectedChanges)[index], changed[index], "Wrong changes")
+		for _, change := range changed {
+			indexInExpected := indexOf(change, *expectedChanges)
+			if indexInExpected == -1 {
+				callbackCalledChan <- fmt.Errorf("Unexpected change in %s", change)
+				return nil
+			}
+			*expectedChanges = append((*expectedChanges)[:indexInExpected], (*expectedChanges)[indexInExpected+1:]...)
 		}
 
-		assert.Equal(t, len(*expectedDeletions), len(deleted), "Wrong deletions")
-		for index := range deleted {
-			assert.Equal(t, (*expectedDeletions)[index], deleted[index], "Wrong deletions")
+		for _, deletion := range deleted {
+			indexInExpected := indexOf(deletion, *expectedDeletions)
+			if indexInExpected == -1 {
+				callbackCalledChan <- fmt.Errorf("Unexpected deletion of %s", deletion)
+				return nil
+			}
+			*expectedDeletions = append((*expectedDeletions)[:indexInExpected], (*expectedDeletions)[indexInExpected+1:]...)
 		}
 
-		callbackCalledChan <- true
+		if len(*expectedChanges) == 0 && len(*expectedDeletions) == 0 {
+			callbackCalledChan <- nil
+		}
 		return nil
 	}
 
@@ -143,7 +160,7 @@ func TestWatcher(t *testing.T) {
 		// Apply changes
 		for _, change := range testCase.changes {
 			if change.delete {
-				err = os.RemoveAll(change.path)
+				err = os.Remove(change.path)
 				if err != nil {
 					t.Fatalf("Error deleting file %s: %v", change.path, err)
 				}
@@ -156,11 +173,22 @@ func TestWatcher(t *testing.T) {
 		}
 
 		select {
-		case <-callbackCalledChan:
+		case err = <-callbackCalledChan:
+			assert.NilError(t, err, "Test %s failed", testCase.name)
 		case <-time.After(time.Second * 5):
-			t.Fatalf("Test %s timed out", testCase.name)
+			changeLock.Lock()
+			t.Fatalf("Test %s timed out. Remaining changes: %v . Remaining deletions: %v", testCase.name, *expectedChanges, *expectedDeletions)
 		}
 	}
 
 	watcher.Stop()
+}
+
+func indexOf(element string, data []string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 //not found.
 }

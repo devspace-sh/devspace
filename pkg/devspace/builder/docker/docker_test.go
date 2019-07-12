@@ -35,8 +35,16 @@ func TestDockerBuild(t *testing.T) {
 	}
 
 	// 4. Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	err = makeTestProject(dir)
 	if err != nil {
@@ -133,8 +141,16 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	}
 
 	// 4. Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	err = makeTestProject(dir)
 	if err != nil {

@@ -29,8 +29,16 @@ func TestContainerizeApplicationWithExistingDockerfile(t *testing.T){
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	err = fsutil.WriteToFile([]byte(""), "Dockerfile")
 	if err != nil {
@@ -59,8 +67,16 @@ func TestContainerizeApplication(t *testing.T){
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	err = fsutil.WriteToFile([]byte(`var express = require('express');
 var app = express();
@@ -101,8 +117,16 @@ func TestDockerfileGenerator(t *testing.T){
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	//Test factory method
 	dockerfileGenerator, err := NewDockerfileGenerator("", ptr.String(""))
@@ -183,8 +207,16 @@ func TestGetLanguage(t *testing.T) {
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	fsutil.WriteToFile([]byte(`var express = require('express');
 var app = express();

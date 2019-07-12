@@ -45,8 +45,16 @@ func TestUpgrade(t *testing.T){
 	}
 
 	// Cleanup temp folder
-	defer os.Chdir(wdBackup)
-	defer os.RemoveAll(dir)
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
 
 	logFile, err := ioutil.TempFile(dir, "log")
 	if err != nil {
