@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -176,5 +177,12 @@ func loadLegacyConfig(path string) (*latest.Config, error) {
 		})
 	}
 
+	err = SaveProviderConfig(newConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "save config")
+	}
+
+	// Remove old config
+	os.Remove(path)
 	return newConfig, nil
 }
