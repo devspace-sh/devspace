@@ -106,21 +106,30 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		return errors.Wrap(err, "init namespace")
 	}
 
-	if options.Key == "" {
-		options.Key, err = getKey(p, false)
-		if err != nil {
-			return errors.Wrap(err, "get key")
-		}
-	}
-
 	token, caCert, err := getServiceAccountCredentials(client)
 	if err != nil {
 		return errors.Wrap(err, "get service account credentials")
 	}
 
-	encryptedToken, err := EncryptAES([]byte(options.Key), token)
+	needKey, err := p.needKey()
 	if err != nil {
-		return errors.Wrap(err, "encrypt token")
+		return errors.Wrap(err, "check cloud settings")
+	}
+
+	// Encrypt token if needed
+	encryptedToken := token
+	if needKey {
+		if options.Key == "" {
+			options.Key, err = getKey(p, false)
+			if err != nil {
+				return errors.Wrap(err, "get key")
+			}
+		}
+
+		encryptedToken, err = EncryptAES([]byte(options.Key), token)
+		if err != nil {
+			return errors.Wrap(err, "encrypt token")
+		}
 	}
 
 	// Create cluster remotely
@@ -133,10 +142,12 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	log.StopWait()
 
 	// Save key
-	p.ClusterKey[clusterID] = options.Key
-	err = p.Save()
-	if err != nil {
-		return errors.Wrap(err, "save key")
+	if needKey {
+		p.ClusterKey[clusterID] = options.Key
+		err = p.Save()
+		if err != nil {
+			return errors.Wrap(err, "save key")
+		}
 	}
 
 	// Initialize roles and pod security policies
@@ -455,6 +466,44 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 
 	log.Done("Initialized cluster")
 	return nil
+}
+
+// SettingDefaultClusterEncryptToken is the setting name to check if we need an encryption key
+const SettingDefaultClusterEncryptToken = "DEFAULT_CLUSTER_ENCRYPT_TOKEN"
+
+func (p *Provider) needKey() (bool, error) {
+	log.StartWait("Retrieving cloud settings")
+	defer log.StopWait()
+
+	// Response struct
+	response := struct {
+		Settings []struct {
+			ID    string `json:"id"`
+			Value string `json:"value"`
+		} `json:"manager_settings"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		query ($settings: [String!]!) {
+			manager_settings(settings:$settings) {
+				id
+				value
+			}
+		}
+	`, map[string]interface{}{
+		"settings": []string{SettingDefaultClusterEncryptToken},
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	// We don't need a key if not specified
+	if len(response.Settings) != 1 {
+		return false, nil
+	}
+
+	return response.Settings[0].ID == SettingDefaultClusterEncryptToken && response.Settings[0].Value == "true", nil
 }
 
 func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, error) {

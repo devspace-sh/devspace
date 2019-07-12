@@ -303,7 +303,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 
 		// Choose cloud provider
 		if providerConfig.Default != "" {
-			cmd.providerName = providerConfig.Default
+			cmd.providerName = &providerConfig.Default
 		} else if len(providerConfig.Providers) > 1 {
 			options := []string{}
 			for _, provider := range providerConfig.Providers {
