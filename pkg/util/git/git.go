@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	git "gopkg.in/src-d/go-git.v4"
+	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // Repository holds the information about a repository
@@ -66,85 +67,92 @@ func (gr *Repository) GetRemote() (string, error) {
 	return urls[0], nil
 }
 
-// HasUpdate checks if there is an update to the repository
-func (gr *Repository) HasUpdate() (bool, error) {
+// Update pulls the repository or clones it into the local path
+func (gr *Repository) Update(merge bool) error {
+	// Check if repo already exists
 	_, err := os.Stat(gr.LocalPath + "/.git")
 	if err != nil {
-		return true, nil
+		// Create local path
+		err := os.MkdirAll(gr.LocalPath, 0755)
+		if err != nil {
+			return err
+		}
+
+		// Clone into folder
+		_, err = git.PlainClone(gr.LocalPath, false, &git.CloneOptions{
+			URL: gr.RemotURL,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
+	// Open existing repo
 	repo, err := git.PlainOpen(gr.LocalPath)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	err = repo.Fetch(&git.FetchOptions{
-		RemoteName: "origin",
-	})
-	if err != git.NoErrAlreadyUpToDate && err != nil {
-		return false, err
-	}
-
-	repoHead, err := repo.Head()
-	if err != nil {
-		return false, err
-	}
-
-	remoteHead, err := repo.Reference("refs/remotes/origin/HEAD", true)
-	if err != nil {
-		return false, nil
-	}
-
-	return remoteHead.Hash().String() != repoHead.Hash().String(), nil
-}
-
-// Update pulls the repository or clones it into the local path
-func (gr *Repository) Update() (bool, error) {
-	_, repoNotFound := os.Stat(gr.LocalPath + "/.git")
-	if repoNotFound == nil {
-		repo, err := git.PlainOpen(gr.LocalPath)
-		if err != nil {
-			return false, err
-		}
-
+	// Pull or fetch?
+	if merge {
 		repoWorktree, err := repo.Worktree()
 		if err != nil {
-			return false, err
-		}
-
-		oldHead, err := repo.Head()
-		if err != nil {
-			return false, err
+			return err
 		}
 
 		err = repoWorktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
 		})
 		if err != git.NoErrAlreadyUpToDate && err != nil {
-			return false, err
+			return err
 		}
+	} else {
+		err = repo.Fetch(&git.FetchOptions{
+			RemoteName: "origin",
+		})
+		if err != git.NoErrAlreadyUpToDate && err != nil {
+			return err
+		}
+	}
 
-		newHead, err := repo.Head()
+	return nil
+}
+
+// Checkout certain tag, branch or hash
+func (gr *Repository) Checkout(tag, branch, revision string) error {
+	r, err := git.PlainOpen(gr.LocalPath)
+	if err != nil {
+		return err
+	}
+
+	// Resolve to the correct hash
+	var hash *plumbing.Hash
+	if tag != "" {
+		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/tags/%s", tag)))
 		if err != nil {
-			return false, err
+			return fmt.Errorf("Error resolving tag revision: %v", err)
 		}
-
-		return oldHead.Hash().String() != newHead.Hash().String(), nil
+	} else if branch != "" {
+		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/remotes/origin/%s", branch)))
+		if err != nil {
+			return fmt.Errorf("Error resolving branch revision: %v", err)
+		}
+	} else if revision != "" {
+		h := plumbing.NewHash(revision)
+		hash = &h
+	} else {
+		return errors.New("Tag, branch or hash has to be defined")
 	}
 
-	// Create local path
-	err := os.MkdirAll(gr.LocalPath, 0755)
+	// Checkout the hash
+	w, err := r.Worktree()
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	// Clone into folder
-	_, err = git.PlainClone(gr.LocalPath, false, &git.CloneOptions{
-		URL: gr.RemotURL,
+	return w.Checkout(&git.CheckoutOptions{
+		Hash: *hash,
 	})
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }

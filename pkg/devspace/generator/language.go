@@ -129,7 +129,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 
 // GetSupportedLanguages returns all languages that are available in the local Template Rempository
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
-	_, err := cg.gitRepo.Update()
+	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return nil, fmt.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemotURL, err)
 	}
@@ -153,7 +153,7 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 
 // CreateDockerfile creates a dockerfile for a given language
 func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
-	_, err := cg.gitRepo.Update()
+	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return err
 	}

@@ -187,10 +187,31 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		// Update chart
 		if update {
-			gitRepo := git.NewGitRepository(localPath, gitPath)
-			_, err := gitRepo.Update()
+			var (
+				gitRepo  = git.NewGitRepository(localPath, gitPath)
+				tag      string
+				branch   string
+				revision string
+			)
+
+			if dependency.Source.Tag != nil {
+				tag = *dependency.Source.Tag
+			} else if dependency.Source.Branch != nil {
+				branch = *dependency.Source.Branch
+			} else if dependency.Source.Revision != nil {
+				revision = *dependency.Source.Revision
+			}
+
+			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
 			if err != nil {
 				return nil, errors.Wrap(err, "pull repo")
+			}
+
+			if tag != "" || branch != "" || revision != "" {
+				err = gitRepo.Checkout(tag, branch, revision)
+				if err != nil {
+					return nil, errors.Wrap(err, "checkout")
+				}
 			}
 
 			r.log.Donef("Pulled %s", ID)

@@ -122,7 +122,7 @@ func NewComponentGenerator() (*ComponentsGenerator, error) {
 	}
 
 	gitRepository := git.NewGitRepository(filepath.Join(homedir, ComponentsRepoPath), ComponentsRepoURL)
-	_, err = gitRepository.Update()
+	err = gitRepository.Update(true)
 	if err != nil {
 		return nil, err
 	}
