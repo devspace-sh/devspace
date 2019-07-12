@@ -130,12 +130,14 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		if err != nil {
 			return errors.Wrap(err, "encrypt token")
 		}
+
+		encryptedToken = []byte(base64.StdEncoding.EncodeToString(encryptedToken))
 	}
 
 	// Create cluster remotely
 	log.StartWait("Initialize cluster")
 	defer log.StopWait()
-	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken), availableResources.NetworkPolicy)
+	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
 	if err != nil {
 		return errors.Wrap(err, "create cluster")
 	}
