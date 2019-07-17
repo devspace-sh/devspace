@@ -142,10 +142,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 
 		// Ask questions
 		if configDefinition.Vars != nil {
-			vars, err := loadVarsFromWrapper(basePath, configDefinition.Vars)
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error loading vars: %v", err)
-			}
+			vars := *configDefinition.Vars
 
 			err = askQuestions(generatedConfig.GetActive(), vars)
 			if err != nil {
