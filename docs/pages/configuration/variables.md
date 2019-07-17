@@ -14,7 +14,7 @@ Config variables are placeholders with the format `${VAR_NAME}` and can be used 
 config1:
   config:
     path: ../devspace.yaml
-  overwrites:
+  overrides:
   - data:
       images:
         database:
