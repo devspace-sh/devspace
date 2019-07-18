@@ -16,10 +16,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	configspkg "github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/mgutz/ansi"
 )
 
@@ -100,11 +101,11 @@ func GetConfig() *latest.Config {
 	return config
 }
 
-func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configs.ConfigDefinition, error) {
+func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configspkg.ConfigDefinition, error) {
 	var (
 		config           = latest.New().(*latest.Config)
 		configRaw        = latest.New().(*latest.Config)
-		configDefinition *configs.ConfigDefinition
+		configDefinition *configspkg.ConfigDefinition
 		configPath       = filepath.Join(basePath, constants.DefaultConfigPath)
 		configsPath      = filepath.Join(basePath, constants.DefaultConfigsPath)
 		varsPath         = filepath.Join(basePath, constants.DefaultVarsPath)
@@ -113,7 +114,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 	// Check if configs.yaml exists
 	_, err := os.Stat(configsPath)
 	if err == nil {
-		configs := configs.Configs{}
+		configs := configspkg.Configs{}
 
 		// Get configs
 		err = LoadConfigs(&configs, configsPath)
@@ -142,7 +143,28 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 
 		// Ask questions
 		if configDefinition.Vars != nil {
-			vars := *configDefinition.Vars
+			// Vars can be either of type []*configspkg.Variable or are a VarsWrapper
+			var vars []*configspkg.Variable
+			_, ok := configDefinition.Vars.([]interface{})
+			if ok {
+				vars = []*configspkg.Variable{}
+				err = util.Convert(configDefinition.Vars, &vars)
+				if err != nil {
+					return nil, nil, err
+				}
+			} else {
+				// It is a variable wrapper
+				wrapper := &configspkg.VarsWrapper{}
+				err = util.Convert(configDefinition.Vars, wrapper)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				vars, err = loadVarsFromWrapper(basePath, wrapper)
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "load vars")
+				}
+			}
 
 			err = askQuestions(generatedConfig.GetActive(), vars)
 			if err != nil {
@@ -158,7 +180,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 	} else {
 		_, err := os.Stat(varsPath)
 		if err == nil {
-			vars := []*configs.Variable{}
+			vars := []*configspkg.Variable{}
 			yamlFileContent, err := ioutil.ReadFile(varsPath)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Error loading %s: %v", varsPath, err)
@@ -250,7 +272,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 	getConfigOnce.Do(func() {
 		var (
 			err              error
-			configDefinition *configs.ConfigDefinition
+			configDefinition *configspkg.ConfigDefinition
 		)
 
 		// Get generated config
@@ -367,7 +389,7 @@ func validate(config *latest.Config) error {
 	return nil
 }
 
-func askQuestions(cache *generated.CacheConfig, vars []*configs.Variable) error {
+func askQuestions(cache *generated.CacheConfig, vars []*configspkg.Variable) error {
 	for idx, variable := range vars {
 		if variable.Name == nil {
 			return fmt.Errorf("Name required for variable with index %d", idx)
