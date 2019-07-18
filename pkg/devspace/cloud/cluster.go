@@ -357,9 +357,12 @@ func (p *Provider) deployServices(client kubernetes.Interface, clusterID int, av
 	if err != nil {
 		return errors.Wrap(err, "list configmaps")
 	}
+	if len(configmaps.Items) != 0 {
+		options.DeployIngressController = false
+	}
 
 	// Ingress controller
-	if len(configmaps.Items) == 0 && options.DeployIngressController {
+	if options.DeployIngressController {
 		// Ask if we should use the host network
 		if options.UseHostNetwork == nil {
 			options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
