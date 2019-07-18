@@ -122,7 +122,7 @@ func TestGetClusterKey(t *testing.T) {
 			defaultGraphlClient = testCase.graphQLClient
 		}
 
-		key, err := provider.GetClusterKey(&Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID})
+		key, err := provider.GetClusterKey(&Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
