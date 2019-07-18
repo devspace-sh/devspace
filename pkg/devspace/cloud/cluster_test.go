@@ -7,7 +7,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -92,44 +91,6 @@ func TestSpecifyDomain(t *testing.T) {
 	survey.SetNextAnswer("some.Domain")
 	err := provider.specifyDomain(0, &ConnectClusterOptions{})
 	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
-}
-
-func TestDeployServices(t *testing.T) {
-	provider := &Provider{}
-	err := provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: false,
-	})
-	assert.NilError(t, err, "Error deploying nothing")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   true,
-		DeployAdmissionController: false,
-		UseHostNetwork:            ptr.Bool(true),
-	})
-	assert.Error(t, err, "deploy ingress controller: get token: Provider has no key specified", "Wrong or no error when trying to deploy an ingress controller without a token")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: true,
-	})
-	assert.Error(t, err, "deploy admission controller: get token: Provider has no key specified", "Wrong or no error when trying to deploy an admission controller without a token")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: false,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: false,
-		DeployCertManager:         true,
-	})
-	assert.Error(t, err, "deploy cert manager: get token: Provider has no key specified", "Wrong or no error when trying to deploy a cert manager without a token")
-
 }
 
 func TestInitCore(t *testing.T) {

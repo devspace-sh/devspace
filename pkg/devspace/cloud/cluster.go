@@ -161,20 +161,8 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		return errors.Wrap(err, "initialize core")
 	}
 
-	// Ask if we should use the host network
-	if options.UseHostNetwork == nil {
-		options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
-			Question:     "Should the ingress controller use a LoadBalancer or the host network?",
-			DefaultValue: loadBalancerOption,
-			Options: []string{
-				loadBalancerOption,
-				hostNetworkOption,
-			},
-		}) == hostNetworkOption)
-	}
-
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(clusterID, availableResources, options)
+	err = p.deployServices(client, clusterID, availableResources, options)
 	if err != nil {
 		return err
 	}
@@ -359,11 +347,31 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 	return nil
 }
 
-func (p *Provider) deployServices(clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
+func (p *Provider) deployServices(client kubernetes.Interface, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
 	defer log.StopWait()
 
+	// Check if devspace-cloud is deployed in the namespace
+	configmaps, err := client.CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
+		LabelSelector: "NAME=devspace-cloud,OWNER=TILLER,STATUS=DEPLOYED",
+	})
+	if err != nil {
+		return errors.Wrap(err, "list configmaps")
+	}
+
 	// Ingress controller
-	if options.DeployIngressController {
+	if len(configmaps.Items) == 0 && options.DeployIngressController {
+		// Ask if we should use the host network
+		if options.UseHostNetwork == nil {
+			options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
+				Question:     "Should the ingress controller use a LoadBalancer or the host network?",
+				DefaultValue: loadBalancerOption,
+				Options: []string{
+					loadBalancerOption,
+					hostNetworkOption,
+				},
+			}) == hostNetworkOption)
+		}
+
 		log.StartWait("Deploying ingress controller")
 
 		// Deploy ingress controller
