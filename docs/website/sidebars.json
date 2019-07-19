@@ -116,6 +116,7 @@
       "cli-commands/use/config",
       "cli-commands/use/space"
     ],
+    "Intro": ["cloud/intro/access"],
     "Spaces": [
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
@@ -131,6 +132,13 @@
       "cloud/clusters/users",
       "cloud/clusters/limits",
       "cloud/clusters/access"
+    ],
+    "Teams": ["cloud/teams/teams"],
+    "Administration": [
+      "cloud/admin/users",
+      "cloud/admin/authentication",
+      "cloud/admin/registry",
+      "cloud/admin/settings"
     ]
   }
 }
