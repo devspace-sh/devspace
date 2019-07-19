@@ -1,4 +1,4 @@
-## [![DevSpace Logo](docs/website/static/img/github-readme-header.svg)](https://devspace.cloud/)
+## [![DevSpace CLI Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://devspace.cloud/docs)
 
 [Website](https://devspace.cloud/) •
 [Documentation](https://devspace.cloud/docs) •
