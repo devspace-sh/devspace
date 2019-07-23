@@ -293,7 +293,7 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		cmd.configureCluster()
 	} else {
 		// Get provider configuration
-		providerConfig, err := cloud.LoadCloudConfig()
+		providerConfig, err := cloudconfig.ParseProviderConfig()
 		if err != nil {
 			log.Fatalf("Error loading provider config: %v", err)
 		}
@@ -302,14 +302,16 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 		cmd.providerName = ptr.String(cloudconfig.DevSpaceCloudProviderName)
 
 		// Choose cloud provider
-		if len(providerConfig) > 1 {
+		if providerConfig.Default != "" {
+			cmd.providerName = &providerConfig.Default
+		} else if len(providerConfig.Providers) > 1 {
 			options := []string{}
-			for providerHost := range providerConfig {
-				options = append(options, providerHost)
+			for _, provider := range providerConfig.Providers {
+				options = append(options, provider.Name)
 			}
 
 			cmd.providerName = ptr.String(survey.Question(&survey.QuestionOptions{
-				Question: "Select cloud provider",
+				Question: "Select a cloud provider",
 				Options:  options,
 			}))
 		}

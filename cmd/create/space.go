@@ -199,8 +199,17 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 			clusterNames = append(clusterNames, cluster.Name)
 		}
 
-		// Add devspace cloud option
-		clusterNames = append(clusterNames, DevSpaceCloudHostedCluster)
+		// Check if there are non connected clusters
+		for _, cluster := range clusters {
+			if cluster.Owner == nil {
+				// Add devspace cloud option
+				clusterNames = append(clusterNames, DevSpaceCloudHostedCluster)
+				break
+			}
+		}
+		if len(clusterNames) == 1 {
+			return connectedClusters[0], nil
+		}
 
 		// Choose cluster
 		chosenCluster := survey.Question(&survey.QuestionOptions{

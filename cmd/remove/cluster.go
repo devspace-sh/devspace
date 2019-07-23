@@ -74,20 +74,20 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	// Delete all spaces?
 	deleteSpaces := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster spaces?",
-		DefaultValue: "Yes",
+		DefaultValue: "No",
 		Options: []string{
-			"Yes",
 			"No",
+			"Yes",
 		},
 	}) == "Yes"
 
 	// Delete services
 	deleteServices := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster services?",
-		DefaultValue: "Yes",
+		DefaultValue: "No",
 		Options: []string{
-			"Yes",
 			"No",
+			"Yes",
 		},
 	}) == "Yes"
 

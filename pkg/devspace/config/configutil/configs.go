@@ -5,10 +5,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func loadVarsFromWrapper(basePath string, varsWrapper *configs.VarsWrapper) ([]*configs.Variable, error) {
