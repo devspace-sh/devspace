@@ -1,10 +1,10 @@
 <img src="docs/website/static/img/devspace-logo.svg">
 
-![-](docs/website/static/img/readme/line.svg)
+<img src="docs/website/static/img/readme/line.svg" height="1">
 
 ### **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Slack](https://devspace.cloud/slack)** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/home?status=Just%20found%20out%20about%20%23DevSpace%20CLI%3A%20https%3A//github.com/devspace-cloud/devspace%0A%0AIt%20lets%20you%20build%20cloud%20native%20software%20directly%20on%20top%20of%20%23Kubernetes%20and%20%23Docker%0A%23CloudNative%20%23k8s) [![Build Status](https://travis-ci.org/devspace-cloud/devspace.svg?branch=master)](https://travis-ci.org/devspace-cloud/devspace) [![Go Report Card](https://goreportcard.com/badge/github.com/devspace-cloud/devspace)](https://goreportcard.com/report/github.com/devspace-cloud/devspace) [![Slack](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
 
-![-](docs/website/static/img/readme/line.svg)
+<img src="docs/website/static/img/readme/line.svg" height="1">
 
 ### DevSpace makes it easier and faster to build applications for Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
@@ -445,7 +445,7 @@ images:
     # The following line defines a custom tag schema for this image (default tag schema is: ${DEVSPACE_RANDOM})
     tag: ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
 ```
-Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/image-building/build-tools/docker). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/image-building/build-tools/docker).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -468,7 +468,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/image-building/build-tools/kaniko). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/image-building/build-tools/kaniko). <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -493,7 +493,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/image-building/build-tools/custom-build-script). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/image-building/build-tools/custom-build-script).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -523,7 +523,7 @@ Learn more about:
 - [What are components?](https://devspace.cloud/docs/deployment/components/what-are-components)
 - [Configuration Specification for Components](https://devspace.cloud/docs/deployment/components/specification) 
 
-![-](docs/website/static/img/readme/line.svg)
+ <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -546,7 +546,7 @@ Learn more about:
 - [What are Helm charts?](https://devspace.cloud/docs/deployment/helm-charts/what-are-helm-charts)
 - [Configure Helm chart deployments](https://devspace.cloud/docs/deployment/helm-charts/add-charts)
 
-![-](docs/website/static/img/readme/line.svg)
+ <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -565,7 +565,7 @@ deployments:
     - more-manifests/
     kustomize: true
 ```
-Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -593,7 +593,7 @@ Learn more about:
 - [What are Kubernetes manifests?](https://devspace.cloud/docs/deployment/kubernetes-manifests/what-are-manifests)
 - [Configure manifest deployments](https://devspace.cloud/docs/deployment/kubernetes-manifests/configure-manifests)
 
-![-](docs/website/static/img/readme/line.svg)
+ <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -614,7 +614,7 @@ deployments:
 
 DevSpace processes all deployments of a project according to their order in the `devspace.yaml`. You can combine deployments of different types (e.g. Helm charts and manifests).
 
-Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/workflow-basics/deployment). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/workflow-basics/deployment).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -637,7 +637,7 @@ dependencies:
 
 Before deploying a project, DevSpace resolves all dependencies and builds a dependency tree which will then be deployed in a buttom-up fashion, i.e. the project which you call `devspace deploy` in will be deployed last.
 
-Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/workflow-basics/deployment/dependencies). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/workflow-basics/deployment/dependencies).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -664,7 +664,7 @@ dev:
 
 When running `devspace dev` instead of `devspace deploy`, DevSpace would override the ENTRYPOINT og the Dockerfile with `[sleep, 9999999]` when building this image.
 
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -688,7 +688,7 @@ dev:
 
 When running `devspace dev` instead of `devspace deploy`, DevSpace would use the dev Dockerfile as configured in the example above.
 
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -724,7 +724,7 @@ The above example would configure the sync, so that:
 - local path `./src` will be synchronized to the container's working directory `.` (specified in the Dockerfile)
 - `./src/node_modules` would **not** be uploaded to the container
 
-Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/development/synchronization). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/development/synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -745,7 +745,7 @@ dev:
 
 Streams the logs of the selected container instead of opening an interactive terminal session.
 
-Take a look at the documentation to learn more about [configuring the terminal proxy for development](https://devspace.cloud/docs/development/terminal). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [configuring the terminal proxy for development](https://devspace.cloud/docs/development/terminal).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -765,7 +765,7 @@ dev:
 
 This configuration would tell DevSpace to redeploy your project when the Dockerfile changes or any file within `./manifests`.
 
-Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/development/auto-reloading). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/development/auto-reloading).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -787,7 +787,7 @@ images:
 
 DevSpace allows you to use certain pre-defined variables to make the configuration more flexible and easier to share with others. Additionally, you can add your own custom variables.
 
-Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/configuration/variables). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/configuration/variables).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -818,7 +818,7 @@ If you have complex deployment scenarios which are not easily addressable by dev
 
 You can tell DevSpace to use a specific config file using thit command: `devspace use config [config-name]`
 
-Take a look at the documentation to learn more about [using multiple config files](https://devspace.cloud/docs/configuration/multiple-configs). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [using multiple config files](https://devspace.cloud/docs/configuration/multiple-configs).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -840,7 +840,7 @@ hooks:
 
 The command defined in this hook would be executed before building the images defined in the config.
 
-Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks). ![-](docs/website/static/img/readme/line.svg)
+Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
