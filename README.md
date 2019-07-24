@@ -2,7 +2,7 @@
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
-### **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Slack](https://devspace.cloud/slack)** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Check%20out%20%23DevSpace%20-%20it%20lets%20you%20build%20cloud-native%20applications%20faster%20and%20automate%20the%20deployment%20process%20to%20%23Kubernetes%20https%3A//github.com/devspace-cloud/devspace/%0A%23cncf%20%23cloudnative%20%23cloud%20%23docker%20%23containers) [![Build Status](https://travis-ci.org/devspace-cloud/devspace.svg?branch=master)](https://travis-ci.org/devspace-cloud/devspace) [![Go Report Card](https://goreportcard.com/badge/github.com/devspace-cloud/devspace)](https://goreportcard.com/report/github.com/devspace-cloud/devspace) [![Slack](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
+### **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Slack](https://devspace.cloud/slack)** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  [![](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Check%20out%20%23DevSpace%20-%20it%20lets%20you%20build%20cloud-native%20applications%20faster%20and%20automate%20the%20deployment%20process%20to%20%23Kubernetes%20https%3A//github.com/devspace-cloud/devspace/%0A%23cncf%20%23cloudnative%20%23cloud%20%23docker%20%23containers) [![](https://travis-ci.org/devspace-cloud/devspace.svg?branch=master)](https://travis-ci.org/devspace-cloud/devspace) [![](https://goreportcard.com/badge/github.com/devspace-cloud/devspace)](https://goreportcard.com/report/github.com/devspace-cloud/devspace) [![](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -326,6 +326,7 @@ devspace use space [space-name]
 You can configure DevSpace with the `devspace.yaml` configuration file that should be placed within the root directory of your project. The general structure of a `devspace.yaml` looks like this:
 
 ```yaml
+# File: ./devspace.yaml
 version: {config-version}
 
 images:                 # DevSpace will build these images in parallel and push them to the respective registries
@@ -355,6 +356,7 @@ dependencies:           # Tells DevSpace which related projects should be deploy
 <summary>Show me an example of a devspace.yaml config file</summary>
 
 ```yaml
+# File: ./devspace.yaml
 version: v1beta2
 
 images:
@@ -421,6 +423,7 @@ Build images with Docker
 </summary>
 
 ```yaml
+# File: ./devspace.yaml
 images:
   auth-server:
     image: dockerhub-username/my-auth-server    # Push to Docker Hub (no registry hostname required) => uses ./Dockerfile by default
@@ -448,6 +451,7 @@ Build images with kaniko (inside a Kubernetes pod)
 </summary>
 
 ```yaml
+# File: ./devspace.yaml
 images:
   auth-server:
     image: dockerhub-username/my-auth-server    # Push to Docker Hub (no registry hostname required) => uses ./Dockerfile by default
@@ -471,6 +475,7 @@ Build images with custom commands and scripts
 </summary>
 
 ```yaml
+# File: ./devspace.yaml
 images:
   auth-server:
     image: dockerhub-username/my-auth-server    # Push to Docker Hub (no registry hostname required) => uses ./Dockerfile by default
@@ -522,7 +527,7 @@ Learn more about:
 
 <details>
 <summary>
-Deploy helm charts
+Deploy Helm charts
 </summary>
 
 ```yaml
@@ -551,14 +556,17 @@ Deploy manifests with kubectl
 ```yaml
 # File: ./devspace.yaml
 deployments:
-- name: my-deployment
+- name: my-nodejs-app
   kubectl:
     manifests:
-    - my-manifests/
-    - more-manifests/
-    kustomize: true
+    - manifest-folder/
+    - some-other-manifest.yaml
 ```
-Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Learn more about:
+- [What are Kubernetes manifests?](https://devspace.cloud/docs/deployment/kubernetes-manifests/what-are-manifests)
+- [Configure manifest deployments](https://devspace.cloud/docs/deployment/kubernetes-manifests/configure-manifests)
+
+<img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -570,23 +578,16 @@ Deploy manifests with kustomize
 ```yaml
 # File: ./devspace.yaml
 deployments:
-- name: my-cache
-  helm:
-    chart:
-      name: redis
-      version: "6.1.4"
-      repo: https://kubernetes-charts.storage.googleapis.com
-- name: my-nodejs-app
+- name: my-deployment
   kubectl:
     manifests:
-    - manifest-folder/
-    - some-other-manifest.yaml
+    - my-manifests/
+    - more-manifests/
+    kustomize: true
 ```
-Learn more about:
-- [What are Kubernetes manifests?](https://devspace.cloud/docs/deployment/kubernetes-manifests/what-are-manifests)
-- [Configure manifest deployments](https://devspace.cloud/docs/deployment/kubernetes-manifests/configure-manifests)
+Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize). 
 
- <img src="docs/website/static/img/readme/line.svg" height="1">
+<img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -598,11 +599,17 @@ Define multiple deployments in one project
 ```yaml
 # File: ./devspace.yaml
 deployments:
-- name: devspace-default
+- name: my-deployment
   kubectl:
     manifests:
     - manifest-folder/
     - some-other-manifest.yaml
+- name: my-cache
+  helm:
+    chart:
+      name: redis
+      version: "6.1.4"
+      repo: https://kubernetes-charts.storage.googleapis.com
 ```
 
 DevSpace processes all deployments of a project according to their order in the `devspace.yaml`. You can combine deployments of different types (e.g. Helm charts and manifests).
@@ -675,7 +682,7 @@ dev:
   overrideImages:
   - name: default
     dockerfile: ./development/Dockerfile.development
-    # Optional use different context
+    # Optional: use different context
     # context: ./development
 ```
 
