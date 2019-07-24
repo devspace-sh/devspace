@@ -13,19 +13,16 @@
 
 <br>
 
-<center>
+<p align="center">
 
 [![DevSpace Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://youtu.be/0-5XwDeIG0s)
 [Click here to watch the full-length video with sound on YouTube [4min]](https://youtu.be/0-5XwDeIG0s)
 
 <br>
 
-<big>
-
 ⭐️ **Do you like DevSpace? Support the project with a star** ⭐️
 
-</big>
-</center>
+</p>
 
 
 <br>
