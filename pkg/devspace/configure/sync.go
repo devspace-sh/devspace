@@ -44,7 +44,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 			}
 			labelSelectorMap = *service.LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
+			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 		}
 	}
 
