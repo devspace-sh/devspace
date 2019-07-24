@@ -28,6 +28,7 @@
 - [Architecture](#architecture)
 - [Quickstart](#quickstart)
 - [Config Examples](#configuration-examples)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [FAQ](#faq)
 
@@ -269,6 +270,10 @@ devspace deploy
 ```
 
 </details>
+
+<br>
+
+> **Having issues?** Take a look at the **[Troubleshooting](#troubleshooting)** section and learn about common mistakes.
 
 <br>
 
@@ -840,8 +845,36 @@ hooks:
 
 The command defined in this hook would be executed before building the images defined in the config.
 
-Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks). <img src="docs/website/static/img/readme/line.svg" height="1">
 
+</details>
+
+
+<br>
+<br>
+
+## Troubleshooting
+
+<details>
+<summary>DevSpace hangs at <code>[wait] Logging into cloud provider...</code></summary>
+
+#### Problem
+DevSpace tries to open a browser window, so you can login to DevSpace Cloud (either our SaaS platform or the self-hosted version that you installed in your cluster). If you are using a terminal inside a Docker container or VM, DevSpace is not able to open a browser window. You have two options to work around this:
+
+#### Solution A
+Run DevSpace on your local machine where you have a browser installed.
+
+#### Solution B 
+Generate an access key and login with the non-interactive login method. Follow these steps:
+   1. Open this page: https://app.devspace.cloud/settings/access-keys (for on-premise version: https://[my-devspace-cloud-url]/settings/access-keys)
+   2. Click on the button "Create Key".
+   3. Enter a name (e.g. my-access-key).
+   4. Click on "Create Access Key".
+   5. Copy the access key displayed within the input field.
+   6. Login via `devspace login --key=[YOUR_ACCESS_KEY]`
+   7. Try the command again that you originally wanted to execute.
+
+<img src="docs/website/static/img/readme/line.svg" height="1">
 </details>
 
 
