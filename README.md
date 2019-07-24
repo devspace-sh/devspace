@@ -14,10 +14,10 @@
 <br>
 
 
-[![DevSpace Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://youtu.be/jq1uVutbj3k)
+[![DevSpace Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://youtu.be/G2l7VkQrkXo)
 
 <p align="center">
-<a href="https://youtu.be/jq1uVutbj3k">Click here to watch the full-length video with explanations on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
+<a href="https://youtu.be/G2l7VkQrkXo">Click here to watch the full-length video with explanations on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
 </p>
 
 
