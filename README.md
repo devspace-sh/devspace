@@ -17,7 +17,7 @@
 [![DevSpace Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://youtu.be/0-5XwDeIG0s)
 
 <p align="center">
-<a href="https://youtu.be/0-5XwDeIG0s">Click here to watch the full-length video with sound on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star<strong> ⭐️
+<a href="https://youtu.be/0-5XwDeIG0s">Click here to watch the full-length video with sound on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
 </p>
 
 
