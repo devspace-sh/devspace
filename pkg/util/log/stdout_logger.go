@@ -9,6 +9,7 @@ import (
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/mgutz/ansi"
 
+	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -253,10 +254,15 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fatalFn, fmt.Sprintln(args...))
+	msg := fmt.Sprintln(args...)
+
+	s.writeMessage(fatalFn, msg)
 	s.writeMessageToFileLogger(fatalFn, args...)
 
 	if s.fileLogger == nil {
+		analytics := analytics.GetAnalytics()
+		analytics.SendCommandEvent(msg)
+
 		os.Exit(1)
 	}
 }
@@ -265,10 +271,15 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fatalFn, fmt.Sprintf(format, args...)+"\n")
+	msg := fmt.Sprintf(format, args...)
+
+	s.writeMessage(fatalFn, msg+"\n")
 	s.writeMessageToFileLoggerf(fatalFn, format, args...)
 
 	if s.fileLogger == nil {
+		analytics := analytics.GetAnalytics()
+		analytics.SendCommandEvent(msg)
+
 		os.Exit(1)
 	}
 }
