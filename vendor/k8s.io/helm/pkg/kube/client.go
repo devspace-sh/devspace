@@ -141,7 +141,7 @@ func (c *Client) validator() validation.Schema {
 	return schema
 }
 
-// BuildUnstructured validates for Kubernetes objects and returns unstructured infos.
+// BuildUnstructured reads Kubernetes objects and returns unstructured infos.
 func (c *Client) BuildUnstructured(namespace string, reader io.Reader) (Result, error) {
 	var result Result
 
@@ -150,11 +150,27 @@ func (c *Client) BuildUnstructured(namespace string, reader io.Reader) (Result, 
 		ContinueOnError().
 		NamespaceParam(namespace).
 		DefaultNamespace().
-		Schema(c.validator()).
 		Stream(reader, "").
 		Flatten().
 		Do().Infos()
 	return result, scrubValidationError(err)
+}
+
+// Validate reads Kubernetes manifests and validates the content.
+//
+// This function does not actually do schema validation of manifests. Adding
+// validation now breaks existing clients of helm: https://github.com/helm/helm/issues/5750
+func (c *Client) Validate(namespace string, reader io.Reader) error {
+	_, err := c.NewBuilder().
+		Unstructured().
+		ContinueOnError().
+		NamespaceParam(namespace).
+		DefaultNamespace().
+		// Schema(c.validator()). // No schema validation
+		Stream(reader, "").
+		Flatten().
+		Do().Infos()
+	return scrubValidationError(err)
 }
 
 // Build validates for Kubernetes objects and returns resource Infos from a io.Reader.
@@ -449,15 +465,34 @@ func (c *Client) cleanup(newlyCreatedResources []*resource.Info) (cleanupErrors 
 //
 // Namespace will set the namespace.
 func (c *Client) Delete(namespace string, reader io.Reader) error {
+	return c.DeleteWithTimeout(namespace, reader, 0, false)
+}
+
+// DeleteWithTimeout deletes Kubernetes resources from an io.reader. If shouldWait is true, the function
+// will wait for all resources to be deleted from etcd before returning, or when the timeout
+// has expired.
+//
+// Namespace will set the namespace.
+func (c *Client) DeleteWithTimeout(namespace string, reader io.Reader, timeout int64, shouldWait bool) error {
 	infos, err := c.BuildUnstructured(namespace, reader)
 	if err != nil {
 		return err
 	}
-	return perform(infos, func(info *resource.Info) error {
+	err = perform(infos, func(info *resource.Info) error {
 		c.Log("Starting delete for %q %s", info.Name, info.Mapping.GroupVersionKind.Kind)
 		err := deleteResource(info)
 		return c.skipIfNotFound(err)
 	})
+	if err != nil {
+		return err
+	}
+
+	if shouldWait {
+		c.Log("Waiting for %d seconds for delete to be completed", timeout)
+		return waitUntilAllResourceDeleted(infos, time.Duration(timeout)*time.Second)
+	}
+
+	return nil
 }
 
 func (c *Client) skipIfNotFound(err error) error {
@@ -466,6 +501,27 @@ func (c *Client) skipIfNotFound(err error) error {
 		return nil
 	}
 	return err
+}
+
+func waitUntilAllResourceDeleted(infos Result, timeout time.Duration) error {
+	return wait.Poll(2*time.Second, timeout, func() (bool, error) {
+		allDeleted := true
+		err := perform(infos, func(info *resource.Info) error {
+			innerErr := info.Get()
+			if errors.IsNotFound(innerErr) {
+				return nil
+			}
+			if innerErr != nil {
+				return innerErr
+			}
+			allDeleted = false
+			return nil
+		})
+		if err != nil {
+			return false, err
+		}
+		return allDeleted, nil
+	})
 }
 
 func (c *Client) watchTimeout(t time.Duration) ResourceActorFunc {

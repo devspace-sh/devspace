@@ -210,6 +210,43 @@ definitions:
       PathInContainer: "/dev/deviceName"
       CgroupPermissions: "mrw"
 
+  DeviceRequest:
+    type: "object"
+    description: "A request for devices to be sent to device drivers"
+    properties:
+      Driver:
+        type: "string"
+        example: "nvidia"
+      Count:
+        type: "integer"
+        example: -1
+      DeviceIDs:
+        type: "array"
+        items:
+          type: "string"
+        example:
+          - "0"
+          - "1"
+          - "GPU-fef8089b-4820-abfc-e83e-94318197576e"
+      Capabilities:
+        description: |
+          A list of capabilities; an OR list of AND lists of capabilities.
+        type: "array"
+        items:
+          type: "array"
+          items:
+            type: "string"
+        example:
+          # gpu AND nvidia AND compute
+          - ["gpu", "nvidia", "compute"]
+      Options:
+        description: |
+          Driver-specific options, specified as a key/value pairs. These options
+          are passed directly to the driver.
+        type: "object"
+        additionalProperties:
+          type: "string"
+
   ThrottleDevice:
     type: "object"
     properties:
@@ -421,6 +458,11 @@ definitions:
         items:
           type: "string"
           example: "c 13:* rwm"
+      DeviceRequests:
+        description: "a list of requests for devices to be sent to device drivers"
+        type: "array"
+        items:
+          $ref: "#/definitions/DeviceRequest"
       DiskQuota:
         description: "Disk limit (in bytes)."
         type: "integer"
@@ -460,9 +502,11 @@ definitions:
         type: "boolean"
         x-nullable: true
       PidsLimit:
-        description: "Tune a container's pids limit. Set -1 for unlimited."
+        description: |
+          Tune a container's PIDs limit. Set `0` or `-1` for unlimited, or `null` to not change.
         type: "integer"
         format: "int64"
+        x-nullable: true
       Ulimits:
         description: |
           A list of resource limits to set in the container. For example: `{"Name": "nofile", "Soft": 1024, "Hard": 2048}`"
@@ -645,14 +689,22 @@ definitions:
               $ref: "#/definitions/Mount"
 
           # Applicable to UNIX platforms
+          Capabilities:
+            type: "array"
+            description: |
+              A list of kernel capabilities to be available for container (this overrides the default set).
+
+              Conflicts with options 'CapAdd' and 'CapDrop'"
+            items:
+              type: "string"
           CapAdd:
             type: "array"
-            description: "A list of kernel capabilities to add to the container."
+            description: "A list of kernel capabilities to add to the container. Conflicts with option 'Capabilities'"
             items:
               type: "string"
           CapDrop:
             type: "array"
-            description: "A list of kernel capabilities to drop from the container."
+            description: "A list of kernel capabilities to drop from the container. Conflicts with option 'Capabilities'"
             items:
               type: "string"
           Dns:
@@ -1484,11 +1536,9 @@ definitions:
             type: "string"
       Options:
         description: "Driver-specific options, specified as a map."
-        type: "array"
-        items:
-          type: "object"
-          additionalProperties:
-            type: "string"
+        type: "object"
+        additionalProperties:
+          type: "string"
 
   NetworkContainer:
     type: "object"
@@ -2617,8 +2667,20 @@ definitions:
                 type: "object"
                 description: "CredentialSpec for managed service account (Windows only)"
                 properties:
+                  Config:
+                    type: "string"
+                    example: "0bt9dmxjvjiqermk6xrop3ekq"
+                    description: |
+                      Load credential spec from a Swarm Config with the given ID.
+                      The specified config must also be present in the Configs field with the Runtime property set.
+
+                      <p><br /></p>
+
+
+                      > **Note**: `CredentialSpec.File`, `CredentialSpec.Registry`, and `CredentialSpec.Config` are mutually exclusive.
                   File:
                     type: "string"
+                    example: "spec.json"
                     description: |
                       Load credential spec from this file. The file is read by the daemon, and must be present in the
                       `CredentialSpecs` subdirectory in the docker data directory, which defaults to
@@ -2628,7 +2690,7 @@ definitions:
 
                       <p><br /></p>
 
-                      > **Note**: `CredentialSpec.File` and `CredentialSpec.Registry` are mutually exclusive.
+                      > **Note**: `CredentialSpec.File`, `CredentialSpec.Registry`, and `CredentialSpec.Config` are mutually exclusive.
                   Registry:
                     type: "string"
                     description: |
@@ -2640,7 +2702,7 @@ definitions:
                       <p><br /></p>
 
 
-                      > **Note**: `CredentialSpec.File` and `CredentialSpec.Registry` are mutually exclusive.
+                      > **Note**: `CredentialSpec.File`, `CredentialSpec.Registry`, and `CredentialSpec.Config` are mutually exclusive.
               SELinuxContext:
                 type: "object"
                 description: "SELinux labels of the container"
@@ -2751,7 +2813,12 @@ definitions:
               type: "object"
               properties:
                 File:
-                  description: "File represents a specific target that is backed by a file."
+                  description: |
+                    File represents a specific target that is backed by a file.
+
+                    <p><br /><p>
+
+                    > **Note**: `Configs.File` and `Configs.Runtime` are mutually exclusive
                   type: "object"
                   properties:
                     Name:
@@ -2767,6 +2834,14 @@ definitions:
                       description: "Mode represents the FileMode of the file."
                       type: "integer"
                       format: "uint32"
+                Runtime:
+                  description: |
+                    Runtime represents a target that is not mounted into the container but is used by the task
+
+                    <p><br /><p>
+
+                    > **Note**: `Configs.File` and `Configs.Runtime` are mutually exclusive
+                  type: "object"
                 ConfigID:
                   description: "ConfigID represents the ID of the specific config that we're referencing."
                   type: "string"
@@ -2878,6 +2953,11 @@ definitions:
                   SpreadDescriptor: "node.labels.datacenter"
               - Spread:
                   SpreadDescriptor: "node.labels.rack"
+          MaxReplicas:
+            description: "Maximum number of replicas for per node (default value is 0, which is unlimited)"
+            type: "integer"
+            format: "int64"
+            default: 0
           Platforms:
             description: |
               Platforms stores all the platforms that the service's image can
@@ -3676,6 +3756,10 @@ definitions:
           Indicates if CPUsets (cpuset.cpus, cpuset.mems) are supported by the host.
 
           See [cpuset(7)](https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt)
+        type: "boolean"
+        example: true
+      PidsLimit:
+        description: "Indicates if the host kernel has PID limit support enabled."
         type: "boolean"
         example: true
       OomKillDisable:
@@ -4614,7 +4698,7 @@ paths:
                 OomKillDisable: false
                 OomScoreAdj: 500
                 PidMode: ""
-                PidsLimit: -1
+                PidsLimit: 0
                 PortBindings:
                   22/tcp:
                     - HostPort: "11022"
@@ -6417,6 +6501,11 @@ paths:
           description: "Target build stage"
           type: "string"
           default: ""
+        - name: "outputs"
+          in: "query"
+          description: "BuildKit output configuration"
+          type: "string"
+          default: ""
       responses:
         200:
           description: "no error"
@@ -7104,6 +7193,51 @@ paths:
             Docker-Experimental:
               type: "boolean"
               description: "If the server is running with experimental mode enabled"
+            Cache-Control:
+              type: "string"
+              default: "no-cache, no-store, must-revalidate"
+            Pragma:
+              type: "string"
+              default: "no-cache"
+        500:
+          description: "server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+          headers:
+            Cache-Control:
+              type: "string"
+              default: "no-cache, no-store, must-revalidate"
+            Pragma:
+              type: "string"
+              default: "no-cache"
+      tags: ["System"]
+    head:
+      summary: "Ping"
+      description: "This is a dummy endpoint you can use to test if the server is accessible."
+      operationId: "SystemPingHead"
+      produces: ["text/plain"]
+      responses:
+        200:
+          description: "no error"
+          schema:
+            type: "string"
+            example: "(empty)"
+          headers:
+            API-Version:
+              type: "string"
+              description: "Max API Version the server supports"
+            BuildKit-Version:
+              type: "string"
+              description: "Default version of docker image builder"
+            Docker-Experimental:
+              type: "boolean"
+              description: "If the server is running with experimental mode enabled"
+            Cache-Control:
+              type: "string"
+              default: "no-cache, no-store, must-revalidate"
+            Pragma:
+              type: "string"
+              default: "no-cache"
         500:
           description: "server error"
           schema:
@@ -8001,6 +8135,10 @@ paths:
           description: |
             JSON encoded value of the filters (a `map[string][]string`) to process on the networks list. Available filters:
 
+            - `dangling=<boolean>` When set to `true` (or `1`), returns all
+               networks that are not in use by a container. When set to `false`
+               (or `0`), only networks that are in use by one or more
+               containers are returned.
             - `driver=<driver-name>` Matches a network's driver.
             - `id=<network-id>` Matches all or part of a network ID.
             - `label=<key>` or `label=<key>=<value>` of a network label.
@@ -9764,6 +9902,7 @@ paths:
           description: "Only return this number of log lines from the end of the logs. Specify as an integer or `all` to output all log lines."
           type: "string"
           default: "all"
+      tags: ["Task"]
   /secrets:
     get:
       summary: "List secrets"
