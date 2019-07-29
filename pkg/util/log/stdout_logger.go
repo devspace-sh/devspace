@@ -262,7 +262,7 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 
 	if s.fileLogger == nil {
 		analytics, err := analytics.GetAnalytics()
-		if err != nil {
+		if err == nil {
 			analytics.SendCommandEvent(errors.New(msg))
 		}
 
@@ -281,7 +281,7 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 
 	if s.fileLogger == nil {
 		analytics, err := analytics.GetAnalytics()
-		if err != nil {
+		if err == nil {
 			analytics.SendCommandEvent(errors.New(msg))
 		}
 
