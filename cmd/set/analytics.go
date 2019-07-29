@@ -29,9 +29,10 @@ devspace set analytics disabled true
 
 // RunAnalyticsConfig executes the "devspace set analytics" logic
 func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) {
-	var err error
-
-	analytics := analytics.GetAnalytics()
+	analytics, err := analytics.GetAnalytics()
+	if err != nil {
+		log.Fatalf("Unable to get analytics config: %v", err)
+	}
 
 	if args[0] == "disabled" {
 		if len(args) == 2 && (args[1] == "false" || args[1] == "0") {

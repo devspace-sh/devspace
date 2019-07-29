@@ -52,8 +52,6 @@ func (p *Provider) GetToken() (string, error) {
 		return "", errors.Wrap(err, "token save")
 	}
 
-	analyticsIdentify(p)
-
 	return p.Token, nil
 }
 

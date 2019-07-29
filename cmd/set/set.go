@@ -11,7 +11,7 @@ func NewSetCmd() *cobra.Command {
 		Short: "Make global configuration changes",
 		Long: `
 #######################################################
-################# devspace set ##################
+#################### devspace set #####################
 #######################################################
 	`,
 		Args: cobra.NoArgs,

@@ -49,14 +49,17 @@ func Execute() {
 			}
 		}
 	}
-	analytics.SetVersion(version)
-	analytics := analytics.GetAnalytics()
+	analytics, analyticsErr := analytics.GetAnalytics()
 
 	if err := rootCmd.Execute(); err != nil {
-		analytics.SendCommandEvent(err.Error())
+		if analyticsErr == nil {
+			analytics.SendCommandEvent(err)
+		}
 		fmt.Println(err)
 	} else {
-		analytics.SendCommandEvent("")
+		if analyticsErr == nil {
+			analytics.SendCommandEvent(nil)
+		}
 	}
 }
 

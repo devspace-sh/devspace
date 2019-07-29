@@ -12,8 +12,9 @@ import (
 	"strings"
 	"time"
 	"regexp"
+	"errors"
+	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/google/uuid"
@@ -21,15 +22,18 @@ import (
 )
 
 var token string
-var analyticsConfigFile = constants.DefaultHomeDevSpaceFolder + "/analytics.yaml"
+var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
+var loadAnalyticsOnce sync.Once
 
+// Analytics is an interface for sending data to an analytics service
 type Analytics interface {
 	Disable() error
 	Enable() error
 	SendEvent(eventName string, eventData map[string]interface{}) error
-	SendCommandEvent(errorMessage string) error
+	SendCommandEvent(commandError error) error
 	Identify(identifier string) error
+	SetVersion(version string)
 }
 
 type analyticsConfig struct {
@@ -37,7 +41,7 @@ type analyticsConfig struct {
 	Identifier string `yaml:"identifier,omitempty"`
 	Disabled   bool   `yaml:"disabled,omitempty"`
 
-	devSpaceVersion string
+	version string
 }
 
 func (a *analyticsConfig) Disable() error {
@@ -60,7 +64,7 @@ func (a *analyticsConfig) Identify(identifier string) error {
 	if identifier != a.Identifier {
 		if a.Identifier != "" {
 			// different user is logged in now => RESET DISTINCT ID
-			a.resetDistinctID()
+			_ = a.resetDistinctID()
 		}
 		a.Identifier = identifier
 
@@ -74,7 +78,7 @@ func (a *analyticsConfig) Identify(identifier string) error {
 	return nil
 }
 
-func (a *analyticsConfig) SendCommandEvent(errorMessage string) error {
+func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	executable, _ := os.Executable()
 	command := strings.Join(os.Args, " ")
 	command = strings.Replace(command, executable, "devspace", 1)
@@ -84,10 +88,13 @@ func (a *analyticsConfig) SendCommandEvent(errorMessage string) error {
 
 	commandData := map[string]interface{}{
 		"command": command,
-		"error":   errorMessage,
 		"runtime_os": runtime.GOOS,
 		"runtime_arch": runtime.GOARCH,
-		"devspace_version": a.devSpaceVersion,
+		"cli_version": a.version,
+	}
+	
+	if commandError != nil {
+		commandData["error"] = commandError.Error()
 	}
 	return a.SendEvent("command", commandData)
 }
@@ -135,6 +142,10 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 	return nil
 }
 
+func (a *analyticsConfig) SetVersion(version string) {
+	a.version = version
+}
+
 func (a *analyticsConfig) createAlias() error {
 	if !a.Disabled {
 		data := map[string]interface{}{
@@ -179,7 +190,7 @@ func (a *analyticsConfig) sendRequest(endpointPath string, data map[string]inter
 		if string(body) == "1" {
 			return nil
 		}
-		return fmt.Errorf("Received error from analytics request: %v", err)
+		return errors.New("Received error from analytics request")
 	}
 	return nil
 }
@@ -197,7 +208,7 @@ func (a *analyticsConfig) resetDistinctID() error {
 func (a *analyticsConfig) save() error {
 	analyticsConfigFilePath, err := a.getAnalyticsConfigFilePath()
 	if err != nil {
-		return fmt.Errorf("Couldn't determine config file %s: %v", err)
+		return fmt.Errorf("Couldn't determine config file: %v", err)
 	}
 
 	err = yamlutil.WriteYamlToFile(a, analyticsConfigFilePath)
@@ -216,35 +227,41 @@ func (a *analyticsConfig) getAnalyticsConfigFilePath() (string, error) {
 	return filepath.Join(homedir, analyticsConfigFile), nil
 }
 
-func GetAnalytics() Analytics {
-	return analyticsInstance
+func GetAnalytics() (Analytics, error) {
+	var err error
+
+	loadAnalyticsOnce.Do(func() {
+		analyticsInstance = &analyticsConfig{}
+	
+		analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
+		if err != nil {
+			err = fmt.Errorf("Couldn't determine config file: %v", err)
+			return
+		}
+		_, err = os.Stat(analyticsConfigFilePath)
+		if err == nil {
+			err := yamlutil.ReadYamlFromFile(analyticsConfigFilePath, analyticsInstance)
+			if err != nil {
+				err = fmt.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
+				return
+			}
+		} else {
+			err = analyticsInstance.resetDistinctID()
+			if err != nil {
+				err = fmt.Errorf("Couldn't reset analytics distinct id: %v", err)
+				return
+			}
+	
+			err = analyticsInstance.save()
+			if err != nil {
+				err = fmt.Errorf("Couldn't save analytics config: %v", err)
+				return
+			}
+		}
+	})
+	return analyticsInstance, err
 }
 
-func SetVersion(version string) error {
-	analyticsInstance = &analyticsConfig{}
-
-	analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
-	if err != nil {
-		return fmt.Errorf("Couldn't determine config file %s: %v", err)
-	}
-	_, err = os.Stat(analyticsConfigFilePath)
-	if err == nil {
-		err := yamlutil.ReadYamlFromFile(analyticsConfigFilePath, analyticsInstance)
-		if err != nil {
-			return fmt.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
-		}
-	} else {
-		err = analyticsInstance.resetDistinctID()
-		if err != nil {
-			//TODO
-		}
-
-		err = analyticsInstance.save()
-		if err != nil {
-			//TODO
-		}
-	}
-	analyticsInstance.devSpaceVersion = version
-
-	return nil
+func SetConfigPath(path string) {
+	analyticsConfigFile = path
 }
