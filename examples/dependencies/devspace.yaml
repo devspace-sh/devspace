@@ -7,6 +7,7 @@ deployments:
 dependencies:
   - source:
       path: dependency1
+    namespace: dependency-1
   - source:
       path: dependency2
   - source:
