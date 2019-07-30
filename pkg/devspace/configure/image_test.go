@@ -13,11 +13,29 @@ import (
 	"gotest.tools/assert"
 )
 
+type GetImageConfigFromDockerfileTestCase struct {
+	name string
+
+	expectedErr string
+}
+
 func TestGetImageConfigFromDockerfile(t *testing.T) {
-	testConfig := &latest.Config{}
-	_, err := GetImageConfigFromDockerfile(testConfig, "", "", ptr.String("invalid"))
-	if err == nil {
-		t.Fatalf("No error getting image config from dockerfile with invalid provider.")
+	testCases := []GetImageConfigFromDockerfileTestCase{
+		GetImageConfigFromDockerfileTestCase{
+			name: "empty params",
+		},
+	}
+
+	for _, testCase := range testCases {
+		testConfig := &latest.Config{}
+
+		_, err := GetImageConfigFromDockerfile(testConfig, "", "", ptr.String("invalid"))
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
 	}
 }
 
