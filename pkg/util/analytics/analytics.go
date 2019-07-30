@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"path/filepath"
 	"strings"
@@ -268,6 +269,19 @@ func GetAnalytics() (Analytics, error) {
 				return
 			}
 		}
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+
+		go func(){
+			<-c
+
+			analyticsInstance.SendCommandEvent(errors.New("Interrupted"))
+			signal.Stop(c)
+
+			pid := os.Getpid()
+			sigterm(pid)
+		}()
 	})
 	return analyticsInstance, err
 }
