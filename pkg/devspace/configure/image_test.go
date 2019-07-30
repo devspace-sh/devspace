@@ -20,6 +20,7 @@ type GetImageConfigFromDockerfileTestCase struct {
 }
 
 func TestGetImageConfigFromDockerfile(t *testing.T) {
+	t.Skip("Uncompleted")
 	testCases := []GetImageConfigFromDockerfileTestCase{
 		GetImageConfigFromDockerfileTestCase{
 			name: "empty params",
