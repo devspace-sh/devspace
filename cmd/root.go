@@ -80,6 +80,7 @@ func init() {
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd())
 	rootCmd.AddCommand(NewDevCmd())
+	rootCmd.AddCommand(NewBuildCmd())
 	rootCmd.AddCommand(NewSyncCmd())
 	rootCmd.AddCommand(NewInstallCmd())
 	rootCmd.AddCommand(NewPurgeCmd())

@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -26,6 +27,13 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 		dockerClient, err := dockerclient.NewClient(config, false, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
+		}
+		if client == nil {
+			// Create kubectl client if not specified
+			client, err = kubectl.NewClient(config)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to create new kubectl client: %v", err)
+			}
 		}
 
 		log.StartWait("Creating kaniko builder")
