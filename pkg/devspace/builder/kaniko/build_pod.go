@@ -128,13 +128,13 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			Containers: []k8sv1.Container{
 				{
 					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:c8fabdf6e43b19f6a223f1d0b06e127d0774bd7e",
+					Image:           "gcr.io/kaniko-project/executor:v0.10.0",
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
 					Args:            kanikoArgs,
 					VolumeMounts: []k8sv1.VolumeMount{
 						{
 							Name:      pullSecretName,
-							MountPath: "/root/.docker",
+							MountPath: "/kaniko/.docker",
 						},
 						{
 							Name:      "context",

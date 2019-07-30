@@ -2,6 +2,8 @@ package add
 
 import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -37,14 +39,22 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 	providerName := args[0]
 
 	// Get provider configuration
-	providerConfig, err := cloudpkg.LoadCloudConfig()
+	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
 	}
+	if providerConfig.Providers == nil {
+		providerConfig.Providers = []*latest.Provider{}
+	}
 
-	providerConfig[providerName] = &cloudpkg.Provider{
-		Name: providerName,
-		Host: "https://" + providerName,
+	provider := config.GetProvider(providerConfig, providerName)
+	if provider == nil {
+		providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
+			Name: providerName,
+			Host: "https://" + providerName,
+		})
+	} else {
+		provider.Host = "https://" + providerName
 	}
 
 	// Ensure user is logged in
@@ -53,7 +63,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Couldn't login to provider: %v", err)
 	}
 
-	err = cloudpkg.SaveCloudConfig(providerConfig)
+	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)
 	}

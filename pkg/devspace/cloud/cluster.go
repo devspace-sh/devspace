@@ -106,37 +106,50 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		return errors.Wrap(err, "init namespace")
 	}
 
-	if options.Key == "" {
-		options.Key, err = getKey(p, false)
-		if err != nil {
-			return errors.Wrap(err, "get key")
-		}
-	}
-
 	token, caCert, err := getServiceAccountCredentials(client)
 	if err != nil {
 		return errors.Wrap(err, "get service account credentials")
 	}
 
-	encryptedToken, err := EncryptAES([]byte(options.Key), token)
+	needKey, err := p.needKey()
 	if err != nil {
-		return errors.Wrap(err, "encrypt token")
+		return errors.Wrap(err, "check cloud settings")
+	}
+
+	// Encrypt token if needed
+	encryptedToken := token
+	if needKey {
+		if options.Key == "" {
+			options.Key, err = getKey(p, false)
+			if err != nil {
+				return errors.Wrap(err, "get key")
+			}
+		}
+
+		encryptedToken, err = EncryptAES([]byte(options.Key), token)
+		if err != nil {
+			return errors.Wrap(err, "encrypt token")
+		}
+
+		encryptedToken = []byte(base64.StdEncoding.EncodeToString(encryptedToken))
 	}
 
 	// Create cluster remotely
 	log.StartWait("Initialize cluster")
 	defer log.StopWait()
-	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, base64.StdEncoding.EncodeToString(encryptedToken), availableResources.NetworkPolicy)
+	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
 	if err != nil {
 		return errors.Wrap(err, "create cluster")
 	}
 	log.StopWait()
 
 	// Save key
-	p.ClusterKey[clusterID] = options.Key
-	err = p.Save()
-	if err != nil {
-		return errors.Wrap(err, "save key")
+	if needKey {
+		p.ClusterKey[clusterID] = options.Key
+		err = p.Save()
+		if err != nil {
+			return errors.Wrap(err, "save key")
+		}
 	}
 
 	// Initialize roles and pod security policies
@@ -148,20 +161,8 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 		return errors.Wrap(err, "initialize core")
 	}
 
-	// Ask if we should use the host network
-	if options.UseHostNetwork == nil {
-		options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
-			Question:     "Should the ingress controller use a LoadBalancer or the host network?",
-			DefaultValue: loadBalancerOption,
-			Options: []string{
-				loadBalancerOption,
-				hostNetworkOption,
-			},
-		}) == hostNetworkOption)
-	}
-
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(clusterID, availableResources, options)
+	err = p.deployServices(client, clusterID, availableResources, options)
 	if err != nil {
 		return err
 	}
@@ -346,11 +347,34 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 	return nil
 }
 
-func (p *Provider) deployServices(clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
+func (p *Provider) deployServices(client kubernetes.Interface, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
 	defer log.StopWait()
+
+	// Check if devspace-cloud is deployed in the namespace
+	configmaps, err := client.CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
+		LabelSelector: "NAME=devspace-cloud,OWNER=TILLER,STATUS=DEPLOYED",
+	})
+	if err != nil {
+		return errors.Wrap(err, "list configmaps")
+	}
+	if len(configmaps.Items) != 0 {
+		options.DeployIngressController = false
+	}
 
 	// Ingress controller
 	if options.DeployIngressController {
+		// Ask if we should use the host network
+		if options.UseHostNetwork == nil {
+			options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
+				Question:     "Should the ingress controller use a LoadBalancer or the host network?",
+				DefaultValue: loadBalancerOption,
+				Options: []string{
+					loadBalancerOption,
+					hostNetworkOption,
+				},
+			}) == hostNetworkOption)
+		}
+
 		log.StartWait("Deploying ingress controller")
 
 		// Deploy ingress controller
@@ -455,6 +479,44 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 
 	log.Done("Initialized cluster")
 	return nil
+}
+
+// SettingDefaultClusterEncryptToken is the setting name to check if we need an encryption key
+const SettingDefaultClusterEncryptToken = "DEFAULT_CLUSTER_ENCRYPT_TOKEN"
+
+func (p *Provider) needKey() (bool, error) {
+	log.StartWait("Retrieving cloud settings")
+	defer log.StopWait()
+
+	// Response struct
+	response := struct {
+		Settings []struct {
+			ID    string `json:"id"`
+			Value string `json:"value"`
+		} `json:"manager_settings"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		query ($settings: [String!]!) {
+			manager_settings(settings:$settings) {
+				id
+				value
+			}
+		}
+	`, map[string]interface{}{
+		"settings": []string{SettingDefaultClusterEncryptToken},
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	// We don't need a key if not specified
+	if len(response.Settings) != 1 {
+		return false, nil
+	}
+
+	return response.Settings[0].ID == SettingDefaultClusterEncryptToken && response.Settings[0].Value == "true", nil
 }
 
 func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, error) {

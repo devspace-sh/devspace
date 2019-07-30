@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -187,10 +188,31 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		// Update chart
 		if update {
-			gitRepo := git.NewGitRepository(localPath, gitPath)
-			_, err := gitRepo.Update()
+			var (
+				gitRepo  = git.NewGitRepository(localPath, gitPath)
+				tag      string
+				branch   string
+				revision string
+			)
+
+			if dependency.Source.Tag != nil {
+				tag = *dependency.Source.Tag
+			} else if dependency.Source.Branch != nil {
+				branch = *dependency.Source.Branch
+			} else if dependency.Source.Revision != nil {
+				revision = *dependency.Source.Revision
+			}
+
+			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
 			if err != nil {
 				return nil, errors.Wrap(err, "pull repo")
+			}
+
+			if tag != "" || branch != "" || revision != "" {
+				err = gitRepo.Checkout(tag, branch, revision)
+				if err != nil {
+					return nil, errors.Wrap(err, "checkout")
+				}
 			}
 
 			r.log.Donef("Pulled %s", ID)
@@ -213,7 +235,19 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Exchange cluster config
-	dConfig.Cluster = r.BaseConfig.Cluster
+	dConfig.Cluster = &latest.Cluster{}
+	if r.BaseConfig.Cluster != nil {
+		err = util.Convert(r.BaseConfig.Cluster, dConfig.Cluster)
+		if err != nil {
+			return nil, errors.Wrap(err, "convert cluster config")
+		}
+	}
+
+	// Exchange namespace if defined
+	if dependency.Namespace != nil {
+		dConfig.Cluster.Namespace = dependency.Namespace
+	}
+
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config

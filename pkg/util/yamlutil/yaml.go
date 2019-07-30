@@ -1,6 +1,7 @@
 package yamlutil
 
 import (
+	"path/filepath"
 	"io/ioutil"
 	"os"
 
@@ -9,10 +10,15 @@ import (
 
 //WriteYamlToFile formats yamlData and writes it to a file
 func WriteYamlToFile(yamlData interface{}, filePath string) error {
-	yamlString, yamlErr := yaml.Marshal(yamlData)
+	yamlString, err := yaml.Marshal(yamlData)
 
-	if yamlErr != nil {
-		return yamlErr
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(filepath.Dir(filePath), 0755)
+	if err != nil {
+		return err
 	}
 	return ioutil.WriteFile(filePath, yamlString, os.ModePerm)
 }

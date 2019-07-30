@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -54,18 +56,21 @@ func (p *Provider) GetToken() (string, error) {
 }
 
 // ReLogin loggs the user in with the given key or via browser
-func ReLogin(providerConfig ProviderConfig, cloudProvider string, key *string, log log.Logger) error {
+func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, log log.Logger) error {
 	// Let's check if we are logged in first
-	provider, ok := providerConfig[cloudProvider]
-	if ok == false {
+	p := config.GetProvider(providerConfig, cloudProvider)
+	if p == nil {
 		cloudProviders := ""
-		for name := range providerConfig {
-			cloudProviders += name + " "
+		for _, p := range providerConfig.Providers {
+			cloudProviders += p.Name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [name]`? Existing cloud providers: %s", cloudProviders)
+		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
+	provider := &Provider{
+		*p,
+	}
 	if key != nil {
 		provider.Token = ""
 		provider.Key = *key
@@ -94,7 +99,7 @@ func ReLogin(providerConfig ProviderConfig, cloudProvider string, key *string, l
 	}
 
 	// Save config
-	err = SaveCloudConfig(providerConfig)
+	err = provider.Save()
 	if err != nil {
 		return err
 	}
@@ -103,18 +108,21 @@ func ReLogin(providerConfig ProviderConfig, cloudProvider string, key *string, l
 }
 
 // EnsureLoggedIn checks if the user is logged into a certain cloud provider and if not loggs the user in
-func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log.Logger) error {
+func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log.Logger) error {
 	// Let's check if we are logged in first
-	provider, ok := providerConfig[cloudProvider]
-	if ok == false {
+	p := config.GetProvider(providerConfig, cloudProvider)
+	if p == nil {
 		cloudProviders := ""
-		for name := range providerConfig {
-			cloudProviders += name + " "
+		for _, p := range providerConfig.Providers {
+			cloudProviders += p.Name + " "
 		}
 
 		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
+	provider := &Provider{
+		*p,
+	}
 	if provider.Key == "" {
 		provider.Token = ""
 
@@ -131,7 +139,7 @@ func EnsureLoggedIn(providerConfig ProviderConfig, cloudProvider string, log log
 			log.Warnf("Error logging into docker registries: %v", err)
 		}
 
-		err = SaveCloudConfig(providerConfig)
+		err = provider.Save()
 		if err != nil {
 			return err
 		}

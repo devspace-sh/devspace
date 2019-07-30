@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -60,6 +61,9 @@ func TestConnectCluster(t *testing.T) {
 }
 
 func TestDefaultClusterSpaceDomain(t *testing.T) {
+	// @Florian make test faster (currently around 10 seconds)
+	t.Skip("Takes too long")
+
 	kubeClient := fake.NewSimpleClientset()
 	err := defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node in cluster", "Wrong or no error when trying to get the spacedomain of the default cluster from empty setting")
@@ -117,44 +121,6 @@ func TestSpecifyDomain(t *testing.T) {
 	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 
-func TestDeployServices(t *testing.T) {
-	provider := &Provider{}
-	err := provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: false,
-	})
-	assert.NilError(t, err, "Error deploying nothing")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   true,
-		DeployAdmissionController: false,
-		UseHostNetwork:            ptr.Bool(true),
-	})
-	assert.Error(t, err, "deploy ingress controller: get token: Provider has no key specified", "Wrong or no error when trying to deploy an ingress controller without a token")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: true,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: true,
-	})
-	assert.Error(t, err, "deploy admission controller: get token: Provider has no key specified", "Wrong or no error when trying to deploy an admission controller without a token")
-
-	err = provider.deployServices(0, &clusterResources{
-		CertManager: false,
-	}, &ConnectClusterOptions{
-		DeployIngressController:   false,
-		DeployAdmissionController: false,
-		DeployCertManager:         true,
-	})
-	assert.Error(t, err, "deploy cert manager: get token: Provider has no key specified", "Wrong or no error when trying to deploy a cert manager without a token")
-
-}
-
 func TestInitCore(t *testing.T) {
 	provider := &Provider{}
 	err := provider.initCore(0, "", true)
@@ -206,12 +172,11 @@ type getKeyTestCase struct {
 }
 
 func TestGetKey(t *testing.T) {
-	testCases := []getKeyTestCase{
-		getKeyTestCase{
-			name:               "One key, no question",
-			givenKeys:          map[int]string{5: "onlyKey"},
-			forceQuestionParam: false,
-			expectedKey:        "onlyKey",
+	provider := &Provider{
+		latest.Provider{
+			ClusterKey: map[int]string{
+				5: "onlyKey",
+			},
 		},
 		getKeyTestCase{
 			name:               "One key, no question",

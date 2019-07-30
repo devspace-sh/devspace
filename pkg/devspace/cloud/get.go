@@ -43,11 +43,12 @@ type Project struct {
 
 // Cluster is the type that holds the cluster information
 type Cluster struct {
-	ClusterID int     `json:"id"`
-	Server    *string `json:"server"`
-	Owner     *Owner  `json:"account"`
-	Name      string  `json:"name"`
-	CreatedAt *string `json:"created_at"`
+	ClusterID    int     `json:"id"`
+	Server       *string `json:"server"`
+	Owner        *Owner  `json:"account"`
+	Name         string  `json:"name"`
+	EncryptToken bool    `json:"encrypt_token"`
+	CreatedAt    *string `json:"created_at"`
 }
 
 // Owner holds the information about a certain
@@ -141,6 +142,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 				name
 			}
 
+			encrypt_token
 			name
 			server
 		}
@@ -183,6 +185,7 @@ func (p *Provider) GetClusters() ([]*Cluster, error) {
 			}
 
 			name
+			encrypt_token
 			server
 			created_at
 		}
@@ -352,7 +355,7 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 				cluster {
 					id
 					name
-
+					encrypt_token
 					account {
 						id
 						name
@@ -427,6 +430,7 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 				cluster {
 					id
 					name
+					encrypt_token
 					account {
 						id
 						name
@@ -524,6 +528,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 					cluster {
 						id
 						name
+						encrypt_token
 						account {
 							id
 							name

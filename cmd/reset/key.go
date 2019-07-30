@@ -50,7 +50,7 @@ func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Connect cluster
+	// Reset the key
 	err = provider.ResetKey(args[0])
 	if err != nil {
 		log.Fatal(err)

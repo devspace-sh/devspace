@@ -204,7 +204,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		resp, err := http.Get(domain)
 		if err != nil {
 			log.Fatalf("Error making request to %s: %v", domain, err)
-		} else if resp.StatusCode != http.StatusBadGateway {
+		} else if resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
 			open.Start(domain)
 			log.Donef("Successfully opened %s", domain)

@@ -53,4 +53,6 @@ func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Done("Successfully removed port")
 }

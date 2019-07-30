@@ -270,12 +270,25 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 	cmd.useCloud = true
 	connectCluster := false
 
+	// Get provider configuration
+	providerConfig, err := cloudconfig.ParseProviderConfig()
+	if err != nil {
+		log.Fatalf("Error loading provider config: %v", err)
+	}
+
 	// Check if kubectl exists
 	if kubeconfig.ConfigExists() {
+		var options []string
+		if providerConfig.Default == "" || providerConfig.Default == cloudconfig.DevSpaceCloudProviderName {
+			options = []string{useDevSpaceCloud, useDevSpaceCloudOwnCluster, useCurrentContext}
+		} else {
+			options = []string{useDevSpaceCloud, useCurrentContext}
+		}
+
 		selectedOption := survey.Question(&survey.QuestionOptions{
 			Question:     "Which Kubernetes cluster do you want to use?",
 			DefaultValue: useDevSpaceCloud,
-			Options:      []string{useDevSpaceCloud, useDevSpaceCloudOwnCluster, useCurrentContext},
+			Options:      options,
 		})
 
 		if selectedOption == useDevSpaceCloud {
@@ -292,24 +305,20 @@ func (cmd *InitCmd) checkIfDevSpaceCloud() {
 	if cmd.useCloud == false {
 		cmd.configureCluster()
 	} else {
-		// Get provider configuration
-		providerConfig, err := cloud.LoadCloudConfig()
-		if err != nil {
-			log.Fatalf("Error loading provider config: %v", err)
-		}
-
 		// Configure cloud provider
 		cmd.providerName = ptr.String(cloudconfig.DevSpaceCloudProviderName)
 
 		// Choose cloud provider
-		if len(providerConfig) > 1 {
+		if providerConfig.Default != "" {
+			cmd.providerName = &providerConfig.Default
+		} else if len(providerConfig.Providers) > 1 {
 			options := []string{}
-			for providerHost := range providerConfig {
-				options = append(options, providerHost)
+			for _, provider := range providerConfig.Providers {
+				options = append(options, provider.Name)
 			}
 
 			cmd.providerName = ptr.String(survey.Question(&survey.QuestionOptions{
-				Question: "Select cloud provider",
+				Question: "Select a cloud provider",
 				Options:  options,
 			}))
 		}

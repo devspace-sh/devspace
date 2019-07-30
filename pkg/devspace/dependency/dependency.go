@@ -49,6 +49,57 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 	return nil
 }
 
+// BuildAll will build all dependencies if there are any
+func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild bool, logger log.Logger) error {
+	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+		return nil
+	}
+
+	// Create a new dependency resolver
+	resolver, err := NewResolver(config, cache, allowCyclic, logger)
+	if err != nil {
+		return errors.Wrap(err, "new resolver")
+	}
+
+	// Resolve all dependencies
+	dependencies, err := resolver.Resolve(*config.Dependencies, updateDependencies)
+	if err != nil {
+		if _, ok := err.(*CyclicError); ok {
+			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+		}
+
+		return err
+	}
+
+	defer logger.StopWait()
+
+	// Deploy all dependencies
+	for i := 0; i < len(dependencies); i++ {
+		dependency := dependencies[i]
+
+		logger.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+		buff := &bytes.Buffer{}
+		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+
+		err := dependency.Build(skipPush, forceDeployDependencies, forceBuild, streamLog)
+		if err != nil {
+			return fmt.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
+		}
+
+		// Prettify path if its a path deployment
+		if dependency.DependencyConfig.Source.Path != nil {
+			logger.Donef("Built dependency %s", dependency.ID[len(filepath.Dir(dependency.ID))+1:])
+		} else {
+			logger.Donef("Built dependency %s", dependency.ID)
+		}
+	}
+
+	logger.StopWait()
+	logger.Donef("Successfully built %d dependencies", len(dependencies))
+
+	return nil
+}
+
 // DeployAll will deploy all dependencies if there are any
 func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
@@ -162,6 +213,57 @@ type Dependency struct {
 	DependencyCache  *generated.Config
 }
 
+// Build builds and pushes all defined images
+func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log.Logger) error {
+	// Check if we should redeploy
+	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
+	if err != nil {
+		return errors.Wrap(err, "hash directory")
+	}
+
+	// Check if we skip the dependency deploy
+	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
+		return nil
+	}
+
+	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
+
+	// Switch current working directory
+	currentWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		return errors.Wrap(err, "getwd")
+	}
+
+	err = os.Chdir(d.LocalPath)
+	if err != nil {
+		return errors.Wrap(err, "change working directory")
+	}
+
+	// Change back to original working directory
+	defer os.Chdir(currentWorkingDirectory)
+
+	// Check if image build is enabled
+	builtImages := make(map[string]string)
+	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
+		// Build images
+		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), nil, skipPush, false, forceBuild, false, log)
+		if err != nil {
+			return err
+		}
+
+		// Save config if an image was built
+		if len(builtImages) > 0 {
+			err := generated.SaveConfig(d.GeneratedConfig)
+			if err != nil {
+				return fmt.Errorf("Error saving generated config: %v", err)
+			}
+		}
+	}
+
+	log.Donef("Built dependency %s", d.ID)
+	return nil
+}
+
 // Deploy deploys the dependency if necessary
 func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceDeploy bool, log log.Logger) error {
 	// Check if we should redeploy
@@ -205,6 +307,9 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceD
 
 	// Create docker client
 	dockerClient, err := docker.NewClient(d.Config, false, log)
+	if err != nil {
+		return errors.Wrap(err, "create docker client")
+	}
 
 	// Create pull secrets and private registry if necessary
 	err = registry.CreatePullSecrets(d.Config, dockerClient, client, log)

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"gotest.tools/assert"
 )
@@ -45,8 +46,10 @@ func TestGrapqhlRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := &Provider{
-			Key:   testCase.providerKey,
-			Token: testCase.providerToken,
+			latest.Provider{
+				Key:   testCase.providerKey,
+				Token: testCase.providerToken,
+			},
 		}
 		err := provider.GrapqhlRequest("", testCase.vars, nil)
 		if testCase.expectedErr == "" {

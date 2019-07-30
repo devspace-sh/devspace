@@ -8,6 +8,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 )
 
 // Version holds the current version tag
@@ -51,6 +52,7 @@ func SetVersion(verText string) {
 		version = _version
 		rawVersion = verText
 	}
+	cloudanalytics.Start(version)
 }
 
 // CheckForNewerVersion checks if there is a newer version on github and returns the newer version

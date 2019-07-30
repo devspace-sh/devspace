@@ -9,11 +9,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
-// GetNameOfFirstHelmDeployment retrieves the first helm deployment name
-func GetNameOfFirstHelmDeployment(config *latest.Config) string {
+// GetNameOfFirstDeployment retrieves the first deployment name
+func GetNameOfFirstDeployment(config *latest.Config) string {
 	if config.Deployments != nil {
 		for _, deploymentConfig := range *config.Deployments {
-			if deploymentConfig.Helm != nil {
+			if deploymentConfig.Component != nil {
 				return *deploymentConfig.Name
 			}
 		}
@@ -32,7 +32,24 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
 	}
 
-	if labelSelector == "" {
+	portMappings, err := parsePortMappings(args[0])
+	if err != nil {
+		return fmt.Errorf("Error parsing port mappings: %s", err.Error())
+	}
+
+	// Add to first existing port mapping if labelselector and service name are empty
+	if labelSelector == "" && serviceName == "" && config.Dev != nil && config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 {
+		if (*config.Dev.Ports)[0].PortMappings == nil {
+			(*config.Dev.Ports)[0].PortMappings = &[]*latest.PortMapping{}
+		}
+
+		configMappings := (*config.Dev.Ports)[0].PortMappings
+		for _, portMapping := range portMappings {
+			*configMappings = append(*configMappings, portMapping)
+		}
+
+		return configutil.SaveLoadedConfig()
+	} else if labelSelector == "" {
 		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
 			services := *config.Dev.Selectors
 
@@ -47,7 +64,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 			}
 			labelSelectorMap = *service.LabelSelector
 		} else {
-			labelSelector = "release=" + GetNameOfFirstHelmDeployment(config)
+			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 		}
 	}
 
@@ -58,13 +75,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 		}
 	}
 
-	portMappings, err := parsePortMappings(args[0])
-	if err != nil {
-		return fmt.Errorf("Error parsing port mappings: %s", err.Error())
-	}
-
 	insertOrReplacePortMapping(config, namespace, labelSelectorMap, serviceName, portMappings)
-
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
@@ -92,7 +103,6 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 	}
 
 	ports := strings.Split(argPorts, ",")
-
 	if config.Dev.Ports != nil && len(*config.Dev.Ports) > 0 {
 		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(*config.Dev.Ports)-1)
 
@@ -102,9 +112,11 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 			}
 
 			newPortMappings := []*latest.PortMapping{}
-
 			for _, pm := range *v.PortMappings {
-				if containsPort(strconv.Itoa(*pm.LocalPort), ports) || containsPort(strconv.Itoa(*pm.RemotePort), ports) {
+				if pm.LocalPort != nil && containsPort(strconv.Itoa(*pm.LocalPort), ports) {
+					continue
+				}
+				if pm.RemotePort != nil && containsPort(strconv.Itoa(*pm.RemotePort), ports) {
 					continue
 				}
 
@@ -138,7 +150,7 @@ func containsPort(port string, ports []string) bool {
 	return false
 }
 
-func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSelectorMap map[string]*string, serviceName string, portMappings []*latest.PortMapping) {
+func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSelectorMap map[string]*string, selector string, portMappings []*latest.PortMapping) {
 	if config.Dev.Ports == nil {
 		config.Dev.Ports = &[]*latest.PortForwardingConfig{}
 	}
@@ -156,23 +168,24 @@ func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSe
 		if areLabelMapsEqual(selectors, labelSelectorMap) {
 			portMap := append(*v.PortMappings, portMappings...)
 			v.PortMappings = &portMap
-
 			return
 		}
 	}
 
-	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
-	if serviceName != "" {
-		labelSelectorMap = nil
+	newPortConfig := &latest.PortForwardingConfig{
+		PortMappings: &portMappings,
+	}
+	if labelSelectorMap != nil {
+		newPortConfig.LabelSelector = &labelSelectorMap
+	}
+	if selector != "" {
+		newPortConfig.Selector = &selector
+	}
+	if namespace != "" {
+		newPortConfig.Namespace = &namespace
 	}
 
-	portMap := append(*config.Dev.Ports, &latest.PortForwardingConfig{
-		LabelSelector: &labelSelectorMap,
-		PortMappings:  &portMappings,
-		Namespace:     &namespace,
-		Selector:      &serviceName,
-	})
-
+	portMap := append(*config.Dev.Ports, newPortConfig)
 	config.Dev.Ports = &portMap
 }
 

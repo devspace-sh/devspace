@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	beginpgp string = "-----BEGIN PGP SIGNATURE-----"
-	endpgp   string = "-----END PGP SIGNATURE-----"
+	beginpgp  string = "-----BEGIN PGP SIGNATURE-----"
+	endpgp    string = "-----END PGP SIGNATURE-----"
+	headerpgp string = "gpgsig"
 )
 
 // Hash represents the hash of an object
@@ -75,8 +76,8 @@ func (c *Commit) Tree() (*Tree, error) {
 	return GetTree(c.s, c.TreeHash)
 }
 
-// Patch returns the Patch between the actual commit and the provided one.
-// Error will be return if context expires. Provided context must be non-nil
+// PatchContext returns the Patch between the actual commit and the provided one.
+// Error will be return if context expires. Provided context must be non-nil.
 func (c *Commit) PatchContext(ctx context.Context, to *Commit) (*Patch, error) {
 	fromTree, err := c.Tree()
 	if err != nil {
@@ -170,7 +171,9 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 	}
 	defer ioutil.CheckClose(reader, &err)
 
-	r := bufio.NewReader(reader)
+	r := bufPool.Get().(*bufio.Reader)
+	defer bufPool.Put(r)
+	r.Reset(reader)
 
 	var message bool
 	var pgpsig bool
@@ -181,23 +184,13 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 		}
 
 		if pgpsig {
-			// Check if it's the end of a PGP signature.
-			if bytes.Contains(line, []byte(endpgp)) {
-				c.PGPSignature += endpgp + "\n"
-				pgpsig = false
-			} else {
-				// Trim the left padding.
+			if len(line) > 0 && line[0] == ' ' {
 				line = bytes.TrimLeft(line, " ")
 				c.PGPSignature += string(line)
+				continue
+			} else {
+				pgpsig = false
 			}
-			continue
-		}
-
-		// Check if it's the beginning of a PGP signature.
-		if bytes.Contains(line, []byte(beginpgp)) {
-			c.PGPSignature += beginpgp + "\n"
-			pgpsig = true
-			continue
 		}
 
 		if !message {
@@ -208,15 +201,24 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 			}
 
 			split := bytes.SplitN(line, []byte{' '}, 2)
+
+			var data []byte
+			if len(split) == 2 {
+				data = split[1]
+			}
+
 			switch string(split[0]) {
 			case "tree":
-				c.TreeHash = plumbing.NewHash(string(split[1]))
+				c.TreeHash = plumbing.NewHash(string(data))
 			case "parent":
-				c.ParentHashes = append(c.ParentHashes, plumbing.NewHash(string(split[1])))
+				c.ParentHashes = append(c.ParentHashes, plumbing.NewHash(string(data)))
 			case "author":
-				c.Author.Decode(split[1])
+				c.Author.Decode(data)
 			case "committer":
-				c.Committer.Decode(split[1])
+				c.Committer.Decode(data)
+			case headerpgp:
+				c.PGPSignature += string(data) + "\n"
+				pgpsig = true
 			}
 		} else {
 			c.Message += string(line)
@@ -231,6 +233,11 @@ func (c *Commit) Decode(o plumbing.EncodedObject) (err error) {
 // Encode transforms a Commit into a plumbing.EncodedObject.
 func (b *Commit) Encode(o plumbing.EncodedObject) error {
 	return b.encode(o, true)
+}
+
+// EncodeWithoutSignature export a Commit into a plumbing.EncodedObject without the signature (correspond to the payload of the PGP signature).
+func (b *Commit) EncodeWithoutSignature(o plumbing.EncodedObject) error {
+	return b.encode(o, false)
 }
 
 func (b *Commit) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
@@ -269,17 +276,18 @@ func (b *Commit) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
 	}
 
 	if b.PGPSignature != "" && includeSig {
-		if _, err = fmt.Fprint(w, "pgpsig"); err != nil {
+		if _, err = fmt.Fprint(w, "\n"+headerpgp+" "); err != nil {
 			return err
 		}
 
-		// Split all the signature lines and write with a left padding and
-		// newline at the end.
-		lines := strings.Split(b.PGPSignature, "\n")
-		for _, line := range lines {
-			if _, err = fmt.Fprintf(w, " %s\n", line); err != nil {
-				return err
-			}
+		// Split all the signature lines and re-write with a left padding and
+		// newline. Use join for this so it's clear that a newline should not be
+		// added after this section, as it will be added when the message is
+		// printed.
+		signature := strings.TrimSuffix(b.PGPSignature, "\n")
+		lines := strings.Split(signature, "\n")
+		if _, err = fmt.Fprint(w, strings.Join(lines, "\n ")); err != nil {
+			return err
 		}
 	}
 
@@ -290,25 +298,33 @@ func (b *Commit) encode(o plumbing.EncodedObject, includeSig bool) (err error) {
 	return err
 }
 
-// Stats shows the status of commit.
+// Stats returns the stats of a commit.
 func (c *Commit) Stats() (FileStats, error) {
-	// Get the previous commit.
-	ci := c.Parents()
-	parentCommit, err := ci.Next()
+	return c.StatsContext(context.Background())
+}
+
+// StatsContext returns the stats of a commit. Error will be return if context
+// expires. Provided context must be non-nil.
+func (c *Commit) StatsContext(ctx context.Context) (FileStats, error) {
+	fromTree, err := c.Tree()
 	if err != nil {
-		if err == io.EOF {
-			emptyNoder := treeNoder{}
-			parentCommit = &Commit{
-				Hash: emptyNoder.hash,
-				// TreeHash: emptyNoder.parent.Hash,
-				s: c.s,
-			}
-		} else {
+		return nil, err
+	}
+
+	toTree := &Tree{}
+	if c.NumParents() != 0 {
+		firstParent, err := c.Parents().Next()
+		if err != nil {
+			return nil, err
+		}
+
+		toTree, err = firstParent.Tree()
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	patch, err := parentCommit.Patch(c)
+	patch, err := toTree.PatchContext(ctx, fromTree)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +354,7 @@ func (c *Commit) Verify(armoredKeyRing string) (*openpgp.Entity, error) {
 
 	encoded := &plumbing.MemoryObject{}
 	// Encode commit components, excluding signature and get a reader object.
-	if err := c.encode(encoded, false); err != nil {
+	if err := c.EncodeWithoutSignature(encoded); err != nil {
 		return nil, err
 	}
 	er, err := encoded.Reader()

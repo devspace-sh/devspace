@@ -10,14 +10,13 @@ default:
             containers:
               - image: ${IMAGE}
   vars:
-    data:
-      - name: SELECT
-        question: Please choose a deployment name
-        options:
-          - Deployment-1
-          - Deployment-2
-      - name: IMAGE
-        question: Please specify an image name, or press enter to use 'nginx'
-        default: nginx
-        validationPattern: ^n.*$
-        validationMessage: Only image names that start with a 'n' are allowed
+  - name: SELECT
+    question: Please choose a deployment name
+    options:
+      - Deployment-1
+      - Deployment-2
+  - name: IMAGE
+    question: Please specify an image name, or press enter to use 'nginx'
+    default: nginx
+    validationPattern: ^n.*$
+    validationMessage: Only image names that start with a 'n' are allowed

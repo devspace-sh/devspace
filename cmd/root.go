@@ -11,10 +11,12 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/list"
 	"github.com/devspace-cloud/devspace/cmd/remove"
 	"github.com/devspace-cloud/devspace/cmd/reset"
+	"github.com/devspace-cloud/devspace/cmd/set"
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -35,7 +37,8 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if upgrade.GetVersion() != "" {
+	version := upgrade.GetVersion()
+	if version != "" {
 		rootCmd.Version = upgrade.GetVersion()
 
 		if strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
@@ -46,28 +49,38 @@ func Execute() {
 			}
 		}
 	}
+	analytics, analyticsErr := analytics.GetAnalytics()
 
 	if err := rootCmd.Execute(); err != nil {
+		if analyticsErr == nil {
+			analytics.SendCommandEvent(err)
+		}
 		fmt.Println(err)
+	} else {
+		if analyticsErr == nil {
+			analytics.SendCommandEvent(nil)
+		}
 	}
 }
 
 func init() {
 	// Add sub commands
 	rootCmd.AddCommand(add.NewAddCmd())
+	rootCmd.AddCommand(cleanup.NewCleanupCmd())
+	rootCmd.AddCommand(connect.NewConnectCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(list.NewListCmd())
 	rootCmd.AddCommand(remove.NewRemoveCmd())
+	rootCmd.AddCommand(reset.NewResetCmd())
+	rootCmd.AddCommand(set.NewSetCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())
 	rootCmd.AddCommand(use.NewUseCmd())
 	rootCmd.AddCommand(update.NewUpdateCmd())
-	rootCmd.AddCommand(connect.NewConnectCmd())
-	rootCmd.AddCommand(reset.NewResetCmd())
-	rootCmd.AddCommand(cleanup.NewCleanupCmd())
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd())
 	rootCmd.AddCommand(NewDevCmd())
+	rootCmd.AddCommand(NewBuildCmd())
 	rootCmd.AddCommand(NewSyncCmd())
 	rootCmd.AddCommand(NewInstallCmd())
 	rootCmd.AddCommand(NewPurgeCmd())

@@ -43,7 +43,7 @@ func NewChartGenerator(localPath string) (*ChartGenerator, error) {
 
 // Update updates the chart if already exists or creates a new chart if not
 func (cg *ChartGenerator) Update(force bool) error {
-	_, err := cg.gitRepo.Update()
+	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return fmt.Errorf("Error updating repository: %v", err)
 	}

@@ -170,10 +170,10 @@ type VolumeConfig struct {
 
 // ServiceConfig holds the configuration of a component service
 type ServiceConfig struct {
-	Name  		*string               `yaml:"name,omitempty"`
-	Type  		*string               `yaml:"type,omitempty"`
-	Ports 		*[]*ServicePortConfig `yaml:"ports,omitempty"`
-	ExternalIPs *[]*string 			  `yaml:"externalIPs,omitempty"`
+	Name        *string               `yaml:"name,omitempty"`
+	Type        *string               `yaml:"type,omitempty"`
+	Ports       *[]*ServicePortConfig `yaml:"ports,omitempty"`
+	ExternalIPs *[]*string            `yaml:"externalIPs,omitempty"`
 }
 
 // ServicePortConfig holds the port configuration of a component service
@@ -307,11 +307,16 @@ type DependencyConfig struct {
 	Config             *string       `yaml:"config"`
 	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
 	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
+	Namespace          *string       `yaml:"namespace,omitempty"`
 }
 
 // SourceConfig defines the dependency source
 type SourceConfig struct {
-	Git  *string `yaml:"git,omitempty"`
+	Git      *string `yaml:"git,omitempty"`
+	Branch   *string `yaml:"branch,omitempty"`
+	Tag      *string `yaml:"tag,omitempty"`
+	Revision *string `yaml:"revision,omitempty"`
+
 	Path *string `yaml:"path,omitempty"`
 }
 

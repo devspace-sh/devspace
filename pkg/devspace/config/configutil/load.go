@@ -87,39 +87,20 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				}
 			}
 
-			cloudConfigData, err := cloudconfig.ReadCloudsConfig()
+			cloudConfigData, err := cloudconfig.ParseProviderConfig()
 			if err != nil {
 				return nil, nil
 			}
 
-			dataMap := make(map[interface{}]interface{})
-			err = yaml.Unmarshal(cloudConfigData, dataMap)
-			if err != nil {
+			provider := cloudconfig.GetProvider(cloudConfigData, providerName)
+			if provider == nil {
 				return nil, nil
-
 			}
-
-			providerMapRaw, ok := dataMap[providerName]
-			if !ok {
+			if provider.Token == "" {
 				return nil, nil
 			}
 
-			providerMap, ok := providerMapRaw.(map[interface{}]interface{})
-			if !ok {
-				return nil, nil
-			}
-
-			tokenRaw, ok := providerMap["token"]
-			if !ok {
-				return nil, nil
-			}
-
-			token, ok := tokenRaw.(string)
-			if !ok {
-				return nil, nil
-			}
-
-			accountName, err := cloudtoken.GetAccountName(token)
+			accountName, err := cloudtoken.GetAccountName(provider.Token)
 			if err != nil {
 				return nil, nil
 			}

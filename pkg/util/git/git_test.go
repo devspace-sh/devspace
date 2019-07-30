@@ -6,8 +6,10 @@ import (
 	"testing"
 )
 
-const testHash = "e53f405732f27aeeaa04ac07a542372d6f4b1a88"
-const testRepo = "https://github.com/rmccue/test-repository.git"
+const testCheckoutHash = "1cc3799959fb8a454b50bb59d0b5d47b78a6d3da"
+const testBranch = "newbr"
+const testTag = "tag1"
+const testRepo = "https://github.com/thockin/test"
 
 func TestGit(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "")
@@ -18,36 +20,19 @@ func TestGit(t *testing.T) {
 
 	gitRepo := NewGitRepository(tempDir, testRepo)
 
-	hasUpdate, err := gitRepo.HasUpdate()
+	err = gitRepo.Update(true)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if hasUpdate == false {
-		t.Fatal("hasUpdate returned false")
 	}
 
-	updated, err := gitRepo.Update()
+	err = gitRepo.Update(false)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if updated == false {
-		t.Fatal("didnt update")
 	}
 
-	updated, err = gitRepo.Update()
+	err = gitRepo.Update(true)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if updated == true {
-		t.Fatal("updated")
-	}
-
-	hasUpdate, err = gitRepo.HasUpdate()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasUpdate == true {
-		t.Fatal("hasUpdate returned true")
 	}
 
 	remote, err := gitRepo.GetRemote()
@@ -58,11 +43,26 @@ func TestGit(t *testing.T) {
 		t.Fatalf("Wrong remote, got %s, expected %s", remote, testRepo)
 	}
 
+	err = gitRepo.Checkout("", "", testCheckoutHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	hash, err := gitRepo.GetHash()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hash != testHash {
-		t.Fatalf("Wrong remote, got %s, expected %s", hash, testHash)
+	if hash != testCheckoutHash {
+		t.Fatalf("Wrong remote, got %s, expected %s", hash, testCheckoutHash)
+	}
+
+	err = gitRepo.Checkout("", testBranch, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = gitRepo.Checkout(testTag, "", "")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
