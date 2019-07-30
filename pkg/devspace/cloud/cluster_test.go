@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -172,23 +171,26 @@ type getKeyTestCase struct {
 }
 
 func TestGetKey(t *testing.T) {
-	provider := &Provider{
-		latest.Provider{
-			ClusterKey: map[int]string{
-				5: "onlyKey",
-			},
-		},
+	testCases := []getKeyTestCase{
 		getKeyTestCase{
 			name:               "One key, no question",
+			givenKeys:          map[int]string{5: "onlyKey"},
+			forceQuestionParam: false,
+			expectedKey:        "onlyKey",
+		},
+		getKeyTestCase{
+			name:               "Key from question",
 			forceQuestionParam: true,
-			answers:            []string{"firstKey", "secoundKey", "sameKey", "sameKey"},
+			answers:            []string{"firstKey", "secondKey", "sameKey", "sameKey"},
 			expectedKey:        "716fb307cf5cc64f34acfe748560a1a268d6e1a47d56ff1fc64eb549bcecd3f1",
 		},
 	}
 
 	for _, testCase := range testCases {
 		provider := &Provider{
-			ClusterKey: testCase.givenKeys,
+			Provider: latest.Provider{
+				ClusterKey: testCase.givenKeys,
+			},
 		}
 		for _, answer := range testCase.answers {
 			survey.SetNextAnswer(answer)

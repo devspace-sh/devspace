@@ -3,10 +3,14 @@ package cloud
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
 )
@@ -93,8 +97,22 @@ func TestGetClusterKey(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
+	//Make backup file
+	homedir, err := homedir.Dir()
+	assert.NilError(t, err, "Error finding out home directory")
+	providerFile := filepath.Join(homedir, cloudconfig.DevSpaceProvidersConfigPath)
+	err = fsutil.Copy(providerFile, "providersBackup", true)
+	didConfigExist := !os.IsNotExist(err)
+
 	// Delete temp folder after test
 	defer func() {
+		if didConfigExist {
+			err = fsutil.Copy("providersBackup", providerFile, true)
+		} else {
+			err = os.Remove(providerFile)
+		}
+		assert.NilError(t, err, "Error restoring config")
+
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
