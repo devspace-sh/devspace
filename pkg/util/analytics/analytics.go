@@ -105,7 +105,6 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	p, err := process.NewProcess(int32(pid))
 	if err == nil {
 		procCreateTime, err := p.CreateTime()
-
 		if err == nil {
 			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano() / int64(time.Millisecond) - procCreateTime, 10) + "ms"
 		}
