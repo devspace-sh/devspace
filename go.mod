@@ -30,7 +30,7 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/google/uuid v1.1.0 // indirect
+	github.com/google/uuid v1.1.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/go-version v1.0.0 // indirect
@@ -62,6 +62,7 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20190327083759-54bad0a9b051 // indirect
 	github.com/russross/blackfriday v1.5.1 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
+	github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
 	github.com/sirupsen/logrus v1.2.0
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cast v1.3.0 // indirect

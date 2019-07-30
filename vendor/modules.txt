@@ -17,6 +17,8 @@ github.com/Microsoft/go-winio
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
+# github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
+github.com/StackExchange/wmi
 # github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 github.com/agl/ed25519
 github.com/agl/ed25519/edwards25519
@@ -153,6 +155,9 @@ github.com/exponent-io/jsonpath
 github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
+# github.com/go-ole/go-ole v1.2.1
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/go-openapi/jsonpointer v0.19.0
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.19.0
@@ -342,6 +347,14 @@ github.com/russross/blackfriday
 github.com/sabhiram/go-gitignore
 # github.com/sergi/go-diff v1.0.0
 github.com/sergi/go-diff/diffmatchpatch
+# github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
+github.com/shirou/gopsutil/process
+github.com/shirou/gopsutil/cpu
+github.com/shirou/gopsutil/internal/common
+github.com/shirou/gopsutil/mem
+github.com/shirou/gopsutil/net
+# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
+github.com/shirou/w32
 # github.com/sirupsen/logrus v1.2.0
 github.com/sirupsen/logrus
 # github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
@@ -433,8 +446,8 @@ golang.org/x/oauth2/jwt
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 golang.org/x/sys/unix
-golang.org/x/sys/windows/registry
 golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
 golang.org/x/sys/cpu
 # golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db
 golang.org/x/text/transform

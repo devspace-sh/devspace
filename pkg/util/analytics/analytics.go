@@ -15,11 +15,13 @@ import (
 	"regexp"
 	"errors"
 	"sync"
+	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/google/uuid"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/shirou/gopsutil/process"
 )
 
 var token string
@@ -97,6 +99,16 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	
 	if commandError != nil {
 		commandData["error"] = commandError.Error()
+	}
+	
+	pid := os.Getpid()
+	p, err := process.NewProcess(int32(pid))
+	if err == nil {
+		procCreateTime, err := p.CreateTime()
+
+		if err == nil {
+			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano() / int64(time.Millisecond) - procCreateTime, 10) + "ms"
+		}
 	}
 	return a.SendEvent("command", commandData)
 }
