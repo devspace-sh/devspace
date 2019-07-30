@@ -32,6 +32,7 @@ type Analytics interface {
 	Enable() error
 	SendEvent(eventName string, eventData map[string]interface{}) error
 	SendCommandEvent(commandError error) error
+	ReportPanics()
 	Identify(identifier string) error
 	SetVersion(version string)
 }
@@ -140,6 +141,15 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 		return a.sendRequest("engage", data)
 	}
 	return nil
+}
+
+func (a *analyticsConfig) ReportPanics() {
+	if r := recover(); r != nil {
+		err := fmt.Errorf("Panic: %v", r)
+
+		a.SendCommandEvent(err)
+		fmt.Println(err)
+	}
 }
 
 func (a *analyticsConfig) SetVersion(version string) {
