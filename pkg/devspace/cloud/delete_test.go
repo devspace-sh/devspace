@@ -43,17 +43,17 @@ func TestDeleteKubeContext(t *testing.T) {
 
 	//Make Backup of config file
 	err = fsutil.Copy(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), "configBackup", true)
-	if !os.IsNotExist(err) {
-		os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
-		defer fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
-	} else if err != nil {
-		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
-	} else {
-		t.Fatalf("Error making backup file: %v", err)
-	}
+	didConfigExist := !os.IsNotExist(err)
 
 	//Delete temp folder
 	defer func() {
+		if didConfigExist {
+			err = fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
+		} else {
+			err = os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
+		}
+		assert.NilError(t, err, "Error restoring config")
+
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
