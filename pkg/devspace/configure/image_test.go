@@ -5,10 +5,12 @@ import (
 	"os"
 	"testing"
 
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
 )
@@ -16,26 +18,136 @@ import (
 type GetImageConfigFromDockerfileTestCase struct {
 	name string
 
-	expectedErr string
+	cloudProvider *string
+	answers       []string
+	dockerfile    string
+	context       string
+
+	expectedErr        string
+	expectedImage      string
+	expectedTag        string
+	expectedDockerfile string
+	expectedContext    string
 }
 
 func TestGetImageConfigFromDockerfile(t *testing.T) {
-	t.Skip("Uncompleted")
+	providerConfig, err := cloudconfig.ParseProviderConfig()
+	assert.NilError(t, err, "Error getting provider config")
+	cloudProviders := ""
+	for _, p := range providerConfig.Providers {
+		cloudProviders += p.Name + " "
+	}
+
 	testCases := []GetImageConfigFromDockerfileTestCase{
 		GetImageConfigFromDockerfileTestCase{
-			name: "empty params",
+			name:          "invalid Cloud provider",
+			cloudProvider: ptr.String("invalid"),
+			expectedErr:   "Error login into cloud provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: " + cloudProviders,
+		},
+		GetImageConfigFromDockerfileTestCase{
+			name:          "unknown cloud provider from question",
+			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "yes"},
+			expectedImage: "someRegistry.com/user/imagename",
+		},
+		GetImageConfigFromDockerfileTestCase{
+			name:          "use hub.docker.com",
+			answers:       []string{"hub.docker.com", "some/image", "yes"},
+			expectedImage: "some/image",
+		},
+		GetImageConfigFromDockerfileTestCase{
+			name:               "use gcr",
+			answers:            []string{"gcr.io", "other/image", "yes"},
+			dockerfile:         "SomeOtherDockerfile",
+			context:            "SomeContext",
+			expectedImage:      "other/image",
+			expectedDockerfile: "SomeOtherDockerfile",
+			expectedContext:    "SomeContext",
 		},
 	}
 
 	for _, testCase := range testCases {
 		testConfig := &latest.Config{}
 
-		_, err := GetImageConfigFromDockerfile(testConfig, "", "", ptr.String("invalid"))
+		for _, answer := range testCase.answers {
+			survey.SetNextAnswer(answer)
+		}
+
+		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, testCase.cloudProvider)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Image), testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Tag), testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Dockerfile), testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Context), testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+	}
+}
+
+type GetImageConfigFromImageNameTestCase struct {
+	name string
+
+	answers    []string
+	imageName  string
+	dockerfile string
+	context    string
+
+	expectedNil           bool
+	expectedImage         string
+	expectedTag           string
+	expectedDockerfile    string
+	expectedContext       string
+	expectedBuildDisabled bool
+}
+
+func TestGetImageConfigFromImageName(t *testing.T) {
+	testCases := []GetImageConfigFromImageNameTestCase{
+		GetImageConfigFromImageNameTestCase{
+			name:        "No pull secrets",
+			answers:     []string{"no"},
+			expectedNil: true,
+		},
+		GetImageConfigFromImageNameTestCase{
+			name:                  "Empty params with pull secrets",
+			answers:               []string{"yes"},
+			expectedTag:           "latest",
+			expectedBuildDisabled: true,
+		},
+		GetImageConfigFromImageNameTestCase{
+			name:               "All params with pull secrets",
+			answers:            []string{"yes"},
+			imageName:          "Many:Splitted:Tokens",
+			dockerfile:         "customDockerfile",
+			context:            "customContext",
+			expectedImage:      "Many",
+			expectedTag:        "Splitted",
+			expectedDockerfile: "customDockerfile",
+			expectedContext:    "customContext",
+		},
+	}
+
+	for _, testCase := range testCases {
+		for _, answer := range testCase.answers {
+			survey.SetNextAnswer(answer)
+		}
+
+		imageConfig := GetImageConfigFromImageName(testCase.imageName, testCase.dockerfile, testCase.context)
+
+		if !testCase.expectedNil {
+			if imageConfig == nil {
+				t.Fatalf("Nil returned in testCase %s", testCase.name)
+			}
+			assert.Equal(t, ptr.ReverseString(imageConfig.Image), testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Tag), testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Dockerfile), testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseString(imageConfig.Context), testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, imageConfig.Build != nil && ptr.ReverseBool(imageConfig.Build.Disabled), testCase.expectedBuildDisabled, "Returned build status is unexpected in testCase %s", testCase.name)
+		} else {
+			if imageConfig != nil {
+				t.Fatalf("Not nil returned in testCase %s", testCase.name)
+			}
 		}
 	}
 }
