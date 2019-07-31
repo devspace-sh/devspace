@@ -9,6 +9,6 @@ import (
 func sigterm(pid int) {
 	p, err := os.FindProcess(pid)
 	if err == nil {
-		p.Signal(sig)
+		p.Signal(os.Interrupt)
 	}
 }
