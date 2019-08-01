@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"path/filepath"
 	"strings"
@@ -14,11 +15,13 @@ import (
 	"regexp"
 	"errors"
 	"sync"
+	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/google/uuid"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/shirou/gopsutil/process"
 )
 
 var token string
@@ -32,6 +35,7 @@ type Analytics interface {
 	Enable() error
 	SendEvent(eventName string, eventData map[string]interface{}) error
 	SendCommandEvent(commandError error) error
+	ReportPanics()
 	Identify(identifier string) error
 	SetVersion(version string)
 }
@@ -96,6 +100,15 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	if commandError != nil {
 		commandData["error"] = commandError.Error()
 	}
+	
+	pid := os.Getpid()
+	p, err := process.NewProcess(int32(pid))
+	if err == nil {
+		procCreateTime, err := p.CreateTime()
+		if err == nil {
+			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano() / int64(time.Millisecond) - procCreateTime, 10) + "ms"
+		}
+	}
 	return a.SendEvent("command", commandData)
 }
 
@@ -140,6 +153,15 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 		return a.sendRequest("engage", data)
 	}
 	return nil
+}
+
+func (a *analyticsConfig) ReportPanics() {
+	if r := recover(); r != nil {
+		err := fmt.Errorf("Panic: %v", r)
+
+		a.SendCommandEvent(err)
+		fmt.Println(err)
+	}
 }
 
 func (a *analyticsConfig) SetVersion(version string) {
@@ -258,6 +280,19 @@ func GetAnalytics() (Analytics, error) {
 				return
 			}
 		}
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+
+		go func(){
+			<-c
+
+			analyticsInstance.SendCommandEvent(errors.New("Interrupted"))
+			signal.Stop(c)
+
+			pid := os.Getpid()
+			sigterm(pid)
+		}()
 	})
 	return analyticsInstance, err
 }
