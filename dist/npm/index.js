@@ -81,22 +81,22 @@ const getLatestVersion = function(callback) {
       "$1"
     );
 
-    callback(latestVersion);
+    if (releasePage != latestVersion && latestVersion) {
+      callback(latestVersion);
+    } else {
+      console.error("Unable to identify latest devspace version");
+      process.exit(1);
+    }
   });
 };
 
 if (action == "update-version") {
   getLatestVersion(function(latestVersion) {
-    if (releasePage != latestVersion && latestVersion) {
-      packageJson.version = latestVersion;
+    packageJson.version = latestVersion;
 
-      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
 
-      process.exit(0);
-    } else {
-      console.error("Unable to identify latest devspace version");
-      process.exit(1);
-    }
+    process.exit(0);
   });
   return;
 }
@@ -105,13 +105,8 @@ let version = packageJson.version;
 let platform = PLATFORM_MAPPING[process.platform];
 let arch = ARCH_MAPPING[process.arch];
 let binaryName = "devspace";
-let downloadPath = downloadPathTemplate
-  .replace("{{version}}", version)
-  .replace("{{platform}}", platform)
-  .replace("{{arch}}", arch);
 
 if (platform == "windows") {
-  downloadPath += ".exe";
   binaryName += ".exe";
 }
 
@@ -153,16 +148,7 @@ exec("npm bin", function(err, stdout, stderr) {
   }
 
   if (action == "install" || action == "force-install") {
-    console.log("Download DevSpace CLI release: " + downloadPath + "\n");
-
-    const spinner = new Spinner(
-      "%s Downloading DevSpace CLI... (this may take a minute)"
-    );
-    spinner.setSpinnerString("|/-\\");
-    spinner.start();
-
     const showRootError = function() {
-      spinner.stop(true);
       console.error("\n############################################");
       console.error(
         "Failed to download DevSpace CLI due to permission issues!\n"
@@ -176,13 +162,32 @@ exec("npm bin", function(err, stdout, stderr) {
       console.error("############################################\n");
       process.exit(1);
     };
-    let writeStream = fs
-      .createWriteStream(binaryPath)
-      .on("error", function(err) {
-        showRootError();
-      });
 
-    const downloadRelease = function(downloadPath) {
+    const downloadRelease = function(version) {
+      let downloadPath = downloadPathTemplate
+        .replace("{{version}}", version)
+        .replace("{{platform}}", platform)
+        .replace("{{arch}}", arch);
+
+      if (platform == "windows") {
+        downloadPath += ".exe";
+      }
+
+      console.log("Download DevSpace CLI release: " + downloadPath + "\n");
+
+      const spinner = new Spinner(
+        "%s Downloading DevSpace CLI... (this may take a minute)"
+      );
+      spinner.setSpinnerString("|/-\\");
+      spinner.start();
+
+      let writeStream = fs
+        .createWriteStream(binaryPath)
+        .on("error", function(err) {
+          spinner.stop(true);
+          showRootError();
+        });
+
       request({ uri: downloadPath, headers: requestHeaders, encoding: null })
         .on("error", function() {
           spinner.stop(true);
@@ -190,34 +195,34 @@ exec("npm bin", function(err, stdout, stderr) {
           process.exit(1);
         })
         .on("response", function(res) {
-          if (res.statusCode == 400) {
-            console.error("Release version " + version + " not found.");
+          spinner.stop(true);
+          if (res.statusCode != 200) {
+            if (res.statusCode == 404) {
+              console.error("Release version " + version + " not found.\n");
 
-            getLatestVersion(function(latestVersion) {
-              if (latestVersion != version) {
-                console.log(
-                  "Downloading latest stable release instead. Latest version is: " +
-                    latestVersion
-                );
+              getLatestVersion(function(latestVersion) {
+                if (latestVersion != version) {
+                  console.log(
+                    "Downloading latest stable release instead. Latest version is: " +
+                      latestVersion +
+                      "\n"
+                  );
 
-                let latestReleaseDownloadPath = downloadPathTemplate
-                  .replace("{{version}}", latestVersion)
-                  .replace("{{platform}}", platform)
-                  .replace("{{arch}}", arch);
-                downloadRelease(latestReleaseDownloadPath);
-              }
-            });
-            return;
-          } else if (res.statusCode != 200) {
-            console.error(
-              "Error requesting URL " +
-                downloadPath +
-                " (Status Code: " +
-                res.statusCode +
-                ")"
-            );
-            console.error(err);
-            process.exit(1);
+                  downloadRelease(latestVersion);
+                }
+              });
+              return;
+            } else {
+              console.error(
+                "Error requesting URL " +
+                  downloadPath +
+                  " (Status Code: " +
+                  res.statusCode +
+                  ")"
+              );
+              console.error(err);
+              process.exit(1);
+            }
           } else {
             try {
               res.pipe(writeStream);
@@ -235,10 +240,9 @@ exec("npm bin", function(err, stdout, stderr) {
           } catch (e) {
             showRootError();
           }
-          process.exit(0);
         });
     };
 
-    downloadRelease(downloadPath);
+    downloadRelease(version);
   }
 });
