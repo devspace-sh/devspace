@@ -3,19 +3,20 @@ package analytics
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"path/filepath"
-	"strings"
-	"time"
 	"regexp"
-	"errors"
-	"sync"
+	"runtime"
+	"runtime/debug"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
@@ -91,22 +92,22 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	command = expr.ReplaceAllString(command, `$1[REDACTED]$3`)
 
 	commandData := map[string]interface{}{
-		"command": command,
-		"runtime_os": runtime.GOOS,
+		"command":      command,
+		"runtime_os":   runtime.GOOS,
 		"runtime_arch": runtime.GOARCH,
-		"cli_version": a.version,
+		"cli_version":  a.version,
 	}
-	
+
 	if commandError != nil {
 		commandData["error"] = commandError.Error()
 	}
-	
+
 	pid := os.Getpid()
 	p, err := process.NewProcess(int32(pid))
 	if err == nil {
 		procCreateTime, err := p.CreateTime()
 		if err == nil {
-			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano() / int64(time.Millisecond) - procCreateTime, 10) + "ms"
+			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
 		}
 	}
 	return a.SendEvent("command", commandData)
@@ -126,7 +127,7 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 		} else {
 			eventData["distinct_id"] = a.DistinctID
 		}
-		
+
 		if _, ok := eventData["time"]; !ok {
 			eventData["time"] = time.Now()
 		}
@@ -157,7 +158,7 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 
 func (a *analyticsConfig) ReportPanics() {
 	if r := recover(); r != nil {
-		err := fmt.Errorf("Panic: %v", r)
+		err := fmt.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
 		a.SendCommandEvent(err)
 		fmt.Println(err)
@@ -174,14 +175,14 @@ func (a *analyticsConfig) createAlias() error {
 			"event": "$create_alias",
 			"properties": map[string]interface{}{
 				"distinct_id": a.Identifier,
-				"alias": a.DistinctID,
-				"token": token,
+				"alias":       a.DistinctID,
+				"token":       token,
 			},
 		}
 		identifierSections := strings.Split(a.Identifier, "/")
 
 		a.UpdateUser(map[string]interface{}{
-			"provider": identifierSections[0],
+			"provider":   identifierSections[0],
 			"account_id": identifierSections[1],
 		})
 		return a.sendRequest("track", data)
@@ -254,7 +255,7 @@ func GetAnalytics() (Analytics, error) {
 
 	loadAnalyticsOnce.Do(func() {
 		analyticsInstance = &analyticsConfig{}
-	
+
 		analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
 		if err != nil {
 			err = fmt.Errorf("Couldn't determine config file: %v", err)
@@ -273,7 +274,7 @@ func GetAnalytics() (Analytics, error) {
 				err = fmt.Errorf("Couldn't reset analytics distinct id: %v", err)
 				return
 			}
-	
+
 			err = analyticsInstance.save()
 			if err != nil {
 				err = fmt.Errorf("Couldn't save analytics config: %v", err)
@@ -284,7 +285,7 @@ func GetAnalytics() (Analytics, error) {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 
-		go func(){
+		go func() {
 			<-c
 
 			analyticsInstance.SendCommandEvent(errors.New("Interrupted"))
