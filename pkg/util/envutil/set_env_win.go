@@ -3,7 +3,6 @@
 package envutil
 
 import (
-	"fmt"
 	"log"
 	"syscall"
 	"unsafe"
@@ -22,8 +21,6 @@ const (
 
 // This is necessary because the mitchellh/go-ps package has a bug and cannot compile on freebsd 386
 func setEnv(name string, value string) error {
-	fmt.Println(name)
-	fmt.Println(value)
 	k, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.ALL_ACCESS)
 	if err != nil {
 		log.Fatal(err)
