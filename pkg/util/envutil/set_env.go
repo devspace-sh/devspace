@@ -1,4 +1,4 @@
-// +build freebsd,amd64 !freebsd
+// +build !windows,freebsd
 
 package envutil
 
