@@ -10,7 +10,7 @@ export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
 # Update vendor directory
-go mod vendor
+# go mod vendor
 
 DEVSPACE_ROOT=$(git rev-parse --show-toplevel)
 VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
