@@ -3,6 +3,7 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"strings"
 	"io/ioutil"
 	"net/http"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 )
 
 // LoginEndpoint is the cloud endpoint that will log you in
@@ -155,19 +157,39 @@ func (p *Provider) Login(log log.Logger) error {
 		ctx        = context.Background()
 		keyChannel = make(chan string)
 	)
-
-	log.Infof("If the browser does not open automatically please navigate to %s", url)
-
-	log.StartWait("Logging into cloud provider...")
-	defer log.StopWait()
+	var key string
 
 	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel)
-	open.Start(url)
+	err := open.Run(url)
+	if err != nil {
+		log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host + "/settings/access-keys")
 
-	key := <-keyChannel
+		key = strings.TrimSpace(survey.Question(&survey.QuestionOptions{
+			Question: "5. Enter the access key here:",
+			IsPassword: true,
+		}))
+
+		log.WriteString("\n")
+		
+		providerConfig, err := config.ParseProviderConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = ReLogin(providerConfig, p.Name, &key, log)
+		if err != nil {
+			log.Fatalf("Error logging in: %v", err)
+		}
+	} else {
+		log.Infof("If the browser does not open automatically please navigate to %s", url)
+		log.StartWait("Logging into cloud provider...")
+		defer log.StopWait()
+		
+		key = <-keyChannel
+	}
+
 	close(keyChannel)
-
-	err := server.Shutdown(ctx)
+	err = server.Shutdown(ctx)
 	if err != nil {
 		return err
 	}

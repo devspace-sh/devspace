@@ -1,4 +1,4 @@
-// +build freebsd,386
+// +build freebsd
 
 package envutil
 

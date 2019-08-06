@@ -38,6 +38,9 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	version := upgrade.GetVersion()
+	analytics, analyticsErr := analytics.GetAnalytics()
+	defer analytics.ReportPanics()
+	
 	if version != "" {
 		rootCmd.Version = upgrade.GetVersion()
 
@@ -49,7 +52,6 @@ func Execute() {
 			}
 		}
 	}
-	analytics, analyticsErr := analytics.GetAnalytics()
 
 	if err := rootCmd.Execute(); err != nil {
 		if analyticsErr == nil {

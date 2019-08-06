@@ -183,6 +183,8 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
+	InitDevSpaceConfig(config, config.ActiveConfig)
+
 	configPath := filepath.Join(workdir, ConfigPath)
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)
 	if err != nil {

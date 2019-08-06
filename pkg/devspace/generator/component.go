@@ -91,7 +91,7 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 		params.Question = "Please enter a value"
 	} else {
 		if variable.Question == nil {
-			params.Question = "Please enter a value"
+			params.Question = "Please enter a value for " + *variable.Name
 		} else {
 			params.Question = *variable.Question
 		}
