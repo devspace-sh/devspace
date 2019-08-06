@@ -420,7 +420,7 @@ dev:
 	
 }
 
-func TestSetSetDevspaceRoot(t *testing.T) {
+func TestSetDevspaceRoot(t *testing.T) {
 	configBackup := config
 	defer func() { config = configBackup }()
 	config = nil
@@ -429,6 +429,10 @@ func TestSetSetDevspaceRoot(t *testing.T) {
 	dir, err := ioutil.TempDir("", "testDir")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	wdBackup, err := os.Getwd()
