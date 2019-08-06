@@ -64,4 +64,5 @@ func TestFakeInstallChart(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("TestFakeInstallChart needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }

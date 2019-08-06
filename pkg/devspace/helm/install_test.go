@@ -61,6 +61,7 @@ func TestCheckDependencies(t *testing.T) {
 		}
 	}
 	t.Log("TestCheckDependencies needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
 
 func TestInstallChart(t *testing.T) {
@@ -98,6 +99,7 @@ func TestInstallChart(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("TestInstallChart needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
 
 type analyzeErrorTestCase struct {
@@ -150,4 +152,5 @@ func TestAnalyzeError(t *testing.T) {
 		}
 	}
 	t.Log("TestAnalyzeError needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }

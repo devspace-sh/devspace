@@ -98,6 +98,7 @@ func TestTillerEnsure(t *testing.T) {
 	isTillerDeployed = IsTillerDeployed(config, client, configutil.TestNamespace)
 	assert.Equal(t, false, isTillerDeployed, "Tiller declared deployed despite deployment being broken")
 	t.Log("TestTillerEnsure needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
 
 func TestTillerCreate(t *testing.T) {
@@ -114,6 +115,7 @@ func TestTillerCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("TestTillerCreate needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
 
 func TestTillerDelete(t *testing.T) {
@@ -129,4 +131,5 @@ func TestTillerDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("TestTillerDelete needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
