@@ -2,6 +2,7 @@ package helm
 
 import (
 	"testing"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -13,6 +14,7 @@ import (
 //Coverage 51% is not enough
 
 func TestFakeInstallChart(t *testing.T) {
+	startTime := time.Now()
 	// Create the fake client.
 	kubeClient := fake.NewSimpleClientset()
 	fakeClient := NewFakeClient(kubeClient, configutil.TestNamespace)
@@ -61,4 +63,5 @@ func TestFakeInstallChart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log("TestFakeInstallChart needed " + time.Since(startTime).String())
 }

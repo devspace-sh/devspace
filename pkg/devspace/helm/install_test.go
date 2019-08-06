@@ -3,6 +3,7 @@ package helm
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -28,6 +29,7 @@ type checkDependenciesTestCase struct {
 }
 
 func TestCheckDependencies(t *testing.T) {
+	startTime := time.Now()
 	testCases := []checkDependenciesTestCase{
 		checkDependenciesTestCase{
 			name:                       "Matching dependencies in chart and requirements",
@@ -58,10 +60,11 @@ func TestCheckDependencies(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error checking dependencies in testCase %s", testCase.name)
 		}
 	}
-
+	t.Log("TestCheckDependencies needed " + time.Since(startTime).String())
 }
 
 func TestInstallChart(t *testing.T) {
+	startTime := time.Now()
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -94,6 +97,7 @@ func TestInstallChart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log("TestInstallChart needed " + time.Since(startTime).String())
 }
 
 type analyzeErrorTestCase struct {
@@ -107,6 +111,7 @@ type analyzeErrorTestCase struct {
 }
 
 func TestAnalyzeError(t *testing.T) {
+	startTime := time.Now()
 	testCases := []analyzeErrorTestCase{
 		analyzeErrorTestCase{
 			name:        "Test analyze no-timeout error",
@@ -144,4 +149,5 @@ func TestAnalyzeError(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error returned in testCase %s", testCase.name)
 		}
 	}
+	t.Log("TestAnalyzeError needed " + time.Since(startTime).String())
 }

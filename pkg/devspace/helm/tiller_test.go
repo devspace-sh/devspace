@@ -2,6 +2,7 @@ package helm
 
 import (
 	"testing"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -12,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	
+
 	"gotest.tools/assert"
 )
 
@@ -63,6 +64,7 @@ func createTestResources(client kubernetes.Interface) error {
 }
 
 func TestTillerEnsure(t *testing.T) {
+	startTime := time.Now()
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -95,10 +97,11 @@ func TestTillerEnsure(t *testing.T) {
 
 	isTillerDeployed = IsTillerDeployed(config, client, configutil.TestNamespace)
 	assert.Equal(t, false, isTillerDeployed, "Tiller declared deployed despite deployment being broken")
-
+	t.Log("TestTillerEnsure needed " + time.Since(startTime).String())
 }
 
 func TestTillerCreate(t *testing.T) {
+	startTime := time.Now()
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -110,9 +113,11 @@ func TestTillerCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log("TestTillerCreate needed " + time.Since(startTime).String())
 }
 
 func TestTillerDelete(t *testing.T) {
+	startTime := time.Now()
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -123,4 +128,5 @@ func TestTillerDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log("TestTillerDelete needed " + time.Since(startTime).String())
 }

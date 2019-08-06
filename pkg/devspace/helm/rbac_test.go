@@ -2,6 +2,7 @@ package helm
 
 import (
 	"testing"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -39,6 +40,7 @@ func createFakeConfig() *latest.Config {
 	return testConfig
 }
 func TestCreateTiller(t *testing.T) {
+	startTime := time.Now()
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -48,4 +50,6 @@ func TestCreateTiller(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log("TestCreateTiller needed " + time.Since(startTime).String())
+	t.Fatal("This fatal is to show the logs")
 }
