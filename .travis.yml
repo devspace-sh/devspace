@@ -12,13 +12,13 @@ jobs:
       install:
         - npm install -g codeclimate-test-reporter
       os: osx
-      go: 1.12.4
+      go: 1.12.6
       script:
         - "./scripts/coverage.bash"
       after_success:
         - codeclimate-test-reporter < coverage.txt
     - stage: deploy
-      go: 1.12.4
+      go: 1.12.6
       os: osx
       go_import_path: github.com/devspace-cloud/devspace
       install: skip
@@ -49,7 +49,6 @@ jobs:
           skip_cleanup: true
           api_key:
             secure: KGCqYQmeEirDMoghu88D4hzUaG6ypBIFlY+QBtqlvyIbjbkyoOJ2cYJlcGG3SVssnXHgNQFGa8OZJosjVysNQorYY2P4ckF/V0GM+u0mSAeRcSSrorMOL6c8UQEY5695st2VqZBFtlpW7mNo75pU6Xgkcqhxb4/j/aj0I/+vhHbakFAQXcC6iMsuKQqRkXsh7g/G5/xgc2oxxK7dcfbJqC4QeUddKX0bZdLyml4yVrrI9XR/7bS1h+Q5S6ZyJ2EO3HRE7h6hAuGU21R4lrzRpDJh7Kopg4Fo6zqrU8lF3/Gw+RtmkWGoo6tXn+r6+HBu8xSbkw0NhGdL2iKraE2pOkRDlYZsR1XTNM5WKRMx+cZGY0OJT+Q04/5hs8uIuGwEATOZ2IAj2AWMba750Hx5h18dyLijpvSjNPtPo+ki0MYbMyYuZtlQDqvBfOclLfKoScsHz9ffGf0oz7p9/Z0riLIaMLmQXY5Zq3OSXATnXBAfgwtOppgR1foUKYb0P92uPePYIsmZN+p2HZDgS1nP2++Mg33BCLf+HUVhyekGc+wLbcEZTz49FCPjDRhGZz7FGe1ovvnYmtr00gaUcR6pq2nJGackkTOeuggu5ahmcc6xtFBxRT/JHi+LCeoqESsi6mvF7QEK4Widpn+sFwbAZlhGUVzhYnwfDNM9RK1pF+Q=
-
           on:
             repo: devspace-cloud/devspace
             branch: master
