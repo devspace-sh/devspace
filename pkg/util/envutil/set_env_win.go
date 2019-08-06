@@ -31,30 +31,20 @@ func setEnv(name string, value string) error {
 		return err
 	}
 	// https://docs.microsoft.com/en-us/windows/desktop/api/shlobj_core/nf-shlobj_core-shchangenotify
-	err = syscall.NewLazyDLL("shell32.dll").NewProc("SHChangeNotify").Call(
+	syscall.NewLazyDLL("shell32.dll").NewProc("SHChangeNotify").Call(
 		uintptr(SHCNE_ASSOCCHANGED),
 		uintptr(SHCNF_IDLIST),
 		0, 0)
-	if err != nil {
-		return err
-	}
 
 	// https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-sendmessagetimeoutw
-	env, err := syscall.UTF16PtrFromString("Environment")
-	if err != nil {
-		return err
-	}
-
-	err = syscall.NewLazyDLL("user32.dll").NewProc("SendMessageTimeoutW").Call(
+	env, _ := syscall.UTF16PtrFromString("Environment")
+	syscall.NewLazyDLL("user32.dll").NewProc("SendMessageTimeoutW").Call(
 		uintptr(HWND_BROADCAST),
 		uintptr(WM_SETTINGCHANGE),
 		0,
 		uintptr(unsafe.Pointer(env)),
 		uintptr(SMTO_ABORTIFHUNG),
 		uintptr(5000))
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
