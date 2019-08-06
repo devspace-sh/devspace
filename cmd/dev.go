@@ -23,7 +23,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -35,6 +35,7 @@ type DevCmd struct {
 	AllowCyclicDependencies bool
 
 	ForceBuild        bool
+	SkipBuild         bool
 	BuildSequential   bool
 	ForceDeploy       bool
 	Deployments       string
@@ -77,6 +78,7 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
+	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
@@ -117,6 +119,9 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Start file logging
 	log.StartFileLogging()
+
+	// Validate flags
+	cmd.validateFlags()
 
 	// Load config
 	generatedConfig, err := generated.LoadConfig()
@@ -168,37 +173,36 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	analytics, err := analytics.GetAnalytics()
-	if err == nil {
-		analytics.SendCommandEvent(nil)
-	}
-
+	cloudanalytics.SendCommandEvent(nil)
 	os.Exit(exitCode)
 }
 
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
 		if err != nil {
 			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary
-		builtImages, err := build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
-		if err != nil {
-			if strings.Index(err.Error(), "no space left on device") != -1 {
-				return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+		builtImages := make(map[string]string)
+		if cmd.SkipBuild == false {
+			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+			if err != nil {
+				if strings.Index(err.Error(), "no space left on device") != -1 {
+					return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+				}
+
+				return 0, fmt.Errorf("Error building image: %v", err)
 			}
 
-			return 0, fmt.Errorf("Error building image: %v", err)
-		}
-
-		// Save config if an image was built
-		if len(builtImages) > 0 {
-			err := generated.SaveConfig(generatedConfig)
-			if err != nil {
-				return 0, fmt.Errorf("Error saving generated config: %v", err)
+			// Save config if an image was built
+			if len(builtImages) > 0 {
+				err := generated.SaveConfig(generatedConfig)
+				if err != nil {
+					return 0, fmt.Errorf("Error saving generated config: %v", err)
+				}
 			}
 		}
 
@@ -336,6 +340,12 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
 	return 0, <-exitChan
+}
+
+func (cmd *DevCmd) validateFlags() {
+	if cmd.SkipBuild && cmd.ForceBuild {
+		log.Fatal("Flags --skip-build & --force-build cannot be used together")
+	}
 }
 
 // GetPaths retrieves the watch paths from the config object
