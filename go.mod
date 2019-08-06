@@ -74,6 +74,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
 	github.com/ulikunitz/xz v0.5.5 // indirect
+	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.21.0

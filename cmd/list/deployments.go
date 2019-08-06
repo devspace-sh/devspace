@@ -1,7 +1,9 @@
 package list
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -51,6 +53,18 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	config := configutil.GetConfig()
+
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	kubectl, err := kubectl.NewClient(config)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %s", err.Error())

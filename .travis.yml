@@ -2,7 +2,7 @@ language: go
 sudo: false
 notifications:
   email: false
-env: 
+env:
   global:
     - secure: "BoHOoj/n7ND5GSntul4hMqov/iPWbqpC3uYEFMyEprIUphYy9ANch43iMt2+O0coS122/Q4uZlWKIX3TViTHlPeAF2Aun92puL/ADoD1ureq64kOYm8X9RKHYs2fr/1vvCK95mFDZXdS1cgH87qvxk3TCMZ+NoG4x9V6gmLaUb93D3tTNdJzYnz1cUH2e+uecqX//pYHx/R35fIvthWhV7/gYV94DnXgRhKBO6zn1Y8RxtT1PfzjGxY1ohqzT7d7fu0O1Gau8CM20yCJGOTr1ASYHv21wJQWVztYi/CaIcM5LJ/LFmkumeAgxeavgVnv8XYPPimFr5WoRn8nvebjFUaHb/nxGsC4gKK5Peu4oIIrBLIDqxHt2r6yF+JB6aNQFl5y/3ivid/XafQ37xBDXcj8yzYp4wtVL1UVTbdHYGOFLyByTP/Pbor6L2aLYhXppjoqKA7zeHYpzNI+uLC3pAKWyVhpFZM7ekqR4VaK77evFB8mIvGH0MCLiVH6kkFFhraw57HgGjLpr0BXCeNNqd7sFP+mhBRJbQwaBBdjgqvaoGLl3WeKdNBVEBeX5aB3F390g38SuC/DawWzPz35b/BE7lqSL6AdReasGGfUOIeyFrQzY3wUZD1jIK22LpcQFB6sFs4CUY1T0Hic720BM9nqpyd3eXD7mSWBOePM92A="
 jobs:
@@ -18,7 +18,7 @@ jobs:
       after_success:
         - codeclimate-test-reporter < coverage.txt
     - stage: deploy
-      go: 1.12.4
+      go: 1.12.6
       os: osx
       go_import_path: github.com/devspace-cloud/devspace
       install: skip
@@ -49,7 +49,6 @@ jobs:
           skip_cleanup: true
           api_key:
             secure: KGCqYQmeEirDMoghu88D4hzUaG6ypBIFlY+QBtqlvyIbjbkyoOJ2cYJlcGG3SVssnXHgNQFGa8OZJosjVysNQorYY2P4ckF/V0GM+u0mSAeRcSSrorMOL6c8UQEY5695st2VqZBFtlpW7mNo75pU6Xgkcqhxb4/j/aj0I/+vhHbakFAQXcC6iMsuKQqRkXsh7g/G5/xgc2oxxK7dcfbJqC4QeUddKX0bZdLyml4yVrrI9XR/7bS1h+Q5S6ZyJ2EO3HRE7h6hAuGU21R4lrzRpDJh7Kopg4Fo6zqrU8lF3/Gw+RtmkWGoo6tXn+r6+HBu8xSbkw0NhGdL2iKraE2pOkRDlYZsR1XTNM5WKRMx+cZGY0OJT+Q04/5hs8uIuGwEATOZ2IAj2AWMba750Hx5h18dyLijpvSjNPtPo+ki0MYbMyYuZtlQDqvBfOclLfKoScsHz9ffGf0oz7p9/Z0riLIaMLmQXY5Zq3OSXATnXBAfgwtOppgR1foUKYb0P92uPePYIsmZN+p2HZDgS1nP2++Mg33BCLf+HUVhyekGc+wLbcEZTz49FCPjDRhGZz7FGe1ovvnYmtr00gaUcR6pq2nJGackkTOeuggu5ahmcc6xtFBxRT/JHi+LCeoqESsi6mvF7QEK4Widpn+sFwbAZlhGUVzhYnwfDNM9RK1pF+Q=
-          
           on:
             repo: devspace-cloud/devspace
             branch: master
