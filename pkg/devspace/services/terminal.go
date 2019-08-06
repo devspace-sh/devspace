@@ -16,7 +16,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) error {
+func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) (int, error) {
 	command := getCommand(config, args)
 
 	selectorParameter := &targetselector.SelectorParameter{
@@ -34,43 +34,43 @@ func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParame
 
 	targetSelector, err := targetselector.NewTargetSelector(config, selectorParameter, true)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
 
 	pod, container, err := targetSelector.GetContainer(client)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(kubeconfig)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
 	go func() {
-		terminalErr := kubectl.ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)
-		if terminalErr != nil {
-			if _, ok := terminalErr.(kubectlExec.CodeExitError); ok == false {
-				interrupt <- fmt.Errorf("Unable to start terminal session: %v", terminalErr)
-				return
-			}
-		}
-
-		interrupt <- nil
+		interrupt <- kubectl.ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)
 	}()
 
 	err = <-interrupt
 	upgradeRoundTripper.Close()
-	return err
+	if err != nil {
+		if exitError, ok := err.(kubectlExec.CodeExitError); ok {
+			return exitError.Code, nil
+		}
+
+		return 0, fmt.Errorf("Unable to start terminal session: %v", err)
+	}
+
+	return 0, nil
 }
 
 func getCommand(config *latest.Config, args []string) []string {

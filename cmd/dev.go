@@ -23,6 +23,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -162,35 +163,42 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	err = cmd.buildAndDeploy(config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	analytics, err := analytics.GetAnalytics()
+	if err == nil {
+		analytics.SendCommandEvent(nil)
+	}
+
+	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) error {
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
 		if err != nil {
-			log.Fatalf("Error deploying dependencies: %v", err)
+			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary
 		builtImages, err := build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
-				return fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+				return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 			}
 
-			return fmt.Errorf("Error building image: %v", err)
+			return 0, fmt.Errorf("Error building image: %v", err)
 		}
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
 			err := generated.SaveConfig(generatedConfig)
 			if err != nil {
-				return fmt.Errorf("Error saving generated config: %v", err)
+				return 0, fmt.Errorf("Error saving generated config: %v", err)
 			}
 		}
 
@@ -208,21 +216,24 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			// Deploy all
 			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
 			if err != nil {
-				return fmt.Errorf("Error deploying: %v", err)
+				return 0, fmt.Errorf("Error deploying: %v", err)
 			}
 
 			// Save Config
 			err = generated.SaveConfig(generatedConfig)
 			if err != nil {
-				return fmt.Errorf("Error saving generated config: %v", err)
+				return 0, fmt.Errorf("Error saving generated config: %v", err)
 			}
 		}
 	}
 
 	// Start services
+	exitCode := 0
 	if cmd.ExitAfterDeploy == false {
+		var err error
+
 		// Start services
-		err := cmd.startServices(config, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(config, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -233,18 +244,18 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 				return cmd.buildAndDeploy(config, generatedConfig, client, args)
 			}
 
-			return err
+			return 0, err
 		}
 	}
 
-	return nil
+	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interface, args []string, log log.Logger) error {
+func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interface, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, client, log)
 		if err != nil {
-			return fmt.Errorf("Unable to start portforwarding: %v", err)
+			return 0, fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
 
 		defer func() {
@@ -257,7 +268,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	if cmd.Sync {
 		syncConfigs, err := services.StartSync(config, cmd.VerboseSync, log)
 		if err != nil {
-			return fmt.Errorf("Unable to start sync: %v", err)
+			return 0, fmt.Errorf("Unable to start sync: %v", err)
 		}
 
 		defer func() {
@@ -284,7 +295,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 			return nil
 		}, log)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		watcher.Start()
@@ -313,18 +324,18 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	log.Info("Will now try to print the logs of a running pod...")
 
 	// Start attaching to a running pod
-	err := services.StartAttach(config, client, params, exitChan, log)
+	_, err := services.StartAttach(config, client, params, exitChan, log)
 	if err != nil {
 		// If it's a reload error we return that so we can rebuild & redeploy
 		if _, ok := err.(*reloadError); ok {
-			return err
+			return 0, err
 		}
 
 		log.Infof("Couldn't print logs of running pod: %v", err)
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
-	return <-exitChan
+	return 0, <-exitChan
 }
 
 // GetPaths retrieves the watch paths from the config object

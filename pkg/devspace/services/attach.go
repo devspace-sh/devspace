@@ -13,7 +13,7 @@ import (
 )
 
 // StartAttach starts attaching to the first pod devspace finds or does nothing
-func StartAttach(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, interrupt chan error, log log.Logger) error {
+func StartAttach(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, interrupt chan error, log log.Logger) (int, error) {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
@@ -29,40 +29,39 @@ func StartAttach(config *latest.Config, client kubernetes.Interface, cmdParamete
 
 	targetSelector, err := targetselector.NewTargetSelector(config, selectorParameter, true)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	pod, container, err := targetSelector.GetContainer(client)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	kubeconfig, err := kubectl.GetRestConfig(config)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(kubeconfig)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	log.Infof("Printing logs of pod %s/%s...", pod.Name, container.Name)
 
 	go func() {
-		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, true, nil, os.Stdout, os.Stderr)
-		if err != nil {
-			if _, ok := err.(kubectlExec.CodeExitError); ok == false {
-				interrupt <- fmt.Errorf("Unable to start attach session: %v", err)
-				return
-			}
-		}
-
-		interrupt <- nil
+		interrupt <- kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, true, nil, os.Stdout, os.Stderr)
 	}()
 
 	err = <-interrupt
 	upgradeRoundTripper.Close()
+	if err != nil {
+		if exitError, ok := err.(kubectlExec.CodeExitError); ok {
+			return exitError.Code, nil
+		}
 
-	return err
+		return 0, fmt.Errorf("Unable to start terminal session: %v", err)
+	}
+
+	return 0, nil
 }
