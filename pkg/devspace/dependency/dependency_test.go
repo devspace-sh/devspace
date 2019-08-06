@@ -206,7 +206,7 @@ func TestDeployAll(t *testing.T) {
 			allowCyclicParam: true,
 			expectedLog: `
 Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir + string(os.PathSeparator) + "someDir"),
+			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
 		},
 	}
 
@@ -228,7 +228,7 @@ Done Resolved 1 dependencies`,
 			},
 		}
 
-		err = DeployAll(testConfig, generatedConfig, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
+		err = DeployAll(testConfig, generatedConfig, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -312,7 +312,7 @@ func TestPurgeAll(t *testing.T) {
 			allowCyclicParam: true,
 			expectedLog: `
 Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir + string(os.PathSeparator) + "someDir"),
+			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
 		},
 	}
 

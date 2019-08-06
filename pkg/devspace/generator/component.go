@@ -91,6 +91,10 @@ func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
 		params.Question = "Please enter a value"
 	} else {
 		if variable.Question == nil {
+			if variable.Name == nil {
+				variable.Name = ptr.String("variable")
+			}
+
 			params.Question = "Please enter a value for " + *variable.Name
 		} else {
 			params.Question = *variable.Question
