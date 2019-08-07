@@ -43,9 +43,6 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 		providerName = *useProviderName
 	}
 
-	log.StartWait("Logging into cloud provider...")
-	defer log.StopWait()
-
 	// Ensure user is logged in
 	err = EnsureLoggedIn(providerConfig, providerName, log)
 	if err != nil {
