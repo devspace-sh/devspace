@@ -27,6 +27,7 @@ type DeployCmd struct {
 	DockerTarget string
 
 	ForceBuild        bool
+	SkipBuild         bool
 	BuildSequential   bool
 	ForceDeploy       bool
 	Deployments       string
@@ -69,6 +70,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
+	deployCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
@@ -90,6 +92,9 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Start file logging
 	log.StartFileLogging()
+
+	// Validate flags
+	cmd.validateFlags()
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig()
@@ -134,26 +139,29 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}
 
 	// Build images
-	builtImages, err := build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
-	if err != nil {
-		if strings.Index(err.Error(), "no space left on device") != -1 {
-			err = fmt.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+	builtImages := make(map[string]string)
+	if cmd.SkipBuild == false {
+		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		if err != nil {
+			if strings.Index(err.Error(), "no space left on device") != -1 {
+				err = fmt.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+			}
+
+			log.Fatal(err)
 		}
 
-		log.Fatal(err)
-	}
-
-	// Save config if an image was built
-	if len(builtImages) > 0 {
-		err := generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatalf("Error saving generated config: %v", err)
+		// Save config if an image was built
+		if len(builtImages) > 0 {
+			err := generated.SaveConfig(generatedConfig)
+			if err != nil {
+				log.Fatalf("Error saving generated config: %v", err)
+			}
 		}
 	}
 
@@ -184,6 +192,12 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		log.Donef("Successfully deployed!")
 		log.Infof("Run `%s` to check for potential issues", ansi.Color("devspace analyze", "white+b"))
+	}
+}
+
+func (cmd *DeployCmd) validateFlags() {
+	if cmd.SkipBuild && cmd.ForceBuild {
+		log.Fatal("Flags --skip-build & --force-build cannot be used together")
 	}
 }
 

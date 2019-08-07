@@ -16,7 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -38,31 +38,26 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	version := upgrade.GetVersion()
-	analytics, analyticsErr := analytics.GetAnalytics()
-	defer analytics.ReportPanics()
-	
+	defer cloudanalytics.ReportPanics()
+
 	if version != "" {
 		rootCmd.Version = upgrade.GetVersion()
 
 		if strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
 			newerVersion, err := upgrade.CheckForNewerVersion()
-
 			if err == nil && newerVersion != "" {
 				log.Warnf("There is a newer version of DevSpace CLI v%s. Run `devspace upgrade` to update the CLI.\n", newerVersion)
 			}
 		}
 	}
 
-	if err := rootCmd.Execute(); err != nil {
-		if analyticsErr == nil {
-			analytics.SendCommandEvent(err)
-		}
+	// Execute command
+	err := rootCmd.Execute()
+	if err != nil {
 		fmt.Println(err)
-	} else {
-		if analyticsErr == nil {
-			analytics.SendCommandEvent(nil)
-		}
 	}
+
+	cloudanalytics.SendCommandEvent(err)
 }
 
 func init() {

@@ -10,7 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/spf13/cobra"
@@ -120,10 +120,6 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	analytics, err := analytics.GetAnalytics()
-	if err == nil {
-		analytics.SendCommandEvent(nil)
-	}
-
+	cloudanalytics.SendCommandEvent(nil)
 	os.Exit(exitCode)
 }

@@ -3,7 +3,6 @@
 package envutil
 
 import (
-	"log"
 	"syscall"
 	"unsafe"
 
@@ -23,13 +22,13 @@ const (
 func setEnv(name string, value string) error {
 	k, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.ALL_ACCESS)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer k.Close()
 
 	err = k.SetExpandStringValue(name, value)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	// https://docs.microsoft.com/en-us/windows/desktop/api/shlobj_core/nf-shlobj_core-shchangenotify
 	syscall.NewLazyDLL("shell32.dll").NewProc("SHChangeNotify").Call(

@@ -101,7 +101,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild, forceDeploy bool, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -132,7 +132,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
-		err := dependency.Deploy(skipPush, forceDeployDependencies, forceBuild, forceDeploy, streamLog)
+		err := dependency.Deploy(skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, streamLog)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
@@ -265,7 +265,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(skipPush bool, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
 	// Check if we should redeploy
 	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
 	if err != nil {
@@ -319,7 +319,7 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, forceBuild, forceD
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)
-	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
+	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
 		// Build images
 		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, skipPush, false, forceBuild, false, log)
 		if err != nil {
