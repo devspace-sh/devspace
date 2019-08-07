@@ -12,6 +12,11 @@ const TestNamespace = "test-namespace"
 func SetFakeConfig(fakeConfig *latest.Config) {
 	getConfigOnce.Do(func() {})
 
+	if fakeConfig == nil {
+		config = nil
+		return
+	}
+
 	if fakeConfig.Deployments == nil {
 		fakeConfig.Deployments = &[]*latest.DeploymentConfig{}
 	}
