@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	"github.com/docker/docker/api"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 )
@@ -96,12 +95,8 @@ func newDockerClientFromMinikube(config *latest.Config) (client.CommonAPIClient,
 	if host == "" {
 		host = client.DefaultDockerHost
 	}
-	version := env["DOCKER_API_VERSION"]
-	if version == "" {
-		version = api.DefaultVersion
-	}
 
-	return client.NewClient(host, version, httpclient, nil)
+	return client.NewClient(host, env["DOCKER_API_VERSION"], httpclient, nil)
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {
