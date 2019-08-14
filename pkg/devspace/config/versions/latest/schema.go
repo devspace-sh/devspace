@@ -106,9 +106,12 @@ type ComponentConfig struct {
 	Replicas            *int                    `yaml:"replicas,omitempty"`
 	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
 	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
+	Labels              *map[string]*string     `yaml:"labels,omitempty"`
+	Annotations         *map[string]*string     `yaml:"annotations,omitempty"`
 	Volumes             *[]*VolumeConfig        `yaml:"volumes,omitempty"`
 	Service             *ServiceConfig          `yaml:"service,omitempty"`
 	ServiceName         *string                 `yaml:"serviceName,omitempty"`
+	Ingress             *IngressConfig          `yaml:"ingress,omitempty"`
 	PodManagementPolicy *string                 `yaml:"podManagementPolicy,omitempty"`
 	PullSecrets         *[]*string              `yaml:"pullSecrets,omitempty"`
 	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
@@ -162,10 +165,12 @@ type RollingUpdateConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name      *string                      `yaml:"name,omitempty"`
-	Size      *string                      `yaml:"size,omitempty"`
-	ConfigMap *map[interface{}]interface{} `yaml:"configMap,omitempty"`
-	Secret    *map[interface{}]interface{} `yaml:"secret,omitempty"`
+	Name        *string                      `yaml:"name,omitempty"`
+	Size        *string                      `yaml:"size,omitempty"`
+	ConfigMap   *map[interface{}]interface{} `yaml:"configMap,omitempty"`
+	Secret      *map[interface{}]interface{} `yaml:"secret,omitempty"`
+	Labels      *map[string]*string          `yaml:"labels,omitempty"`
+	Annotations *map[string]*string          `yaml:"annotations,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
@@ -174,6 +179,8 @@ type ServiceConfig struct {
 	Type        *string               `yaml:"type,omitempty"`
 	Ports       *[]*ServicePortConfig `yaml:"ports,omitempty"`
 	ExternalIPs *[]*string            `yaml:"externalIPs,omitempty"`
+	Labels      *map[string]*string   `yaml:"labels,omitempty"`
+	Annotations *map[string]*string   `yaml:"annotations,omitempty"`
 }
 
 // ServicePortConfig holds the port configuration of a component service
@@ -181,6 +188,23 @@ type ServicePortConfig struct {
 	Port          *int    `yaml:"port,omitempty"`
 	ContainerPort *int    `yaml:"containerPort,omitempty"`
 	Protocol      *string `yaml:"protocol,omitempty"`
+}
+
+// IngressConfig holds the configuration of a component ingress
+type IngressConfig struct {
+	Name        *string               `yaml:"name,omitempty"`
+	TLS         *string               `yaml:"tls,omitempty"`
+	Labels      *map[string]*string   `yaml:"labels,omitempty"`
+	Annotations *map[string]*string   `yaml:"annotations,omitempty"`
+	Rules       *[]*IngressRuleConfig `yaml:"rules,omitempty"`
+}
+
+// IngressRuleConfig holds the port configuration of a component service
+type IngressRuleConfig struct {
+	Host        *string `yaml:"host,omitempty"`
+	ServicePort *int    `yaml:"servicePort,omitempty"`
+	Path        *string `yaml:"path,omitempty"`
+	TLS         *string `yaml:"tls,omitempty"`
 }
 
 // ComponentConfigOptions defines the specific helm options used during deployment of a component
