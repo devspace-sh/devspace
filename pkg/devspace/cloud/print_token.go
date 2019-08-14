@@ -23,7 +23,9 @@ func (p *Provider) PrintToken(spaceID int) error {
 
 		if now.Before(time.Unix(tokenCache.Expires, 0)) {
 			// Check if we should resume
-			if time.Unix(tokenCache.LastResume, 0).Add(time.Minute * 3).Before(now) {
+			mustResume := time.Unix(tokenCache.LastResume, 0).Add(time.Minute * 3).Before(now)
+
+			if mustResume {
 				err := resume(p, tokenCache.Server, tokenCache.CaCert, tokenCache.Token, tokenCache.Namespace, spaceID, &Cluster{
 					ClusterID:    tokenCache.ClusterID,
 					Name:         tokenCache.ClusterName,
@@ -40,7 +42,14 @@ func (p *Provider) PrintToken(spaceID int) error {
 			}
 
 			// Now print token
-			return printToken(tokenCache.Token)
+			err := printToken(tokenCache.Token)
+			if err != nil || mustResume {
+				// Sends analytics requests if error or if space resume ping was sent
+				return err
+			}
+
+			// Prevent analytics from sending request
+			os.Exit(0)
 		}
 	}
 

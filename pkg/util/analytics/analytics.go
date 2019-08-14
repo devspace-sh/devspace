@@ -30,6 +30,8 @@ var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
 var loadAnalyticsOnce sync.Once
 
+const identifierUndefinedValue = "undefined"
+
 // Analytics is an interface for sending data to an analytics service
 type Analytics interface {
 	Disable() error
@@ -114,7 +116,7 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 }
 
 func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]interface{}) error {
-	if !a.Disabled {
+	if !a.Disabled && token != "" {
 		insertID, err := randutil.GenerateRandomString(16)
 		if err != nil {
 			return fmt.Errorf("Couldn't generate random insert_id for analytics: %v", err)
@@ -122,7 +124,7 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 		eventData["$insert_id"] = insertID
 		eventData["token"] = token
 
-		if a.Identifier != "" {
+		if a.Identifier != "" && a.Identifier != identifierUndefinedValue {
 			eventData["distinct_id"] = a.Identifier
 		} else {
 			eventData["distinct_id"] = a.DistinctID
@@ -135,19 +137,34 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 
 		data["event"] = eventName
 		data["properties"] = eventData
+
+		if a.Identifier == "" {
+			a.Identifier = identifierUndefinedValue
+
+			// ignore if config save fails
+			_ = a.save()
+
+			// ignore if user update fails
+			_ = a.UpdateUser(map[string]interface{}{
+				"cli_version":  a.version,
+				"runtime_os":   runtime.GOOS,
+				"runtime_arch": runtime.GOARCH,
+			})
+		}
 		return a.sendRequest("track", data)
 	}
 	return nil
 }
 
 func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
-	if !a.Disabled {
+	if !a.Disabled && token != "" {
 		data := map[string]interface{}{}
 		data["$token"] = token
-		data["$distinct_id"] = a.Identifier
 
-		if _, ok := data["$time"]; !ok {
-			data["$time"] = time.Now()
+		if a.Identifier != "" && a.Identifier != identifierUndefinedValue {
+			data["$distinct_id"] = a.Identifier
+		} else {
+			data["$distinct_id"] = a.DistinctID
 		}
 		data["$set"] = userData
 
@@ -268,7 +285,10 @@ func GetAnalytics() (Analytics, error) {
 				err = fmt.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
 				return
 			}
-		} else {
+
+		}
+
+		if analyticsInstance.DistinctID == "" {
 			err = analyticsInstance.resetDistinctID()
 			if err != nil {
 				err = fmt.Errorf("Couldn't reset analytics distinct id: %v", err)
