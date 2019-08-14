@@ -91,7 +91,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if configExists && cmd.Reconfigure == false {
 		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
 		log.Infof("\r          \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
-		os.Exit(0)
+		return
 	}
 
 	// Delete config & overwrite config

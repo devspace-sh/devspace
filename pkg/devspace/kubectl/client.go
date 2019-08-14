@@ -31,6 +31,26 @@ func NewClient(devSpaceConfig *latest.Config) (kubernetes.Interface, error) {
 	return kubernetes.NewForConfig(restConfig)
 }
 
+// NewClientFromContext creates a new kubernetes client from given context
+func NewClientFromContext(context string) (kubernetes.Interface, error) {
+	config, err := GetRestConfigFromContext(context)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(config)
+}
+
+// NewClientFromKubeConfig creates a new kubernetes client from a given kube config
+func NewClientFromKubeConfig(config clientcmd.ClientConfig) (kubernetes.Interface, error) {
+	clientConfig, err := config.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(clientConfig)
+}
+
 // NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
 func NewClientWithContextSwitch(devSpaceConfig *latest.Config, switchContext bool) (kubernetes.Interface, error) {
 	config, err := loadClientConfig(devSpaceConfig, switchContext)

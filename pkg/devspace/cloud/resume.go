@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/pkg/errors"
 )
@@ -54,29 +55,9 @@ func ResumeSpace(config *latest.Config, generatedConfig *generated.Config, loop 
 			return err
 		}
 
-		maxWait := time.Minute * 5
-		start := time.Now()
-
-		for time.Now().Sub(start) <= maxWait {
-			pods, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
-			if err != nil {
-				return errors.Wrap(err, "list pods")
-			}
-
-			continueWaiting := false
-			for _, pod := range pods.Items {
-				for _, containerStatus := range pod.Status.ContainerStatuses {
-					if containerStatus.State.Waiting != nil {
-						continueWaiting = true
-					}
-				}
-			}
-
-			if !continueWaiting {
-				break
-			}
-
-			time.Sleep(1 * time.Second)
+		err = WaitForSpaceResume(client, namespace)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -87,6 +68,36 @@ func ResumeSpace(config *latest.Config, generatedConfig *generated.Config, loop 
 				p.ResumeSpace(space.SpaceID, space.Cluster)
 			}
 		}()
+	}
+
+	return nil
+}
+
+// WaitForSpaceResume waits for a space to resume
+func WaitForSpaceResume(client kubernetes.Interface, namespace string) error {
+	maxWait := time.Minute * 5
+	start := time.Now()
+
+	for time.Now().Sub(start) <= maxWait {
+		pods, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return errors.Wrap(err, "list pods")
+		}
+
+		continueWaiting := false
+		for _, pod := range pods.Items {
+			for _, containerStatus := range pod.Status.ContainerStatuses {
+				if containerStatus.State.Waiting != nil {
+					continueWaiting = true
+				}
+			}
+		}
+
+		if !continueWaiting {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
 	}
 
 	return nil
