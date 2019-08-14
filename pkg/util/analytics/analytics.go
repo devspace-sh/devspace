@@ -30,8 +30,6 @@ var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
 var loadAnalyticsOnce sync.Once
 
-const identifierUndefinedValue = "undefined"
-
 // Analytics is an interface for sending data to an analytics service
 type Analytics interface {
 	Disable() error
@@ -44,9 +42,10 @@ type Analytics interface {
 }
 
 type analyticsConfig struct {
-	DistinctID string `yaml:"distinctId,omitempty"`
-	Identifier string `yaml:"identifier,omitempty"`
-	Disabled   bool   `yaml:"disabled,omitempty"`
+	DistinctID   string `yaml:"distinctId,omitempty"`
+	Identifier   string `yaml:"identifier,omitempty"`
+	Disabled     bool   `yaml:"disabled,omitempty"`
+	LatestUpdate int64  `yaml:"latestUpdate,omitempty"`
 
 	version string
 }
@@ -117,6 +116,8 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 
 func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]interface{}) error {
 	if !a.Disabled && token != "" {
+		now := time.Now()
+
 		insertID, err := randutil.GenerateRandomString(16)
 		if err != nil {
 			return fmt.Errorf("Couldn't generate random insert_id for analytics: %v", err)
@@ -124,32 +125,28 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 		eventData["$insert_id"] = insertID
 		eventData["token"] = token
 
-		if a.Identifier != "" && a.Identifier != identifierUndefinedValue {
+		if a.Identifier != "" {
 			eventData["distinct_id"] = a.Identifier
 		} else {
 			eventData["distinct_id"] = a.DistinctID
 		}
 
 		if _, ok := eventData["time"]; !ok {
-			eventData["time"] = time.Now()
+			eventData["time"] = now
 		}
 		data := map[string]interface{}{}
 
 		data["event"] = eventName
 		data["properties"] = eventData
 
-		if a.Identifier == "" {
-			a.Identifier = identifierUndefinedValue
+		if time.Unix(a.LatestUpdate, 0).Add(time.Minute * 30).Before(now) {
+			a.LatestUpdate = now.Unix()
 
 			// ignore if config save fails
 			_ = a.save()
 
 			// ignore if user update fails
-			_ = a.UpdateUser(map[string]interface{}{
-				"cli_version":  a.version,
-				"runtime_os":   runtime.GOOS,
-				"runtime_arch": runtime.GOARCH,
-			})
+			_ = a.UpdateUser(map[string]interface{}{})
 		}
 		return a.sendRequest("track", data)
 	}
@@ -161,13 +158,24 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 		data := map[string]interface{}{}
 		data["$token"] = token
 
-		if a.Identifier != "" && a.Identifier != identifierUndefinedValue {
+		if a.Identifier != "" {
 			data["$distinct_id"] = a.Identifier
 		} else {
 			data["$distinct_id"] = a.DistinctID
 		}
 		data["$set"] = userData
 
+		if _, ok := data["cli_version"]; !ok {
+			data["cli_version"] = a.version
+		}
+
+		if _, ok := data["runtime_os"]; !ok {
+			data["runtime_os"] = runtime.GOOS
+		}
+
+		if _, ok := data["runtime_arch"]; !ok {
+			data["runtime_arch"] = runtime.GOARCH
+		}
 		return a.sendRequest("engage", data)
 	}
 	return nil
