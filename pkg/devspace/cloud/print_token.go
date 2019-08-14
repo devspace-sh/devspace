@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,22 +100,22 @@ func resume(p *Provider, server, caCert, token, namespace string, spaceID int, c
 		// Give the controllers some time to create the pods
 		time.Sleep(time.Second * 3)
 
-		// Load new kube config
-		config, err := kubeconfig.LoadNewConfig("devspace", server, caCert, token, namespace)
-		if err != nil {
-			return err
-		}
+		// // Load new kube config
+		// config, err := kubeconfig.LoadNewConfig("devspace", server, caCert, token, namespace)
+		// if err != nil {
+		// 	return err
+		// }
 
-		// Create kube client
-		client, err := kubectl.NewClientFromKubeConfig(config)
-		if err != nil {
-			return err
-		}
+		// // Create kube client
+		// client, err := kubectl.NewClientFromKubeConfig(config)
+		// if err != nil {
+		// 	return err
+		// }
 
-		err = WaitForSpaceResume(client, namespace)
-		if err != nil {
-			return err
-		}
+		// err = WaitForSpaceResume(client, namespace)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 
 	return nil

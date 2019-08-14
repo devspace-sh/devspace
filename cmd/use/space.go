@@ -94,8 +94,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		cloudProvider = &cmd.Provider
 	}
 
+	logger := log.GetInstance()
+	if cmd.GetToken == true {
+		logger = log.Discard
+	}
+
 	// Get cloud provider from config
-	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
+	provider, err := cloudpkg.GetProvider(cloudProvider, logger)
 	if err != nil {
 		log.Fatalf("Error getting cloud context: %v", err)
 	}

@@ -94,7 +94,7 @@ func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, spaceI
 	authInfo.Exec = &api.ExecConfig{
 		APIVersion: "client.authentication.k8s.io/v1alpha1",
 		Command:    "devspace",
-		Args:       []string{"--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token"},
+		Args:       []string{"use", "space", "--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token"},
 	}
 
 	config.Clusters[contextName] = cluster
