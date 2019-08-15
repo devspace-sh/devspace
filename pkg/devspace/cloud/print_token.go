@@ -37,10 +37,18 @@ func (p *Provider) PrintToken(spaceID int) error {
 
 				// We don't care so much if saving fails here
 				_ = p.Save()
+
+				// Now print token
+				return printToken(tokenCache.Token)
 			}
 
-			// Now print token
-			return printToken(tokenCache.Token)
+			err := printToken(tokenCache.Token)
+			if err != nil {
+				return err
+			}
+
+			// We exit here directly (not a very elegant way, but we do not want to send mixpanel stats every time which delays all other commands)
+			os.Exit(0)
 		}
 	}
 
@@ -92,7 +100,8 @@ func resume(p *Provider, server, caCert, token, namespace string, spaceID int, c
 	// Resume space
 	resumed, err := p.ResumeSpace(spaceID, cluster)
 	if err != nil {
-		return err
+		// We ignore the error here, because we don't want kubectl or other commands to fail if we have an outage
+		// return err
 	}
 
 	// We will wait a little bit till the space has resumed

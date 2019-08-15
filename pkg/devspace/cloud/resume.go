@@ -33,7 +33,7 @@ func ResumeSpace(config *latest.Config, generatedConfig *generated.Config, loop 
 
 	resumed, err := p.ResumeSpace(space.SpaceID, space.Cluster)
 	if err != nil {
-		return errors.Wrap(err, "active space")
+		return errors.Wrap(err, "resume space")
 	}
 
 	// We will wait a little bit till the space has resumed
