@@ -395,12 +395,24 @@ func askQuestions(cache *generated.CacheConfig, vars []*configspkg.Variable) err
 			return fmt.Errorf("Name required for variable with index %d", idx)
 		}
 
-		if os.Getenv(VarEnvPrefix+strings.ToUpper(*variable.Name)) != "" {
-			continue
-		} else if _, ok := cache.Vars[*variable.Name]; ok {
+		isInEnv := os.Getenv(VarEnvPrefix+strings.ToUpper(*variable.Name)) != "" || os.Getenv(*variable.Name) != ""
+		if variable.Source != nil && *variable.Source == configspkg.VariableSourceEnv && isInEnv == false {
+			return fmt.Errorf("Couldn't find environment variable %s, but is needed for loading the config", *variable.Name)
+		}
+
+		// Check if variable is in environment
+		if variable.Source == nil || *variable.Source != configspkg.VariableSourceInput {
+			if isInEnv {
+				continue
+			}
+		}
+
+		// Is cached
+		if _, ok := cache.Vars[*variable.Name]; ok {
 			continue
 		}
 
+		// Ask question
 		cache.Vars[*variable.Name] = AskQuestion(variable)
 	}
 
