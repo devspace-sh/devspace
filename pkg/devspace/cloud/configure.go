@@ -3,6 +3,7 @@ package cloud
 import (
 	"encoding/base64"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -75,7 +76,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 }
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
-func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, setActive bool) error {
+func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, spaceID int, providerName string, setActive bool) error {
 	config, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err
@@ -90,7 +91,11 @@ func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, setAct
 	cluster.CertificateAuthorityData = caCert
 
 	authInfo := api.NewAuthInfo()
-	authInfo.Token = serviceAccount.Token
+	authInfo.Exec = &api.ExecConfig{
+		APIVersion: "client.authentication.k8s.io/v1alpha1",
+		Command:    "devspace",
+		Args:       []string{"use", "space", "--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token"},
+	}
 
 	config.Clusters[contextName] = cluster
 	config.AuthInfos[contextName] = authInfo

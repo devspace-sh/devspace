@@ -19,11 +19,11 @@ func ReportPanics() {
 }
 
 // SendCommandEvent sends a new event to the analytics provider
-func SendCommandEvent(err error) {
+func SendCommandEvent(commandErr error) {
 	analytics, err := analytics.GetAnalytics()
 	if err == nil {
 		// Ignore analytics error
-		_ = analytics.SendCommandEvent(err)
+		_ = analytics.SendCommandEvent(commandErr)
 	}
 }
 

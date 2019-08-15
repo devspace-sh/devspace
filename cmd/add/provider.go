@@ -63,6 +63,9 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Couldn't login to provider: %v", err)
 	}
 
+	// Switch default provider to newly added provider name
+	providerConfig.Default = providerName
+
 	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
 		log.Fatalf("Couldn't save provider config: %v", err)

@@ -9,7 +9,7 @@ import (
 
 // GetClusterKey makes sure there is a correct key for the given cluster id
 func (p *Provider) GetClusterKey(cluster *Cluster) (string, error) {
-	if cluster.Owner == nil || cluster.EncryptToken == false {
+	if cluster.EncryptToken == false {
 		return "", nil
 	}
 

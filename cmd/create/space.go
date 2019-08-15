@@ -125,7 +125,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, true)
+	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, spaceID, provider.Name, true)
 	if err != nil {
 		log.Fatalf("Error saving kube config: %v", err)
 	}

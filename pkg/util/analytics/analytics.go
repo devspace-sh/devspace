@@ -42,9 +42,10 @@ type Analytics interface {
 }
 
 type analyticsConfig struct {
-	DistinctID string `yaml:"distinctId,omitempty"`
-	Identifier string `yaml:"identifier,omitempty"`
-	Disabled   bool   `yaml:"disabled,omitempty"`
+	DistinctID   string `yaml:"distinctId,omitempty"`
+	Identifier   string `yaml:"identifier,omitempty"`
+	Disabled     bool   `yaml:"disabled,omitempty"`
+	LatestUpdate int64  `yaml:"latestUpdate,omitempty"`
 
 	version string
 }
@@ -71,10 +72,9 @@ func (a *analyticsConfig) Identify(identifier string) error {
 			// different user is logged in now => RESET DISTINCT ID
 			_ = a.resetDistinctID()
 		}
-		a.Identifier = identifier
 
 		// Save a.Identifier as alias for a.DistinctID
-		err := a.createAlias()
+		err := a.createAlias(identifier)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,9 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 }
 
 func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]interface{}) error {
-	if !a.Disabled {
+	if !a.Disabled && token != "" {
+		now := time.Now()
+
 		insertID, err := randutil.GenerateRandomString(16)
 		if err != nil {
 			return fmt.Errorf("Couldn't generate random insert_id for analytics: %v", err)
@@ -129,25 +131,52 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 		}
 
 		if _, ok := eventData["time"]; !ok {
-			eventData["time"] = time.Now()
+			eventData["time"] = now
 		}
 		data := map[string]interface{}{}
 
 		data["event"] = eventName
 		data["properties"] = eventData
+
+		if time.Unix(a.LatestUpdate, 0).Add(time.Minute * 5).Before(now) {
+			// ignore if user update fails
+			_ = a.UpdateUser(map[string]interface{}{})
+		}
 		return a.sendRequest("track", data)
 	}
 	return nil
 }
 
 func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
-	if !a.Disabled {
+	if !a.Disabled && token != "" {
+		a.LatestUpdate = time.Now().Unix()
+
+		// ignore if config save fails
+		_ = a.save()
+
 		data := map[string]interface{}{}
 		data["$token"] = token
-		data["$distinct_id"] = a.Identifier
 
-		if _, ok := data["$time"]; !ok {
-			data["$time"] = time.Now()
+		if a.Identifier != "" {
+			data["$distinct_id"] = a.Identifier
+		} else {
+			data["$distinct_id"] = a.DistinctID
+		}
+
+		if _, ok := userData["cli_version"]; !ok {
+			userData["cli_version"] = a.version
+		}
+
+		if _, ok := userData["runtime_os"]; !ok {
+			userData["runtime_os"] = runtime.GOOS
+		}
+
+		if _, ok := userData["runtime_arch"]; !ok {
+			userData["runtime_arch"] = runtime.GOARCH
+		}
+
+		if _, ok := userData["duplicate"]; !ok {
+			userData["duplicate"] = false
 		}
 		data["$set"] = userData
 
@@ -161,7 +190,6 @@ func (a *analyticsConfig) ReportPanics() {
 		err := fmt.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
 		a.SendCommandEvent(err)
-		fmt.Println(err)
 	}
 }
 
@@ -169,22 +197,35 @@ func (a *analyticsConfig) SetVersion(version string) {
 	a.version = version
 }
 
-func (a *analyticsConfig) createAlias() error {
+func (a *analyticsConfig) createAlias(identifier string) error {
 	if !a.Disabled {
-		data := map[string]interface{}{
-			"event": "$create_alias",
-			"properties": map[string]interface{}{
-				"distinct_id": a.Identifier,
-				"alias":       a.DistinctID,
-				"token":       token,
-			},
-		}
-		identifierSections := strings.Split(a.Identifier, "/")
+		identifierSections := strings.Split(identifier, "/")
 
-		a.UpdateUser(map[string]interface{}{
+		// mark current distinct_id as duplicate
+		// => future calls will reset this for the correct distinct_id
+		// ignore if user update fails
+		_ = a.UpdateUser(map[string]interface{}{
+			"provider":   identifierSections[0],
+			"account_id": identifierSections[1],
+			"duplicate":  true,
+		})
+
+		a.Identifier = identifier
+
+		// ignore if update user fails
+		_ = a.UpdateUser(map[string]interface{}{
 			"provider":   identifierSections[0],
 			"account_id": identifierSections[1],
 		})
+
+		data := map[string]interface{}{
+			"event": "$create_alias",
+			"properties": map[string]interface{}{
+				"distinct_id": a.DistinctID,
+				"alias":       a.Identifier,
+				"token":       token,
+			},
+		}
 		return a.sendRequest("track", data)
 	}
 	return nil
@@ -268,7 +309,10 @@ func GetAnalytics() (Analytics, error) {
 				err = fmt.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
 				return
 			}
-		} else {
+
+		}
+
+		if analyticsInstance.DistinctID == "" {
 			err = analyticsInstance.resetDistinctID()
 			if err != nil {
 				err = fmt.Errorf("Couldn't reset analytics distinct id: %v", err)
