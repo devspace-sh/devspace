@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/devspace-cloud/devspace/pkg/util/vars"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 
@@ -25,9 +25,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	yaml "gopkg.in/yaml.v2"
 )
-
-// VarMatchRegex is the regex to check if a value matches the devspace var format
-var VarMatchRegex = regexp.MustCompile("^(.*)(\\$\\{[^\\}]+\\})(.*)$")
 
 // VarEnvPrefix is the prefix environment variables should have in order to use them
 const VarEnvPrefix = "DEVSPACE_VAR_"
@@ -120,63 +117,50 @@ func varReplaceFn(path, value string) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	matched := VarMatchRegex.FindStringSubmatch(value)
-	if len(matched) != 4 {
-		return "", nil
-	}
+	return vars.ParseString(value, resolveVar)
+}
 
-	value = matched[2]
-	varName := strings.TrimSpace(value[2 : len(value)-1])
-
-	// Find value for variable
-	varValue := ""
+func resolveVar(varName string) (string, error) {
+	// Is predefined variable?
 	if variable, ok := PredefinedVars[strings.ToUpper(varName)]; ok {
 		if variable.Value == nil {
-			return nil, errors.New(variable.ErrorMessage)
+			return "", errors.New(variable.ErrorMessage)
 		}
 
-		varValue = *variable.Value
-	} else if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
-		envVarValue := os.Getenv(VarEnvPrefix + strings.ToUpper(varName))
-		varValue = envVarValue
-	} else {
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			return nil, fmt.Errorf("Error reading generated config: %v", err)
-		}
-
-		// Get current config
-		currentConfig := generatedConfig.GetActive()
-		if _, ok := currentConfig.Vars[varName]; !ok {
-			currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
-				Question: ptr.String("Please enter a value for " + varName),
-			})
-		}
-
-		varValue = currentConfig.Vars[varName]
-
-		// Save config
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return nil, fmt.Errorf("Error saving generated config: %v", err)
-		}
+		return *variable.Value, nil
 	}
 
-	// Add matched groups again
-	varValue = matched[1] + varValue + matched[3]
-
-	// Check if we can convert val
-	if i, err := strconv.Atoi(varValue); err == nil {
-		return i, nil
-	} else if b, err := strconv.ParseBool(varValue); err == nil {
-		return b, nil
+	// Is in generated config?
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		return "", fmt.Errorf("Error reading generated config: %v", err)
+	}
+	currentConfig := generatedConfig.GetActive()
+	if _, ok := currentConfig.Vars[varName]; ok {
+		return currentConfig.Vars[varName], nil
 	}
 
-	return varValue, nil
+	// Is in environment?
+	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
+		return os.Getenv(VarEnvPrefix + strings.ToUpper(varName)), nil
+	} else if os.Getenv(varName) != "" {
+		return os.Getenv(varName), nil
+	}
+
+	// Ask for variable
+	currentConfig.Vars[varName] = AskQuestion(&configs.Variable{
+		Question: ptr.String("Please enter a value for " + varName),
+	})
+	err = generated.SaveConfig(generatedConfig)
+	if err != nil {
+		return "", fmt.Errorf("Error saving generated config: %v", err)
+	}
+
+	return currentConfig.Vars[varName], nil
 }
 
 func varMatchFn(path, key, value string) bool {
-	return VarMatchRegex.MatchString(value)
+	return vars.VarMatchRegex.MatchString(value)
 }
 
 // AskQuestion asks the user a question depending on the variable options
