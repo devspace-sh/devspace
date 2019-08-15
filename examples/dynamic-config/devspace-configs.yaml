@@ -13,8 +13,8 @@ default:
   - name: SELECT
     question: Please choose a deployment name
     options:
-      - Deployment-1
-      - Deployment-2
+      - deployment-1
+      - deployment-2
   - name: IMAGE
     question: Please specify an image name, or press enter to use 'nginx'
     default: nginx
