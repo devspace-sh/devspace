@@ -72,10 +72,9 @@ func (a *analyticsConfig) Identify(identifier string) error {
 			// different user is logged in now => RESET DISTINCT ID
 			_ = a.resetDistinctID()
 		}
-		a.Identifier = identifier
 
 		// Save a.Identifier as alias for a.DistinctID
-		err := a.createAlias()
+		err := a.createAlias(identifier)
 		if err != nil {
 			return err
 		}
@@ -139,12 +138,7 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 		data["event"] = eventName
 		data["properties"] = eventData
 
-		if time.Unix(a.LatestUpdate, 0).Add(time.Minute * 30).Before(now) {
-			a.LatestUpdate = now.Unix()
-
-			// ignore if config save fails
-			_ = a.save()
-
+		if time.Unix(a.LatestUpdate, 0).Add(time.Minute * 5).Before(now) {
 			// ignore if user update fails
 			_ = a.UpdateUser(map[string]interface{}{})
 		}
@@ -155,6 +149,11 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 
 func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 	if !a.Disabled && token != "" {
+		a.LatestUpdate = time.Now().Unix()
+
+		// ignore if config save fails
+		_ = a.save()
+
 		data := map[string]interface{}{}
 		data["$token"] = token
 
@@ -163,19 +162,24 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 		} else {
 			data["$distinct_id"] = a.DistinctID
 		}
+
+		if _, ok := userData["cli_version"]; !ok {
+			userData["cli_version"] = a.version
+		}
+
+		if _, ok := userData["runtime_os"]; !ok {
+			userData["runtime_os"] = runtime.GOOS
+		}
+
+		if _, ok := userData["runtime_arch"]; !ok {
+			userData["runtime_arch"] = runtime.GOARCH
+		}
+
+		if _, ok := userData["duplicate"]; !ok {
+			userData["duplicate"] = false
+		}
 		data["$set"] = userData
 
-		if _, ok := data["cli_version"]; !ok {
-			data["cli_version"] = a.version
-		}
-
-		if _, ok := data["runtime_os"]; !ok {
-			data["runtime_os"] = runtime.GOOS
-		}
-
-		if _, ok := data["runtime_arch"]; !ok {
-			data["runtime_arch"] = runtime.GOARCH
-		}
 		return a.sendRequest("engage", data)
 	}
 	return nil
@@ -186,7 +190,6 @@ func (a *analyticsConfig) ReportPanics() {
 		err := fmt.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
 		a.SendCommandEvent(err)
-		fmt.Println(err)
 	}
 }
 
@@ -194,22 +197,35 @@ func (a *analyticsConfig) SetVersion(version string) {
 	a.version = version
 }
 
-func (a *analyticsConfig) createAlias() error {
+func (a *analyticsConfig) createAlias(identifier string) error {
 	if !a.Disabled {
-		data := map[string]interface{}{
-			"event": "$create_alias",
-			"properties": map[string]interface{}{
-				"distinct_id": a.Identifier,
-				"alias":       a.DistinctID,
-				"token":       token,
-			},
-		}
-		identifierSections := strings.Split(a.Identifier, "/")
+		identifierSections := strings.Split(identifier, "/")
 
-		a.UpdateUser(map[string]interface{}{
+		// mark current distinct_id as duplicate
+		// => future calls will reset this for the correct distinct_id
+		// ignore if user update fails
+		_ = a.UpdateUser(map[string]interface{}{
+			"provider":   identifierSections[0],
+			"account_id": identifierSections[1],
+			"duplicate":  true,
+		})
+
+		a.Identifier = identifier
+
+		// ignore if update user fails
+		_ = a.UpdateUser(map[string]interface{}{
 			"provider":   identifierSections[0],
 			"account_id": identifierSections[1],
 		})
+
+		data := map[string]interface{}{
+			"event": "$create_alias",
+			"properties": map[string]interface{}{
+				"distinct_id": a.DistinctID,
+				"alias":       a.Identifier,
+				"token":       token,
+			},
+		}
 		return a.sendRequest("track", data)
 	}
 	return nil
