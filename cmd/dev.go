@@ -100,7 +100,7 @@ Starts your project in development mode:
 
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 
-	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
+	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 
 	return devCmd
