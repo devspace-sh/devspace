@@ -31,7 +31,7 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 		if matchStr[0] == '$' && matchStr[1] == '$' {
 			newMatchStr = matchStr[1:]
 		} else {
-			newMatchStr, err = replace(matchStr)
+			newMatchStr, err = replace(matchStr[2 : len(matchStr)-1])
 			if err != nil {
 				return "", err
 			}

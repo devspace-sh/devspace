@@ -28,8 +28,8 @@ func TestParse(t *testing.T) {
 		},
 		"Multiple Replace 2": &testCase{
 			input:   "${Test}${Test}${Test}",
-			replace: func(value string) (string, error) { return "test", nil },
-			output:  "testtesttest",
+			replace: func(value string) (string, error) { return value, nil },
+			output:  "TestTestTest",
 		},
 		"Return integer": &testCase{
 			input:   "${integer}",

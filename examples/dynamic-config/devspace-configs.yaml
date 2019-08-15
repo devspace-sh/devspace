@@ -18,5 +18,6 @@ default:
   - name: IMAGE
     question: Please specify an image name, or press enter to use 'nginx'
     default: nginx
+    source: input
     validationPattern: ^n.*$
     validationMessage: Only image names that start with a 'n' are allowed
