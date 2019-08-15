@@ -4,7 +4,7 @@ default:
       version: v1beta2
       deployments:
         # This will be filled with a question on `devspace deploy` or `devspace dev`, alternatevly you could also set the
-        # environment variable DEVSPACE_VAR_SELECT to avoid the question and fill it automatically
+        # environment variable DEVSPACE_VAR_SELECT or SELECT to avoid the question and fill it automatically
         - name: ${SELECT}
           component:
             containers:
