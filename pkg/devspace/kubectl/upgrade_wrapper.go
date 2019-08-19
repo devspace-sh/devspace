@@ -3,6 +3,7 @@ package kubectl
 import (
 	"net/http"
 
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/transport/spdy"
@@ -20,6 +21,13 @@ func (uw *UpgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connec
 	if err != nil {
 		return nil, err
 	}
+
+	closeChan := conn.CloseChan()
+
+	go func() {
+		<-closeChan
+		log.Info("Connection is closed")
+	}()
 
 	uw.Connections = append(uw.Connections, conn)
 

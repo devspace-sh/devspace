@@ -111,6 +111,12 @@ func (u *upstream) mainLoop() error {
 			// We gather changes till there are no more changes for 1 second
 			if changeAmount == len(changes) && changeAmount > 0 {
 				break
+			} else {
+				// Keep the connection alive by pinging the remote
+				_, err := u.client.Ping(context.Background(), &remote.Empty{})
+				if err != nil {
+					return errors.Wrap(err, "ping")
+				}
 			}
 
 			changeAmount = len(changes)
