@@ -74,6 +74,18 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 			return nil, nil
 		},
 	},
+	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
+		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
+		Fill: func(generatedConfig *generated.Config) (*string, error) {
+			if generatedConfig.CloudSpace != nil {
+				if generatedConfig.CloudSpace.Namespace != "" {
+					return &generatedConfig.CloudSpace.Namespace, nil
+				}
+			}
+
+			return nil, nil
+		},
+	},
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("Not logged into Devspace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
@@ -113,6 +125,37 @@ type predefinedVarDefinition struct {
 	Fill         func(generatedConfig *generated.Config) (*string, error)
 }
 
+func getPredefinedVar(name string) (bool, string, error) {
+	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
+		if variable.Value == nil {
+			return false, "", errors.New(variable.ErrorMessage)
+		}
+
+		return true, *variable.Value, nil
+	}
+
+	// Load space domain environment variable
+	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
+		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
+		if err != nil {
+			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
+		}
+
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			return false, "", fmt.Errorf("Error reading generated config: %v", err)
+		} else if generatedConfig.CloudSpace == nil {
+			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+		} else if len(generatedConfig.CloudSpace.Domains) <= idx-1 {
+			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(generatedConfig.CloudSpace.Domains), idx)
+		}
+
+		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil
+	}
+
+	return false, "", nil
+}
+
 func varReplaceFn(path, value string) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
@@ -122,12 +165,11 @@ func varReplaceFn(path, value string) (interface{}, error) {
 
 func resolveVar(varName string) (string, error) {
 	// Is predefined variable?
-	if variable, ok := PredefinedVars[strings.ToUpper(varName)]; ok {
-		if variable.Value == nil {
-			return "", errors.New(variable.ErrorMessage)
-		}
-
-		return *variable.Value, nil
+	found, value, err := getPredefinedVar(varName)
+	if err != nil {
+		return "", err
+	} else if found {
+		return value, nil
 	}
 
 	// Is in generated config?

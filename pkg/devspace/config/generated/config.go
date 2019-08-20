@@ -21,13 +21,21 @@ type Config struct {
 
 // CloudSpaceConfig holds all the informations about a certain cloud space
 type CloudSpaceConfig struct {
-	SpaceID      int    `yaml:"spaceID,omitempty"`
-	OwnerID      int    `yaml:"ownerID,omitempty"`
-	Owner        string `yaml:"owner,omitempty"`
-	ProviderName string `yaml:"providerName,omitempty"`
-	KubeContext  string `yaml:"kubeContext,omitempty"`
-	Name         string `yaml:"name,omitempty"`
-	Created      string `yaml:"created,omitempty"`
+	SpaceID      int                       `yaml:"spaceID,omitempty"`
+	OwnerID      int                       `yaml:"ownerID,omitempty"`
+	Owner        string                    `yaml:"owner,omitempty"`
+	ProviderName string                    `yaml:"providerName,omitempty"`
+	KubeContext  string                    `yaml:"kubeContext,omitempty"`
+	Namespace    string                    `yaml:"namespace,omitempty"`
+	Name         string                    `yaml:"name,omitempty"`
+	Domains      []*CloudSpaceDomainConfig `yaml:"domains,omitempty"`
+	Created      string                    `yaml:"created,omitempty"`
+}
+
+// CloudSpaceDomainConfig holds the space domain related information
+type CloudSpaceDomainConfig struct {
+	DomainID int    `yaml:"id,omitempty"`
+	URL      string `yaml:"url,omitempty"`
 }
 
 // CacheConfig holds all the information specific to a certain config

@@ -174,18 +174,8 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-			SpaceID:      space.SpaceID,
-			ProviderName: space.ProviderName,
-			Name:         space.Name,
-			Owner:        space.Owner.Name,
-			OwnerID:      space.Owner.OwnerID,
-			KubeContext:  kubeContext,
-			Created:      space.Created,
-		}
-		generatedConfig.Configs = map[string]*generated.CacheConfig{}
-
-		err = generated.SaveConfig(generatedConfig)
+		// Cache space
+		err = provider.CacheSpace(generatedConfig, space)
 		if err != nil {
 			log.Fatal(err)
 		}
