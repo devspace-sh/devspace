@@ -88,7 +88,7 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	command := strings.Join(os.Args, " ")
 	command = strings.Replace(command, executable, "devspace", 1)
 
-	expr := regexp.MustCompile(`^.*(\s+login\s.*--key=?\s*)(.*)(\s.*|$)`)
+	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
 	command = expr.ReplaceAllString(command, `devspace $1[REDACTED]$3`)
 
 	commandData := map[string]interface{}{
@@ -115,7 +115,7 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 		}
 	}
 
-	if regexp.MustCompile(`^.*(\s+use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
+	if regexp.MustCompile(`^.*\s+(use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
 		return a.SendEvent("context", commandData)
 	}
 	return a.SendEvent("command", commandData)
