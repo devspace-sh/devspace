@@ -12,6 +12,7 @@ import (
 type Space struct {
 	SpaceID      int            `yaml:"spaceID"`
 	Name         string         `yaml:"name"`
+	Namespace    string         `yaml:"namespace"`
 	Owner        *Owner         `yaml:"account"`
 	ProviderName string         `yaml:"providerName"`
 	Cluster      *Cluster       `yaml:"cluster"`
@@ -21,7 +22,8 @@ type Space struct {
 
 // SpaceDomain holds the information about a space domain
 type SpaceDomain struct {
-	URL string `yaml:"url"`
+	DomainID int    `yaml:"id" json:"id"`
+	URL      string `yaml:"url" json:"url"`
 }
 
 // ServiceAccount holds the information about a service account for a certain space
@@ -326,8 +328,9 @@ type spaceGraphql struct {
 	Owner *Owner `json:"account"`
 
 	KubeContext *struct {
-		Cluster *Cluster       `json:"cluster"`
-		Domains []*SpaceDomain `json:"kube_context_domains"`
+		Namespace string         `json:"namespace"`
+		Cluster   *Cluster       `json:"cluster"`
+		Domains   []*SpaceDomain `json:"kube_context_domains"`
 	} `json:"kube_context"`
 
 	CreatedAt string `json:"created_at"`
@@ -352,6 +355,8 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 			}
 
 			kube_context {
+				namespace
+
 				cluster {
 					id
 					name
@@ -362,7 +367,8 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 					}
 				}
 				
-				kube_context_domains(limit:1) {
+				kube_context_domains {
+					id
 					url
 				}
 			}
@@ -390,6 +396,7 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 			SpaceID:      spaceConfig.ID,
 			Owner:        spaceConfig.Owner,
 			Name:         spaceConfig.Name,
+			Namespace:    spaceConfig.KubeContext.Namespace,
 			ProviderName: p.Name,
 			Cluster:      spaceConfig.KubeContext.Cluster,
 			Domains:      spaceConfig.KubeContext.Domains,
@@ -427,6 +434,7 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 			}
 			
 			kube_context {
+				namespace
 				cluster {
 					id
 					name
@@ -437,7 +445,8 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 					}
 				}
 
-				kube_context_domains(limit:1) {
+				kube_context_domains {
+					id
 					url
 				}
 			}
@@ -466,6 +475,7 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 		SpaceID:      spaceConfig.ID,
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
+		Namespace:    spaceConfig.KubeContext.Namespace,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
 		Domains:      spaceConfig.KubeContext.Domains,
@@ -525,6 +535,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 				}
 				
 				kube_context {
+					namespace
 					cluster {
 						id
 						name
@@ -535,7 +546,8 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 						}
 					}
 
-					kube_context_domains(limit:1) {
+					kube_context_domains {
+						id
 						url
 					}
 				}
@@ -568,6 +580,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 		SpaceID:      spaceConfig.ID,
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
+		Namespace:    spaceConfig.KubeContext.Namespace,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
 		Domains:      spaceConfig.KubeContext.Domains,

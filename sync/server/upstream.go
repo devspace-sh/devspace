@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -38,11 +37,6 @@ func StartUpstreamServer(uploadPath string, reader io.Reader, writer io.Writer, 
 // Upstream is the implementation for the upstream server
 type Upstream struct {
 	UploadPath string
-}
-
-// Ping implements the server
-func (u *Upstream) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
-	return &remote.Empty{}, nil
 }
 
 // Remove implements the server

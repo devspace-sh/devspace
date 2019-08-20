@@ -2,8 +2,9 @@ package kubectl
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/transport"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/transport/spdy"
@@ -22,15 +23,25 @@ func (uw *UpgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connec
 		return nil, err
 	}
 
-	closeChan := conn.CloseChan()
-
-	go func() {
-		<-closeChan
-		log.Info("Connection is closed")
-	}()
+	// This is a fix to prevent the connection of getting idle and killed by the kubernetes
+	// api server, this is used for sync, port forwarding and the terminal
+	newConn, ok := conn.(*transport.Connection)
+	if ok && newConn != nil {
+		go func() {
+			if newConn.Conn != nil {
+				for {
+					select {
+					case <-newConn.Conn.CloseChan():
+						return
+					case <-time.After(time.Second * 10):
+						newConn.Conn.Ping()
+					}
+				}
+			}
+		}()
+	}
 
 	uw.Connections = append(uw.Connections, conn)
-
 	return conn, nil
 }
 
@@ -48,7 +59,7 @@ func (uw *UpgraderWrapper) Close() error {
 
 // GetUpgraderWrapper returns an upgrade wrapper for the given config
 func GetUpgraderWrapper(config *rest.Config) (http.RoundTripper, *UpgraderWrapper, error) {
-	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(config)
+	wrapper, upgradeRoundTripper, err := transport.RoundTripperFor(config)
 	if err != nil {
 		return nil, nil, err
 	}
