@@ -88,18 +88,22 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	command := strings.Join(os.Args, " ")
 	command = strings.Replace(command, executable, "devspace", 1)
 
-	expr := regexp.MustCompile(`^(devspace\s+login\s.*--key=?\s*)(.*)(\s.*|$)`)
-	command = expr.ReplaceAllString(command, `$1[REDACTED]$3`)
+	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
+	command = expr.ReplaceAllString(command, `devspace $1[REDACTED]$3`)
 
 	commandData := map[string]interface{}{
 		"command":      command,
-		"runtime_os":   runtime.GOOS,
+		"$os":          runtime.GOOS,
 		"runtime_arch": runtime.GOARCH,
 		"cli_version":  a.version,
 	}
 
 	if commandError != nil {
 		commandData["error"] = commandError.Error()
+	}
+
+	if a.Identifier != "" {
+		commandData["$user_id"] = a.Identifier
 	}
 
 	pid := os.Getpid()
@@ -109,6 +113,10 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 		if err == nil {
 			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
 		}
+	}
+
+	if regexp.MustCompile(`^.*\s+(use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
+		return a.SendEvent("context", commandData)
 	}
 	return a.SendEvent("command", commandData)
 }

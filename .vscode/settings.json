@@ -1,5 +1,6 @@
 {
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
-  "go.formatTool": "goimports"
+  "go.formatTool": "goimports",
+  "go.autocompleteUnimportedPackages": true
 }

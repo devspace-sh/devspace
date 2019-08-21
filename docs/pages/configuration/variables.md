@@ -21,6 +21,8 @@ config1:
           image: ${ImageName}
   vars:
   - name: ImageName
+    # source can be one of all|env|input
+    source: all 
     question: Which database image do you want to use?
 ```
 
@@ -33,22 +35,22 @@ If a user runs `devspace deploy` for the first time after defining the config va
 Currently, there is no convenience command for deleting the values of config variables. You can, however, remove config values manually from `.devspace/generated.yaml` if necessary.
 
 ## Using environment variables as config variables
-The value for a config variable can also be set by defining an environment variable named `DEVSPACE_VAR_[VAR_NAME]`. Setting the value of a config variable with name `ImageName` would be possible by setting an environment value `DEVSPACE_VAR_IMAGENAME`.
+The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Windows Powershell-->
 ```powershell
-$env:DEVSPACE_VAR_IMAGENAME = "some-value"
+$env:IMAGE_NAME = "some-value"
 ```
 
 <!--Mac Terminal-->
 ```bash
-export DEVSPACE_VAR_IMAGENAME="some-value"
+export IMAGE_NAME="some-value"
 ```
 
 <!--Linux Bash-->
 ```bash
-export DEVSPACE_VAR_IMAGENAME="some-value"
+export IMAGE_NAME="some-value"
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -62,6 +64,8 @@ DevSpace provides some variables that are filled automatically and can be used w
 - **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
 - **DEVSPACE_GIT_COMMIT**: A short hash of the local repos current git commit
 - **DEVSPACE_SPACE**: The name of the [space](/docs/cloud/spaces/what-are-spaces) that is currently used
+- **DEVSPACE_SPACE_NAMESPACE**: The kubernetes namespace of the [space](/docs/cloud/spaces/what-are-spaces) in the cluster
+- **DEVSPACE_SPACE_DOMAIN1**, **DEVSPACE_SPACE_DOMAIN2**... : The connected domains of the [space](/docs/cloud/spaces/what-are-spaces). E.g. if a space has a domain connected with test.devspace.host, **DEVSPACE_SPACE_DOMAIN1** will hold test.devspace.host
 - **DEVSPACE_USERNAME**: The username currently logged into devspace cloud
 
 For example these predefined variables can be used to dynamically tag images during deployment:
@@ -82,6 +86,7 @@ This config will tag the image in the form of `myrepo/devspace:d9b4bcd-155976651
 vars:                               # struct   | Options for variables
 - name: ""                          # string   | The name of the variable (can be used within the config as ${name}) and can be defined via environment variable as DEVSPACE_VAR_NAME
   question: "How do you ..."        # string   | Question that will be presented to the user for filling the value
+  source: all                       # string   | Can be one of all | env | input. Env is for environment variables only or input to force user input.
   options: []                       # string[] | Array of possible answer options for the variable value
   default: ""                       # string   | Default value of the variable if user skips question
   validationPattern: "^.*$"         # string   | Regex pattern to verify the variable input

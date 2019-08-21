@@ -908,11 +908,9 @@ This project is mainly written in Golang. If you want to contribute code:
    GOFLAGS=-mod=vendor
    ```
 3. Check-out the project: `git clone https://github.com/devspace-cloud/devspace && cd devspace`
-4. Run `go clean -modcache`
-5. Run `go mod vendor`
-6. Make changes to the code
-7. Build the project, e.g. via `go build -o devspace.exe`
-8. Evaluate and test your changes `./devspace [SOME_COMMAND]`
+4. Make changes to the code
+5. Build the project, e.g. via `go build -o devspace[.exe]`
+6. Evaluate and test your changes `./devspace [SOME_COMMAND]`
 
 See [Contributing Guideslines](CONTRIBUTING.md) for more information.
 

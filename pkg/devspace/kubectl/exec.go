@@ -81,7 +81,7 @@ func ExecStream(restConfig *rest.Config, pod *k8sv1.Pod, container string, comma
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(restConfig)
+	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(restConfig)
 	if err != nil {
 		return err
 	}

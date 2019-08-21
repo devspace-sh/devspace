@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,7 @@ Example:
 devspace use config myconfig
 #######################################################
 	`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunUseConfig,
 	}
 }
@@ -51,9 +52,24 @@ func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Cannot load %s: %v", constants.DefaultConfigsPath, err)
 	}
 
+	configName := ""
+	if len(args) > 0 {
+		configName = args[0]
+	} else {
+		configNames := make([]string, 0, len(configs))
+		for configKey := range configs {
+			configNames = append(configNames, configKey)
+		}
+
+		configName = survey.Question(&survey.QuestionOptions{
+			Question: "Please select a config to use",
+			Options:  configNames,
+		})
+	}
+
 	// Check if config exists
-	if _, ok := configs[args[0]]; ok == false {
-		log.Fatalf("Config '%s' does not exist in %s", args[0], constants.DefaultConfigsPath)
+	if _, ok := configs[configName]; ok == false {
+		log.Fatalf("Config '%s' does not exist in %s", configName, constants.DefaultConfigsPath)
 	}
 
 	// Load generated config
@@ -63,7 +79,7 @@ func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Exchange active config
-	generatedConfig.ActiveConfig = args[0]
+	generatedConfig.ActiveConfig = configName
 
 	// Save generated config
 	err = generated.SaveConfig(generatedConfig)
@@ -71,5 +87,5 @@ func (*configCmd) RunUseConfig(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving generated config: %v", err)
 	}
 
-	log.Infof("Successfully switched to config '%s'", args[0])
+	log.Infof("Successfully switched to config '%s'", configName)
 }

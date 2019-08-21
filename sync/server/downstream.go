@@ -140,7 +140,7 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 	newState := make(map[string]*remote.Change)
 
 	// Walk through the dir
-	walkDir(d.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.RemotePath, d.RemotePath, d.ignoreMatcher, newState)
 
 	changeAmount, err := streamChanges(d.RemotePath, d.watchedFiles, newState, nil)
 	if err != nil {
@@ -157,7 +157,7 @@ func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_Chang
 	newState := make(map[string]*remote.Change)
 
 	// Walk through the dir
-	walkDir(d.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.RemotePath, d.RemotePath, d.ignoreMatcher, newState)
 
 	_, err := streamChanges(d.RemotePath, d.watchedFiles, newState, stream)
 	if err != nil {
@@ -255,7 +255,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 	return changeAmount, nil
 }
 
-func walkDir(path string, ignoreMatcher gitignore.IgnoreParser, state map[string]*remote.Change) {
+func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser, state map[string]*remote.Change) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		// We ignore errors here
@@ -264,7 +264,7 @@ func walkDir(path string, ignoreMatcher gitignore.IgnoreParser, state map[string
 
 	for _, f := range files {
 		absolutePath := filepath.Join(path, f.Name())
-		if ignoreMatcher != nil && ignoreMatcher.MatchesPath(absolutePath) {
+		if ignoreMatcher != nil && ignoreMatcher.MatchesPath(absolutePath[len(basePath):]) {
 			continue
 		}
 
@@ -283,7 +283,7 @@ func walkDir(path string, ignoreMatcher gitignore.IgnoreParser, state map[string
 				IsDir: true,
 			}
 
-			walkDir(absolutePath, ignoreMatcher, state)
+			walkDir(basePath, absolutePath, ignoreMatcher, state)
 		} else {
 			state[absolutePath] = &remote.Change{
 				Path:          absolutePath,

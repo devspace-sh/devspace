@@ -8,6 +8,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -48,10 +50,6 @@ devspace use space none    // stop using a space
 
 // RunUseDevSpace executes the functionality "devspace use space"
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
-	if len(args) == 0 && cmd.SpaceID == "" {
-		log.Fatal("Either a space name or a space id have to be supplied")
-	}
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -108,6 +106,34 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("No cloud provider specified")
 	}
 
+	// List spaces
+	if len(args) == 0 && cmd.SpaceID == "" {
+		spaces, err := provider.GetSpaces()
+		if err != nil {
+			log.Fatalf("Error retrieving spaces: %v", err)
+		} else if len(spaces) == 0 {
+			log.Fatalf("There are no spaces to select from. Please create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
+		}
+
+		names := make([]string, 0, len(spaces))
+		for _, space := range spaces {
+			names = append(names, space.Name)
+		}
+
+		spaceName := survey.Question(&survey.QuestionOptions{
+			Question: "Please select a space that you want to use",
+			Options:  names,
+		})
+
+		// Set space id
+		for _, space := range spaces {
+			if space.Name == spaceName {
+				cmd.SpaceID = strconv.Itoa(space.SpaceID)
+			}
+		}
+	}
+
+	// Check if we should return a token
 	if cmd.GetToken == true {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
 		if err != nil {
@@ -174,18 +200,8 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-			SpaceID:      space.SpaceID,
-			ProviderName: space.ProviderName,
-			Name:         space.Name,
-			Owner:        space.Owner.Name,
-			OwnerID:      space.Owner.OwnerID,
-			KubeContext:  kubeContext,
-			Created:      space.Created,
-		}
-		generatedConfig.Configs = map[string]*generated.CacheConfig{}
-
-		err = generated.SaveConfig(generatedConfig)
+		// Cache space
+		err = provider.CacheSpace(generatedConfig, space)
 		if err != nil {
 			log.Fatal(err)
 		}

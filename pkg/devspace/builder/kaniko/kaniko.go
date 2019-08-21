@@ -139,9 +139,11 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 
 // BuildImage builds a dockerimage within a kaniko pod
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
+	var err error
+
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err := helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
 		if err != nil {
 			return err
 		}
@@ -220,6 +222,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		}
 
 		ignoreRules = append(ignoreRules, ".devspace/")
+
 		log.StartWait("Uploading files to build container")
 
 		// Copy complete context
@@ -229,7 +232,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		}
 
 		// Copy dockerfile
-		err = kubectl.Copy(restConfig, buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, ignoreRules)
+		err = kubectl.Copy(restConfig, buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
 			return fmt.Errorf("Error uploading files to container: %v", err)
 		}
