@@ -100,8 +100,16 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	if found {
-		log.Donef("Successfully removed deployment %s", args[0])
+		if cmd.RemoveAll {
+			log.Warnf("Successfully removed all deployments")
+		} else {
+			log.Donef("Successfully removed deployment %s", args[0])
+		}
 	} else {
-		log.Warnf("Couldn't find deployment %s", args[0])
+		if cmd.RemoveAll {
+			log.Warnf("Couldn't find any deployment")
+		} else {
+			log.Warnf("Couldn't find deployment %s", args[0])
+		}
 	}
 }
