@@ -15,5 +15,5 @@ To contribute code,
 
 Docusaurus allows you to use hot reloading when editing the docs pages, so you can now edit any docs page in ./docs and Docusaurus will recompile the markdown and reload the website automatically.
 
-## [Contribution Guidelines](/docs/CONTRIBUTING.md)
-For general information regarding contributions see: [Contribution Guidelines](/docs/CONTRIBUTING.md)
+## [Contribution Guidelines](../CONTRIBUTING.md)
+For general information regarding contributions see: [Contribution Guidelines](../CONTRIBUTING.md)
