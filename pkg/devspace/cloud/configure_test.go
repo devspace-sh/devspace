@@ -18,7 +18,7 @@ func TestGetKubeContextNameFromSpace(t *testing.T) {
 }
 
 func TestUpdateKubeConfig(t *testing.T) {
-	err := UpdateKubeConfig("", &ServiceAccount{CaCert: "Undecodable"}, false)
+	err := UpdateKubeConfig("", &ServiceAccount{CaCert: "Undecodable"}, 1, "app.devspace.cloud", false)
 	assert.Error(t, err, "illegal base64 data at input byte 8", "No or wrong error when trying to update kube config with an undecodable cacert in the serviceaccount")
 
 	dir, err := ioutil.TempDir("", "test")
@@ -63,7 +63,7 @@ func TestUpdateKubeConfig(t *testing.T) {
 		Namespace: "someNamespace",
 		Server:    "someServer",
 		Token:     "someToken",
-	}, true)
+	}, 1, "app.devspace.cloud", true)
 	assert.NilError(t, err, "Error when updating kube config with a vailid serviceaccount")
 	config, err := kubeconfig.LoadRawConfig()
 	assert.NilError(t, err, "Error loading kubeconfig")
@@ -72,5 +72,5 @@ func TestUpdateKubeConfig(t *testing.T) {
 	assert.Equal(t, config.Contexts["someContext"].Namespace, "someNamespace", "KubeConfig badly saved")
 	assert.Equal(t, config.Clusters["someContext"].Server, "someServer", "KubeConfig badly saved")
 	assert.Equal(t, len(config.Clusters["someContext"].CertificateAuthorityData), 0, "KubeConfig badly saved")
-	assert.Equal(t, config.AuthInfos["someContext"].Token, "someToken", "KubeConfig badly saved")
+	assert.Equal(t, config.AuthInfos["someContext"].Exec.Command, "devspace", "KubeConfig badly saved")
 }

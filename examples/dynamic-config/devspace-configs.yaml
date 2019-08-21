@@ -4,7 +4,7 @@ default:
       version: v1beta2
       deployments:
         # This will be filled with a question on `devspace deploy` or `devspace dev`, alternatevly you could also set the
-        # environment variable DEVSPACE_VAR_SELECT to avoid the question and fill it automatically
+        # environment variable DEVSPACE_VAR_SELECT or SELECT to avoid the question and fill it automatically
         - name: ${SELECT}
           component:
             containers:
@@ -13,10 +13,11 @@ default:
   - name: SELECT
     question: Please choose a deployment name
     options:
-      - Deployment-1
-      - Deployment-2
+      - deployment-1
+      - deployment-2
   - name: IMAGE
     question: Please specify an image name, or press enter to use 'nginx'
     default: nginx
+    source: input
     validationPattern: ^n.*$
     validationMessage: Only image names that start with a 'n' are allowed

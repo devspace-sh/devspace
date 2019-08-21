@@ -19,7 +19,7 @@ type DeployConfig struct {
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    ptr.String("component-chart"),
-	Version: ptr.String("v0.0.2"),
+	Version: ptr.String("v0.0.3"),
 	RepoURL: ptr.String("https://charts.devspace.cloud"),
 }
 

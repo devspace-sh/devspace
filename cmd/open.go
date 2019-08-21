@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -130,7 +129,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatalf("Error retrieving space service account: %v", err)
 		}
-		err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, true)
+		err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, space.SpaceID, space.ProviderName, true)
 		if err != nil {
 			log.Fatalf("Error saving kube config: %v", err)
 		}
@@ -208,7 +207,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			log.StopWait()
 			open.Start(domain)
 			log.Donef("Successfully opened %s", domain)
-			os.Exit(0)
+			return
 		}
 
 		// Analyze space for issues
@@ -219,7 +218,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		if len(report) > 0 {
 			reportString := analyze.ReportToString(report)
 			log.WriteString(reportString)
-			os.Exit(1)
+			log.Fatal("")
 		}
 
 		time.Sleep(time.Second * 5)
