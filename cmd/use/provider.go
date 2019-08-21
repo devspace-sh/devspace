@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 )
 
@@ -26,19 +27,32 @@ Example:
 devspace use provider my.domain.com
 #######################################################
 	`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunUseProvider,
 	}
 }
 
 // RunUseProvider executes the "devspace use provider" command logic
 func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) {
-	providerName := args[0]
-
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		log.Fatalf("Error loading provider config: %v", err)
+	}
+
+	providerName := ""
+	if len(args) > 0 {
+		providerName = args[0]
+	} else {
+		providerNames := make([]string, 0, len(providerConfig.Providers))
+		for _, provider := range providerConfig.Providers {
+			providerNames = append(providerNames, provider.Name)
+		}
+
+		providerName = survey.Question(&survey.QuestionOptions{
+			Question: "Please select a default provider",
+			Options:  providerNames,
+		})
 	}
 
 	provider := config.GetProvider(providerConfig, providerName)
