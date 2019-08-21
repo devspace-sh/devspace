@@ -1,6 +1,7 @@
 .DS_Store
 
 node_modules
+npm-debug.log
 yarn-error.log
 
 package-lock.json
@@ -14,3 +15,10 @@ website/build/
 website/yarn.lock
 website/node_modules
 website/i18n/*
+
+# add yarn.lock to allow CI pipeline to run correctly
+# => please use npm instead of yarn
+yarn.lock
+
+# Exclude .devspace generated files
+.devspace/

@@ -1,0 +1,33 @@
+version: v1beta2
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
+    createPullSecret: true
+deployments:
+- name: docs
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
+    service:
+      ports:
+      - port: 3000
+dev:
+  overrideImages:
+  - name: default
+    entrypoint:
+    - sleep
+    - "999999999999"
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: docs
+    forward:
+    - port: 3000
+    - port: 9229
+    - port: 35729
+  sync:
+  - labelSelector:
+      app.kubernetes.io/component: docs
+    containerPath: /app
+    excludePaths:
+    - '*/node_modules'
+    - '*.log'

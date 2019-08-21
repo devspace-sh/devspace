@@ -310,7 +310,7 @@ func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.In
 		Namespace(pod.Namespace).
 		SubResource("portforward")
 
-	transport, upgrader, err := spdy.RoundTripperFor(config)
+	transport, upgrader, err := GetUpgraderWrapper(config)
 	if err != nil {
 		return nil, err
 	}

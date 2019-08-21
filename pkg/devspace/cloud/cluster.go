@@ -604,6 +604,8 @@ func getKey(provider *Provider, forceQuestion bool) (string, error) {
 func getClusterName(clusterName string) (string, error) {
 	if clusterName != "" && ClusterNameValidationRegEx.MatchString(clusterName) == false {
 		return "", fmt.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
+	} else if clusterName != "" {
+		return clusterName, nil
 	}
 
 	// Ask for cluster name
