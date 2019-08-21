@@ -209,8 +209,6 @@ func parsePortMappings(portMappingsString string) ([]*latest.PortMapping, error)
 
 		if len(portMapping) == 1 {
 			portMappingStruct.LocalPort = &firstPort
-
-			portMappingStruct.RemotePort = portMappingStruct.LocalPort
 		} else {
 			portMappingStruct.LocalPort = &firstPort
 
