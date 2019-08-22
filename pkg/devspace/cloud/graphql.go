@@ -7,7 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var defaultGraphlClient GraphqlClientInterface = &GraphqlClient{}
+//DefaultGraphqlClient is the default client for graphQL requests. It is overwritable
+var DefaultGraphqlClient GraphqlClientInterface = &GraphqlClient{}
 
 //GraphqlClientInterface can communicate with a graphQL server
 type GraphqlClientInterface interface {
@@ -44,5 +45,5 @@ func (g *GraphqlClient) GrapqhlRequest(p *Provider, request string, vars map[str
 
 // GrapqhlRequest does a new graphql request and stores the result in the response
 func (p *Provider) GrapqhlRequest(request string, vars map[string]interface{}, response interface{}) error {
-	return defaultGraphlClient.GrapqhlRequest(p, request, vars, response)
+	return DefaultGraphqlClient.GrapqhlRequest(p, request, vars, response)
 }

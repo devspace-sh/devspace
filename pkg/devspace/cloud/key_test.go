@@ -134,7 +134,7 @@ func TestGetClusterKey(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 		if testCase.graphQLClient != nil {
-			defaultGraphlClient = testCase.graphQLClient
+			DefaultGraphqlClient = testCase.graphQLClient
 		}
 
 		key, err := provider.GetClusterKey(&Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
@@ -152,6 +152,6 @@ func TestGetClusterKey(t *testing.T) {
 			assert.Equal(t, false, ok, "ClusterKey with clusterID unexpectedly set. TestCase: %s", testCase.name)
 		}
 
-		defaultGraphlClient = &GraphqlClient{}
+		DefaultGraphqlClient = &GraphqlClient{}
 	}
 }

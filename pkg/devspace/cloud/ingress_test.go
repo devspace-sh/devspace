@@ -133,7 +133,7 @@ func TestCreateIngress(t *testing.T) {
 			}{ManagerCreateIngressPath: testCase.ManagerCreateIngressPath}
 			response, err := json.Marshal(graphQLResponse)
 			assert.NilError(t, err, "Error parsing fake response in testCase %s", testCase.name)
-			defaultGraphlClient = &fakeGraphQLClient{
+			DefaultGraphqlClient = &fakeGraphQLClient{
 				responsesAsJSON: []string{string(response)},
 			}
 		}
@@ -148,6 +148,6 @@ func TestCreateIngress(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error when trying to do a graphql request in testCase %s", testCase.name)
 		}
 
-		defaultGraphlClient = &GraphqlClient{}
+		DefaultGraphqlClient = &GraphqlClient{}
 	}
 }
