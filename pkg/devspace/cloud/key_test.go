@@ -33,9 +33,6 @@ type getClusterKeyTestCase struct {
 func TestGetClusterKey(t *testing.T) {
 	testCases := []getClusterKeyTestCase{
 		getClusterKeyTestCase{
-			name: "Empty everything",
-		},
-		getClusterKeyTestCase{
 			name:         "Ask for encryption key and then fail",
 			clusterOwner: &Owner{},
 			setAnswers:   []string{"123456"},
@@ -155,6 +152,6 @@ func TestGetClusterKey(t *testing.T) {
 			assert.Equal(t, false, ok, "ClusterKey with clusterID unexpectedly set. TestCase: %s", testCase.name)
 		}
 
-		defaultGraphlClient = &graphlClient{}
+		defaultGraphlClient = &GraphqlClient{}
 	}
 }

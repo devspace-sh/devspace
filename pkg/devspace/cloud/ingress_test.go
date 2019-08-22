@@ -148,6 +148,6 @@ func TestCreateIngress(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error when trying to do a graphql request in testCase %s", testCase.name)
 		}
 
-		defaultGraphlClient = &graphlClient{}
+		defaultGraphlClient = &GraphqlClient{}
 	}
 }
