@@ -36,9 +36,8 @@ type removeContextTestCase struct {
 	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput   string
-	expectedPanic    string
-	expectConfigFile bool
+	expectedOutput string
+	expectedPanic  string
 }
 
 func TestRunRemoveContext(t *testing.T) {
