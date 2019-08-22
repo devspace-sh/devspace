@@ -44,6 +44,13 @@ func (t testLogger) Donef(format string, args ...interface{}) {
 	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
 }
 
+func (t testLogger) Fail(args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
+}
+func (t testLogger) Failf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
+}
+
 func (t testLogger) Warn(args ...interface{}) {
 	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
 }
