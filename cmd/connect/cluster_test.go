@@ -2,21 +2,13 @@ package connect
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-
-	"gotest.tools/assert"
 )
 
 var logOutput string
- 
+
 type testLogger struct {
 	log.DiscardLogger
 }
@@ -46,6 +38,6 @@ func (t testLogger) StartWait(message string) {
 	logOutput = logOutput + "\nWait " + message
 }
 
-type TestRunConnectCluster(t *testing.T){
-	
+func TestRunConnectCluster(t *testing.T) {
+
 }
