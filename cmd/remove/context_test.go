@@ -1,7 +1,6 @@
 package remove
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
@@ -24,75 +24,24 @@ import (
 	"gotest.tools/assert"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
-type customGraphqlClient struct {
-	responses []interface{}
-}
-
-func (q *customGraphqlClient) GrapqhlRequest(p *cloudpkg.Provider, request string, vars map[string]interface{}, response interface{}) error {
-	if len(q.responses) == 0 {
-		panic("Not enough responses. Need response for: " + request)
-	}
-	currentResponse := q.responses[0]
-	q.responses = q.responses[1:]
-
-	errorResponse, isError := currentResponse.(error)
-	if isError {
-		return errorResponse
-	}
-	buf, err := json.Marshal(currentResponse)
-	if err != nil {
-		panic(fmt.Sprintf("Cannot encode response. %d responses left", len(q.responses)))
-	}
-	json.NewDecoder(bytes.NewReader(buf)).Decode(&response)
-
-	return nil
-}
-
-type removeClusterTestCase struct {
+type removeContextTestCase struct {
 	name string
+
+	fakeConfig *latest.Config
 
 	args             []string
 	answers          []string
 	graphQLResponses []interface{}
 	provider         string
+	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectedOutput   string
+	expectedPanic    string
+	expectConfigFile bool
 }
 
-func TestRunRemoveCluster(t *testing.T) {
+func TestRunRemoveContext(t *testing.T) {
 	claimAsJSON, _ := json.Marshal(token.ClaimSet{
 		Expiration: time.Now().Add(time.Hour).Unix(),
 	})
@@ -101,13 +50,13 @@ func TestRunRemoveCluster(t *testing.T) {
 		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
 	}
 
-	testCases := []removeClusterTestCase{
-		removeClusterTestCase{
+	testCases := []removeContextTestCase{
+		removeContextTestCase{
 			name:          "Cloud context not gettable",
 			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
 		},
-		removeClusterTestCase{
-			name:     "Don't delete",
+		removeContextTestCase{
+			name:     "Spaces not gettable",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -115,10 +64,41 @@ func TestRunRemoveCluster(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			answers: []string{"no"},
+			all: true,
+			graphQLResponses: []interface{}{
+				fmt.Errorf("TestError from graphql server"),
+			},
+			expectedPanic: "TestError from graphql server",
 		},
-		removeClusterTestCase{
-			name:     "Unparsable clustername",
+		removeContextTestCase{
+			name:     "Delete all one spaces",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name:  "myProvider",
+					Key:   "someKey",
+					Token: "." + validEncodedClaim + ".",
+				},
+			},
+			all: true,
+			graphQLResponses: []interface{}{
+				struct {
+					Spaces []interface{} `json:"space"`
+				}{
+					Spaces: []interface{}{
+						struct {
+							Owner   struct{} `json:"account"`
+							Context struct {
+								Cluster struct{} `json:"cluster"`
+							} `json:"kube_context"`
+						}{},
+					},
+				},
+			},
+			expectedOutput: "\nDone Deleted kubectl context for space \nDone All space kubectl contexts removed",
+		},
+		removeContextTestCase{
+			name:     "Neither all nor argument specified",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -126,12 +106,22 @@ func TestRunRemoveCluster(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			answers:       []string{"Yes"},
+			expectedPanic: "Please specify a space name or the --all flag",
+		},
+		removeContextTestCase{
+			name:     "Unparsable space name",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name: "myProvider",
+					Key:  "someKey",
+				},
+			},
 			args:          []string{"a:b:c"},
-			expectedPanic: "Error parsing cluster name a:b:c: Expected : only once",
+			expectedPanic: "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
 		},
-		removeClusterTestCase{
-			name:     "Cluster can't be deleted",
+		removeContextTestCase{
+			name:     "Unparsable space name",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -140,44 +130,22 @@ func TestRunRemoveCluster(t *testing.T) {
 					Token: "." + validEncodedClaim + ".",
 				},
 			},
-			answers: []string{"Yes", "No", "No"},
-			args:    []string{"a:b"},
 			graphQLResponses: []interface{}{
 				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
+					Spaces []interface{} `json:"space"`
 				}{
-					Clusters: []*cloudpkg.Cluster{
-						&cloudpkg.Cluster{},
+					Spaces: []interface{}{
+						struct {
+							Owner   struct{} `json:"account"`
+							Context struct {
+								Cluster struct{} `json:"cluster"`
+							} `json:"kube_context"`
+						}{},
 					},
 				},
-				fmt.Errorf("Testerror from graphql server"),
 			},
-			expectedPanic:  "Testerror from graphql server",
-			expectedOutput: "\nWait Deleting cluster ",
-		},
-		removeClusterTestCase{
-			name:     "Successful deletion",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			answers: []string{"Yes", "No", "No"},
-			args:    []string{"a:b"},
-			graphQLResponses: []interface{}{
-				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
-				}{
-					Clusters: []*cloudpkg.Cluster{
-						&cloudpkg.Cluster{},
-					},
-				},
-				struct{}{},
-			},
-			expectedOutput: "\nWait Deleting cluster \nDone Successfully deleted cluster a:b",
+			args:           []string{"a:b"},
+			expectedOutput: "\nDone Kubectl context deleted for space a:b",
 		},
 	}
 
@@ -186,11 +154,11 @@ func TestRunRemoveCluster(t *testing.T) {
 	})
 
 	for _, testCase := range testCases {
-		testRunRemoveCluster(t, testCase)
+		testRunRemoveContext(t, testCase)
 	}
 }
 
-func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
+func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 	logOutput = ""
 
 	dir, err := ioutil.TempDir("", "test")
@@ -252,12 +220,10 @@ func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	if len(testCase.args) == 0 {
-		testCase.args = []string{""}
-	}
-	(&clusterCmd{
+	(&contextCmd{
 		Provider: testCase.provider,
-	}).RunRemoveCluster(nil, testCase.args)
+		All:      testCase.all,
+	}).RunRemoveContext(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
