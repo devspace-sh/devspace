@@ -9,7 +9,7 @@ Use the convenience command `devspace add port [LOCAL_PORT]:[REMOTE_PORT]` to te
 ```bash
 devspace add port 8080:80,3000
 ```
-The example above would tell DevSpace CLI to forward the local port `8080` to the container port `80` as well as to forward the local port `3000` to the remove container port `3000`.
+The example above would tell DevSpace CLI to forward the local port `8080` to the container port `80` as well as to forward the local port `3000` to the remote container port `3000`.
 
 > Local ports must be unique across all port forwarding configurations.
 
