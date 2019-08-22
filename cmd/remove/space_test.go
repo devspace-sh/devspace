@@ -24,7 +24,7 @@ import (
 	"gotest.tools/assert"
 )
 
-type removeContextTestCase struct {
+type removeSpaceTestCase struct {
 	name string
 
 	fakeConfig *latest.Config
@@ -32,6 +32,7 @@ type removeContextTestCase struct {
 	args             []string
 	answers          []string
 	graphQLResponses []interface{}
+	spaceID          string
 	provider         string
 	all              bool
 	providerList     []*cloudlatest.Provider
@@ -40,7 +41,7 @@ type removeContextTestCase struct {
 	expectedPanic  string
 }
 
-func TestRunRemoveContext(t *testing.T) {
+func TestRunRemoveSpace(t *testing.T) {
 	claimAsJSON, _ := json.Marshal(token.ClaimSet{
 		Expiration: time.Now().Add(time.Hour).Unix(),
 	})
@@ -49,12 +50,12 @@ func TestRunRemoveContext(t *testing.T) {
 		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
 	}
 
-	testCases := []removeContextTestCase{
-		removeContextTestCase{
+	testCases := []removeSpaceTestCase{
+		removeSpaceTestCase{
 			name:          "Cloud context not gettable",
 			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
 		},
-		removeContextTestCase{
+		removeSpaceTestCase{
 			name:     "Spaces not gettable",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -69,7 +70,35 @@ func TestRunRemoveContext(t *testing.T) {
 			},
 			expectedPanic: "TestError from graphql server",
 		},
-		removeContextTestCase{
+		removeSpaceTestCase{
+			name:     "Fail at deleting first of all spaces",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name:  "myProvider",
+					Key:   "someKey",
+					Token: "." + validEncodedClaim + ".",
+				},
+			},
+			all: true,
+			graphQLResponses: []interface{}{
+				struct {
+					Spaces []interface{} `json:"space"`
+				}{
+					Spaces: []interface{}{
+						struct {
+							Owner   struct{} `json:"account"`
+							Context struct {
+								Cluster struct{} `json:"cluster"`
+							} `json:"kube_context"`
+						}{},
+					},
+				},
+				fmt.Errorf("TestError from graphql server"),
+			},
+			expectedPanic: "TestError from graphql server",
+		},
+		removeSpaceTestCase{
 			name:     "Delete all one spaces",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -93,11 +122,16 @@ func TestRunRemoveContext(t *testing.T) {
 						}{},
 					},
 				},
+				struct {
+					ManagerDeleteSpace bool `json:"manager_deleteSpace"`
+				}{
+					ManagerDeleteSpace: true,
+				},
 			},
-			expectedOutput: "\nDone Deleted kubectl context for space \nDone All space kubectl contexts removed",
+			expectedOutput: "\nDone Deleted space \nDone All spaces removed",
 		},
-		removeContextTestCase{
-			name:     "Neither all nor argument specified",
+		removeSpaceTestCase{
+			name:     "Unparsable spaceID",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -105,9 +139,27 @@ func TestRunRemoveContext(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			expectedPanic: "Please specify a space name or the --all flag",
+			spaceID:        "abc",
+			expectedPanic:  "Couldn't parse space id abc: strconv.Atoi: parsing \"abc\": invalid syntax",
+			expectedOutput: "\nWait Delete space",
 		},
-		removeContextTestCase{
+		removeSpaceTestCase{
+			name:     "Space with given id not gettable",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name: "myProvider",
+					Key:  "someKey",
+				},
+			},
+			spaceID: "123",
+			graphQLResponses: []interface{}{
+				fmt.Errorf("TestError from graphql server"),
+			},
+			expectedPanic:  "Error retrieving space: TestError from graphql server",
+			expectedOutput: "\nWait Delete space",
+		},
+		removeSpaceTestCase{
 			name:     "Unparsable space name",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -116,10 +168,23 @@ func TestRunRemoveContext(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			args:          []string{"a:b:c"},
-			expectedPanic: "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
+			args:           []string{"a:b:c"},
+			expectedPanic:  "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
+			expectedOutput: "\nWait Delete space",
 		},
-		removeContextTestCase{
+		removeSpaceTestCase{
+			name:     "No name or id",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name: "myProvider",
+					Key:  "someKey",
+				},
+			},
+			expectedPanic:  "Please provide a space name or id for this command",
+			expectedOutput: "\nWait Delete space",
+		},
+		removeSpaceTestCase{
 			name:     "Delete one space successfully",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -142,9 +207,15 @@ func TestRunRemoveContext(t *testing.T) {
 						}{},
 					},
 				},
+				struct {
+					ManagerDeleteSpace bool `json:"manager_deleteSpace"`
+				}{
+					ManagerDeleteSpace: true,
+				},
 			},
 			args:           []string{"a:b"},
-			expectedOutput: "\nDone Kubectl context deleted for space a:b",
+			fakeConfig:     &latest.Config{},
+			expectedOutput: "\nWait Delete space\nDone Deleted space ",
 		},
 	}
 
@@ -153,11 +224,11 @@ func TestRunRemoveContext(t *testing.T) {
 	})
 
 	for _, testCase := range testCases {
-		testRunRemoveContext(t, testCase)
+		testRunRemoveSpace(t, testCase)
 	}
 }
 
-func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
+func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 	logOutput = ""
 
 	dir, err := ioutil.TempDir("", "test")
@@ -219,10 +290,11 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&contextCmd{
+	(&spaceCmd{
+		SpaceID:  testCase.spaceID,
 		Provider: testCase.provider,
 		All:      testCase.all,
-	}).RunRemoveContext(nil, testCase.args)
+	}).RunRemoveCloudDevSpace(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
