@@ -3,6 +3,7 @@ package dependency
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"os"
 	"testing"
 
@@ -164,6 +165,10 @@ func TestDeployAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Delete temp folder
 	defer func() {
@@ -260,6 +265,10 @@ func TestPurgeAll(t *testing.T) {
 	dir, err := ioutil.TempDir("", "testFolder")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	wdBackup, err := os.Getwd()

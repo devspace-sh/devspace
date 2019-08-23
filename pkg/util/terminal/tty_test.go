@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	//"github.com/docker/docker/pkg/term"
+	
+	"gotest.tools/assert"
 )
 
 func TestTTY(t *testing.T) {
@@ -14,5 +16,6 @@ func TestTTY(t *testing.T) {
 	buf := make([]byte, 1000)
 	writer := bytes.NewBuffer(buf)
 
-	SetupTTY(os.Stdin, writer)
+	tty := SetupTTY(os.Stdin, writer)
+	assert.Equal(t, false, tty.Raw, "Raw terminal that doesn't got a terminal stdin")
 }

@@ -142,7 +142,7 @@ func TestInitialSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 }
 
 func TestNormalSync(t *testing.T) {
@@ -222,7 +222,7 @@ func TestNormalSync(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 8*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 
 	t.Log("Create test is done")
 
@@ -231,7 +231,7 @@ func TestNormalSync(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 8*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 
 	t.Log("Delete test is done")
 
@@ -240,7 +240,7 @@ func TestNormalSync(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 10*time.Second)
+	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 
 	t.Log("Rename test is done")
 

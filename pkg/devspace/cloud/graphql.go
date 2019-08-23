@@ -7,16 +7,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-var defaultGraphlClient graphqlClientInterface = &graphlClient{}
+//DefaultGraphqlClient is the default client for graphQL requests. It is overwritable
+var DefaultGraphqlClient GraphqlClientInterface = &GraphqlClient{}
 
-type graphqlClientInterface interface {
+//GraphqlClientInterface can communicate with a graphQL server
+type GraphqlClientInterface interface {
 	GrapqhlRequest(p *Provider, request string, vars map[string]interface{}, response interface{}) error
 }
 
-type graphlClient struct{}
+//GraphqlClient is the default implementation of the GraphqlClientInterface
+type GraphqlClient struct{}
 
 // GrapqhlRequest does a new graphql request and stores the result in the response
-func (g *graphlClient) GrapqhlRequest(p *Provider, request string, vars map[string]interface{}, response interface{}) error {
+func (g *GraphqlClient) GrapqhlRequest(p *Provider, request string, vars map[string]interface{}, response interface{}) error {
 	graphQlClient := graphql.NewClient(p.Host + GraphqlEndpoint)
 	req := graphql.NewRequest(request)
 
@@ -42,5 +45,5 @@ func (g *graphlClient) GrapqhlRequest(p *Provider, request string, vars map[stri
 
 // GrapqhlRequest does a new graphql request and stores the result in the response
 func (p *Provider) GrapqhlRequest(request string, vars map[string]interface{}, response interface{}) error {
-	return defaultGraphlClient.GrapqhlRequest(p, request, vars, response)
+	return DefaultGraphqlClient.GrapqhlRequest(p, request, vars, response)
 }

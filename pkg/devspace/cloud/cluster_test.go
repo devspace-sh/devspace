@@ -2,11 +2,13 @@ package cloud
 
 import (
 	"encoding/base64"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -15,6 +17,31 @@ import (
 
 	"gotest.tools/assert"
 )
+
+var logOutput string
+
+type testLogger struct {
+	log.DiscardLogger
+}
+
+func (t testLogger) Done(args ...interface{}) {
+	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
+}
+func (t testLogger) Donef(format string, args ...interface{}) {
+	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
+}
+func (t testLogger) Info(args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
+}
+func (t testLogger) Infof(format string, args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
+}
+func (t testLogger) StartWait(message string) {
+	logOutput = logOutput + "\nStartWait " + message
+}
+func (t testLogger) StopWait() {
+	logOutput = logOutput + "\nStopWait"
+}
 
 func TestConnectCluster(t *testing.T) {
 	provider := &Provider{}
@@ -133,17 +160,51 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 	assert.Equal(t, string(flag), string(decodedCert), "Wrong cert returned")
 }
 
+type getKeyTestCase struct {
+	name string
+
+	givenKeys          map[int]string
+	forceQuestionParam bool
+	answers            []string
+	expectedErr        string
+	expectedKey        string
+}
+
 func TestGetKey(t *testing.T) {
-	provider := &Provider{
-		latest.Provider{
-			ClusterKey: map[int]string{
-				5: "onlyKey",
-			},
+	testCases := []getKeyTestCase{
+		getKeyTestCase{
+			name:               "One key, no question",
+			givenKeys:          map[int]string{5: "onlyKey"},
+			forceQuestionParam: false,
+			expectedKey:        "onlyKey",
+		},
+		getKeyTestCase{
+			name:               "Key from question",
+			forceQuestionParam: true,
+			answers:            []string{"firstKey", "secondKey", "sameKey", "sameKey"},
+			expectedKey:        "716fb307cf5cc64f34acfe748560a1a268d6e1a47d56ff1fc64eb549bcecd3f1",
 		},
 	}
-	returnedKey, err := getKey(provider, false)
-	assert.NilError(t, err, "Error getting the only clusteKey without forcing a question")
-	assert.Equal(t, returnedKey, "onlyKey", "Wrong key returned from Clusterkey with only one item")
+
+	for _, testCase := range testCases {
+		provider := &Provider{
+			Provider: latest.Provider{
+				ClusterKey: testCase.givenKeys,
+			},
+		}
+		for _, answer := range testCase.answers {
+			survey.SetNextAnswer(answer)
+		}
+
+		returnedKey, err := getKey(provider, testCase.forceQuestionParam)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
+			assert.Equal(t, returnedKey, testCase.expectedKey, "Wrong key returned in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from getKey in testCase %s", testCase.name)
+		}
+	}
 }
 
 type checkResourcesTestCase struct {
@@ -178,5 +239,41 @@ func TestCheckResources(t *testing.T) {
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from checking resources in testCase %s", testCase.name)
 		}
+	}
+}
+
+type initializeNamespaceTestCase struct {
+	name string
+
+	expectedErr string
+	expectedLog string
+}
+
+func TestInitializeNamespace(t *testing.T) {
+	testCases := []initializeNamespaceTestCase{
+		initializeNamespaceTestCase{
+			name: "Basic initialize",
+			expectedLog: `
+StartWait Initializing namespace
+Done Created namespace 'devspace-cloud'
+Done Created service account 'devspace-cloud-user'
+Info Created cluster role binding 'devspace-cloud-user-binding'
+StopWait`,
+		},
+	}
+	for _, testCase := range testCases {
+		kubeClient := fake.NewSimpleClientset()
+
+		logOutput = ""
+		log.SetInstance(&testLogger{})
+
+		err := initializeNamespace(kubeClient)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error initializing namespace in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from initializing namespace in testCase %s", testCase.name)
+		}
+		assert.Equal(t, logOutput, testCase.expectedLog, "Unexpected log output in testCase %s", testCase.name)
 	}
 }

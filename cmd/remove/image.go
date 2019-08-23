@@ -51,5 +51,9 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	log.Donef("Successfully removed image %s", args[0])
+	if cmd.RemoveAll {
+		log.Done("Successfully removed all images")
+	} else {
+		log.Donef("Successfully removed image %s", args[0])
+	}
 }

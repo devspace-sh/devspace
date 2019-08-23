@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	
+
 	"gotest.tools/assert"
 )
 
@@ -95,7 +95,6 @@ func TestTillerEnsure(t *testing.T) {
 
 	isTillerDeployed = IsTillerDeployed(config, client, configutil.TestNamespace)
 	assert.Equal(t, false, isTillerDeployed, "Tiller declared deployed despite deployment being broken")
-
 }
 
 func TestTillerCreate(t *testing.T) {

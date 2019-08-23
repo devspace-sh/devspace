@@ -73,7 +73,6 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	var (
 		dockerUsername = ""
 		registryURL    = ""
-		useKaniko      = false
 		retImageConfig = &latest.ImageConfig{}
 	)
 
@@ -94,7 +93,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	}
 
 	// If not kaniko get docker hub credentials
-	if cloudProvider == nil && useKaniko == false {
+	if cloudProvider == nil {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
 		log.StopWait()

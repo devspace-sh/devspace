@@ -11,7 +11,7 @@ jobs:
       go_import_path: github.com/devspace-cloud/devspace
       install:
         - npm install -g codeclimate-test-reporter
-      os: linux
+      os: osx
       go: 1.12.6
       script:
         - "./scripts/coverage.bash"

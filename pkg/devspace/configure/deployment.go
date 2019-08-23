@@ -151,8 +151,8 @@ func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, err
 	splittedPointer := []*string{}
 
 	for _, s := range splitted {
-		s = strings.TrimSpace(s)
-		splittedPointer = append(splittedPointer, &s)
+		trimmed := strings.TrimSpace(s)
+		splittedPointer = append(splittedPointer, &trimmed)
 	}
 
 	return &v1.DeploymentConfig{

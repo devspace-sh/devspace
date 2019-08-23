@@ -21,6 +21,10 @@ func TestResolver(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
