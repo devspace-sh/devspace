@@ -337,6 +337,7 @@ type DependencyConfig struct {
 // SourceConfig defines the dependency source
 type SourceConfig struct {
 	Git      *string `yaml:"git,omitempty"`
+	SubPath  *string `yaml:"subPath,omitempty"`
 	Branch   *string `yaml:"branch,omitempty"`
 	Tag      *string `yaml:"tag,omitempty"`
 	Revision *string `yaml:"revision,omitempty"`

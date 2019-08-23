@@ -102,6 +102,12 @@ func (gr *Repository) Update(merge bool) error {
 			return err
 		}
 
+		// Make sure master is checked out
+		repoWorktree.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName("refs/heads/master"),
+			Create: false,
+		})
+
 		err = repoWorktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
 		})
@@ -135,10 +141,24 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 			return fmt.Errorf("Error resolving tag revision: %v", err)
 		}
 	} else if branch != "" {
-		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/remotes/origin/%s", branch)))
+		remoteRef, err := r.Reference(plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", branch)), true)
 		if err != nil {
 			return fmt.Errorf("Error resolving branch revision: %v", err)
 		}
+
+		newRef := plumbing.NewHashReference(plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)), remoteRef.Hash())
+		r.Storer.SetReference(newRef)
+
+		// Checkout the branch
+		w, err := r.Worktree()
+		if err != nil {
+			return err
+		}
+
+		return w.Checkout(&git.CheckoutOptions{
+			Branch: newRef.Name(),
+			Create: false,
+		})
 	} else if revision != "" {
 		h := plumbing.NewHash(revision)
 		hash = &h
@@ -153,6 +173,7 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 	}
 
 	return w.Checkout(&git.CheckoutOptions{
-		Hash: *hash,
+		Hash:  *hash,
+		Force: true,
 	})
 }

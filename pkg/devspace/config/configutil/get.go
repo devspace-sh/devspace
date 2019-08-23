@@ -160,7 +160,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 					return nil, nil, err
 				}
 
-				vars, err = loadVarsFromWrapper(basePath, wrapper)
+				vars, err = loadVarsFromWrapper(basePath, wrapper, generatedConfig)
 				if err != nil {
 					return nil, nil, errors.Wrap(err, "load vars")
 				}
@@ -173,7 +173,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		}
 
 		// Load config
-		configRaw, err = loadConfigFromWrapper(basePath, configDefinition.Config)
+		configRaw, err = loadConfigFromWrapper(basePath, configDefinition.Config, generatedConfig)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -198,7 +198,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 			}
 		}
 
-		configRaw, err = loadConfigFromPath(configPath)
+		configRaw, err = loadConfigFromPath(configPath, generatedConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Loading config: %v", err)
 		}
@@ -211,7 +211,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		if configDefinition != nil {
 			if configDefinition.Overrides != nil {
 				for index, configWrapper := range *configDefinition.Overrides {
-					overwriteConfig, err := loadConfigFromWrapper(".", configWrapper)
+					overwriteConfig, err := loadConfigFromWrapper(".", configWrapper, generatedConfig)
 					if err != nil {
 						return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
 					}

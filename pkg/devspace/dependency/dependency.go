@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -86,12 +85,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 			return fmt.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
-		// Prettify path if its a path deployment
-		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Donef("Built dependency %s", dependency.ID[len(filepath.Dir(dependency.ID))+1:])
-		} else {
-			logger.Donef("Built dependency %s", dependency.ID)
-		}
+		logger.Donef("Built dependency %s", dependency.ID)
 	}
 
 	logger.StopWait()
@@ -138,11 +132,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 		}
 
 		// Prettify path if its a path deployment
-		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Donef("Deployed dependency %s", dependency.ID[len(filepath.Dir(dependency.ID))+1:])
-		} else {
-			logger.Donef("Deployed dependency %s", dependency.ID)
-		}
+		logger.Donef("Deployed dependency %s", dependency.ID)
 	}
 
 	logger.StopWait()
@@ -188,12 +178,7 @@ func PurgeAll(config *latest.Config, cache *generated.Config, allowCyclic bool, 
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
-		// Prettify path if its a path deployment
-		if dependency.DependencyConfig.Source.Path != nil {
-			logger.Donef("Purged dependency %s", dependency.ID[len(filepath.Dir(dependency.ID)):])
-		} else {
-			logger.Donef("Purged dependency %s", dependency.ID)
-		}
+		logger.Donef("Purged dependency %s", dependency.ID)
 	}
 
 	logger.StopWait()

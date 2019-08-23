@@ -6,11 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func loadVarsFromWrapper(basePath string, varsWrapper *configs.VarsWrapper) ([]*configs.Variable, error) {
+func loadVarsFromWrapper(basePath string, varsWrapper *configs.VarsWrapper, generatedConfig *generated.Config) ([]*configs.Variable, error) {
 	if varsWrapper.Path == nil && varsWrapper.Data == nil {
 		return nil, fmt.Errorf("path & data key are empty for vars %s", LoadedConfig)
 	}
@@ -38,7 +39,7 @@ func loadVarsFromWrapper(basePath string, varsWrapper *configs.VarsWrapper) ([]*
 	return returnVars, nil
 }
 
-func loadConfigFromWrapper(basePath string, configWrapper *configs.ConfigWrapper) (*latest.Config, error) {
+func loadConfigFromWrapper(basePath string, configWrapper *configs.ConfigWrapper, generatedConfig *generated.Config) (*latest.Config, error) {
 	if configWrapper.Path == nil && configWrapper.Data == nil {
 		return nil, fmt.Errorf("path & data key are empty for config %s", LoadedConfig)
 	}
@@ -52,12 +53,12 @@ func loadConfigFromWrapper(basePath string, configWrapper *configs.ConfigWrapper
 
 	// Load from path
 	if configWrapper.Path != nil {
-		returnConfig, err = loadConfigFromPath(filepath.Join(basePath, filepath.FromSlash(*configWrapper.Path)))
+		returnConfig, err = loadConfigFromPath(filepath.Join(basePath, filepath.FromSlash(*configWrapper.Path)), generatedConfig)
 		if err != nil {
 			return nil, fmt.Errorf("Loading config: %v", err)
 		}
 	} else {
-		returnConfig, err = loadConfigFromInterface(configWrapper.Data)
+		returnConfig, err = loadConfigFromInterface(configWrapper.Data, generatedConfig)
 		if err != nil {
 			return nil, fmt.Errorf("Loading config from interface: %v", err)
 		}
