@@ -322,6 +322,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	}
 
 	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
+		log.WriteString("\n")
 		return services.StartTerminal(config, client, params, args, exitChan, log)
 	}
 

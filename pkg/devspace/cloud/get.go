@@ -564,11 +564,8 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 	}
 
 	// Check result
-	if response.Space == nil {
-		return nil, fmt.Errorf("Space %s not found", spaceName)
-	}
-	if len(response.Space) == 0 {
-		return nil, fmt.Errorf("Space %s not found", spaceName)
+	if response.Space == nil || len(response.Space) == 0 {
+		return nil, fmt.Errorf("Space %s not found. You may need to prefix the space name with the name of its owner, e.g. USER:SPACE", spaceName)
 	}
 
 	spaceConfig := response.Space[0]

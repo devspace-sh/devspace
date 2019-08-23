@@ -129,7 +129,7 @@ func StartSync(config *latest.Config, verboseSync bool, log log.Logger) ([]*sync
 			return nil, fmt.Errorf("Error creating target selector: %v", err)
 		}
 
-		log.StartWait("Sync: Waiting for pods...")
+		log.StartWait("Sync: Waiting for containers to start...")
 		pod, container, err := selector.GetContainer(client)
 		log.StopWait()
 		if err != nil {

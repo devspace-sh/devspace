@@ -54,7 +54,9 @@ func StartTerminal(config *latest.Config, client kubernetes.Interface, cmdParame
 		return 0, err
 	}
 
+	log.WriteString("\n")
 	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	log.WriteString("\n")
 
 	go func() {
 		interrupt <- kubectl.ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)

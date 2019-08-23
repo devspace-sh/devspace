@@ -32,7 +32,7 @@ func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log
 				return nil, fmt.Errorf("Error creating target selector: %v", err)
 			}
 
-			log.StartWait("Port-Forwarding: Waiting for pods...")
+			log.StartWait("Port-Forwarding: Waiting for containers to start...")
 			pod, err := selector.GetPod(client)
 			log.StopWait()
 			if err != nil {
