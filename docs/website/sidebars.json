@@ -1,122 +1,301 @@
 {
   "docs": {
+    "Introduction": [
+      "introduction"
+    ],
+    "DevSpace CLI": [
+      "cli/what-is-devspace-cli"
+    ],
     "Getting Started": [
-      "getting-started/installation",
-      "getting-started/deployment",
-      "getting-started/development",
-      "getting-started/debugging"
+      "cli/getting-started/installation",
+      "cli/getting-started/deployment",
+      "cli/getting-started/development"
     ],
-    "Workflow & Basics": [
-      "workflow-basics/containerization",
-      "workflow-basics/deployment",
-      "workflow-basics/deployment/domains",
-      "workflow-basics/deployment/ci-cd-pipelines",
-      "workflow-basics/deployment/dependencies",
-      "workflow-basics/development",
-      "workflow-basics/development/analyze",
-      "workflow-basics/development/logs",
-      "workflow-basics/development/enter",
-      "workflow-basics/development/sync",
-      "workflow-basics/development/remote-debuggers"
+    "Image Building": [
+      "cli/image-building/workflow-basics",
+      "cli/image-building/configuration",
+      {
+        "type": "subcategory",
+        "label": "Build Tools",
+        "ids": [
+          "cli/image-building/build-tools/what-are-build-tools",
+          "cli/image-building/build-tools/docker",
+          "cli/image-building/build-tools/kaniko",
+          "cli/image-building/build-tools/custom-build-commands"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/image-building/advanced/tagging",
+          "cli/image-building/advanced/registry-authentication",
+          "cli/image-building/advanced/cleanup",
+          "cli/image-building/advanced/sequential-builds",
+          "cli/image-building/advanced/variables"
+        ]
+      }
     ],
-    "Build Images": [
-      "image-building/overview",
-      "image-building/add-images",
-      "image-building/remove-images",
-      "image-building/tagging",
-      "image-building/cleanup",
-      "image-building/specification",
-      "image-building/registries/authentication",
-      "image-building/registries/pull-secrets",
-      "image-building/build-tools/docker",
-      "image-building/build-tools/kaniko",
-      "image-building/build-tools/custom-build-script"
+    "Deployment": [
+      "cli/deployment/workflow-basics",
+      {
+        "type": "subcategory",
+        "label": "Deployment Types",
+        "ids": [
+          "cli/deployment/deployment-types",
+          "cli/deployment/components/what-are-components",
+          "cli/deployment/kubernetes-manifests/what-are-manifests",
+          "cli/deployment/helm-charts/what-are-helm-charts"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Configuration (Components)",
+        "ids": [
+          "cli/deployment/components/configuration/overview-specification",
+          "cli/deployment/components/configuration/containers",
+          "cli/deployment/components/configuration/volumes",
+          "cli/deployment/components/configuration/service",
+          "cli/deployment/components/configuration/ingress",
+          "cli/deployment/components/configuration/scaling"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Configuration (Manifests)",
+        "ids": [
+          "cli/deployment/kubernetes-manifests/configuration/overview-specification",
+          "cli/deployment/kubernetes-manifests/configuration/kustomize"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Configuration (Helm Charts)",
+        "ids": [
+          "cli/deployment/helm-charts/configuration/overview-specification",
+          "cli/deployment/helm-charts/configuration/override-values"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/deployment/advanced/advanced-topics",
+          "cli/deployment/advanced/dependencies",
+          "cli/deployment/advanced/ci-cd-pipelines",
+          "cli/deployment/advanced/variables"
+        ]
+      }
     ],
-    "Deploy Components": [
-      "deployment/components/what-are-components",
-      "deployment/components/add-predefined-components",
-      "deployment/components/add-custom-components",
-      "deployment/components/remove-components",
-      "deployment/components/configuration/volumes",
-      "deployment/components/configuration/service",
-      "deployment/components/configuration/scaling",
-      "deployment/components/configuration/specification",
-      "deployment/components/containers/image",
-      "deployment/components/containers/environment-variables",
-      "deployment/components/containers/resource-limits",
-      "deployment/components/containers/entrypoint",
-      "deployment/components/containers/health-checks"
-    ],
-    "Deploy Manifests": [
-      "deployment/kubernetes-manifests/what-are-manifests",
-      "deployment/kubernetes-manifests/add-manifests",
-      "deployment/kubernetes-manifests/remove-manifests",
-      "deployment/kubernetes-manifests/kustomize"
-    ],
-    "Deploy Helm Charts": [
-      "deployment/helm-charts/what-are-helm-charts",
-      "deployment/helm-charts/add-charts",
-      "deployment/helm-charts/remove-charts"
-    ],
-    "Develop with Kubernetes": [
-      "development/workflow",
-      "development/terminal",
-      "development/synchronization",
-      "development/port-forwarding",
-      "development/auto-reloading",
-      "development/overrides"
+    "Development": [
+      "cli/development/workflow-basics",
+      "cli/development/commands",
+      {
+        "type": "subcategory",
+        "label": "Configuration",
+        "ids": [
+          "cli/development/configuration/overview-specification",
+          "cli/development/configuration/file-synchronization",
+          "cli/development/configuration/port-forwarding",
+          "cli/development/configuration/dev-overrides",
+          "cli/development/configuration/terminal-proxy",
+          "cli/development/configuration/auto-reloading"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/development/advanced/advanced-topics",
+          "cli/development/advanced/remote-debuggers",
+          "cli/development/advanced/optimize-development-workflow"
+        ]
+      }
     ],
     "Advanced Configuration": [
-      "configuration/reference",
-      "configuration/multiple-configs",
-      "configuration/overrides",
-      "configuration/variables",
-      "configuration/hooks"
+      "cli/configuration/reference",
+      "cli/configuration/variables",
+      "cli/configuration/multiple-configs",
+      "cli/configuration/overrides",
+      "cli/configuration/hooks"
     ],
     "CLI Reference": [
-      "cli-commands/analyze",
-      "cli-commands/deploy",
-      "cli-commands/dev",
-      "cli-commands/enter",
-      "cli-commands/help",
-      "cli-commands/init",
-      "cli-commands/install",
-      "cli-commands/login",
-      "cli-commands/logs",
-      "cli-commands/purge",
-      "cli-commands/sync",
-      "cli-commands/upgrade",
-      "cli-commands/add/deployment",
-      "cli-commands/add/image",
-      "cli-commands/add/port",
-      "cli-commands/add/provider",
-      "cli-commands/add/selector",
-      "cli-commands/add/sync",
-      "cli-commands/connect/cluster",
-      "cli-commands/create/space",
-      "cli-commands/list/clusters",
-      "cli-commands/list/configs",
-      "cli-commands/list/ports",
-      "cli-commands/list/providers",
-      "cli-commands/list/selectors",
-      "cli-commands/list/spaces",
-      "cli-commands/list/sync",
-      "cli-commands/list/vars",
-      "cli-commands/remove/cluster",
-      "cli-commands/remove/deployment",
-      "cli-commands/remove/image",
-      "cli-commands/remove/port",
-      "cli-commands/remove/provider",
-      "cli-commands/remove/selector",
-      "cli-commands/remove/space",
-      "cli-commands/remove/sync",
-      "cli-commands/reset/key",
-      "cli-commands/status/sync",
-      "cli-commands/update/config",
-      "cli-commands/use/config",
-      "cli-commands/use/space"
+      {
+        "type": "subcategory",
+        "label": "devspace analyze",
+        "ids": [
+          "cli/commands/analyze"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace deploy",
+        "ids": [
+          "cli/commands/deploy"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace dev",
+        "ids": [
+          "cli/commands/dev"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace enter",
+        "ids": [
+          "cli/commands/enter"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace help",
+        "ids": [
+          "cli/commands/help"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace init",
+        "ids": [
+          "cli/commands/init"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace install",
+        "ids": [
+          "cli/commands/install"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace login",
+        "ids": [
+          "cli/commands/login"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace logs",
+        "ids": [
+          "cli/commands/logs"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace purge",
+        "ids": [
+          "cli/commands/purge"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace sync",
+        "ids": [
+          "cli/commands/sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace upgrade",
+        "ids": [
+          "cli/commands/upgrade"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace add",
+        "ids": [
+          "cli/commands/add/overview",
+          "cli/commands/add/deployment",
+          "cli/commands/add/image",
+          "cli/commands/add/port",
+          "cli/commands/add/provider",
+          "cli/commands/add/selector",
+          "cli/commands/add/sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace connect",
+        "ids": [
+          "cli/commands/connect/cluster"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace create",
+        "ids": [
+          "cli/commands/create/space"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace list",
+        "ids": [
+          "cli/commands/list/overview",
+          "cli/commands/list/clusters",
+          "cli/commands/list/configs",
+          "cli/commands/list/ports",
+          "cli/commands/list/providers",
+          "cli/commands/list/selectors",
+          "cli/commands/list/spaces",
+          "cli/commands/list/sync",
+          "cli/commands/list/vars"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace remove",
+        "ids": [
+          "cli/commands/remove/overview",
+          "cli/commands/remove/cluster",
+          "cli/commands/remove/deployment",
+          "cli/commands/remove/image",
+          "cli/commands/remove/port",
+          "cli/commands/remove/provider",
+          "cli/commands/remove/selector",
+          "cli/commands/remove/space",
+          "cli/commands/remove/sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace reset",
+        "ids": [
+          "cli/commands/reset/key"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace status",
+        "ids": [
+          "cli/commands/status/sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace update",
+        "ids": [
+          "cli/commands/update/config"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace use",
+        "ids": [
+          "cli/commands/use/overview",
+          "cli/commands/use/config",
+          "cli/commands/use/space"
+        ]
+      }
     ],
-    "Intro": ["cloud/intro/access"],
+    "DevSpace Cloud": [
+      "cloud/what-is-devspace-cloud",
+      "cloud/saas-vs-on-premise"
+    ],
     "Spaces": [
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
@@ -125,8 +304,13 @@
       "cloud/spaces/resource-limits",
       "cloud/spaces/pause-spaces"
     ],
-    "Domains": ["cloud/domains/workflow", "cloud/domains/certificates"],
-    "Images": ["cloud/images/dscr-io"],
+    "Domains": [
+      "cloud/domains/workflow", 
+      "cloud/domains/certificates"
+    ],
+    "Images": [
+      "cloud/images/dscr-io"
+    ],
     "Clusters": [
       "cloud/clusters/connect",
       "cloud/clusters/users",

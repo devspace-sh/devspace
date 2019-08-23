@@ -19,7 +19,7 @@ const siteConfig = {
   headerLinks: [
     { href: "http://devspace.cloud/pricing", label: "Pricing" },
     { href: "http://devspace.cloud/about", label: "About" },
-    { doc: "getting-started/installation", label: "Docs" },
+    { doc: "introduction", label: "Docs" },
     { href: "http://devspace.cloud/help", label: "Help" },
     { href: "https://app.devspace.cloud/", label: "Login" },
     { href: "#", label: "" },
@@ -75,7 +75,7 @@ const siteConfig = {
   ],
 
   stylesheets: [
-    "https://fonts.googleapis.com/css?family=Play|Raleway:400,500,600"
+    "https://fonts.googleapis.com/css?family=Play|Kanit:400"
   ],
 
   // On page navigation for the current documentation page.
