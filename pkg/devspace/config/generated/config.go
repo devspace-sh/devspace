@@ -137,6 +137,7 @@ func NewCache() *CacheConfig {
 
 // GetActive returns the currently active devspace config
 func (config *Config) GetActive() *CacheConfig {
+	InitDevSpaceConfig(config, config.ActiveConfig)
 	return config.Configs[config.ActiveConfig]
 }
 

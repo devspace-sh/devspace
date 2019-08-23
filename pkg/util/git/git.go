@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/pkg/errors"
 	git "gopkg.in/src-d/go-git.v4"
@@ -12,14 +13,14 @@ import (
 // Repository holds the information about a repository
 type Repository struct {
 	LocalPath string
-	RemotURL  string
+	RemoteURL string
 }
 
 // NewGitRepository creates a new git repository struct with the given parameters
 func NewGitRepository(localPath string, remoteURL string) *Repository {
 	return &Repository{
 		LocalPath: localPath,
-		RemotURL:  remoteURL,
+		RemoteURL: remoteURL,
 	}
 }
 
@@ -67,6 +68,15 @@ func (gr *Repository) GetRemote() (string, error) {
 	return urls[0], nil
 }
 
+func isGitCommandAvailable() bool {
+	_, err := exec.Command("git", "version").Output()
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // Update pulls the repository or clones it into the local path
 func (gr *Repository) Update(merge bool) error {
 	// Check if repo already exists
@@ -78,12 +88,37 @@ func (gr *Repository) Update(merge bool) error {
 			return err
 		}
 
-		// Clone into folder
-		_, err = git.PlainClone(gr.LocalPath, false, &git.CloneOptions{
-			URL: gr.RemotURL,
-		})
-		if err != nil {
-			return err
+		if isGitCommandAvailable() {
+			out, err := exec.Command("git", "clone", gr.RemoteURL, gr.LocalPath).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("Error running 'git clone %s': %v -> %s", gr.RemoteURL, err, string(out))
+			}
+		} else {
+			// Check
+			// Clone into folder
+			_, err = git.PlainClone(gr.LocalPath, false, &git.CloneOptions{
+				URL: gr.RemoteURL,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	// Check if git command exists
+	if isGitCommandAvailable() {
+		if merge {
+			out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
+			}
+		} else {
+			out, err := exec.Command("git", "-C", gr.LocalPath, "fetch").CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("Error running 'git fetch %s': %v -> %s", gr.RemoteURL, err, string(out))
+			}
 		}
 
 		return nil
@@ -101,6 +136,12 @@ func (gr *Repository) Update(merge bool) error {
 		if err != nil {
 			return err
 		}
+
+		// Make sure master is checked out
+		repoWorktree.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName("refs/heads/master"),
+			Create: false,
+		})
 
 		err = repoWorktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
@@ -135,10 +176,24 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 			return fmt.Errorf("Error resolving tag revision: %v", err)
 		}
 	} else if branch != "" {
-		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/remotes/origin/%s", branch)))
+		remoteRef, err := r.Reference(plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", branch)), true)
 		if err != nil {
 			return fmt.Errorf("Error resolving branch revision: %v", err)
 		}
+
+		newRef := plumbing.NewHashReference(plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)), remoteRef.Hash())
+		r.Storer.SetReference(newRef)
+
+		// Checkout the branch
+		w, err := r.Worktree()
+		if err != nil {
+			return err
+		}
+
+		return w.Checkout(&git.CheckoutOptions{
+			Branch: newRef.Name(),
+			Create: false,
+		})
 	} else if revision != "" {
 		h := plumbing.NewHash(revision)
 		hash = &h
@@ -153,6 +208,7 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 	}
 
 	return w.Checkout(&git.CheckoutOptions{
-		Hash: *hash,
+		Hash:  *hash,
+		Force: true,
 	})
 }

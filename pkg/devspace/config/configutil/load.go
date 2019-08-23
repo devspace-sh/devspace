@@ -125,7 +125,7 @@ type predefinedVarDefinition struct {
 	Fill         func(generatedConfig *generated.Config) (*string, error)
 }
 
-func getPredefinedVar(name string) (bool, string, error) {
+func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, string, error) {
 	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
 		if variable.Value == nil {
 			return false, "", errors.New(variable.ErrorMessage)
@@ -141,10 +141,7 @@ func getPredefinedVar(name string) (bool, string, error) {
 			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
 		}
 
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			return false, "", fmt.Errorf("Error reading generated config: %v", err)
-		} else if generatedConfig.CloudSpace == nil {
+		if generatedConfig.CloudSpace == nil {
 			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 		} else if len(generatedConfig.CloudSpace.Domains) <= idx-1 {
 			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(generatedConfig.CloudSpace.Domains), idx)
@@ -156,16 +153,16 @@ func getPredefinedVar(name string) (bool, string, error) {
 	return false, "", nil
 }
 
-func varReplaceFn(path, value string) (interface{}, error) {
+func varReplaceFn(path, value string, generatedConfig *generated.Config) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return vars.ParseString(value, resolveVar)
+	return vars.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig) })
 }
 
-func resolveVar(varName string) (string, error) {
+func resolveVar(varName string, generatedConfig *generated.Config) (string, error) {
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName)
+	found, value, err := getPredefinedVar(varName, generatedConfig)
 	if err != nil {
 		return "", err
 	} else if found {
@@ -173,10 +170,6 @@ func resolveVar(varName string) (string, error) {
 	}
 
 	// Is in generated config?
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return "", fmt.Errorf("Error reading generated config: %v", err)
-	}
 	currentConfig := generatedConfig.GetActive()
 	if _, ok := currentConfig.Vars[varName]; ok {
 		return currentConfig.Vars[varName], nil
@@ -240,13 +233,13 @@ func AskQuestion(variable *configs.Variable) string {
 	return survey.Question(params)
 }
 
-func loadConfigFromPath(path string) (*latest.Config, error) {
+func loadConfigFromPath(path string, generatedConfig *generated.Config) (*latest.Config, error) {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := resolveVars(yamlFileContent)
+	out, err := resolveVars(yamlFileContent, generatedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -265,13 +258,13 @@ func loadConfigFromPath(path string) (*latest.Config, error) {
 	return newConfig, nil
 }
 
-func loadConfigFromInterface(m interface{}) (*latest.Config, error) {
+func loadConfigFromInterface(m interface{}, generatedConfig *generated.Config) (*latest.Config, error) {
 	yamlFileContent, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := resolveVars(yamlFileContent)
+	out, err := resolveVars(yamlFileContent, generatedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -322,21 +315,16 @@ func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, stri
 	return out, nil
 }
 
-func resolveVars(yamlFileContent []byte) ([]byte, error) {
-	err := fillPredefinedVars()
+func resolveVars(yamlFileContent []byte, generatedConfig *generated.Config) ([]byte, error) {
+	err := fillPredefinedVars(generatedConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return CustomResolveVars(yamlFileContent, varMatchFn, varReplaceFn)
+	return CustomResolveVars(yamlFileContent, varMatchFn, func(path, value string) (interface{}, error) { return varReplaceFn(path, value, generatedConfig) })
 }
 
-func fillPredefinedVars() error {
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("Error reading generated config: %v", err)
-	}
-
+func fillPredefinedVars(generatedConfig *generated.Config) error {
 	for varName, predefinedVariable := range PredefinedVars {
 		val, err := predefinedVariable.Fill(generatedConfig)
 		if err != nil {

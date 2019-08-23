@@ -131,7 +131,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
-		return nil, fmt.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemotURL, err)
+		return nil, fmt.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
 	}
 
 	if len(cg.supportedLanguages) == 0 {
