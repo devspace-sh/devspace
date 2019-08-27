@@ -302,7 +302,10 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		return id
 	} else if dependency.Source.Path != nil {
 		// Check if it's an git repo
-		filePath := filepath.Join(basePath, *dependency.Source.Path)
+		filePath, err := filepath.Abs(filepath.Join(basePath, *dependency.Source.Path))
+		if err != nil {
+			filePath = filepath.Join(basePath, *dependency.Source.Path)
+		}
 
 		gitRepo := git.NewGitRepository(filePath, "")
 		remote, err := gitRepo.GetRemote()
