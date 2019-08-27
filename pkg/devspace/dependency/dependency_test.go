@@ -22,11 +22,36 @@ type testLogger struct {
 	log.DiscardLogger
 }
 
+func (t testLogger) Info(args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
+}
+func (t testLogger) Infof(format string, args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
+}
+
 func (t testLogger) Done(args ...interface{}) {
 	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
 }
 func (t testLogger) Donef(format string, args ...interface{}) {
 	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) Fail(args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
+}
+func (t testLogger) Failf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) Warn(args ...interface{}) {
+	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
+}
+func (t testLogger) Warnf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) StartWait(msg string) {
+	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
 }
 
 type updateAllTestCase struct {
@@ -42,8 +67,6 @@ type updateAllTestCase struct {
 }
 
 func TestUpdateAll(t *testing.T) {
-	t.Skip("Skipped for now")
-
 	testCases := []updateAllTestCase{
 		updateAllTestCase{
 			name: "No Dependencies to update",
@@ -59,7 +82,7 @@ func TestUpdateAll(t *testing.T) {
 					Source: &latest.SourceConfig{
 						Path: ptr.String("someDir"),
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
+					Config: ptr.String("someConfig"),
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -71,8 +94,7 @@ func TestUpdateAll(t *testing.T) {
 				Dependencies: map[string]string{},
 			},
 			allowCyclicParam: true,
-			expectedLog: `
-Done Resolved 1 dependencies`,
+			expectedLog:      "\nWait Update dependencies\nWait Resolving dependencies\nDone Resolved 1 dependencies",
 		},
 	}
 
