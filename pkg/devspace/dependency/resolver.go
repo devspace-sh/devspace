@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -178,7 +179,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 		gitPath := strings.TrimSpace(*dependency.Source.Git)
 
 		os.MkdirAll(DependencyFolderPath, 0755)
-		localPath = filepath.Join(DependencyFolderPath, hash.String(gitPath))
+		localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
 
 		// Check if dependency exists
 		_, err := os.Stat(localPath)
@@ -186,7 +187,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 			update = true
 		}
 
-		// Update chart
+		// Update dependency
 		if update {
 			var (
 				gitRepo  = git.NewGitRepository(localPath, gitPath)
@@ -228,6 +229,10 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 		loadConfig = *dependency.Config
 	}
 
+	if dependency.Source.SubPath != nil {
+		localPath = filepath.Join(localPath, filepath.FromSlash(*dependency.Source.SubPath))
+	}
+
 	// Load config
 	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache, log.Discard)
 	if err != nil {
@@ -256,6 +261,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
 	dGeneratedConfig.ActiveConfig = loadConfig
+	generated.InitDevSpaceConfig(dGeneratedConfig, loadConfig)
 
 	return &Dependency{
 		ID:        ID,
@@ -269,9 +275,31 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}, nil
 }
 
+var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
+
 func (r *Resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
 	if dependency.Source.Git != nil {
-		return strings.TrimSpace(*dependency.Source.Git)
+		// Erase authentication credentials
+		id := strings.TrimSpace(*dependency.Source.Git)
+		id = authRegEx.ReplaceAllString(id, "$1$2")
+
+		if dependency.Source.Tag != nil {
+			id += "@" + *dependency.Source.Tag
+		} else if dependency.Source.Branch != nil {
+			id += "@" + *dependency.Source.Branch
+		} else if dependency.Source.Revision != nil {
+			id += "@" + *dependency.Source.Revision
+		}
+
+		if dependency.Source.SubPath != nil {
+			id += ":" + *dependency.Source.SubPath
+		}
+
+		if dependency.Config != nil {
+			id += " - config " + *dependency.Config
+		}
+
+		return id
 	} else if dependency.Source.Path != nil {
 		// Check if it's an git repo
 		filePath := filepath.Join(basePath, *dependency.Source.Path)
@@ -280,6 +308,10 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		remote, err := gitRepo.GetRemote()
 		if err == nil {
 			return remote
+		}
+
+		if dependency.Config != nil {
+			filePath += " - config " + *dependency.Config
 		}
 
 		return filePath
