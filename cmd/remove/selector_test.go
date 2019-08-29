@@ -35,7 +35,7 @@ func TestRunRemoveSelector(t *testing.T) {
 	testCases := []removeSelectorTestCase{
 		removeSelectorTestCase{
 			name:          "No devspace config",
-			expectedPanic: "Couldn't find any devspace configuration. Please run `devspace init`",
+			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removeSelectorTestCase{
 			name: "Remove existing selector",

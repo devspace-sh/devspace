@@ -34,7 +34,7 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name:          "No devspace config",
 			args:          []string{""},
-			expectedPanic: "Couldn't find any devspace configuration. Please run `devspace init`",
+			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removeDeploymentTestCase{
 			name:          "Don't specify what to remove",

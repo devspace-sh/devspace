@@ -34,7 +34,7 @@ func TestRunRemovePort(t *testing.T) {
 		removePortTestCase{
 			name:          "No devspace config",
 			args:          []string{""},
-			expectedPanic: "Couldn't find any devspace configuration. Please run `devspace init`",
+			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removePortTestCase{
 			name:          "No port specified",

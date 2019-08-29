@@ -35,7 +35,7 @@ func TestRunRemoveSync(t *testing.T) {
 	testCases := []removeSyncTestCase{
 		removeSyncTestCase{
 			name:          "No devspace config",
-			expectedPanic: "Couldn't find any devspace configuration. Please run `devspace init`",
+			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removeSyncTestCase{
 			name:          "Specify nothing",

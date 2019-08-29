@@ -41,7 +41,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	var values [][]string

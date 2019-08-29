@@ -50,7 +50,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		log.Fatal(err)
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	name := ""
