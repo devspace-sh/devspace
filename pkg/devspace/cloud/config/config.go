@@ -44,6 +44,12 @@ func GetProvider(config *latest.Config, provider string) *latest.Provider {
 	return nil
 }
 
+//Reset resets the loaded config and enables another loading processa
+func Reset() {
+	loadedConfig = nil
+	loadConfigOnce = sync.Once{}
+}
+
 // SaveProviderConfig saves the cloud config
 func SaveProviderConfig(config *latest.Config) error {
 	homedir, err := homedir.Dir()
