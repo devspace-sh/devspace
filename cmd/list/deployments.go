@@ -93,11 +93,15 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 					log.Warnf("Unable to create component deploy config for %s: %v", *deployConfig.Name, err)
 					continue
 				}
+			} else {
+				log.Warnf("No deployment method defined for deployment %s", *deployConfig.Name)
+				continue
 			}
 
 			status, err := deployClient.Status()
 			if err != nil {
 				log.Warnf("Error retrieving status for deployment %s: %v", *deployConfig.Name, err)
+				continue
 			}
 
 			values = append(values, []string{
