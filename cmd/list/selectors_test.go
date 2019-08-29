@@ -25,7 +25,7 @@ type listSelectorsTestCase struct {
 }
 
 func TestListSelectors(t *testing.T) {
-	expectedHeader := ansi.Color(" Name  ", "green+b") + "      " + ansi.Color(" Namespace  ", "green+b") + ansi.Color(" Label Selector  ", "green+b") + "          " + ansi.Color(" Container  ", "green+b") + "      "
+	expectedHeader := ansi.Color(" Name  ", "green+b") + "      " + ansi.Color(" Namespace  ", "green+b") + ansi.Color(" Label Selector  ", "green+b") + "" + ansi.Color(" Container  ", "green+b") + "      "
 	testCases := []listSelectorsTestCase{
 		listSelectorsTestCase{
 			name:          "no config exists",
@@ -46,8 +46,9 @@ func TestListSelectors(t *testing.T) {
 						&latest.SelectorConfig{
 							Name: ptr.String("mySelector"),
 							LabelSelector: &map[string]*string{
-								"hello":  ptr.String("world"),
-								"isTest": ptr.String("true"),
+								//The order can be any way, so we do a little trick so the selectors are printed equally
+								"a":   ptr.String("b="),
+								"a=b": ptr.String(""),
 							},
 							Namespace:     ptr.String("myNS"),
 							ContainerName: ptr.String("myContainername"),
@@ -55,7 +56,7 @@ func TestListSelectors(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n mySelector   myNS        hello=world, isTest=true   myContainername  \n\n",
+			expectedOutput: "\n" + expectedHeader + "\n mySelector   myNS        a=b=, a=b=       myContainername  \n\n",
 		},
 	}
 
