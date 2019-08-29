@@ -12,9 +12,9 @@ import (
 type varsCmd struct{}
 
 func newVarsCmd() *cobra.Command {
-	cmd := &configsCmd{}
+	cmd := &varsCmd{}
 
-	configsCmd := &cobra.Command{
+	varsCmd := &cobra.Command{
 		Use:   "vars",
 		Short: "Lists the vars in the active config",
 		Long: `
@@ -29,11 +29,11 @@ values
 		Run:  cmd.RunListVars,
 	}
 
-	return configsCmd
+	return varsCmd
 }
 
 // RunListVars runs the list vars command logic
-func (cmd *configsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
+func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
