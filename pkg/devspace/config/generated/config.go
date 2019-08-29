@@ -84,6 +84,12 @@ func SetTestConfig(config *Config) {
 	testDontSaveConfig = true
 }
 
+//ResetConfig resets the config to nil and enables loading from configs.yaml
+func ResetConfig() {
+	loadedConfigOnce = sync.Once{}
+	loadedConfig = nil
+}
+
 // LoadConfig loads the config from the filesystem
 func LoadConfig() (*Config, error) {
 	var err error
