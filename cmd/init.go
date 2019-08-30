@@ -482,13 +482,10 @@ func (cmd *InitCmd) addDevConfig() {
 		}
 	}
 
-	// Override image entrypoint
+	// Disable terminal by default
 	if len(*config.Images) > 0 {
-		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
-			&latest.ImageOverrideConfig{
-				Name:       ptr.String("default"),
-				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
-			},
+		config.Dev.Terminal = &latest.Terminal{
+			Disabled: ptr.Bool(true),
 		}
 	}
 }
