@@ -437,29 +437,30 @@ func (cmd *InitCmd) addDevConfig() {
 		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
 
 		if servicePort.Port != nil {
-			localPort := *servicePort.Port
-			var remotePort int
-			var err error
+			localPortPtr := servicePort.Port
+			var remotePortPtr *int
 
-			if localPort < 1024 {
-				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+			if *localPortPtr < 1024 {
+				log.WriteString("\n")
+				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.\n")
 
 				portString := survey.Question(&survey.QuestionOptions{
 					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
-					DefaultValue: strconv.Itoa(localPort + 8000),
+					DefaultValue: strconv.Itoa(*localPortPtr + 8000),
 				})
 
-				remotePort = localPort
+				remotePortPtr = localPortPtr
 
-				localPort, err = strconv.Atoi(portString)
+				localPort, err := strconv.Atoi(portString)
 				if err != nil {
 					log.Fatal("Error parsing port '%s'", portString)
 				}
+				localPortPtr = &localPort
 			}
 			portMappings := []*latest.PortMapping{}
 			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort:  &localPort,
-				RemotePort: &remotePort,
+				LocalPort:  localPortPtr,
+				RemotePort: remotePortPtr,
 			})
 
 			config.Dev.Ports = &[]*latest.PortForwardingConfig{

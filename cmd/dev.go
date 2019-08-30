@@ -57,7 +57,7 @@ type DevCmd struct {
 	Namespace       string
 }
 
-var interactiveDefaultPickerValue = "Open Picker"
+const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd() *cobra.Command {
