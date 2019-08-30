@@ -446,7 +446,7 @@ func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config 
 
 	// Adjust config for interactive mode
 	if cmd.Interactive != "" {
-		if config.Images == nil {
+		if config.Images == nil || len(*config.Images) == 0 {
 			log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
 		}
 		images := *config.Images
@@ -462,9 +462,8 @@ func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config 
 				cmd.Interactive = imageNames[0]
 			} else {
 				cmd.Interactive = survey.Question(&survey.QuestionOptions{
-					Question:     "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?\nIf you want to apply this override to multiple images run `devspace dev -i image1,image2,...`",
-					DefaultValue: useDevSpaceCloud,
-					Options:      imageNames,
+					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?\nIf you want to apply this override to multiple images run `devspace dev -i image1,image2,...`",
+					Options:  imageNames,
 				})
 			}
 		}

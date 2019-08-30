@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
@@ -436,10 +437,29 @@ func (cmd *InitCmd) addDevConfig() {
 		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
 
 		if servicePort.Port != nil {
+			localPort := *servicePort.Port
+			var remotePort int
+			var err error
+
+			if localPort < 1024 {
+				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+
+				portString := survey.Question(&survey.QuestionOptions{
+					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+					DefaultValue: strconv.Itoa(localPort + 8000),
+				})
+
+				remotePort = localPort
+
+				localPort, err = strconv.Atoi(portString)
+				if err != nil {
+					log.Fatal("Error parsing port '%s'", portString)
+				}
+			}
 			portMappings := []*latest.PortMapping{}
-			exposedPort := *servicePort.Port
 			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort: &exposedPort,
+				LocalPort:  &localPort,
+				RemotePort: &remotePort,
 			})
 
 			config.Dev.Ports = &[]*latest.PortForwardingConfig{

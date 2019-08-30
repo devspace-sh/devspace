@@ -11,7 +11,6 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
@@ -75,20 +74,6 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		port, err := strconv.Atoi(port)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing port")
-		}
-
-		if port < 1024 {
-			log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
-
-			portString := survey.Question(&survey.QuestionOptions{
-				Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
-				DefaultValue: strconv.Itoa(port + 8000),
-			})
-
-			port, err = strconv.Atoi(portString)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "parsing port")
-			}
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
