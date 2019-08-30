@@ -29,8 +29,8 @@ const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
 
 const (
 	// Cluster options
-	useDevSpaceCloud           = "DevSpace Cloud (managed cluster)"
-	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your own cluster)"
+	useDevSpaceCloud           = "DevSpace Cloud (hosted Kubernetes namespaces, free)"
+	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your cluster and create isolated namespaces)"
 	useCurrentContext          = "Use current kubectl context (no server-side component)"
 
 	// Cluster connect options

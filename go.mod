@@ -20,7 +20,7 @@ require (
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
-	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
+	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -91,6 +91,7 @@ require (
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v0.0.0
 	k8s.io/helm v2.14.2+incompatible
+	k8s.io/klog v0.3.1
 	k8s.io/kubernetes v1.15.0
 	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
 )
