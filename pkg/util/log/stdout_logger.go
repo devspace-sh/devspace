@@ -47,7 +47,7 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	},
 	warnFn: {
 		tag:      "[warn]   ",
-		color:    "166+b",
+		color:    "red+b",
 		logLevel: logrus.WarnLevel,
 		stream:   stdout,
 	},

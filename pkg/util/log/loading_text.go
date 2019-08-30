@@ -108,7 +108,7 @@ func (l *loadingText) render() {
 	}
 	messagePrefix := []byte("[wait] ")
 
-	l.Stream.Write([]byte(ansi.Color(string(messagePrefix), "red+b")))
+	l.Stream.Write([]byte(ansi.Color(string(messagePrefix), "cyan+b")))
 
 	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.StartTimestamp)/int64(time.Second))
 	message := []byte(l.getLoadingChar() + " " + l.Message)
