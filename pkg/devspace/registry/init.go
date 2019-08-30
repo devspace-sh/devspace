@@ -26,8 +26,12 @@ func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClien
 				if err != nil {
 					return err
 				}
+				displayRegistryURL := registryURL
 
-				log.StartWait("Creating image pull secret for registry: " + registryURL)
+				if displayRegistryURL == "" {
+					displayRegistryURL = "hub.docker.com"
+				}
+				log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
 				err = createPullSecretForRegistry(config, dockerClient, client, registryURL, log)
 				log.StopWait()
 				if err != nil {
