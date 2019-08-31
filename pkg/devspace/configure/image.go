@@ -69,10 +69,9 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string, cloudProvider *string) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context, registryURL string, cloudProvider *string) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
-		registryURL    = ""
 		retImageConfig = &latest.ImageConfig{}
 	)
 
@@ -103,28 +102,30 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		}
 	}
 
-	// Check which registry to use
-	if cloudProvider == nil {
-		registryURL = survey.Question(&survey.QuestionOptions{
-			Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
-			DefaultValue:           "hub.docker.com",
-			ValidationRegexPattern: "^.*$",
-		})
-	} else {
-		// Get default registry
-		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
-		if err != nil {
-			return nil, fmt.Errorf("Error login into cloud provider: %v", err)
-		}
-
-		registries, err := provider.GetRegistries()
-		if err != nil {
-			return nil, fmt.Errorf("Error retrieving registries: %v", err)
-		}
-		if len(registries) > 0 {
-			registryURL = registries[0].URL
+	if registryURL == "" {
+		// Check which registry to use
+		if cloudProvider == nil {
+			registryURL = survey.Question(&survey.QuestionOptions{
+				Question:               "Which registry do you want to push to? ('hub.docker.com' or URL)",
+				DefaultValue:           "hub.docker.com",
+				ValidationRegexPattern: "^.*$",
+			})
 		} else {
-			registryURL = "hub.docker.com"
+			// Get default registry
+			provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
+			if err != nil {
+				return nil, fmt.Errorf("Error login into cloud provider: %v", err)
+			}
+
+			registries, err := provider.GetRegistries()
+			if err != nil {
+				return nil, fmt.Errorf("Error retrieving registries: %v", err)
+			}
+			if len(registries) > 0 {
+				registryURL = registries[0].URL
+			} else {
+				registryURL = "hub.docker.com"
+			}
 		}
 	}
 

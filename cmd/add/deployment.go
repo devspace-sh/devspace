@@ -118,7 +118,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 			log.Fatal(err)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, "")
 	} else if cmd.Image != "" {
 		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image)
 	} else if cmd.Component != "" {

@@ -129,7 +129,7 @@ func TestGetImageConfigFromDockerfile(t *testing.T) {
 		}
 		fsutil.WriteToFile([]byte(testCase.providersYaml), filepath.Join(dir, "providers.yaml"))
 
-		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, testCase.cloudProvider)
+		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, "", testCase.cloudProvider)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
