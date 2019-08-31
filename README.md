@@ -186,8 +186,29 @@ devspace init
 ```
 > Take a look at the [Configuration Examples](#configuration-examples) to learn more about `devspace.yaml`
 
+<br>
+
 ### 4. Choose a Kubernetes Cluster
 Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is very easy to switch between the options later on.
+<br>
+
+<details>
+<summary><b>Hosted Spaces sponsored by DevSpace (managed Kubernetes namespaces)</b>
+<br>&nbsp;&nbsp;&nbsp;
+<i>
+FREE for one project, includes 1 GB RAM
+</i>
+</summary>
+
+<br>
+
+```bash
+devspace create space my-app
+```
+
+</details>
+
+<br>
 
 <details>
 <summary><b>Your own local cluster</b>
@@ -218,20 +239,14 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 
   <br>
 
-  <details>
-    <summary><b>You want to use this cluster alone</b></summary>
-
+#### Option A: You want to use this cluster alone
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
 ```
 <br>
 
-  </details>
-
-  <details>
-    <summary><b>You want to share this cluster with your team</b></summary>
-
+#### Option B: You want to share this cluster with your team
 ```bash
 # Connect your cluster to DevSpace Cloud
 devspace connect cluster
@@ -299,29 +314,10 @@ devspace connect cluster
 ```bash
 devspace create space my-app
 ```
-</details>
-<br>
-
+  <br>
   </details>
 
-</details>
-
-<br>
-
-<details>
-<summary><b>Hosted Spaces sponsored by DevSpace (managed Kubernetes namespaces)</b>
-<br>&nbsp;&nbsp;&nbsp;
-<i>
-FREE for one project, includes 1 GB RAM
-</i>
-</summary>
-
-<br>
-
-```bash
-devspace create space my-app
-```
-
+<img src="docs/website/static/img/readme/line.svg" height="1">
 </details>
 
 <br>
@@ -332,7 +328,9 @@ Initializing a project will create the configuration file `devspace.yaml` which 
 devspace deploy
 ```
 
-> **Having issues?** Take a look at the **[Troubleshooting](#troubleshooting)** section and learn about common mistakes.
+> **Having issues?** Take a look at the **[Troubleshooting Guides](#troubleshooting)** and learn how to fix common issues.
+
+<br>
 
 ### 5. Develop
 After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
@@ -340,7 +338,10 @@ After successfully deploying your project one, you can start it in development m
 ```bash
 devspace dev
 ```
-You can now access your application via `localhost:PORT` in your browser. Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster. If you are using a hot reloading tool like `nodemon`, then your application will automatically reload when file changes are detected inside the container.
+You can now:
+- Access your application via `localhost:PORT` in your browser
+- Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster. 
+- Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files.
 
 > You can also run `devspace dev -i` to develop with interactive mode (overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`).
 
