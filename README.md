@@ -257,22 +257,29 @@ devspace create space my-namespace
 
 > DevSpace automatically sets up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
+<br>
+
 <details>
   <summary><b>What is DevSpace Cloud?</b></summary>
+
 DevSpace Cloud allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc.
 
 > You can use DevSpace Cloud as SaaS platform or use the [on-premise edition](https://github.com/devspace-cloud/devspace-cloud) to run it yourself.
+
 <br>
 </details>
 
 <details>
   <summary><b>How are Spaces isolated? Why is it safe to share a cluster?</b></summary>
+
 DevSpace Cloud makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that DevSpace Cloud enforces using the UI of DevSpace Cloud and even set custom limits for different members of your team.
+
 <br>
 </details>
 
 <details>
   <summary><b>How can I add my team mates, so we can share this cluster?</b></summary>
+
 1. Connect your cluster to DevSpace Cloud using `devspace connect cluster`
 2. Go to **Clusters** in the UI of DevSpace Cloud: [https://app.devspace.cloud/clusters](https://app.devspace.cloud/clusters)
 3. Click on your cluster
@@ -280,22 +287,26 @@ DevSpace Cloud makes sure that developers cannot break out of their namespaces b
 5. Click on the **Add Invite** button
 6. Click on the invite link in the table and send the link to a team mate
 7. After clicking on the link and defining an encryption key, your team mate will be able to create isolated namespaces.
+
 <br>
 </details>
 
 <details>
   <summary><b>It it safe to connect my cluster to DevSpace Cloud?</b></summary>
+
 **Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encrytion key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
 
 - If you use DevSpace from a different computer, you will have to enter the encryption key again or re-connect the cluster which generates a new access token and encrypts it with a new key.
 - If you add a team member, you will have to send them a secure invite link which makes sure that they also get cluster access. This procedure is very safe and your key is never sent to our platform. After clicking on the invite link, your colleagues will define a separate encryption key for secure access to their namespaces.
 
 > If you are still hesitant, you can run DevSpace Cloud in your own Kubernetes cluster using the on-premise edition: [https://github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)
+
 <br>
 </details>
 
 <details>
   <summary><b>Can I run DevSpace Cloud on-premise in my own cluster?</b></summary>
+  
   **Yes**. Follow these intructions to run DevSpace Cloud yourself:
 
   **1. Install DevSpace Cloud**  
@@ -316,7 +327,7 @@ devspace connect cluster
 ```bash
 devspace create space my-app
 ```
-  <br>
+
   </details>
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
