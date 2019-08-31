@@ -335,7 +335,7 @@ devspace create space my-app
 
 <br>
 
-### 4. Deploy
+### 5. Deploy
 Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
 ```bash
 devspace deploy
@@ -345,7 +345,7 @@ devspace deploy
 
 <br>
 
-### 5. Develop
+### 6. Develop
 After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
@@ -360,7 +360,7 @@ You can now:
 
 <br>
 
-### 6. Learn more
+### 7. Learn more
 
 <details>
 <summary>See useful commands for development
