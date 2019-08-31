@@ -942,11 +942,13 @@ devspace analyze
 ```
 
 #### 2. Check your Dockerfile
-Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using). If your pods are crashing, you might have the wrong ENTRYPOINT or something is missing within your containers. A great way to debug this is to start the interactive development mode using:
+Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using). 
+
+If your pods are crashing, you might have the wrong `ENTRYPOINT` or something is missing within your containers. A great way to debug this is to start the interactive development mode using:
 ```bash
 devspace dev -i
 ```
-With the interactive mode, DevSpace will override the `ENTRYPOINT` in our Dockerfile with `[sleep, 999999]` and open a terminal proxy. That means your containers will definitively start but only in sleep mode. After the terminal opens you can run the start command for your application yourself, e.g. `npm start`
+With the interactive mode, DevSpace will override the `ENTRYPOINT` in our Dockerfile with `[sleep, 999999]` and open a terminal proxy. That means your containers will definitively start but only in sleep mode. After the terminal opens you can run the start command for your application yourself, e.g. `npm start`.
 
 #### 3. Debug your application with kubectl
 Run the following commands to find issues:
