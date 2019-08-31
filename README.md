@@ -203,8 +203,9 @@ FREE for one project, includes 1 GB RAM
 <br>
 
 ```bash
-devspace create space my-app
+devspace create space my-app # requires login via GitHub or email
 ```
+> DevSpace automatically sets up a kube-context for this space, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 </details>
 
@@ -237,23 +238,24 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 </i>
 </summary>
 
-  <br>
+<img src="docs/website/static/img/readme/line.svg" height="1">
 
 #### Option A: You want to use this cluster alone
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
 ```
-<br>
 
 #### Option B: You want to share this cluster with your team
 ```bash
 # Connect your cluster to DevSpace Cloud
-devspace connect cluster
+devspace connect cluster # requires login via GitHub or email
 
 # Create an isolated Kubernetes namespace in your cluster via DevSpace Cloud
 devspace create space my-namespace
 ```
+
+> DevSpace automatically sets up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 <details>
   <summary><b>What is DevSpace Cloud?</b></summary>
@@ -339,11 +341,11 @@ After successfully deploying your project one, you can start it in development m
 devspace dev
 ```
 You can now:
-- Access your application via `localhost:PORT` in your browser
-- Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster. 
-- Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files.
+- Access your application via `http://localhost:PORT` in your browser
+- Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
+- Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-> You can also run `devspace dev -i` to develop with interactive mode (overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`).
+> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`
 
 <br>
 
