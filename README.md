@@ -948,7 +948,7 @@ devspace dev -i
 ```
 With the interactive mode, DevSpace will override the `ENTRYPOINT` in our Dockerfile with `[sleep, 999999]` and open a terminal proxy. That means your containers will definitively start but only in sleep mode. After the terminal opens you can run the start command for your application yourself, e.g. `npm start`
 
-#### 2. Debug your application with kubectl
+#### 3. Debug your application with kubectl
 Run the following commands to find issues:
 ```bash
 # Failing Pods
