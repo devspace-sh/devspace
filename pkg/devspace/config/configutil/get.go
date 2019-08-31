@@ -484,6 +484,15 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 		return *config.Cluster.Namespace, nil
 	}
 
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		return "", err
+	}
+
+	if generatedConfig.Namespace != nil && generatedConfig.Namespace.Name != nil {
+		return *generatedConfig.Namespace.Name, nil
+	}
+
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return "", err
@@ -499,4 +508,56 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 	}
 
 	return "default", nil
+}
+
+// GetContextAjustedConfig returns the config with setting the correct values for namespace and kubeContext based on generated config and on args provided
+func GetContextAjustedConfig(namespace, kubeContext string) (*latest.Config, error) {
+	// load generated config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		return nil, errors.Errorf("Error loading generated.yaml: %v", err)
+	}
+
+	// load config
+	config, err := GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// make sure config.Cluster exists
+	if config.Cluster == nil {
+		config.Cluster = &latest.Cluster{}
+	}
+	
+	// set namespace correctly
+	if namespace != "" {
+		config.Cluster.Namespace = &namespace
+	} else if config.Cluster.Namespace == nil {
+		if generatedConfig.CloudSpace != nil {
+			config.Cluster.Namespace = &generatedConfig.CloudSpace.Namespace
+		} else if generatedConfig.Namespace != nil {
+			config.Cluster.Namespace = generatedConfig.Namespace.Name
+		}
+	}
+	
+	// set kubeContext correctly
+	if kubeContext != "" {
+		config.Cluster.KubeContext = &kubeContext
+	} else if config.Cluster.KubeContext == nil {
+		if generatedConfig.CloudSpace != nil {
+			config.Cluster.KubeContext = &generatedConfig.CloudSpace.KubeContext
+		} else if generatedConfig.Namespace != nil {
+			config.Cluster.KubeContext = generatedConfig.Namespace.KubeContext
+		}
+	}
+
+	if config.Cluster.Namespace != nil {
+		log.Infof("Using namespace '%s'", *config.Cluster.Namespace)
+	}
+	
+	if config.Cluster.KubeContext != nil {
+		log.Infof("Using kube-context '%s'", *config.Cluster.KubeContext)
+	}
+
+	return config, nil
 }

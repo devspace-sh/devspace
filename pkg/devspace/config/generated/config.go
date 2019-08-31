@@ -17,6 +17,13 @@ type Config struct {
 	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
 	CloudSpace   *CloudSpaceConfig       `yaml:"space,omitempty"`
+	Namespace    *NamespaceConfig        `yaml:"namespace,omitempty"`
+}
+
+// NamespaceConfig holds all the informations about the namespace to use
+type NamespaceConfig struct {
+	Name    *string `yaml:"name,omitempty"`
+	KubeContext *string `yaml:"context,omitempty"`
 }
 
 // CloudSpaceConfig holds all the informations about a certain cloud space

@@ -6,8 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -68,12 +66,14 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
-		log.Errorf("Error loading generated.yaml: %v", err)
-		return
+		log.Fatal(err)
 	}
 
-	// Get the config
-	config := cmd.loadConfig(generatedConfig)
+	// Get config with adjusted cluster config
+	config, err := configutil.GetContextAjustedConfig(cmd.Namespace, "")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
@@ -109,29 +109,4 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
-}
-
-func (cmd *PurgeCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if cmd.Namespace != "" {
-		config.Cluster = &v1.Cluster{
-			Namespace:   &cmd.Namespace,
-			KubeContext: config.Cluster.KubeContext,
-		}
-
-		log.Infof("Using %s namespace", cmd.Namespace)
-	}
-
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
-	}
-
-	return config
 }

@@ -55,16 +55,21 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	}
 
 	var devSpaceConfig *latest.Config
-	if configExists {
-		devSpaceConfig = configutil.GetConfig()
-
+	if configutil.ConfigExists() {
+		// Load generated config
 		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatalf("Error loading generated.yaml: %v", err)
+		}
+
+		// Get config with adjusted cluster config
+		config, err := configutil.GetContextAjustedConfig(cmd.Namespace, "")
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(devSpaceConfig, generatedConfig, true, log.GetInstance())
+		err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -18,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -108,7 +107,7 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 
-	devCmd.Flags().StringVarP(&cmd.Interactive, "interactive", "i", interactiveDefaultPickerValue, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
+	devCmd.Flags().StringVarP(&cmd.Interactive, "interactive", "i", "", "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
 
 	// Allows to use `devspace dev -i` without providing a value for the flag, see https://github.com/spf13/pflag#setting-no-option-default-values-for-flags
 	devCmd.Flags().Lookup("interactive").NoOptDefVal = interactiveDefaultPickerValue
@@ -133,7 +132,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
-	// Load config
+	// Load generated config
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
@@ -423,25 +422,10 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	// Get config with adjusted cluster config
+	config, err := configutil.GetContextAjustedConfig(cmd.Namespace, "")
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if cmd.Namespace != "" {
-		config.Cluster = &v1.Cluster{
-			Namespace:   &cmd.Namespace,
-			KubeContext: config.Cluster.KubeContext,
-		}
-
-		log.Infof("Using %s namespace", cmd.Namespace)
-	}
-
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
 	}
 
 	// Adjust config for interactive mode

@@ -48,7 +48,7 @@ devspace use space none    // stop using a space
 	return useSpace
 }
 
-// RunUseDevSpace executes the functionality "devspace use space"
+// RunUseSpace executes the functionality "devspace use space"
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
@@ -213,5 +213,5 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
-	log.Donef("Successfully configured config to use space %s", space.Name)
+	log.Donef("Successfully configured DevSpace to use space %s", space.Name)
 }

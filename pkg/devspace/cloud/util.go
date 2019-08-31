@@ -22,6 +22,9 @@ import (
 
 // CacheSpace converts the space config into a cloud space config
 func (p *Provider) CacheSpace(generatedConfig *generated.Config, space *Space) error {
+	// Remove namespace from generated config as user wants to use space instead of plain namespace
+	generatedConfig.Namespace = nil
+
 	// Convert space domains
 	var domains []*generated.CloudSpaceDomainConfig
 	if space.Domains != nil && len(space.Domains) > 0 {

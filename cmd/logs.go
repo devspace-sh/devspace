@@ -69,9 +69,14 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig()
-
+		// Load generated config
 		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatalf("Error loading generated.yaml: %v", err)
+		}
+
+		// Get config with adjusted cluster config
+		config, err := configutil.GetContextAjustedConfig(cmd.Namespace, "")
 		if err != nil {
 			log.Fatal(err)
 		}
