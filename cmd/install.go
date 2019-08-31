@@ -19,8 +19,9 @@ func NewInstallCmd() *cobra.Command {
 	cmd := &InstallCmd{}
 
 	installCmd := &cobra.Command{
-		Use:   "install",
-		Short: "Installs the DevSpace CLI",
+		Use:        "install",
+		Short:      "Installs the DevSpace CLI",
+		Deprecated: "devspace install is deprecated.",
 		Long: `
 #######################################################
 ################## devspace install ###################
