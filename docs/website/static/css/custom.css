@@ -8,6 +8,16 @@ body a, body a:hover {
     color: #1c65f7;
 }
 
+
+body h1 a,
+body h2 a,
+body h3 a,
+body h4 a,
+body h5 a,
+body blockquote a {
+    color: #000000 !important;
+}
+
 body a:hover {
     text-decoration: underline;
 }

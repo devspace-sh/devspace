@@ -70,13 +70,13 @@
   color: #1c65f7;
 }
 
-/* hide category title for DevSpace CLI and DevSpace Cloud */
+/* hide category title for DevSpace and DevSpace Cloud */
 .toc .navGroups > .navGroup:nth-child(2) .navGroupCategoryTitle,
 .toc .navGroups > .navGroup:nth-child(9) .navGroupCategoryTitle {
   display: none;
 }
 
-/* hide expansion arrows for DevSpace CLI and DevSpace Cloud */
+/* hide expansion arrows for DevSpace and DevSpace Cloud */
 .toc .navGroups > .navGroup:nth-child(2) .navGroupCategoryTitle .arrow,
 .toc .navGroups > .navGroup:nth-child(9) .navGroupCategoryTitle .arrow {
   display: none;
@@ -87,28 +87,28 @@
   display: none;
 }
 
-/* always show Introduction + What is DevSpace CLI/Cloud? */
+/* always show Introduction + What is DevSpace/Cloud? */
 .toc .navGroups > .navGroup:nth-child(1) > ul,
 .toc .navGroups > .navGroup:nth-child(2) > ul,
 .toc .navGroups > .navGroup:nth-child(9) > ul {
   display: block;
 }
 
-/* hide vertical line for Introduction + What is DevSpace CLI/Cloud? */
+/* hide vertical line for Introduction + What is DevSpace/Cloud? */
 .toc .navGroups > .navGroup:nth-child(1) > ul > .navListItem,
 .toc .navGroups > .navGroup:nth-child(2) > ul > .navListItem,
 .toc .navGroups > .navGroup:nth-child(9) > ul > .navListItem {
   border-left: none;
 }
 
-/* hide horizontal line for Introduction + What is DevSpace CLI/Cloud? */
+/* hide horizontal line for Introduction + What is DevSpace/Cloud? */
 .toc .navGroups > .navGroup:nth-child(1) > ul > .navListItem::after,
 .toc .navGroups > .navGroup:nth-child(2) > ul > .navListItem::after,
 .toc .navGroups > .navGroup:nth-child(9) > ul > .navListItem::after {
   display: none;
 }
 
-/* large title for Introduction + DevSpace CLI and DevSpace Cloud */
+/* large title for DevSpace + DevSpace Cloud */
 .navGroups > .navGroup:nth-child(1) > ul > .navListItem > .navItem,
 .navGroups > .navGroup:nth-child(2) > ul > .navListItem > .navItem,
 .navGroups > .navGroup:nth-child(9) > ul > .navListItem > .navItem {
@@ -121,20 +121,25 @@
   font-family: "Kanit", sans-serif;
 }
 
-/* hovering over large title for Introduction + DevSpace CLI and DevSpace Cloud */
+/* move up large title DevSpace*/
+.navGroups > .navGroup:nth-child(2) > ul > .navListItem > .navItem {
+  margin-top: -5px;
+}
+
+/* hovering over large title for Introduction + DevSpace and DevSpace Cloud */
 .navGroups > .navGroup:nth-child(1) .navItem:not(:hover),
 .navGroups > .navGroup:nth-child(2) .navItem:not(:hover),
 .navGroups > .navGroup:nth-child(9) .navItem:not(:hover) {
   color: inherit;
 }
 
-/* move up DevSpace CLI */
+/* move up DevSpace */
 .navGroups > .navGroup:nth-child(2) .navItem {
   margin-top: 0;
   padding-top: 0;
 }
 
-/* style when active link is What is DevSpace CLI/Cloud? */
+/* style when active link is What is DevSpace/Cloud? */
 .toc .navGroups > .navGroup:nth-child(2) .navListItem.navListItemActive .navItem,
 .toc .navGroups > .navGroup:nth-child(9) .navListItem.navListItemActive .navItem {
   background-color: transparent;
