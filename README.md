@@ -9,7 +9,7 @@
 ### DevSpace makes it easier and faster to build applications for Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
 - **Automate repetitive tasks** for image building and deployment
-- **Unify deployment workflows** among developers or across dev, staging and production
+- **Unify deployment workflows** among developers and across dev, staging and production
 
 <br>
 
@@ -101,7 +101,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 
 ## Architecture
-![DevSpace Architecture](docs/website/static/img/readme/devspace-architecture.png)
+![DevSpace Architecture](docs/website/static/img/devspace-architecture.png)
 
 DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kubectl context.
 
@@ -367,7 +367,7 @@ version: v1beta2
 images:
   default:                              # Key 'default' = Name of this image
     image: my-registry.tld/image1       # Registry and image name for pushing the image
-    createPullSecret: true              # Let DevSpace CLI automatically create pull secrets in your Kubernetes namespace
+    createPullSecret: true              # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
 deployments:
 - name: quickstart-nodejs               # Name of this deployment

@@ -1,85 +1,26 @@
 ---
-title: Introduction
+title: Introduction to DevSpace
 ---
 
-To build and deploy applications with DevSpace, you need to install DevSpace CLI.
+DevSpace allows developer teams to collaboratively build applications that seamlessly run and scale on Kubernetes.
 
-## Install DevSpace CLI
-Install DevSpace CLI with NPM (recommended for Windows users) or any of the platform-specific installation scripts shown below.
+## [What is DevSpace?](/docs/cli/what-is-devspace-cli)
+DevSpace is an open-source command-line tool that enables your team to:
+-  **Build, test and debug applications directly inside Kubernetes** and define deployment workflows
+-  **Automate repetitive tasks** for image building and deployment
+-  **Unify deployment workflows** among developers and across dev, staging and production
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NPM-->
-```bash
-npm install -g devspace
-```
+> [DevSpace](/docs/cli/what-is-devspace-cli) is a client-only, open-source dev tool for Kubernetes. It is [available on GitHub](https://github.com/devspace-cloud/devspace) and works with any Kubernetes cluster because it simply uses your kube-context, just like kubectl.
 
-<!--Mac Terminal-->
-```bash
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo mv devspace /usr/local/bin;
-```
+## [What is DevSpace Cloud?](/docs/cloud/what-is-devspace-cloud)
+DevSpace Cloud is an optional add-on for DevSpace and allows developer teams to work together in shared dev clusters with:
+- **Secure Multi-Tenancy & Namespace Isolation** ensure that cluster users cannot break out of their namespaces
+- **On-Demand Namespace Provisioning** allows developers to create isolated namespaces with a single command
+- **&gt;70% Cost Savings** With Sleep Mode that automatically scales down pod replicas when users are not working
 
-<!--Linux Bash-->
-```bash
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo mv devspace /usr/local/bin;
-```
+> [DevSpace Cloud](/docs/cloud/what-is-devspace-cloud) is the optional server-side component that DevSpace can connect to for creating isolated Kubernetes namespaces whenever a developer on your teams needs one. You can either
+> - use the fully managed [SaaS edition of DevSpace Cloud](https://app.devspace.cloud)
+> - or run it on your clusters using the [on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud).
 
-<!--Windows Powershell-->
-```powershell
-md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-Alternatively, you can simply download the binary for your platform from the [GitHub Releases](https://github.com/devspace-cloud/devspace/releases) page and add the binary to your PATH.
-
-<details>
-<summary>
-### How to uninstall DevSpace CLI?
-</summary>
-
-Uninstalling DevSpace CLI is as easy as removing the devspace binary from your machine. You can use the following commands for removing the binary and optionally also deleting the DevSpace folder in your home directory:
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NPM-->
-```bash
-npm uninstall -g devspace
-
-# If you also want to delete the DevSpace configuration folder:
-rm "~/.devspace";           # for Mac and Linux
-Remove-Item "~\.devspace";  # for Windows
-```
-
-<!--Mac Terminal-->
-```bash
-sudo rm  /usr/local/bin/devspace;
-
-# If you also want to delete the DevSpace configuration folder:
-rm "~/.devspace";
-```
-
-<!--Linux Bash-->
-```bash
-sudo rm /usr/local/bin/devspace;
-
-# If you also want to delete the DevSpace configuration folder:
-rm "~/.devspace";
-```
-
-<!--Windows Powershell-->
-```powershell
-Remove-Item "$Env:APPDATA\devspace";
-
-# If you also want to delete the DevSpace configuration folder:
-Remove-Item "~\.devspace";
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-
-</details>
-
-## Install Docker (optional)
-The preferred image building method is Docker, however DevSpace CLI is also able to build images directly inside Kubernetes pods (using [kaniko](https://github.com/GoogleContainerTools/kaniko)) if you don't have Docker installed. If you want to install Docker, you can download the latest stable releases here:
-- **Mac**: [Docker Community Edition](https://download.docker.com/mac/stable/Docker.dmg)
-- **Windows Pro**: [Docker Community Edition](https://download.docker.com/win/stable/Docker%20for%20Windows%20Installer.exe)
-- **Windows 10 Home**: [Docker Toolbox](https://download.docker.com/win/stable/DockerToolbox.exe) (legacy)
+## Architecture
+![DevSpace Architecture](/img/devspace-architecture.png)
