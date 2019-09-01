@@ -8,9 +8,9 @@
   box-shadow: 0 3px 8px 0 rgba(116, 129, 141, 0.3);
 }
 
-.fixedHeaderContainer .headerWrapper {
-  /* height: 76px; */
-  padding: 30px 5%;
+.separateOnPageNav .fixedHeaderContainer .headerWrapper.wrapper {
+  max-width: 1600px;
+  padding: 30px;
 }
 
 .fixedHeaderContainer .headerWrapper header {

@@ -23,9 +23,11 @@ body {
   overflow: initial;
 }
 
-.separateOnPageNav .navPusher .mainContainer {
-  flex: 0 1 770px;
-  max-width: 770px;
+body.separateOnPageNav.sideNavVisible .navPusher .mainContainer {
+  flex: 1 auto;
+  max-width: 1050px;
+  width: 100%;
+  min-width: 0;
 }
 
 .separateOnPageNav .navPusher .docsNavContainer,
