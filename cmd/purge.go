@@ -70,7 +70,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAjustedConfig(cmd.Namespace, "")
+	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,14 +9,11 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -28,7 +24,6 @@ import (
 )
 
 const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
-const dockerHubHostname = "hub.docker.com"
 
 const (
 	// Cluster options
@@ -57,7 +52,6 @@ type InitCmd struct {
 	Context     string
 	Provider    string
 
-	useCloud            bool
 	dockerfileGenerator *generator.DockerfileGenerator
 }
 
@@ -115,21 +109,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Print DevSpace logo
 	log.PrintLogo()
-
-	cloudRegistryHostname, err := cmd.getCloudRegistryHostname()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ask user which image registry to use
-	registryURL := cmd.getRegistryURL(cloudRegistryHostname)
-
-	// Check if DevSpace Cloud should be used
-	if registryURL == cloudRegistryHostname {
-		cmd.useCloud = true
-		cmd.loginDevSpaceCloud()
-		log.WriteString("\n")
-	}
 
 	// Add deployment and image config
 	deploymentName, err := getDeploymentName()
@@ -226,7 +205,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, registryURL)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -277,150 +256,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.WriteString("\n")
 	log.Done("Project successfully initialized")
 	log.Infof("\r          \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
-}
-
-func (cmd *InitCmd) getCloudRegistryHostname() (string, error) {
-	var registryURL string
-
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider == "" {
-		// prevents EnsureLoggedIn call in GetProvider
-		registryURL = "dscr.io"
-	} else {
-		cloudProvider = &cmd.Provider
-
-		// Get default registry
-		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
-		if err != nil {
-			return "", fmt.Errorf("Error login into cloud provider: %v", err)
-		}
-
-		registries, err := provider.GetRegistries()
-		if err != nil {
-			return "", fmt.Errorf("Error retrieving registries: %v", err)
-		}
-		if len(registries) > 0 {
-			registryURL = registries[0].URL
-		} else {
-			registryURL = "hub.docker.com"
-		}
-	}
-
-	return registryURL, nil
-
-}
-
-func (cmd *InitCmd) getRegistryURL(cloudRegistryHostname string) string {
-	useDockerHub := "Use " + dockerHubHostname
-	useDevSpaceRegistry := "Use " + cloudRegistryHostname + " (free, private Docker registry)"
-	useOtherRegistry := "Use other registry"
-	registryUsernameHint := " => you are logged in as %s"
-	registryDefaultOption := useDevSpaceRegistry
-	registryLoginHint := "Please login via `docker login%s` and try again."
-
-	config := configutil.GetConfig()
-	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
-	if err == nil {
-		authConfig, err := docker.GetAuthConfig(dockerClient, dockerHubHostname, true)
-		if err == nil && authConfig.Username != "" {
-			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-			registryDefaultOption = useDockerHub
-		}
-
-		authConfig, err = docker.GetAuthConfig(dockerClient, cloudRegistryHostname, true)
-		if err == nil && authConfig.Username != "" {
-			useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-			registryDefaultOption = useDevSpaceRegistry
-		}
-	}
-	registryOptions := []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
-
-	selectedRegistry := survey.Question(&survey.QuestionOptions{
-		Question:     "Which registry do you want to use for storing your Docker images?",
-		DefaultValue: registryDefaultOption,
-		Options:      registryOptions,
-	})
-	var registryURL string
-
-	if selectedRegistry == useDockerHub {
-		registryURL = dockerHubHostname
-		registryLoginHint = fmt.Sprintf(registryLoginHint, "")
-	} else if selectedRegistry == useDevSpaceRegistry {
-		registryURL = cloudRegistryHostname
-		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+cloudRegistryHostname)
-		cmd.useCloud = true
-	} else {
-		registryURL = survey.Question(&survey.QuestionOptions{
-			Question:     "Please enter the registry URL without image name:",
-			DefaultValue: "http://my.registry.tld/username",
-		})
-		registryURL = strings.Trim(registryURL, "/ ")
-		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+registryURL)
-	}
-	log.WriteString("\n")
-
-	if dockerClient != nil {
-		log.StartWait("Checking registry authentication")
-		authConfig, err := docker.Login(dockerClient, registryURL, "", "", true, false, false)
-		log.StopWait()
-
-		if err != nil || authConfig.Username == "" {
-			log.Fatalf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
-		}
-	} else if selectedRegistry != useDevSpaceRegistry {
-		log.Fatal("Unable to verify registry authentication.\n         Please install and start Docker, or use dscr.io as registry")
-	}
-	return registryURL
-}
-
-func (cmd *InitCmd) loginDevSpaceCloud() {
-	// Get provider configuration
-	providerConfig, err := cloudconfig.ParseProviderConfig()
-	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
-	}
-
-	// Set default cloud provider, if none is provided
-	if cmd.Provider == "" {
-		cmd.Provider = cloudconfig.DevSpaceCloudProviderName
-	}
-
-	// Choose cloud provider
-	if providerConfig.Default != "" {
-		cmd.Provider = providerConfig.Default
-	} else if len(providerConfig.Providers) > 1 {
-		options := []string{}
-		for _, provider := range providerConfig.Providers {
-			options = append(options, provider.Name)
-		}
-
-		cmd.Provider = survey.Question(&survey.QuestionOptions{
-			Question: "Select a cloud provider",
-			Options:  options,
-		})
-	}
-
-	// Ensure user is logged in
-	err = cloud.EnsureLoggedIn(providerConfig, cmd.Provider, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create generated yaml if cloud
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-		ProviderName: cmd.Provider,
-	}
-
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func getDeploymentName() (string, error) {

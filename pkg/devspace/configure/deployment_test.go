@@ -109,7 +109,7 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, "")
+		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

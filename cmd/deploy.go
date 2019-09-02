@@ -101,7 +101,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAjustedConfig(cmd.Namespace, cmd.KubeContext)
+	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, cmd.KubeContext, true)
 	if err != nil {
 		log.Fatal(err)
 	}

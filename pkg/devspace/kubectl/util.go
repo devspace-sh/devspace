@@ -14,7 +14,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1beta1"
@@ -63,25 +62,16 @@ func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, 
 		return fmt.Errorf("Error getting default namespace: %v", err)
 	}
 
-	if defaultNamespace != "default" {
-		_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
-		if err != nil {
-			// Create release namespace
-			_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultNamespace,
-				},
-			})
+	_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create release namespace
+		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: defaultNamespace,
+			},
+		})
 
-			log.Donef("Created namespace %s", defaultNamespace)
-		}
-	} else {
-		log.Warn("You are deploying to the 'default' namespace of your cluster. This is highly discouraged as this namespace cannot be deleted.")
-		log.Infof("\r          \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
-
-		log.StartWait("Will continue to deploy in 5 seconds")
-		time.Sleep(5 * time.Second)
-		log.StopWait()
+		log.Donef("Created namespace %s", defaultNamespace)
 	}
 
 	return err
