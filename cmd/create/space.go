@@ -3,7 +3,6 @@ package create
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -134,21 +133,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	err = cloud.SetTillerNamespace(serviceAccount)
 	if err != nil {
 		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
-	}
-
-	// Set space as active space
-	if cmd.Active && configExists {
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Cache space
-		err = provider.CacheSpace(generatedConfig, space)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	log.StopWait()

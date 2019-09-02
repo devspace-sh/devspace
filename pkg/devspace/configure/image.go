@@ -18,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
 )
 
@@ -62,11 +63,14 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string, cloudProvider *string, checkRegistryAuth bool) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string, checkRegistryAuth bool) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
 		retImageConfig = &latest.ImageConfig{}
 	)
+
+	// Ignore error as context may not be a Space
+	_, cloudProvider, _ := kubeconfig.GetCurrentContextSpaceID()
 
 	// Get docker client
 	client, err := docker.NewClient(config, true, log.GetInstance())
@@ -85,7 +89,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	}
 
 	// If not kaniko get docker hub credentials
-	if cloudProvider == nil {
+	if cloudProvider == "" {
 		log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
 		log.StopWait()
@@ -95,7 +99,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		}
 	}
 
-	registryURL, err := getRegistryURL(config, cloudProvider, checkRegistryAuth)
+	registryURL, err := getRegistryURL(config, &cloudProvider, checkRegistryAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +137,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 			},
 		})
 		defaultImageName, _ = registry.GetStrippedDockerImageName(defaultImageName)
-	} else if cloudProvider != nil {
+	} else if cloudProvider != "" {
 		// Is DevSpace Cloud?
 		defaultImageName = registryURL + "/${DEVSPACE_USERNAME}/" + DefaultImageName
 	} else {

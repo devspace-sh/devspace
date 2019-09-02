@@ -25,6 +25,10 @@ func ResumeLatestSpace(config *latest.Config, loop bool, log log.Logger) error {
 
 	if generatedConfig != nil && generatedConfig.Namespace != nil && generatedConfig.Namespace.KubeContext != nil {
 		context, contextName, err := kubeconfig.GetContext(*generatedConfig.Namespace.KubeContext)
+		if err != nil {
+			return fmt.Errorf("Unable to get current kube-context: %v", err)
+		}
+
 		spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
 		if err != nil {
 			return fmt.Errorf("Unable to get Space ID for context %s: %v", contextName, err)

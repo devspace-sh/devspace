@@ -20,12 +20,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 	var imageConfig *latest.ImageConfig
 	var err error
 	if imageName == "" {
-		var providerName *string
-		if generatedConfig.CloudSpace != nil {
-			providerName = &generatedConfig.CloudSpace.ProviderName
-		}
-
-		imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context, providerName, checkRegistryAuth)
+		imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context, checkRegistryAuth)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}

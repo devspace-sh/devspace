@@ -61,7 +61,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 	}
 
 	// Check if current kube-context blongs to Space
-	isSpace, err := kubeconfig.ContextIsCloudSpace(currentContext)
+	isSpace, err := kubeconfig.IsCloudSpace(currentContext)
 	if err != nil {
 		log.Fatalf("Unable to check if context belongs to Space: %v", err)
 	}

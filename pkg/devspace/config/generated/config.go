@@ -16,33 +16,13 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
-	CloudSpace   *CloudSpaceConfig       `yaml:"space,omitempty"`
 	Namespace    *NamespaceConfig        `yaml:"namespace,omitempty"`
 }
 
 // NamespaceConfig holds all the informations about the namespace to use
 type NamespaceConfig struct {
-	Name    *string `yaml:"name,omitempty"`
+	Name        *string `yaml:"name,omitempty"`
 	KubeContext *string `yaml:"context,omitempty"`
-}
-
-// CloudSpaceConfig holds all the informations about a certain cloud space
-type CloudSpaceConfig struct {
-	SpaceID      int                       `yaml:"spaceID,omitempty"`
-	OwnerID      int                       `yaml:"ownerID,omitempty"`
-	Owner        string                    `yaml:"owner,omitempty"`
-	ProviderName string                    `yaml:"providerName,omitempty"`
-	KubeContext  string                    `yaml:"kubeContext,omitempty"`
-	Namespace    string                    `yaml:"namespace,omitempty"`
-	Name         string                    `yaml:"name,omitempty"`
-	Domains      []*CloudSpaceDomainConfig `yaml:"domains,omitempty"`
-	Created      string                    `yaml:"created,omitempty"`
-}
-
-// CloudSpaceDomainConfig holds the space domain related information
-type CloudSpaceDomainConfig struct {
-	DomainID int    `yaml:"id,omitempty"`
-	URL      string `yaml:"url,omitempty"`
 }
 
 // CacheConfig holds all the information specific to a certain config

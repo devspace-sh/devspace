@@ -192,11 +192,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.Donef("Successfully deployed!")
 
-	if generatedConfig.CloudSpace != nil {
-		log.Infof("\r          \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
-	} else {
-		log.Infof("\r          \nRun: \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the namespace for potential issues\n", ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
-	}
+	log.Infof("\r          \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
 }
 
 func (cmd *DeployCmd) validateFlags() {

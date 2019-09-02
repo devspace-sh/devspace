@@ -228,21 +228,6 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		} else {
 			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
 		}
-
-		// Exchange kube context if necessary, but only if we don't load the base config
-		// we do this to avoid saving the kube context on commands like
-		// devspace add deployment && devspace add image etc.
-		if generatedConfig.CloudSpace != nil {
-			if config.Cluster == nil || config.Cluster.KubeContext == nil {
-				if generatedConfig.CloudSpace.KubeContext == "" {
-					return nil, nil, fmt.Errorf("No space configured!\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-				}
-
-				config.Cluster = &latest.Cluster{
-					KubeContext: &generatedConfig.CloudSpace.KubeContext,
-				}
-			}
-		}
 	} else {
 		if configDefinition != nil {
 			log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)

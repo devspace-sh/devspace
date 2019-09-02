@@ -80,8 +80,8 @@ func LoadNewConfig(contextName, server, caCert, token, namespace string) (client
 	return clientcmd.NewNonInteractiveClientConfig(*config, contextName, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
 }
 
-// ContextIsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud
-func ContextIsCloudSpace(context *api.Context) (bool, error) {
+// IsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud
+func IsCloudSpace(context *api.Context) (bool, error) {
 	// Get AuthInfo for context
 	authInfo, err := GetAuthInfo(context)
 	if err != nil {
@@ -112,6 +112,16 @@ func GetSpaceID(context *api.Context) (int, string, error) {
 	spaceID, err := strconv.Atoi(authInfo.Exec.Args[5])
 
 	return spaceID, authInfo.Exec.Args[3], err
+}
+
+// GetCurrentContextSpaceID returns the id and the provider of the Space that belongs to the current context
+func GetCurrentContextSpaceID() (int, string, error) {
+	currentContext, _, err := GetCurrentContext()
+	if err != nil {
+		return 0, "", fmt.Errorf("Unable to get current kube-context: %v", err)
+	}
+
+	return GetSpaceID(currentContext)
 }
 
 // GetAuthInfo returns the AuthInfo of the context with this name
