@@ -1,6 +1,6 @@
 ---
 title: Configuring Terminal & Log Streaming
-sidebar_label: Terminal Proxy
+sidebar_label: Terminal & Logs
 ---
 
 After running `devspace dev`, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers.

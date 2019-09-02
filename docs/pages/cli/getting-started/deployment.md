@@ -2,9 +2,9 @@
 title: 2. Deploy to Kubernetes
 ---
 
-After installing DevSpace CLI, you are ready to deploy applications to Kubernetes with DevSpace CLI.
+After installing DevSpace, you are ready to deploy your first project.
 
-## Choose a project to deploy
+## Choose a project
 You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Your Project-->
@@ -44,15 +44,15 @@ cd quickstart-php
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+> If you are using DevSpace for the first time, we recommend that you are using one of the demo projects.
+
 ## Initialize your project
-Run this command in your project directory to initialize your application with DevSpace CLI:
+Run this command in your project directory to initialize your application with DevSpace:
 ```bash
 devspace init
 ```
 
-> If your project does not have a Dockerfile yet, DevSpace CLI will automatically create a Dockerfile for your project. Learn more about [containerizing your projects using DevSpace](/docs/workflow-basics/containerization).
-
-While initializing your project, DevSpace CLI will ask you a couple of questions and then create a `devspace.yaml` file within your project which contains a basic configuration for building and deploying your application.
+While initializing your project, DevSpace will ask you a couple of questions and then create a `devspace.yaml` file within your project which contains a basic configuration for building and deploying your application.
 
 
 <details>
@@ -64,11 +64,14 @@ While initializing your project, DevSpace CLI will ask you a couple of questions
 # Config version
 version: v1beta2
 
-# Development-specific configuration (will be explained later)
-dev: ...
+# Defines all Dockerfiles that DevSpace will build, tag and push
+images:
+  default:                              # Key 'default' = Name of this image
+    image: dscr.io/username/devspace    # Registry and image name for pushing the image (dscr.io is the private registry provided by DevSpace Cloud)
+    createPullSecret: true  
 
 # Defines an array of everything (component, Helm chart, Kubernetes maninfests) 
-# that will be deployed with DevSpace CLI in the specified order
+# that will be deployed with DevSpace in the specified order
 deployments:
 - name: quickstart-nodejs               # Name of this deployment
   component:                            # Deploy a component (alternatives: helm, kubectl)
@@ -80,28 +83,159 @@ deployments:
           memory: "500Mi"               # Memory/RAM limit for this container
     service:                            # Expose this component with a Kubernetes service
       ports:                            # Array of container ports to expose through the service
-      - port: 3000                      # Exposes container port 3000 on service port 3000
+      - port: 3000                      # Exposes container port 3000 on service port 3000            # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
-# Defines all Dockerfiles that DevSpace CLI will build, tag and push
-images:
-  default:                              # Key 'default' = Name of this image
-    image: dscr.io/username/devspace    # Registry and image name for pushing the image (dscr.io is the private registry provided by DevSpace Cloud)
-    createPullSecret: true              # Let DevSpace CLI automatically create pull secrets in your Kubernetes namespace
+# Development-specific configuration (will be explained later)
+dev: ...
 ```
 
 </details>
 
 
-## Create a Space (DevSpace Cloud)
-*If you are **not** using DevSpace Cloud, you can skip this step.*
+## Choose a Kubernetes Cluster
+Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is very easy to switch between the options later on.
+<br>
 
-You can create an isolated Kubernetes namespace with the command:
+<details>
+<summary><h3 style="margin-bottom: 0;">Hosted Spaces sponsored by DevSpace (managed k8s namespaces)</h3>
+<i>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;
+FREE for one project, includes 1 GB RAM
+</i>
+</summary>
+
+At DevSpace, we believe everybody should have access to Kubernetes. That's why we sponsor free Kubernetes namespaces with 1GB RAM for everyone. You can simply create such a Space using this command:
+
+```bash
+devspace create space my-app # requires login via GitHub or email
+```
+> DevSpace automatically sets up a kube-context for this space, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
+
+</details>
+
+<details>
+<summary><h3 style="margin-bottom: 0;">Your own local cluster</h3>
+<i>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;
+works with any local Kubernetes cluster (minikube, kind, k3s, mikrok8s etc.)
+</i>
+</summary>
+
+If you have a local Kubernetes cluster, make sure your **current kube-context** points to this local cluster and tell DevSpace which namespace to use:
+
+```bash
+# Tell DevSpace which namespace to use (will be created automatically during deployment)
+devspace use namespace my-namespace
+```
+
+</details>
+
+<details>
+<summary><h3 style="margin-bottom: 0;">Your own remote cluster</h3>
+<i>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;
+works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
+</i>
+</summary>
+
+
+<details>
+<summary><h4>Option A: You want to use this cluster alone</h4></summary>
+
+If you have a local Kubernetes cluster, make sure your **current kube-context** points to this local cluster and tell DevSpace which namespace to use:
+
+```bash
+# Tell DevSpace which namespace to use (will be created automatically during deployment)
+devspace use namespace my-namespace
+```
+
+</details>
+
+<details>
+<summary><h4>Option B: You want to share this cluster with your team</h4></summary>
+
+To share a cluster, connect it to DevSpace Cloud and then create an isolated Kubernetes namespace.
+
+```bash
+# Connect your cluster to DevSpace Cloud
+devspace connect cluster # requires login via GitHub or email
+
+# Create an isolated Kubernetes namespace in your cluster via DevSpace Cloud
+devspace create space my-namespace
+```
+
+> DevSpace automatically sets up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
+
+<details>
+  <summary><h5>What is DevSpace Cloud?</h5></summary>
+
+DevSpace Cloud allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc.
+
+> You can use DevSpace Cloud as SaaS platform or use the [on-premise edition](https://github.com/devspace-cloud/devspace-cloud) to run it yourself.
+
+</details>
+
+<details>
+  <summary><h5>How are Spaces isolated? Why is it safe to share a cluster?</h5></summary>
+
+DevSpace Cloud makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that DevSpace Cloud enforces using the UI of DevSpace Cloud and even set custom limits for different members of your team.
+
+</details>
+
+<details>
+  <summary><h5>How can I add my team mates, so we can share this cluster?</h5></summary>
+
+1. Connect your cluster to DevSpace Cloud using `devspace connect cluster`
+2. Go to **Clusters** in the UI of DevSpace Cloud: [https://app.devspace.cloud/clusters](https://app.devspace.cloud/clusters)
+3. Click on your cluster
+4. Go to the **Invites** tab
+5. Click on the **Add Invite** button
+6. Click on the invite link in the table and send the link to a team mate
+7. After clicking on the link and defining an encryption key, your team mate will be able to create isolated namespaces.
+
+</details>
+
+<details>
+  <summary><h5>It it safe to connect my cluster to DevSpace Cloud?</h5></summary>
+
+**Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encrytion key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
+
+- If you use DevSpace from a different computer, you will have to enter the encryption key again or re-connect the cluster which generates a new access token and encrypts it with a new key.
+- If you add a team member, you will have to send them a secure invite link which makes sure that they also get cluster access. This procedure is very safe and your key is never sent to our platform. After clicking on the invite link, your colleagues will define a separate encryption key for secure access to their namespaces.
+
+> If you are still hesitant, you can run DevSpace Cloud in your own Kubernetes cluster using the on-premise edition: [https://github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)
+
+</details>
+
+<details>
+  <summary><h5>Can I run DevSpace Cloud on-premise in my own cluster?</h5></summary>
+  
+  **Yes**. Follow these intructions to run DevSpace Cloud yourself:
+
+  **1. Install DevSpace Cloud**  
+  &nbsp;&nbsp;&nbsp;
+  See [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions.
+
+  **2. Tell DevSpace to use your self-hosted DevSpace Cloud**  
+```bash
+devspace use provider devspace.my-domain.com
+```
+
+  **3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**  
+```bash
+devspace connect cluster
+```
+
+  **4. Create an isolated namespace**  
 ```bash
 devspace create space my-app
 ```
-This command would create a Space called `my-app`. If you are using DevSpace Cloud with your own cluster (connected cluster), this namespace would be created within your own Kubernetes cluster but the Space would be isolated and managed by DevSpace Cloud.
 
-> DevSpace CLI automatically uses the Space you just created for all following commands. Learn how to [switch between different Spaces](/docs/cloud/spaces/create-spaces#switch-between-spaces).
+  </details>
+
+</details>
+
+</details>
 
 
 ## Deploy your application
@@ -116,60 +250,8 @@ This command will do the following:
 3. Create image pull secrets in your Kubernetes namespace 
 4. Deploy everything that is defined unter `deployments` in your `devspace.yaml`
 
-**Congrats you have successfully deployed an application to kubernetes!**
+**Congrats you have successfully deployed an application to Kubernetes!**
 
-<details>
-<summary>
-### Learn more about image building with DevSpace
-</summary>
-DevSpace CLI builds and pushes your Docker images before deploying your projects. Follow these links to learn more about how to:
-- [Configure image building](/docs/image-building/overview)
-- [Add images to be built](/docs/image-building/add-images)
-- [Authenticate with private Docker registries](/docs/image-building/registries/authentication)
-
-DevSpace CLI will also create image pull secrets, if you configure this. Learn more about [image pull secrets](/docs/image-building/registries/pull-secrets).
-</details>
-
-<details>
-<summary>
-### Learn more about deploying with DevSpace
-</summary>
-DevSpace CLI lets you define the following types of deployments:
-- Components ([What are components?](/docs/deployment/components/what-are-components))
-- Helm charts ([What are Helm charts?](/docs/deployment/helm-charts/what-are-helm-charts))
-- Kubernetes manifests ([What are Kubernetes manifests?](/docs/deployment/kubernetes-manifests/what-are-manifests))
-
-<details>
-<summary>
-#### Deploy Components
-</summary>
-With DevSpace CLI, you can easily:
-- [Add predefined components (e.g. a database) to your deployments](/docs/deployment/components/add-predefined-components)
-- [Add custom components to your deployments](/docs/deployment/components/add-custom-components)
-
-You can fully customize your components (predefined and custom) within your `devspace.yaml`:
-- [Configure create and mount volumes](/docs/deployment/components/configuration/volumes)
-- [Configure environment variables](/docs/deployment/components/containers/environment-variables)
-- [Configure resource limits](/docs/deployment/components/containers/resource-limits)
-- [Configure resource auto-scaling](/docs/deployment/components/configuration/scaling)
-- [Expose components via services](/docs/deployment/components/configuration/service)
-</details>
-
-<details>
-<summary>
-#### Deploy Helm Charts
-</summary>
-If you want to deploy Helm charts, you can easily [add Helm charts to the deployment process](/docs/deployment/helm-charts/add-charts). This works for local Helm charts within your project or with Helm charts hosted on a registry.
-</details>
-
-<details>
-<summary>
-#### Deploy Kubernetes manifests
-</summary>
-If you want to deploy your existing Kubernetes manifests, you can easily [add these manifests to the deployment process](/docs/deployment/kubernetes-manifests/add-manifests).
-</details>
-
-</details>
 
 ## Open your app in the browser (DevSpace Cloud)
 *If you are **not** using DevSpace Cloud, you will need to setup an ingress-controller, define an ingress and configure the DNS of your domain to point to your cluster in order to use `devspace open`.*
@@ -178,11 +260,8 @@ You can now view your application in the browser using the following command:
 ```bash
 devspace open
 ```
-If you are using DevSpace Cloud, your application will automatically be available on a `.devspace.host` subdomain. 
 
-Learn how to [connect custom domains](/docs/cloud/spaces/domains). 
+Learn how to [connect custom domains](/docs/cloud/spaces/domains) to DevSpace Cloud. 
 
 ## What's next?
-DevSpace CLI does more than simplify and streamline the process of deploying applications to Kubernetes. It also lets you:
-- [Develop applications directly inside a Kubernetes cluster](/docs/getting-started/development)
-- [Example Configurations](https://github.com/devspace-cloud/devspace/tree/master/examples)
+DevSpace ist not just a deployment tool, it is also a very powerful development tool. In the last step of this Getting Started guide you will learn how to [develop applications directly inside a Kubernetes cluster](/docs/cli/getting-started/development).
