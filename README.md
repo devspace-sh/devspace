@@ -56,7 +56,7 @@ DevSpace helps your team to standardize deployment and development workflows wit
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
 - The configuration of DevSpace is highly dynamic, so you can configure everything using variables that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
-> Giving everyone on your team access to a Kubernetes cluster means a lot of work for admins and requires a lot of knowledge from developers. DevSpace Cloud makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](/docs/cloud/what-is-devspace-cloud). 
+> Giving everyone on your team access to a Kubernetes cluster means a lot of work for admins and requires a lot of knowledge from developers. DevSpace Cloud makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
 
 </details>
 
