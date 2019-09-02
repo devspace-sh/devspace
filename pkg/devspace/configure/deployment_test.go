@@ -37,7 +37,7 @@ func TestGetDockerfileComponentDeployment(t *testing.T) {
 	testCases := []GetDockerfileComponentDeploymentTestCase{
 		GetDockerfileComponentDeploymentTestCase{
 			name:          "Empty params, only answers",
-			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "yes", "1234"},
+			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "1234"},
 			expectedImage: "someRegistry.com/user/imagename",
 			expectedPort:  1234,
 		},
@@ -109,7 +109,7 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context)
+		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, false)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -146,7 +146,7 @@ func TestGetImageComponentDeployment(t *testing.T) {
 	testCases := []getImageComponentDeploymentTestCase{
 		getImageComponentDeploymentTestCase{
 			name:      "valid with port",
-			answers:   []string{"12345", "no"},
+			answers:   []string{"12345"},
 			icdName:   "someDeployment",
 			imageName: "someImage",
 
