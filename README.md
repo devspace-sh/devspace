@@ -39,11 +39,7 @@
 Building modern, distributed and highly scalable microservices with Kubernetes is hard - and it is even harder in a large team of developers. DevSpace is the next-generation tool for fast cloud-native software development.
 
 <details>
-<summary>
-
-**Standardize & Version Your Workflows**
-
-</summary>
+<summary><b>Standardize & Version Your Workflows</b></summary>
 
 DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
 - Codify workflow knowledge about building images, deploying your project and its dependencies, debugging and developing a project etc.
@@ -53,11 +49,7 @@ DevSpace allows you to store all your workflows in one declarative config file: 
 </details>
 
 <details>
-<summary>
-
-**Let Everyone on Your Team Deploy to Kubernetes**
-
-</summary>
+<summary><b>Let Everyone on Your Team Deploy to Kubernetes</b></summary>
 
 DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
 - The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
@@ -69,11 +61,7 @@ DevSpace helps your team to standardize deployment and development workflows wit
 </details>
 
 <details>
-<summary>
-
-**Speed Up Cloud-Native Development**
-
-</summary>
+<summary><b>Speed Up Cloud-Native Development</b></summary>
 
 Instead of rebuilding images and redeploying containers, DevSpace allows you to hot reload running containers while you code:
 - Simply edit your files with your IDE and see how your application reloads within the running container.
@@ -83,11 +71,7 @@ Instead of rebuilding images and redeploying containers, DevSpace allows you to 
 </details>
 
 <details>
-<summary>
-
-**Automate Repetitive Tasks**
-
-</summary>
+<summary><b>Automate Repetitive Tasks</b></summary>
 
 Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repetedly run command like `kubectl get po` and copy pod ids. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
 - DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application including its dependencies with just a single command
@@ -96,11 +80,7 @@ Deploying and debugging services with Kubernetes requires a lot of knowledge and
 </details>
 
 <details>
-<summary>
-
-**Works with Any Kubernetes Clusters**
-
-</summary>
+<summary><b>Works with Any Kubernetes Clusters</b></summary>
 
 DevSpace is battle tested with any major Kubernetes distributions including:
 - local Kubernetes clusters like minikube, k3s, MikroK8s, kind
