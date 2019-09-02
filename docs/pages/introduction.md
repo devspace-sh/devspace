@@ -10,7 +10,7 @@ DevSpace is an open-source command-line tool that enables your team to:
 -  **Automate repetitive tasks** for image building and deployment
 -  **Unify deployment workflows** among developers and across dev, staging and production
 
-> [DevSpace](/docs/cli/what-is-devspace-cli) is a client-only, open-source dev tool for Kubernetes. It is [available on GitHub](https://github.com/devspace-cloud/devspace) and works with any Kubernetes cluster because it simply uses your kube-context, just like kubectl.
+> [DevSpace](/docs/cli/what-is-devspace-cli) is a client-only, open-source dev tool for Kubernetes. It is [available on GitHub](https://github.com/devspace-cloud/devspace) and works with any Kubernetes cluster because it simply uses your kube-context, just like kubectl or helm.
 
 ## [What is DevSpace Cloud?](/docs/cloud/what-is-devspace-cloud)
 DevSpace Cloud is an optional add-on for DevSpace and allows developer teams to work together in shared dev clusters with:
