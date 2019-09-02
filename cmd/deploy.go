@@ -107,7 +107,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

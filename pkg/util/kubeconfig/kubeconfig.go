@@ -3,6 +3,7 @@ package kubeconfig
 import (
 	"encoding/base64"
 	"fmt"
+	"strconv"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -94,21 +95,23 @@ func ContextIsCloudSpace(context *api.Context) (bool, error) {
 }
 
 // GetSpaceID returns the id of the Space that belongs to the context with this name
-func GetSpaceID(context *api.Context) (string, error) {
+func GetSpaceID(context *api.Context) (int, string, error) {
 	// Get AuthInfo for context
 	authInfo, err := GetAuthInfo(context)
 	if err != nil {
-		return "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
+		return 0, "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
 	if authInfo.Exec.Command != AuthCommand {
-		return "", fmt.Errorf("Kube-context does not belong to a Space")
+		return 0, "", fmt.Errorf("Kube-context does not belong to a Space")
 	}
 
 	if len(authInfo.Exec.Args) < 6 {
-		return "", fmt.Errorf("Kube-context is misconfigured. Please run `devspace use space [SPACE_NAME]` to setup a new context")
+		return 0, "", fmt.Errorf("Kube-context is misconfigured. Please run `devspace use space [SPACE_NAME]` to setup a new context")
 	}
-	return authInfo.Exec.Args[5], nil
+	spaceID, err := strconv.Atoi(authInfo.Exec.Args[5])
+
+	return spaceID, authInfo.Exec.Args[3], err
 }
 
 // GetAuthInfo returns the AuthInfo of the context with this name
@@ -129,16 +132,26 @@ func GetAuthInfo(context *api.Context) (*api.AuthInfo, error) {
 
 // GetCurrentContext returns the current kube-context
 func GetCurrentContext() (*api.Context, string, error) {
+	return GetContext("")
+}
+
+// GetContext returns the kube-context with the provided name
+func GetContext(name string) (*api.Context, string, error) {
 	// Load kube-config
 	kubeConfig, err := LoadRawConfig()
 	if err != nil {
 		return nil, "", err
 	}
 
-	// Get context
-	context, ok := kubeConfig.Contexts[kubeConfig.CurrentContext]
-	if !ok {
-		return nil, "", fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", kubeConfig.CurrentContext)
+	// use current context name if none is provided
+	if name == "" {
+		name = kubeConfig.CurrentContext
 	}
-	return context, kubeConfig.CurrentContext, nil
+
+	// Get context
+	context, ok := kubeConfig.Contexts[name]
+	if !ok {
+		return nil, "", fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", name)
+	}
+	return context, name, nil
 }
