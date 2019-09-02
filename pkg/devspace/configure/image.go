@@ -27,13 +27,7 @@ const dockerHubHostname = "hub.docker.com"
 
 // GetImageConfigFromImageName returns an image config based on the image
 func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.ImageConfig {
-	// Configure pull secret
-	createPullSecret := dockerfile != "" || survey.Question(&survey.QuestionOptions{
-		Question: "Do you want to enable automatic creation of pull secrets for this image?",
-		Options:  []string{"no", "yes"},
-	}) == "yes"
-
-	if createPullSecret {
+	if dockerfile != "" {
 		// Figure out tag
 		imageTag := ""
 		splittedImage := strings.Split(imageName, ":")
@@ -46,7 +40,7 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 
 		retImageConfig := &latest.ImageConfig{
 			Image:            &imageName,
-			CreatePullSecret: &createPullSecret,
+			CreatePullSecret: ptr.Bool(true),
 		}
 
 		if imageTag != "" {
@@ -163,15 +157,6 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		defaultImageName, _ = registry.GetStrippedDockerImageName(defaultImageName)
 	}
 
-	// Check if we should create pull secrets for the image
-	createPullSecret := true
-	if cloudProvider == nil {
-		createPullSecret = survey.Question(&survey.QuestionOptions{
-			Question: "Do you want to enable automatic creation of pull secrets for this image?",
-			Options:  []string{"yes", "no"},
-		}) == "yes"
-	}
-
 	// Set image name
 	retImageConfig.Image = &defaultImageName
 
@@ -182,9 +167,8 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 	if context != "" && context != helper.DefaultContextPath {
 		retImageConfig.Context = &context
 	}
-	if createPullSecret {
-		retImageConfig.CreatePullSecret = &createPullSecret
-	}
+
+	retImageConfig.CreatePullSecret = ptr.Bool(true)
 
 	return retImageConfig, nil
 }
