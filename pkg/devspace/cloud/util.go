@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/envutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -60,11 +60,9 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	activeSpaceID := 0
-	if configutil.ConfigExists() {
-		generated, err := generated.LoadConfig()
-		if err == nil && generated.CloudSpace != nil {
-			activeSpaceID = generated.CloudSpace.SpaceID
-		}
+	currentContext, _, err := kubeconfig.GetCurrentContext()
+	if err == nil {
+		activeSpaceID, _, _ = kubeconfig.GetSpaceID(currentContext)
 	}
 
 	headerColumnNames := []string{}

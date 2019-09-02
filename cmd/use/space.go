@@ -80,7 +80,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatalf("Error retrieving spaces: %v", err)
 		} else if len(spaces) == 0 {
-			log.Fatalf("There are no spaces to select from. Please create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
+			log.Fatalf("You do not have any Spaces, yet. You can create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
 		}
 
 		names := make([]string, 0, len(spaces))
@@ -89,7 +89,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		spaceName := survey.Question(&survey.QuestionOptions{
-			Question: "Please select a space that you want to use",
+			Question: "Please select the Space that you want to use",
 			Options:  names,
 		})
 
