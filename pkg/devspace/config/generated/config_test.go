@@ -95,9 +95,6 @@ func TestSaveConfig(t *testing.T) {
 		Configs: map[string]*CacheConfig{
 			"SavedActiveConfig": &CacheConfig{},
 		},
-		CloudSpace: &CloudSpaceConfig{
-			Name: "SavedCloudSpaceConfig",
-		},
 	})
 	if err != nil {
 		t.Fatalf("Error saving config: %v", err)
@@ -108,7 +105,6 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("Error loading config: %v", err)
 	}
 	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveConfig, "Wrong config saved or returned")
-	assert.Equal(t, "SavedCloudSpaceConfig", returnedConfig.CloudSpace.Name, "Wrong config saved or returned")
 
 	//Now with testDontSaveConfig set true. Loaded config shouldn't change
 	SetTestConfig(&Config{})
@@ -116,9 +112,6 @@ func TestSaveConfig(t *testing.T) {
 		ActiveConfig: "NewActiveConfig",
 		Configs: map[string]*CacheConfig{
 			"NewActiveConfig": &CacheConfig{},
-		},
-		CloudSpace: &CloudSpaceConfig{
-			Name: "NewCloudSpaceConfig",
 		},
 	})
 	if err != nil {
@@ -130,7 +123,6 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("Error loading config: %v", err)
 	}
 	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveConfig, "Wrong config saved or returned")
-	assert.Equal(t, "SavedCloudSpaceConfig", returnedConfig.CloudSpace.Name, "Wrong config saved or returned")
 }
 
 func TestGetCaches(t *testing.T) {
