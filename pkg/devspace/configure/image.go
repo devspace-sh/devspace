@@ -27,42 +27,38 @@ const dockerHubHostname = "hub.docker.com"
 
 // GetImageConfigFromImageName returns an image config based on the image
 func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.ImageConfig {
-	if dockerfile != "" {
-		// Figure out tag
-		imageTag := ""
-		splittedImage := strings.Split(imageName, ":")
-		imageName = splittedImage[0]
-		if len(splittedImage) > 1 {
-			imageTag = splittedImage[1]
-		} else if dockerfile == "" {
-			imageTag = "latest"
-		}
-
-		retImageConfig := &latest.ImageConfig{
-			Image:            &imageName,
-			CreatePullSecret: ptr.Bool(true),
-		}
-
-		if imageTag != "" {
-			retImageConfig.Tag = &imageTag
-		}
-		if dockerfile == "" {
-			retImageConfig.Build = &latest.BuildConfig{
-				Disabled: ptr.Bool(true),
-			}
-		} else {
-			if dockerfile != helper.DefaultDockerfilePath {
-				retImageConfig.Dockerfile = &dockerfile
-			}
-			if context != "" && context != helper.DefaultContextPath {
-				retImageConfig.Context = &context
-			}
-		}
-
-		return retImageConfig
+	// Figure out tag
+	imageTag := ""
+	splittedImage := strings.Split(imageName, ":")
+	imageName = splittedImage[0]
+	if len(splittedImage) > 1 {
+		imageTag = splittedImage[1]
+	} else if dockerfile == "" {
+		imageTag = "latest"
 	}
 
-	return nil
+	retImageConfig := &latest.ImageConfig{
+		Image:            &imageName,
+		CreatePullSecret: ptr.Bool(true),
+	}
+
+	if imageTag != "" {
+		retImageConfig.Tag = &imageTag
+	}
+	if dockerfile == "" {
+		retImageConfig.Build = &latest.BuildConfig{
+			Disabled: ptr.Bool(true),
+		}
+	} else {
+		if dockerfile != helper.DefaultDockerfilePath {
+			retImageConfig.Dockerfile = &dockerfile
+		}
+		if context != "" && context != helper.DefaultContextPath {
+			retImageConfig.Context = &context
+		}
+	}
+
+	return retImageConfig
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
