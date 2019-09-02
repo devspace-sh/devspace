@@ -38,7 +38,7 @@
 
 Stop wasting time for running the same build and deploy commands over and over again. Let DevSpace automate your workflow and build cloud-native applications directly inside Kubernetes.
 
-### Automatic Image Building 
+### Automatic Image Building with `devspace build`
   
 - **Customizable Build Process** supporting Docker, kaniko or even custom scripts
 - **Parallel Image Building** to save time when multiple Dockerfiles have to be built  
@@ -304,6 +304,7 @@ DevSpace will deploy your application, wait until your pods are ready and open t
 | `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
 | `devspace logs` <br> Prints the logs of a container                 | `-p • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
 | `devspace analyze` <br> Analyzes your deployments for issues        |                                                                                                      |
+| `devspace build` <br> Only build and push images without deployment |                                                                                                      |
 
 </details>
 
