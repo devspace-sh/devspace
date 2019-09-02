@@ -76,7 +76,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 ### Powerful Configuration
 - **Declarative Configuration File** that can be versioned and shared just like the source code of your project (e.g. via git)
 - **Config Variables** which allow you to parameterize the config and share a unified config file with your team
-- **Config Overrides** for overriding Dockerfiles or ENTRPOINTs (e.g. to separate development, staging and production)
+- **Config Overrides** for overriding Dockerfiles or ENTRYPOINTs (e.g. to separate development, staging and production)
 - **Hooks** for executing custom commands before or after each build and deployment step
 - **Multiple Configs** for advanced deployment scenarios
 
