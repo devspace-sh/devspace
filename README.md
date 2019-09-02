@@ -400,7 +400,7 @@ images:                 # DevSpace will build these images in parallel and push 
   {image-b}: ...        # tells DevSpace how to build image-b
   ... 
 
-deployments:            # DevSpace will deploy these [Helm chart | manifest | ... ] after another
+deployments:            # DevSpace will deploy these [Helm charts | manifests | ... ] one after another
   - {deployment-1}      # could be a Helm chart
   - {deployment-2}      # could be a folder with kubectl manifests
   ...

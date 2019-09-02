@@ -1,11 +1,11 @@
 ---
-title: 1. Install DevSpace CLI
+title: 1. Install DevSpace
 ---
 
-To build and deploy applications with DevSpace, you need to install DevSpace CLI.
+To build and deploy applications with DevSpace, you need to install DevSpace.
 
-## Install DevSpace CLI
-Install DevSpace CLI with NPM (recommended for Windows users) or any of the platform-specific installation scripts shown below.
+## Install DevSpace
+Install DevSpace with NPM (recommended for Windows users) or any of the platform-specific installation scripts shown below.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NPM-->
@@ -36,10 +36,10 @@ Alternatively, you can simply download the binary for your platform from the [Gi
 
 <details>
 <summary>
-### How to uninstall DevSpace CLI?
+### How to uninstall DevSpace?
 </summary>
 
-Uninstalling DevSpace CLI is as easy as removing the devspace binary from your machine. You can use the following commands for removing the binary and optionally also deleting the DevSpace folder in your home directory:
+Uninstalling DevSpace is as easy as removing the devspace binary from your machine. You can use the following commands for removing the binary and optionally also deleting the DevSpace folder in your home directory:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NPM-->
 ```bash
