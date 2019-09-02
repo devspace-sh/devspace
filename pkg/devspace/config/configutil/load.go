@@ -68,12 +68,12 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
 			context, contextName, err := kubeconfig.GetCurrentContext()
 			if err != nil {
-				return nil, err
+				return nil, nil
 			}
 
 			isSpace, err := kubeconfig.IsCloudSpace(context)
 			if err != nil {
-				return nil, err
+				return nil, nil
 			}
 
 			contextNameSplit := strings.Split(contextName, "-")
@@ -102,7 +102,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
 			context, _, err := kubeconfig.GetCurrentContext()
 			if err != nil {
-				return nil, err
+				return nil, nil
 			}
 
 			_, providerName, err := kubeconfig.GetSpaceID(context)
@@ -157,7 +157,7 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
 		}
 
-		
+
 		if generatedConfig.CloudSpace == nil {
 			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 		} else if len(generatedConfig.CloudSpace.Domains) <= idx-1 {
