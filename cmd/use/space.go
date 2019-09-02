@@ -34,7 +34,6 @@ Use an existing space for the current configuration
 
 Example:
 devspace use space my-space
-devspace use space none    // stop using a space
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -54,36 +53,6 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	// Erase currently used space
-	if len(args) > 0 && args[0] == "none" {
-		// Set tiller env
-		err = cloudpkg.SetTillerNamespace(nil)
-		if err != nil {
-			// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
-		}
-
-		if !configExists {
-			return
-		}
-
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		generatedConfig.CloudSpace = nil
-		generatedConfig.Configs = map[string]*generated.CacheConfig{}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Info("Successfully erased space from config")
-		return
 	}
 
 	// Check if user has specified a certain provider
