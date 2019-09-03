@@ -136,15 +136,19 @@ func TestBuild(t *testing.T) {
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
 							Image: ptr.String("someImage"),
+							Tag:   ptr.String("someTag"),
 							Build: &latest.BuildConfig{
-								Custom: &latest.CustomConfig{},
+								Custom: &latest.CustomConfig{
+									Command: ptr.String(" "),
+								},
 							},
 						},
 					},
 				},
 			},
-			expectedPanic:  fmt.Sprintf("Error building image: Error during shouldRebuild check: Dockerfile ./Dockerfile missing: CreateFile ./Dockerfile: %s", noFileFoundError),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
+			buildSequentialFlag: true,
+			expectedPanic:       "Error building image: Error building image: exec: \" \": executable file not found in %PATH%",
+			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command   someImage:someTag",
 		},
 		buildTestCase{
 			name: "Deploy 1 image that is too big (Or manipulate the error message to pretend to)",
@@ -153,16 +157,19 @@ func TestBuild(t *testing.T) {
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
 							Image: ptr.String("someImage"),
+							Tag:   ptr.String("someTag"),
 							Build: &latest.BuildConfig{
-								Custom: &latest.CustomConfig{},
+								Custom: &latest.CustomConfig{
+									Command: ptr.String(" no space left on device "), //It's a bit dirty. Force specific kind of error
+								},
 							},
-							Dockerfile: ptr.String("no space left on device"), //It's a bit dirty. Force specific kind of error
 						},
 					},
 				},
 			},
-			expectedPanic:  fmt.Sprintf("Error building image: Error during shouldRebuild check: Dockerfile no space left on device missing: CreateFile no space left on device: The system cannot find the file specified.\n\n Try running `%s` to free docker daemon space and retry", ansi.Color("devspace cleanup images", "white+b")),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
+			buildSequentialFlag: true,
+			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", "%PATH%", ansi.Color("devspace cleanup images", "white+b")),
+			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},
 		buildTestCase{
 			name:       "Nothing to build",
