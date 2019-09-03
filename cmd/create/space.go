@@ -3,6 +3,7 @@ package create
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // DevSpaceCloudHostedCluster is the option that is shown during cluster select to select the hosted devspace cloud clusters
-const DevSpaceCloudHostedCluster = "DevSpace Cloud Hosted"
+const DevSpaceCloudHostedCluster = "Clusters managed by DevSpace"
 
 type spaceCmd struct {
 	Active   bool
@@ -129,10 +130,21 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env
-	err = cloud.SetTillerNamespace(serviceAccount)
-	if err != nil {
-		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+	if configExists {
+		// Get generated config
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Reset namespace cache
+		generatedConfig.Namespace = nil
+
+		// Save generated config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.StopWait()

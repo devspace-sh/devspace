@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -269,7 +270,8 @@ func getDeploymentName() (string, error) {
 	dirname = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(dirname, "")
 	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
 	dirname = strings.Trim(dirname, "-")
-	if len(dirname) == 0 {
+
+	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false {
 		dirname = "devspace"
 	}
 

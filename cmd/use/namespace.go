@@ -79,7 +79,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 
 	if len(args) > 0 {
 		// First arg is namespace name
-		namespace := args[0]
+		namespace = args[0]
 
 		if namespace == metav1.NamespaceDefault {
 			log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
@@ -119,8 +119,6 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use namespace "+oldDefaultNamespace, "white+b"))
 	}
 
-	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))
-
 	if configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
@@ -136,7 +134,11 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
 
+	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))
+
+	if configExists {
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 }

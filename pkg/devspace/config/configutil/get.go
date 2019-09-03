@@ -467,17 +467,8 @@ func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorCo
 
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
 func GetDefaultNamespace(config *latest.Config) (string, error) {
-	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil {
+	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
 		return *config.Cluster.Namespace, nil
-	}
-
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return "", err
-	}
-
-	if generatedConfig.Namespace != nil && generatedConfig.Namespace.Name != nil {
-		return *generatedConfig.Namespace.Name, nil
 	}
 
 	kubeConfig, err := kubeconfig.LoadRawConfig()
@@ -486,7 +477,7 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 	}
 
 	activeContext := kubeConfig.CurrentContext
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
+	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
 		activeContext = *config.Cluster.KubeContext
 	}
 
@@ -494,7 +485,7 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 		return kubeConfig.Contexts[activeContext].Namespace, nil
 	}
 
-	return "default", nil
+	return metav1.NamespaceDefault, nil
 }
 
 // GetContextAdjustedConfig returns the config with setting the correct values for namespace and kubeContext based on generated config and on args provided
@@ -530,9 +521,6 @@ func GetContextAdjustedConfig(namespaceFlag, kubeContextFlag string, updateCache
 	} else {
 		// use namespace of current kube-context
 		config.Cluster.Namespace = &currentContext.Namespace
-
-		// remember namespace if not passed as flag
-		generatedConfig.Namespace.Name = &currentContext.Namespace
 	}
 
 	// set kubeContext correctly
@@ -541,26 +529,28 @@ func GetContextAdjustedConfig(namespaceFlag, kubeContextFlag string, updateCache
 	} else if config.Cluster.KubeContext == nil {
 		// use current kube-context
 		config.Cluster.KubeContext = &currentContextName
-
-		// remember context name if not passed as flag
-		generatedConfig.Namespace.KubeContext = &currentContextName
-	}
-
-	if config.Cluster.Namespace != nil {
-		log.Infof("Using namespace '%s'", *config.Cluster.Namespace)
 	}
 
 	if config.Cluster.KubeContext != nil {
-		log.Infof("Using kube-context '%s'", *config.Cluster.KubeContext)
+		log.Infof("Using kube-context: %s", *config.Cluster.KubeContext)
+	}
+
+	if config.Cluster.Namespace != nil {
+		namespaceName := *config.Cluster.Namespace
+
+		if namespaceName == "" {
+			namespaceName = metav1.NamespaceDefault
+		}
+		log.Infof("Using namespace: %s", namespaceName)
 	}
 
 	// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 	if (kubeContextFlag == "" && generatedConfig.Namespace.KubeContext != nil && *generatedConfig.Namespace.KubeContext != currentContextName) || (namespaceFlag == "" && generatedConfig.Namespace.Name != nil && *generatedConfig.Namespace.Name != currentContext.Namespace) {
 		log.WriteString("\n")
 		log.Warnf("Your current kube-context and/or default namespace is different than last time.")
-
+		log.WriteString("\n")
 		if updateCache {
-			log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", ansi.Red))
+			log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", "red+b"))
 			log.StartWait("Will continue in 10 seconds...")
 			time.Sleep(10 * time.Second)
 			log.StopWait()
@@ -571,6 +561,23 @@ func GetContextAdjustedConfig(namespaceFlag, kubeContextFlag string, updateCache
 	// warn if user is currently using default namespace
 	if namespaceFlag == "" && (currentContext.Namespace == metav1.NamespaceDefault || currentContext.Namespace == "") {
 		log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
+
+		if generatedConfig.Namespace.Name == nil || currentContext.Namespace != *generatedConfig.Namespace.Name {
+			log.Warn(ansi.Color("Abort with CTRL+C if you do not want to use the default namespace.", "red+b"))
+			log.StartWait("Will continue in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			log.StopWait()
+			log.WriteString("\n")
+		}
+	}
+
+	if namespaceFlag == "" {
+		generatedConfig.Namespace.Name = &currentContext.Namespace
+	}
+
+	if kubeContextFlag == "" {
+		// remember context name if not passed as flag
+		generatedConfig.Namespace.KubeContext = &currentContextName
 	}
 
 	// save generated config to remember kubeContext and namespace

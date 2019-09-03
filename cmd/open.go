@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"crypto/sha1"
@@ -161,9 +164,10 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				log.Fatal(err)
 			}
 		} else {
-			ingressControllerWarning = " / an ingress controller must be installed in your cluster"
+			ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
 		}
 	}
+	log.WriteString("\n")
 
 	openingMode := survey.Question(&survey.QuestionOptions{
 		Question:     "How do you want to open your application?",
@@ -175,9 +179,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	})
 
 	if openingMode == openLocalHostOption {
-		domain = "localhost"
-
-		_, servicePort, serviceLabels, err := getService(devspaceConfig, client, namespace, domain)
+		_, servicePort, serviceLabels, err := getService(devspaceConfig, client, namespace, domain, true)
 		if err != nil {
 			log.Fatal("Unable to get service: %v", err)
 		}
@@ -187,6 +189,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		if localPort < 1024 {
 			localPort = localPort + 8000
 		}
+		domain = "localhost:" + strconv.Itoa(localPort)
 
 		portMappings := []*latest.PortMapping{
 			&latest.PortMapping{
@@ -197,7 +200,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		labelSelector := map[string]*string{}
 
 		for key, value := range *serviceLabels {
-			labelSelector[key] = &value
+			labelSelector[key] = ptr.String(value)
 		}
 
 		portforwardingConfig := []*latest.PortForwardingConfig{
@@ -257,7 +260,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 		// No suitable ingress found => create ingress
 		if existingIngressDomain == "" {
-			serviceName, servicePort, _, err := getService(devspaceConfig, client, namespace, domain)
+			serviceName, servicePort, _, err := getService(devspaceConfig, client, namespace, domain, false)
 			if err != nil {
 				log.Fatalf("Error getting service: %v", err)
 			}
@@ -267,9 +270,14 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 			ingressName := "devspace-ingress-" + fmt.Sprintf("%x", hash.Sum(nil))
 
-			client.NetworkingV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
+			_, err = client.NetworkingV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 				Spec: v1beta1.IngressSpec{
+					Rules: []v1beta1.IngressRule{
+						v1beta1.IngressRule{
+							Host: domain,
+						},
+					},
 					Backend: &v1beta1.IngressBackend{
 						ServiceName: serviceName,
 						ServicePort: intstr.FromInt(servicePort),
@@ -282,6 +290,9 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 					},
 				},
 			})
+			if err != nil {
+				log.Fatalf("Unable to create ingress for domain %s: %v", domain, err)
+			}
 
 			domain, tls, err = findDomain(client, namespace, domain)
 			if err != nil {
@@ -317,6 +328,15 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			log.StopWait()
 			open.Start(domain)
 			log.Donef("Successfully opened %s", domain)
+
+			if openingMode == openLocalHostOption {
+				log.WriteString("\n")
+				log.Info("Press ENTER to terminate port-forwarding process")
+
+				// Wait until user aborts the program or presses ENTER
+				reader := bufio.NewReader(os.Stdin)
+				_, _, _ = reader.ReadRune()
+			}
 			return
 		}
 
@@ -338,7 +358,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
 }
 
-func getService(config *latest.Config, client kubernetes.Interface, namespace, host string) (string, int, *map[string]string, error) {
+func getService(config *latest.Config, client kubernetes.Interface, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceLabels := map[string]map[string]string{}
@@ -359,10 +379,20 @@ func getService(config *latest.Config, client kubernetes.Interface, namespace, h
 				continue
 			}
 
-			for _, port := range service.Spec.Ports {
-				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port.Port)))
+			for _, ports := range service.Spec.Ports {
+				port := ports.Port
+
+				if getEndpoints {
+					port = ports.TargetPort.IntVal
+				}
+				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port)))
 			}
-			serviceLabels[service.Name] = service.Labels
+
+			if getEndpoints {
+				serviceLabels[service.Name] = service.Spec.Selector
+			} else {
+				serviceLabels[service.Name] = service.Labels
+			}
 		}
 	}
 
