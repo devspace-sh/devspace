@@ -116,7 +116,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		kubeconfig.SaveConfig(kubeConfig)
 
 		log.Infof("The default namespace of your current kube-context '%s' has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"), ansi.Color(namespace, "white+b"))
-		log.Infof("\r          To revert this operation, run: %s\n", ansi.Color("devspace use namespace "+oldDefaultNamespace, "white+b"))
+		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use namespace "+oldDefaultNamespace, "white+b"))
 	}
 
 	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))
@@ -137,6 +137,6 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 			log.Fatal(err)
 		}
 
-		log.Infof("\r          \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 }

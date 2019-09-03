@@ -88,7 +88,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.Reconfigure == false {
 		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
-		log.Infof("\r          \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		return
 	}
 
@@ -255,7 +255,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.WriteString("\n")
 	log.Done("Project successfully initialized")
-	log.Infof("\r          \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 }
 
 func getDeploymentName() (string, error) {

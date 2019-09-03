@@ -68,7 +68,7 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 		kubeconfig.SaveConfig(kubeConfig)
 
 		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
-		log.Infof("\r          To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))
+		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))
 	}
 
 	log.Donef("Successfully set kube-context to '%s'", ansi.Color(context, "white+b"))
