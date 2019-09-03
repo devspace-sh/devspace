@@ -210,6 +210,4 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 		Namespace: testCase.namespaceFlag,
 		Wait:      testCase.waitFlag,
 	}).RunAnalyze(nil, []string{})
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
