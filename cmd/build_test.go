@@ -136,6 +136,9 @@ func TestBuild(t *testing.T) {
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
 							Image: ptr.String("someImage"),
+							Build: &latest.BuildConfig{
+								Custom: &latest.CustomConfig{},
+							},
 						},
 					},
 				},
@@ -149,7 +152,10 @@ func TestBuild(t *testing.T) {
 				"devspace.yaml": &latest.Config{
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
-							Image:      ptr.String("someImage"),
+							Image: ptr.String("someImage"),
+							Build: &latest.BuildConfig{
+								Custom: &latest.CustomConfig{},
+							},
 							Dockerfile: ptr.String("no space left on device"), //It's a bit dirty. Force specific kind of error
 						},
 					},
