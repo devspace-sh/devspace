@@ -106,9 +106,13 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		log.Fatalf("Unable to load kube-config: %v", err)
 	}
 
+	// Remove context
+	delete(kubeConfig.Contexts, contextName)
+
 	removeAuthInfo := true
 	removeCluster := true
 
+	// Check if AuthInfo or Cluster is used by any other context
 	for _, ctx := range kubeConfig.Contexts {
 		if ctx.AuthInfo == context.AuthInfo {
 			removeAuthInfo = false
@@ -119,15 +123,15 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		}
 	}
 
+	// Remove AuthInfo if not used by any other context
 	if removeAuthInfo {
 		delete(kubeConfig.AuthInfos, context.AuthInfo)
 	}
 
+	// Remove Cluster if not used by any other context
 	if removeCluster {
 		delete(kubeConfig.Clusters, context.Cluster)
 	}
-	
-	delete(kubeConfig.Contexts, contextName)
 
 	for ctx, _ := range kubeConfig.Contexts {
 		// Set first context as default for current kube-context
