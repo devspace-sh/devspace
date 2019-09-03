@@ -253,15 +253,23 @@ This command will do the following:
 **Congrats you have successfully deployed an application to Kubernetes!**
 
 
-## Open your app in the browser (DevSpace Cloud)
-*If you are **not** using DevSpace Cloud, you will need to setup an ingress-controller, define an ingress and configure the DNS of your domain to point to your cluster in order to use `devspace open`.*
-
-You can now view your application in the browser using the following command:
+## Open your app in the browser
+You can now open your application in the browser using the following command:
 ```bash
 devspace open
 ```
+When DevSpace asks you how to open your application, choose the first option: **via localhost**
+```bash
+? How do you want to open your application?
+  [Use arrows to move, space to select, type to filter]
+> via localhost (provides private access only on your computer via port-forwarding) # <<<<<<<< CHOOSE THIS ONE!
+  via domain (makes your application publicly available via ingress)
+```
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you can simply use DevSpace Cloud using our Hosted Spaces or using your own cluster with `devspace connect cluster`.
 
-Learn how to [connect custom domains](/docs/cloud/spaces/domains) to DevSpace Cloud. 
+> **Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
+
+<img style="float: left; max-width: 500px; margin-right: 50px;" src="https://i.gifer.com/ZIx.gif">
 
 ## What's next?
 DevSpace ist not just a deployment tool, it is also a very powerful development tool. In the last step of this Getting Started guide you will learn how to [develop applications directly inside a Kubernetes cluster](/docs/cli/getting-started/development).
