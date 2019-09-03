@@ -40,16 +40,19 @@ Building modern, distributed and highly scalable microservices with Kubernetes i
 
 <details>
 <summary><b>Standardize & Version Your Workflows</b></summary>
+<br>
 
 DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
 - Codify workflow knowledge about building images, deploying your project and its dependencies, debugging and developing a project etc.
 - Version your workflows together with your code (i.e. you can check out any old version and get it up and running with just a single command) 
 - Easily share your workflows with your team mates
 
+<br>
 </details>
 
 <details>
 <summary><b>Let Everyone on Your Team Deploy to Kubernetes</b></summary>
+<br>
 
 DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
 - The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
@@ -58,29 +61,35 @@ DevSpace helps your team to standardize deployment and development workflows wit
 
 > Giving everyone on your team access to a Kubernetes cluster means a lot of work for admins and requires a lot of knowledge from developers. DevSpace Cloud makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
 
+<br>
 </details>
 
 <details>
 <summary><b>Speed Up Cloud-Native Development</b></summary>
+<br>
 
 Instead of rebuilding images and redeploying containers, DevSpace allows you to hot reload running containers while you code:
 - Simply edit your files with your IDE and see how your application reloads within the running container.
 - The high performance, bi-directional file synchronization detects code changes immediately and synchronizes files immediately between your local dev environment and the containers running in Kubernetes
 - Stream logs, connect debuggers or open a container terminal directly from your IDE with just a single command.
 
+<br>
 </details>
 
 <details>
 <summary><b>Automate Repetitive Tasks</b></summary>
+<br>
 
 Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repetedly run command like `kubectl get po` and copy pod ids. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
 - DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application including its dependencies with just a single command
 - Let DevSpace automatically start port-foward and log streaming, so you don't have to get the pod ids and run 10 commands to get everything started.
 
+<br>
 </details>
 
 <details>
 <summary><b>Works with Any Kubernetes Clusters</b></summary>
+<br>
 
 DevSpace is battle tested with any major Kubernetes distributions including:
 - local Kubernetes clusters like minikube, k3s, MikroK8s, kind
@@ -89,6 +98,7 @@ DevSpace is battle tested with any major Kubernetes distributions including:
 
 > DevSpace also let you switch seamlessly between clusters. You can work with a local clusters as long as that is sufficient. If things get more advanced, you need cloud power like GPUs or you simply want to share a complex system such as Kafka with your team, simply tell DevSpace to use a remote cluster and continue working.
 
+<br>
 </details>
 
 
@@ -171,7 +181,7 @@ You can, however, connect your Kubernetes cluster to DevSpace Cloud to manage cl
 
 ## Quickstart
 
-### 1. Install
+### 1. Install DevSpace
 
 <details>
 <summary>via NPM</summary>
@@ -239,7 +249,7 @@ cd /path/to/my/project/root
 
 <br>
 
-### 3. Deploy
+### 3. Deploy Your Project
 
 Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is fairly easy to switch between the options listed here.
 
@@ -337,19 +347,32 @@ devspace deploy
 
 <br>
 
-### 4. Develop
+### 4. Open In Your Browser
+You can now open your application in the browser using the following command:
+```bash
+devspace open
+```
+When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
+
+**Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
+
+<img width="300" src="https://i.gifer.com/ZIx.gif">
+
+<br>
+
+### 5. Develop
 After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
 devspace dev
 ```
-DevSpace will deploy your application, wait until your pods are ready and open the terminal of a pod that is specified in your config. You can now start your application manually using a command such as `npm start` or `npm run develop` and access your application via `localhost:PORT` in your browser. Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster.
+DevSpace will deploy your application, wait until your pods are ready and open the terminal of a pod that is specified in your config. You can now start your application manually using a command such as `npm start` or `npm run develop` and access your application via `localhost:PORT` in your browser. 
 
-> If you are using DevSpace Cloud, you can now `devspace ui` to open the graphical user interface in your browser, stream logs, add new users to your cluster and configure permissions for everyone on your team.
+**Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster.**
 
 <br>
 
-### 5. Learn more
+### 6. Learn more
 
 <details>
 <summary>Show useful commands for development
