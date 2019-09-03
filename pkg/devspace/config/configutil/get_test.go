@@ -745,6 +745,7 @@ func TestValidate(t *testing.T) {
 		},
 		Images: &map[string]*latest.ImageConfig{
 			"validImg": &latest.ImageConfig{
+				Image: ptr.String("someImage"),
 				Build: &latest.BuildConfig{
 					Custom: &latest.CustomConfig{
 						Command: ptr.String("echo"),

@@ -366,6 +366,9 @@ func validate(config *latest.Config) error {
 			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == nil {
 				return fmt.Errorf("images.%s.build.custom.command is required", imageConfigName)
 			}
+			if imageConf.Image == nil || *imageConf.Image == "" {
+				return fmt.Errorf("images.%s.image is required", imageConfigName)
+			}
 		}
 	}
 
