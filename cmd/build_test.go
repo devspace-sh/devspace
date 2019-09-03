@@ -15,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -76,6 +77,8 @@ func TestBuild(t *testing.T) {
 
 	_, err = os.Open("doesn'tExist")
 	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+	err = command.NewStreamCommand("", []string{}).Run(nil, nil, nil)
+	pathVarKey := strings.TrimPrefix(err.Error(), "exec: \"\": executable file not found in ")
 
 	testCases := []buildTestCase{
 		buildTestCase{
@@ -147,7 +150,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			buildSequentialFlag: true,
-			expectedPanic:       "Error building image: Error building image: exec: \" \": executable file not found in %PATH%",
+			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" \": executable file not found in %s", pathVarKey),
 			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command   someImage:someTag",
 		},
 		buildTestCase{
@@ -168,7 +171,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			buildSequentialFlag: true,
-			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", "%PATH%", ansi.Color("devspace cleanup images", "white+b")),
+			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
 			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},
 		buildTestCase{
