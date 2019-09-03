@@ -5,8 +5,10 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +85,27 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 			log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
 		}
 	} else if !cmd.Reset {
-		// TODO: Show picker
+		// Get kubernetes client
+		client, err := kubectl.NewClient(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		namespaceList, err := client.CoreV1().Namespaces().List(metav1.ListOptions{})
+		if err != nil {
+			log.Fatalf("Unable to list namespaces: %v", err)
+		}
+
+		namespaces := []string{}
+
+		for _, ns := range namespaceList.Items {
+			namespaces = append(namespaces, ns.Name)
+		}
+
+		namespace = survey.Question(&survey.QuestionOptions{
+			Question: "Which namespace do you want to use?",
+			Options:  namespaces,
+		})
 	}
 
 	// Set namespace as default for current kube-context
