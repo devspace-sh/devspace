@@ -70,6 +70,9 @@ func TestBuild(t *testing.T) {
 		}
 	}()
 
+	_, err = os.Open("doesn'tExist")
+	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+
 	testCases := []buildTestCase{
 		buildTestCase{
 			name:          "config doesn't exist",
@@ -128,12 +131,12 @@ func TestBuild(t *testing.T) {
 				"devspace.yaml": &latest.Config{
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
-							Image: ptr.String(""),
+							Image: ptr.String("someImage"),
 						},
 					},
 				},
 			},
-			expectedPanic:  "Error building image: Error during shouldRebuild check: Dockerfile ./Dockerfile missing: CreateFile ./Dockerfile: The system cannot find the file specified.",
+			expectedPanic:  fmt.Sprintf("Error building image: Error during shouldRebuild check: Dockerfile ./Dockerfile missing: CreateFile ./Dockerfile: %s", noFileFoundError),
 			expectedOutput: "\nInfo Loaded config from devspace.yaml",
 		},
 		buildTestCase{
@@ -142,8 +145,8 @@ func TestBuild(t *testing.T) {
 				"devspace.yaml": &latest.Config{
 					Images: &map[string]*latest.ImageConfig{
 						"buildThis": &latest.ImageConfig{
-							Image:      ptr.String(""),
-							Dockerfile: ptr.String("no space left on device"), //It's a bit dirty
+							Image:      ptr.String("someImage"),
+							Dockerfile: ptr.String("no space left on device"), //It's a bit dirty. Force specific kind of error
 						},
 					},
 				},
