@@ -7,15 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	configspkg "github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
@@ -463,129 +460,4 @@ func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorCo
 	}
 
 	return nil, errors.New("Unable to find selector: " + selectorName)
-}
-
-// GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
-func GetDefaultNamespace(config *latest.Config) (string, error) {
-	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
-		return *config.Cluster.Namespace, nil
-	}
-
-	kubeConfig, err := kubeconfig.LoadRawConfig()
-	if err != nil {
-		return "", err
-	}
-
-	activeContext := kubeConfig.CurrentContext
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && *config.Cluster.KubeContext != "" {
-		activeContext = *config.Cluster.KubeContext
-	}
-
-	if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
-		return kubeConfig.Contexts[activeContext].Namespace, nil
-	}
-
-	return metav1.NamespaceDefault, nil
-}
-
-// GetDefaultContext retrieves the default kube context where to operate in
-func GetDefaultContext(config *latest.Config) (string, error) {
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && *config.Cluster.KubeContext != "" {
-		return *config.Cluster.KubeContext, nil
-	}
-
-	kubeConfig, err := kubeconfig.LoadRawConfig()
-	if err != nil {
-		return "", err
-	}
-
-	activeContext := kubeConfig.CurrentContext
-	if activeContext == "" {
-		return "", fmt.Errorf("Couldn't find any active kube context")
-	}
-
-	return activeContext, nil
-}
-
-// LoadAndUpdateConfig returns the config with setting the correct values for namespace and kubeContext based on generated config and on args provided
-func LoadAndUpdateConfig(generatedConfig *generated.Config, namespaceFlag, kubeContextFlag string, updateGenerated bool, log log.Logger) (*latest.Config, error) {
-	// load config
-	config, err := GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "load config")
-	}
-
-	// Check if we should update the cluster configuration
-	if namespaceFlag != "" || kubeContextFlag != "" {
-		if config.Cluster == nil {
-			config.Cluster = &latest.Cluster{}
-		}
-
-		// set namespace correctly
-		if namespaceFlag != "" {
-			config.Cluster.Namespace = &namespaceFlag
-		}
-
-		// set kubeContext correctly
-		if kubeContextFlag != "" {
-			config.Cluster.KubeContext = &kubeContextFlag
-		}
-	}
-
-	// Get default Namespace & kube context
-	kubeContext, err := GetDefaultContext(config)
-	if err != nil {
-		return nil, err
-	}
-
-	namespace, err := GetDefaultNamespace(config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Info message
-	log.Infof("Using namespace %s", ansi.Color(namespace, "white+b"))
-
-	// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
-	if generatedConfig.LastContext != nil {
-		if (generatedConfig.LastContext.Context != "" && generatedConfig.LastContext.Context != kubeContext) || (generatedConfig.LastContext.Namespace != "" && generatedConfig.LastContext.Namespace != namespace) {
-			log.WriteString("\n")
-			log.Warnf("Your current kube-context and/or default namespace is different than last time.")
-			log.WriteString("\n")
-
-			if updateGenerated {
-				log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", "red+b"))
-				log.StartWait("Will continue in 10 seconds...")
-				time.Sleep(10 * time.Second)
-				log.StopWait()
-				log.WriteString("\n")
-			}
-		}
-	}
-
-	// warn if user is currently using default namespace but only if we updating the generated config, since we don't want the warning in devspace enter, logs etc.
-	if updateGenerated && namespace == metav1.NamespaceDefault {
-		log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
-
-		log.Warn(ansi.Color("Abort with CTRL+C if you do not want to use the default namespace.", "red+b"))
-		log.StartWait("Will continue in 5 seconds...")
-		time.Sleep(5 * time.Second)
-		log.StopWait()
-		log.WriteString("\n")
-	}
-
-	// Update generated if we deploy the application
-	if updateGenerated {
-		generatedConfig.LastContext = &generated.LastContextConfig{
-			Context:   kubeContext,
-			Namespace: namespace,
-		}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "save generated")
-		}
-	}
-
-	return config, nil
 }

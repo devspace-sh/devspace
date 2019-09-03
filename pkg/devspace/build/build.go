@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
@@ -22,7 +21,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 

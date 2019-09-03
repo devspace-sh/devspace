@@ -19,9 +19,8 @@ import (
 func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
-
 	if imageName == "" {
-		imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context)
+		imageConfig, err = GetImageConfigFromDockerfile(config, name, dockerfile, context)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}

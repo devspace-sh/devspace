@@ -6,17 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // Logs prints the container logs
-func Logs(client kubernetes.Interface, namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
+func (client *Client) Logs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
 	lines := int64(100)
 	if tail != nil {
 		lines = *tail
 	}
 
-	request := client.CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
+	request := client.Client.CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
 		Container: containerName,
 		TailLines: &lines,
 		Previous:  lastContainerLog,

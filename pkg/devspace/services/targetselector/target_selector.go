@@ -12,7 +12,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // DefaultPodQuestion defines the default question for selecting a pod
@@ -34,13 +33,15 @@ type TargetSelector struct {
 	containerName *string
 
 	allowPick bool
-	config    *latest.Config
+
+	kubeClient *kubectl.Client
+	config     *latest.Config
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector(config *latest.Config, sp *SelectorParameter, allowPick bool) (*TargetSelector, error) {
+func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *SelectorParameter, allowPick bool) (*TargetSelector, error) {
 	// Get namespace
-	namespace, err := sp.GetNamespace(config)
+	namespace, err := sp.GetNamespace(config, kubeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -58,15 +59,16 @@ func NewTargetSelector(config *latest.Config, sp *SelectorParameter, allowPick b
 		containerName: sp.GetContainerName(),
 		pick:          allowPick && sp.CmdParameter.Pick != nil && *sp.CmdParameter.Pick == true,
 
-		allowPick: allowPick,
-		config:    config,
+		kubeClient: kubeClient,
+		allowPick:  allowPick,
+		config:     config,
 	}, nil
 }
 
 // GetPod retrieves a pod
-func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
+func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 	if t.pick == false && t.podName != nil {
-		pod, err := client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
+		pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +80,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 
 		return pod, nil
 	} else if t.pick == false && t.labelSelector != nil {
-		pod, err := kubectl.GetNewestRunningPod(t.config, client, *t.labelSelector, t.namespace, time.Second*120)
+		pod, err := t.kubeClient.GetNewestRunningPod(*t.labelSelector, t.namespace, time.Second*120)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +94,7 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 	}
 
 	// Ask for pod
-	pod, err := SelectPod(client, t.namespace, nil, t.PodQuestion)
+	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +103,8 @@ func (t *TargetSelector) GetPod(client kubernetes.Interface) (*v1.Pod, error) {
 }
 
 // GetContainer retrieves a container and pod
-func (t *TargetSelector) GetContainer(client kubernetes.Interface) (*v1.Pod, *v1.Container, error) {
-	pod, err := t.GetPod(client)
+func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
+	pod, err := t.GetPod()
 	if err != nil {
 		return nil, nil, err
 	}

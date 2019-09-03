@@ -59,7 +59,7 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context string) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, context string) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
 		retImageConfig = &latest.ImageConfig{}
@@ -87,15 +87,10 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		}
 	}
 
-	// If cloud provider is not set we use
-	if cloudProvider == "" {
-		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
-		log.StopWait()
-
-		if err == nil {
-			dockerUsername = dockerAuthConfig.Username
-		}
+	// Get cloud provider if context is a space
+	cloudProvider, err := cloud.GetDefaultProvider()
+	if err != nil {
+		return nil, err
 	}
 
 	cloudRegistryHostname, err := getCloudRegistryHostname(&cloudProvider)
@@ -103,13 +98,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, dockerfile, context str
 		return nil, err
 	}
 
-	registryURL, err := getRegistryURL(config, &cloudProvider, checkRegistryAuth)
+	registryURL, err := getRegistryURL(config, cloudRegistryHostname, &cloudProvider, checkRegistryAuth)
 	if err != nil {
 		return nil, err
 	}
 
 	if registryURL == cloudRegistryHostname {
-		imageName = registryURL + "/${DEVSPACE_USERNAME}/devspace"
+		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
@@ -269,7 +264,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 	var registryURL string
 
-	if cloudProvider == nil || *cloudProvider == "" {
+	if cloudProvider == nil || *cloudProvider == "" || *cloudProvider == cloudconfig.DevSpaceCloudProviderName {
 		// prevents EnsureLoggedIn call in GetProvider
 		// TODO: remove this hard-coded exception once the registry URL can be retrieved from DevSpace Cloud without login
 		registryURL = "dscr.io"

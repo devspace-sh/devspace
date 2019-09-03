@@ -10,17 +10,16 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
-	"k8s.io/client-go/kubernetes"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+func StartLogs(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
 	return StartLogsWithWriter(config, client, cmdParameter, follow, tail, log, os.Stdout, os.Stderr)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
+func StartLogsWithWriter(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, stdout io.Writer, stderr io.Writer) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
@@ -34,29 +33,24 @@ func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmd
 		}
 	}
 
-	targetSelector, err := targetselector.NewTargetSelector(config, selectorParameter, true)
+	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true)
 	if err != nil {
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer(client)
+	pod, container, err := targetSelector.GetContainer()
 	if err != nil {
 		return err
 	}
 
-	kubeconfig, err := kubectl.GetRestConfig(config)
-	if err != nil {
-		return err
-	}
-
-	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(kubeconfig)
+	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(client.RestConfig)
 	if err != nil {
 		return err
 	}
 
 	log.Infof("Printing logs of pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
-	logOutput, err := kubectl.Logs(client, pod.Namespace, pod.Name, container.Name, false, &tail)
+	logOutput, err := client.Logs(pod.Namespace, pod.Name, container.Name, false, &tail)
 	if err != nil {
 		return nil
 	}
@@ -74,7 +68,7 @@ func StartLogsWithWriter(config *latest.Config, client kubernetes.Interface, cmd
 
 	// TODO: Refactor this, because with this method we could miss some messages between logs and attach
 	go func() {
-		err := kubectl.AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container.Name, true, nil, stdout, stderr)
+		err := client.AttachStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, true, nil, stdout, stderr)
 		if err != nil {
 			if _, ok := err.(kubectlExec.CodeExitError); ok == false {
 				interrupt <- fmt.Errorf("Unable to start attach session: %v", err)

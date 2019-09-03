@@ -10,7 +10,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -52,13 +51,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
-		// Use default namespace here
-		defaultNamespace, err := configutil.GetDefaultNamespace(client.config)
-		if err != nil {
-			return nil, err
-		}
-
-		releaseNamespace = defaultNamespace
+		releaseNamespace = client.kubectl.Namespace
 	}
 
 	chart, err := helmchartutil.Load(chartPath)
@@ -182,7 +175,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 
 	// Only check if the error is time out
 	if strings.Index(errMessage, "timed out waiting") != -1 {
-		report, err := analyze.CreateReport(client.kubectl, releaseNamespace, false)
+		report, err := analyze.CreateReport(client.kubectl.Client, releaseNamespace, false)
 		if err != nil {
 			log.Warnf("Error creating analyze report: %v", err)
 			return srcErr

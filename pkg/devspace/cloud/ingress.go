@@ -6,8 +6,7 @@ import (
 	"strings"
 
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
@@ -15,23 +14,16 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // IngressName is the ingress name to create
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func (p *Provider) CreateIngress(config *latest.Config, client kubernetes.Interface, space *cloudlatest.Space, host string) error {
-	namespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return errors.Wrap(err, "get default namespace")
-	}
-
+func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string) error {
 	// Let user select service
 	serviceNameList := []string{}
-
-	serviceList, err := client.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	serviceList, err := client.Client.CoreV1().Services(client.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "list services")
 	}

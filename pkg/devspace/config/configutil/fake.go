@@ -2,7 +2,6 @@ package configutil
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 // TestNamespace is the test namespace to use
@@ -25,10 +24,6 @@ func SetFakeConfig(fakeConfig *latest.Config) {
 	}
 	if fakeConfig.Dev == nil {
 		fakeConfig.Dev = &latest.DevConfig{}
-	}
-
-	fakeConfig.Cluster = &latest.Cluster{
-		Namespace: ptr.String(TestNamespace),
 	}
 
 	config = fakeConfig

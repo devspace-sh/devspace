@@ -14,7 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -52,9 +52,9 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client client.CommonAPIClient, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
-		helper:   helper.NewBuildHelper(config, EngineName, imageConfigName, imageConf, imageTag, isDev),
+		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client:   client,
 		skipPush: skipPush,
 	}, nil
@@ -90,7 +90,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 	// We skip pushing when it is the minikube client
 	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
-		if minikube.IsMinikube(b.helper.Config) {
+		if b.helper.KubeClient != nil && b.helper.KubeClient.IsMinikube() {
 			b.skipPush = true
 		}
 	}

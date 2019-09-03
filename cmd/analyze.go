@@ -74,19 +74,15 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	namespace := ""
+	var config *latest.Config
 	if configExists == true {
-		config := configutil.GetConfig()
+		config = configutil.GetConfig()
+	}
 
-		namespace, err = configutil.GetDefaultNamespace(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		namespace, err = configutil.GetDefaultNamespace(nil)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// Get default namespace
+	namespace, err := configutil.GetDefaultNamespace(config)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Override namespace

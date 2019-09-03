@@ -3,14 +3,13 @@ package helm
 import (
 	"regexp"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // TillerServiceAccountName is the name of the service account tiller will use
@@ -24,9 +23,9 @@ const TillerRoleManagerName = "tiller-config-manager"
 
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
-func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface, tillerNamespace string) error {
+func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNamespace string) error {
 	// Create service account
-	err := createTillerServiceAccount(kubectlClient, tillerNamespace)
+	err := createTillerServiceAccount(client, tillerNamespace)
 	if err != nil {
 		return err
 	}
@@ -34,18 +33,12 @@ func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface,
 	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
 	appNamespaces := []*string{&tillerNamespace}
 
-	// Get default namespace
-	defaultNamespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return err
-	}
-
 	// Add all namespaces that need our permission
 	if config.Deployments != nil && len(*config.Deployments) > 0 {
 		for _, deployConfig := range *config.Deployments {
 			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
 				if *deployConfig.Namespace == "" {
-					appNamespaces = append(appNamespaces, &defaultNamespace)
+					appNamespaces = append(appNamespaces, &client.Namespace)
 					continue
 				}
 
@@ -58,11 +51,11 @@ func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface,
 	for _, appNamespace := range appNamespaces {
 		if *appNamespace != "default" {
 			// Create namespaces if they are not there already
-			_, err := kubectlClient.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
+			_, err := client.Client.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
 			if err != nil {
 				log.Donef("Create namespace %s", *appNamespace)
 
-				_, err = kubectlClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				_, err = client.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: *appNamespace,
 					},
@@ -73,7 +66,7 @@ func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface,
 			}
 		}
 
-		err = addDeployAccessToTiller(kubectlClient, tillerNamespace, *appNamespace)
+		err = addDeployAccessToTiller(client, tillerNamespace, *appNamespace)
 		if err != nil {
 			return err
 		}
@@ -82,8 +75,8 @@ func createTillerRBAC(config *latest.Config, kubectlClient kubernetes.Interface,
 	return nil
 }
 
-func createTillerServiceAccount(kubectlClient kubernetes.Interface, tillerNamespace string) error {
-	_, err := kubectlClient.CoreV1().ServiceAccounts(tillerNamespace).Create(&k8sv1.ServiceAccount{
+func createTillerServiceAccount(client *kubectl.Client, tillerNamespace string) error {
+	_, err := client.Client.CoreV1().ServiceAccounts(tillerNamespace).Create(&k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerServiceAccountName,
 			Namespace: tillerNamespace,
@@ -93,8 +86,8 @@ func createTillerServiceAccount(kubectlClient kubernetes.Interface, tillerNamesp
 	return err
 }
 
-func addDeployAccessToTiller(kubectlClient kubernetes.Interface, tillerNamespace, namespace string) error {
-	_, err := kubectlClient.RbacV1beta1().Roles(namespace).Create(&k8sv1beta1.Role{
+func addDeployAccessToTiller(client *kubectl.Client, tillerNamespace, namespace string) error {
+	_, err := client.Client.RbacV1beta1().Roles(namespace).Create(&k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName,
 			Namespace: namespace,
@@ -115,7 +108,7 @@ func addDeployAccessToTiller(kubectlClient kubernetes.Interface, tillerNamespace
 		return err
 	}
 
-	_, err = kubectlClient.RbacV1beta1().RoleBindings(namespace).Create(&k8sv1beta1.RoleBinding{
+	_, err = client.Client.RbacV1beta1().RoleBindings(namespace).Create(&k8sv1beta1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName + "-binding",
 			Namespace: namespace,

@@ -28,7 +28,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -270,7 +270,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 			ingressName := "devspace-ingress-" + fmt.Sprintf("%x", hash.Sum(nil))
 
-			_, err = client.NetworkingV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
+			_, err = client.ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 				Spec: v1beta1.IngressSpec{
 					Rules: []v1beta1.IngressRule{
@@ -291,6 +291,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				},
 			})
 			if err != nil {
+				log.WriteString("\n")
 				log.Fatalf("Unable to create ingress for domain %s: %v", domain, err)
 			}
 
@@ -328,7 +329,6 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			log.StopWait()
 			open.Start(domain)
 			log.Donef("Successfully opened %s", domain)
-
 			if openingMode == openLocalHostOption {
 				log.WriteString("\n")
 				log.Info("Press ENTER to terminate port-forwarding process")

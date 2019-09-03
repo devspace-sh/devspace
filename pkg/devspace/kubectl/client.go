@@ -4,70 +4,144 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// NewClient creates a new kubernetes client
-func NewClient(devSpaceConfig *latest.Config) (kubernetes.Interface, error) {
-	config, err := loadClientConfig(devSpaceConfig, false)
-	if err != nil {
-		return nil, err
+// Client holds all important information for kubernetes
+type Client struct {
+	Client       kubernetes.Interface
+	ClientConfig clientcmd.ClientConfig
+	RestConfig   *rest.Config
+
+	CurrentContext string
+	Namespace      string
+}
+
+// UpdateLastContext returns a new kubectl client based on the namespace flag and kube context flag and updates the generated accordingly
+func (client *Client) UpdateLastContext(updateGenerated bool, log log.Logger) (*Client, error) {
+	// Info messages
+	log.Infof("Using kube context '%s'", ansi.Color(client.CurrentContext, "white+b"))
+	log.Infof("Using namespace '%s'", ansi.Color(client.Namespace, "white+b"))
+
+	generatedConfig, err := generated.LoadConfig()
+	if err == nil {
+		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
+		if generatedConfig.LastContext != nil {
+			if (generatedConfig.LastContext.Context != "" && generatedConfig.LastContext.Context != client.CurrentContext) || (generatedConfig.LastContext.Namespace != "" && generatedConfig.LastContext.Namespace != client.Namespace) {
+				log.WriteString("\n")
+				log.Warnf("Your current kube-context and/or default namespace is different than last time.")
+				log.WriteString("\n")
+
+				if updateGenerated {
+					log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", "red+b"))
+					log.StartWait("Will continue in 10 seconds...")
+					time.Sleep(10 * time.Second)
+					log.StopWait()
+					log.WriteString("\n")
+				}
+			}
+		}
+
+		// warn if user is currently using default namespace but only if we updating the generated config, since we don't want the warning in devspace enter, logs etc.
+		if updateGenerated && client.Namespace == metav1.NamespaceDefault {
+			log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
+
+			log.Warn(ansi.Color("Abort with CTRL+C if you do not want to use the default namespace.", "red+b"))
+			log.StartWait("Will continue in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			log.StopWait()
+			log.WriteString("\n")
+		}
+
+		// Update generated if we deploy the application
+		if updateGenerated {
+			generatedConfig.LastContext = &generated.LastContextConfig{
+				Context:   client.CurrentContext,
+				Namespace: client.Namespace,
+			}
+
+			err = generated.SaveConfig(generatedConfig)
+			if err != nil {
+				return nil, errors.Wrap(err, "save generated")
+			}
+		}
 	}
 
-	restConfig, err := config.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(restConfig)
+	return client, nil
 }
 
 // NewClientFromContext creates a new kubernetes client from given context
-func NewClientFromContext(context string) (kubernetes.Interface, error) {
-	config, err := GetRestConfigFromContext(context)
+func NewClientFromContext(context, namespace string, switchContext bool) (*Client, error) {
+	// Load raw config
+	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return kubernetes.NewForConfig(config)
+	// If we should use a certain kube context use that
+	activeContext := kubeConfig.CurrentContext
+	if context != "" && activeContext != context {
+		activeContext = context
+		if switchContext {
+			kubeConfig.CurrentContext = activeContext
+
+			err = kubeconfig.SaveConfig(kubeConfig)
+			if err != nil {
+				return nil, fmt.Errorf("Error saving kube config: %v", err)
+			}
+		}
+	}
+
+	if _, ok := kubeConfig.Contexts[activeContext]; ok == false {
+		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+	}
+
+	// Change context namespace
+	activeNamespace := kubeConfig.Contexts[activeContext].Namespace
+	if namespace != "" && activeNamespace != namespace {
+		activeNamespace = namespace
+		kubeConfig.Contexts[activeContext].Namespace = namespace
+	}
+	if activeNamespace == "" {
+		activeNamespace = metav1.NamespaceDefault
+	}
+
+	clientConfig := clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
+
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		Client:       client,
+		ClientConfig: clientConfig,
+		RestConfig:   restConfig,
+
+		Namespace:      activeNamespace,
+		CurrentContext: activeContext,
+	}, nil
 }
 
-// NewClientFromKubeConfig creates a new kubernetes client from a given kube config
-func NewClientFromKubeConfig(config clientcmd.ClientConfig) (kubernetes.Interface, error) {
-	clientConfig, err := config.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(clientConfig)
-}
-
-// NewClientWithContextSwitch creates a new kubernetes client and switches the kubectl context
-func NewClientWithContextSwitch(devSpaceConfig *latest.Config, switchContext bool) (kubernetes.Interface, error) {
-	config, err := loadClientConfig(devSpaceConfig, switchContext)
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig, err := config.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(restConfig)
-}
-
-// GetRestConfigBySelect let's the user select a kube context to use
-func GetRestConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Config, error) {
+// NewClientBySelect creates a new kubernetes client by user select
+func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -108,74 +182,8 @@ func GetRestConfigBySelect(allowPrivate bool, switchContext bool) (*rest.Config,
 			}
 		}
 
-		if switchContext {
-			kubeConfig.CurrentContext = kubeContext
-			err = kubeconfig.SaveConfig(kubeConfig)
-			if err != nil {
-				return nil, errors.Wrap(err, "write kube config")
-			}
-		}
-
-		return GetRestConfigFromContext(kubeContext)
+		return NewClientFromContext(kubeContext, "", switchContext)
 	}
 
 	return nil, errors.New("We should not reach this point")
-}
-
-// GetRestConfigFromContext loads the configuration from a kubernetes context
-func GetRestConfigFromContext(context string) (*rest.Config, error) {
-	clientConfig, err := kubeconfig.LoadConfigFromContext(context)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientConfig.ClientConfig()
-}
-
-// GetRestConfig loads the rest configuration for kubernetes clients and parses it to *rest.Config
-func GetRestConfig(config *latest.Config) (*rest.Config, error) {
-	clientConfig, err := loadClientConfig(config, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientConfig.ClientConfig()
-}
-
-func loadClientConfig(config *latest.Config, switchContext bool) (clientcmd.ClientConfig, error) {
-	if config == nil {
-		return kubeconfig.LoadConfig(), nil
-	}
-
-	// Load raw config
-	kubeConfig, err := kubeconfig.LoadRawConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	// If we should use a certain kube context use that
-	activeContext := kubeConfig.CurrentContext
-	if config.Cluster != nil && config.Cluster.KubeContext != nil && len(*config.Cluster.KubeContext) > 0 && activeContext != *config.Cluster.KubeContext {
-		activeContext = *config.Cluster.KubeContext
-
-		if switchContext {
-			kubeConfig.CurrentContext = activeContext
-
-			err = kubeconfig.SaveConfig(kubeConfig)
-			if err != nil {
-				return nil, fmt.Errorf("Error saving kube config: %v", err)
-			}
-		}
-	}
-
-	if _, ok := kubeConfig.Contexts[activeContext]; ok == false {
-		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
-	}
-
-	// Change context namespace
-	if config.Cluster != nil && config.Cluster.Namespace != nil {
-		kubeConfig.Contexts[activeContext].Namespace = *config.Cluster.Namespace
-	}
-
-	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
 }

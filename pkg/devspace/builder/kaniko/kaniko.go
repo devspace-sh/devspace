@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -27,7 +26,6 @@ import (
 	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
@@ -47,7 +45,7 @@ type Builder struct {
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	kubectl               kubernetes.Interface
+	kubeClient            *kubectl.Client
 	dockerClient          client.CommonAPIClient
 }
 
@@ -55,11 +53,8 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubectl kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
-	buildNamespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return nil, errors.New("Error retrieving default namespace")
-	}
+func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+	buildNamespace := kubeClient.Namespace
 
 	if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = *imageConf.Build.Kaniko.Namespace
