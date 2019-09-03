@@ -3,7 +3,6 @@ package list
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -52,15 +51,14 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		"STATUS",
 	}
 
-	config := configutil.GetConfig()
-
-	generatedConfig, err := generated.LoadConfig()
+	// Get config with adjusted cluster config
+	config, err := configutil.GetContextAdjustedConfig("", "", false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

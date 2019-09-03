@@ -37,7 +37,7 @@ func TestGetDockerfileComponentDeployment(t *testing.T) {
 	testCases := []GetDockerfileComponentDeploymentTestCase{
 		GetDockerfileComponentDeploymentTestCase{
 			name:          "Empty params, only answers",
-			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "yes", "1234"},
+			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "1234"},
 			expectedImage: "someRegistry.com/user/imagename",
 			expectedPort:  1234,
 		},
@@ -109,7 +109,7 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context)
+		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, false)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -146,7 +146,7 @@ func TestGetImageComponentDeployment(t *testing.T) {
 	testCases := []getImageComponentDeploymentTestCase{
 		getImageComponentDeploymentTestCase{
 			name:      "valid with port",
-			answers:   []string{"12345", "no"},
+			answers:   []string{"12345"},
 			icdName:   "someDeployment",
 			imageName: "someImage",
 
@@ -320,8 +320,8 @@ type removeDeploymentTestCase struct {
 	allFlag             bool
 	existingDeployments []*latest.DeploymentConfig
 
-	expectedErr   string
-	expectedFound bool
+	expectedErr                  string
+	expectedFound                bool
 	expectedRemainingDeployments []string
 }
 
@@ -332,56 +332,56 @@ func TestRemoveDeployment(t *testing.T) {
 			expectedErr: "You have to specify either a deployment name or the --all flag",
 		},
 		removeDeploymentTestCase{
-			name:        "Remove all 2 deployments",
+			name:    "Remove all 2 deployments",
 			allFlag: true,
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: ptr.String("someDeploy"),
+					Name:      ptr.String("someDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name: ptr.String("otherDeploy"),
+					Name:      ptr.String("otherDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 			},
 			expectedFound: true,
 		},
 		removeDeploymentTestCase{
-			name:        "Remove all 0 deployments",
-			allFlag: true,
+			name:                "Remove all 0 deployments",
+			allFlag:             true,
 			existingDeployments: []*latest.DeploymentConfig{},
-			expectedFound: false,
+			expectedFound:       false,
 		},
 		removeDeploymentTestCase{
-			name:        "Remove 1 of 2 deployments",
+			name:           "Remove 1 of 2 deployments",
 			deploymentName: "someDeploy",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: ptr.String("someDeploy"),
+					Name:      ptr.String("someDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name: ptr.String("otherDeploy"),
+					Name:      ptr.String("otherDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 			},
-			expectedFound: true,
+			expectedFound:                true,
 			expectedRemainingDeployments: []string{"otherDeploy"},
 		},
 		removeDeploymentTestCase{
-			name:        "Remove 1 deployment that does not exist",
+			name:           "Remove 1 deployment that does not exist",
 			deploymentName: "notExistent",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: ptr.String("someDeploy"),
+					Name:      ptr.String("someDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name: ptr.String("otherDeploy"),
+					Name:      ptr.String("otherDeploy"),
 					Component: &latest.ComponentConfig{},
 				},
 			},
-			expectedFound: false,
+			expectedFound:                false,
 			expectedRemainingDeployments: []string{"someDeploy", "otherDeploy"},
 		},
 	}

@@ -18,13 +18,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -48,11 +49,14 @@ type DevCmd struct {
 	SwitchContext   bool
 	Portforwarding  bool
 	VerboseSync     bool
+	Interactive     string
 	Selector        string
 	Container       string
 	LabelSelector   string
 	Namespace       string
 }
+
+const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd() *cobra.Command {
@@ -103,6 +107,11 @@ Starts your project in development mode:
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 
+	devCmd.Flags().StringVarP(&cmd.Interactive, "interactive", "i", "", "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
+
+	// Allows to use `devspace dev -i` without providing a value for the flag, see https://github.com/spf13/pflag#setting-no-option-default-values-for-flags
+	devCmd.Flags().Lookup("interactive").NoOptDefVal = interactiveDefaultPickerValue
+
 	return devCmd
 }
 
@@ -123,7 +132,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
-	// Load config
+	// Load generated config
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
@@ -133,7 +142,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	config := cmd.loadConfig(generatedConfig)
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -413,25 +422,77 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	// Get config with adjusted cluster config
+	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if cmd.Namespace != "" {
-		config.Cluster = &v1.Cluster{
-			Namespace:   &cmd.Namespace,
-			KubeContext: config.Cluster.KubeContext,
+	// Adjust config for interactive mode
+	if cmd.Interactive != "" {
+		if config.Images == nil || len(*config.Images) == 0 {
+			log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
+		}
+		images := *config.Images
+
+		if cmd.Interactive == interactiveDefaultPickerValue {
+			imageNames := make([]string, 0, len(images))
+			for k := range images {
+				imageNames = append(imageNames, k)
+			}
+
+			// If only one image exists, use it, otherwise show image picker
+			if len(imageNames) == 1 {
+				cmd.Interactive = imageNames[0]
+			} else {
+				cmd.Interactive = survey.Question(&survey.QuestionOptions{
+					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?\nIf you want to apply this override to multiple images run `devspace dev -i image1,image2,...`",
+					Options:  imageNames,
+				})
+			}
 		}
 
-		log.Infof("Using %s namespace", cmd.Namespace)
-	}
+		// Make sure dev section exists in config
+		if config.Dev == nil {
+			config.Dev = &latest.DevConfig{}
+		}
 
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
+		// Make sure dev.overrideImages section exists in config
+		if config.Dev.OverrideImages == nil {
+			imageOverrideConfig := []*latest.ImageOverrideConfig{}
+			config.Dev.OverrideImages = &imageOverrideConfig
+		}
+		imageOverrideConfig := *config.Dev.OverrideImages
+
+		// Entrypoint used for interactive mode
+		entrypointOverride := []*string{
+			ptr.String("sleep"),
+			ptr.String("999999"),
+		}
+
+		// Set all entrypoint overrides for specified interactive images
+		interactiveImages := strings.Split(cmd.Interactive, ",")
+		for i := range interactiveImages {
+			imageName := strings.TrimSpace(interactiveImages[i])
+			if _, ok := images[imageName]; !ok {
+				log.Fatalf("Unable to find image '%s' in configuration", imageName)
+			}
+			imageOverrideConfig = append(imageOverrideConfig, &latest.ImageOverrideConfig{
+				Name:       &imageName,
+				Entrypoint: &entrypointOverride,
+			})
+			log.Infof("Interactive mode: override image %s with 'ENTRYPOINT [sleep, 999999]'", imageName)
+		}
+		config.Dev.OverrideImages = &imageOverrideConfig
+
+		// Make sure dev.terminal section exists in config
+		if config.Dev.Terminal == nil {
+			config.Dev.Terminal = &latest.Terminal{}
+		}
+
+		// Set dev.terminal.disabled = false
+		config.Dev.Terminal.Disabled = ptr.Bool(false)
+		log.Info("Interactive mode: enable terminal")
 	}
 
 	return config

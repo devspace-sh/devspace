@@ -220,8 +220,8 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 	}()
 
 	(&contextCmd{
-		Provider: testCase.provider,
-		All:      testCase.all,
+		Provider:  testCase.provider,
+		AllSpaces: testCase.all,
 	}).RunRemoveContext(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)

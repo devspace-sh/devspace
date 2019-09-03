@@ -62,18 +62,16 @@ func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, 
 		return fmt.Errorf("Error getting default namespace: %v", err)
 	}
 
-	if defaultNamespace != "default" {
-		_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
-		if err != nil {
-			log.Donef("Create namespace %s", defaultNamespace)
+	_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
+	if err != nil {
+		// Create release namespace
+		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: defaultNamespace,
+			},
+		})
 
-			// Create release namespace
-			_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultNamespace,
-				},
-			})
-		}
+		log.Donef("Created namespace: %s", defaultNamespace)
 	}
 
 	return err

@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -15,18 +16,44 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
-func ResumeSpace(config *latest.Config, generatedConfig *generated.Config, loop bool, log log.Logger) error {
-	if generatedConfig.CloudSpace == nil {
-		return nil
-	}
-
-	p, err := GetProvider(&generatedConfig.CloudSpace.ProviderName, log)
+// ResumeLatestSpace resumes the latest Space that has been used to deploy this project to (if any)
+func ResumeLatestSpace(config *latest.Config, loop bool, log log.Logger) error {
+	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		return err
 	}
 
-	space, err := p.GetSpace(generatedConfig.CloudSpace.SpaceID)
+	if generatedConfig != nil && generatedConfig.Namespace != nil && generatedConfig.Namespace.KubeContext != nil {
+		context, contextName, err := kubeconfig.GetContext(*generatedConfig.Namespace.KubeContext)
+		if err != nil {
+			return fmt.Errorf("Unable to get current kube-context: %v", err)
+		}
+
+		isSpace, err := kubeconfig.IsCloudSpace(context)
+		if err != nil {
+			return fmt.Errorf("Unable to test if context '%s' belongs to Space: %v", contextName, err)
+		}
+
+		if isSpace {
+			spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
+			if err != nil {
+				return fmt.Errorf("Unable to get Space ID for context '%s': %v", contextName, err)
+			}
+
+			return ResumeSpace(config, cloudProvider, spaceID, loop, log)
+		}
+	}
+	return nil
+}
+
+// ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
+func ResumeSpace(config *latest.Config, cloudProvider string, spaceID int, loop bool, log log.Logger) error {
+	p, err := GetProvider(&cloudProvider, log)
+	if err != nil {
+		return err
+	}
+
+	space, err := p.GetSpace(spaceID)
 	if err != nil {
 		return fmt.Errorf("Error retrieving Spaces details: %v", err)
 	}

@@ -2,10 +2,15 @@ package kubeconfig
 
 import (
 	"encoding/base64"
+	"fmt"
+	"strconv"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+// Name of the command used to get auth token for kube-context of Spaces
+const AuthCommand = "devspace"
 
 // ConfigExists checks if a kube config exists
 func ConfigExists() bool {
@@ -73,4 +78,91 @@ func LoadNewConfig(contextName, server, caCert, token, namespace string) (client
 	config.CurrentContext = contextName
 
 	return clientcmd.NewNonInteractiveClientConfig(*config, contextName, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
+}
+
+// IsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud
+func IsCloudSpace(context *api.Context) (bool, error) {
+	// Get AuthInfo for context
+	authInfo, err := GetAuthInfo(context)
+	if err != nil {
+		return false, fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
+	}
+
+	if authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand {
+		return true, nil
+	}
+	return false, nil
+}
+
+// GetSpaceID returns the id of the Space that belongs to the context with this name
+func GetSpaceID(context *api.Context) (int, string, error) {
+	// Get AuthInfo for context
+	authInfo, err := GetAuthInfo(context)
+
+	if err != nil {
+		return 0, "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
+	}
+
+	if authInfo.Exec == nil || authInfo.Exec.Command != AuthCommand {
+		return 0, "", fmt.Errorf("Kube-context does not belong to a Space")
+	}
+
+	if len(authInfo.Exec.Args) < 6 {
+		return 0, "", fmt.Errorf("Kube-context is misconfigured. Please run `devspace use space [SPACE_NAME]` to setup a new context")
+	}
+	spaceID, err := strconv.Atoi(authInfo.Exec.Args[5])
+
+	return spaceID, authInfo.Exec.Args[3], err
+}
+
+// GetCurrentContextSpaceID returns the id and the provider of the Space that belongs to the current context
+func GetCurrentContextSpaceID() (int, string, error) {
+	currentContext, _, err := GetCurrentContext()
+	if err != nil {
+		return 0, "", fmt.Errorf("Unable to get current kube-context: %v", err)
+	}
+
+	return GetSpaceID(currentContext)
+}
+
+// GetAuthInfo returns the AuthInfo of the context with this name
+func GetAuthInfo(context *api.Context) (*api.AuthInfo, error) {
+	// Load kube-config
+	kubeConfig, err := LoadRawConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get AuthInfo for context
+	authInfo, ok := kubeConfig.AuthInfos[context.AuthInfo]
+	if !ok {
+		return nil, fmt.Errorf("Unable to find user information for context in kube-config file")
+	}
+	return authInfo, nil
+}
+
+// GetCurrentContext returns the current kube-context
+func GetCurrentContext() (*api.Context, string, error) {
+	return GetContext("")
+}
+
+// GetContext returns the kube-context with the provided name
+func GetContext(name string) (*api.Context, string, error) {
+	// Load kube-config
+	kubeConfig, err := LoadRawConfig()
+	if err != nil {
+		return nil, "", err
+	}
+
+	// use current context name if none is provided
+	if name == "" {
+		name = kubeConfig.CurrentContext
+	}
+
+	// Get context
+	context, ok := kubeConfig.Contexts[name]
+	if !ok {
+		return nil, "", fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", name)
+	}
+	return context, name, nil
 }

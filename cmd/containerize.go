@@ -17,8 +17,9 @@ func NewContainerizeCmd() *cobra.Command {
 	cmd := &ContainerizeCmd{}
 
 	containerizeCmd := &cobra.Command{
-		Use:   "containerize",
-		Short: "Creates a Dockerfile in the project",
+		Use:        "containerize",
+		Short:      "Creates a Dockerfile in the project",
+		Deprecated: "devspace containerize is deprecated. Use devspace init instead.",
 		Long: `
 #######################################################
 ################ devspace containerize ################

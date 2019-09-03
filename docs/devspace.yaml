@@ -12,11 +12,8 @@ deployments:
       ports:
       - port: 3000
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
+  terminal:
+    disabled: true
   ports:
   - labelSelector:
       app.kubernetes.io/component: docs

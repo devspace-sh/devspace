@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -68,15 +67,14 @@ devspace sync --container-path=/my-path
 func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig()
-
-		generatedConfig, err := generated.LoadConfig()
+		// Get config with adjusted cluster config
+		config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+		err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

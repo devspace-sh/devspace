@@ -11,43 +11,11 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/util/envutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
-
-// CacheSpace converts the space config into a cloud space config
-func (p *Provider) CacheSpace(generatedConfig *generated.Config, space *Space) error {
-	// Convert space domains
-	var domains []*generated.CloudSpaceDomainConfig
-	if space.Domains != nil && len(space.Domains) > 0 {
-		domains = make([]*generated.CloudSpaceDomainConfig, 0, len(space.Domains))
-
-		err := util.Convert(space.Domains, &domains)
-		if err != nil {
-			return err
-		}
-	}
-
-	generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-		SpaceID:      space.SpaceID,
-		ProviderName: space.ProviderName,
-		Name:         space.Name,
-		Namespace:    space.Namespace,
-		Owner:        space.Owner.Name,
-		OwnerID:      space.Owner.OwnerID,
-		KubeContext:  GetKubeContextNameFromSpace(space.Name, space.ProviderName),
-		Domains:      domains,
-		Created:      space.Created,
-	}
-
-	generatedConfig.Configs = map[string]*generated.CacheConfig{}
-	return generated.SaveConfig(generatedConfig)
-}
 
 // PrintSpaces prints the users spaces
 func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
@@ -57,11 +25,9 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	activeSpaceID := 0
-	if configutil.ConfigExists() {
-		generated, err := generated.LoadConfig()
-		if err == nil && generated.CloudSpace != nil {
-			activeSpaceID = generated.CloudSpace.SpaceID
-		}
+	currentContext, _, err := kubeconfig.GetCurrentContext()
+	if err == nil {
+		activeSpaceID, _, _ = kubeconfig.GetSpaceID(currentContext)
 	}
 
 	headerColumnNames := []string{}
@@ -143,15 +109,6 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	return nil
-}
-
-// SetTillerNamespace sets the tiller environment variable
-func SetTillerNamespace(serviceAccount *ServiceAccount) error {
-	if serviceAccount == nil {
-		return envutil.SetEnvVar("TILLER_NAMESPACE", "kube-system")
-	}
-
-	return envutil.SetEnvVar("TILLER_NAMESPACE", serviceAccount.Namespace)
 }
 
 // PadKey formats the key to the correct padding (32 byte)

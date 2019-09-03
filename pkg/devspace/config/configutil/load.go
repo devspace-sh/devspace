@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/git"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -65,21 +66,31 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 	"DEVSPACE_SPACE": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			if generatedConfig.CloudSpace != nil {
-				if generatedConfig.CloudSpace.Name != "" {
-					return &generatedConfig.CloudSpace.Name, nil
-				}
+			context, contextName, err := kubeconfig.GetCurrentContext()
+			if err != nil {
+				return nil, nil
 			}
 
+			isSpace, err := kubeconfig.IsCloudSpace(context)
+			if err != nil {
+				return nil, nil
+			}
+
+			contextNameSplit := strings.Split(contextName, "-")
+
+			if isSpace && len(contextNameSplit) > 1 {
+				spaceName := strings.Join(contextNameSplit[1:], "-")
+				return &spaceName, nil
+			}
 			return nil, nil
 		},
 	},
 	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			if generatedConfig.CloudSpace != nil {
-				if generatedConfig.CloudSpace.Namespace != "" {
-					return &generatedConfig.CloudSpace.Namespace, nil
+			if generatedConfig.Namespace != nil {
+				if generatedConfig.Namespace.Name != nil {
+					return generatedConfig.Namespace.Name, nil
 				}
 			}
 
@@ -89,11 +100,15 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("Not logged into Devspace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			providerName := cloudconfig.DevSpaceCloudProviderName
-			if generatedConfig.CloudSpace != nil {
-				if generatedConfig.CloudSpace.ProviderName != "" {
-					providerName = generatedConfig.CloudSpace.ProviderName
-				}
+			context, _, err := kubeconfig.GetCurrentContext()
+			if err != nil {
+				return nil, nil
+			}
+
+			_, providerName, err := kubeconfig.GetSpaceID(context)
+			if err != nil {
+				// use global provider config as fallback
+				providerName = cloudconfig.DevSpaceCloudProviderName
 			}
 
 			cloudConfigData, err := cloudconfig.ParseProviderConfig()
@@ -136,10 +151,12 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 
 	// Load space domain environment variable
 	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
+		/* TODO @FabianKramm
 		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
 		if err != nil {
 			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
 		}
+
 
 		if generatedConfig.CloudSpace == nil {
 			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
@@ -147,7 +164,7 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(generatedConfig.CloudSpace.Domains), idx)
 		}
 
-		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil
+		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil*/
 	}
 
 	return false, "", nil

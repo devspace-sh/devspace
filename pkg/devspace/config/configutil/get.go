@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -225,21 +227,6 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 			}
 		} else {
 			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
-		}
-
-		// Exchange kube context if necessary, but only if we don't load the base config
-		// we do this to avoid saving the kube context on commands like
-		// devspace add deployment && devspace add image etc.
-		if generatedConfig.CloudSpace != nil {
-			if config.Cluster == nil || config.Cluster.KubeContext == nil {
-				if generatedConfig.CloudSpace.KubeContext == "" {
-					return nil, nil, fmt.Errorf("No space configured!\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-				}
-
-				config.Cluster = &latest.Cluster{
-					KubeContext: &generatedConfig.CloudSpace.KubeContext,
-				}
-			}
 		}
 	} else {
 		if configDefinition != nil {
@@ -480,7 +467,7 @@ func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorCo
 
 // GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
 func GetDefaultNamespace(config *latest.Config) (string, error) {
-	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil {
+	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
 		return *config.Cluster.Namespace, nil
 	}
 
@@ -490,7 +477,7 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 	}
 
 	activeContext := kubeConfig.CurrentContext
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
+	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
 		activeContext = *config.Cluster.KubeContext
 	}
 
@@ -498,5 +485,103 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 		return kubeConfig.Contexts[activeContext].Namespace, nil
 	}
 
-	return "default", nil
+	return metav1.NamespaceDefault, nil
+}
+
+// GetContextAdjustedConfig returns the config with setting the correct values for namespace and kubeContext based on generated config and on args provided
+func GetContextAdjustedConfig(namespaceFlag, kubeContextFlag string, updateCache bool) (*latest.Config, error) {
+	// load generated config
+	generatedConfig, err := generated.LoadConfig()
+	if err != nil {
+		return nil, errors.Errorf("Error loading generated.yaml: %v", err)
+	}
+
+	// load config
+	config, err := GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// make sure generatedConfig.Namespace exists
+	if generatedConfig.Namespace == nil {
+		generatedConfig.Namespace = &generated.NamespaceConfig{}
+	}
+
+	// make sure config.Cluster exists
+	if config.Cluster == nil {
+		config.Cluster = &latest.Cluster{}
+	}
+
+	// get current kube-context
+	currentContext, currentContextName, err := kubeconfig.GetCurrentContext()
+
+	// set namespace correctly
+	if namespaceFlag != "" {
+		config.Cluster.Namespace = &namespaceFlag
+	} else {
+		// use namespace of current kube-context
+		config.Cluster.Namespace = &currentContext.Namespace
+	}
+
+	// set kubeContext correctly
+	if kubeContextFlag != "" {
+		config.Cluster.KubeContext = &kubeContextFlag
+	} else if config.Cluster.KubeContext == nil {
+		// use current kube-context
+		config.Cluster.KubeContext = &currentContextName
+	}
+
+	if config.Cluster.KubeContext != nil {
+		log.Infof("Using kube-context: %s", *config.Cluster.KubeContext)
+	}
+
+	if config.Cluster.Namespace != nil {
+		namespaceName := *config.Cluster.Namespace
+
+		if namespaceName == "" {
+			namespaceName = metav1.NamespaceDefault
+		}
+		log.Infof("Using namespace: %s", namespaceName)
+	}
+
+	// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
+	if (kubeContextFlag == "" && generatedConfig.Namespace.KubeContext != nil && *generatedConfig.Namespace.KubeContext != currentContextName) || (namespaceFlag == "" && generatedConfig.Namespace.Name != nil && *generatedConfig.Namespace.Name != currentContext.Namespace) {
+		log.WriteString("\n")
+		log.Warnf("Your current kube-context and/or default namespace is different than last time.")
+		log.WriteString("\n")
+		if updateCache {
+			log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", "red+b"))
+			log.StartWait("Will continue in 10 seconds...")
+			time.Sleep(10 * time.Second)
+			log.StopWait()
+			log.WriteString("\n")
+		}
+	}
+
+	// warn if user is currently using default namespace
+	if namespaceFlag == "" && (currentContext.Namespace == metav1.NamespaceDefault || currentContext.Namespace == "") {
+		log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
+
+		if generatedConfig.Namespace.Name == nil || currentContext.Namespace != *generatedConfig.Namespace.Name {
+			log.Warn(ansi.Color("Abort with CTRL+C if you do not want to use the default namespace.", "red+b"))
+			log.StartWait("Will continue in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			log.StopWait()
+			log.WriteString("\n")
+		}
+	}
+
+	if namespaceFlag == "" {
+		generatedConfig.Namespace.Name = &currentContext.Namespace
+	}
+
+	if kubeContextFlag == "" {
+		// remember context name if not passed as flag
+		generatedConfig.Namespace.KubeContext = &currentContextName
+	}
+
+	// save generated config to remember kubeContext and namespace
+	generated.SaveConfig(generatedConfig)
+
+	return config, nil
 }

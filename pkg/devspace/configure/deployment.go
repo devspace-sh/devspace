@@ -16,21 +16,13 @@ import (
 )
 
 // GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
-func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string, checkRegistryAuth bool) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
-	if imageName == "" {
-		var providerName *string
-		if generatedConfig.CloudSpace != nil {
-			providerName = &generatedConfig.CloudSpace.ProviderName
-		}
 
-		imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context, providerName)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "get image config")
-		}
-	} else {
-		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
+	imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context, name, checkRegistryAuth)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "get image config")
 	}
 
 	if imageName == "" {
@@ -57,7 +49,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 			port = strconv.Itoa(ports[0])
 		} else if len(ports) > 1 {
 			port = survey.Question(&survey.QuestionOptions{
-				Question:     "Which port is the container listening on?",
+				Question:     "Which port is your application listening on?",
 				DefaultValue: strconv.Itoa(ports[0]),
 			})
 			if port == "" {
@@ -67,7 +59,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 	}
 	if port == "" {
 		port = survey.Question(&survey.QuestionOptions{
-			Question: "Which port is the container listening on? (Enter to skip)",
+			Question: "Which port is your application listening on? (Enter to skip)",
 		})
 	}
 	if port != "" {

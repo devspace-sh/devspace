@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -17,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -29,8 +28,8 @@ const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
 
 const (
 	// Cluster options
-	useDevSpaceCloud           = "DevSpace Cloud (managed cluster)"
-	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your own cluster)"
+	useDevSpaceCloud           = "DevSpace Cloud (hosted Kubernetes namespaces, free)"
+	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your cluster and create isolated namespaces)"
 	useCurrentContext          = "Use current kubectl context (no server-side component)"
 
 	// Cluster connect options
@@ -52,9 +51,8 @@ type InitCmd struct {
 	Reconfigure bool
 	Dockerfile  string
 	Context     string
+	Provider    string
 
-	providerName        *string
-	useCloud            bool
 	dockerfileGenerator *generator.DockerfileGenerator
 }
 
@@ -80,6 +78,7 @@ folder. Creates a devspace.yaml with all configuration.
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
 	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
 	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", helper.DefaultDockerfilePath, "Dockerfile to use for initialization")
+	initCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
 	return initCmd
 }
@@ -90,7 +89,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	configExists := configutil.ConfigExists()
 	if configExists && cmd.Reconfigure == false {
 		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
-		log.Infof("\r          \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		return
 	}
 
@@ -111,9 +110,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Print DevSpace logo
 	log.PrintLogo()
-
-	// Check if user wants to use devspace cloud
-	cmd.checkIfDevSpaceCloud()
 
 	// Add deployment and image config
 	deploymentName, err := getDeploymentName()
@@ -154,6 +150,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			},
 		})
 	}
+	log.WriteString("\n")
 
 	if selectedOption == createDockerfileOption {
 		// Containerize application if necessary
@@ -209,7 +206,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, true)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -257,147 +254,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	}
 
+	log.WriteString("\n")
 	log.Done("Project successfully initialized")
-
-	if cmd.useCloud {
-		log.Infof("\r          \nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
-	} else {
-		log.Infof("\r          \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
-	}
-}
-
-func (cmd *InitCmd) checkIfDevSpaceCloud() {
-	cmd.useCloud = true
-	connectCluster := false
-
-	// Get provider configuration
-	providerConfig, err := cloudconfig.ParseProviderConfig()
-	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
-	}
-
-	// Check if kubectl exists
-	if kubeconfig.ConfigExists() {
-		var options []string
-		if providerConfig.Default == "" || providerConfig.Default == cloudconfig.DevSpaceCloudProviderName {
-			options = []string{useDevSpaceCloud, useDevSpaceCloudOwnCluster, useCurrentContext}
-		} else {
-			options = []string{useDevSpaceCloud, useCurrentContext}
-		}
-
-		selectedOption := survey.Question(&survey.QuestionOptions{
-			Question:     "Which Kubernetes cluster do you want to use?",
-			DefaultValue: useDevSpaceCloud,
-			Options:      options,
-		})
-
-		if selectedOption == useDevSpaceCloud {
-			cmd.useCloud = true
-		} else if selectedOption == useDevSpaceCloudOwnCluster {
-			cmd.useCloud = true
-			connectCluster = true
-		} else {
-			cmd.useCloud = false
-		}
-	}
-
-	// Check if DevSpace Cloud should be used
-	if cmd.useCloud == false {
-		cmd.configureCluster()
-	} else {
-		// Configure cloud provider
-		cmd.providerName = ptr.String(cloudconfig.DevSpaceCloudProviderName)
-
-		// Choose cloud provider
-		if providerConfig.Default != "" {
-			cmd.providerName = &providerConfig.Default
-		} else if len(providerConfig.Providers) > 1 {
-			options := []string{}
-			for _, provider := range providerConfig.Providers {
-				options = append(options, provider.Name)
-			}
-
-			cmd.providerName = ptr.String(survey.Question(&survey.QuestionOptions{
-				Question: "Select a cloud provider",
-				Options:  options,
-			}))
-		}
-
-		// Ensure user is logged in
-		err = cloud.EnsureLoggedIn(providerConfig, *cmd.providerName, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Create generated yaml if cloud
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		generatedConfig.CloudSpace = &generated.CloudSpaceConfig{
-			ProviderName: *cmd.providerName,
-		}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Check if we should connect cluster
-		if connectCluster {
-			cmd.connectCluster()
-		}
-	}
-}
-
-func (cmd *InitCmd) connectCluster() {
-	provider, err := cloud.GetProvider(cmd.providerName, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	clusters, err := provider.GetClusters()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	connectedClusters := []string{}
-	for _, cluster := range clusters {
-		if cluster.Owner != nil {
-			connectedClusters = append(connectedClusters, cluster.Name)
-		}
-	}
-
-	connectCluster := false
-	if len(connectedClusters) == 0 {
-		connectCluster = survey.Question(&survey.QuestionOptions{
-			Question: "You do not have any clusters connected. What do you want to do?",
-			Options:  []string{demoClusterOption, connectClusterOption},
-		}) == connectClusterOption
-	} else {
-		connectedClusters = append(connectedClusters, connectClusterOption)
-
-		connectCluster = survey.Question(&survey.QuestionOptions{
-			Question: "Which cluster do you want to use?",
-			Options:  connectedClusters,
-		}) == connectClusterOption
-	}
-
-	// User selected connect cluster
-	if connectCluster {
-		err = provider.ConnectCluster(&cloud.ConnectClusterOptions{
-			DeployAdmissionController: true,
-			DeployIngressController:   true,
-			DeployCertManager:         true,
-			UseDomain:                 true,
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Done("Successfully connected cluster to DevSpace Cloud")
-	}
+	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 }
 
 func getDeploymentName() (string, error) {
@@ -411,21 +270,12 @@ func getDeploymentName() (string, error) {
 	dirname = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(dirname, "")
 	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
 	dirname = strings.Trim(dirname, "-")
-	if len(dirname) == 0 {
+
+	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false {
 		dirname = "devspace"
 	}
 
 	return dirname, nil
-}
-
-func (cmd *InitCmd) configureCluster() {
-	namespace := survey.Question(&survey.QuestionOptions{
-		Question:     "Which namespace should the app run in?",
-		DefaultValue: "default",
-	})
-
-	config := configutil.GetConfig()
-	config.Cluster.Namespace = &namespace
 }
 
 func (cmd *InitCmd) addDevConfig() {
@@ -436,10 +286,30 @@ func (cmd *InitCmd) addDevConfig() {
 		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
 
 		if servicePort.Port != nil {
+			localPortPtr := servicePort.Port
+			var remotePortPtr *int
+
+			if *localPortPtr < 1024 {
+				log.WriteString("\n")
+				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.\n")
+
+				portString := survey.Question(&survey.QuestionOptions{
+					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+					DefaultValue: strconv.Itoa(*localPortPtr + 8000),
+				})
+
+				remotePortPtr = localPortPtr
+
+				localPort, err := strconv.Atoi(portString)
+				if err != nil {
+					log.Fatal("Error parsing port '%s'", portString)
+				}
+				localPortPtr = &localPort
+			}
 			portMappings := []*latest.PortMapping{}
-			exposedPort := *servicePort.Port
 			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort: &exposedPort,
+				LocalPort:  localPortPtr,
+				RemotePort: remotePortPtr,
 			})
 
 			config.Dev.Ports = &[]*latest.PortForwardingConfig{
@@ -482,13 +352,10 @@ func (cmd *InitCmd) addDevConfig() {
 		}
 	}
 
-	// Override image entrypoint
+	// Disable terminal by default
 	if len(*config.Images) > 0 {
-		config.Dev.OverrideImages = &[]*latest.ImageOverrideConfig{
-			&latest.ImageOverrideConfig{
-				Name:       ptr.String("default"),
-				Entrypoint: &[]*string{ptr.String("sleep"), ptr.String("999999999999")},
-			},
+		config.Dev.Terminal = &latest.Terminal{
+			Disabled: ptr.Bool(true),
 		}
 	}
 }

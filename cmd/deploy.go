@@ -8,8 +8,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -102,11 +100,14 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	// Prepare the config
-	config := cmd.loadConfig(generatedConfig)
+	// Get config with adjusted cluster config
+	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, cmd.KubeContext, true)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -189,51 +190,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving generated config: %v", err)
 	}
 
-	if generatedConfig.CloudSpace != nil {
-		log.Donef("Successfully deployed!")
-		log.Infof("\r          \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
-	} else {
-		log.Donef("Successfully deployed!")
-		log.Infof("Run `%s` to check for potential issues", ansi.Color("devspace analyze", "white+b"))
-	}
+	log.Donef("Successfully deployed!")
+
+	log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
 }
 
 func (cmd *DeployCmd) validateFlags() {
 	if cmd.SkipBuild && cmd.ForceBuild {
 		log.Fatal("Flags --skip-build & --force-build cannot be used together")
 	}
-}
-
-func (cmd *DeployCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if cmd.Namespace != "" {
-		config.Cluster = &v1.Cluster{
-			Namespace:   &cmd.Namespace,
-			KubeContext: config.Cluster.KubeContext,
-		}
-
-		log.Infof("Using %s namespace for deploying", cmd.Namespace)
-	}
-
-	if cmd.KubeContext != "" {
-		config.Cluster = &v1.Cluster{
-			Namespace:   config.Cluster.Namespace,
-			KubeContext: &cmd.KubeContext,
-		}
-
-		log.Infof("Using %s kube context for deploying", cmd.KubeContext)
-	}
-
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
-	}
-
-	return config
 }
