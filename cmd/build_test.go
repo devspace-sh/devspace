@@ -78,7 +78,7 @@ func TestBuild(t *testing.T) {
 	_, err = os.Open("doesn'tExist")
 	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 	err = command.NewStreamCommand(" ", []string{}).Run(nil, nil, nil)
-	pathVarKey := strings.TrimPrefix(err.Error(), "exec: \"\": executable file not found in ")
+	pathVarKey := strings.TrimPrefix(err.Error(), "exec: \" \": executable file not found in ")
 
 	testCases := []buildTestCase{
 		buildTestCase{
