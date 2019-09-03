@@ -477,7 +477,7 @@ func GetDefaultNamespace(config *latest.Config) (string, error) {
 	}
 
 	activeContext := kubeConfig.CurrentContext
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && config.Cluster.Namespace != nil && *config.Cluster.Namespace != "" {
+	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil && *config.Cluster.KubeContext != "" {
 		activeContext = *config.Cluster.KubeContext
 	}
 
