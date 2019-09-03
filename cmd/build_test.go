@@ -162,7 +162,7 @@ func TestBuild(t *testing.T) {
 	}
 
 	//The build-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", os.ModeTemporary)
+	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
 	assert.NilError(t, err, "Error overwriting log file before its creation")
 	log.OverrideRuntimeErrorHandler()
 
