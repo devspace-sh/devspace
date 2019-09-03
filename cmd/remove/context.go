@@ -106,25 +106,28 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		log.Fatalf("Unable to load kube-config: %v", err)
 	}
 
-	// Check if current kube-context blongs to Space
-	isSpace, err := kubeconfig.IsCloudSpace(context)
-	if err != nil {
-		log.Fatalf("Unable to check if context belongs to Space: %v", err)
-	}
+	removeAuthInfo := true
+	removeCluster := true
 
-	if isSpace {
-		// Retrieve space
-		space, err := provider.GetSpaceByName(args[0])
-		if err != nil {
-			log.Fatalf("Error retrieving space %s: %v", args[0], err)
+	for _, ctx := range kubeConfig.Contexts {
+		if ctx.AuthInfo == context.AuthInfo {
+			removeAuthInfo = false
 		}
 
-		// Delete kube context
-		err = cloudpkg.DeleteKubeContext(space)
-		if err != nil {
-			log.Fatalf("Error deleting kube context: %v", err)
+		if ctx.Cluster == context.Cluster {
+			removeCluster = false
 		}
 	}
+
+	if removeAuthInfo {
+		delete(kubeConfig.AuthInfos, context.AuthInfo)
+	}
+
+	if removeCluster {
+		delete(kubeConfig.Clusters, context.Cluster)
+	}
+	
+	delete(kubeConfig.Contexts, contextName)
 
 	for ctx, _ := range kubeConfig.Contexts {
 		// Set first context as default for current kube-context
