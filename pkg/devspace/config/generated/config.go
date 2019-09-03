@@ -16,13 +16,13 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
-	Namespace    *NamespaceConfig        `yaml:"namespace,omitempty"`
+	LastContext  *LastContextConfig      `yaml:"lastContext,omitempty"`
 }
 
-// NamespaceConfig holds all the informations about the namespace to use
-type NamespaceConfig struct {
-	Name        *string `yaml:"name,omitempty"`
-	KubeContext *string `yaml:"context,omitempty"`
+// LastContextConfig holds all the informations about the last used kubernetes context
+type LastContextConfig struct {
+	Namespace string `yaml:"namespace,omitempty"`
+	Context   string `yaml:"context,omitempty"`
 }
 
 // CacheConfig holds all the information specific to a certain config

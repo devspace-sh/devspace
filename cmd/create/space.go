@@ -2,6 +2,7 @@ package create
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -88,8 +89,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		projectID = projects[0].ProjectID
 	}
 
-	var cluster *cloud.Cluster
-
+	var cluster *latest.Cluster
 	if cmd.Cluster == "" {
 		cluster, err = getCluster(provider)
 		if err != nil {
@@ -130,6 +130,12 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
+	// Cache space
+	err = provider.CacheSpace(space, serviceAccount)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
@@ -138,7 +144,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Reset namespace cache
-		generatedConfig.Namespace = nil
+		generatedConfig.LastContext = nil
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
@@ -156,7 +162,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	}
 }
 
-func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
+func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
 	log.StartWait("Retrieving clusters")
 	defer log.StopWait()
 
@@ -171,7 +177,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	log.StopWait()
 
 	// Check if the user has access to a connected cluster
-	connectedClusters := make([]*cloud.Cluster, 0, len(clusters))
+	connectedClusters := make([]*latest.Cluster, 0, len(clusters))
 	for _, cluster := range clusters {
 		if cluster.Owner != nil {
 			connectedClusters = append(connectedClusters, cluster)
@@ -213,7 +219,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	}
 
 	// Select a devspace cluster
-	devSpaceClusters := make([]*cloud.Cluster, 0, len(clusters))
+	devSpaceClusters := make([]*latest.Cluster, 0, len(clusters))
 	for _, cluster := range clusters {
 		if cluster.Owner == nil {
 			devSpaceClusters = append(devSpaceClusters, cluster)

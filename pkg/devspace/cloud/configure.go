@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -73,7 +74,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 }
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
-func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, spaceID int, providerName string, setActive bool) error {
+func UpdateKubeConfig(contextName string, serviceAccount *latest.ServiceAccount, spaceID int, providerName string, setActive bool) error {
 	config, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err

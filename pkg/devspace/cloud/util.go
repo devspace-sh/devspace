@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -25,7 +26,7 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	activeSpaceID := 0
-	currentContext, _, err := kubeconfig.GetCurrentContext()
+	currentContext, err := configutil.GetDefaultContext(nil)
 	if err == nil {
 		activeSpaceID, _, _ = kubeconfig.GetSpaceID(currentContext)
 	}

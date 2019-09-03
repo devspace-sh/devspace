@@ -19,7 +19,7 @@ type getClusterKeyTestCase struct {
 	name string
 
 	keyVerifiedInResponse bool
-	clusterOwner          *Owner
+	clusterOwner          *latest.Owner
 	setAnswers            []string
 	setClusterKeys        map[int]string
 	clusterID             int
@@ -34,19 +34,19 @@ func TestGetClusterKey(t *testing.T) {
 	testCases := []getClusterKeyTestCase{
 		getClusterKeyTestCase{
 			name:         "Ask for encryption key and then fail",
-			clusterOwner: &Owner{},
+			clusterOwner: &latest.Owner{},
 			setAnswers:   []string{"123456"},
 			expectedErr:  "verify key: get token: Provider has no key specified",
 		},
 		getClusterKeyTestCase{
 			name:           "Use only encryption key and fail when validate",
-			clusterOwner:   &Owner{},
+			clusterOwner:   &latest.Owner{},
 			setClusterKeys: map[int]string{2: "someKey"},
 			expectedErr:    "verify key: get token: Provider has no key specified",
 		},
 		getClusterKeyTestCase{
 			name:         "Ask for encryption key and succeed on secound try",
-			clusterOwner: &Owner{},
+			clusterOwner: &latest.Owner{},
 			setAnswers:   []string{"234567", "345678"},
 			graphQLClient: &fakeGraphQLClient{
 				responsesAsJSON: []string{"{\"manager_verifyUserClusterKey\":false}", "{\"manager_verifyUserClusterKey\":true}"},
@@ -57,7 +57,7 @@ func TestGetClusterKey(t *testing.T) {
 		},
 		getClusterKeyTestCase{
 			name:           "Try with invalid clusterKey from map and then ask and succeed",
-			clusterOwner:   &Owner{},
+			clusterOwner:   &latest.Owner{},
 			setAnswers:     []string{"456789"},
 			setClusterKeys: map[int]string{2: "someKey"},
 			graphQLClient: &fakeGraphQLClient{
@@ -68,7 +68,7 @@ func TestGetClusterKey(t *testing.T) {
 		},
 		getClusterKeyTestCase{
 			name:           "Only clusterKey is valid and then saved to ClusterID",
-			clusterOwner:   &Owner{},
+			clusterOwner:   &latest.Owner{},
 			setClusterKeys: map[int]string{2: "567890"},
 			graphQLClient: &fakeGraphQLClient{
 				responsesAsJSON: []string{"{\"manager_verifyUserClusterKey\":true}"},
@@ -137,8 +137,7 @@ func TestGetClusterKey(t *testing.T) {
 			DefaultGraphqlClient = testCase.graphQLClient
 		}
 
-		key, err := provider.GetClusterKey(&Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
-
+		key, err := provider.GetClusterKey(&latest.Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
 			assert.Equal(t, testCase.expectedKey, key, "Wrong key returned in testCase %s", testCase.name)

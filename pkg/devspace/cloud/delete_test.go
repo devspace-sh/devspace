@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
@@ -16,13 +17,13 @@ import (
 
 func TestDeleteCluster(t *testing.T) {
 	provider := &Provider{}
-	err := provider.DeleteCluster(&Cluster{}, true, true)
+	err := provider.DeleteCluster(&latest.Cluster{}, true, true)
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a cluster without a token")
 }
 
 func TestDeleteSpace(t *testing.T) {
 	provider := &Provider{}
-	err := provider.DeleteSpace(&Space{Cluster: &Cluster{}})
+	err := provider.DeleteSpace(&latest.Space{Cluster: &latest.Cluster{}})
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 
@@ -80,7 +81,7 @@ func TestDeleteKubeContext(t *testing.T) {
 	}
 	kubeconfig.SaveConfig(config)
 
-	err = DeleteKubeContext(&Space{Name: "space.Name", ProviderName: "space.ProviderName"})
+	err = DeleteKubeContext(&latest.Space{Name: "space.Name", ProviderName: "space.ProviderName"})
 	assert.NilError(t, err, "Error deleting kube context")
 
 	config, err = kubeconfig.LoadRawConfig()
@@ -90,6 +91,6 @@ func TestDeleteKubeContext(t *testing.T) {
 	assert.Equal(t, len(config.AuthInfos), 0, "kube context not correctly deleted")
 	assert.Equal(t, config.CurrentContext, "otherContext", "kube context not correctly deleted")
 
-	err = DeleteKubeContext(&Space{Name: "space.Name", ProviderName: "space.ProviderName"})
+	err = DeleteKubeContext(&latest.Space{Name: "space.Name", ProviderName: "space.ProviderName"})
 	assert.NilError(t, err, "Error deleting already deleted kube context")
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -16,49 +16,41 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ResumeLatestSpace resumes the latest Space that has been used to deploy this project to (if any)
-func ResumeLatestSpace(config *latest.Config, loop bool, log log.Logger) error {
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		return err
-	}
-
-	if generatedConfig != nil && generatedConfig.Namespace != nil && generatedConfig.Namespace.KubeContext != nil {
-		context, contextName, err := kubeconfig.GetContext(*generatedConfig.Namespace.KubeContext)
-		if err != nil {
-			return fmt.Errorf("Unable to get current kube-context: %v", err)
-		}
-
-		isSpace, err := kubeconfig.IsCloudSpace(context)
-		if err != nil {
-			return fmt.Errorf("Unable to test if context '%s' belongs to Space: %v", contextName, err)
-		}
-
-		if isSpace {
-			spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
-			if err != nil {
-				return fmt.Errorf("Unable to get Space ID for context '%s': %v", contextName, err)
-			}
-
-			return ResumeSpace(config, cloudProvider, spaceID, loop, log)
-		}
-	}
-	return nil
-}
-
 // ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
-func ResumeSpace(config *latest.Config, cloudProvider string, spaceID int, loop bool, log log.Logger) error {
+func ResumeSpace(config *latest.Config, loop bool, log log.Logger) error {
+	context, err := configutil.GetDefaultContext(config)
+	if err != nil {
+		return errors.Wrap(err, "get default context")
+	}
+
+	isSpace, err := kubeconfig.IsCloudSpace(context)
+	if err != nil {
+		return errors.Wrap(err, "is cloud space")
+	}
+
+	// It is not a space so we just exit here
+	if isSpace == false {
+		return nil
+	}
+
+	// Retrieve space id and cloud provider
+	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
+	if err != nil {
+		return fmt.Errorf("Unable to get Space ID for context '%s': %v", context, err)
+	}
+
 	p, err := GetProvider(&cloudProvider, log)
 	if err != nil {
 		return err
 	}
 
-	space, err := p.GetSpace(spaceID)
+	// Retrieve space from cache
+	space, _, err := p.GetAndUpdateSpaceCache(spaceID, false)
 	if err != nil {
-		return fmt.Errorf("Error retrieving Spaces details: %v", err)
+		return err
 	}
 
-	resumed, err := p.ResumeSpace(space.SpaceID, space.Cluster)
+	resumed, err := p.ResumeSpace(spaceID, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -92,7 +84,7 @@ func ResumeSpace(config *latest.Config, cloudProvider string, spaceID int, loop 
 		go func() {
 			for {
 				time.Sleep(time.Minute * 3)
-				p.ResumeSpace(space.SpaceID, space.Cluster)
+				p.ResumeSpace(spaceID, space.Space.Cluster)
 			}
 		}()
 	}
@@ -131,7 +123,7 @@ func WaitForSpaceResume(client kubernetes.Interface, namespace string) error {
 }
 
 // ResumeSpace resumes a space if its sleeping and sets the last activity to the current timestamp
-func (p *Provider) ResumeSpace(spaceID int, cluster *Cluster) (bool, error) {
+func (p *Provider) ResumeSpace(spaceID int, cluster *cloudlatest.Cluster) (bool, error) {
 	key, err := p.GetClusterKey(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "get cluster key")

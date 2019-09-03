@@ -2,12 +2,10 @@ package cloud
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
@@ -15,88 +13,38 @@ import (
 
 // PrintToken prints and resumes a space if necessary
 func (p *Provider) PrintToken(spaceID int) error {
-	now := time.Now()
+	space, wasUpdated, err := p.GetAndUpdateSpaceCache(spaceID, false)
+	if err != nil {
+		return err
+	}
 
-	// Check if token is cached
-	if p.SpaceToken != nil && p.SpaceToken[spaceID] != nil {
-		tokenCache := p.SpaceToken[spaceID]
-
-		if now.Before(time.Unix(tokenCache.Expires, 0)) {
-			// Check if we should resume
-			if time.Unix(tokenCache.LastResume, 0).Add(time.Minute * 3).Before(now) {
-				err := resume(p, tokenCache.Server, tokenCache.CaCert, tokenCache.Token, tokenCache.Namespace, spaceID, &Cluster{
-					ClusterID:    tokenCache.ClusterID,
-					Name:         tokenCache.ClusterName,
-					EncryptToken: tokenCache.ClusterEncryptToken,
-				})
-				if err != nil {
-					return errors.Wrap(err, "resume space")
-				}
-
-				tokenCache.LastResume = now.Unix()
-
-				// We don't care so much if saving fails here
-				_ = p.Save()
-
-				// Now print token
-				return printToken(tokenCache.Token)
-			}
-
-			err := printToken(tokenCache.Token)
-			if err != nil {
-				return err
-			}
-
-			// We exit here directly (not a very elegant way, but we do not want to send mixpanel stats every time which delays all other commands)
-			os.Exit(0)
+	if wasUpdated == false && time.Unix(space.LastResume, 0).Add(time.Minute*3).Before(time.Now()) == false {
+		err := printToken(space.ServiceAccount.Token)
+		if err != nil {
+			return err
 		}
+
+		// We exit here directly (not a very elegant way, but we do not want to send mixpanel stats every time which delays all other commands)
+		os.Exit(0)
 	}
-
-	// Token is not cached => hence we have to retrieve it
-	space, err := p.GetSpace(spaceID)
-	if err != nil {
-		return fmt.Errorf("Error retrieving Spaces details: %v", err)
-	}
-
-	// Get service account
-	serviceAccount, err := p.GetServiceAccount(space)
-	if err != nil {
-		return fmt.Errorf("Error retrieving space service account: %v", err)
-	}
-
-	// Save in cache
-	if p.SpaceToken == nil {
-		p.SpaceToken = map[int]*latest.SpaceToken{}
-	}
-
-	p.SpaceToken[spaceID] = &latest.SpaceToken{
-		Token:     serviceAccount.Token,
-		Namespace: serviceAccount.Namespace,
-		Server:    serviceAccount.Server,
-		CaCert:    serviceAccount.CaCert,
-
-		ClusterID:           space.Cluster.ClusterID,
-		ClusterName:         space.Cluster.Name,
-		ClusterEncryptToken: space.Cluster.EncryptToken,
-
-		LastResume: now.Unix(),
-		Expires:    now.Add(time.Hour).Unix(),
-	}
-
-	// We don't care so much if saving fails here
-	_ = p.Save()
 
 	// Resume space
-	err = resume(p, serviceAccount.Server, serviceAccount.CaCert, serviceAccount.Token, serviceAccount.Namespace, spaceID, space.Cluster)
+	err = resume(p, space.ServiceAccount.Server, space.ServiceAccount.CaCert, space.ServiceAccount.Token, space.ServiceAccount.Namespace, spaceID, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
 
+	// Update when the space was last resumed
+	p.Spaces[spaceID].LastResume = time.Now().Unix()
+
+	// We don't care so much if saving fails here
+	_ = p.Save()
+
 	// Print token and return
-	return printToken(serviceAccount.Token)
+	return printToken(space.ServiceAccount.Token)
 }
 
-func resume(p *Provider, server, caCert, token, namespace string, spaceID int, cluster *Cluster) error {
+func resume(p *Provider, server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster) error {
 	// Resume space
 	resumed, err := p.ResumeSpace(spaceID, cluster)
 	if err != nil {

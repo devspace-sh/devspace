@@ -5,10 +5,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -119,7 +121,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	log.StartWait("Retrieving Space details")
 	var (
-		space *cloud.Space
+		space *latest.Space
 	)
 
 	if len(args) > 0 {
@@ -156,9 +158,15 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
+	// Cache space
+	err = provider.CacheSpace(space, serviceAccount)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if configExists {
 		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(configutil.GetConfig(), space.ProviderName, space.SpaceID, false, log.GetInstance())
+		err = cloud.ResumeSpace(configutil.GetConfig(), false, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -170,7 +178,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Reset namespace cache
-		generatedConfig.Namespace = nil
+		generatedConfig.LastContext = nil
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
@@ -180,7 +188,6 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.Donef("Successfully configured DevSpace to use space %s", space.Name)
-
 	if configExists {
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}

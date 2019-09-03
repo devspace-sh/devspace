@@ -43,20 +43,21 @@ devspace remove context --all-spaces
 
 // RunRemoveContext executes the devspace remove context functionality
 func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) {
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider != "" {
-		cloudProvider = &cmd.Provider
-	}
-
-	// Get provider
-	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
-	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
-	}
-
 	// Delete all contexts
 	if cmd.AllSpaces {
+		// Check if user has specified a certain provider
+		var cloudProvider *string
+		if cmd.Provider != "" {
+			cloudProvider = &cmd.Provider
+		}
+
+		// Get provider
+		provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
+		if err != nil {
+			log.Fatalf("Error getting cloud context: %v", err)
+		}
+
+		// Retrieve spaces
 		spaces, err := provider.GetSpaces()
 		if err != nil {
 			log.Fatal(err)
@@ -83,14 +84,12 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 	}
 
 	var contextName string
-
 	if len(args) > 0 {
 		// First arg is context name
 		contextName = args[0]
 	} else {
 		contexts := []string{}
-
-		for ctx, _ := range kubeConfig.Contexts {
+		for ctx := range kubeConfig.Contexts {
 			contexts = append(contexts, ctx)
 		}
 
@@ -100,49 +99,23 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		})
 	}
 
-	// Load kube-config
-	context, _, err := kubeconfig.GetContext(contextName)
+	oldCurrentContext = kubeConfig.CurrentContext
+
+	// Delete the context
+	err = kubeconfig.DeleteContext(kubeConfig, contextName)
 	if err != nil {
-		log.Fatalf("Unable to load kube-config: %v", err)
-	}
-
-	// Remove context
-	delete(kubeConfig.Contexts, contextName)
-
-	removeAuthInfo := true
-	removeCluster := true
-
-	// Check if AuthInfo or Cluster is used by any other context
-	for _, ctx := range kubeConfig.Contexts {
-		if ctx.AuthInfo == context.AuthInfo {
-			removeAuthInfo = false
-		}
-
-		if ctx.Cluster == context.Cluster {
-			removeCluster = false
-		}
-	}
-
-	// Remove AuthInfo if not used by any other context
-	if removeAuthInfo {
-		delete(kubeConfig.AuthInfos, context.AuthInfo)
-	}
-
-	// Remove Cluster if not used by any other context
-	if removeCluster {
-		delete(kubeConfig.Clusters, context.Cluster)
-	}
-
-	for ctx, _ := range kubeConfig.Contexts {
-		// Set first context as default for current kube-context
-		kubeConfig.CurrentContext = ctx
-		break
+		log.Fatalf("Error deleting context: %v", err)
 	}
 
 	// Save updated kube-config
-	kubeconfig.SaveConfig(kubeConfig)
+	err = kubeconfig.SaveConfig(kubeConfig)
+	if err != nil {
+		log.Fatalf("Error saving kube file: %v", err)
+	}
 
-	log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
+	if oldCurrentContext != kubeConfig.CurrentContext {
+		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
+	}
 
 	log.Donef("Kube-context '%s' has been successfully deleted", args[0])
 }

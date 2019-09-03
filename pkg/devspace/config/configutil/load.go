@@ -4,21 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/git"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/devspace-cloud/devspace/pkg/util/vars"
-	"github.com/mgutz/ansi"
-	"github.com/pkg/errors"
 
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
@@ -34,7 +25,7 @@ const VarEnvPrefix = "DEVSPACE_VAR_"
 var LoadedVars = make(map[string]string)
 
 // PredefinedVars holds all predefined variables that can be used in the config
-var PredefinedVars = map[string]*predefinedVarDefinition{
+/*var PredefinedVars = map[string]*predefinedVarDefinition{
 	"DEVSPACE_RANDOM": &predefinedVarDefinition{
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
 			ret, err := randutil.GenerateRandomString(6)
@@ -76,23 +67,14 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, nil
 			}
 
-			contextNameSplit := strings.Split(contextName, "-")
 
-			if isSpace && len(contextNameSplit) > 1 {
-				spaceName := strings.Join(contextNameSplit[1:], "-")
-				return &spaceName, nil
-			}
 			return nil, nil
 		},
 	},
 	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
 		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			if generatedConfig.Namespace != nil {
-				if generatedConfig.Namespace.Name != nil {
-					return generatedConfig.Namespace.Name, nil
-				}
-			}
+
 
 			return nil, nil
 		},
@@ -132,7 +114,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 			return &accountName, nil
 		},
 	},
-}
+}*/
 
 type predefinedVarDefinition struct {
 	Value        *string
@@ -141,7 +123,7 @@ type predefinedVarDefinition struct {
 }
 
 func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, string, error) {
-	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
+	/*if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
 		if variable.Value == nil {
 			return false, "", errors.New(variable.ErrorMessage)
 		}
@@ -164,8 +146,8 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(generatedConfig.CloudSpace.Domains), idx)
 		}
 
-		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil*/
-	}
+		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil
+	}*/
 
 	return false, "", nil
 }
@@ -342,14 +324,14 @@ func resolveVars(yamlFileContent []byte, generatedConfig *generated.Config) ([]b
 }
 
 func fillPredefinedVars(generatedConfig *generated.Config) error {
-	for varName, predefinedVariable := range PredefinedVars {
+	/*for varName, predefinedVariable := range PredefinedVars {
 		val, err := predefinedVariable.Fill(generatedConfig)
 		if err != nil {
 			return errors.Wrap(err, "fill predefined var "+varName)
 		}
 
 		predefinedVariable.Value = val
-	}
+	}*/
 
 	return nil
 }

@@ -3,6 +3,7 @@ package cloud
 import (
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"gotest.tools/assert"
 )
 
@@ -38,7 +39,7 @@ func TestGetClusterUser(t *testing.T) {
 
 func TestGetServiceAccount(t *testing.T) {
 	provider := &Provider{}
-	_, err := provider.GetServiceAccount(&Space{Cluster: &Cluster{}})
+	_, err := provider.GetServiceAccount(&latest.Space{Cluster: &latest.Cluster{}})
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get a service account without a token")
 }
 

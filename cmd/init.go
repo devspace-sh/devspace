@@ -27,15 +27,6 @@ import (
 const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
 
 const (
-	// Cluster options
-	useDevSpaceCloud           = "DevSpace Cloud (hosted Kubernetes namespaces, free)"
-	useDevSpaceCloudOwnCluster = "DevSpace Cloud (connect your cluster and create isolated namespaces)"
-	useCurrentContext          = "Use current kubectl context (no server-side component)"
-
-	// Cluster connect options
-	demoClusterOption    = "Use Demo cluster (managed by DevSpace Cloud)"
-	connectClusterOption = "Connect cluster to DevSpace Cloud"
-
 	// Dockerfile not found options
 	useExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
 	createDockerfileOption      = "Create a Dockerfile for me"
@@ -271,7 +262,7 @@ func getDeploymentName() (string, error) {
 	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
 	dirname = strings.Trim(dirname, "-")
 
-	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false {
+	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false || len(dirname) > 42 {
 		dirname = "devspace"
 	}
 

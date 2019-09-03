@@ -4,13 +4,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// Name of the command used to get auth token for kube-context of Spaces
+// AuthCommand is the name of the command used to get auth token for kube-context of Spaces
 const AuthCommand = "devspace"
+
+var loadOnce sync.Once
+var loadOnceMutext sync.Mutex
+var loadedConfig clientcmd.ClientConfig
 
 // ConfigExists checks if a kube config exists
 func ConfigExists() bool {
@@ -19,7 +24,14 @@ func ConfigExists() bool {
 
 // LoadConfig loads the kube config with the default loading rules
 func LoadConfig() clientcmd.ClientConfig {
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
+	loadOnceMutext.Lock()
+	defer loadOnceMutext.Unlock()
+
+	loadOnce.Do(func() {
+		loadedConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
+	})
+
+	return loadedConfig
 }
 
 // LoadConfigFromContext loads the kube client config from a certain context
@@ -44,7 +56,17 @@ func LoadRawConfig() (*api.Config, error) {
 
 // SaveConfig writes the kube config back to the specified filename
 func SaveConfig(config *api.Config) error {
-	return clientcmd.ModifyConfig(clientcmd.NewDefaultClientConfigLoadingRules(), *config, false)
+	loadOnceMutext.Lock()
+	defer loadOnceMutext.Unlock()
+
+	err := clientcmd.ModifyConfig(clientcmd.NewDefaultClientConfigLoadingRules(), *config, false)
+	if err != nil {
+		return err
+	}
+
+	// Since the config has changed now we reset the loadOnce
+	loadOnce = sync.Once{}
+	return nil
 }
 
 // LoadNewConfig creates a new config from scratch with the given parameters and loads it
@@ -81,24 +103,30 @@ func LoadNewConfig(contextName, server, caCert, token, namespace string) (client
 }
 
 // IsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud
-func IsCloudSpace(context *api.Context) (bool, error) {
+func IsCloudSpace(context string) (bool, error) {
+	kubeConfig, err := LoadRawConfig()
+	if err != nil {
+		return false, err
+	}
+
 	// Get AuthInfo for context
-	authInfo, err := GetAuthInfo(context)
+	authInfo, err := getAuthInfo(kubeConfig, context)
 	if err != nil {
 		return false, fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
-	if authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand {
-		return true, nil
-	}
-	return false, nil
+	return authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand, nil
 }
 
 // GetSpaceID returns the id of the Space that belongs to the context with this name
-func GetSpaceID(context *api.Context) (int, string, error) {
-	// Get AuthInfo for context
-	authInfo, err := GetAuthInfo(context)
+func GetSpaceID(context string) (int, string, error) {
+	kubeConfig, err := LoadRawConfig()
+	if err != nil {
+		return 0, "", err
+	}
 
+	// Get AuthInfo for context
+	authInfo, err := getAuthInfo(kubeConfig, context)
 	if err != nil {
 		return 0, "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
@@ -115,54 +143,72 @@ func GetSpaceID(context *api.Context) (int, string, error) {
 	return spaceID, authInfo.Exec.Args[3], err
 }
 
-// GetCurrentContextSpaceID returns the id and the provider of the Space that belongs to the current context
-func GetCurrentContextSpaceID() (int, string, error) {
-	currentContext, _, err := GetCurrentContext()
-	if err != nil {
-		return 0, "", fmt.Errorf("Unable to get current kube-context: %v", err)
-	}
-
-	return GetSpaceID(currentContext)
-}
-
-// GetAuthInfo returns the AuthInfo of the context with this name
-func GetAuthInfo(context *api.Context) (*api.AuthInfo, error) {
-	// Load kube-config
-	kubeConfig, err := LoadRawConfig()
-	if err != nil {
-		return nil, err
+// getAuthInfo returns the AuthInfo of the context with this name
+func getAuthInfo(kubeConfig *api.Config, context string) (*api.AuthInfo, error) {
+	// Get context
+	contextRaw, ok := kubeConfig.Contexts[context]
+	if !ok {
+		return nil, fmt.Errorf("Unable to find kube-context '%s' in kube-config file", context)
 	}
 
 	// Get AuthInfo for context
-	authInfo, ok := kubeConfig.AuthInfos[context.AuthInfo]
+	authInfo, ok := kubeConfig.AuthInfos[contextRaw.AuthInfo]
 	if !ok {
 		return nil, fmt.Errorf("Unable to find user information for context in kube-config file")
 	}
+
 	return authInfo, nil
 }
 
-// GetCurrentContext returns the current kube-context
-func GetCurrentContext() (*api.Context, string, error) {
-	return GetContext("")
-}
-
-// GetContext returns the kube-context with the provided name
-func GetContext(name string) (*api.Context, string, error) {
-	// Load kube-config
-	kubeConfig, err := LoadRawConfig()
-	if err != nil {
-		return nil, "", err
-	}
-
-	// use current context name if none is provided
-	if name == "" {
-		name = kubeConfig.CurrentContext
-	}
-
+// DeleteKubeContext removes the specified devspace id from the kube context if it exists
+func DeleteKubeContext(kubeConfig *api.Config, kubeContext string) error {
 	// Get context
-	context, ok := kubeConfig.Contexts[name]
+	contextRaw, ok := kubeConfig.Contexts[kubeContext]
 	if !ok {
-		return nil, "", fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", name)
+		// return fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", kubeContext)
+		// This is debatable but usually we don't care when the context is not there
+		return nil
 	}
-	return context, name, nil
+
+	// Remove context
+	delete(kubeConfig.Contexts, kubeContext)
+
+	removeAuthInfo := true
+	removeCluster := true
+
+	// Check if AuthInfo or Cluster is used by any other context
+	for name, ctx := range kubeConfig.Contexts {
+		if name != kubeContext && ctx.AuthInfo == contextRaw.AuthInfo {
+			removeAuthInfo = false
+		}
+
+		if name != kubeContext && ctx.Cluster == contextRaw.Cluster {
+			removeCluster = false
+		}
+	}
+
+	// Remove AuthInfo if not used by any other context
+	if removeAuthInfo {
+		delete(kubeConfig.AuthInfos, contextRaw.AuthInfo)
+	}
+
+	// Remove Cluster if not used by any other context
+	if removeCluster {
+		delete(kubeConfig.Clusters, contextRaw.Cluster)
+	}
+
+	if kubeConfig.CurrentContext == kubeContext {
+		kubeConfig.CurrentContext = ""
+
+		if len(kubeConfig.Contexts) > 0 {
+			for context, contextObj := range kubeConfig.Contexts {
+				if contextObj != nil {
+					kubeConfig.CurrentContext = context
+					break
+				}
+			}
+		}
+	}
+
+	return nil
 }

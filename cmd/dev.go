@@ -423,7 +423,7 @@ func (r *reloadError) Error() string {
 
 func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
 	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
+	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", true)
 	if err != nil {
 		log.Fatal(err)
 	}

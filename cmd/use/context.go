@@ -15,12 +15,12 @@ func newContextCmd() *cobra.Command {
 
 	useContext := &cobra.Command{
 		Use:   "context",
-		Short: "Tells DevSpace which context to use",
+		Short: "Tells DevSpace which kube context to use",
 		Long: `
 #######################################################
 ############### devspace use context ##################
 #######################################################
-Set the default context to deploy to
+Switch the current kube context
 
 Example:
 devspace use context my-context
@@ -42,14 +42,12 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 	}
 
 	var context string
-
 	if len(args) > 0 {
 		// First arg is context name
 		context = args[0]
 	} else {
 		contexts := []string{}
-
-		for ctx, _ := range kubeConfig.Contexts {
+		for ctx := range kubeConfig.Contexts {
 			contexts = append(contexts, ctx)
 		}
 
@@ -58,6 +56,8 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 			Options:  contexts,
 		})
 	}
+
+	// Save old context
 	oldContext := kubeConfig.CurrentContext
 
 	// Set current kube-context

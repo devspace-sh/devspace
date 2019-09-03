@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -50,40 +51,42 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		log.Fatal(err)
 	}
 
+	var config *latest.Config
+	if configExists {
+		config = configutil.GetConfig()
+	}
+
+	// Get default context
+	context, err := configutil.GetDefaultContext(config)
+	if err != nil {
+		log.Fatalf("Error retrieving default context: %v", err)
+	}
+
+	// Check if current kube context belongs to a space
+	isSpace, err := kubeconfig.IsCloudSpace(context)
+	if err != nil {
+		log.Fatalf("Unable to check if context belongs to Space: %v", err)
+	}
+	if isSpace {
+		log.Fatalf("Current kube-context belongs to a Space created by DevSpace Cloud. Changing the default namespace for a Space context is not possible.")
+	}
+
 	// Load kube-config
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		log.Fatalf("Unable to load kube-config: %v", err)
 	}
 
-	// Get current kube-context
-	currentContext, ok := kubeConfig.Contexts[kubeConfig.CurrentContext]
-	if !ok {
-		log.Fatalf("Unable to find current kube-context '%s' in kube-config file", kubeConfig.CurrentContext)
-	}
-
-	// Check if current kube-context blongs to Space
-	isSpace, err := kubeconfig.IsCloudSpace(currentContext)
-	if err != nil {
-		log.Fatalf("Unable to check if context belongs to Space: %v", err)
-	}
-
-	if isSpace {
-		log.Fatalf("Current kube-context belongs to a Space created by DevSpace Cloud. Changing the default namespace for a Space context is not possible.")
+	if kubeConfig.Contexts[context] == nil {
+		log.Fatalf("Couldn't find kube context '%s' in kube config", context)
 	}
 
 	// Remember current default namespace
-	oldDefaultNamespace := currentContext.Namespace
+	oldDefaultNamespace := kubeConfig.Contexts[context].Namespace
 
 	namespace := ""
-
 	if len(args) > 0 {
-		// First arg is namespace name
 		namespace = args[0]
-
-		if namespace == metav1.NamespaceDefault {
-			log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
-		}
 	} else if !cmd.Reset {
 		// Get kubernetes client
 		client, err := kubectl.NewClient(nil)
@@ -97,7 +100,6 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		}
 
 		namespaces := []string{}
-
 		for _, ns := range namespaceList.Items {
 			namespaces = append(namespaces, ns.Name)
 		}
@@ -108,16 +110,21 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		})
 	}
 
-	// Set namespace as default for current kube-context
-	currentContext.Namespace = namespace
-
 	if oldDefaultNamespace != namespace {
+		// Set namespace as default for used kube-context
+		kubeConfig.Contexts[context].Namespace = namespace
+
 		// Save updated kube-config
-		kubeconfig.SaveConfig(kubeConfig)
+		err = kubeconfig.SaveConfig(kubeConfig)
+		if err != nil {
+			log.Fatalf("Error saving kube config: %v")
+		}
 
 		log.Infof("The default namespace of your current kube-context '%s' has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"), ansi.Color(namespace, "white+b"))
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use namespace "+oldDefaultNamespace, "white+b"))
 	}
+
+	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))
 
 	if configExists {
 		// Get generated config
@@ -127,18 +134,14 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		}
 
 		// Reset namespace cache
-		generatedConfig.Namespace = nil
+		generatedConfig.LastContext = nil
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
 
-	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))
-
-	if configExists {
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 }

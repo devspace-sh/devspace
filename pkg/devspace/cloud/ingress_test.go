@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -141,7 +142,7 @@ func TestCreateIngress(t *testing.T) {
 			survey.SetNextAnswer(testCase.serviceAnswer)
 		}
 
-		err := provider.CreateIngress(testConfig, kubeClient, &Space{Cluster: &Cluster{}}, "")
+		err := provider.CreateIngress(testConfig, kubeClient, &cloudlatest.Space{Cluster: &cloudlatest.Cluster{}}, "")
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
 		} else {

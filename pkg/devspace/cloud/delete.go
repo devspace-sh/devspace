@@ -1,13 +1,14 @@
 package cloud
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
 	"github.com/pkg/errors"
 )
 
 // DeleteCluster deletes an cluster
-func (p *Provider) DeleteCluster(cluster *Cluster, deleteServices, deleteKubeContexts bool) error {
+func (p *Provider) DeleteCluster(cluster *latest.Cluster, deleteServices, deleteKubeContexts bool) error {
 	key, err := p.GetClusterKey(cluster)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
@@ -38,7 +39,7 @@ func (p *Provider) DeleteCluster(cluster *Cluster, deleteServices, deleteKubeCon
 }
 
 // DeleteSpace deletes a space with the given id
-func (p *Provider) DeleteSpace(space *Space) error {
+func (p *Provider) DeleteSpace(space *latest.Space) error {
 	key, err := p.GetClusterKey(space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
@@ -71,48 +72,17 @@ func (p *Provider) DeleteSpace(space *Space) error {
 }
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
-func DeleteKubeContext(space *Space) error {
-	config, err := kubeconfig.LoadRawConfig()
+func DeleteKubeContext(space *latest.Space) error {
+	kubeContext := GetKubeContextNameFromSpace(space.Name, space.ProviderName)
+	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err
 	}
 
-	hasChanged := false
-	kubeContext := GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-
-	if _, ok := config.Clusters[kubeContext]; ok {
-		delete(config.Clusters, kubeContext)
-		hasChanged = true
+	err = kubeconfig.DeleteKubeContext(kubeConfig, kubeContext)
+	if err != nil {
+		return err
 	}
 
-	if _, ok := config.AuthInfos[kubeContext]; ok {
-		delete(config.AuthInfos, kubeContext)
-		hasChanged = true
-	}
-
-	if _, ok := config.Contexts[kubeContext]; ok {
-		delete(config.Contexts, kubeContext)
-		hasChanged = true
-	}
-
-	if config.CurrentContext == kubeContext {
-		config.CurrentContext = ""
-
-		if len(config.Contexts) > 0 {
-			for context, contextObj := range config.Contexts {
-				if contextObj != nil {
-					config.CurrentContext = context
-					break
-				}
-			}
-		}
-
-		hasChanged = true
-	}
-
-	if hasChanged {
-		return kubeconfig.SaveConfig(config)
-	}
-
-	return nil
+	return kubeconfig.SaveConfig(kubeConfig)
 }
