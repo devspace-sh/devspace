@@ -57,6 +57,10 @@ func TestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	defer func() {
 		//Delete temp folder
