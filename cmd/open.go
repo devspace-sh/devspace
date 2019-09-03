@@ -16,12 +16,18 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
+	"crypto/sha1"
+
+	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -69,12 +75,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	var (
-		providerName *string
-		provider     *cloud.Provider
-		spaceName    = ""
-		space        *cloud.Space
-		domain       string
-		tls          bool
+		providerName             *string
+		provider                 *cloud.Provider
+		spaceName                = ""
+		space                    *cloud.Space
+		domain                   string
+		tls                      bool
+		ingressControllerWarning = ""
 	)
 
 	// Get default namespace
@@ -153,6 +160,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			if err != nil {
 				log.Fatal(err)
 			}
+		} else {
+			ingressControllerWarning = " / an ingress controller must be installed in your cluster"
 		}
 	}
 
@@ -161,69 +170,49 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		DefaultValue: openLocalHostOption,
 		Options: []string{
 			openLocalHostOption,
-			openDomainOption,
+			openDomainOption + ingressControllerWarning,
 		},
 	})
 
 	if openingMode == openLocalHostOption {
-		ports := []string{}
+		domain = "localhost"
 
-		if devspaceConfig.Dev == nil {
-			devspaceConfig.Dev = &latest.DevConfig{}
+		_, servicePort, serviceLabels, err := getService(devspaceConfig, client, namespace, domain)
+		if err != nil {
+			log.Fatal("Unable to get service: %v", err)
 		}
 
-		if devspaceConfig.Dev.Ports == nil {
-			portConfigs := []*latest.PortForwardingConfig{}
-			devspaceConfig.Dev.Ports = &portConfigs
+		localPort := servicePort
+
+		if localPort < 1024 {
+			localPort = localPort + 8000
 		}
-		portConfigs := *devspaceConfig.Dev.Ports
 
-		// search for ports
-		for i := range portConfigs {
-			portMappings := *portConfigs[i].PortMappings
-
-			for ii := range portConfigs {
-				portMap := *portMappings[ii]
-
-				if portMap.LocalPort != nil {
-					ports = append(ports, strconv.Itoa(*portMap.LocalPort))
-				}
-			}
+		portMappings := []*latest.PortMapping{
+			&latest.PortMapping{
+				LocalPort:  &localPort,
+				RemotePort: &servicePort,
+			},
 		}
-		port := ""
+		labelSelector := map[string]*string{}
 
-		// if no port is found, ask users which port and add it to config in-memory
-		if len(ports) == 0 {
-			port := survey.Question(&survey.QuestionOptions{
-				Question: "Which port does your application run on?",
-			})
-
-			intPort, err := strconv.Atoi(port)
-			if err != nil {
-				log.Fatal("Invalid port '%s': %v", port, err)
-			}
-
-			portMappings := []*latest.PortMapping{
-				&latest.PortMapping{
-					LocalPort: ptr.Int(intPort),
-				},
-			}
-
-			portConfigs = append(portConfigs, &latest.PortForwardingConfig{
-				PortMappings: &portMappings,
-			})
-		} else if len(ports) == 1 {
-			port = ports[0]
-		} else {
-			port = survey.Question(&survey.QuestionOptions{
-				Question: "Which port do you want to access?",
-				Options:  ports,
-			})
+		for key, value := range *serviceLabels {
+			labelSelector[key] = &value
 		}
-		domain = "localhost:" + port
+
+		portforwardingConfig := []*latest.PortForwardingConfig{
+			&latest.PortForwardingConfig{
+				PortMappings:  &portMappings,
+				LabelSelector: &labelSelector,
+			},
+		}
 
 		// start port-forwarding for localhost access
-		portForwarder, err := services.StartPortForwarding(devspaceConfig, client, log.GetInstance())
+		portForwarder, err := services.StartPortForwarding(&latest.Config{
+			Dev: &latest.DevConfig{
+				Ports: &portforwardingConfig,
+			},
+		}, client, log.GetInstance())
 		if err != nil {
 			log.Fatalf("Unable to start portforwarding: %v", err)
 		}
@@ -246,36 +235,61 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				domains = append(domains, domain.URL)
 			}
 
-			host := ""
 			if len(domains) == 1 {
-				host = domains[0]
+				domain = domains[0]
 			} else {
-				host = survey.Question(&survey.QuestionOptions{
+				domain = survey.Question(&survey.QuestionOptions{
 					Question: "Please select a domain to open",
 					Options:  domains,
 				})
 			}
+		} else {
+			domain = survey.Question(&survey.QuestionOptions{
+				Question: "Which domain do you want to use? (must be connected via DNS)",
+			})
+		}
 
-			// Check if domain exists
-			domain, tls, err = findDomain(client, namespace, host)
+		// Check if ingress for domain already exists
+		existingIngressDomain, existingIngressTls, err := findDomain(client, namespace, domain)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// No suitable ingress found => create ingress
+		if existingIngressDomain == "" {
+			serviceName, servicePort, _, err := getService(devspaceConfig, client, namespace, domain)
+			if err != nil {
+				log.Fatalf("Error getting service: %v", err)
+			}
+
+			hash := sha1.New()
+			hash.Write([]byte(domain))
+
+			ingressName := "devspace-ingress-" + fmt.Sprintf("%x", hash.Sum(nil))
+
+			client.NetworkingV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{Name: ingressName},
+				Spec: v1beta1.IngressSpec{
+					Backend: &v1beta1.IngressBackend{
+						ServiceName: serviceName,
+						ServicePort: intstr.FromInt(servicePort),
+					},
+					TLS: []v1beta1.IngressTLS{
+						v1beta1.IngressTLS{
+							Hosts:      []string{domain},
+							SecretName: "tls-" + ingressName,
+						},
+					},
+				},
+			})
+
+			domain, tls, err = findDomain(client, namespace, domain)
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			// Not found
-			if domain == "" {
-				err = provider.CreateIngress(devspaceConfig, client, space, host)
-				if err != nil {
-					log.Fatalf("Error creating ingress: %v", err)
-				}
-
-				domain, tls, err = findDomain(client, namespace, host)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
 		} else {
-			// TODO: create ingress for regular namespaces
+			domain = existingIngressDomain
+			tls = existingIngressTls
 		}
 	}
 
@@ -322,6 +336,64 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	log.StopWait()
 	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
+}
+
+func getService(config *latest.Config, client kubernetes.Interface, namespace, host string) (string, int, *map[string]string, error) {
+	// Let user select service
+	serviceNameList := []string{}
+	serviceLabels := map[string]map[string]string{}
+
+	serviceList, err := client.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return "", 0, nil, errors.Wrap(err, "list services")
+	}
+
+	for _, service := range serviceList.Items {
+		// We skip tiller-deploy, because usually you don't want to create an ingress for tiller
+		if service.Name == "tiller-deploy" {
+			continue
+		}
+
+		if service.Spec.Type == v1.ServiceTypeClusterIP {
+			if service.Spec.ClusterIP == "None" {
+				continue
+			}
+
+			for _, port := range service.Spec.Ports {
+				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port.Port)))
+			}
+			serviceLabels[service.Name] = service.Labels
+		}
+	}
+
+	serviceName := ""
+	servicePort := ""
+
+	if len(serviceNameList) == 0 {
+		return "", 0, nil, fmt.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+	} else if len(serviceNameList) == 1 {
+		splitted := strings.Split(serviceNameList[0], ":")
+
+		serviceName = splitted[0]
+		servicePort = splitted[1]
+	} else {
+		// Ask user which service
+		splitted := strings.Split(survey.Question(&survey.QuestionOptions{
+			Question: fmt.Sprintf("Please specify the service you want to make available on '%s'", ansi.Color(host, "white+b")),
+			Options:  serviceNameList,
+		}), ":")
+
+		serviceName = splitted[0]
+		servicePort = splitted[1]
+	}
+	servicePortInt, err := strconv.Atoi(servicePort)
+	if err != nil {
+		return "", 0, nil, err
+	}
+
+	labels := serviceLabels[serviceName]
+
+	return serviceName, servicePortInt, &labels, nil
 }
 
 func findDomain(client kubernetes.Interface, namespace, host string) (string, bool, error) {
