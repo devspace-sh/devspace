@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -29,12 +29,19 @@ func ResumeLatestSpace(config *latest.Config, loop bool, log log.Logger) error {
 			return fmt.Errorf("Unable to get current kube-context: %v", err)
 		}
 
-		spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
+		isSpace, err := kubeconfig.IsCloudSpace(context)
 		if err != nil {
-			return fmt.Errorf("Unable to get Space ID for context %s: %v", contextName, err)
+			return fmt.Errorf("Unable to test if context '%s' belongs to Space: %v", contextName, err)
 		}
 
-		return ResumeSpace(config, cloudProvider, spaceID, loop, log)
+		if isSpace {
+			spaceID, cloudProvider, err := kubeconfig.GetSpaceID(context)
+			if err != nil {
+				return fmt.Errorf("Unable to get Space ID for context '%s': %v", contextName, err)
+			}
+
+			return ResumeSpace(config, cloudProvider, spaceID, loop, log)
+		}
 	}
 	return nil
 }

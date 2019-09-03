@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/util/envutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -110,15 +109,6 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	return nil
-}
-
-// SetTillerNamespace sets the tiller environment variable
-func SetTillerNamespace(serviceAccount *ServiceAccount) error {
-	if serviceAccount == nil {
-		return envutil.SetEnvVar("TILLER_NAMESPACE", "kube-system")
-	}
-
-	return envutil.SetEnvVar("TILLER_NAMESPACE", serviceAccount.Namespace)
 }
 
 // PadKey formats the key to the correct padding (32 byte)

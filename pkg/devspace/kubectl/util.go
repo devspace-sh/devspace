@@ -71,7 +71,7 @@ func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, 
 			},
 		})
 
-		log.Donef("Created namespace %s", defaultNamespace)
+		log.Donef("Created namespace: %s", defaultNamespace)
 	}
 
 	return err

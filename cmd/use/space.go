@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
@@ -155,19 +156,32 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env
-	err = cloudpkg.SetTillerNamespace(serviceAccount)
-	if err != nil {
-		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
-	}
-
 	if configExists {
 		// Signal that we are working on the space if there is any
 		err = cloud.ResumeSpace(configutil.GetConfig(), space.ProviderName, space.SpaceID, false, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Get generated config
+		generatedConfig, err := generated.LoadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Reset namespace cache
+		generatedConfig.Namespace = nil
+
+		// Save generated config
+		err = generated.SaveConfig(generatedConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Donef("Successfully configured DevSpace to use space %s", space.Name)
+
+	if configExists {
+		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+	}
 }

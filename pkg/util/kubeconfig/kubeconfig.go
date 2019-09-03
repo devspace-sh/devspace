@@ -88,7 +88,7 @@ func IsCloudSpace(context *api.Context) (bool, error) {
 		return false, fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
-	if authInfo.Exec.Command == AuthCommand {
+	if authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand {
 		return true, nil
 	}
 	return false, nil
@@ -98,11 +98,12 @@ func IsCloudSpace(context *api.Context) (bool, error) {
 func GetSpaceID(context *api.Context) (int, string, error) {
 	// Get AuthInfo for context
 	authInfo, err := GetAuthInfo(context)
+
 	if err != nil {
 		return 0, "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
-	if authInfo.Exec.Command != AuthCommand {
+	if authInfo.Exec == nil || authInfo.Exec.Command != AuthCommand {
 		return 0, "", fmt.Errorf("Kube-context does not belong to a Space")
 	}
 
