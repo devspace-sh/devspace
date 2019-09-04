@@ -26,7 +26,7 @@ func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.
 					Namespace:     portForwarding.Namespace,
 					LabelSelector: portForwarding.LabelSelector,
 				},
-			}, false)
+			}, false, nil)
 			if err != nil {
 				return nil, fmt.Errorf("Error creating target selector: %v", err)
 			}

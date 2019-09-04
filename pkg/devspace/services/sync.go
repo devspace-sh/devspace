@@ -41,7 +41,7 @@ const SyncHelperContainerPath = "/tmp/sync"
 func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
 	targetSelector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
-	}, true)
+	}, true, nil)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 				LabelSelector: syncConfig.LabelSelector,
 				ContainerName: syncConfig.ContainerName,
 			},
-		}, false)
+		}, false, nil)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating target selector: %v", err)
 		}

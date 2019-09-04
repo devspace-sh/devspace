@@ -255,7 +255,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(config, generatedConfig, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -273,7 +273,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, client, log)
 		if err != nil {
@@ -339,21 +339,36 @@ func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, 
 		params.Namespace = &cmd.Namespace
 	}
 
-	if cmd.Terminal && (config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Enabled != nil && *config.Dev.Terminal.Enabled == true) {
-		return services.StartTerminal(config, client, params, args, exitChan, log)
+	var imageSelector []string
+	if cmd.Interactive != "" {
+		imageSelector = []string{}
+		cache := generatedConfig.GetActive()
+
+		splitted := strings.Split(cmd.Interactive, ",")
+		for _, imageConfigName := range splitted {
+			imageConfigCache := cache.GetImageCache(imageConfigName)
+			if imageConfigCache.ImageName != "" {
+				imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+			}
+		}
 	}
 
-	log.Info("Will now try to print the logs of a running pod...")
+	if cmd.Terminal && (config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Enabled != nil && *config.Dev.Terminal.Enabled == true) {
+		return services.StartTerminal(config, client, params, args, imageSelector, exitChan, log)
+	}
 
-	// Start attaching to a running pod
-	_, err := services.StartAttach(config, client, params, exitChan, log)
-	if err != nil {
-		// If it's a reload error we return that so we can rebuild & redeploy
-		if _, ok := err.(*reloadError); ok {
-			return 0, err
+	// Build an image selector
+	imageSelector = []string{}
+	for _, imageConfigCache := range generatedConfig.GetActive().Images {
+		if imageConfigCache.ImageName != "" {
+			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
 		}
+	}
 
-		log.Infof("Couldn't print logs of running pod: %v", err)
+	// Log multiple pods
+	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
+	if err != nil {
+		return 0, err
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")

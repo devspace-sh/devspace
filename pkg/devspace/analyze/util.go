@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
 )
 
@@ -16,9 +17,9 @@ func printPodProblem(pp *podProblem) string {
 
 	// Status
 	formattedStatus := pp.Status
-	if _, ok := OkayStatus[pp.Status]; ok {
+	if _, ok := kubectl.OkayStatus[pp.Status]; ok {
 		formattedStatus = ansi.Color(formattedStatus, "green+b")
-	} else if _, ok := CriticalStatus[pp.Status]; ok {
+	} else if _, ok := kubectl.CriticalStatus[pp.Status]; ok {
 		formattedStatus = ansi.Color(formattedStatus, "red+b")
 	} else {
 		formattedStatus = ansi.Color(formattedStatus, "yellow+b")

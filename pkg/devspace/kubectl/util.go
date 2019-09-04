@@ -23,6 +23,32 @@ import (
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
 const ClusterRoleBindingName = "devspace-user"
 
+// WaitStatus are the status to wait
+var WaitStatus = []string{
+	"ContainerCreating",
+	"PodInitializing",
+	"Pending",
+	"Terminating",
+}
+
+// CriticalStatus container status
+var CriticalStatus = map[string]bool{
+	"Error":                      true,
+	"Unknown":                    true,
+	"ImagePullBackOff":           true,
+	"CrashLoopBackOff":           true,
+	"RunContainerError":          true,
+	"ErrImagePull":               true,
+	"CreateContainerConfigError": true,
+	"InvalidImageName":           true,
+}
+
+// OkayStatus container status
+var OkayStatus = map[string]bool{
+	"Completed": true,
+	"Running":   true,
+}
+
 var privateIPBlocks []*net.IPNet
 
 func init() {
@@ -120,6 +146,61 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 	}
 
 	return nil
+}
+
+// GetRunningPodsWithImage retrieves the running pods that have at least one of the specified image names
+func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
+	if namespace == "" {
+		namespace = client.Namespace
+	}
+
+	waitingInterval := 1 * time.Second
+	for maxWaiting > 0 {
+		time.Sleep(waitingInterval)
+
+		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		if podList.Size() > 0 && len(podList.Items) > 0 {
+			pods := []*k8sv1.Pod{}
+			wait := false
+
+		PodLoop:
+			for _, pod := range podList.Items {
+				podStatus := GetPodStatus(&pod)
+
+			Outer:
+				for _, container := range pod.Spec.Containers {
+					for _, imageName := range imageNames {
+						if imageName == container.Image {
+							if CriticalStatus[podStatus] {
+								return nil, fmt.Errorf("Pod '%s' cannot start (Status: %s)", pod.Name, podStatus)
+							} else if podStatus == "Completed" {
+								break Outer
+							} else if podStatus != "Running" {
+								wait = true
+								break PodLoop
+							}
+
+							pods = append(pods, &pod)
+							break Outer
+						}
+					}
+				}
+			}
+
+			if wait == false {
+				return pods, nil
+			}
+		}
+
+		time.Sleep(waitingInterval)
+		maxWaiting -= waitingInterval * 2
+	}
+
+	return nil, fmt.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string

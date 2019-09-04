@@ -29,6 +29,7 @@ type TargetSelector struct {
 	pick      bool
 
 	labelSelector *string
+	imageSelector []string
 	podName       *string
 	containerName *string
 
@@ -39,7 +40,7 @@ type TargetSelector struct {
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *SelectorParameter, allowPick bool) (*TargetSelector, error) {
+func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *SelectorParameter, allowPick bool, imageSelector []string) (*TargetSelector, error) {
 	// Get namespace
 	namespace, err := sp.GetNamespace(config, kubeClient)
 	if err != nil {
@@ -55,6 +56,7 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 	return &TargetSelector{
 		namespace:     namespace,
 		labelSelector: labelSelector,
+		imageSelector: imageSelector,
 		podName:       sp.GetPodName(),
 		containerName: sp.GetContainerName(),
 		pick:          allowPick && sp.CmdParameter.Pick != nil && *sp.CmdParameter.Pick == true,
@@ -67,25 +69,36 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 
 // GetPod retrieves a pod
 func (t *TargetSelector) GetPod() (*v1.Pod, error) {
-	if t.pick == false && t.podName != nil {
-		pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
+	if t.pick == false {
+		if t.podName != nil {
+			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
 
-		podStatus := kubectl.GetPodStatus(pod)
-		if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-			return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
-		}
+			podStatus := kubectl.GetPodStatus(pod)
+			if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
+				return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
+			}
 
-		return pod, nil
-	} else if t.pick == false && t.labelSelector != nil {
-		pod, err := t.kubeClient.GetNewestRunningPod(*t.labelSelector, t.namespace, time.Second*120)
-		if err != nil {
-			return nil, err
-		}
+			return pod, nil
+		} else if len(t.imageSelector) > 0 {
+			// Retrieve the first running pod with that image
+			pods, err := t.kubeClient.GetRunningPodsWithImage(t.imageSelector, t.namespace, time.Second*120)
+			if err != nil {
+				return nil, err
+			}
+			if len(pods) > 0 {
+				return pods[0], nil
+			}
+		} else if t.labelSelector != nil {
+			pod, err := t.kubeClient.GetNewestRunningPod(*t.labelSelector, t.namespace, time.Second*120)
+			if err != nil {
+				return nil, err
+			}
 
-		return pod, nil
+			return pod, nil
+		}
 	}
 
 	// Don't allow pick

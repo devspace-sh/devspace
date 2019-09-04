@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -15,7 +14,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, args []string, interrupt chan error, log log.Logger) (int, error) {
+func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, args []string, imageSelector []string, interrupt chan error, log log.Logger) (int, error) {
 	command := getCommand(config, args)
 
 	selectorParameter := &targetselector.SelectorParameter{
@@ -31,7 +30,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter t
 		}
 	}
 
-	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true)
+	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, imageSelector)
 	if err != nil {
 		return 0, err
 	}
@@ -61,7 +60,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter t
 			return exitError.Code, nil
 		}
 
-		return 0, fmt.Errorf("Unable to start terminal session: %v", err)
+		return 0, err
 	}
 
 	return 0, nil
