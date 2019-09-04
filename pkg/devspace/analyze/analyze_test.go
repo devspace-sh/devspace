@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
@@ -32,7 +33,9 @@ func (l *testLogger) Debug(message ...interface{}) {
 }
 
 func TestAnalyze(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 	logger := testLogger{}
 
 	//Analyze empty
@@ -47,15 +50,17 @@ func TestAnalyze(t *testing.T) {
 }
 
 func TestCreateReport(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "testNS",
 		},
 	})
 	assert.NilError(t, err, "Error creating namespace")
-	_, err = kubeClient.CoreV1().Pods("testNS").Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods("testNS").Create(&k8sv1.Pod{
 		Status: k8sv1.PodStatus{
 			Reason: "Error",
 		},
@@ -68,14 +73,14 @@ func TestCreateReport(t *testing.T) {
 	assert.Equal(t, true, strings.Contains(reports[0].Problems[0], "Pod"), "Report does not address pods")
 	assert.Equal(t, true, strings.Contains(reports[0].Problems[0], "Error"), "Report does not address the pod status")
 
-	_, err = kubeClient.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
 		Status: k8sv1.PodStatus{
 			Reason:    "Running",
 			StartTime: &metav1.Time{time.Now().Add(-MinimumPodAge / 10 * 9)},
 		},
 	})
 	assert.NilError(t, err, "Error fixing pod")
-	_, err = kubeClient.AppsV1().ReplicaSets("testNS").Create(&v1.ReplicaSet{
+	_, err = kubeClient.Client.AppsV1().ReplicaSets("testNS").Create(&v1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ReplicaSet with errors",
 		},
@@ -92,9 +97,9 @@ func TestCreateReport(t *testing.T) {
 	assert.NilError(t, err, "Error while creating a report")
 	assert.Equal(t, 0, len(reports), "Problems reported when only the ReplicaSets have problems.")
 
-	err = kubeClient.AppsV1().ReplicaSets("testNS").Delete("ReplicaSet with errors", &metav1.DeleteOptions{})
+	err = kubeClient.Client.AppsV1().ReplicaSets("testNS").Delete("ReplicaSet with errors", &metav1.DeleteOptions{})
 	assert.NilError(t, err, "Error deleting replicaSet")
-	_, err = kubeClient.AppsV1().StatefulSets("testNS").Create(&v1.StatefulSet{
+	_, err = kubeClient.Client.AppsV1().StatefulSets("testNS").Create(&v1.StatefulSet{
 		Spec: v1.StatefulSetSpec{
 			Replicas: ptr.Int32(1),
 		},
@@ -110,7 +115,7 @@ func TestCreateReport(t *testing.T) {
 	assert.Equal(t, 0, len(reports), "Problems reported when only the StatefulSets have problems.")
 
 	// Delete test namespace
-	err = kubeClient.CoreV1().Namespaces().Delete("testNS", &metav1.DeleteOptions{})
+	err = kubeClient.Client.CoreV1().Namespaces().Delete("testNS", &metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}

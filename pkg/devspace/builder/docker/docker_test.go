@@ -8,9 +8,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+	
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 //@Moretest
@@ -83,7 +86,7 @@ func TestDockerBuild(t *testing.T) {
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -92,6 +95,10 @@ func TestDockerBuild(t *testing.T) {
 	imageTag, err := randutil.GenerateRandomString(7)
 	if err != nil {
 		t.Fatalf("Generating imageTag failed: %v", err)
+	}
+
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
 	}
 
 	// 2. Build image
@@ -110,7 +117,7 @@ func TestDockerBuild(t *testing.T) {
 			},
 		},
 	}
-	imageBuilder, err := NewBuilder(testConfig, dockerClient, imageName, imageConfig, imageTag, true, true)
+	imageBuilder, err := NewBuilder(testConfig, dockerClient, kubeClient, imageName, imageConfig, imageTag, true, true)
 	if err != nil {
 		t.Fatalf("Builder creation failed: %v", err)
 	}
@@ -189,7 +196,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -199,6 +206,10 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generating imageTag failed: %v", err)
 	}
+	
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
 	// 2. Build image with entrypoint override (see parameter entrypoint in BuildImage)
 	// 3. Don't push image
@@ -206,7 +217,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	imageConfig := &latest.ImageConfig{
 		Image: &imageName,
 	}
-	imageBuilder, err := NewBuilder(testConfig, dockerClient, imageName, imageConfig, imageTag, true, true)
+	imageBuilder, err := NewBuilder(testConfig, dockerClient, kubeClient, imageName, imageConfig, imageTag, true, true)
 	if err != nil {
 		t.Fatalf("Builder creation failed: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	
@@ -77,7 +78,7 @@ func TestBuild(t *testing.T) {
 
 	//Test without images
 	go makeAllPodsRunning(t, kubeClient, configutil.TestNamespace)
-	images, err := All(testConfig, cache, kubeClient, true, true, true, true, log.GetInstance())
+	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 0 images: %v", err)
 	}
@@ -88,7 +89,7 @@ func TestBuild(t *testing.T) {
 	(*testConfig.Images)["firstimg"] = &latest.ImageConfig{
 		Image: ptr.String("firstimg"),
 	}
-	images, err = All(testConfig, cache, kubeClient, true, true, true, false, log.GetInstance())
+	images, err = All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, false, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 1 images: %v", err)
 	}

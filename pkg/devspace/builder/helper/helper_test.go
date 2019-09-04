@@ -10,9 +10,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+
+	"k8s.io/client-go/kubernetes/fake"
 
 	"gotest.tools/assert"
 )
@@ -53,7 +56,10 @@ func TestBuild(t *testing.T) {
 		Dockerfile: ptr.String("Dockerfile"),
 		Context:    ptr.String("ImageConfigContext"),
 	}
-	helper := NewBuildHelper(testConfig, "engineName", "imageConfigName", imageConfig, "imageTag", true)
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	helper := NewBuildHelper(testConfig, kubeClient, "engineName", "imageConfigName", imageConfig, "imageTag", true)
 
 	var err error
 	expectedAbsoluteContextPath, err = filepath.Abs("OverwriteContext")

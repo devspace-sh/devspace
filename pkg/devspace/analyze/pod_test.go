@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"gotest.tools/assert"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,15 +14,17 @@ import (
 )
 
 func TestPods(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "testNS",
 		},
 	})
 	assert.NilError(t, err, "Error creating namespace")
-	_, err = kubeClient.CoreV1().Pods("testNS").Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods("testNS").Create(&k8sv1.Pod{
 		Status: k8sv1.PodStatus{
 			Reason: "Error",
 		},
@@ -35,7 +38,7 @@ func TestPods(t *testing.T) {
 	assert.Equal(t, true, strings.Contains(problems[0], "Error"), "Report does not address the pod status")
 
 	timeNow := time.Now()
-	_, err = kubeClient.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
 		Status: k8sv1.PodStatus{
 			Reason: "Running",
 			ContainerStatuses: []k8sv1.ContainerStatus{
