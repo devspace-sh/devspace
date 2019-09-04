@@ -136,11 +136,11 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			log.Fatal(err)
 		}
 
-		if generatedConfig.LastContext != nil && generatedConfig.LastContext.Context != "" {
-			spaceID, _, err := kubeconfig.GetSpaceID(generatedConfig.LastContext.Context)
+		if generatedConfig.GetActive().LastContext != nil && generatedConfig.GetActive().LastContext.Context != "" {
+			spaceID, _, err := kubeconfig.GetSpaceID(generatedConfig.GetActive().LastContext.Context)
 			if err == nil && spaceID == space.SpaceID {
 				// Remove cached namespace from generated config if it belongs to the space that is being deleted
-				generatedConfig.LastContext = nil
+				generatedConfig.GetActive().LastContext = nil
 			}
 		}
 

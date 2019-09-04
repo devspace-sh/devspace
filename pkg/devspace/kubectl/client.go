@@ -148,8 +148,8 @@ func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
 	generatedConfig, err := generated.LoadConfig()
 	if err == nil {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
-		if generatedConfig.LastContext != nil {
-			if (generatedConfig.LastContext.Context != "" && generatedConfig.LastContext.Context != client.CurrentContext) || (generatedConfig.LastContext.Namespace != "" && generatedConfig.LastContext.Namespace != client.Namespace) {
+		if generatedConfig.GetActive().LastContext != nil {
+			if (generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext) || (generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace) {
 				log.WriteString("\n")
 				log.Warnf("Your current kube-context and/or default namespace is different than last time.")
 				log.WriteString("\n")
@@ -177,7 +177,7 @@ func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
 
 		// Update generated if we deploy the application
 		if updateGenerated {
-			generatedConfig.LastContext = &generated.LastContextConfig{
+			generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
 				Context:   client.CurrentContext,
 				Namespace: client.Namespace,
 			}
