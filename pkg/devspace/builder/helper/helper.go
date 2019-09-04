@@ -7,6 +7,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/docker/cli/cli/command/image/build"
@@ -28,6 +29,8 @@ type BuildHelper struct {
 	ImageName  string
 	ImageTag   string
 	Entrypoint *[]*string
+
+	KubeClient *kubectl.Client
 }
 
 // BuildHelperInterface is the interface the build helper uses to build an image
@@ -36,7 +39,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(config *latest.Config, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
+func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
 		imageName                   = *imageConf.Image
@@ -68,6 +71,8 @@ func NewBuildHelper(config *latest.Config, engineName string, imageConfigName st
 
 		Entrypoint: entrypoint,
 		Config:     config,
+
+		KubeClient: kubeClient,
 	}
 }
 

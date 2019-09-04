@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -66,8 +67,11 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 			selector += k + "=" + *v
 		}
 
-		// TODO: should we skip this error?
-		namespace, _ := configutil.GetDefaultNamespace(config)
+		namespace, err := kubeconfig.GetCurrentNamespace()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		if value.Namespace != nil {
 			namespace = *value.Namespace
 		}

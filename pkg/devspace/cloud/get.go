@@ -4,80 +4,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/pkg/errors"
 )
 
-// Space holds the information about a space in the cloud
-type Space struct {
-	SpaceID      int            `yaml:"spaceID"`
-	Name         string         `yaml:"name"`
-	Namespace    string         `yaml:"namespace"`
-	Owner        *Owner         `yaml:"account"`
-	ProviderName string         `yaml:"providerName"`
-	Cluster      *Cluster       `yaml:"cluster"`
-	Created      string         `yaml:"created"`
-	Domains      []*SpaceDomain `yaml:"domains"`
-}
-
-// SpaceDomain holds the information about a space domain
-type SpaceDomain struct {
-	DomainID int    `yaml:"id" json:"id"`
-	URL      string `yaml:"url" json:"url"`
-}
-
-// ServiceAccount holds the information about a service account for a certain space
-type ServiceAccount struct {
-	SpaceID   int    `yaml:"spaceID"`
-	Namespace string `yaml:"namespace"`
-	CaCert    string `yaml:"caCert"`
-	Server    string `yaml:"server"`
-	Token     string `yaml:"token"`
-}
-
-// Project is the type that holds the project information
-type Project struct {
-	ProjectID int      `json:"id"`
-	OwnerID   int      `json:"owner_id"`
-	Cluster   *Cluster `json:"cluster"`
-	Name      string   `json:"name"`
-}
-
-// Cluster is the type that holds the cluster information
-type Cluster struct {
-	ClusterID    int     `json:"id"`
-	Server       *string `json:"server"`
-	Owner        *Owner  `json:"account"`
-	Name         string  `json:"name"`
-	EncryptToken bool    `json:"encrypt_token"`
-	CreatedAt    *string `json:"created_at"`
-}
-
-// Owner holds the information about a certain
-type Owner struct {
-	OwnerID int    `json:"id"`
-	Name    string `json:"name"`
-}
-
-// ClusterUser is the type that golds the cluster user information
-type ClusterUser struct {
-	ClusterUserID int  `json:"id"`
-	AccountID     int  `json:"account_id"`
-	ClusterID     int  `json:"cluster_id"`
-	IsAdmin       bool `json:"is_admin"`
-}
-
-// Registry is the type that holds the docker image registry information
-type Registry struct {
-	RegistryID int    `json:"id"`
-	URL        string `json:"url"`
-}
-
 // GetRegistries returns all docker image registries
-func (p *Provider) GetRegistries() ([]*Registry, error) {
+func (p *Provider) GetRegistries() ([]*latest.Registry, error) {
 	// Response struct
 	response := struct {
-		ImageRegistry []*Registry `json:"image_registry"`
+		ImageRegistry []*latest.Registry `json:"image_registry"`
 	}{}
 
 	// Do the request
@@ -102,7 +38,7 @@ func (p *Provider) GetRegistries() ([]*Registry, error) {
 }
 
 // GetClusterByName retrieves an user cluster by name (username:clustername)
-func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
+func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error) {
 	clusterNameSplitted := strings.Split(clusterName, ":")
 	if len(clusterNameSplitted) > 2 {
 		return nil, fmt.Errorf("Error parsing cluster name %s: Expected : only once", clusterName)
@@ -126,7 +62,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 
 	// Response struct
 	response := struct {
-		Clusters []*Cluster `json:"cluster"`
+		Clusters []*latest.Cluster `json:"cluster"`
 	}{}
 
 	err = p.GrapqhlRequest(`
@@ -170,10 +106,10 @@ func (p *Provider) GetClusterByName(clusterName string) (*Cluster, error) {
 }
 
 // GetClusters returns all clusters accessable by the user
-func (p *Provider) GetClusters() ([]*Cluster, error) {
+func (p *Provider) GetClusters() ([]*latest.Cluster, error) {
 	// Response struct
 	response := struct {
-		Clusters []*Cluster `json:"cluster"`
+		Clusters []*latest.Cluster `json:"cluster"`
 	}{}
 
 	// Do the request
@@ -214,10 +150,10 @@ func (p *Provider) GetClusters() ([]*Cluster, error) {
 }
 
 // GetProjects returns all projects by the user
-func (p *Provider) GetProjects() ([]*Project, error) {
+func (p *Provider) GetProjects() ([]*latest.Project, error) {
 	// Response struct
 	response := struct {
-		Projects []*Project `json:"project"`
+		Projects []*latest.Project `json:"project"`
 	}{}
 
 	// Do the request
@@ -244,10 +180,10 @@ func (p *Provider) GetProjects() ([]*Project, error) {
 }
 
 // GetClusterUser retrieves the cluster user
-func (p *Provider) GetClusterUser(clusterID int) (*ClusterUser, error) {
+func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 	// Response struct
 	response := struct {
-		ClusterUser []*ClusterUser `json:"cluster_user"`
+		ClusterUser []*latest.ClusterUser `json:"cluster_user"`
 	}{}
 
 	bearerToken, err := p.GetToken()
@@ -289,7 +225,7 @@ func (p *Provider) GetClusterUser(clusterID int) (*ClusterUser, error) {
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (p *Provider) GetServiceAccount(space *Space) (*ServiceAccount, error) {
+func (p *Provider) GetServiceAccount(space *latest.Space) (*latest.ServiceAccount, error) {
 	key, err := p.GetClusterKey(space.Cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "get cluster key")
@@ -297,7 +233,7 @@ func (p *Provider) GetServiceAccount(space *Space) (*ServiceAccount, error) {
 
 	// Response struct
 	response := struct {
-		ServiceAccount *ServiceAccount `json:"manager_serviceAccount"`
+		ServiceAccount *latest.ServiceAccount `json:"manager_serviceAccount"`
 	}{}
 
 	// Do the request
@@ -323,21 +259,21 @@ func (p *Provider) GetServiceAccount(space *Space) (*ServiceAccount, error) {
 }
 
 type spaceGraphql struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Owner *Owner `json:"account"`
+	ID    int           `json:"id"`
+	Name  string        `json:"name"`
+	Owner *latest.Owner `json:"account"`
 
 	KubeContext *struct {
-		Namespace string         `json:"namespace"`
-		Cluster   *Cluster       `json:"cluster"`
-		Domains   []*SpaceDomain `json:"kube_context_domains"`
+		Namespace string                `json:"namespace"`
+		Cluster   *latest.Cluster       `json:"cluster"`
+		Domains   []*latest.SpaceDomain `json:"kube_context_domains"`
 	} `json:"kube_context"`
 
 	CreatedAt string `json:"created_at"`
 }
 
 // GetSpaces returns all spaces by the user
-func (p *Provider) GetSpaces() ([]*Space, error) {
+func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 	// Response struct
 	response := struct {
 		Spaces []*spaceGraphql `json:"space"`
@@ -386,13 +322,13 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 		return nil, errors.New("Wrong answer from graphql server: Spaces is nil")
 	}
 
-	retSpaces := []*Space{}
+	retSpaces := []*latest.Space{}
 	for _, spaceConfig := range response.Spaces {
 		if spaceConfig.KubeContext == nil {
 			return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 		}
 
-		newSpace := &Space{
+		newSpace := &latest.Space{
 			SpaceID:      spaceConfig.ID,
 			Owner:        spaceConfig.Owner,
 			Name:         spaceConfig.Name,
@@ -416,7 +352,7 @@ func (p *Provider) GetSpaces() ([]*Space, error) {
 }
 
 // GetSpace returns a specific space by id
-func (p *Provider) GetSpace(spaceID int) (*Space, error) {
+func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 	// Response struct
 	response := struct {
 		Space *spaceGraphql `json:"space_by_pk"`
@@ -471,7 +407,7 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 	}
 
-	retSpace := &Space{
+	retSpace := &latest.Space{
 		SpaceID:      spaceConfig.ID,
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
@@ -492,7 +428,7 @@ func (p *Provider) GetSpace(spaceID int) (*Space, error) {
 }
 
 // GetSpaceByName returns a space by name
-func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
+func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 	spaceNameSplitted := strings.Split(spaceName, ":")
 	if len(spaceNameSplitted) > 2 {
 		return nil, fmt.Errorf("Error parsing space name %s: Expected : only once", spaceName)
@@ -576,7 +512,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 	}
 
-	retSpace := &Space{
+	retSpace := &latest.Space{
 		SpaceID:      spaceConfig.ID,
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
@@ -596,7 +532,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*Space, error) {
 	return retSpace, nil
 }
 
-func (p *Provider) exchangeSpaceName(space *Space) error {
+func (p *Provider) exchangeSpaceName(space *latest.Space) error {
 	bearerToken, err := p.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "get token")
@@ -615,7 +551,7 @@ func (p *Provider) exchangeSpaceName(space *Space) error {
 	return p.exchangeClusterName(space.Cluster)
 }
 
-func (p *Provider) exchangeClusterName(cluster *Cluster) error {
+func (p *Provider) exchangeClusterName(cluster *latest.Cluster) error {
 	if cluster.Owner == nil {
 		return nil
 	}

@@ -79,7 +79,6 @@ func init() {
 	rootCmd.AddCommand(NewDevCmd())
 	rootCmd.AddCommand(NewBuildCmd())
 	rootCmd.AddCommand(NewSyncCmd())
-	rootCmd.AddCommand(NewInstallCmd())
 	rootCmd.AddCommand(NewPurgeCmd())
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewDeployCmd())
@@ -89,7 +88,6 @@ func init() {
 	rootCmd.AddCommand(NewLogsCmd())
 	rootCmd.AddCommand(NewOpenCmd())
 	rootCmd.AddCommand(NewUICmd())
-	rootCmd.AddCommand(NewContainerizeCmd())
 
 	cobra.OnInitialize(initConfig)
 }

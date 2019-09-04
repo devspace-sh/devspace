@@ -12,12 +12,11 @@ import (
 
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
 )
 
 // CopyFromReader extracts a tar from the reader to a container path
-func CopyFromReader(restConfig *rest.Config, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
-	_, stderr, err := ExecBuffered(restConfig, pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
+func (client *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
+	_, stderr, err := client.ExecBuffered(pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
 	if err != nil {
 		if stderr != nil {
 			return fmt.Errorf("Error executing tar: %s: %v", string(stderr), err)
@@ -30,7 +29,7 @@ func CopyFromReader(restConfig *rest.Config, pod *k8sv1.Pod, container, containe
 }
 
 // Copy copies the specified folder to the container
-func Copy(restConfig *rest.Config, pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
+func (client *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return errors.Wrap(err, "create pipe")
@@ -41,7 +40,7 @@ func Copy(restConfig *rest.Config, pod *k8sv1.Pod, container, containerPath, loc
 
 	errorChan := make(chan error)
 	go func() {
-		errorChan <- CopyFromReader(restConfig, pod, container, containerPath, reader)
+		errorChan <- client.CopyFromReader(pod, container, containerPath, reader)
 	}()
 
 	err = writeTar(writer, localPath, exclude)

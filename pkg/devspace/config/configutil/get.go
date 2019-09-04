@@ -13,7 +13,6 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	configspkg "github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
@@ -225,21 +224,6 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 			}
 		} else {
 			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
-		}
-
-		// Exchange kube context if necessary, but only if we don't load the base config
-		// we do this to avoid saving the kube context on commands like
-		// devspace add deployment && devspace add image etc.
-		if generatedConfig.CloudSpace != nil {
-			if config.Cluster == nil || config.Cluster.KubeContext == nil {
-				if generatedConfig.CloudSpace.KubeContext == "" {
-					return nil, nil, fmt.Errorf("No space configured!\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-				}
-
-				config.Cluster = &latest.Cluster{
-					KubeContext: &generatedConfig.CloudSpace.KubeContext,
-				}
-			}
 		}
 	} else {
 		if configDefinition != nil {
@@ -479,27 +463,4 @@ func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorCo
 	}
 
 	return nil, errors.New("Unable to find selector: " + selectorName)
-}
-
-// GetDefaultNamespace retrieves the default namespace where to operate in, either from devspace config or kube config
-func GetDefaultNamespace(config *latest.Config) (string, error) {
-	if config != nil && config.Cluster != nil && config.Cluster.Namespace != nil {
-		return *config.Cluster.Namespace, nil
-	}
-
-	kubeConfig, err := kubeconfig.LoadRawConfig()
-	if err != nil {
-		return "", err
-	}
-
-	activeContext := kubeConfig.CurrentContext
-	if config != nil && config.Cluster != nil && config.Cluster.KubeContext != nil {
-		activeContext = *config.Cluster.KubeContext
-	}
-
-	if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
-		return kubeConfig.Contexts[activeContext].Namespace, nil
-	}
-
-	return "default", nil
 }

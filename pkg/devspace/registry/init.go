@@ -7,16 +7,15 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClient, client kubernetes.Interface, log log.Logger) error {
+func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClient client.CommonAPIClient, log log.Logger) error {
 	if config.Images != nil {
 		pullSecrets := []string{}
 
@@ -26,9 +25,13 @@ func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClien
 				if err != nil {
 					return err
 				}
+				displayRegistryURL := registryURL
 
-				log.StartWait("Creating image pull secret for registry: " + registryURL)
-				err = createPullSecretForRegistry(config, dockerClient, client, registryURL, log)
+				if displayRegistryURL == "" {
+					displayRegistryURL = "hub.docker.com"
+				}
+				log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
+				err = createPullSecretForRegistry(config, client, dockerClient, registryURL, log)
 				log.StopWait()
 				if err != nil {
 					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
@@ -39,7 +42,7 @@ func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClien
 		}
 
 		if len(pullSecrets) > 0 {
-			err := addPullSecretsToServiceAccount(config, client, pullSecrets, log)
+			err := addPullSecretsToServiceAccount(client, pullSecrets, log)
 			if err != nil {
 				return errors.Wrap(err, "add pull secrets to service account")
 			}
@@ -49,17 +52,11 @@ func CreatePullSecrets(config *latest.Config, dockerClient client.CommonAPIClien
 	return nil
 }
 
-func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Interface, pullSecrets []string, log log.Logger) error {
-	// Add secrets to default service account in default namespace
-	namespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return errors.Wrap(err, "get default namespace")
-	}
-
+func addPullSecretsToServiceAccount(client *kubectl.Client, pullSecrets []string, log log.Logger) error {
 	// Get default service account
-	serviceaccount, err := client.CoreV1().ServiceAccounts(namespace).Get("default", metav1.GetOptions{})
+	serviceaccount, err := client.Client.CoreV1().ServiceAccounts(client.Namespace).Get("default", metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", namespace, err)
+		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", client.Namespace, err)
 		return nil
 	}
 
@@ -83,7 +80,7 @@ func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Int
 
 	// Should we update the service account?
 	if changed {
-		_, err := client.CoreV1().ServiceAccounts(namespace).Update(serviceaccount)
+		_, err := client.Client.CoreV1().ServiceAccounts(client.Namespace).Update(serviceaccount)
 		if err != nil {
 			return errors.Wrap(err, "update service account")
 		}
@@ -92,12 +89,7 @@ func addPullSecretsToServiceAccount(config *latest.Config, client kubernetes.Int
 	return nil
 }
 
-func createPullSecretForRegistry(config *latest.Config, dockerClient client.CommonAPIClient, client kubernetes.Interface, registryURL string, log log.Logger) error {
-	defaultNamespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return err
-	}
-
+func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, dockerClient client.CommonAPIClient, registryURL string, log log.Logger) error {
 	username, password := "", ""
 	if dockerClient != nil {
 		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
@@ -111,7 +103,7 @@ func createPullSecretForRegistry(config *latest.Config, dockerClient client.Comm
 		for _, deployConfig := range *config.Deployments {
 			email := "noreply@devspace.cloud"
 
-			namespace := defaultNamespace
+			namespace := client.Namespace
 			if deployConfig.Namespace != nil {
 				namespace = *deployConfig.Namespace
 			}

@@ -70,7 +70,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		},
 	}) == "yes"
 	if shouldPurgeDeployment {
-		kubectl, err := kubectl.NewClient(config)
+		client, err := kubectl.NewDefaultClient()
 		if err != nil {
 			log.Fatalf("Unable to create new kubectl client: %v", err)
 		}
@@ -86,7 +86,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			return
 		}
 
-		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
+		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {

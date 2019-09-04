@@ -11,12 +11,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	kubectlpkg "github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes"
 )
 
 // All deploys all deployments in the config
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg.Client, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
 	if config.Deployments != nil && len(*config.Deployments) > 0 {
 		// Execute before deployments deploy hook
 		err := hook.Execute(config, hook.Before, hook.StageDeployments, hook.All, log)
@@ -106,7 +106,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string, log log.Logger) {
+func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg.Client, deployments []string, log log.Logger) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}

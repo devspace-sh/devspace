@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -19,12 +18,14 @@ import (
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
 	Selector      string
-	Namespace     string
 	LabelSelector string
 	Container     string
 	Pod           string
 	SwitchContext bool
 	Pick          bool
+
+	Namespace   string
+	KubeContext string
 }
 
 // NewEnterCmd creates a new init command
@@ -56,7 +57,10 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+
 	enterCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
+	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
+
 	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
 	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
 
@@ -71,26 +75,27 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// Get kubectl client
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		log.Fatalf("Unable to create new kubectl client: %v", err)
+	}
+
+	err = client.PrintWarning(false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Get config
 	var config *latest.Config
 	if configutil.ConfigExists() {
 		config = configutil.GetConfig()
-
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Get kubectl client
-	kubectl, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Build params
@@ -115,7 +120,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(config, kubectl, params, args, make(chan error), log.GetInstance())
+	exitCode, err := services.StartTerminal(config, client, params, args, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

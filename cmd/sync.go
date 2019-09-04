@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -15,6 +15,7 @@ import (
 type SyncCmd struct {
 	Selector      string
 	Namespace     string
+	KubeContext   string
 	LabelSelector string
 	Container     string
 	Pod           string
@@ -54,6 +55,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	syncCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
+	syncCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 	syncCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
@@ -66,20 +68,26 @@ devspace sync --container-path=/my-path
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
+	// Get config with adjusted cluster config
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	if err != nil {
+		log.Fatalf("Unable to create new kubectl client: %v", err)
+	}
+
+	err = client.PrintWarning(false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var config *latest.Config
 	if configutil.ConfigExists() {
 		config = configutil.GetConfig()
-
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// Build params
@@ -104,7 +112,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err := services.StartSyncFromCmd(config, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, log.GetInstance())
+	err = services.StartSyncFromCmd(config, client, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

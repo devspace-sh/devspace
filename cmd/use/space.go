@@ -5,10 +5,13 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +37,6 @@ Use an existing space for the current configuration
 
 Example:
 devspace use space my-space
-devspace use space none    // stop using a space
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
@@ -48,42 +50,12 @@ devspace use space none    // stop using a space
 	return useSpace
 }
 
-// RunUseDevSpace executes the functionality "devspace use space"
+// RunUseSpace executes the functionality "devspace use space"
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	// Erase currently used space
-	if len(args) > 0 && args[0] == "none" {
-		// Set tiller env
-		err = cloudpkg.SetTillerNamespace(nil)
-		if err != nil {
-			// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
-		}
-
-		if !configExists {
-			return
-		}
-
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		generatedConfig.CloudSpace = nil
-		generatedConfig.Configs = map[string]*generated.CacheConfig{}
-
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Info("Successfully erased space from config")
-		return
 	}
 
 	// Check if user has specified a certain provider
@@ -112,7 +84,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatalf("Error retrieving spaces: %v", err)
 		} else if len(spaces) == 0 {
-			log.Fatalf("There are no spaces to select from. Please create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
+			log.Fatalf("You do not have any Spaces, yet. You can create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
 		}
 
 		names := make([]string, 0, len(spaces))
@@ -121,7 +93,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		spaceName := survey.Question(&survey.QuestionOptions{
-			Question: "Please select a space that you want to use",
+			Question: "Please select the Space that you want to use",
 			Options:  names,
 		})
 
@@ -150,7 +122,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 
 	log.StartWait("Retrieving Space details")
 	var (
-		space *cloud.Space
+		space *latest.Space
 	)
 
 	if len(args) > 0 {
@@ -187,31 +159,42 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env
-	err = cloudpkg.SetTillerNamespace(serviceAccount)
+	// Cache space
+	err = provider.CacheSpace(space, serviceAccount)
 	if err != nil {
-		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+		log.Fatal(err)
 	}
 
 	if configExists {
+		client, err := kubectl.NewClientFromContext(kubeContext, "", false)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Signal that we are working on the space if there is any
+		err = cloud.ResumeSpace(client, false, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Cache space
-		err = provider.CacheSpace(generatedConfig, space)
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Reset namespace cache
+		generatedConfig.LastContext = nil
 
-		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(configutil.GetConfig(), generatedConfig, false, log.GetInstance())
+		// Save generated config
+		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	log.Donef("Successfully configured config to use space %s", space.Name)
+	log.Donef("Successfully configured DevSpace to use space %s", space.Name)
+	if configExists {
+		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+	}
 }

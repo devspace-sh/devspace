@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/pkg/errors"
 )
 
@@ -46,7 +47,7 @@ func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string
 }
 
 // CreateSpace creates a new space and returns the space id
-func (p *Provider) CreateSpace(name string, projectID int, cluster *Cluster) (int, error) {
+func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Cluster) (int, error) {
 	key, err := p.GetClusterKey(cluster)
 	if err != nil {
 		return 0, errors.Wrap(err, "get cluster key")

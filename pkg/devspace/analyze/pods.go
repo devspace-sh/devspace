@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // MinimumPodAge is the minimum amount of time that a pod should be old
@@ -48,7 +47,7 @@ var OkayStatus = map[string]string{
 const IgnoreRestartsSince = time.Hour * 2
 
 // Pods analyzes the pods for problems
-func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string, error) {
+func Pods(client *kubectl.Client, namespace string, noWait bool) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing pods")
@@ -66,7 +65,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 			loop = false
 
 			// Get all pods
-			pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +103,7 @@ func Pods(client kubernetes.Interface, namespace string, noWait bool) ([]string,
 		}
 	} else {
 		// Get all pods
-		pods, err = client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +161,7 @@ type containerProblem struct {
 }
 
 // Pod analyzes the pod for potential problems
-func checkPod(client kubernetes.Interface, pod *v1.Pod) *podProblem {
+func checkPod(client *kubectl.Client, pod *v1.Pod) *podProblem {
 	hasProblem := false
 	podProblem := &podProblem{
 		Name:                  pod.Name,
@@ -222,7 +221,7 @@ func checkPod(client kubernetes.Interface, pod *v1.Pod) *podProblem {
 	return nil
 }
 
-func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
+func getContainerProblem(client *kubectl.Client, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
 	tailLines := int64(50)
 	hasProblem := false
 	containerProblem := &containerProblem{
@@ -242,7 +241,7 @@ func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStat
 			containerProblem.LastExitReason = containerStatus.LastTerminationState.Terminated.Reason
 
 			if containerProblem.LastExitCode != 0 {
-				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.Logs(pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
 			}
 		}
 	}
@@ -260,7 +259,7 @@ func getContainerProblem(client kubernetes.Interface, pod *v1.Pod, containerStat
 			containerProblem.LastExitCode = int(containerStatus.State.Terminated.ExitCode)
 			if containerProblem.LastExitCode != 0 {
 				hasProblem = true
-				containerProblem.LastFaultyExecutionLog, _ = kubectl.Logs(client, pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.Logs(pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {
 			hasProblem = true

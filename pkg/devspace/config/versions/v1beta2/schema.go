@@ -1,4 +1,4 @@
-package latest
+package v1beta2
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
@@ -6,7 +6,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta3"
+const Version string = "v1beta2"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -22,6 +22,7 @@ func New() config.Config {
 func NewRaw() *Config {
 	return &Config{
 		Version: ptr.String(Version),
+		Cluster: &Cluster{},
 		Dev:     &DevConfig{},
 		Images:  &map[string]*ImageConfig{},
 	}
@@ -35,6 +36,7 @@ type Config struct {
 	Dev          *DevConfig               `yaml:"dev,omitempty"`
 	Dependencies *[]*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Hooks        *[]*HookConfig           `yaml:"hooks,omitempty"`
+	Cluster      *Cluster                 `yaml:"cluster,omitempty"`
 }
 
 // ImageConfig defines the image specification
@@ -361,4 +363,10 @@ type HookWhenConfig struct {
 type HookWhenAtConfig struct {
 	Images      *string `yaml:"images,omitempty"`
 	Deployments *string `yaml:"deployments,omitempty"`
+}
+
+// Cluster is a struct that contains data for a Kubernetes-Cluster
+type Cluster struct {
+	KubeContext *string `yaml:"kubeContext,omitempty"`
+	Namespace   *string `yaml:"namespace,omitempty"`
 }

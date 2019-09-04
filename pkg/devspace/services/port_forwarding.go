@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/portforward"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -16,12 +15,12 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log log.Logger) ([]*portforward.PortForwarder, error) {
+func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))
 
 		for portConfigIndex, portForwarding := range *config.Dev.Ports {
-			selector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
+			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Selector:      portForwarding.Selector,
 					Namespace:     portForwarding.Namespace,
@@ -33,7 +32,7 @@ func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log
 			}
 
 			log.StartWait("Port-Forwarding: Waiting for pods...")
-			pod, err := selector.GetPod(client)
+			pod, err := selector.GetPod()
 			log.StopWait()
 			if err != nil {
 				return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
@@ -62,7 +61,7 @@ func StartPortForwarding(config *latest.Config, client kubernetes.Interface, log
 
 				readyChan := make(chan struct{})
 
-				pf, err := kubectl.NewPortForwarder(config, client, pod, ports, addresses, make(chan struct{}), readyChan)
+				pf, err := client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
 					return nil, fmt.Errorf("Error starting port forwarding: %v", err)
 				}

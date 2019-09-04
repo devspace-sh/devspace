@@ -137,7 +137,7 @@ func TestRunAddDeployment(t *testing.T) {
 		addDeploymentTestCase{
 			name:    "Valid image deployment",
 			args:    []string{"newImageDeployment"},
-			answers: []string{"1234", "yes"},
+			answers: []string{"1234"},
 			fakeConfig: &latest.Config{
 				Images: &map[string]*latest.ImageConfig{
 					"someImage": &latest.ImageConfig{
@@ -232,6 +232,7 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		Image:        testCase.cmdImage,
 		Context:      testCase.cmdContext,
 		Namespace:    testCase.cmdNamespace,
+		disableRegistryAuth:    true,
 	}).RunAddDeployment(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)

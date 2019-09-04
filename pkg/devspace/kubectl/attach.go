@@ -4,10 +4,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
@@ -16,12 +14,12 @@ import (
 )
 
 // AttachStreamWithTransport attaches to a certain container
-func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (client *Client) AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
 
-	attachRequest := client.CoreV1().RESTClient().Post().
+	attachRequest := client.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -69,16 +67,11 @@ func AttachStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrad
 }
 
 // AttachStream attaches to a container in a certain pod
-func AttachStream(config *latest.Config, client kubernetes.Interface, pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	kubeconfig, err := GetRestConfig(config)
+func (client *Client) AttachStream(pod *k8sv1.Pod, container string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(client.RestConfig)
 	if err != nil {
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := spdy.RoundTripperFor(kubeconfig)
-	if err != nil {
-		return err
-	}
-
-	return AttachStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container, tty, stdin, stdout, stderr)
+	return client.AttachStreamWithTransport(wrapper, upgradeRoundTripper, pod, container, tty, stdin, stdout, stderr)
 }

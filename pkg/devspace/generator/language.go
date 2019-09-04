@@ -74,10 +74,11 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 
 	// Let the user select the language
 	selectedLanguage := survey.Question(&survey.QuestionOptions{
-		Question:     "Select programming language of project",
+		Question:     "Select the programming language of this project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,
 	})
+	log.WriteString("\n")
 
 	return dockerfileGenerator.CreateDockerfile(selectedLanguage)
 }

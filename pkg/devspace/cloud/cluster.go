@@ -19,7 +19,6 @@ import (
 	v1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // ClusterNameValidationRegEx is the cluster name validation regex
@@ -64,7 +63,7 @@ type clusterResources struct {
 // ConnectCluster connects a new cluster to DevSpace Cloud
 func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	var (
-		config *rest.Config
+		client *kubectl.Client
 	)
 
 	// Get cluster name
@@ -76,32 +75,26 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Check what kube context to use
 	if options.KubeContext == "" {
 		// Get kube context to use
-		config, err = kubectl.GetRestConfigBySelect(false, true)
+		client, err = kubectl.NewClientBySelect(false, true)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
 	} else {
 		// Get kube context to use
-		config, err = kubectl.GetRestConfigFromContext(options.KubeContext)
+		client, err = kubectl.NewClientFromContext(options.KubeContext, "", false)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
 	}
 
-	// Get client from config
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return errors.Wrap(err, "get kubernetes client")
-	}
-
 	// Check available cluster resources
-	availableResources, err := checkResources(client)
+	availableResources, err := checkResources(client.Client)
 	if err != nil {
 		return errors.Wrap(err, "check resource availability")
 	}
 
 	// Initialize namespace
-	err = initializeNamespace(client)
+	err = initializeNamespace(client.Client)
 	if err != nil {
 		return errors.Wrap(err, "init namespace")
 	}
@@ -137,7 +130,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Create cluster remotely
 	log.StartWait("Initialize cluster")
 	defer log.StopWait()
-	clusterID, err := p.CreateUserCluster(clusterName, config.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
+	clusterID, err := p.CreateUserCluster(clusterName, client.RestConfig.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
 	if err != nil {
 		return errors.Wrap(err, "create cluster")
 	}
@@ -186,12 +179,12 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 
 var waitTimeout = time.Minute * 5
 
-func defaultClusterSpaceDomain(p *Provider, client kubernetes.Interface, useHostNetwork bool, clusterID int, key string) error {
+func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwork bool, clusterID int, key string) error {
 	if useHostNetwork {
 		log.StartWait("Waiting for loadbalancer to get an ip")
 		defer log.StopWait()
 
-		nodeList, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodeList, err := client.Client.CoreV1().Nodes().List(metav1.ListOptions{})
 		if err != nil {
 			return errors.Wrap(err, "list nodes")
 		}
@@ -224,7 +217,7 @@ func defaultClusterSpaceDomain(p *Provider, client kubernetes.Interface, useHost
 	Outer:
 		for time.Since(now) < waitTimeout {
 			// Get loadbalancer
-			services, err := client.CoreV1().Services(constants.DevSpaceCloudNamespace).List(metav1.ListOptions{})
+			services, err := client.Client.CoreV1().Services(constants.DevSpaceCloudNamespace).List(metav1.ListOptions{})
 			if err != nil {
 				return errors.Wrap(err, "list services")
 			}
@@ -347,11 +340,11 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 	return nil
 }
 
-func (p *Provider) deployServices(client kubernetes.Interface, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
+func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
 	defer log.StopWait()
 
 	// Check if devspace-cloud is deployed in the namespace
-	configmaps, err := client.CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
+	configmaps, err := client.Client.CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
 		LabelSelector: "NAME=devspace-cloud,OWNER=TILLER,STATUS=DEPLOYED",
 	})
 	if err != nil {
@@ -519,12 +512,12 @@ func (p *Provider) needKey() (bool, error) {
 	return response.Settings[0].ID == SettingDefaultClusterEncryptToken && response.Settings[0].Value == "true", nil
 }
 
-func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, error) {
+func getServiceAccountCredentials(client *kubectl.Client) ([]byte, string, error) {
 	log.StartWait("Retrieving service account credentials")
 	defer log.StopWait()
 
 	// Create main service account
-	sa, err := client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	sa, err := client.Client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -535,7 +528,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < timeout {
 		time.Sleep(time.Second)
 
-		sa, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+		sa, err = client.Client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -546,7 +539,7 @@ func getServiceAccountCredentials(client kubernetes.Interface) ([]byte, string, 
 	}
 
 	// Get secret
-	secret, err := client.CoreV1().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
+	secret, err := client.Client.CoreV1().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -739,18 +732,12 @@ func (p *Provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	config, err := kubectl.GetRestConfigBySelect(false, false)
+	client, err := kubectl.NewClientBySelect(false, false)
 	if err != nil {
-		return errors.Wrap(err, "new kubectl client")
+		return err
 	}
-	if config.Host != *cluster.Server {
-		return fmt.Errorf("Selected context does not point to the correct host. Selected %s <> %s", config.Host, *cluster.Server)
-	}
-
-	// Get client from config
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return errors.Wrap(err, "get kubernetes client")
+	if client.RestConfig.Host != *cluster.Server {
+		return fmt.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig.Host, *cluster.Server)
 	}
 
 	key, err := getKey(p, true)

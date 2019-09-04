@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 )
 
 // SelectorParameter holds the information from the config and the command overrides
@@ -32,7 +33,7 @@ type ConfigParameter struct {
 }
 
 // GetNamespace retrieves the target namespace
-func (t *SelectorParameter) GetNamespace(config *latest.Config) (string, error) {
+func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient *kubectl.Client) (string, error) {
 	if t.CmdParameter.Namespace != nil {
 		return *t.CmdParameter.Namespace, nil
 	}
@@ -49,13 +50,7 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config) (string, error) 
 		}
 	}
 
-	// Get default namespace
-	namespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return "", err
-	}
-
-	return namespace, nil
+	return kubeClient.Namespace, nil
 }
 
 // GetLabelSelector retrieves the label selector of the target

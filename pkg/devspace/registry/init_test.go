@@ -71,7 +71,7 @@ func TestCreatePullSecrets(t *testing.T) {
 				},
 			},
 			expectedLog: `
-StartWait Creating image pull secret for registry: 
+StartWait Creating image pull secret for registry: hub.docker.com
 StopWait
 Error Couldn't find service account 'default' in namespace 'testNS': serviceaccounts "default" not found`,
 		},
@@ -86,7 +86,7 @@ Error Couldn't find service account 'default' in namespace 'testNS': serviceacco
 				},
 			},
 			expectedLog: `
-StartWait Creating image pull secret for registry: 
+StartWait Creating image pull secret for registry: hub.docker.com
 StopWait`,
 		},
 	}

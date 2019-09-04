@@ -6,9 +6,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"k8s.io/client-go/kubernetes"
 )
 
 // DeployConfig holds the informations for deploying a component
@@ -24,7 +24,7 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 }
 
 // New creates a new helm deployment client
-func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubectl *kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	// Convert the values
 	values := map[interface{}]interface{}{}
 	err := util.Convert(deployConfig.Component, &values)

@@ -53,9 +53,6 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 	if clonedConfig.Dev != nil && *clonedConfig.Dev == (latest.DevConfig{}) {
 		clonedConfig.Dev = nil
 	}
-	if clonedConfig.Cluster != nil && *clonedConfig.Cluster == (latest.Cluster{}) {
-		clonedConfig.Cluster = nil
-	}
 	if clonedConfig.Deployments != nil && len(*clonedConfig.Deployments) == 0 {
 		clonedConfig.Deployments = nil
 	}

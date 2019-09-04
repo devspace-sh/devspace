@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha3"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -20,6 +21,7 @@ var versionLoader = map[string]config.New{
 	v1alpha3.Version: v1alpha3.New,
 	v1alpha4.Version: v1alpha4.New,
 	v1beta1.Version:  v1beta1.New,
+	v1beta2.Version:  v1beta2.New,
 	latest.Version:   latest.New,
 }
 
