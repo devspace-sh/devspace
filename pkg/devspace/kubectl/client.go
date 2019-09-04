@@ -141,34 +141,41 @@ func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 
 // PrintWarning prints a warning if the last kube context is different than this one
 func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
-	// Info messages
-	log.Infof("Using kube context '%s'", ansi.Color(client.CurrentContext, "white+b"))
-	log.Infof("Using namespace '%s'", ansi.Color(client.Namespace, "white+b"))
-
 	generatedConfig, err := generated.LoadConfig()
 	if err == nil {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
-			if (generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext) || (generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace) {
+			wait := false
+
+			if generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext {
 				log.WriteString("\n")
-				log.Warnf("Your current kube-context and/or default namespace is different than last time.")
+				log.Warnf("Current kube context: '%s'", ansi.Color(client.CurrentContext, "white+b"))
+				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
+				log.Warnf("Is this the correct kube context?")
 				log.WriteString("\n")
 
-				if updateGenerated {
-					log.Warn(ansi.Color("Abort with CTRL+C if you are using the wrong kube-context.", "red+b"))
-					log.StartWait("Will continue in 10 seconds...")
-					time.Sleep(10 * time.Second)
-					log.StopWait()
-					log.WriteString("\n")
-				}
+				log.Infof("Run '%s' to change to the previous context", ansi.Color("devspace use context "+generatedConfig.GetActive().LastContext.Context, "white+b"))
+				wait = true
+			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
+				log.WriteString("\n")
+				log.Warnf("Current namespace: '%s'", ansi.Color(client.Namespace, "white+b"))
+				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+				log.Warnf("Is this the correct namespace?")
+				log.WriteString("\n")
+
+				log.Infof("Run '%s' to change to the previous namespace", ansi.Color("devspace use namespace "+generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+				wait = true
 			}
-		}
 
-		// warn if user is currently using default namespace but only if we updating the generated config, since we don't want the warning in devspace enter, logs etc.
-		if updateGenerated && client.Namespace == metav1.NamespaceDefault {
-			log.Warn("Using the 'default' namespace of your cluster is highly discouraged as this namespace cannot be deleted.")
-
-			log.Warn(ansi.Color("Abort with CTRL+C if you do not want to use the default namespace.", "red+b"))
+			if wait && updateGenerated {
+				log.StartWait("Will continue in 10 seconds...")
+				time.Sleep(10 * time.Second)
+				log.StopWait()
+				log.WriteString("\n")
+			}
+		} else if updateGenerated && client.Namespace == metav1.NamespaceDefault {
+			log.WriteString("\n")
+			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted")
 			log.StartWait("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			log.StopWait()
@@ -188,6 +195,10 @@ func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
 			}
 		}
 	}
+
+	// Info messages
+	log.Infof("Using kube context '%s'", ansi.Color(client.CurrentContext, "white+b"))
+	log.Infof("Using namespace '%s'", ansi.Color(client.Namespace, "white+b"))
 
 	return nil
 }

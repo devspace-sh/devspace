@@ -82,9 +82,28 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, nil
 			}
 
-			// TODO
+			spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			if err != nil {
+				return nil, err
+			}
 
-			return nil, nil
+			cloudConfigData, err := cloudconfig.ParseProviderConfig()
+			if err != nil {
+				return nil, nil
+			}
+
+			provider := cloudconfig.GetProvider(cloudConfigData, providerName)
+			if provider == nil {
+				return nil, nil
+			}
+			if provider.Spaces == nil {
+				return nil, nil
+			}
+			if provider.Spaces[spaceID] == nil {
+				return nil, nil
+			}
+
+			return &provider.Spaces[spaceID].Space.Name, nil
 		},
 	},
 	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
@@ -103,20 +122,42 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, nil
 			}
 
-			// TODO
+			spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			if err != nil {
+				return nil, err
+			}
 
-			return nil, nil
-		},
-	},
-	"DEVSPACE_USERNAME": &predefinedVarDefinition{
-		ErrorMessage: fmt.Sprintf("Not logged into Devspace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
-		Fill: func(ctx context.Context) (*string, error) {
-			context, err := kubeconfig.GetCurrentContext()
+			cloudConfigData, err := cloudconfig.ParseProviderConfig()
 			if err != nil {
 				return nil, nil
 			}
 
-			_, providerName, err := kubeconfig.GetSpaceID(context)
+			provider := cloudconfig.GetProvider(cloudConfigData, providerName)
+			if provider == nil {
+				return nil, nil
+			}
+			if provider.Spaces == nil {
+				return nil, nil
+			}
+			if provider.Spaces[spaceID] == nil {
+				return nil, nil
+			}
+
+			return &provider.Spaces[spaceID].ServiceAccount.Namespace, nil
+		},
+	},
+	"DEVSPACE_USERNAME": &predefinedVarDefinition{
+		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
+		Fill: func(ctx context.Context) (*string, error) {
+			kubeContext, err := kubeconfig.GetCurrentContext()
+			if err != nil {
+				return nil, nil
+			}
+			if ctx.Value(constants.KubeContextKey) != nil {
+				kubeContext = ctx.Value(constants.KubeContextKey).(string)
+			}
+
+			_, providerName, err := kubeconfig.GetSpaceID(kubeContext)
 			if err != nil {
 				// use global provider config as fallback
 				providerName = cloudconfig.DevSpaceCloudProviderName
@@ -161,20 +202,47 @@ func getPredefinedVar(ctx context.Context, name string) (bool, string, error) {
 	}
 
 	// Load space domain environment variable
-	/*if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
+	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
 		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
 		if err != nil {
 			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
 		}
 
-		if generatedConfig.CloudSpace == nil {
-			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		} else if len(generatedConfig.CloudSpace.Domains) <= idx-1 {
-			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(generatedConfig.CloudSpace.Domains), idx)
+		kubeContext, err := kubeconfig.GetCurrentContext()
+		if err != nil {
+			return false, "", errors.Wrap(err, "get current context")
+		}
+		if ctx.Value(constants.KubeContextKey) != nil {
+			kubeContext = ctx.Value(constants.KubeContextKey).(string)
 		}
 
-		return true, generatedConfig.CloudSpace.Domains[idx-1].URL, nil
-	}*/
+		spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+		if err != nil {
+			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+		}
+
+		cloudConfigData, err := cloudconfig.ParseProviderConfig()
+		if err != nil {
+			return false, "", errors.Wrap(err, "parse provider config")
+		}
+
+		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
+		if provider == nil {
+			return false, "", fmt.Errorf("Couldn't find space provider: %s", providerName)
+		}
+		if provider.Spaces == nil {
+			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+		}
+		if provider.Spaces[spaceID] == nil {
+			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+		}
+
+		if len(provider.Spaces[spaceID].Space.Domains) <= idx-1 {
+			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(provider.Spaces[spaceID].Space.Domains), idx)
+		}
+
+		return true, provider.Spaces[spaceID].Space.Domains[idx-1].URL, nil
+	}
 
 	return false, "", nil
 }
