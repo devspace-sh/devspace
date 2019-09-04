@@ -117,5 +117,5 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
 	}
 
-	log.Donef("Kube-context '%s' has been successfully deleted", args[0])
+	log.Donef("Kube-context '%s' has been successfully deleted", contextName)
 }
