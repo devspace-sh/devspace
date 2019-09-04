@@ -75,7 +75,7 @@ func TestInit(t *testing.T) {
 		initTestCase{
 			name:           "Don't reconfigure the existing config",
 			fakeConfig:     &latest.Config{},
-			expectedOutput: fmt.Sprintf("\nInfo Config already exists. If you want to recreate the config please run `devspace init --reconfigure`\nInfo \r          \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b")),
+			expectedOutput: fmt.Sprintf("\nInfo Config already exists. If you want to recreate the config please run `devspace init --reconfigure`\nInfo \r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b")),
 		},
 	}
 

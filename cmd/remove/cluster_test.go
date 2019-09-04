@@ -151,10 +151,10 @@ func TestRunRemoveCluster(t *testing.T) {
 			args:    []string{"a:b"},
 			graphQLResponses: []interface{}{
 				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
 				}{
-					Clusters: []*cloudpkg.Cluster{
-						&cloudpkg.Cluster{},
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{},
 					},
 				},
 				fmt.Errorf("Testerror from graphql server"),
@@ -176,10 +176,10 @@ func TestRunRemoveCluster(t *testing.T) {
 			args:    []string{"a:b"},
 			graphQLResponses: []interface{}{
 				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
 				}{
-					Clusters: []*cloudpkg.Cluster{
-						&cloudpkg.Cluster{},
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{},
 					},
 				},
 				struct{}{},

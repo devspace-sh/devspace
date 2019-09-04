@@ -34,6 +34,7 @@ type addDeploymentTestCase struct {
 	cmdImage        string
 	cmdContext      string
 	cmdNamespace    string
+	componentFlag   string
 
 	expectedOutput              string
 	expectedPanic               string
@@ -232,7 +233,7 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		Image:        testCase.cmdImage,
 		Context:      testCase.cmdContext,
 		Namespace:    testCase.cmdNamespace,
-		disableRegistryAuth:    true,
+		Component:    testCase.componentFlag,
 	}).RunAddDeployment(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)

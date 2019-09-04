@@ -1,6 +1,7 @@
 package add
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -128,7 +129,7 @@ func testRunAddSelector(t *testing.T, testCase addSelectorTestCase) {
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	assert.Equal(t, len(testCase.expectedSelectors), len(*config.Dev.Selectors), "Wrong number of selectors in testCase %s", testCase.name)
 	for index, selector := range *config.Dev.Selectors {

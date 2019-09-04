@@ -16,7 +16,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -26,6 +28,7 @@ type enterTestCase struct {
 	name string
 
 	fakeConfig           *latest.Config
+	fakeKubeConfig       clientcmd.ClientConfig
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -76,6 +79,14 @@ func TestEnter(t *testing.T) {
 
 	testCases := []enterTestCase{
 		enterTestCase{
+			name:       "Invalid kube config",
+			fakeConfig: &latest.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawConfigError: fmt.Errorf("RawConfigError"),
+			},
+			expectedPanic: "Unable to create new kubectl client: RawConfigError",
+		},
+		/*enterTestCase{
 			name:       "Unparsable generated.yaml",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{
@@ -86,11 +97,8 @@ func TestEnter(t *testing.T) {
 		enterTestCase{
 			name: "cloud space can't be resumed",
 			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{},
+				"devspace.yaml":            &latest.Config{},
 				".devspace/generated.yaml": &generated.Config{
-					CloudSpace: &generated.CloudSpaceConfig{
-						KubeContext: "someKubeContext",
-					},
 				},
 			},
 			providerList: []*cloudlatest.Provider{
@@ -102,7 +110,7 @@ func TestEnter(t *testing.T) {
 				fmt.Errorf("Custom graphQL error"),
 			},
 			expectedPanic: "Error retrieving Spaces details: Custom graphQL error",
-		},
+		},*/
 	}
 
 	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -156,6 +164,7 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)

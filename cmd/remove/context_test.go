@@ -17,17 +17,50 @@ import (
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type customKubeConfig struct {
+	rawconfig      clientcmdapi.Config
+	rawConfigError error
+
+	clientConfig      *restclient.Config
+	clientConfigError error
+
+	namespace     string
+	namespaceBool bool
+	namespaceErr  error
+
+	configAccess clientcmd.ConfigAccess
+}
+
+func (config *customKubeConfig) RawConfig() (clientcmdapi.Config, error) {
+	return config.rawconfig, config.rawConfigError
+}
+func (config *customKubeConfig) Namespace() (string, bool, error) {
+	return config.namespace, config.namespaceBool, config.namespaceErr
+}
+func (config *customKubeConfig) ClientConfig() (*restclient.Config, error) {
+	return config.clientConfig, config.clientConfigError
+}
+func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
+	return config.configAccess
+}
 
 type removeContextTestCase struct {
 	name string
 
-	fakeConfig *latest.Config
+	fakeConfig     *latest.Config
+	fakeKubeConfig clientcmd.ClientConfig
 
 	args             []string
 	answers          []string
@@ -51,8 +84,15 @@ func TestRunRemoveContext(t *testing.T) {
 
 	testCases := []removeContextTestCase{
 		removeContextTestCase{
-			name:          "Cloud context not gettable",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+			name:     "Provider not gettable",
+			provider: "doesn'tExist",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name: "myProvider",
+				},
+			},
+			all:           true,
+			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: myProvider ",
 		},
 		removeContextTestCase{
 			name:     "Spaces not gettable",
@@ -94,33 +134,11 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
+			fakeKubeConfig: &customKubeConfig{},
 			expectedOutput: "\nDone Deleted kubectl context for space \nDone All space kubectl contexts removed",
 		},
 		removeContextTestCase{
-			name:     "Neither all nor argument specified",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			expectedPanic: "Please specify a space name or the --all flag",
-		},
-		removeContextTestCase{
-			name:     "Unparsable space name",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			args:          []string{"a:b:c"},
-			expectedPanic: "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
-		},
-		removeContextTestCase{
-			name:     "Delete one space successfully",
+			name:     "Delete one context successfully",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -144,7 +162,44 @@ func TestRunRemoveContext(t *testing.T) {
 				},
 			},
 			args:           []string{"a:b"},
-			expectedOutput: "\nDone Kubectl context deleted for space a:b",
+			fakeKubeConfig: &customKubeConfig{},
+			expectedOutput: "\nDone Kube-context 'a:b' has been successfully deleted",
+		},
+		removeContextTestCase{
+			name:     "Delete current context successfully",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name:  "myProvider",
+					Key:   "someKey",
+					Token: "." + validEncodedClaim + ".",
+				},
+			},
+			graphQLResponses: []interface{}{
+				struct {
+					Spaces []interface{} `json:"space"`
+				}{
+					Spaces: []interface{}{
+						struct {
+							Owner   struct{} `json:"account"`
+							Context struct {
+								Cluster struct{} `json:"cluster"`
+							} `json:"kube_context"`
+						}{},
+					},
+				},
+			},
+			answers: []string{"current"},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					CurrentContext: "current",
+					Contexts: map[string]*clientcmdapi.Context{
+						"current": &clientcmdapi.Context{},
+						"next":    &clientcmdapi.Context{},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Your kube-context has been updated to '%s'\nDone Kube-context 'current' has been successfully deleted", ansi.Color("next", "white+b")),
 		},
 	}
 
@@ -193,6 +248,8 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+
 	defer func() {
 		//Delete temp folder
 		err = os.Chdir(wdBackup)
@@ -223,6 +280,4 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		Provider:  testCase.provider,
 		AllSpaces: testCase.all,
 	}).RunRemoveContext(nil, testCase.args)
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

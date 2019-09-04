@@ -1,6 +1,7 @@
 package add
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -141,7 +142,7 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	assert.Equal(t, len(testCase.expectedSync), len(*config.Dev.Sync), "Wrong number of selectors in testCase %s", testCase.name)
 	for index, sync := range *config.Dev.Sync {

@@ -102,9 +102,9 @@ func TestListClusters(t *testing.T) {
 			},
 			graphQLResponses: []interface{}{
 				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
 				}{
-					Clusters: []*cloudpkg.Cluster{},
+					Clusters: []*cloudlatest.Cluster{},
 				},
 			},
 			expectedOutput: fmt.Sprintf("\nWait Retrieving clusters\nInfo No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b")),
@@ -121,15 +121,15 @@ func TestListClusters(t *testing.T) {
 			},
 			graphQLResponses: []interface{}{
 				struct {
-					Clusters []*cloudpkg.Cluster `json:"cluster"`
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
 				}{
-					Clusters: []*cloudpkg.Cluster{
-						&cloudpkg.Cluster{
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{
 							ClusterID:    1,
 							Server:       ptr.String("someServer"),
 							Name:         "someName",
 							EncryptToken: true,
-							Owner: &cloudpkg.Owner{
+							Owner: &cloudlatest.Owner{
 								OwnerID: 1,
 								Name:    "someOwner",
 							},

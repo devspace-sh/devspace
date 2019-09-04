@@ -18,11 +18,15 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var logOutput string
@@ -92,10 +96,38 @@ func (q *customGraphqlClient) GrapqhlRequest(p *cloudpkg.Provider, request strin
 	return nil
 }
 
+type customKubeConfig struct {
+	rawconfig      clientcmdapi.Config
+	rawConfigError error
+
+	clientConfig      *restclient.Config
+	clientConfigError error
+
+	namespace     string
+	namespaceBool bool
+	namespaceErr  error
+
+	configAccess clientcmd.ConfigAccess
+}
+
+func (config *customKubeConfig) RawConfig() (clientcmdapi.Config, error) {
+	return config.rawconfig, config.rawConfigError
+}
+func (config *customKubeConfig) Namespace() (string, bool, error) {
+	return config.namespace, config.namespaceBool, config.namespaceErr
+}
+func (config *customKubeConfig) ClientConfig() (*restclient.Config, error) {
+	return config.clientConfig, config.clientConfigError
+}
+func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
+	return config.configAccess
+}
+
 type analyzeTestCase struct {
 	name string
 
 	fakeConfig           *latest.Config
+	fakeKubeConfig       clientcmd.ClientConfig
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
 	providerList         []*cloudlatest.Provider
@@ -109,18 +141,9 @@ type analyzeTestCase struct {
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
 		analyzeTestCase{
-			name:                 "Unparsable generated.yaml",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: "unparsable",
-			expectedPanic:        "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		analyzeTestCase{
-			name:       "Server error",
-			fakeConfig: &latest.Config{},
-			generatedYamlContent: generated.Config{
-				CloudSpace: &generated.CloudSpaceConfig{},
-			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+			name:           "Invalid config",
+			fakeKubeConfig: &customKubeConfig{},
+			expectedPanic:  "Error loading kube config, context '' doesn't exist",
 		},
 	}
 
@@ -178,6 +201,7 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	}
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	generated.ResetConfig()
 
 	if testCase.generatedYamlContent != nil {

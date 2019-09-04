@@ -38,20 +38,19 @@ func TestListDeployments(t *testing.T) {
 			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listDeploymentsTestCase{
-			name:                 "generated.yaml has unparsable content",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: "unparsable",
-			expectedPanic:        "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			name:          "Kubectl client can't be created",
+			fakeConfig:    &latest.Config{},
+			expectedPanic: "invalid configuration: no configuration has been provided",
 		},
-		listDeploymentsTestCase{
-			name:       "Space can't be resumed",
-			fakeConfig: &latest.Config{},
+		/*listDeploymentsTestCase{
+			name:                 "Space can't be resumed",
+			fakeConfig:           &latest.Config{},
 			generatedYamlContent: generated.Config{
-				CloudSpace: &generated.CloudSpaceConfig{},
+				//CloudSpace: &generated.CloudSpaceConfig{},
 			},
 			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
 		},
-		/*listDeploymentsTestCase{
+		listDeploymentsTestCase{
 			name:           "No deployments",
 			fakeConfig:     &latest.Config{},
 			expectedOutput: "\n" + expectedHeader + "\n No entries found\n\n",

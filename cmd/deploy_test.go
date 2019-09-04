@@ -16,7 +16,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -26,6 +28,7 @@ type deployTestCase struct {
 	name string
 
 	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -78,8 +81,8 @@ func TestDeploy(t *testing.T) {
 		}
 	}()
 
-	_, err = os.Open("doesn'tExist")
-	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+	//_, err = os.Open("doesn'tExist")
+	//noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 
 	testCases := []deployTestCase{
 		deployTestCase{
@@ -102,6 +105,14 @@ func TestDeploy(t *testing.T) {
 			expectedPanic: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		deployTestCase{
+			name:       "invalid kubeconfig",
+			fakeConfig: &latest.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawConfigError: fmt.Errorf("RawConfigError"),
+			},
+			expectedPanic: "Unable to create new kubectl client: RawConfigError",
+		},
+		/*deployTestCase{
 			name:          "No devspace.yaml",
 			fakeConfig:    &latest.Config{},
 			expectedPanic: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
@@ -120,12 +131,8 @@ func TestDeploy(t *testing.T) {
 		deployTestCase{
 			name: "cloud space can't be resumed",
 			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
-					CloudSpace: &generated.CloudSpaceConfig{
-						KubeContext: "someKubeContext",
-					},
-				},
+				"devspace.yaml":            &latest.Config{},
+				".devspace/generated.yaml": &generated.Config{},
 			},
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -137,7 +144,7 @@ func TestDeploy(t *testing.T) {
 			},
 			expectedPanic:  "Error retrieving Spaces details: Custom graphQL error",
 			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},
+		},*/
 	}
 
 	//The deploy-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -191,6 +198,7 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
