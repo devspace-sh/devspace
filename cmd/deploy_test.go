@@ -25,11 +25,10 @@ import (
 type deployTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
 
 	namespaceFlag               string
 	kubeContextFlag             string

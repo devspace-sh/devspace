@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -95,6 +96,10 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	wdBackup, err := os.Getwd()

@@ -19,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -56,7 +55,6 @@ type listClustersTestCase struct {
 	providerFlag     string
 	allFlag          bool
 	graphQLResponses []interface{}
-	answers          []string
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
@@ -198,10 +196,6 @@ func testListClusters(t *testing.T, testCase listClustersTestCase) {
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
-
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
-	}
 
 	defer func() {
 		rec := recover()
