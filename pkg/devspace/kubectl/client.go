@@ -149,18 +149,18 @@ func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
 
 			if generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext {
 				log.WriteString("\n")
+				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
 				log.Warnf("Current kube context: '%s'", ansi.Color(client.CurrentContext, "white+b"))
 				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
-				log.Warnf("Is this the correct kube context?")
 				log.WriteString("\n")
 
 				log.Infof("Run '%s' to change to the previous context", ansi.Color("devspace use context "+generatedConfig.GetActive().LastContext.Context, "white+b"))
 				wait = true
 			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
 				log.WriteString("\n")
+				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
 				log.Warnf("Current namespace: '%s'", ansi.Color(client.Namespace, "white+b"))
 				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
-				log.Warnf("Is this the correct namespace?")
 				log.WriteString("\n")
 
 				log.Infof("Run '%s' to change to the previous namespace", ansi.Color("devspace use namespace "+generatedConfig.GetActive().LastContext.Namespace, "white+b"))

@@ -19,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
@@ -341,13 +340,6 @@ func (cmd *InitCmd) addDevConfig() {
 			})
 
 			config.Dev.Sync = &syncConfig
-		}
-	}
-
-	// Disable terminal by default
-	if len(*config.Images) > 0 {
-		config.Dev.Terminal = &latest.Terminal{
-			Disabled: ptr.Bool(true),
 		}
 	}
 }

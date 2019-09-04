@@ -264,7 +264,7 @@ type ImageOverrideConfig struct {
 
 // Terminal describes the terminal options
 type Terminal struct {
-	Disabled      *bool               `yaml:"disabled,omitempty"`
+	Enabled       *bool               `yaml:"enabled,omitempty"`
 	Selector      *string             `yaml:"selector,omitempty"`
 	LabelSelector *map[string]*string `yaml:"labelSelector,omitempty"`
 	Namespace     *string             `yaml:"namespace,omitempty"`

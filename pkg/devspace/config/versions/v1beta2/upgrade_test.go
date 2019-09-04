@@ -23,7 +23,29 @@ func TestSimple(t *testing.T) {
 					KubeContext: ptr.String("kubecontext"),
 				},
 			},
-			expected: &next.Config{},
+			expected: &next.Config{
+				Dev: &next.DevConfig{
+					Terminal: &next.Terminal{
+						Enabled: ptr.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			in: &Config{
+				Dev: &DevConfig{
+					Terminal: &Terminal{
+						Disabled: ptr.Bool(true),
+					},
+				},
+			},
+			expected: &next.Config{
+				Dev: &next.DevConfig{
+					Terminal: &next.Terminal{
+						Enabled: ptr.Bool(false),
+					},
+				},
+			},
 		},
 	}
 

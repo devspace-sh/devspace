@@ -339,7 +339,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, 
 		params.Namespace = &cmd.Namespace
 	}
 
-	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
+	if cmd.Terminal && (config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Enabled != nil && *config.Dev.Terminal.Enabled == true) {
 		return services.StartTerminal(config, client, params, args, exitChan, log)
 	}
 
@@ -499,8 +499,8 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 			config.Dev.Terminal = &latest.Terminal{}
 		}
 
-		// Set dev.terminal.disabled = false
-		config.Dev.Terminal.Disabled = ptr.Bool(false)
+		// Set dev.terminal.enabled = true
+		config.Dev.Terminal.Enabled = ptr.Bool(true)
 		log.Info("Interactive mode: enable terminal")
 	}
 
