@@ -111,7 +111,8 @@ func TestRunCreateSpace(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Custom graphQL server error"),
 			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: SomeProvider ",
+			expectedPanic:  "Error retrieving projects: Custom graphQL server error",
+			expectedOutput: "\nWait Retrieving clusters",
 		},
 	}
 
