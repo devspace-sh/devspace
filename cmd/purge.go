@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -90,7 +92,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
 
 	deployments := []string{}
 	if cmd.Deployments != "" {

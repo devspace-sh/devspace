@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -41,7 +42,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.Background())
 
 	if config.Dev.Ports == nil || len(*config.Dev.Ports) == 0 {
 		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")

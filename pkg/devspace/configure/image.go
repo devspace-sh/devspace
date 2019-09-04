@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	contextpkg "context"
 	"fmt"
 	"os/exec"
@@ -322,7 +323,7 @@ func loginDevSpaceCloud(cloudProvider string) error {
 
 // AddImage adds an image to the devspace
 func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	imageConfig := &v1.ImageConfig{
 		Image: &name,
@@ -371,7 +372,7 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 
 //RemoveImage removes an image from the devspace
 func RemoveImage(removeAll bool, names []string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	if len(names) == 0 && removeAll == false {
 		return fmt.Errorf("You have to specify at least one image")

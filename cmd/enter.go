@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -95,7 +97,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Get config
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig()
+		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
 	}
 
 	// Build params

@@ -1,6 +1,7 @@
 package add
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -93,7 +94,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	if config.Deployments != nil {
 		for _, deployConfig := range *config.Deployments {
 			if *deployConfig.Name == deploymentName {

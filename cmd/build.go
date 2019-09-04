@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
@@ -105,7 +106,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 func (cmd *BuildCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
 	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	config, err := configutil.GetConfigFromPath(context.Background(), ".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

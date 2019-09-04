@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ import (
 
 // AddSyncPath adds a new sync path to the config
 func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	if config.Dev == nil {
 		config.Dev = &latest.DevConfig{}
@@ -102,7 +103,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 // RemoveSyncPath removes a sync path from the config
 func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {

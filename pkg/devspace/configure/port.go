@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,7 +28,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	var labelSelectorMap map[string]*string
 	var err error
 
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	if labelSelector != "" && serviceName != "" {
 		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
 	}
@@ -86,7 +87,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 
 // RemovePort removes a port from the config
 func RemovePort(removeAll bool, labelSelector string, args []string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {

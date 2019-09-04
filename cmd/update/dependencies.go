@@ -1,6 +1,8 @@
 package update
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
@@ -50,7 +52,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get the config
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.Background())
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig()

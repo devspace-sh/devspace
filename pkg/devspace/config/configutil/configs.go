@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -39,7 +40,7 @@ func loadVarsFromWrapper(basePath string, varsWrapper *configs.VarsWrapper, gene
 	return returnVars, nil
 }
 
-func loadConfigFromWrapper(basePath string, configWrapper *configs.ConfigWrapper, generatedConfig *generated.Config) (*latest.Config, error) {
+func loadConfigFromWrapper(ctx context.Context, basePath string, configWrapper *configs.ConfigWrapper, generatedConfig *generated.Config) (*latest.Config, error) {
 	if configWrapper.Path == nil && configWrapper.Data == nil {
 		return nil, fmt.Errorf("path & data key are empty for config %s", LoadedConfig)
 	}
@@ -53,12 +54,12 @@ func loadConfigFromWrapper(basePath string, configWrapper *configs.ConfigWrapper
 
 	// Load from path
 	if configWrapper.Path != nil {
-		returnConfig, err = loadConfigFromPath(filepath.Join(basePath, filepath.FromSlash(*configWrapper.Path)), generatedConfig)
+		returnConfig, err = loadConfigFromPath(ctx, filepath.Join(basePath, filepath.FromSlash(*configWrapper.Path)), generatedConfig)
 		if err != nil {
 			return nil, fmt.Errorf("Loading config: %v", err)
 		}
 	} else {
-		returnConfig, err = loadConfigFromInterface(configWrapper.Data, generatedConfig)
+		returnConfig, err = loadConfigFromInterface(ctx, configWrapper.Data, generatedConfig)
 		if err != nil {
 			return nil, fmt.Errorf("Loading config from interface: %v", err)
 		}

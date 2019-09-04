@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -85,22 +86,22 @@ func InitConfig() *latest.Config {
 }
 
 // GetBaseConfig returns the config unmerged with potential overwrites
-func GetBaseConfig() *latest.Config {
-	GetConfigWithoutDefaults(false)
+func GetBaseConfig(ctx context.Context) *latest.Config {
+	GetConfigWithoutDefaults(ctx, false)
 	ValidateOnce()
 
 	return config
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig() *latest.Config {
-	GetConfigWithoutDefaults(true)
+func GetConfig(ctx context.Context) *latest.Config {
+	GetConfigWithoutDefaults(ctx, true)
 	ValidateOnce()
 
 	return config
 }
 
-func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configspkg.ConfigDefinition, error) {
+func loadBaseConfigFromPath(ctx context.Context, basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configspkg.ConfigDefinition, error) {
 	var (
 		config           = latest.New().(*latest.Config)
 		configRaw        = latest.New().(*latest.Config)
@@ -172,7 +173,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		}
 
 		// Load config
-		configRaw, err = loadConfigFromWrapper(basePath, configDefinition.Config, generatedConfig)
+		configRaw, err = loadConfigFromWrapper(ctx, basePath, configDefinition.Config, generatedConfig)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -197,7 +198,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 			}
 		}
 
-		configRaw, err = loadConfigFromPath(configPath, generatedConfig)
+		configRaw, err = loadConfigFromPath(ctx, configPath, generatedConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Loading config: %v", err)
 		}
@@ -210,7 +211,7 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 		if configDefinition != nil {
 			if configDefinition.Overrides != nil {
 				for index, configWrapper := range *configDefinition.Overrides {
-					overwriteConfig, err := loadConfigFromWrapper(".", configWrapper, generatedConfig)
+					overwriteConfig, err := loadConfigFromWrapper(ctx, ".", configWrapper, generatedConfig)
 					if err != nil {
 						return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
 					}
@@ -237,8 +238,8 @@ func loadBaseConfigFromPath(basePath string, loadConfig string, loadOverwrites b
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, error) {
-	config, _, err := loadBaseConfigFromPath(basePath, loadConfig, loadOverrides, generatedConfig, log)
+func GetConfigFromPath(ctx context.Context, basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, error) {
+	config, _, err := loadBaseConfigFromPath(ctx, basePath, loadConfig, loadOverrides, generatedConfig, log)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +253,7 @@ func GetConfigFromPath(basePath string, loadConfig string, loadOverrides bool, g
 }
 
 // GetConfigWithoutDefaults returns the config without setting the default values
-func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
+func GetConfigWithoutDefaults(ctx context.Context, loadOverwrites bool) *latest.Config {
 	getConfigOnce.Do(func() {
 		var (
 			err              error
@@ -269,7 +270,7 @@ func GetConfigWithoutDefaults(loadOverwrites bool) *latest.Config {
 		LoadedConfig = generatedConfig.ActiveConfig
 
 		// Load base config
-		config, configDefinition, err = loadBaseConfigFromPath(".", LoadedConfig, loadOverwrites, generatedConfig, log.GetInstance())
+		config, configDefinition, err = loadBaseConfigFromPath(ctx, ".", LoadedConfig, loadOverwrites, generatedConfig, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
