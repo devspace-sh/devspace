@@ -95,7 +95,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy bool, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -126,7 +126,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
-		err := dependency.Deploy(skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, streamLog)
+		err := dependency.Deploy(client, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, streamLog)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
@@ -142,7 +142,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, allowCyclic, upda
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.Config, allowCyclic bool, logger log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
 		return nil
 	}
@@ -173,7 +173,7 @@ func PurgeAll(config *latest.Config, cache *generated.Config, allowCyclic bool, 
 		buff := &bytes.Buffer{}
 		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
 
-		err := dependency.Purge(streamLog)
+		err := dependency.Purge(client, streamLog)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
@@ -250,7 +250,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(skipPush bool, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
 	// Check if we should redeploy
 	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
 	if err != nil {
@@ -278,26 +278,28 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, skipBuild, forceBu
 	// Change back to original working directory
 	defer os.Chdir(currentWorkingDirectory)
 
-	// Create kubectl client
-	client, err := kubectl.NewClient(d.Config)
-	if err != nil {
-		return fmt.Errorf("Unable to create new kubectl client: %v", err)
+	// Recreate client if necessary
+	if d.DependencyConfig.Namespace != nil && *d.DependencyConfig.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext, *d.DependencyConfig.Namespace, false)
+		if err != nil {
+			return errors.Wrap(err, "create new client")
+		}
 	}
 
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(d.Config, client, log)
+	err = client.EnsureDefaultNamespace(log)
 	if err != nil {
 		return fmt.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(d.Config, false, log)
+	dockerClient, err := docker.NewClient(log)
 	if err != nil {
 		return errors.Wrap(err, "create docker client")
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(d.Config, dockerClient, client, log)
+	err = registry.CreatePullSecrets(d.Config, client, dockerClient, log)
 	if err != nil {
 		return err
 	}
@@ -337,7 +339,7 @@ func (d *Dependency) Deploy(skipPush bool, forceDependencies, skipBuild, forceBu
 }
 
 // Purge purges the dependency
-func (d *Dependency) Purge(log log.Logger) error {
+func (d *Dependency) Purge(client *kubectl.Client, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
@@ -354,13 +356,16 @@ func (d *Dependency) Purge(log log.Logger) error {
 		os.Chdir(currentWorkingDirectory)
 	}()
 
-	kubectl, err := kubectl.NewClient(d.Config)
-	if err != nil {
-		return fmt.Errorf("Unable to create new kubectl client: %v", err)
+	// Recreate client if necessary
+	if d.DependencyConfig.Namespace != nil && *d.DependencyConfig.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext, *d.DependencyConfig.Namespace, false)
+		if err != nil {
+			return errors.Wrap(err, "create new client")
+		}
 	}
 
 	// Purge the deployments
-	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), kubectl, nil, log)
+	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), client, nil, log)
 
 	err = generated.SaveConfig(d.GeneratedConfig)
 	if err != nil {

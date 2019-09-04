@@ -99,10 +99,10 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		})
 	}
 
-	oldCurrentContext = kubeConfig.CurrentContext
+	oldCurrentContext := kubeConfig.CurrentContext
 
 	// Delete the context
-	err = kubeconfig.DeleteContext(kubeConfig, contextName)
+	err = kubeconfig.DeleteKubeContext(kubeConfig, contextName)
 	if err != nil {
 		log.Fatalf("Error deleting context: %v", err)
 	}

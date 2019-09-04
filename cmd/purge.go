@@ -17,9 +17,11 @@ import (
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
 	Deployments             string
-	Namespace               string
 	AllowCyclicDependencies bool
 	PurgeDependencies       bool
+
+	Namespace   string
+	KubeContext string
 }
 
 // NewPurgeCmd creates a new purge command
@@ -44,6 +46,8 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
+	purgeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
+
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
@@ -64,27 +68,29 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	if err != nil {
+		log.Fatalf("Unable to create new kubectl client: %v", err)
+	}
+
+	err = client.PrintWarning(false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	generatedConfig, err := generated.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Signal that we are working on the space if there is any
-	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	kubectl, err := kubectl.NewClient(config)
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
-	}
+	config := configutil.GetConfig()
 
 	deployments := []string{}
 	if cmd.Deployments != "" {
@@ -95,11 +101,11 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Purge deployments
-	deploy.PurgeDeployments(config, generatedConfig.GetActive(), kubectl, deployments, log.GetInstance())
+	deploy.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig, cmd.AllowCyclicDependencies, log.GetInstance())
+		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, log.GetInstance())
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}

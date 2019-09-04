@@ -27,7 +27,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
 )
 
 // DevCmd is a struct that defines a command call for "up"
@@ -53,7 +52,9 @@ type DevCmd struct {
 	Selector        string
 	Container       string
 	LabelSelector   string
-	Namespace       string
+
+	KubeContext string
+	Namespace   string
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -103,6 +104,7 @@ Starts your project in development mode:
 	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
 
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
+	devCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
@@ -138,40 +140,45 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	// Get the config
-	config := cmd.loadConfig(generatedConfig)
-
-	// Signal that we are working on the space if there is any
-	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
+	err = client.PrintWarning(true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get the config
+	config := cmd.loadConfig(generatedConfig)
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
+	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
+	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		dockerClient = nil
 	}
 
-	err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
+	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -186,10 +193,10 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubernetes.Interface, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
 		if err != nil {
 			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -264,7 +271,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interface, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, client, log)
 		if err != nil {
@@ -279,7 +286,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client kubernetes.Interf
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
 		if err != nil {
 			return 0, fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -423,10 +430,7 @@ func (r *reloadError) Error() string {
 
 func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
 	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", true)
-	if err != nil {
-		log.Fatal(err)
-	}
+	config := configutil.GetConfig()
 
 	// Adjust config for interactive mode
 	if cmd.Interactive != "" {

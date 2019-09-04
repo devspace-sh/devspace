@@ -20,8 +20,9 @@ import (
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	Namespace    string
-	KubeContext  string
+	Namespace   string
+	KubeContext string
+
 	DockerTarget string
 
 	ForceBuild        bool
@@ -100,50 +101,53 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	// Get config with adjusted cluster config
-	config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, cmd.KubeContext, true)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Signal that we are working on the space if there is any
-	err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Create kubectl client
-	client, err := kubectl.NewClientWithContextSwitch(config, cmd.SwitchContext)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
+	// Warn the user if we deployed into a different context before
+	err = client.PrintWarning(true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get config with adjusted cluster config
+	config := configutil.GetConfig()
+
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create namespace if necessary
-	err = kubectl.EnsureDefaultNamespace(config, client, log.GetInstance())
+	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster binding if necessary
-	err = kubectl.EnsureGoogleCloudClusterRoleBinding(config, client, log.GetInstance())
+	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		dockerClient = nil
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(config, dockerClient, client, log.GetInstance())
+	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}

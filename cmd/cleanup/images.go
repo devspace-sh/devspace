@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/docker/api/types/filters"
@@ -52,8 +53,14 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Get active context
+	kubeContext, err := kubeconfig.GetCurrentContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create docker client
-	client, err := docker.NewClient(config, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

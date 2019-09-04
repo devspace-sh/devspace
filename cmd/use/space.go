@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -165,8 +166,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if configExists {
+		client, err := kubectl.NewClientFromContext(kubeContext, "", false)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(configutil.GetConfig(), false, log.GetInstance())
+		err = cloud.ResumeSpace(client, false, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

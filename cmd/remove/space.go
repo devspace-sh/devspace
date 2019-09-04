@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -95,7 +96,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	defer log.StopWait()
 
 	// Get by id
-	var space *cloudpkg.Space
+	var space *latest.Space
 
 	if cmd.SpaceID != "" {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
@@ -135,14 +136,11 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			log.Fatal(err)
 		}
 
-		if generatedConfig.Namespace != nil && generatedConfig.Namespace.KubeContext != nil {
-			context, _, err := kubeconfig.GetContext(*generatedConfig.Namespace.KubeContext)
-			if err == nil {
-				spaceID, _, err := kubeconfig.GetSpaceID(context)
-				if err == nil && spaceID == space.SpaceID {
-					// Remove cached namespace from generated config if it belongs to the space that is being deleted
-					generatedConfig.Namespace = nil
-				}
+		if generatedConfig.LastContext != nil && generatedConfig.LastContext.Context != "" {
+			spaceID, _, err := kubeconfig.GetSpaceID(generatedConfig.LastContext.Context)
+			if err == nil && spaceID == space.SpaceID {
+				// Remove cached namespace from generated config if it belongs to the space that is being deleted
+				generatedConfig.LastContext = nil
 			}
 		}
 

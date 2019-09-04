@@ -15,6 +15,7 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -66,13 +67,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	)
 
 	// Ignore error as context may not be a Space
-	context, err := configutil.GetDefaultContext(config)
+	context, err := kubeconfig.GetCurrentContext()
 	if err != nil {
 		return nil, err
 	}
 
 	// Get docker client
-	client, err := docker.NewClient(config, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(context, true, log.GetInstance())
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -88,7 +89,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Get cloud provider if context is a space
-	cloudProvider, err := cloud.GetDefaultProvider()
+	cloudProvider, err := cloud.GetDefaultProviderName()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		return nil, err
 	}
 
-	registryURL, err := getRegistryURL(config, cloudRegistryHostname, &cloudProvider, checkRegistryAuth)
+	registryURL, err := getRegistryURL(config, cloudRegistryHostname, &cloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +168,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	return retImageConfig, nil
 }
 
-func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudProvider *string, checkRegistryAuth bool) (string, error) {
+func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudProvider *string) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
@@ -178,7 +179,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	)
 
 	// Initialize docker
-	dockerClient, err := docker.NewClient(config, false, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		return "", fmt.Errorf("Error creating docker client: %v", err)
 	}
@@ -218,43 +219,42 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	}
 
 	log.WriteString("\n")
-	if checkRegistryAuth {
-		log.StartWait("Checking registry authentication")
-		authConfig, err := docker.Login(dockerClient, registryURL, "", "", true, false, false)
-		log.StopWait()
-		if err != nil || authConfig.Username == "" {
-			if registryURL == dockerHubHostname {
-				log.Warn("You are not logged in to Docker Hub")
-				log.Warn("Please make sure you have a https://hub.docker.com account")
-				log.Warn("Installing docker is NOT required. You simply need a Docker Hub account\n")
 
-				for {
-					dockerUsername := survey.Question(&survey.QuestionOptions{
-						Question:               "What is your Docker Hub username?",
-						DefaultValue:           "",
-						ValidationRegexPattern: "^.*$",
-					})
+	log.StartWait("Checking registry authentication")
+	authConfig, err = docker.Login(dockerClient, registryURL, "", "", true, false, false)
+	log.StopWait()
+	if err != nil || authConfig.Username == "" {
+		if registryURL == dockerHubHostname {
+			log.Warn("You are not logged in to Docker Hub")
+			log.Warn("Please make sure you have a https://hub.docker.com account")
+			log.Warn("Installing docker is NOT required. You simply need a Docker Hub account\n")
 
-					dockerPassword := survey.Question(&survey.QuestionOptions{
-						Question:               "What is your Docker Hub password? (will only be sent to Docker Hub)",
-						DefaultValue:           "",
-						ValidationRegexPattern: "^.*$",
-						IsPassword:             true,
-					})
+			for {
+				dockerUsername := survey.Question(&survey.QuestionOptions{
+					Question:               "What is your Docker Hub username?",
+					DefaultValue:           "",
+					ValidationRegexPattern: "^.*$",
+				})
 
-					_, err = docker.Login(dockerClient, registryURL, dockerUsername, dockerPassword, false, true, true)
-					if err != nil {
-						log.Warn(err)
-						continue
-					}
+				dockerPassword := survey.Question(&survey.QuestionOptions{
+					Question:               "What is your Docker Hub password? (will only be sent to Docker Hub)",
+					DefaultValue:           "",
+					ValidationRegexPattern: "^.*$",
+					IsPassword:             true,
+				})
 
-					break
+				_, err = docker.Login(dockerClient, registryURL, dockerUsername, dockerPassword, false, true, true)
+				if err != nil {
+					log.Warn(err)
+					continue
 				}
-			} else if selectedRegistry == useDevSpaceRegistry {
-				return "", loginDevSpaceCloud(*cloudProvider)
-			} else {
-				return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+
+				break
 			}
+		} else if selectedRegistry == useDevSpaceRegistry {
+			return "", loginDevSpaceCloud(*cloudProvider)
+		} else {
+			return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}
 	}
 

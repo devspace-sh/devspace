@@ -24,9 +24,6 @@ type deploymentCmd struct {
 
 	Dockerfile string
 	Context    string
-
-	// mainly used for testing
-	disableRegistryAuth bool
 }
 
 func newDeploymentCmd() *cobra.Command {
@@ -121,7 +118,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 			log.Fatal(err)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, !cmd.disableRegistryAuth)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
 	} else if cmd.Image != "" {
 		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image)
 	} else if cmd.Component != "" {

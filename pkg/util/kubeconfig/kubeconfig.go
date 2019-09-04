@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -22,13 +23,18 @@ func ConfigExists() bool {
 	return clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename() != ""
 }
 
+// NewConfig loads a new kube config
+func NewConfig() clientcmd.ClientConfig {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
+}
+
 // LoadConfig loads the kube config with the default loading rules
 func LoadConfig() clientcmd.ClientConfig {
 	loadOnceMutext.Lock()
 	defer loadOnceMutext.Unlock()
 
 	loadOnce.Do(func() {
-		loadedConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
+		loadedConfig = NewConfig()
 	})
 
 	return loadedConfig
@@ -52,6 +58,32 @@ func LoadRawConfig() (*api.Config, error) {
 	}
 
 	return &config, nil
+}
+
+// GetCurrentContext retrieves the current kube context
+func GetCurrentContext() (string, error) {
+	config, err := LoadRawConfig()
+	if err != nil {
+		return "", err
+	}
+
+	return config.CurrentContext, nil
+}
+
+// GetCurrentNamespace retrieves the current namespace
+func GetCurrentNamespace() (string, error) {
+	kubeConfig, err := LoadRawConfig()
+	if err != nil {
+		return "", err
+	}
+
+	// Change context namespace
+	activeNamespace := metav1.NamespaceDefault
+	if kubeConfig.Contexts[kubeConfig.CurrentContext] != nil && kubeConfig.Contexts[kubeConfig.CurrentContext].Namespace != "" {
+		activeNamespace = kubeConfig.Contexts[kubeConfig.CurrentContext].Namespace
+	}
+
+	return activeNamespace, nil
 }
 
 // SaveConfig writes the kube config back to the specified filename

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -19,7 +18,7 @@ import (
 )
 
 // PrintSpaces prints the users spaces
-func (p *Provider) PrintSpaces(client *kubectl.Client, cluster, name string, all bool) error {
+func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	spaces, err := p.GetSpaces()
 	if err != nil {
 		return fmt.Errorf("Error retrieving spaces: %v", err)
@@ -27,7 +26,10 @@ func (p *Provider) PrintSpaces(client *kubectl.Client, cluster, name string, all
 
 	activeSpaceID := 0
 	if err == nil {
-		activeSpaceID, _, _ = kubeconfig.GetSpaceID(client.CurrentContext)
+		context, _ := kubeconfig.GetCurrentContext()
+		if context != "" {
+			activeSpaceID, _, _ = kubeconfig.GetSpaceID(context)
+		}
 	}
 
 	headerColumnNames := []string{}

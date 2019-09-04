@@ -4,7 +4,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -12,8 +11,10 @@ import (
 
 // AnalyzeCmd holds the analyze cmd flags
 type AnalyzeCmd struct {
-	Namespace string
-	Wait      bool
+	Namespace   string
+	KubeContext string
+
+	Wait bool
 }
 
 // NewAnalyzeCmd creates a new analyze command
@@ -40,6 +41,8 @@ devspace analyze --namespace=mynamespace
 	}
 
 	analyzeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The kubernetes namespace to analyze")
+	analyzeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
+
 	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
 
 	return analyzeCmd
@@ -48,44 +51,31 @@ devspace analyze --namespace=mynamespace
 // RunAnalyze executes the functionality "devspace analyze"
 func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	_, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	var devSpaceConfig *latest.Config
-	if configutil.ConfigExists() {
-		// Get config with adjusted cluster config
-		config, err := configutil.GetContextAdjustedConfig(cmd.Namespace, "", false)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Signal that we are working on the space if there is any
-		err = cloud.ResumeLatestSpace(config, true, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClient(devSpaceConfig)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var config *latest.Config
-	if configExists == true {
-		config = configutil.GetConfig()
+	// Print warning
+	err = client.PrintWarning(false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Get default namespace
-	namespace, err := configutil.GetDefaultNamespace(config)
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Override namespace
+	namespace := client.Namespace
 	if cmd.Namespace != "" {
 		namespace = cmd.Namespace
 	}
