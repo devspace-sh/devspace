@@ -28,6 +28,8 @@ Running `devspace dev` will do the following:
 6. Start [real-time code synchronization](/docs/development/synchronization)
 7. Start [terminal proxy](/docs/development/terminal) (optional, [see how to configure log streaming instead](/docs/development/terminal#print-logs-instead-of-opening-a-terminal))
 
+<img src="/img/processes/development-process-devspace.svg" alt="DevSpace Development Process" style="width: 100%;">
+
 ## Useful commands
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags |
 |---|---|

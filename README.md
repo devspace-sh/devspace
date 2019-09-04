@@ -6,10 +6,11 @@
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
-### DevSpace makes it easier and faster to build applications for Kubernetes
+### DevSpace makes it much faster to develop applications for Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
+- **Enable Hot Reloading**: updates your running containers without rebuilding images or restarting containers
+- **Unify deployment workflows** within your team and across dev, staging and production
 - **Automate repetitive tasks** for image building and deployment
-- **Unify deployment workflows** among developers and across dev, staging and production
 
 <br>
 
@@ -117,6 +118,8 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Automatic Configuration of Pull Secrets** within the Kubernetes cluster
 - **Smart Caching** that skips images which do not need to be rebuilt
 
+[![DevSpace Image Building Process](docs/website/static/img/processes/image-building-process-devspace.svg)](https://devspace.cloud/docs/cli/image-building/workflow-basics)
+
 ### Automatic Deployment with `devspace deploy`
 - **Automatig Image Building** for images required in the deployment process
 - **Customizable Deployment Process** supporting kubectl, helm, kustomize and more
@@ -125,6 +128,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Smart Caching** that skips deployments which do not need to be redeployed
 - **Easy Integration into CI/CD Tools** with non-interactive mode
 
+[![DevSpace Deployment Process](docs/website/static/img/processes/deployment-process-devspace.svg)](https://devspace.cloud/docs/cli/deployment/workflow-basics)
 
 ### Efficient In-Cluster Development with `devspace dev`
 - **Hot Reloading** that updates your running containers without restarting them (whenever you change a line of code)
@@ -132,6 +136,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 - **Port Forwarding** that lets you access services and pods on localhost and allows you to attach debuggers with ease
 
+[![DevSpace Development Process](docs/website/static/img/processes/development-process-devspace.svg)](https://devspace.cloud/docs/cli/development/workflow-basics)
 
 ### Faster Interaction with Kubernetes
 - **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.  

@@ -2,23 +2,32 @@
 title: Workflow & Basics
 ---
 
-DevSpace CLI allows you to build, tag and push all the images that you need for deploying your application.
+DevSpace can automatically build, tag and push all images needed for your application. Additionally, DevSpace can also create and manage image pull secrets in Kubernetes, so your cluster can pull images from private registries.
 
-> If you have multiple Dockerfiles in your project (e.g. in case of a monorepo), you can also tell DevSpace CLI to build multiple images in a row by [adding new images to `devspace.yaml`](/docs/image-building/add-images).
-
-## Image building process
-DevSpace CLI fully automates the manual work of building, tagging and pushing Docker images and executes the following steps during `devspace deploy` and `devspace dev`:
+## Image Building Process
+DevSpace fully automates the manual work of building, tagging and pushing Docker images and executes the following steps during `devspace deploy` and `devspace dev`:
 1. Build a new image (if the Dockerfile or the Docker context has changed)
 2. Apply [entrypoint overrides](/docs/development/overrides) for development (only when running `devspace dev`)
 3. Tag this new image with an auto-generated tag
 4. Push this image to any [Docker registry](/docs/image-building/registries/authentication) of your choice
 5. Create [image pull secrets](/docs/image-building/registries/pull-secrets) for your registries
 
+<img src="/img/processes/image-building-process-devspace.svg" alt="DevSpace Image Building Process" style="width: 100%;">
+
+
+## Important Commands
+
+
+### `devspace add image`
+
+
+### `devspace remove image`
+
 ### Replacing image tags before deployment
-After building your images as part of `devspace deploy` or `devspace dev`, DevSpace CLI will continue with deploying your application as defined in the `deployments`. Before deploying, DevSpace CLI will use the newly generated tag and replace every occurence of the same image in your deployment files (e.g. Helm charts or Kubernetes manifests) with the newly generated tag, so that you are always deploying the newest version of your application. This tag replacement happens entirely in-memory, so your deployment files will not be altered.
+After building your images as part of `devspace deploy` or `devspace dev`, DevSpace will continue with deploying your application as defined in the `deployments`. Before deploying, DevSpace will use the newly generated tag and replace every occurence of the same image in your deployment files (e.g. Helm charts or Kubernetes manifests) with the newly generated tag, so that you are always deploying the newest version of your application. This tag replacement happens entirely in-memory, so your deployment files will not be altered.
 
 ### Skipping image building
-DevSpace CLI automatically skips image building when neither the Dockerfile nor the context has changed since the last time an image bas been build from the repective Dockerfile.
+DevSpace automatically skips image building when neither the Dockerfile nor the context has changed since the last time an image bas been build from the repective Dockerfile.
 
 ## Configuring the image building process
 There are a couple of configuration options to influence the image building process.
@@ -27,16 +36,16 @@ There are a couple of configuration options to influence the image building proc
 <summary>
 ### Creating image pull secrets
 </summary>
-To make sure that Kubernetes can pull your image even when you are pushing to a private registry (such as dscr.io), DevSpace CLI will also create an [image pull secret](/docs/image-building/registries/pull-secrets) containing credentials for your registry.
+To make sure that Kubernetes can pull your image even when you are pushing to a private registry (such as dscr.io), DevSpace will also create an [image pull secret](/docs/image-building/registries/pull-secrets) containing credentials for your registry.
 
 ## Default image created by `devspace init`
-When running `devspace init` within your project, DevSpace CLI defines an image called `default` within your config file `devspace.yaml`.
+When running `devspace init` within your project, DevSpace defines an image called `default` within your config file `devspace.yaml`.
 ```yaml
 images:
   default:
     image: dscr.io/username/devspace
 ```
-Because this image called `default` only has the `image` option configured, DevSpace CLI will automatically conclude that:
+Because this image called `default` only has the `image` option configured, DevSpace will automatically conclude that:
 
 1. The image should be built using your local Docker daemon
 2. The Dockerfile for building the image will be located inside the root folder of your project (i.e. ./Dockerfile)
@@ -56,7 +65,7 @@ images:
       kaniko:
         cache: true
 ```
-The config excerpt shown above would tell DevSpace CLI to build the image `default` with kaniko and to use caching while building the image.
+The config excerpt shown above would tell DevSpace to build the image `default` with kaniko and to use caching while building the image.
 
 > In comparison to using a local Docker daemon, **kaniko is currently rather slow** at building images. Therefore, it is currently recommended to use Docker for building images.
 </details>
@@ -65,7 +74,7 @@ The config excerpt shown above would tell DevSpace CLI to build the image `defau
 <summary>
 ### Skip image pushing (for development with minikube)
 </summary>
-If you are using minikube for development, you usually do not need to push your images to a registry because DevSpace CLI will build your images with minikube's Docker daemon and the image will already be present and does not need to be pulled from a registry.
+If you are using minikube for development, you usually do not need to push your images to a registry because DevSpace will build your images with minikube's Docker daemon and the image will already be present and does not need to be pulled from a registry.
 ```yaml
 images:
   default:
@@ -74,7 +83,7 @@ images:
       docker:
         skipPush: true
 ```
-Defining `skipPush: true` tells DevSpace CLI not to push an image after building and tagging it.
+Defining `skipPush: true` tells DevSpace not to push an image after building and tagging it.
 </details>
 
 
@@ -113,7 +122,7 @@ That means that a Dockerfile statement such as `COPY ./src /app` would copy the 
 
 
 
-To tell DevSpace CLI to build an additional image, simply use the `devspace add image` command.
+To tell DevSpace to build an additional image, simply use the `devspace add image` command.
 ```bash
 devspace add image database --dockerfile=./db/Dockerfile --context=./db --image=dscr.io/username/mysql
 ```

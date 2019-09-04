@@ -98,7 +98,7 @@
           "cli/development/configuration/file-synchronization",
           "cli/development/configuration/port-forwarding",
           "cli/development/configuration/dev-overrides",
-          "cli/development/configuration/terminal-proxy",
+          "cli/development/configuration/terminal-proxy-logs",
           "cli/development/configuration/auto-reloading"
         ]
       },
