@@ -116,7 +116,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 	// Hash context path
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "get context from local dir")
 	}
 
 	excludes, err := build.ReadDockerignore(contextDir)

@@ -68,13 +68,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	)
 
 	// Ignore error as context may not be a Space
-	context, err := kubeconfig.GetCurrentContext()
+	kubeContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
 		return nil, err
 	}
 
 	// Get docker client
-	client, err := docker.NewClientWithMinikube(context, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -108,9 +108,16 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	if registryURL == cloudRegistryHostname {
 		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		log.StopWait()
+		if err == nil {
+			dockerUsername = dockerAuthConfig.Username
+		}
+
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
-			DefaultValue:      dockerUsername + "/devspace",
+			DefaultValue:      dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
 			ValidationFunc: func(name string) error {
 				_, err := registry.GetStrippedDockerImageName(name)
