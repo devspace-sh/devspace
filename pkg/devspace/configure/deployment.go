@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -185,7 +186,7 @@ func RemoveDeployment(removeAll bool, name string) (bool, error) {
 		return false, errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	found := false
 
 	if config.Deployments != nil {

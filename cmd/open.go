@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -112,7 +114,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig = configutil.GetConfig()
+		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
 	}
 
 	namespace := client.Namespace

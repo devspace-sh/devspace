@@ -47,7 +47,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load config
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.Background())
 	if config.Images == nil || len(*config.Images) == 0 {
 		log.Done("No images found in config to delete")
 		return

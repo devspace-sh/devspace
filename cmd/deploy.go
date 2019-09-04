@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -114,7 +116,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

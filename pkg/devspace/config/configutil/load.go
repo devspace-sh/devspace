@@ -1,21 +1,33 @@
 package configutil
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/util/git"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/devspace-cloud/devspace/pkg/util/vars"
 
+	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/mgutz/ansi"
 	yaml "gopkg.in/yaml.v2"
+
+	"github.com/pkg/errors"
 )
 
 // VarEnvPrefix is the prefix environment variables should have in order to use them
@@ -25,9 +37,9 @@ const VarEnvPrefix = "DEVSPACE_VAR_"
 var LoadedVars = make(map[string]string)
 
 // PredefinedVars holds all predefined variables that can be used in the config
-/*var PredefinedVars = map[string]*predefinedVarDefinition{
+var PredefinedVars = map[string]*predefinedVarDefinition{
 	"DEVSPACE_RANDOM": &predefinedVarDefinition{
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
+		Fill: func(ctx context.Context) (*string, error) {
 			ret, err := randutil.GenerateRandomString(6)
 			if err != nil {
 				return nil, err
@@ -37,13 +49,13 @@ var LoadedVars = make(map[string]string)
 		},
 	},
 	"DEVSPACE_TIMESTAMP": &predefinedVarDefinition{
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
+		Fill: func(ctx context.Context) (*string, error) {
 			return ptr.String(strconv.FormatInt(time.Now().Unix(), 10)), nil
 		},
 	},
 	"DEVSPACE_GIT_COMMIT": &predefinedVarDefinition{
 		ErrorMessage: "No git repository found, but predefined var DEVSPACE_GIT_COMMIT is used",
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
+		Fill: func(ctx context.Context) (*string, error) {
 			gitRepo := git.NewGitRepository(".", "")
 
 			hash, err := gitRepo.GetHash()
@@ -55,34 +67,51 @@ var LoadedVars = make(map[string]string)
 		},
 	},
 	"DEVSPACE_SPACE": &predefinedVarDefinition{
-		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			context, contextName, err := kubeconfig.GetCurrentContext()
+		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_SPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
+		Fill: func(ctx context.Context) (*string, error) {
+			kubeContext, err := kubeconfig.GetCurrentContext()
 			if err != nil {
 				return nil, nil
 			}
+			if ctx.Value(constants.KubeContextKey) != nil {
+				kubeContext = ctx.Value(constants.KubeContextKey).(string)
+			}
 
-			isSpace, err := kubeconfig.IsCloudSpace(context)
-			if err != nil {
+			isSpace, err := kubeconfig.IsCloudSpace(kubeContext)
+			if err != nil || !isSpace {
 				return nil, nil
 			}
 
+			// TODO
 
 			return nil, nil
 		},
 	},
 	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
-		ErrorMessage: fmt.Sprintf("No space configured, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
+		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
+		Fill: func(ctx context.Context) (*string, error) {
+			kubeContext, err := kubeconfig.GetCurrentContext()
+			if err != nil {
+				return nil, nil
+			}
+			if ctx.Value(constants.KubeContextKey) != nil {
+				kubeContext = ctx.Value(constants.KubeContextKey).(string)
+			}
 
+			isSpace, err := kubeconfig.IsCloudSpace(kubeContext)
+			if err != nil || !isSpace {
+				return nil, nil
+			}
+
+			// TODO
 
 			return nil, nil
 		},
 	},
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("Not logged into Devspace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
-		Fill: func(generatedConfig *generated.Config) (*string, error) {
-			context, _, err := kubeconfig.GetCurrentContext()
+		Fill: func(ctx context.Context) (*string, error) {
+			context, err := kubeconfig.GetCurrentContext()
 			if err != nil {
 				return nil, nil
 			}
@@ -114,16 +143,16 @@ var LoadedVars = make(map[string]string)
 			return &accountName, nil
 		},
 	},
-}*/
+}
 
 type predefinedVarDefinition struct {
 	Value        *string
 	ErrorMessage string
-	Fill         func(generatedConfig *generated.Config) (*string, error)
+	Fill         func(ctx context.Context) (*string, error)
 }
 
-func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, string, error) {
-	/*if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
+func getPredefinedVar(ctx context.Context, name string) (bool, string, error) {
+	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
 		if variable.Value == nil {
 			return false, "", errors.New(variable.ErrorMessage)
 		}
@@ -132,13 +161,11 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 	}
 
 	// Load space domain environment variable
-	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
-		/* TODO @FabianKramm
+	/*if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
 		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
 		if err != nil {
 			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
 		}
-
 
 		if generatedConfig.CloudSpace == nil {
 			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
@@ -152,16 +179,16 @@ func getPredefinedVar(name string, generatedConfig *generated.Config) (bool, str
 	return false, "", nil
 }
 
-func varReplaceFn(path, value string, generatedConfig *generated.Config) (interface{}, error) {
+func varReplaceFn(ctx context.Context, path, value string, generatedConfig *generated.Config) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return vars.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig) })
+	return vars.ParseString(value, func(v string) (string, error) { return resolveVar(ctx, v, generatedConfig) })
 }
 
-func resolveVar(varName string, generatedConfig *generated.Config) (string, error) {
+func resolveVar(ctx context.Context, varName string, generatedConfig *generated.Config) (string, error) {
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName, generatedConfig)
+	found, value, err := getPredefinedVar(ctx, varName)
 	if err != nil {
 		return "", err
 	} else if found {
@@ -232,13 +259,13 @@ func AskQuestion(variable *configs.Variable) string {
 	return survey.Question(params)
 }
 
-func loadConfigFromPath(path string, generatedConfig *generated.Config) (*latest.Config, error) {
+func loadConfigFromPath(ctx context.Context, path string, generatedConfig *generated.Config) (*latest.Config, error) {
 	yamlFileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := resolveVars(yamlFileContent, generatedConfig)
+	out, err := resolveVars(ctx, yamlFileContent, generatedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -257,13 +284,13 @@ func loadConfigFromPath(path string, generatedConfig *generated.Config) (*latest
 	return newConfig, nil
 }
 
-func loadConfigFromInterface(m interface{}, generatedConfig *generated.Config) (*latest.Config, error) {
+func loadConfigFromInterface(ctx context.Context, m interface{}, generatedConfig *generated.Config) (*latest.Config, error) {
 	yamlFileContent, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := resolveVars(yamlFileContent, generatedConfig)
+	out, err := resolveVars(ctx, yamlFileContent, generatedConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -314,24 +341,24 @@ func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, stri
 	return out, nil
 }
 
-func resolveVars(yamlFileContent []byte, generatedConfig *generated.Config) ([]byte, error) {
-	err := fillPredefinedVars(generatedConfig)
+func resolveVars(ctx context.Context, yamlFileContent []byte, generatedConfig *generated.Config) ([]byte, error) {
+	err := fillPredefinedVars(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return CustomResolveVars(yamlFileContent, varMatchFn, func(path, value string) (interface{}, error) { return varReplaceFn(path, value, generatedConfig) })
+	return CustomResolveVars(yamlFileContent, varMatchFn, func(path, value string) (interface{}, error) { return varReplaceFn(ctx, path, value, generatedConfig) })
 }
 
-func fillPredefinedVars(generatedConfig *generated.Config) error {
-	/*for varName, predefinedVariable := range PredefinedVars {
-		val, err := predefinedVariable.Fill(generatedConfig)
+func fillPredefinedVars(ctx context.Context) error {
+	for varName, predefinedVariable := range PredefinedVars {
+		val, err := predefinedVariable.Fill(ctx)
 		if err != nil {
 			return errors.Wrap(err, "fill predefined var "+varName)
 		}
 
 		predefinedVariable.Value = val
-	}*/
+	}
 
 	return nil
 }

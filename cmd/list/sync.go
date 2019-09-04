@@ -1,6 +1,8 @@
 package list
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -39,7 +41,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.Background())
 
 	if config.Dev.Sync == nil || len(*config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")

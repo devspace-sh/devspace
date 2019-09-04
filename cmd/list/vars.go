@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -44,7 +45,7 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Fill variables config
-	configutil.GetConfig()
+	configutil.GetConfig(context.Background())
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig()

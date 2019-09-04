@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/mgutz/ansi"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -152,7 +154,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get the config
-	config := cmd.loadConfig(generatedConfig)
+	config := cmd.loadConfig(client, generatedConfig)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -258,7 +260,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(generatedConfig)
+				config := cmd.loadConfig(client, generatedConfig)
 
 				// Trigger rebuild & redeploy
 				return cmd.buildAndDeploy(config, generatedConfig, client, args)
@@ -428,9 +430,12 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
+func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig()
+	config, err := configutil.GetConfigFromPath(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), ".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Adjust config for interactive mode
 	if cmd.Interactive != "" {

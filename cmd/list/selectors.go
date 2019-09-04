@@ -1,6 +1,8 @@
 package list
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -40,7 +42,7 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig()
+	config := configutil.GetConfig(context.Background())
 
 	if config.Dev.Selectors == nil || len(*config.Dev.Selectors) == 0 {
 		log.Info("No selectors are configured. Run `devspace add selector` to add new selector\n")

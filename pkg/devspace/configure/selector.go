@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -9,7 +10,7 @@ import (
 
 // AddSelector adds a selector
 func AddSelector(name string, labelSelector string, namespace string, save bool) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	var labelSelectorMap map[string]*string
 	var err error
@@ -58,7 +59,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 
 // RemoveSelector removes a service from the devspace
 func RemoveSelector(removeAll bool, name string, labelSelector string, namespace string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
