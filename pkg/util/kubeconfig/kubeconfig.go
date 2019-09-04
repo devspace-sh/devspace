@@ -18,6 +18,12 @@ var loadOnce sync.Once
 var loadOnceMutext sync.Mutex
 var loadedConfig clientcmd.ClientConfig
 
+//SetFakeConfig sets loadedConfig to FakeConfig !ONLY FOR TESTING!
+func SetFakeConfig(fake clientcmd.ClientConfig) {
+	loadOnce.Do(func() {})
+	loadedConfig = fake
+}
+
 // ConfigExists checks if a kube config exists
 func ConfigExists() bool {
 	return clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename() != ""
