@@ -51,7 +51,9 @@ var colors = []string{
 // LogMultiple will log multiple
 func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
 	// Get pods
+	log.StartWait("Find running pods...")
 	pods, err := client.GetRunningPodsWithImage(imageSelector, client.Namespace, time.Minute*2)
+	log.StopWait()
 	if err != nil {
 		return fmt.Errorf("Error finding images: %v", err)
 	}
@@ -113,7 +115,7 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 		case <-done:
 			return nil
 		case line := <-lines:
-			writer.Write([]byte(ansi.Color(fmt.Sprintf("[%s]", line.name), line.color) + " " + line.line))
+			writer.Write([]byte(ansi.Color(fmt.Sprintf("[%s]", line.name), line.color) + " " + line.line + "\n"))
 		}
 	}
 

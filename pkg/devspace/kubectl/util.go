@@ -163,20 +163,21 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 			return nil, err
 		}
 
-		if podList.Size() > 0 && len(podList.Items) > 0 {
+		if len(podList.Items) > 0 {
 			pods := []*k8sv1.Pod{}
 			wait := false
 
 		PodLoop:
 			for _, pod := range podList.Items {
-				podStatus := GetPodStatus(&pod)
+				currentPod := pod
+				podStatus := GetPodStatus(&currentPod)
 
 			Outer:
-				for _, container := range pod.Spec.Containers {
+				for _, container := range currentPod.Spec.Containers {
 					for _, imageName := range imageNames {
 						if imageName == container.Image {
 							if CriticalStatus[podStatus] {
-								return nil, fmt.Errorf("Pod '%s' cannot start (Status: %s)", pod.Name, podStatus)
+								return nil, fmt.Errorf("Pod '%s' cannot start (Status: %s)", currentPod.Name, podStatus)
 							} else if podStatus == "Completed" {
 								break Outer
 							} else if podStatus != "Running" {
@@ -184,7 +185,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 								break PodLoop
 							}
 
-							pods = append(pods, &pod)
+							pods = append(pods, &currentPod)
 							break Outer
 						}
 					}
