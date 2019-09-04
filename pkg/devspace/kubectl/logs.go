@@ -39,12 +39,12 @@ type logLine struct {
 }
 
 var colors = []string{
-	"red",
+	"blue",
 	"green",
 	"yellow",
-	"blue",
 	"magenta",
 	"cyan",
+	"red",
 	"white+b",
 }
 
