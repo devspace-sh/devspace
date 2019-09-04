@@ -144,7 +144,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Reset namespace cache
-		generatedConfig.LastContext = nil
+		generatedConfig.GetActive().LastContext = nil
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)

@@ -16,7 +16,6 @@ const DefaultConfigName = "default"
 type Config struct {
 	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
 	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
-	LastContext  *LastContextConfig      `yaml:"lastContext,omitempty"`
 }
 
 // LastContextConfig holds all the informations about the last used kubernetes context
@@ -31,6 +30,7 @@ type CacheConfig struct {
 	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
 	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
 	Vars         map[string]string           `yaml:"vars,omitempty"`
+	LastContext  *LastContextConfig          `yaml:"lastContext,omitempty"`
 }
 
 // ImageCache holds the cache related information about a certain image
