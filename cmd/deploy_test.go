@@ -53,6 +53,10 @@ func TestDeploy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -61,10 +65,6 @@ func TestDeploy(t *testing.T) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	defer func() {
@@ -78,6 +78,9 @@ func TestDeploy(t *testing.T) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
+
+	_, err = os.Open("doesn'tExist")
+	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 
 	testCases := []deployTestCase{
 		deployTestCase{
@@ -102,7 +105,7 @@ func TestDeploy(t *testing.T) {
 		deployTestCase{
 			name:          "No devspace.yaml",
 			fakeConfig:    &latest.Config{},
-			expectedPanic: "Loading config: open devspace.yaml: The system cannot find the file specified.",
+			expectedPanic: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
 		},
 		deployTestCase{
 			name: "generated.yaml is a dir",

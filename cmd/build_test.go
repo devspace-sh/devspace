@@ -49,6 +49,10 @@ func TestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -57,10 +61,6 @@ func TestBuild(t *testing.T) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	defer func() {
