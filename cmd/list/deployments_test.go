@@ -12,16 +12,48 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type customKubeConfig struct {
+	rawconfig      clientcmdapi.Config
+	rawConfigError error
+
+	clientConfig      *restclient.Config
+	clientConfigError error
+
+	namespace     string
+	namespaceBool bool
+	namespaceErr  error
+
+	configAccess clientcmd.ConfigAccess
+}
+
+func (config *customKubeConfig) RawConfig() (clientcmdapi.Config, error) {
+	return config.rawconfig, config.rawConfigError
+}
+func (config *customKubeConfig) Namespace() (string, bool, error) {
+	return config.namespace, config.namespaceBool, config.namespaceErr
+}
+func (config *customKubeConfig) ClientConfig() (*restclient.Config, error) {
+	return config.clientConfig, config.clientConfigError
+}
+func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
+	return config.configAccess
+}
 
 type listDeploymentsTestCase struct {
 	name string
 
 	fakeConfig           *latest.Config
+	fakeKubeConfig       clientcmd.ClientConfig
 	configsYamlContent   interface{}
 	generatedYamlContent interface{}
 	providerList         []*cloudlatest.Provider
@@ -117,6 +149,7 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	if testCase.generatedYamlContent != nil {
 		content, err := yaml.Marshal(testCase.generatedYamlContent)
