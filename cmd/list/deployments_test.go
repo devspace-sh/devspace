@@ -1,6 +1,7 @@
 package list
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime/debug"
@@ -70,9 +71,12 @@ func TestListDeployments(t *testing.T) {
 			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listDeploymentsTestCase{
-			name:          "Kubectl client can't be created",
-			fakeConfig:    &latest.Config{},
-			expectedPanic: "invalid configuration: no configuration has been provided",
+			name:       "Kubectl client can't be created",
+			fakeConfig: &latest.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawConfigError: fmt.Errorf("RawConfigError"),
+			},
+			expectedPanic: "RawConfigError",
 		},
 		/*listDeploymentsTestCase{
 			name:                 "Space can't be resumed",
