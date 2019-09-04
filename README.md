@@ -141,7 +141,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 ### Faster Interaction with Kubernetes
 - **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.  
   &raquo; Shows a "dropdown selector" for pods directly in the CLI when running one of these commands:
-  - `devspace enter` to open a terminal session **Fast, Real-Time Log Streaming** for all containers you deploy
+  - `devspace enter` to open a **Interactive Terminal Session**
   - `devspace logs` / `devspace logs -f` for **Fast, Real-Time Logs** (optionally streaming new logs)
   - `devspace sync` for quickly starting a **Bi-Directional, Real-Time File Synchronization** on demand 
 - **Automatic Issue Analysis** via `devspace analyze` reporting crashed containers, missing endpoints, scheduling errors, ...
