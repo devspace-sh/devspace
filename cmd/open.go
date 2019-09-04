@@ -293,7 +293,7 @@ func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain str
 		localPort = localPort + 8000
 	}
 
-	domain = "localhost:" + strconv.Itoa(localPort)
+	domain = "http://localhost:" + strconv.Itoa(localPort)
 
 	portMappings := []*latest.PortMapping{
 		&latest.PortMapping{
