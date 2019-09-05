@@ -28,13 +28,61 @@ func NewRaw() *Config {
 
 // Config defines the configuration
 type Config struct {
-	Version      string                  `yaml:"version"`
+	Version string `yaml:"version"`
+
+	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
+	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Dev          *DevConfig              `yaml:"dev,omitempty"`
+	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
+	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
+
+	Vars     []*Variable      `yaml:"vars,omitempty"`
+	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
+}
+
+// ProfileConfig defines a profile config
+type ProfileConfig struct {
+	Name    string         `yaml:"name"`
+	Replace *ReplaceConfig `yaml:"replaceConfig,omitempty"`
+	Patches []*PatchConfig `yaml:"patches,omitempty"`
+}
+
+// PatchConfig describes a config patch and how it should be applied
+type PatchConfig struct {
+	Operation string `yaml:"op"`
+	Path      string `yaml:"path"`
+	Value     string `yaml:"value"`
+}
+
+// ReplaceConfig defines a replace config that can override certain parts of the config completely
+type ReplaceConfig struct {
 	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Dev          *DevConfig              `yaml:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
 }
+
+// Variable describes the var definition
+type Variable struct {
+	Name              string          `yaml:"name"`
+	Source            *VariableSource `yaml:"source,omitempty"`
+	Options           []string        `yaml:"options,omitempty"`
+	Default           string          `yaml:"default,omitempty"`
+	Question          string          `yaml:"question,omitempty"`
+	ValidationPattern string          `yaml:"validationPattern,omitempty"`
+	ValidationMessage string          `yaml:"validationMessage,omitempty"`
+}
+
+// VariableSource is type of a variable source
+type VariableSource string
+
+// List of values that source can take
+const (
+	VariableSourceAll   VariableSource = "all"
+	VariableSourceEnv   VariableSource = "env"
+	VariableSourceInput VariableSource = "input"
+)
 
 // ImageConfig defines the image specification
 type ImageConfig struct {

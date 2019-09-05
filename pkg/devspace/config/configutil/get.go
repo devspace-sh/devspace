@@ -6,29 +6,18 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
-
-	yaml "gopkg.in/yaml.v2"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	configspkg "github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/mgutz/ansi"
 )
-
-// ConfigInterface defines the pattern of every config
-type ConfigInterface interface{}
-
-// LoadedConfig is the config that was loaded from the configs file
-var LoadedConfig string
 
 // Global config vars
 var config *latest.Config // merged config
@@ -73,9 +62,9 @@ func InitConfig() *latest.Config {
 	return config
 }
 
-// GetBaseConfig returns the config unmerged with potential overwrites
+// GetBaseConfig returns the config
 func GetBaseConfig(ctx context.Context) *latest.Config {
-	GetConfigWithoutDefaults(ctx, false)
+	GetConfigOnce(ctx, false)
 	ValidateOnce()
 
 	return config
@@ -83,151 +72,61 @@ func GetBaseConfig(ctx context.Context) *latest.Config {
 
 // GetConfig returns the config merged with all potential overwrite files
 func GetConfig(ctx context.Context) *latest.Config {
-	GetConfigWithoutDefaults(ctx, true)
+	GetConfigOnce(ctx, true)
 	ValidateOnce()
 
 	return config
 }
 
-func loadBaseConfigFromPath(ctx context.Context, basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configspkg.ConfigDefinition, error) {
-	var (
-		config = latest.New().(*latest.Config)
-		// configRaw        = latest.New().(*latest.Config)
-		configDefinition *configspkg.ConfigDefinition
-		// configPath       = filepath.Join(basePath, constants.DefaultConfigPath)
-		configsPath = filepath.Join(basePath, constants.DefaultConfigsPath)
-		varsPath    = filepath.Join(basePath, constants.DefaultVarsPath)
-	)
+func loadConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
+	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
-	// Check if configs.yaml exists
-	_, err := os.Stat(configsPath)
-	if err == nil {
-		configs := configspkg.Configs{}
-
-		// Get configs
-		err = LoadConfigs(&configs, configsPath)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Error loading %s: %v", configsPath, err)
-		}
-
-		// Check if active config exists
-		if _, ok := configs[loadConfig]; ok == false {
-			availableConfigs := make([]string, 0, len(configs))
-			for configName := range configs {
-				availableConfigs = append(availableConfigs, configName)
-			}
-			if loadConfig == generated.DefaultConfigName {
-				return nil, nil, fmt.Errorf("No config selected. Please select one of the following configs %v.\n Run '%s'", availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
-			}
-
-			return nil, nil, fmt.Errorf("Config %s couldn't be found. Please select one of the configs %v.\n Run '%s'", loadConfig, availableConfigs, ansi.Color("devspace use config CONFIG_NAME", "white+b"))
-		}
-
-		// Get real config definition
-		configDefinition = configs[loadConfig]
-		if configDefinition.Config == nil {
-			return nil, nil, fmt.Errorf("Config %s couldn't be found", loadConfig)
-		}
-
-		// Ask questions
-		if configDefinition.Vars != nil {
-			// Vars can be either of type []*configspkg.Variable or are a VarsWrapper
-			var vars []*configspkg.Variable
-			_, ok := configDefinition.Vars.([]interface{})
-			if ok {
-				vars = []*configspkg.Variable{}
-				err = util.Convert(configDefinition.Vars, &vars)
-				if err != nil {
-					return nil, nil, err
-				}
-			} else {
-				// It is a variable wrapper
-				wrapper := &configspkg.VarsWrapper{}
-				err = util.Convert(configDefinition.Vars, wrapper)
-				if err != nil {
-					return nil, nil, err
-				}
-
-				vars, err = loadVarsFromWrapper(basePath, wrapper, generatedConfig)
-				if err != nil {
-					return nil, nil, errors.Wrap(err, "load vars")
-				}
-			}
-
-			err = askQuestions(generatedConfig.GetActive(), vars)
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
-			}
-		}
-
-		// Load config
-		// configRaw, err = loadConfigFromWrapper(ctx, basePath, configDefinition.Config, generatedConfig)
-		// if err != nil {
-		//	return nil, nil, err
-		// }
-	} else {
-		_, err := os.Stat(varsPath)
+	// Check devspace.yaml
+	_, err := os.Stat(configPath)
+	if err != nil {
+		// Check for legacy devspace-configs.yaml
+		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
 		if err == nil {
-			vars := []*configspkg.Variable{}
-			yamlFileContent, err := ioutil.ReadFile(varsPath)
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error loading %s: %v", varsPath, err)
-			}
-
-			err = yaml.UnmarshalStrict(yamlFileContent, vars)
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error parsing %s: %v", varsPath, err)
-			}
-
-			// Ask questions
-			err = askQuestions(generatedConfig.GetActive(), vars)
-			if err != nil {
-				return nil, nil, fmt.Errorf("Error filling vars: %v", err)
-			}
+			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use the new config option 'configs' in 'devspace.yaml'")
 		}
 
-		// configRaw, err = loadConfigFromPath(ctx, configPath, generatedConfig)
-		//if err != nil {
-		//	return nil, nil, fmt.Errorf("Loading config: %v", err)
-		//}
+		return nil, fmt.Errorf("Couldn't find '%s': %v", err)
 	}
 
-	// Merge(&config, deepCopy(configRaw))
-
-	// Check if we should load overrides
-	if loadOverwrites {
-		if configDefinition != nil {
-			if configDefinition.Overrides != nil {
-				//for index, configWrapper := range *configDefinition.Overrides {
-				// overwriteConfig, err := loadConfigFromWrapper(ctx, ".", configWrapper, generatedConfig)
-				// if err != nil {
-				//	return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
-				//}
-
-				// Merge(&config, overwriteConfig)
-				// }
-
-				log.Infof("Loaded config %s from %s with %d overrides", loadConfig, constants.DefaultConfigsPath, len(*configDefinition.Overrides))
-			} else {
-				log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
-			}
-		} else {
-			log.Infof("Loaded config from %s", constants.DefaultConfigPath)
-		}
-	} else {
-		if configDefinition != nil {
-			log.Infof("Loaded config %s from %s", loadConfig, constants.DefaultConfigsPath)
-		} else {
-			log.Infof("Loaded config %s", constants.DefaultConfigPath)
-		}
+	fileContent, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, err
 	}
 
-	return config, configDefinition, nil
+	rawMap := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(fileContent, &rawMap)
+	if err != nil {
+		return nil, err
+	}
+
+	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ApplyReplace(loadedConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: PATCHES
+
+	return loadedConfig, nil
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(ctx context.Context, basePath string, loadConfig string, loadOverrides bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, error) {
-	config, _, err := loadBaseConfigFromPath(ctx, basePath, loadConfig, loadOverrides, generatedConfig, log)
+func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
+	// Check if we should load a specific config
+	if generatedConfig.ActiveProfile != "" && ctx.Value(constants.ProfileContextKey) == nil {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+	}
+
+	config, err := loadConfigFromPath(ctx, generatedConfig, basePath, log)
 	if err != nil {
 		return nil, err
 	}
@@ -240,32 +139,26 @@ func GetConfigFromPath(ctx context.Context, basePath string, loadConfig string, 
 	return config, nil
 }
 
-// GetConfigWithoutDefaults returns the config without setting the default values
-func GetConfigWithoutDefaults(ctx context.Context, loadOverwrites bool) *latest.Config {
+// GetConfigOnce loads the config globally once
+func GetConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
 	getConfigOnce.Do(func() {
-		var (
-			err              error
-			configDefinition *configspkg.ConfigDefinition
-		)
-
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
 			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
 
-		// Get config to load
-		LoadedConfig = generatedConfig.ActiveConfig
-
-		// Load base config
-		config, configDefinition, err = loadBaseConfigFromPath(ctx, ".", LoadedConfig, loadOverwrites, generatedConfig, log.GetInstance())
-		if err != nil {
-			log.Fatal(err)
+		// Check if we should load a specific config
+		if allowProfile && generatedConfig.ActiveProfile != "" && ctx.Value(constants.ProfileContextKey) == nil {
+			ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+		} else if !allowProfile {
+			ctx = context.WithValue(ctx, constants.ProfileContextKey, nil)
 		}
 
-		// Reset loaded config if there was no configs.yaml
-		if configDefinition == nil {
-			LoadedConfig = ""
+		// Load base config
+		config, err = loadConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		// Save generated config
@@ -357,36 +250,6 @@ func validate(config *latest.Config) error {
 				return fmt.Errorf("deployments[%d].kubectl.manifests is required", index)
 			}
 		}
-	}
-
-	return nil
-}
-
-func askQuestions(cache *generated.CacheConfig, vars []*configspkg.Variable) error {
-	for idx, variable := range vars {
-		if variable.Name == nil {
-			return fmt.Errorf("Name required for variable with index %d", idx)
-		}
-
-		isInEnv := os.Getenv(VarEnvPrefix+strings.ToUpper(*variable.Name)) != "" || os.Getenv(*variable.Name) != ""
-		if variable.Source != nil && *variable.Source == configspkg.VariableSourceEnv && isInEnv == false {
-			return fmt.Errorf("Couldn't find environment variable %s, but is needed for loading the config", *variable.Name)
-		}
-
-		// Check if variable is in environment
-		if variable.Source == nil || *variable.Source != configspkg.VariableSourceInput {
-			if isInEnv {
-				continue
-			}
-		}
-
-		// Is cached
-		if _, ok := cache.Vars[*variable.Name]; ok {
-			continue
-		}
-
-		// Ask question
-		cache.Vars[*variable.Name] = AskQuestion(variable)
 	}
 
 	return nil

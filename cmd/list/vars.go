@@ -13,9 +13,9 @@ import (
 type varsCmd struct{}
 
 func newVarsCmd() *cobra.Command {
-	cmd := &configsCmd{}
+	cmd := &varsCmd{}
 
-	configsCmd := &cobra.Command{
+	varsCmd := &cobra.Command{
 		Use:   "vars",
 		Short: "Lists the vars in the active config",
 		Long: `
@@ -30,11 +30,11 @@ values
 		Run:  cmd.RunListVars,
 	}
 
-	return configsCmd
+	return varsCmd
 }
 
 // RunListVars runs the list vars command logic
-func (cmd *configsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
+func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -54,8 +54,8 @@ func (cmd *configsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// No variable found
-	if generatedConfig.GetActive().Vars == nil || len(generatedConfig.GetActive().Vars) == 0 {
-		log.Infof("No variable found for config %s", generatedConfig.ActiveConfig)
+	if generatedConfig.Vars == nil || len(generatedConfig.Vars) == 0 {
+		log.Info("No variables found")
 		return
 	}
 
@@ -65,9 +65,9 @@ func (cmd *configsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 		"Value",
 	}
 
-	varRow := make([][]string, 0, len(generatedConfig.GetActive().Vars))
+	varRow := make([][]string, 0, len(generatedConfig.Vars))
 
-	for name, value := range generatedConfig.GetActive().Vars {
+	for name, value := range generatedConfig.Vars {
 		varRow = append(varRow, []string{
 			name,
 			fmt.Sprintf("%v", value),
