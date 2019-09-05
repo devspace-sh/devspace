@@ -37,12 +37,12 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 	}
 
 	retImageConfig := &latest.ImageConfig{
-		Image:            &imageName,
+		Image:            imageName,
 		CreatePullSecret: ptr.Bool(true),
 	}
 
 	if imageTag != "" {
-		retImageConfig.Tag = &imageTag
+		retImageConfig.Tag = imageTag
 	}
 	if dockerfile == "" {
 		retImageConfig.Build = &latest.BuildConfig{
@@ -50,10 +50,10 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 		}
 	} else {
 		if dockerfile != helper.DefaultDockerfilePath {
-			retImageConfig.Dockerfile = &dockerfile
+			retImageConfig.Dockerfile = dockerfile
 		}
 		if context != "" && context != helper.DefaultContextPath {
-			retImageConfig.Context = &context
+			retImageConfig.Context = context
 		}
 	}
 
@@ -161,14 +161,14 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Set image name
-	retImageConfig.Image = &imageName
+	retImageConfig.Image = imageName
 
 	// Set image specifics
 	if dockerfile != "" && dockerfile != helper.DefaultDockerfilePath {
-		retImageConfig.Dockerfile = &dockerfile
+		retImageConfig.Dockerfile = dockerfile
 	}
 	if context != "" && context != helper.DefaultContextPath {
-		retImageConfig.Context = &context
+		retImageConfig.Context = context
 	}
 
 	retImageConfig.CreatePullSecret = ptr.Bool(true)
@@ -333,17 +333,17 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 	config := configutil.GetBaseConfig(context.Background())
 
 	imageConfig := &v1.ImageConfig{
-		Image: &name,
+		Image: name,
 	}
 
 	if tag != "" {
-		imageConfig.Tag = &tag
+		imageConfig.Tag = tag
 	}
 	if contextPath != "" {
-		imageConfig.Context = &contextPath
+		imageConfig.Context = contextPath
 	}
 	if dockerfilePath != "" {
-		imageConfig.Dockerfile = &dockerfilePath
+		imageConfig.Dockerfile = dockerfilePath
 	}
 
 	if buildEngine == "docker" {
@@ -364,10 +364,10 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 
 	if config.Images == nil {
 		images := make(map[string]*v1.ImageConfig)
-		config.Images = &images
+		config.Images = images
 	}
 
-	(*config.Images)[nameInConfig] = imageConfig
+	config.Images[nameInConfig] = imageConfig
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
@@ -390,7 +390,7 @@ func RemoveImage(removeAll bool, names []string) error {
 	if !removeAll && config.Images != nil {
 
 	ImagesLoop:
-		for nameInConfig, imageConfig := range *config.Images {
+		for nameInConfig, imageConfig := range config.Images {
 			for _, deletionName := range names {
 				if deletionName == nameInConfig {
 					continue ImagesLoop
@@ -401,7 +401,7 @@ func RemoveImage(removeAll bool, names []string) error {
 		}
 	}
 
-	config.Images = &newImageList
+	config.Images = newImageList
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {

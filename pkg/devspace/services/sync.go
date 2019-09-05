@@ -60,11 +60,11 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 
 	syncDone := make(chan bool)
 	syncConfig := &latest.SyncConfig{
-		LocalSubPath:  &localPath,
-		ContainerPath: &containerPath,
+		LocalSubPath:  localPath,
+		ContainerPath: containerPath,
 	}
 	if len(exclude) > 0 {
-		syncConfig.ExcludePaths = &exclude
+		syncConfig.ExcludePaths = exclude
 	}
 
 	log.StartWait("Starting sync...")
@@ -93,8 +93,8 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 		return []*sync.Sync{}, nil
 	}
 
-	syncClients := make([]*sync.Sync, 0, len(*config.Dev.Sync))
-	for _, syncConfig := range *config.Dev.Sync {
+	syncClients := make([]*sync.Sync, 0, len(config.Dev.Sync))
+	for _, syncConfig := range config.Dev.Sync {
 		selector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
 				Selector:      syncConfig.Selector,
@@ -127,8 +127,8 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 		}
 
 		containerPath := "."
-		if syncConfig.ContainerPath != nil {
-			containerPath = *syncConfig.ContainerPath
+		if syncConfig.ContainerPath != "" {
+			containerPath = syncConfig.ContainerPath
 		}
 
 		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
@@ -153,13 +153,13 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 	}
 
 	localPath := "."
-	if syncConfig.LocalSubPath != nil {
-		localPath = *syncConfig.LocalSubPath
+	if syncConfig.LocalSubPath != "" {
+		localPath = syncConfig.LocalSubPath
 	}
 
 	containerPath := "."
-	if syncConfig.ContainerPath != nil {
-		containerPath = *syncConfig.ContainerPath
+	if syncConfig.ContainerPath != "" {
+		containerPath = syncConfig.ContainerPath
 	}
 
 	options := &sync.Options{
@@ -168,16 +168,16 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 		Log:      customLog,
 	}
 
-	if syncConfig.ExcludePaths != nil {
-		options.ExcludePaths = *syncConfig.ExcludePaths
+	if len(syncConfig.ExcludePaths) > 0 {
+		options.ExcludePaths = syncConfig.ExcludePaths
 	}
 
-	if syncConfig.DownloadExcludePaths != nil {
-		options.DownloadExcludePaths = *syncConfig.DownloadExcludePaths
+	if len(syncConfig.DownloadExcludePaths) > 0 {
+		options.DownloadExcludePaths = syncConfig.DownloadExcludePaths
 	}
 
-	if syncConfig.UploadExcludePaths != nil {
-		options.UploadExcludePaths = *syncConfig.UploadExcludePaths
+	if len(syncConfig.UploadExcludePaths) > 0 {
+		options.UploadExcludePaths = syncConfig.UploadExcludePaths
 	}
 
 	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {

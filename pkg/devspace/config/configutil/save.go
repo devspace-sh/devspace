@@ -50,13 +50,10 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 	}
 
 	// Erase default values
-	if clonedConfig.Dev != nil && *clonedConfig.Dev == (latest.DevConfig{}) {
-		clonedConfig.Dev = nil
-	}
-	if clonedConfig.Deployments != nil && len(*clonedConfig.Deployments) == 0 {
+	if clonedConfig.Deployments != nil && len(clonedConfig.Deployments) == 0 {
 		clonedConfig.Deployments = nil
 	}
-	if clonedConfig.Images != nil && len(*clonedConfig.Images) == 0 {
+	if clonedConfig.Images != nil && len(clonedConfig.Images) == 0 {
 		clonedConfig.Images = nil
 	}
 

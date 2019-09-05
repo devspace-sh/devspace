@@ -11,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -67,7 +66,7 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	}
 
 	// Update version to latest
-	latestConfigConverted.Version = ptr.String(latest.Version)
+	latestConfigConverted.Version = latest.Version
 
 	return latestConfigConverted, nil
 }

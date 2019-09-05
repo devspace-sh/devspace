@@ -19,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
@@ -205,10 +204,10 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if newImage != nil {
-		(*config.Images)["default"] = newImage
+		config.Images["default"] = newImage
 	}
 	if newDeployment != nil {
-		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
+		config.Deployments = []*latest.DeploymentConfig{newDeployment}
 	}
 
 	// Add the development configuration
@@ -274,8 +273,8 @@ func (cmd *InitCmd) addDevConfig() {
 	config := configutil.GetConfig(context.Background())
 
 	// Forward ports
-	if len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil && (*config.Deployments)[0].Component.Service != nil && (*config.Deployments)[0].Component.Service.Ports != nil && len(*(*config.Deployments)[0].Component.Service.Ports) > 0 {
-		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
+	if len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
+		servicePort := config.Deployments[0].Component.Service.Ports[0]
 
 		if servicePort.Port != nil {
 			localPortPtr := servicePort.Port
@@ -305,29 +304,29 @@ func (cmd *InitCmd) addDevConfig() {
 			})
 
 			// Add dev.ports config
-			config.Dev.Ports = &[]*latest.PortForwardingConfig{
+			config.Dev.Ports = []*latest.PortForwardingConfig{
 				{
-					LabelSelector: &map[string]*string{
-						"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+					LabelSelector: map[string]string{
+						"app.kubernetes.io/component": (config.Deployments)[0].Name,
 					},
-					PortMappings: &portMappings,
+					PortMappings: portMappings,
 				},
 			}
 
 			// Add dev.open config
-			config.Dev.Open = &[]*latest.OpenConfig{
+			config.Dev.Open = []*latest.OpenConfig{
 				&latest.OpenConfig{
-					URL: ptr.String("http://localhost:" + strconv.Itoa(*localPortPtr)),
+					URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
 				},
 			}
 		}
 	}
 
 	// Specify sync path
-	if len(*config.Images) > 0 && len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil {
-		if (*config.Images)["default"].Build == nil || (*config.Images)["default"].Build.Disabled == nil {
+	if len(config.Images) > 0 && len(config.Deployments) > 0 && (config.Deployments)[0].Component != nil {
+		if (config.Images)["default"].Build == nil || (config.Images)["default"].Build.Disabled == nil {
 			if config.Dev.Sync == nil {
-				config.Dev.Sync = &[]*latest.SyncConfig{}
+				config.Dev.Sync = []*latest.SyncConfig{}
 			}
 
 			dockerignore, err := ioutil.ReadFile(".dockerignore")
@@ -341,14 +340,14 @@ func (cmd *InitCmd) addDevConfig() {
 				}
 			}
 
-			syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-				LabelSelector: &map[string]*string{
-					"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
+				LabelSelector: map[string]string{
+					"app.kubernetes.io/component": config.Deployments[0].Name,
 				},
-				ExcludePaths: &excludePaths,
+				ExcludePaths: excludePaths,
 			})
 
-			config.Dev.Sync = &syncConfig
+			config.Dev.Sync = syncConfig
 		}
 	}
 }

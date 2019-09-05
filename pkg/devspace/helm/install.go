@@ -193,7 +193,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 // InstallChart installs the given chart by name under the releasename in the releasenamespace
 func (client *Client) InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	chart := helmConfig.Chart
-	chartPath, err := locateChartPath(client.Settings, ptr.ReverseString(chart.RepoURL), ptr.ReverseString(chart.Username), ptr.ReverseString(chart.Password), ptr.ReverseString(chart.Name), ptr.ReverseString(chart.Version), false, "", "", "", "")
+	chartPath, err := locateChartPath(client.Settings, chart.RepoURL, chart.Username, chart.Password, chart.Name, chart.Version, false, "", "", "", "")
 	if err != nil {
 		return nil, errors.Wrap(err, "locate chart path")
 	}

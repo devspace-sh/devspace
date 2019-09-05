@@ -48,7 +48,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 
 	// Load config
 	config := configutil.GetConfig(context.Background())
-	if config.Images == nil || len(*config.Images) == 0 {
+	if config.Images == nil || len(config.Images) == 0 {
 		log.Done("No images found in config to delete")
 		return
 	}
@@ -73,10 +73,10 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	defer log.StopWait()
 
 	// Delete all images
-	for _, imageConfig := range *config.Images {
-		log.StartWait("Deleting local image " + *imageConfig.Image)
+	for _, imageConfig := range config.Images {
+		log.StartWait("Deleting local image " + imageConfig.Image)
 
-		response, err := docker.DeleteImageByName(client, *imageConfig.Image, log.GetInstance())
+		response, err := docker.DeleteImageByName(client, imageConfig.Image, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -43,7 +43,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 	config := configutil.GetConfig(context.Background())
 
-	if config.Dev.Sync == nil || len(*config.Dev.Sync) == 0 {
+	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return
 	}
@@ -56,28 +56,28 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		"Excluded Paths",
 	}
 
-	syncPaths := make([][]string, 0, len(*config.Dev.Sync))
+	syncPaths := make([][]string, 0, len(config.Dev.Sync))
 
 	// Transform values into string arrays
-	for _, value := range *config.Dev.Sync {
+	for _, value := range config.Dev.Sync {
 		service := ""
 		selector := ""
 
-		if value.Selector != nil {
-			service = *value.Selector
+		if value.Selector != "" {
+			service = value.Selector
 		} else {
-			for k, v := range *value.LabelSelector {
+			for k, v := range value.LabelSelector {
 				if len(selector) > 0 {
 					selector += ", "
 				}
 
-				selector += k + "=" + *v
+				selector += k + "=" + v
 			}
 		}
 		excludedPaths := ""
 
 		if value.ExcludePaths != nil {
-			for _, v := range *value.ExcludePaths {
+			for _, v := range value.ExcludePaths {
 				if len(excludedPaths) > 0 {
 					excludedPaths += ", "
 				}
@@ -89,8 +89,8 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		syncPaths = append(syncPaths, []string{
 			service,
 			selector,
-			*value.LocalSubPath,
-			*value.ContainerPath,
+			value.LocalSubPath,
+			value.ContainerPath,
 			excludedPaths,
 		})
 	}

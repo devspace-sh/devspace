@@ -25,8 +25,8 @@ type DeployConfig struct {
 // New creates a new helm deployment client
 func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	tillerNamespace := kubeClient.Namespace
-	if deployConfig.Helm.TillerNamespace != nil && *deployConfig.Helm.TillerNamespace != "" {
-		tillerNamespace = *deployConfig.Helm.TillerNamespace
+	if deployConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = deployConfig.Helm.TillerNamespace
 	}
 
 	return &DeployConfig{
@@ -56,12 +56,12 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(*d.DeploymentConfig.Name, true)
+	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}
 
 	// Delete from cache
-	delete(cache.Deployments, *d.DeploymentConfig.Name)
+	delete(cache.Deployments, d.DeploymentConfig.Name)
 	return nil
 }

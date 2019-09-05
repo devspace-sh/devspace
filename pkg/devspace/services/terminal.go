@@ -69,9 +69,9 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter t
 func getCommand(config *latest.Config, args []string) []string {
 	var command []string
 
-	if config != nil && config.Dev != nil && config.Dev.Terminal != nil && config.Dev.Terminal.Command != nil && len(*config.Dev.Terminal.Command) > 0 {
-		for _, cmd := range *config.Dev.Terminal.Command {
-			command = append(command, *cmd)
+	if config != nil && config.Dev != nil && config.Dev.Terminal != nil && len(config.Dev.Terminal.Command) > 0 {
+		for _, cmd := range config.Dev.Terminal.Command {
+			command = append(command, cmd)
 		}
 	}
 

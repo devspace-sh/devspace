@@ -334,18 +334,11 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	// Build params
-	params := targetselector.CmdParameter{}
-	if cmd.Selector != "" {
-		params.Selector = &cmd.Selector
-	}
-	if cmd.Container != "" {
-		params.ContainerName = &cmd.Container
-	}
-	if cmd.LabelSelector != "" {
-		params.LabelSelector = &cmd.LabelSelector
-	}
-	if cmd.Namespace != "" {
-		params.Namespace = &cmd.Namespace
+	params := targetselector.CmdParameter{
+		Selector:      cmd.Selector,
+		ContainerName: cmd.Container,
+		LabelSelector: cmd.LabelSelector,
+		Namespace:     cmd.Namespace,
 	}
 
 	var imageSelector []string
@@ -378,10 +371,10 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	if config.Dev.Open != nil {
 		logFile := logutil.GetFileLogger("default")
 
-		for _, openConfig := range *config.Dev.Open {
-			if openConfig.URL != nil {
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
 				go func() {
-					err := openURL(*openConfig.URL, nil, "", logFile)
+					err := openURL(openConfig.URL, nil, "", logFile)
 					if err != nil {
 						// Use warn instead of fatal to prevent exit
 						logFile.Warn(err)
@@ -438,13 +431,13 @@ func GetPaths(config *latest.Config) []string {
 	// Add the deploy manifest paths
 	if config.Dev != nil && config.Dev.AutoReload != nil {
 		if config.Dev.AutoReload.Deployments != nil && config.Deployments != nil {
-			for _, deployName := range *config.Dev.AutoReload.Deployments {
-				for _, deployConf := range *config.Deployments {
-					if *deployName == *deployConf.Name {
-						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != nil {
-							_, err := os.Stat(*deployConf.Helm.Chart.Name)
+			for _, deployName := range config.Dev.AutoReload.Deployments {
+				for _, deployConf := range config.Deployments {
+					if deployName == deployConf.Name {
+						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != "" {
+							_, err := os.Stat(deployConf.Helm.Chart.Name)
 							if err == nil {
-								chartPath := *deployConf.Helm.Chart.Name
+								chartPath := deployConf.Helm.Chart.Name
 								if chartPath[len(chartPath)-1] != '/' {
 									chartPath += "/"
 								}
@@ -452,8 +445,8 @@ func GetPaths(config *latest.Config) []string {
 								paths = append(paths, chartPath+"**")
 							}
 						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
-							for _, manifestPath := range *deployConf.Kubectl.Manifests {
-								paths = append(paths, *manifestPath)
+							for _, manifestPath := range deployConf.Kubectl.Manifests {
+								paths = append(paths, manifestPath)
 							}
 						}
 					}
@@ -463,12 +456,12 @@ func GetPaths(config *latest.Config) []string {
 
 		// Add the dockerfile paths
 		if config.Dev.AutoReload.Images != nil && config.Images != nil {
-			for _, imageName := range *config.Dev.AutoReload.Images {
-				for imageConfName, imageConf := range *config.Images {
-					if *imageName == imageConfName {
+			for _, imageName := range config.Dev.AutoReload.Images {
+				for imageConfName, imageConf := range config.Images {
+					if imageName == imageConfName {
 						dockerfilePath := "./Dockerfile"
-						if imageConf.Dockerfile != nil {
-							dockerfilePath = *imageConf.Dockerfile
+						if imageConf.Dockerfile != "" {
+							dockerfilePath = imageConf.Dockerfile
 						}
 
 						paths = append(paths, dockerfilePath)
@@ -479,8 +472,8 @@ func GetPaths(config *latest.Config) []string {
 
 		// Add the additional paths
 		if config.Dev.AutoReload.Paths != nil {
-			for _, path := range *config.Dev.AutoReload.Paths {
-				paths = append(paths, *path)
+			for _, path := range config.Dev.AutoReload.Paths {
+				paths = append(paths, path)
 			}
 		}
 	}
@@ -504,10 +497,10 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 
 	// Adjust config for interactive mode
 	if cmd.Interactive != "" {
-		if config.Images == nil || len(*config.Images) == 0 {
+		if config.Images == nil || len(config.Images) == 0 {
 			log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
 		}
-		images := *config.Images
+		images := config.Images
 
 		if cmd.Interactive == interactiveDefaultPickerValue {
 			imageNames := make([]string, 0, len(images))
@@ -534,14 +527,14 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 		// Make sure dev.overrideImages section exists in config
 		if config.Dev.OverrideImages == nil {
 			imageOverrideConfig := []*latest.ImageOverrideConfig{}
-			config.Dev.OverrideImages = &imageOverrideConfig
+			config.Dev.OverrideImages = imageOverrideConfig
 		}
-		imageOverrideConfig := *config.Dev.OverrideImages
+		imageOverrideConfig := config.Dev.OverrideImages
 
 		// Entrypoint used for interactive mode
-		entrypointOverride := []*string{
-			ptr.String("sleep"),
-			ptr.String("999999"),
+		entrypointOverride := []string{
+			"sleep",
+			"999999",
 		}
 
 		// Set all entrypoint overrides for specified interactive images
@@ -553,13 +546,13 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 			}
 			imageOverrideConfig = append([]*latest.ImageOverrideConfig{
 				&latest.ImageOverrideConfig{
-					Name:       &imageName,
-					Entrypoint: &entrypointOverride,
+					Name:       imageName,
+					Entrypoint: entrypointOverride,
 				},
 			}, imageOverrideConfig...)
 			log.Infof("Interactive mode: override image %s with 'ENTRYPOINT [sleep, 999999]'", imageName)
 		}
-		config.Dev.OverrideImages = &imageOverrideConfig
+		config.Dev.OverrideImages = imageOverrideConfig
 
 		// Make sure dev.terminal section exists in config
 		if config.Dev.Terminal == nil {

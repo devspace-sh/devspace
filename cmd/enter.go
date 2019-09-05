@@ -101,21 +101,12 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build params
-	params := targetselector.CmdParameter{}
-	if cmd.Selector != "" {
-		params.Selector = &cmd.Selector
-	}
-	if cmd.Container != "" {
-		params.ContainerName = &cmd.Container
-	}
-	if cmd.LabelSelector != "" {
-		params.LabelSelector = &cmd.LabelSelector
-	}
-	if cmd.Namespace != "" {
-		params.Namespace = &cmd.Namespace
-	}
-	if cmd.Pod != "" {
-		params.PodName = &cmd.Pod
+	params := targetselector.CmdParameter{
+		Selector:      cmd.Selector,
+		ContainerName: cmd.Container,
+		LabelSelector: cmd.LabelSelector,
+		Namespace:     cmd.Namespace,
+		PodName:       cmd.Pod,
 	}
 	if cmd.Pick != false {
 		params.Pick = &cmd.Pick

@@ -24,7 +24,7 @@ import (
 
 // UpdateAll will update all dependencies if there are any
 func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool, log log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
 
@@ -38,7 +38,7 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 	}
 
 	// Resolve all dependencies
-	_, err = resolver.Resolve(context.Background(), *config.Dependencies, true)
+	_, err = resolver.Resolve(context.Background(), config.Dependencies, true)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
@@ -52,7 +52,7 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 
 // BuildAll will build all dependencies if there are any
 func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild bool, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 	}
 
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(context.Background(), *config.Dependencies, updateDependencies)
+	dependencies, err := resolver.Resolve(context.Background(), config.Dependencies, updateDependencies)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
@@ -98,7 +98,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 
 // DeployAll will deploy all dependencies if there are any
 func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy bool, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
 
@@ -109,7 +109,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 	}
 
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), *config.Dependencies, updateDependencies)
+	dependencies, err := resolver.Resolve(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), config.Dependencies, updateDependencies)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
@@ -145,7 +145,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 
 // PurgeAll purges all dependencies in reverse order
 func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic bool, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(*config.Dependencies) == 0 {
+	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
 
@@ -156,7 +156,7 @@ func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Cl
 	}
 
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), *config.Dependencies, false)
+	dependencies, err := resolver.Resolve(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), config.Dependencies, false)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
@@ -281,8 +281,8 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Recreate client if necessary
-	if d.DependencyConfig.Namespace != nil && *d.DependencyConfig.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext, *d.DependencyConfig.Namespace, false)
+	if d.DependencyConfig.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext, d.DependencyConfig.Namespace, false)
 		if err != nil {
 			return errors.Wrap(err, "create new client")
 		}
@@ -359,8 +359,8 @@ func (d *Dependency) Purge(client *kubectl.Client, log log.Logger) error {
 	}()
 
 	// Recreate client if necessary
-	if d.DependencyConfig.Namespace != nil && *d.DependencyConfig.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext, *d.DependencyConfig.Namespace, false)
+	if d.DependencyConfig.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext, d.DependencyConfig.Namespace, false)
 		if err != nil {
 			return errors.Wrap(err, "create new client")
 		}

@@ -28,10 +28,10 @@ type TargetSelector struct {
 	namespace string
 	pick      bool
 
-	labelSelector *string
+	labelSelector string
 	imageSelector []string
-	podName       *string
-	containerName *string
+	podName       string
+	containerName string
 
 	allowPick bool
 
@@ -70,8 +70,8 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 // GetPod retrieves a pod
 func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 	if t.pick == false {
-		if t.podName != nil {
-			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(*t.podName, metav1.GetOptions{})
+		if t.podName != "" {
+			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -91,8 +91,8 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 			if len(pods) > 0 {
 				return pods[0], nil
 			}
-		} else if t.labelSelector != nil {
-			pod, err := t.kubeClient.GetNewestRunningPod(*t.labelSelector, t.namespace, time.Second*120)
+		} else if t.labelSelector != "" {
+			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.namespace, time.Second*120)
 			if err != nil {
 				return nil, err
 			}
@@ -129,15 +129,15 @@ func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
 	if pod.Spec.Containers != nil && len(pod.Spec.Containers) == 1 {
 		return pod, &pod.Spec.Containers[0], nil
 	} else if pod.Spec.Containers != nil && len(pod.Spec.Containers) > 1 {
-		if t.pick == false && t.containerName != nil {
+		if t.pick == false && t.containerName != "" {
 			// Find container
 			for _, container := range pod.Spec.Containers {
-				if container.Name == *t.containerName {
+				if container.Name == t.containerName {
 					return pod, &container, nil
 				}
 			}
 
-			return nil, nil, fmt.Errorf("Couldn't find container %s in pod %s", *t.containerName, pod.Name)
+			return nil, nil, fmt.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
 		}
 
 		// Don't allow pick

@@ -17,9 +17,9 @@ import (
 // StartPortForwarding starts the port forwarding functionality
 func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev.Ports != nil {
-		portforwarder := make([]*portforward.PortForwarder, 0, len(*config.Dev.Ports))
+		portforwarder := make([]*portforward.PortForwarder, 0, len(config.Dev.Ports))
 
-		for portConfigIndex, portForwarding := range *config.Dev.Ports {
+		for portConfigIndex, portForwarding := range config.Dev.Ports {
 			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Selector:      portForwarding.Selector,
@@ -37,10 +37,10 @@ func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.
 			if err != nil {
 				return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
-				ports := make([]string, len(*portForwarding.PortMappings))
-				addresses := make([]string, len(*portForwarding.PortMappings))
+				ports := make([]string, len(portForwarding.PortMappings))
+				addresses := make([]string, len(portForwarding.PortMappings))
 
-				for index, value := range *portForwarding.PortMappings {
+				for index, value := range portForwarding.PortMappings {
 					if value.LocalPort == nil {
 						return nil, fmt.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
 					}
@@ -52,10 +52,10 @@ func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.
 					}
 
 					ports[index] = localPort + ":" + remotePort
-					if value.BindAddress == nil {
+					if value.BindAddress == "" {
 						addresses[index] = "127.0.0.1"
 					} else {
-						addresses[index] = *value.BindAddress
+						addresses[index] = value.BindAddress
 					}
 				}
 

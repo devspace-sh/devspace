@@ -61,18 +61,6 @@ func configExistsInPath(path string) bool {
 		return true
 	}
 
-	// Check old .devspace/config.yaml
-	_, err = os.Stat(filepath.Join(path, ".devspace", "config.yaml"))
-	if err == nil {
-		return true
-	}
-
-	// Check old .devspace/configs.yaml
-	_, err = os.Stat(filepath.Join(path, ".devspace", "configs.yaml"))
-	if err == nil {
-		return true
-	}
-
 	return false // Normal config file found
 }
 
@@ -103,12 +91,12 @@ func GetConfig(ctx context.Context) *latest.Config {
 
 func loadBaseConfigFromPath(ctx context.Context, basePath string, loadConfig string, loadOverwrites bool, generatedConfig *generated.Config, log log.Logger) (*latest.Config, *configspkg.ConfigDefinition, error) {
 	var (
-		config           = latest.New().(*latest.Config)
-		configRaw        = latest.New().(*latest.Config)
+		config = latest.New().(*latest.Config)
+		// configRaw        = latest.New().(*latest.Config)
 		configDefinition *configspkg.ConfigDefinition
-		configPath       = filepath.Join(basePath, constants.DefaultConfigPath)
-		configsPath      = filepath.Join(basePath, constants.DefaultConfigsPath)
-		varsPath         = filepath.Join(basePath, constants.DefaultVarsPath)
+		// configPath       = filepath.Join(basePath, constants.DefaultConfigPath)
+		configsPath = filepath.Join(basePath, constants.DefaultConfigsPath)
+		varsPath    = filepath.Join(basePath, constants.DefaultVarsPath)
 	)
 
 	// Check if configs.yaml exists
@@ -173,10 +161,10 @@ func loadBaseConfigFromPath(ctx context.Context, basePath string, loadConfig str
 		}
 
 		// Load config
-		configRaw, err = loadConfigFromWrapper(ctx, basePath, configDefinition.Config, generatedConfig)
-		if err != nil {
-			return nil, nil, err
-		}
+		// configRaw, err = loadConfigFromWrapper(ctx, basePath, configDefinition.Config, generatedConfig)
+		// if err != nil {
+		//	return nil, nil, err
+		// }
 	} else {
 		_, err := os.Stat(varsPath)
 		if err == nil {
@@ -198,26 +186,26 @@ func loadBaseConfigFromPath(ctx context.Context, basePath string, loadConfig str
 			}
 		}
 
-		configRaw, err = loadConfigFromPath(ctx, configPath, generatedConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Loading config: %v", err)
-		}
+		// configRaw, err = loadConfigFromPath(ctx, configPath, generatedConfig)
+		//if err != nil {
+		//	return nil, nil, fmt.Errorf("Loading config: %v", err)
+		//}
 	}
 
-	Merge(&config, deepCopy(configRaw))
+	// Merge(&config, deepCopy(configRaw))
 
 	// Check if we should load overrides
 	if loadOverwrites {
 		if configDefinition != nil {
 			if configDefinition.Overrides != nil {
-				for index, configWrapper := range *configDefinition.Overrides {
-					overwriteConfig, err := loadConfigFromWrapper(ctx, ".", configWrapper, generatedConfig)
-					if err != nil {
-						return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
-					}
+				//for index, configWrapper := range *configDefinition.Overrides {
+				// overwriteConfig, err := loadConfigFromWrapper(ctx, ".", configWrapper, generatedConfig)
+				// if err != nil {
+				//	return nil, nil, fmt.Errorf("Error loading override config at index %d: %v", index, err)
+				//}
 
-					Merge(&config, overwriteConfig)
-				}
+				// Merge(&config, overwriteConfig)
+				// }
 
 				log.Infof("Loaded config %s from %s with %d overrides", loadConfig, constants.DefaultConfigsPath, len(*configDefinition.Overrides))
 			} else {
@@ -303,16 +291,16 @@ func ValidateOnce() {
 func validate(config *latest.Config) error {
 	if config.Dev != nil {
 		if config.Dev.Selectors != nil {
-			for index, selectorConfig := range *config.Dev.Selectors {
-				if selectorConfig.Name == nil {
+			for index, selectorConfig := range config.Dev.Selectors {
+				if selectorConfig.Name == "" {
 					return fmt.Errorf("Error in config: Unnamed selector at index %d", index)
 				}
 			}
 		}
 
 		if config.Dev.Ports != nil {
-			for index, port := range *config.Dev.Ports {
-				if port.Selector == nil && port.LabelSelector == nil {
+			for index, port := range config.Dev.Ports {
+				if port.Selector == "" && port.LabelSelector == nil {
 					return fmt.Errorf("Error in config: selector and label selector are nil in port config at index %d", index)
 				}
 				if port.PortMappings == nil {
@@ -322,16 +310,16 @@ func validate(config *latest.Config) error {
 		}
 
 		if config.Dev.Sync != nil {
-			for index, sync := range *config.Dev.Sync {
-				if sync.Selector == nil && sync.LabelSelector == nil {
+			for index, sync := range config.Dev.Sync {
+				if sync.Selector == "" && sync.LabelSelector == nil {
 					return fmt.Errorf("Error in config: selector and label selector are nil in sync config at index %d", index)
 				}
 			}
 		}
 
 		if config.Dev.OverrideImages != nil {
-			for index, overrideImageConfig := range *config.Dev.OverrideImages {
-				if overrideImageConfig.Name == nil {
+			for index, overrideImageConfig := range config.Dev.OverrideImages {
+				if overrideImageConfig.Name == "" {
 					return fmt.Errorf("Error in config: Unnamed override image config at index %d", index)
 				}
 			}
@@ -339,30 +327,30 @@ func validate(config *latest.Config) error {
 	}
 
 	if config.Hooks != nil {
-		for index, hookConfig := range *config.Hooks {
-			if hookConfig.Command == nil {
+		for index, hookConfig := range config.Hooks {
+			if hookConfig.Command == "" {
 				return fmt.Errorf("hooks[%d].command is required", index)
 			}
 		}
 	}
 
 	if config.Images != nil {
-		for imageConfigName, imageConf := range *config.Images {
-			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == nil {
+		for imageConfigName, imageConf := range config.Images {
+			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
 				return fmt.Errorf("images.%s.build.custom.command is required", imageConfigName)
 			}
 		}
 	}
 
 	if config.Deployments != nil {
-		for index, deployConfig := range *config.Deployments {
-			if deployConfig.Name == nil {
+		for index, deployConfig := range config.Deployments {
+			if deployConfig.Name == "" {
 				return fmt.Errorf("deployments[%d].name is required", index)
 			}
 			if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
-				return fmt.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", *deployConfig.Name)
+				return fmt.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 			}
-			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == nil) {
+			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") {
 				return fmt.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
 			}
 			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
@@ -428,12 +416,6 @@ func SetDevSpaceRoot() (bool, error) {
 					return false, err
 				}
 
-				// Convert config if needed
-				err = convertDotDevSpaceConfigToDevSpaceYaml(cwd)
-				if err != nil {
-					return false, errors.Wrap(err, "convert devspace config")
-				}
-
 				// Notify user that we are not using the current working directory
 				if originalCwd != cwd {
 					log.Infof("Using devspace config in %s", filepath.ToSlash(cwd))
@@ -453,8 +435,8 @@ func SetDevSpaceRoot() (bool, error) {
 // GetSelector returns the service referenced by serviceName
 func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorConfig, error) {
 	if config.Dev.Selectors != nil {
-		for _, selector := range *config.Dev.Selectors {
-			if *selector.Name == selectorName {
+		for _, selector := range config.Dev.Selectors {
+			if selector.Name == selectorName {
 				return selector, nil
 			}
 		}

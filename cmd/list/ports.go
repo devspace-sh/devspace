@@ -44,7 +44,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 
 	config := configutil.GetConfig(context.Background())
 
-	if config.Dev.Ports == nil || len(*config.Dev.Ports) == 0 {
+	if config.Dev.Ports == nil || len(config.Dev.Ports) == 0 {
 		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return
 	}
@@ -55,28 +55,28 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		"Ports (Local:Remote)",
 	}
 
-	portForwards := make([][]string, 0, len(*config.Dev.Ports))
+	portForwards := make([][]string, 0, len(config.Dev.Ports))
 
 	// Transform values into string arrays
-	for _, value := range *config.Dev.Ports {
+	for _, value := range config.Dev.Ports {
 		service := ""
 		selector := ""
 
-		if value.Selector != nil {
-			service = *value.Selector
+		if value.Selector != "" {
+			service = value.Selector
 		} else {
-			for k, v := range *value.LabelSelector {
+			for k, v := range value.LabelSelector {
 				if len(selector) > 0 {
 					selector += ", "
 				}
 
-				selector += k + "=" + *v
+				selector += k + "=" + v
 			}
 		}
 
 		portMappings := ""
 		if value.PortMappings != nil {
-			for _, v := range *value.PortMappings {
+			for _, v := range value.PortMappings {
 				if len(portMappings) > 0 {
 					portMappings += ", "
 				}

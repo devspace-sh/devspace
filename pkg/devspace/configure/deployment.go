@@ -29,18 +29,18 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}
-		imageName = *imageConfig.Image
+		imageName = imageConfig.Image
 	} else {
 		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
 	}
 
 	// Prepare return deployment config
 	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: &imageName,
+					Image: imageName,
 				},
 			},
 		},
@@ -74,7 +74,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
-			Ports: &[]*latest.ServicePortConfig{
+			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
 				},
@@ -88,11 +88,11 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 // GetImageComponentDeployment returns a new deployment that deploys an image via a component
 func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: &imageName,
+					Image: imageName,
 				},
 			},
 		},
@@ -109,7 +109,7 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
-			Ports: &[]*latest.ServicePortConfig{
+			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
 				},
@@ -137,7 +137,7 @@ func GetPredefinedComponentDeployment(name, component string) (*latest.Deploymen
 	}
 
 	return &latest.DeploymentConfig{
-		Name:      &name,
+		Name:      name,
 		Component: template,
 	}, nil
 }
@@ -145,17 +145,17 @@ func GetPredefinedComponentDeployment(name, component string) (*latest.Deploymen
 // GetKubectlDeployment retruns a new kubectl deployment
 func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, error) {
 	splitted := strings.Split(manifests, ",")
-	splittedPointer := []*string{}
+	splittedPointer := []string{}
 
 	for _, s := range splitted {
 		trimmed := strings.TrimSpace(s)
-		splittedPointer = append(splittedPointer, &trimmed)
+		splittedPointer = append(splittedPointer, trimmed)
 	}
 
 	return &v1.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Kubectl: &v1.KubectlConfig{
-			Manifests: &splittedPointer,
+			Manifests: splittedPointer,
 		},
 	}, nil
 }
@@ -163,19 +163,19 @@ func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, err
 // GetHelmDeployment returns a new helm deployment
 func GetHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error) {
 	retDeploymentConfig := &v1.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Helm: &v1.HelmConfig{
 			Chart: &v1.ChartConfig{
-				Name: &chartName,
+				Name: chartName,
 			},
 		},
 	}
 
 	if chartRepo != "" {
-		retDeploymentConfig.Helm.Chart.RepoURL = &chartRepo
+		retDeploymentConfig.Helm.Chart.RepoURL = chartRepo
 	}
 	if chartVersion != "" {
-		retDeploymentConfig.Helm.Chart.Version = &chartVersion
+		retDeploymentConfig.Helm.Chart.Version = chartVersion
 	}
 
 	return retDeploymentConfig, nil
@@ -193,15 +193,15 @@ func RemoveDeployment(removeAll bool, name string) (bool, error) {
 	if config.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
 
-		for _, deployConfig := range *config.Deployments {
-			if removeAll == false && *deployConfig.Name != name {
+		for _, deployConfig := range config.Deployments {
+			if removeAll == false && deployConfig.Name != name {
 				newDeployments = append(newDeployments, deployConfig)
 			} else {
 				found = true
 			}
 		}
 
-		config.Deployments = &newDeployments
+		config.Deployments = newDeployments
 	}
 
 	err := configutil.SaveLoadedConfig()

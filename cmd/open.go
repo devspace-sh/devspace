@@ -21,7 +21,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"crypto/sha1"
@@ -316,23 +315,23 @@ func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain str
 			RemotePort: &servicePort,
 		},
 	}
-	labelSelector := map[string]*string{}
 
+	labelSelector := map[string]string{}
 	for key, value := range *serviceLabels {
-		labelSelector[key] = ptr.String(value)
+		labelSelector[key] = value
 	}
 
 	portforwardingConfig := []*latest.PortForwardingConfig{
 		&latest.PortForwardingConfig{
-			PortMappings:  &portMappings,
-			LabelSelector: &labelSelector,
+			PortMappings:  portMappings,
+			LabelSelector: labelSelector,
 		},
 	}
 
 	// start port-forwarding for localhost access
 	portForwarder, err := services.StartPortForwarding(&latest.Config{
 		Dev: &latest.DevConfig{
-			Ports: &portforwardingConfig,
+			Ports: portforwardingConfig,
 		},
 	}, client, log.GetInstance())
 	if err != nil {

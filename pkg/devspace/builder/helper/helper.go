@@ -28,29 +28,29 @@ type BuildHelper struct {
 	EngineName string
 	ImageName  string
 	ImageTag   string
-	Entrypoint *[]*string
+	Entrypoint []string
 
 	KubeClient *kubectl.Client
 }
 
 // BuildHelperInterface is the interface the build helper uses to build an image
 type BuildHelperInterface interface {
-	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint *[]*string, log log.Logger) error
+	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, log log.Logger) error
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
 func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
-		imageName                   = *imageConf.Image
+		imageName                   = imageConf.Image
 	)
 
 	// Check if we should overwrite entrypoint
-	var entrypoint *[]*string
+	var entrypoint []string
 	if isDev {
 		if config.Dev != nil && config.Dev.OverrideImages != nil {
-			for _, imageOverrideConfig := range *config.Dev.OverrideImages {
-				if *imageOverrideConfig.Name == imageConfigName {
+			for _, imageOverrideConfig := range config.Dev.OverrideImages {
+				if imageOverrideConfig.Name == imageConfigName {
 					entrypoint = imageOverrideConfig.Entrypoint
 					break
 				}
@@ -146,8 +146,8 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 	// Hash entrypoint
 	entrypointHash := ""
 	if b.Entrypoint != nil {
-		for _, str := range *b.Entrypoint {
-			entrypointHash += *str
+		for _, str := range b.Entrypoint {
+			entrypointHash += str
 		}
 
 		entrypointHash = hash.String(string(entrypointHash))

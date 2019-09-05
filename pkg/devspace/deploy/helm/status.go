@@ -27,7 +27,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	releases, err := d.Helm.ListReleases()
 	if err != nil {
 		return &deploy.StatusResult{
-			Name:   *d.DeploymentConfig.Name,
+			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",
 			Target: deployTargetStr,
 			Status: fmt.Sprintf("Error: %v", err),
@@ -36,7 +36,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 
 	if releases == nil || len(releases.Releases) == 0 {
 		return &deploy.StatusResult{
-			Name:   *d.DeploymentConfig.Name,
+			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",
 			Target: deployTargetStr,
 			Status: "Not deployed",
@@ -44,10 +44,10 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	}
 
 	for _, release := range releases.Releases {
-		if release.GetName() == *d.DeploymentConfig.Name {
+		if release.GetName() == d.DeploymentConfig.Name {
 			if release.Info.Status.Code.String() != "DEPLOYED" {
 				return &deploy.StatusResult{
-					Name:   *d.DeploymentConfig.Name,
+					Name:   d.DeploymentConfig.Name,
 					Type:   "Helm",
 					Target: deployTargetStr,
 					Status: "Status:" + release.Info.Status.Code.String(),
@@ -55,7 +55,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 			}
 
 			return &deploy.StatusResult{
-				Name:   *d.DeploymentConfig.Name,
+				Name:   d.DeploymentConfig.Name,
 				Type:   "Helm",
 				Target: deployTargetStr,
 				Status: "Deployed " + time.Since(time.Unix(release.Info.LastDeployed.Seconds, 0)).String() + " ago",
@@ -64,7 +64,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	}
 
 	return &deploy.StatusResult{
-		Name:   *d.DeploymentConfig.Name,
+		Name:   d.DeploymentConfig.Name,
 		Type:   "Helm",
 		Target: deployTargetStr,
 		Status: "Not deployed",
@@ -76,9 +76,9 @@ func (d *DeployConfig) getDeployTarget() string {
 		return "N/A"
 	}
 
-	retString := *d.DeploymentConfig.Helm.Chart.Name
-	if d.DeploymentConfig.Helm.Chart.Version != nil {
-		retString += " (" + *d.DeploymentConfig.Helm.Chart.Version + ")"
+	retString := d.DeploymentConfig.Helm.Chart.Name
+	if d.DeploymentConfig.Helm.Chart.Version != "" {
+		retString += " (" + d.DeploymentConfig.Helm.Chart.Version + ")"
 	}
 
 	return retString

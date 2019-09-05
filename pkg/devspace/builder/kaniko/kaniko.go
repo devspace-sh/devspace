@@ -54,9 +54,8 @@ const waitTimeout = 2 * time.Minute
 // NewBuilder creates a new kaniko.Builder instance
 func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
 	buildNamespace := kubeClient.Namespace
-
-	if imageConf.Build.Kaniko.Namespace != nil && *imageConf.Build.Kaniko.Namespace != "" {
-		buildNamespace = *imageConf.Build.Kaniko.Namespace
+	if imageConf.Build.Kaniko.Namespace != "" {
+		buildNamespace = imageConf.Build.Kaniko.Namespace
 	}
 
 	allowInsecurePush := false
@@ -65,13 +64,13 @@ func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kube
 	}
 
 	pullSecretName := ""
-	if imageConf.Build.Kaniko.PullSecret != nil {
-		pullSecretName = *imageConf.Build.Kaniko.PullSecret
+	if imageConf.Build.Kaniko.PullSecret != "" {
+		pullSecretName = imageConf.Build.Kaniko.PullSecret
 	}
 
 	builder := &Builder{
 		PullSecretName: pullSecretName,
-		FullImageName:  *imageConf.Image + ":" + imageTag,
+		FullImageName:  imageConf.Image + ":" + imageTag,
 		BuildNamespace: buildNamespace,
 
 		allowInsecureRegistry: allowInsecurePush,
@@ -131,12 +130,12 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
 	var err error
 
 	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
+	if entrypoint != nil && len(entrypoint) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint)
 		if err != nil {
 			return err
 		}
@@ -148,13 +147,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Kaniko != nil && b.helper.ImageConf.Build.Kaniko.Options != nil {
 		if b.helper.ImageConf.Build.Kaniko.Options.BuildArgs != nil {
-			options.BuildArgs = *b.helper.ImageConf.Build.Kaniko.Options.BuildArgs
+			options.BuildArgs = b.helper.ImageConf.Build.Kaniko.Options.BuildArgs
 		}
-		if b.helper.ImageConf.Build.Kaniko.Options.Target != nil {
-			options.Target = *b.helper.ImageConf.Build.Kaniko.Options.Target
+		if b.helper.ImageConf.Build.Kaniko.Options.Target != "" {
+			options.Target = b.helper.ImageConf.Build.Kaniko.Options.Target
 		}
-		if b.helper.ImageConf.Build.Kaniko.Options.Network != nil {
-			options.NetworkMode = *b.helper.ImageConf.Build.Kaniko.Options.Network
+		if b.helper.ImageConf.Build.Kaniko.Options.Network != "" {
+			options.NetworkMode = b.helper.ImageConf.Build.Kaniko.Options.Network
 		}
 	}
 
@@ -260,7 +259,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 		stdoutLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		err = services.StartLogsWithWriter(b.helper.Config, b.helper.KubeClient, targetselector.CmdParameter{PodName: &buildPod.Name, ContainerName: &buildPod.Spec.Containers[0].Name, Namespace: &buildPod.Namespace}, true, 100, log, stdoutLogger)
+		err = services.StartLogsWithWriter(b.helper.Config, b.helper.KubeClient, targetselector.CmdParameter{PodName: buildPod.Name, ContainerName: buildPod.Spec.Containers[0].Name, Namespace: buildPod.Namespace}, true, 100, log, stdoutLogger)
 		if err != nil {
 			return fmt.Errorf("Error during printling build logs: %v", err)
 		}
