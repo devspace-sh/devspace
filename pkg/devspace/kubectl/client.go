@@ -173,13 +173,14 @@ func (client *Client) PrintWarning(updateGenerated bool, log log.Logger) error {
 				log.StopWait()
 				log.WriteString("\n")
 			}
-		} else if updateGenerated && client.Namespace == metav1.NamespaceDefault {
-			log.WriteString("\n")
-			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted")
+		}
+
+		// Warn if using default namespace unless previous deployment was also to default namespace
+		if generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault && client.Namespace == metav1.NamespaceDefault {
+			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
 			log.StartWait("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			log.StopWait()
-			log.WriteString("\n")
 		}
 
 		// Update generated if we deploy the application
