@@ -90,7 +90,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 	// We skip pushing when it is the minikube client
 	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
-		if b.helper.KubeClient != nil && b.helper.KubeClient.IsMinikube() {
+		if b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
 			b.skipPush = true
 		}
 	}

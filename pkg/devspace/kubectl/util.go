@@ -23,6 +23,10 @@ import (
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
 const ClusterRoleBindingName = "devspace-user"
 
+const minikubeContext = "minikube"
+const dockerDesktopContext = "docker-desktop"
+const dockerForDesktopContext = "docker-for-desktop"
+
 // WaitStatus are the status to wait
 var WaitStatus = []string{
 	"ContainerCreating",
@@ -96,7 +100,7 @@ func (client *Client) EnsureDefaultNamespace(log log.Logger) error {
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
 func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
-	if client.IsMinikube() {
+	if client.IsLocalKubernetes() {
 		return nil
 	}
 
@@ -391,7 +395,7 @@ func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses
 	return fw, nil
 }
 
-// IsMinikube returns if the current context is minikube
-func (client *Client) IsMinikube() bool {
-	return client.CurrentContext == "minikube"
+// IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
+func (client *Client) IsLocalKubernetes() bool {
+	return client.CurrentContext == minikubeContext || client.CurrentContext == dockerDesktopContext || client.CurrentContext == dockerForDesktopContext
 }
