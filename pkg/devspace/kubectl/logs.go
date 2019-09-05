@@ -17,6 +17,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const k8sComponentLabel = "app.kubernetes.io/component"
+
 // ReadLogs reads the logs and returns a string
 func (client *Client) ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
 	readCloser, err := client.Logs(context.Background(), namespace, podName, containerName, lastContainerLog, tail, false)
@@ -72,6 +74,8 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 
 	var wg sync.WaitGroup
 
+	printInfo := true
+
 	// Loop over pods and open logs connection
 	for idx, pod := range pods {
 	Outer:
@@ -83,19 +87,29 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 						log.Warnf("Couldn't log %s/%s: %v", pod.Name, container.Name, err)
 					}
 
+					prefix := pod.Name
+					if componentLabel, ok := pod.Labels[k8sComponentLabel]; ok {
+						prefix = componentLabel
+					}
+
+					if printInfo {
+						log.Info("Starting log streaming for containers that use images defined in devspace.yaml\n")
+						printInfo = false
+					}
+
 					wg.Add(1)
-					go func(podName string, reader io.Reader, color string) {
+					go func(prefix string, reader io.Reader, color string) {
 						scanner := bufio.NewScanner(reader)
 						for scanner.Scan() {
 							lines <- &logLine{
 								line:  scanner.Text(),
-								name:  podName,
+								name:  prefix,
 								color: color,
 							}
 						}
 
 						wg.Done()
-					}(pod.Name, reader, colors[idx%len(colors)])
+					}(prefix, reader, colors[idx%len(colors)])
 					break Outer
 				}
 			}
