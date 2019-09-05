@@ -249,6 +249,7 @@ type DevConfig struct {
 	OverrideImages *[]*ImageOverrideConfig  `yaml:"overrideImages,omitempty"`
 	Terminal       *Terminal                `yaml:"terminal,omitempty"`
 	Ports          *[]*PortForwardingConfig `yaml:"ports,omitempty"`
+	Open           *[]*OpenConfig           `yaml:"open,omitempty"`
 	Sync           *[]*SyncConfig           `yaml:"sync,omitempty"`
 	AutoReload     *AutoReloadConfig        `yaml:"autoReload,omitempty"`
 	Selectors      *[]*SelectorConfig       `yaml:"selectors,omitempty"`
@@ -285,6 +286,11 @@ type PortMapping struct {
 	LocalPort   *int    `yaml:"port"`
 	RemotePort  *int    `yaml:"remotePort,omitempty"`
 	BindAddress *string `yaml:"bindAddress,omitempty"`
+}
+
+// OpenConfig defines what to open after services have been started
+type OpenConfig struct {
+	URL *string `yaml:"url,omitempty"`
 }
 
 // SyncConfig defines the paths for a SyncFolder

@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
@@ -303,12 +304,20 @@ func (cmd *InitCmd) addDevConfig() {
 				RemotePort: remotePortPtr,
 			})
 
+			// Add dev.ports config
 			config.Dev.Ports = &[]*latest.PortForwardingConfig{
 				{
 					LabelSelector: &map[string]*string{
 						"app.kubernetes.io/component": (*config.Deployments)[0].Name,
 					},
 					PortMappings: &portMappings,
+				},
+			}
+
+			// Add dev.open config
+			config.Dev.Open = &[]*latest.OpenConfig{
+				&latest.OpenConfig{
+					URL: ptr.String("http://localhost:" + strconv.Itoa(*localPortPtr)),
 				},
 			}
 		}

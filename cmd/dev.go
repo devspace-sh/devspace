@@ -26,6 +26,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
@@ -373,6 +374,23 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}
 	}
 
+	// Run dev.open configs
+	if config.Dev.Open != nil {
+		logFile := logutil.GetFileLogger("default")
+
+		for _, openConfig := range *config.Dev.Open {
+			if openConfig.URL != nil {
+				go func() {
+					err := openURL(*openConfig.URL, nil, "", logFile)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						logFile.Warn(err)
+					}
+				}()
+			}
+		}
+	}
+
 	// Log multiple pods
 	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
 	if err != nil {
@@ -390,20 +408,23 @@ func (cmd *DevCmd) validateFlags() {
 }
 
 func (cmd *DevCmd) fixInteractiveFlag() {
-	for i := 0; i < len(os.Args); i++ {
+	lenArgs := len(os.Args)
+	for i := 0; i < lenArgs; i++ {
 		arg := os.Args[i]
 
 		if arg == "-i" || arg == "--interactive" {
-			nextArg := os.Args[i+1]
-			// validate that nextArg is NOT another flag (= not starting with -)
-			if nextArg[0] != "-"[0] {
-				// use nextArg as value for interactive flag
-				if cmd.Interactive == interactiveDefaultPickerValue {
-					// replace default value
-					cmd.Interactive = nextArg
-				} else {
-					// append to other user-defined value
-					cmd.Interactive = cmd.Interactive + "," + nextArg
+			if i+1 < lenArgs {
+				nextArg := os.Args[i+1]
+				// validate that nextArg is NOT another flag (= not starting with -)
+				if nextArg[0] != "-"[0] {
+					// use nextArg as value for interactive flag
+					if cmd.Interactive == interactiveDefaultPickerValue {
+						// replace default value
+						cmd.Interactive = nextArg
+					} else {
+						// append to other user-defined value
+						cmd.Interactive = cmd.Interactive + "," + nextArg
+					}
 				}
 			}
 		}

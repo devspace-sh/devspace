@@ -243,6 +243,16 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		domain = "http://" + domain
 	}
 
+	err = openURL(domain, client, namespace, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.StopWait()
+	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
+}
+
+func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger) error {
 	// Loop and check if http code is != 502
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
@@ -253,32 +263,31 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	now := time.Now()
 	for time.Since(now) < time.Minute*4 {
 		// Check if domain is ready
-		resp, err := http.Get(domain)
+		resp, err := http.Get(url)
 		if err != nil {
-			log.Fatalf("Error making request to %s: %v", domain, err)
+			return errors.Errorf("Error making request to %s: %v", url, err)
 		} else if resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
-			open.Start(domain)
-			log.Donef("Successfully opened %s", domain)
-			return
+			open.Start(url)
+			log.Donef("Successfully opened %s", url)
+			return nil
 		}
 
-		// Analyze space for issues
-		report, err := analyze.CreateReport(client, namespace, false)
-		if err != nil {
-			log.Fatalf("Error analyzing space: %v", err)
-		}
-		if len(report) > 0 {
-			reportString := analyze.ReportToString(report)
-			log.WriteString(reportString)
-			log.Fatal("")
+		if kubectlClient != nil && analyzeNamespace != "" {
+			// Analyze space for issues
+			report, err := analyze.CreateReport(kubectlClient, analyzeNamespace, false)
+			if err != nil {
+				return errors.Errorf("Error analyzing space: %v", err)
+			}
+			if len(report) > 0 {
+				reportString := analyze.ReportToString(report)
+				log.WriteString(reportString)
+			}
 		}
 
 		time.Sleep(time.Second * 5)
 	}
-
-	log.StopWait()
-	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
+	return nil
 }
 
 func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain string) {
