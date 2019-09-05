@@ -551,10 +551,12 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 			if _, ok := images[imageName]; !ok {
 				log.Fatalf("Unable to find image '%s' in configuration", imageName)
 			}
-			imageOverrideConfig = append(imageOverrideConfig, &latest.ImageOverrideConfig{
-				Name:       &imageName,
-				Entrypoint: &entrypointOverride,
-			})
+			imageOverrideConfig = append([]*latest.ImageOverrideConfig{
+				&latest.ImageOverrideConfig{
+					Name:       &imageName,
+					Entrypoint: &entrypointOverride,
+				},
+			}, imageOverrideConfig...)
 			log.Infof("Interactive mode: override image %s with 'ENTRYPOINT [sleep, 999999]'", imageName)
 		}
 		config.Dev.OverrideImages = &imageOverrideConfig
