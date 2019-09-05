@@ -147,7 +147,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		},
 	},
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
-		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
+		ErrorMessage: fmt.Sprintf("You are not logged into DevSpace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
 		Fill: func(ctx context.Context) (*string, error) {
 			kubeContext, err := kubeconfig.GetCurrentContext()
 			if err != nil {
