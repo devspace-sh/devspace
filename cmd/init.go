@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,7 +25,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
+const gitIgnoreFile = ".gitignore"
+const dockerIgnoreFile = ".dockerignore"
+const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml/\n"
 
 const (
 	// Dockerfile not found options
@@ -201,6 +205,18 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Add devspace.yaml to .dockerignore
+		err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+
+	// Add .devspace/ to .gitignore
+	err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
+	if err != nil {
+		log.Warn(err)
 	}
 
 	if newImage != nil {
@@ -219,35 +235,37 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Config error: %v", err)
 	}
 
-	// Check if .gitignore exists
-	_, err = os.Stat(".gitignore")
+	log.WriteString("\n")
+	log.Done("Project successfully initialized")
+	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+}
+
+func appendToIgnoreFile(ignoreFile, content string) error {
+	// Check if ignoreFile exists
+	_, err := os.Stat(ignoreFile)
 	if os.IsNotExist(err) {
-		fsutil.WriteToFile([]byte(configGitignore), ".gitignore")
+		fsutil.WriteToFile([]byte(content), ignoreFile)
 	} else {
-		gitignoreContent, err := ioutil.ReadFile(".gitignore")
+		fileContent, err := ioutil.ReadFile(ignoreFile)
 		if err != nil {
-			log.Warnf("Error reading .gitignore: %v", err)
+			return fmt.Errorf("Error reading file %s: %v", ignoreFile, err)
 		} else {
-			gitignoreRegexp := regexp.MustCompile("(?ms)(^|[^!]).devspace/(\\n|$)")
-
-			if gitignoreRegexp.MatchString(string(gitignoreContent)) == false {
-				gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
+			// append only if not found in file content
+			if strings.Contains(string(fileContent), content) == false {
+				file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
 				if err != nil {
-					log.Warnf("Error writing to .gitignore: %v", err)
+					return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
 				} else {
-					defer gitignore.Close()
+					defer file.Close()
 
-					if _, err = gitignore.WriteString(configGitignore); err != nil {
-						log.Warnf("Error writing to .gitignore: %v", err)
+					if _, err = file.WriteString(content); err != nil {
+						return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
 					}
 				}
 			}
 		}
 	}
-
-	log.WriteString("\n")
-	log.Done("Project successfully initialized")
-	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+	return nil
 }
 
 func getDeploymentName() (string, error) {
