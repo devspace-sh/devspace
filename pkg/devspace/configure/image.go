@@ -118,7 +118,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
 			DefaultValue:      dockerUsername + "/" + imageName,
-			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
@@ -136,7 +136,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
-			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
@@ -260,7 +260,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 				break
 			}
 		} else if selectedRegistry == useDevSpaceRegistry {
-			return "", loginDevSpaceCloud(*cloudProvider)
+			return registryURL, loginDevSpaceCloud(*cloudProvider)
 		} else {
 			return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}

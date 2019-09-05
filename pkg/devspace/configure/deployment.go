@@ -3,6 +3,7 @@ package configure
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -16,21 +17,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+var imageNameCleaningRegex = regexp.MustCompile("[^a-z0-9]")
+
 // GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
 func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
 	if imageName == "" {
-		imageConfig, err = GetImageConfigFromDockerfile(config, name, dockerfile, context)
+		imageName = imageNameCleaningRegex.ReplaceAllString(strings.ToLower(name), "")
+		imageConfig, err = GetImageConfigFromDockerfile(config, imageName, dockerfile, context)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}
+		imageName = *imageConfig.Image
 	} else {
 		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
-	}
-
-	if imageName == "" {
-		imageName = *imageConfig.Image
 	}
 
 	// Prepare return deployment config
