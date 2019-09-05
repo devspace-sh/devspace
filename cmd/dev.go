@@ -77,7 +77,12 @@ Starts your project in development mode:
 2. Deploys the deployments via helm or kubectl
 3. Forwards container ports to the local computer
 4. Starts the sync client
-5. Enters the container shell
+5. Streams the logs of deployed containers
+
+Use Interactive Mode:
+- Use "devspace dev -i" for interactive mode (terminal)
+- Use "devspace dev -i image1,image2,..." to override
+  entrypoints for images1,image2,... and open terminal
 #######################################################`,
 		Run: cmd.Run,
 	}
@@ -135,6 +140,9 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Validate flags
 	cmd.validateFlags()
+
+	// Allows "-i value" instead of only accepting "-i=value"
+	cmd.fixInteractiveFlag()
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig()
@@ -378,6 +386,27 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 func (cmd *DevCmd) validateFlags() {
 	if cmd.SkipBuild && cmd.ForceBuild {
 		log.Fatal("Flags --skip-build & --force-build cannot be used together")
+	}
+}
+
+func (cmd *DevCmd) fixInteractiveFlag() {
+	for i := 0; i < len(os.Args); i++ {
+		arg := os.Args[i]
+
+		if arg == "-i" || arg == "--interactive" {
+			nextArg := os.Args[i+1]
+			// validate that nextArg is NOT another flag (= not starting with -)
+			if nextArg[0] != "-"[0] {
+				// use nextArg as value for interactive flag
+				if cmd.Interactive == interactiveDefaultPickerValue {
+					// replace default value
+					cmd.Interactive = nextArg
+				} else {
+					// append to other user-defined value
+					cmd.Interactive = cmd.Interactive + "," + nextArg
+				}
+			}
+		}
 	}
 }
 
