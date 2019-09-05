@@ -157,15 +157,19 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				kubeContext = ctx.Value(constants.KubeContextKey).(string)
 			}
 
-			_, providerName, err := kubeconfig.GetSpaceID(kubeContext)
-			if err != nil {
-				// use global provider config as fallback
-				providerName = cloudconfig.DevSpaceCloudProviderName
-			}
-
 			cloudConfigData, err := cloudconfig.ParseProviderConfig()
 			if err != nil {
 				return nil, nil
+			}
+
+			_, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			if err != nil {
+				// use global provider config as fallback
+				if cloudConfigData.Default != "" {
+					providerName = cloudConfigData.Default
+				} else {
+					providerName = cloudconfig.DevSpaceCloudProviderName
+				}
 			}
 
 			provider := cloudconfig.GetProvider(cloudConfigData, providerName)
