@@ -151,6 +151,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			openDomainOption + ingressControllerWarning,
 		},
 	})
+	log.WriteString("\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
@@ -208,11 +209,19 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				Rules: []v1beta1.IngressRule{
 					v1beta1.IngressRule{
 						Host: domain,
+						IngressRuleValue: v1beta1.IngressRuleValue{
+							HTTP: &v1beta1.HTTPIngressRuleValue{
+								Paths: []v1beta1.HTTPIngressPath{
+									v1beta1.HTTPIngressPath{
+										Backend: v1beta1.IngressBackend{
+											ServiceName: serviceName,
+											ServicePort: intstr.FromInt(servicePort),
+										},
+									},
+								},
+							},
+						},
 					},
-				},
-				Backend: &v1beta1.IngressBackend{
-					ServiceName: serviceName,
-					ServicePort: intstr.FromInt(servicePort),
 				},
 				TLS: []v1beta1.IngressTLS{
 					v1beta1.IngressTLS{
@@ -245,11 +254,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	err = openURL(domain, client, namespace, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
 	}
-
-	log.StopWait()
-	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
 }
 
 func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger) error {
