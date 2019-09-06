@@ -55,7 +55,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	logsCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
+	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 
@@ -79,7 +79,7 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

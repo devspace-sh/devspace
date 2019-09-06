@@ -59,7 +59,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	syncCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
 	syncCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
-	syncCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
+	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")
@@ -77,7 +77,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

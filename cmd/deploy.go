@@ -24,6 +24,7 @@ import (
 type DeployCmd struct {
 	Namespace   string
 	KubeContext string
+	Profile     string
 
 	DockerTarget string
 
@@ -66,6 +67,7 @@ devspace deploy --kube-context=deploy-context
 
 	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	deployCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
@@ -97,8 +99,14 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	// Get config with adjusted cluster config
+	ctx := context.Background()
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	}
+
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(ctx)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -110,13 +118,15 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(true, log.GetInstance())
+	err = client.PrintWarning(ctx, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+	// Add current kube context to context
+	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+
+	config := configutil.GetConfig(ctx)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

@@ -1,6 +1,8 @@
 package use
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 
@@ -81,7 +83,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(context.Background())
 	if err != nil {
 		log.Fatalf("Cannot load generated config: %v", err)
 	}

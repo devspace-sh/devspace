@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -63,7 +65,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Print warning
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -45,7 +45,7 @@ Execute a command or start a new terminal in your
 devspace:
 
 devspace enter
-devspace enter -p # Select pod to enter
+devspace enter --pick # Select pod to enter
 devspace enter bash
 devspace enter -s my-selector
 devspace enter -c my-container
@@ -64,7 +64,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
 	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
-	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
+	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return enterCmd
 }
@@ -83,7 +83,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

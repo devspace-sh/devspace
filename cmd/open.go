@@ -99,7 +99,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

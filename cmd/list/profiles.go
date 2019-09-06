@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -49,7 +50,7 @@ func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

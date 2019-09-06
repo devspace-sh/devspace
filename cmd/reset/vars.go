@@ -1,6 +1,8 @@
 package reset
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -45,7 +47,7 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(context.Background())
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}

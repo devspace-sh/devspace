@@ -1,6 +1,8 @@
 package use
 
 import (
+	contextpkg "context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -80,7 +82,7 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 
 		if configExists {
 			// Get generated config
-			generatedConfig, err := generated.LoadConfig()
+			generatedConfig, err := generated.LoadConfig(contextpkg.Background())
 			if err != nil {
 				log.Fatal(err)
 			}

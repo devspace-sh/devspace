@@ -233,7 +233,7 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config
-	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
+	dGeneratedConfig, err := generated.LoadConfigFromPath(ctx, filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}

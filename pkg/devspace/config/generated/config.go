@@ -1,19 +1,23 @@
 package generated
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // Config specifies the runtime config struct
 type Config struct {
-	ActiveProfile string                  `yaml:"activeProfile,omitempty"`
-	Vars          map[string]string       `yaml:"vars,omitempty"`
-	Profiles      map[string]*CacheConfig `yaml:"profiles,omitempty"`
+	OverrideProfile *string                 `yaml:"lastOverrideProfile,omitempty"`
+	ActiveProfile   string                  `yaml:"activeProfile,omitempty"`
+	Vars            map[string]string       `yaml:"vars,omitempty"`
+	Profiles        map[string]*CacheConfig `yaml:"profiles,omitempty"`
 }
 
 // LastContextConfig holds all the informations about the last used kubernetes context
@@ -69,26 +73,27 @@ func SetTestConfig(config *Config) {
 }
 
 // LoadConfig loads the config from the filesystem
-func LoadConfig() (*Config, error) {
+func LoadConfig(ctx context.Context) (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		loadedConfig, err = LoadConfigFromPath(ConfigPath)
+		loadedConfig, err = LoadConfigFromPath(ctx, ConfigPath)
 	})
 
 	return loadedConfig, err
 }
 
 // LoadConfigFromPath loads the generated config from a given path
-func LoadConfigFromPath(path string) (*Config, error) {
+func LoadConfigFromPath(ctx context.Context, path string) (*Config, error) {
 	var loadedConfig *Config
 
 	data, readErr := ioutil.ReadFile(path)
 	if readErr != nil {
 		loadedConfig = &Config{
-			ActiveProfile: "",
-			Profiles:      make(map[string]*CacheConfig),
-			Vars:          make(map[string]string),
+			OverrideProfile: nil,
+			ActiveProfile:   "",
+			Profiles:        make(map[string]*CacheConfig),
+			Vars:            make(map[string]string),
 		}
 	} else {
 		loadedConfig = &Config{}
@@ -103,6 +108,13 @@ func LoadConfigFromPath(path string) (*Config, error) {
 		if loadedConfig.Vars == nil {
 			loadedConfig.Vars = make(map[string]string)
 		}
+	}
+
+	// Set override profile
+	if ctx.Value(constants.ProfileContextKey) != nil && ctx.Value(constants.ProfileContextKey).(string) != "" {
+		loadedConfig.OverrideProfile = ptr.String(ctx.Value(constants.ProfileContextKey).(string))
+	} else {
+		loadedConfig.OverrideProfile = nil
 	}
 
 	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveProfile)
@@ -121,8 +133,13 @@ func NewCache() *CacheConfig {
 
 // GetActive returns the currently active devspace config
 func (config *Config) GetActive() *CacheConfig {
-	InitDevSpaceConfig(config, config.ActiveProfile)
-	return config.Profiles[config.ActiveProfile]
+	active := config.ActiveProfile
+	if config.OverrideProfile != nil {
+		active = *config.OverrideProfile
+	}
+
+	InitDevSpaceConfig(config, active)
+	return config.Profiles[active]
 }
 
 // GetImageCache returns the image cache if it exists and creates one if not

@@ -196,7 +196,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig(context.Background())
 		if err != nil {
 			log.Fatal(err)
 		}

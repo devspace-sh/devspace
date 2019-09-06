@@ -371,9 +371,9 @@ You can now:
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags                                                                                      |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `devspace dev`<br> Starts the development mode                      | `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and opens terminal)` <br> `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`                                |
-| `devspace enter`<br> Opens a terminal session for a container       | `-p • Pick a container instead of using the default one`                                             |
+| `devspace enter`<br> Opens a terminal session for a container       | `--pick • Pick a container instead of using the default one`                                             |
 | `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
-| `devspace logs` <br> Prints the logs of a container                 | `-p • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
+| `devspace logs` <br> Prints the logs of a container                 | `--pick • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
 | `devspace analyze` <br> Analyzes your deployments for issues        |                                                                                                      |
 
 </details>

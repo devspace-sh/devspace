@@ -102,7 +102,7 @@ func ReportToString(report []*ReportItem) string {
 	reportString := ""
 
 	if len(report) == 0 {
-		reportString += fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs -p", "white+b"))
+		reportString += fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs --pick", "white+b"))
 	} else {
 		reportString += "\n"
 

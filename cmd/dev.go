@@ -58,6 +58,7 @@ type DevCmd struct {
 
 	KubeContext string
 	Namespace   string
+	Profile     string
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -112,6 +113,7 @@ Use Interactive Mode:
 
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	devCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	devCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
@@ -137,8 +139,14 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	ctx := context.Background()
+	// Get config with adjusted cluster config
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	}
+
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(ctx)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -149,13 +157,16 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(true, log.GetInstance())
+	err = client.PrintWarning(ctx, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Add kube context to context
+	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+
 	// Get the config
-	config := cmd.loadConfig(client, generatedConfig)
+	config := cmd.loadConfig(ctx, client, generatedConfig)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -187,7 +198,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -196,7 +207,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
@@ -256,15 +267,15 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, generatedConfig, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(ctx, config, generatedConfig, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(client, generatedConfig)
+				config := cmd.loadConfig(ctx, client, generatedConfig)
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(config, generatedConfig, client, args)
+				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
 			}
 
 			return 0, err
@@ -274,7 +285,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
@@ -483,9 +494,12 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
-	ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+func (cmd *DevCmd) loadConfig(ctx context.Context, client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	} else {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+	}
 
 	// Get config with adjusted cluster config
 	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())

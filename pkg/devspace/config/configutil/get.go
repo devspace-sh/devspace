@@ -136,7 +136,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 func loadConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
 	getConfigOnce.Do(func() {
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig(ctx)
 		if err != nil {
 			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
