@@ -1,19 +1,18 @@
 package helm
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
 )
 
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
-	Kube kubernetes.Interface
+	Kube *kubectl.Client
 	Helm helm.Interface
 
 	TillerNamespace  string
@@ -24,17 +23,14 @@ type DeployConfig struct {
 }
 
 // New creates a new helm deployment client
-func New(config *latest.Config, kubectl kubernetes.Interface, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
-	tillerNamespace, err := configutil.GetDefaultNamespace(config)
-	if err != nil {
-		return nil, err
-	}
-	if deployConfig.Helm.TillerNamespace != nil && *deployConfig.Helm.TillerNamespace != "" {
-		tillerNamespace = *deployConfig.Helm.TillerNamespace
+func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+	tillerNamespace := kubeClient.Namespace
+	if deployConfig.Helm.TillerNamespace != "" {
+		tillerNamespace = deployConfig.Helm.TillerNamespace
 	}
 
 	return &DeployConfig{
-		Kube:             kubectl,
+		Kube:             kubeClient,
 		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
 		Log:              log,
@@ -54,18 +50,18 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		var err error
 
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
 		if err != nil {
 			return errors.Wrap(err, "new helm client")
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(*d.DeploymentConfig.Name, true)
+	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}
 
 	// Delete from cache
-	delete(cache.Deployments, *d.DeploymentConfig.Name)
+	delete(cache.Deployments, d.DeploymentConfig.Name)
 	return nil
 }

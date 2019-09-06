@@ -6,17 +6,16 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client kubernetes.Interface, namespace string, labelSelector *string, question *string) (*v1.Pod, error) {
+func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string) (*v1.Pod, error) {
 	if question == nil {
 		question = ptr.String(DefaultPodQuestion)
 	}
 
 	if labelSelector != nil {
-		podList, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: *labelSelector,
 		})
 		if err != nil {
@@ -61,7 +60,7 @@ func SelectPod(client kubernetes.Interface, namespace string, labelSelector *str
 		}
 	}
 
-	podList, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

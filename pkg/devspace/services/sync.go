@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -23,8 +24,6 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // SyncHelperBaseURL is the base url where to look for the sync helper
@@ -40,25 +39,15 @@ var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/rel
 const SyncHelperContainerPath = "/tmp/sync"
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
-	restConfig, err := kubectl.GetRestConfig(config)
-	if err != nil {
-		return errors.Wrap(err, "get kubernetes rest config")
-	}
-
-	client, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return errors.Wrap(err, "new kuberentes client")
-	}
-
-	targetSelector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
+func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
+	targetSelector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
-	}, true)
+	}, true, nil)
 	if err != nil {
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer(client)
+	pod, container, err := targetSelector.GetContainer()
 	if err != nil {
 		return err
 	}
@@ -72,15 +61,15 @@ func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdPara
 
 	syncDone := make(chan bool)
 	syncConfig := &latest.SyncConfig{
-		LocalSubPath:  &localPath,
-		ContainerPath: &containerPath,
+		LocalSubPath:  localPath,
+		ContainerPath: containerPath,
 	}
 	if len(exclude) > 0 {
-		syncConfig.ExcludePaths = &exclude
+		syncConfig.ExcludePaths = exclude
 	}
 
 	log.StartWait("Starting sync...")
-	syncClient, err := startSync(restConfig, pod, container.Name, syncConfig, verbose, syncDone, log)
+	syncClient, err := startSync(kubeClient, pod, container.Name, syncConfig, verbose, syncDone, log)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
@@ -100,44 +89,42 @@ func StartSyncFromCmd(config *latest.Config, cmdParameter targetselector.CmdPara
 }
 
 // StartSync starts the syncing functionality
-func StartSync(config *latest.Config, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
+func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeClient *kubectl.Client, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
 	if config.Dev.Sync == nil {
 		return []*sync.Sync{}, nil
 	}
 
-	restConfig, err := kubectl.GetRestConfig(config)
-	if err != nil {
-		return nil, errors.Wrap(err, "get rest config")
-	}
+	syncClients := make([]*sync.Sync, 0, len(config.Dev.Sync))
+	for _, syncConfig := range config.Dev.Sync {
+		var imageSelector []string
+		if syncConfig.ImageName != "" {
+			imageConfigCache := generatedConfig.GetActive().GetImageCache(syncConfig.ImageName)
+			if imageConfigCache.ImageName != "" {
+				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+			}
+		}
 
-	client, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "create new kubernetes client")
-	}
-
-	syncClients := make([]*sync.Sync, 0, len(*config.Dev.Sync))
-	for _, syncConfig := range *config.Dev.Sync {
-		selector, err := targetselector.NewTargetSelector(config, &targetselector.SelectorParameter{
+		selector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
 				Selector:      syncConfig.Selector,
 				Namespace:     syncConfig.Namespace,
 				LabelSelector: syncConfig.LabelSelector,
 				ContainerName: syncConfig.ContainerName,
 			},
-		}, false)
+		}, false, imageSelector)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating target selector: %v", err)
 		}
 
 		log.StartWait("Sync: Waiting for containers to start...")
-		pod, container, err := selector.GetContainer(client)
+		pod, container, err := selector.GetContainer()
 		log.StopWait()
 		if err != nil {
 			return nil, fmt.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
 		}
 
 		log.StartWait("Starting sync...")
-		syncClient, err := startSync(restConfig, pod, container.Name, syncConfig, verboseSync, nil, nil)
+		syncClient, err := startSync(kubeClient, pod, container.Name, syncConfig, verboseSync, nil, nil)
 		log.StopWait()
 		if err != nil {
 			return nil, errors.Wrap(err, "start sync")
@@ -149,8 +136,8 @@ func StartSync(config *latest.Config, verboseSync bool, log log.Logger) ([]*sync
 		}
 
 		containerPath := "."
-		if syncConfig.ContainerPath != nil {
-			containerPath = *syncConfig.ContainerPath
+		if syncConfig.ContainerPath != "" {
+			containerPath = syncConfig.ContainerPath
 		}
 
 		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
@@ -168,20 +155,20 @@ func StartSync(config *latest.Config, verboseSync bool, log log.Logger) ([]*sync
 	return syncClients, nil
 }
 
-func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog log.Logger) (*sync.Sync, error) {
-	err := injectSync(kubeconfig, pod, container)
+func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog log.Logger) (*sync.Sync, error) {
+	err := injectSync(kubeClient, pod, container)
 	if err != nil {
 		return nil, err
 	}
 
 	localPath := "."
-	if syncConfig.LocalSubPath != nil {
-		localPath = *syncConfig.LocalSubPath
+	if syncConfig.LocalSubPath != "" {
+		localPath = syncConfig.LocalSubPath
 	}
 
 	containerPath := "."
-	if syncConfig.ContainerPath != nil {
-		containerPath = *syncConfig.ContainerPath
+	if syncConfig.ContainerPath != "" {
+		containerPath = syncConfig.ContainerPath
 	}
 
 	options := &sync.Options{
@@ -190,16 +177,16 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 		Log:      customLog,
 	}
 
-	if syncConfig.ExcludePaths != nil {
-		options.ExcludePaths = *syncConfig.ExcludePaths
+	if len(syncConfig.ExcludePaths) > 0 {
+		options.ExcludePaths = syncConfig.ExcludePaths
 	}
 
-	if syncConfig.DownloadExcludePaths != nil {
-		options.DownloadExcludePaths = *syncConfig.DownloadExcludePaths
+	if len(syncConfig.DownloadExcludePaths) > 0 {
+		options.DownloadExcludePaths = syncConfig.DownloadExcludePaths
 	}
 
-	if syncConfig.UploadExcludePaths != nil {
-		options.UploadExcludePaths = *syncConfig.UploadExcludePaths
+	if len(syncConfig.UploadExcludePaths) > 0 {
+		options.UploadExcludePaths = syncConfig.UploadExcludePaths
 	}
 
 	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
@@ -232,7 +219,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(syncClient, kubeconfig, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
+	go startStream(syncClient, kubeClient, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {
@@ -258,7 +245,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(syncClient, kubeconfig, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+	go startStream(syncClient, kubeClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
 
 	err = syncClient.InitDownstream(downStdoutReader, downStdinWriter)
 	if err != nil {
@@ -268,7 +255,7 @@ func startSync(kubeconfig *rest.Config, pod *v1.Pod, container string, syncConfi
 	return syncClient, nil
 }
 
-func startStream(syncClient *sync.Sync, kubeconfig *rest.Config, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
+func startStream(syncClient *sync.Sync, kubeClient *kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
 	stderr, err := ioutil.TempFile("", "")
 	if err != nil {
 		log.Warnf("Couldn't create temp file for stream %s: %v", strings.Join(command, " "), err)
@@ -276,7 +263,7 @@ func startStream(syncClient *sync.Sync, kubeconfig *rest.Config, pod *v1.Pod, co
 	}
 	defer os.Remove(stderr.Name())
 
-	err = kubectl.ExecStream(kubeconfig, pod, container, command, false, reader, writer, stderr)
+	err = kubeClient.ExecStream(pod, container, command, false, reader, writer, stderr)
 	if err != nil {
 		stderr.Close()
 
@@ -290,7 +277,7 @@ func startStream(syncClient *sync.Sync, kubeconfig *rest.Config, pod *v1.Pod, co
 	}
 }
 
-func injectSync(kubeconfig *rest.Config, pod *v1.Pod, container string) error {
+func injectSync(kubeClient *kubectl.Client, pod *v1.Pod, container string) error {
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {
@@ -298,7 +285,7 @@ func injectSync(kubeconfig *rest.Config, pod *v1.Pod, container string) error {
 	}
 
 	// Check if sync is already in pod
-	stdout, _, err := kubectl.ExecBuffered(kubeconfig, pod, container, []string{"/tmp/sync", "--version"}, nil)
+	stdout, _, err := kubeClient.ExecBuffered(pod, container, []string{"/tmp/sync", "--version"}, nil)
 	if err != nil || version != string(stdout) {
 		homedir, err := homedir.Dir()
 		if err != nil {
@@ -315,7 +302,7 @@ func injectSync(kubeconfig *rest.Config, pod *v1.Pod, container string) error {
 		}
 
 		// Inject sync helper
-		err = injectSyncHelper(kubeconfig, pod, container, filepath)
+		err = injectSyncHelper(kubeClient, pod, container, filepath)
 		if err != nil {
 			return errors.Wrap(err, "inject sync helper")
 		}
@@ -385,7 +372,7 @@ func downloadFile(version string, filepath string) error {
 	return nil
 }
 
-func injectSyncHelper(kubeconfig *rest.Config, pod *v1.Pod, container string, filepath string) error {
+func injectSyncHelper(kubeClient *kubectl.Client, pod *v1.Pod, container string, filepath string) error {
 	// Compress the sync helper and then copy it to the container
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -398,7 +385,7 @@ func injectSyncHelper(kubeconfig *rest.Config, pod *v1.Pod, container string, fi
 	// Start reading on the other end
 	errChan := make(chan error)
 	go func() {
-		errChan <- kubectl.CopyFromReader(kubeconfig, pod, container, "/tmp", reader)
+		errChan <- kubeClient.CopyFromReader(pod, container, "/tmp", reader)
 	}()
 
 	// Use compression

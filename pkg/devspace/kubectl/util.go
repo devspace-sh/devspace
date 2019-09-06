@@ -9,16 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/kubernetes/pkg/util/node"
@@ -26,6 +22,36 @@ import (
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
 const ClusterRoleBindingName = "devspace-user"
+
+const minikubeContext = "minikube"
+const dockerDesktopContext = "docker-desktop"
+const dockerForDesktopContext = "docker-for-desktop"
+
+// WaitStatus are the status to wait
+var WaitStatus = []string{
+	"ContainerCreating",
+	"PodInitializing",
+	"Pending",
+	"Terminating",
+}
+
+// CriticalStatus container status
+var CriticalStatus = map[string]bool{
+	"Error":                      true,
+	"Unknown":                    true,
+	"ImagePullBackOff":           true,
+	"CrashLoopBackOff":           true,
+	"RunContainerError":          true,
+	"ErrImagePull":               true,
+	"CreateContainerConfigError": true,
+	"InvalidImageName":           true,
+}
+
+// OkayStatus container status
+var OkayStatus = map[string]bool{
+	"Completed": true,
+	"Running":   true,
+}
 
 var privateIPBlocks []*net.IPNet
 
@@ -56,39 +82,31 @@ func IsPrivateIP(ip net.IP) bool {
 }
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
-func EnsureDefaultNamespace(config *latest.Config, client kubernetes.Interface, log log.Logger) error {
-	defaultNamespace, err := configutil.GetDefaultNamespace(config)
+func (client *Client) EnsureDefaultNamespace(log log.Logger) error {
+	_, err := client.Client.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Error getting default namespace: %v", err)
-	}
+		// Create release namespace
+		_, err = client.Client.CoreV1().Namespaces().Create(&v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: client.Namespace,
+			},
+		})
 
-	if defaultNamespace != "default" {
-		_, err = client.CoreV1().Namespaces().Get(defaultNamespace, metav1.GetOptions{})
-		if err != nil {
-			log.Donef("Create namespace %s", defaultNamespace)
-
-			// Create release namespace
-			_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultNamespace,
-				},
-			})
-		}
+		log.Donef("Created namespace: %s", client.Namespace)
 	}
 
 	return err
 }
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
-func EnsureGoogleCloudClusterRoleBinding(config *latest.Config, client kubernetes.Interface, log log.Logger) error {
-	if minikube.IsMinikube(config) {
+func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
+	if client.IsLocalKubernetes() {
 		return nil
 	}
 
-	_, err := client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
+	_, err := client.Client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		clusterConfig, _ := GetRestConfig(config)
-		if clusterConfig.AuthProvider != nil && clusterConfig.AuthProvider.Name == "gcp" {
+		if client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
 
 			log.StartWait("Checking gcloud account")
@@ -124,7 +142,7 @@ func EnsureGoogleCloudClusterRoleBinding(config *latest.Config, client kubernete
 				},
 			}
 
-			_, err = client.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			_, err = client.Client.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
 			if err != nil {
 				return err
 			}
@@ -134,22 +152,73 @@ func EnsureGoogleCloudClusterRoleBinding(config *latest.Config, client kubernete
 	return nil
 }
 
-// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func GetNewestRunningPod(config *latest.Config, kubectl kubernetes.Interface, labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+// GetRunningPodsWithImage retrieves the running pods that have at least one of the specified image names
+func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
 	if namespace == "" {
-		defaultNamespace, err := configutil.GetDefaultNamespace(config)
-		if err != nil {
-			return nil, err
-		}
-
-		namespace = defaultNamespace
+		namespace = client.Namespace
 	}
 
 	waitingInterval := 1 * time.Second
 	for maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
-		podList, err := kubectl.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		if len(podList.Items) > 0 {
+			pods := []*k8sv1.Pod{}
+			wait := false
+
+		PodLoop:
+			for _, pod := range podList.Items {
+				currentPod := pod
+				podStatus := GetPodStatus(&currentPod)
+
+			Outer:
+				for _, container := range currentPod.Spec.Containers {
+					for _, imageName := range imageNames {
+						if imageName == container.Image {
+							if CriticalStatus[podStatus] {
+								return nil, fmt.Errorf("Pod '%s' cannot start (Status: %s)", currentPod.Name, podStatus)
+							} else if podStatus == "Completed" {
+								break Outer
+							} else if podStatus != "Running" {
+								wait = true
+								break PodLoop
+							}
+
+							pods = append(pods, &currentPod)
+							break Outer
+						}
+					}
+				}
+			}
+
+			if wait == false {
+				return pods, nil
+			}
+		}
+
+		time.Sleep(waitingInterval)
+		maxWaiting -= waitingInterval * 2
+	}
+
+	return nil, fmt.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
+}
+
+// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
+func (client *Client) GetNewestRunningPod(labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+	if namespace == "" {
+		namespace = client.Namespace
+	}
+
+	waitingInterval := 1 * time.Second
+	for maxWaiting > 0 {
+		time.Sleep(waitingInterval)
+
+		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
@@ -261,8 +330,12 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
-func GetPodsFromDeployment(kubectl kubernetes.Interface, deployment, namespace string) (*k8sv1.PodList, error) {
-	deploy, err := kubectl.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
+func (client *Client) GetPodsFromDeployment(deployment, namespace string) (*k8sv1.PodList, error) {
+	if namespace == "" {
+		namespace = client.Namespace
+	}
+
+	deploy, err := client.Client.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
 	// Deployment not there
 	if err != nil {
 		return nil, err
@@ -282,14 +355,14 @@ func GetPodsFromDeployment(kubectl kubernetes.Interface, deployment, namespace s
 		matchLabelString += k + "=" + v
 	}
 
-	return kubectl.CoreV1().Pods(namespace).List(metav1.ListOptions{
+	return client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
 		LabelSelector: matchLabelString,
 	})
 }
 
 // ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
-func ForwardPorts(config *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	fw, err := NewPortForwarder(config, kubectlClient, pod, ports, addresses, stopChan, readyChan)
+func (client *Client) ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+	fw, err := client.NewPortForwarder(pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
 	}
@@ -298,19 +371,14 @@ func ForwardPorts(config *latest.Config, kubectlClient kubernetes.Interface, pod
 }
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.Interface, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
-	config, err := GetRestConfig(devSpaceConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	execRequest := kubectlClient.CoreV1().RESTClient().Post().
+func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+	execRequest := client.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
 		SubResource("portforward")
 
-	transport, upgrader, err := GetUpgraderWrapper(config)
+	transport, upgrader, err := GetUpgraderWrapper(client.RestConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -325,4 +393,9 @@ func NewPortForwarder(devSpaceConfig *latest.Config, kubectlClient kubernetes.In
 	}
 
 	return fw, nil
+}
+
+// IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
+func (client *Client) IsLocalKubernetes() bool {
+	return client.CurrentContext == minikubeContext || client.CurrentContext == dockerDesktopContext || client.CurrentContext == dockerForDesktopContext
 }

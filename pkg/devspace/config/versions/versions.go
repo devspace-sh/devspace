@@ -1,26 +1,97 @@
 package versions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha1"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha2"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha3"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
+
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
-var versionLoader = map[string]config.New{
-	v1alpha1.Version: v1alpha1.New,
-	v1alpha2.Version: v1alpha2.New,
-	v1alpha3.Version: v1alpha3.New,
-	v1alpha4.Version: v1alpha4.New,
-	v1beta1.Version:  v1beta1.New,
-	latest.Version:   latest.New,
+type loader struct {
+	New       config.New
+	Variables config.Variables
+	Prepare   config.Prepare
+}
+
+var versionLoader = map[string]*loader{
+	v1alpha1.Version: &loader{New: v1alpha1.New},
+	v1alpha2.Version: &loader{New: v1alpha2.New},
+	v1alpha3.Version: &loader{New: v1alpha3.New},
+	v1alpha4.Version: &loader{New: v1alpha4.New},
+	v1beta1.Version:  &loader{New: v1beta1.New},
+	v1beta2.Version:  &loader{New: v1beta2.New},
+	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Prepare: latest.Prepare},
+}
+
+// Prepare prepares the config for variable loading
+func Prepare(ctx context.Context, data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	version, ok := data["version"].(string)
+	if ok == false {
+		// This is needed because overrides usually don't have versions
+		data["version"] = latest.Version
+		version = latest.Version
+	}
+
+	loader, ok := versionLoader[version]
+	if ok == false {
+		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+	}
+
+	prepareFunc := loader.Prepare
+	if prepareFunc == nil {
+		cloned := map[interface{}]interface{}{}
+		err := util.Convert(data, &cloned)
+		if err != nil {
+			return nil, err
+		}
+
+		return cloned, nil
+	}
+
+	return prepareFunc(ctx, data)
+}
+
+// ParseVariables parses only the variables from the config
+func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error) {
+	version, ok := data["version"].(string)
+	if ok == false {
+		// This is needed because overrides usually don't have versions
+		data["version"] = latest.Version
+		version = latest.Version
+	}
+
+	loader, ok := versionLoader[version]
+	if ok == false {
+		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+	}
+
+	variablesLoadFunc := loader.Variables
+	if variablesLoadFunc == nil {
+		return []*latest.Variable{}, nil
+	}
+
+	strippedData, err := variablesLoadFunc(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "loading variables")
+	}
+
+	config, err := Parse(strippedData)
+	if err != nil {
+		return nil, errors.Wrap(err, "loading vars")
+	}
+
+	return config.Vars, nil
 }
 
 // Parse parses the data into the latest config
@@ -32,10 +103,12 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 		version = latest.Version
 	}
 
-	versionLoadFunc, ok := versionLoader[version]
+	loader, ok := versionLoader[version]
 	if ok == false {
 		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
+
+	versionLoadFunc := loader.New
 
 	// Load config strict
 	latestConfig := versionLoadFunc()
@@ -65,7 +138,7 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	}
 
 	// Update version to latest
-	latestConfigConverted.Version = ptr.String(latest.Version)
+	latestConfigConverted.Version = latest.Version
 
 	return latestConfigConverted, nil
 }

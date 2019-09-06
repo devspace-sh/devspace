@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -15,6 +16,23 @@ import (
 
 // SpaceNameValidationRegEx is the sapace name validation regex
 var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
+
+// GetDefaultProviderName returns the default provider name
+func GetDefaultProviderName() (string, error) {
+	// Get provider configuration
+	providerConfig, err := config.ParseProviderConfig()
+	if err != nil {
+		return "", err
+	}
+
+	// Choose cloud provider
+	providerName := config.DevSpaceCloudProviderName
+	if providerConfig.Default != "" {
+		providerName = providerConfig.Default
+	}
+
+	return providerName, nil
+}
 
 // GetProvider returns the current specified cloud provider
 func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
@@ -73,7 +91,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 }
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
-func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, spaceID int, providerName string, setActive bool) error {
+func UpdateKubeConfig(contextName string, serviceAccount *latest.ServiceAccount, spaceID int, providerName string, setActive bool) error {
 	config, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return err
@@ -90,7 +108,7 @@ func UpdateKubeConfig(contextName string, serviceAccount *ServiceAccount, spaceI
 	authInfo := api.NewAuthInfo()
 	authInfo.Exec = &api.ExecConfig{
 		APIVersion: "client.authentication.k8s.io/v1alpha1",
-		Command:    "devspace",
+		Command:    kubeconfig.AuthCommand,
 		Args:       []string{"use", "space", "--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token"},
 	}
 

@@ -51,7 +51,7 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Clear the vars map
-	generatedConfig.GetActive().Vars = map[string]string{}
+	generatedConfig.Vars = map[string]string{}
 
 	// Save the config
 	err = generated.SaveConfig(generatedConfig)
@@ -59,5 +59,5 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving config: %v", err)
 	}
 
-	log.Donef("Successfully deleted all variables in config %s", generatedConfig.ActiveConfig)
+	log.Donef("Successfully deleted all variables")
 }

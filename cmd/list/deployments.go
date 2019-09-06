@@ -1,9 +1,10 @@
 package list
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -52,52 +53,55 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		"STATUS",
 	}
 
-	config := configutil.GetConfig()
-
-	generatedConfig, err := generated.LoadConfig()
+	// Create new kube client
+	client, err := kubectl.NewDefaultClient()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Show warning if the old kube context was different
+	err = client.PrintWarning(false, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get config with adjusted cluster config
+	config := configutil.GetConfig(context.Background())
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(config, generatedConfig, true, log.GetInstance())
+	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	kubectl, err := kubectl.NewClient(config)
-	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %s", err.Error())
 	}
 
 	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
+		for _, deployConfig := range config.Deployments {
 			var deployClient deploy.Interface
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployKubectl.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = deployHelm.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployHelm.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
-				deployClient, err = deployComponent.New(config, kubectl, deployConfig, log.GetInstance())
+				deployClient, err = deployComponent.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create component deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create component deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			}
 
 			status, err := deployClient.Status()
 			if err != nil {
-				log.Warnf("Error retrieving status for deployment %s: %v", *deployConfig.Name, err)
+				log.Warnf("Error retrieving status for deployment %s: %v", deployConfig.Name, err)
 			}
 
 			values = append(values, []string{

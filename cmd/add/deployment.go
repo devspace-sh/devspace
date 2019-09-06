@@ -1,6 +1,7 @@
 package add
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -93,15 +94,15 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
-			if *deployConfig.Name == deploymentName {
+		for _, deployConfig := range config.Deployments {
+			if deployConfig.Name == deploymentName {
 				log.Fatalf("Deployment %s already exists", deploymentName)
 			}
 		}
 	} else {
-		config.Deployments = &[]*latest.DeploymentConfig{}
+		config.Deployments = []*latest.DeploymentConfig{}
 	}
 
 	var newDeployment *latest.DeploymentConfig
@@ -132,7 +133,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 
 	// Add namespace if defined
 	if cmd.Namespace != "" {
-		newDeployment.Namespace = &cmd.Namespace
+		newDeployment.Namespace = cmd.Namespace
 	}
 
 	// Restore vars in config
@@ -147,8 +148,8 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 
 		// First check if image already exists in another configuration
 		if clonedConfig.Images != nil {
-			for _, imageConfig := range *clonedConfig.Images {
-				if *imageConfig.Image == *newImage.Image {
+			for _, imageConfig := range clonedConfig.Images {
+				if imageConfig.Image == newImage.Image {
 					imageAlreadyExists = true
 					break
 				}
@@ -163,7 +164,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 			// Check if image name exits
 			if clonedConfig.Images != nil {
 				for i := 0; true; i++ {
-					if _, ok := (*clonedConfig.Images)[imageName]; ok {
+					if _, ok := (clonedConfig.Images)[imageName]; ok {
 						if i == 0 {
 							imageName = imageName + "-" + strconv.Itoa(i)
 						} else {
@@ -176,19 +177,19 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 					break
 				}
 			} else {
-				clonedConfig.Images = &map[string]*latest.ImageConfig{}
+				clonedConfig.Images = map[string]*latest.ImageConfig{}
 			}
 
-			(*clonedConfig.Images)[imageName] = newImage
+			(clonedConfig.Images)[imageName] = newImage
 		}
 	}
 
 	// Prepend deployment
 	if clonedConfig.Deployments == nil {
-		clonedConfig.Deployments = &[]*latest.DeploymentConfig{}
+		clonedConfig.Deployments = []*latest.DeploymentConfig{}
 	}
 
-	(*clonedConfig.Deployments) = append([]*latest.DeploymentConfig{newDeployment}, (*clonedConfig.Deployments)...)
+	clonedConfig.Deployments = append([]*latest.DeploymentConfig{newDeployment}, clonedConfig.Deployments...)
 
 	// Save config
 	err = configutil.SaveConfig(clonedConfig)

@@ -16,8 +16,6 @@ import (
 	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/repo"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	homedir "github.com/mitchellh/go-homedir"
@@ -42,7 +40,7 @@ type Client struct {
 	Namespace string
 
 	helm    k8shelm.Interface
-	kubectl kubernetes.Interface
+	kubectl *kubectl.Client
 
 	config *latest.Config
 }
@@ -51,7 +49,7 @@ var helmClientsMutex sync.Mutex
 var helmClients = map[string]*Client{}
 
 // NewClient creates a new helm client
-func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func NewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	helmClientsMutex.Lock()
 	defer helmClientsMutex.Unlock()
 
@@ -59,7 +57,7 @@ func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, up
 		return client, nil
 	}
 
-	client, err := createNewClient(config, tillerNamespace, log, upgradeTiller)
+	client, err := createNewClient(config, kubeClient, tillerNamespace, log, upgradeTiller)
 	if err != nil {
 		return nil, err
 	}
@@ -68,21 +66,9 @@ func NewClient(config *latest.Config, tillerNamespace string, log log.Logger, up
 	return client, nil
 }
 
-func createNewClient(config *latest.Config, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
-	// Get kube config
-	kubeconfig, err := kubectl.GetRestConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create client from config
-	kubectlClient, err := kubernetes.NewForConfig(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
+func createNewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	// Create tiller if necessary
-	err = ensureTiller(config, kubectlClient, tillerNamespace, upgradeTiller, log)
+	err := ensureTiller(config, kubeClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +85,7 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 	for true {
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
-			tunnel, err = portforwarder.New(tillerNamespace, kubectlClient, kubeconfig)
+			tunnel, err = portforwarder.New(tillerNamespace, kubeClient.Client, kubeClient.RestConfig)
 			if err == nil && tunnel != nil {
 				break
 			}
@@ -135,10 +121,10 @@ func createNewClient(config *latest.Config, tillerNamespace string, log log.Logg
 
 	log.StopWait()
 
-	return create(config, tillerNamespace, helmClient, kubectlClient, log)
+	return create(config, tillerNamespace, helmClient, kubeClient, log)
 }
 
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubectlClient kubernetes.Interface, log log.Logger) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient *kubectl.Client, log log.Logger) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -167,7 +153,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 		},
 		Namespace: tillerNamespace,
 		helm:      helmClient,
-		kubectl:   kubectlClient,
+		kubectl:   kubeClient,
 		config:    config,
 	}
 

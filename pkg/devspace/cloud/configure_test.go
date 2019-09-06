@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
@@ -18,7 +19,7 @@ func TestGetKubeContextNameFromSpace(t *testing.T) {
 }
 
 func TestUpdateKubeConfig(t *testing.T) {
-	err := UpdateKubeConfig("", &ServiceAccount{CaCert: "Undecodable"}, 1, "app.devspace.cloud", false)
+	err := UpdateKubeConfig("", &latest.ServiceAccount{CaCert: "Undecodable"}, 1, "app.devspace.cloud", false)
 	assert.Error(t, err, "illegal base64 data at input byte 8", "No or wrong error when trying to update kube config with an undecodable cacert in the serviceaccount")
 
 	dir, err := ioutil.TempDir("", "test")
@@ -58,7 +59,7 @@ func TestUpdateKubeConfig(t *testing.T) {
 		}
 	}()
 
-	err = UpdateKubeConfig("someContext", &ServiceAccount{
+	err = UpdateKubeConfig("someContext", &latest.ServiceAccount{
 		CaCert:    "",
 		Namespace: "someNamespace",
 		Server:    "someServer",

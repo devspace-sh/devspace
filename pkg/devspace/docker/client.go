@@ -9,21 +9,24 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/minikube"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 )
 
-// NewClient creates a new docker client
-func NewClient(config *latest.Config, preferMinikube bool, log log.Logger) (client.CommonAPIClient, error) {
+// NewClient retrieves a new docker client
+func NewClient(log log.Logger) (client.CommonAPIClient, error) {
+	return NewClientWithMinikube("", false, log)
+}
+
+// NewClientWithMinikube creates a new docker client with optionally from the minikube vm
+func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (client.CommonAPIClient, error) {
 	var cli client.CommonAPIClient
 	var err error
 
 	if preferMinikube {
-		cli, err = newDockerClientFromMinikube(config)
+		cli, err = newDockerClientFromMinikube(currentKubeContext)
 	}
 	if preferMinikube == false || err != nil {
 		cli, err = newDockerClientFromEnvironment()
@@ -60,8 +63,8 @@ func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	return cli, nil
 }
 
-func newDockerClientFromMinikube(config *latest.Config) (client.CommonAPIClient, error) {
-	if minikube.IsMinikube(config) == false {
+func newDockerClientFromMinikube(currentKubeContext string) (client.CommonAPIClient, error) {
+	if currentKubeContext != "minikube" {
 		return nil, errors.New("Cluster is not a minikube cluster")
 	}
 

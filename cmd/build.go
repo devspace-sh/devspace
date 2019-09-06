@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -72,7 +72,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get the config
-	config := cmd.loadConfig(generatedConfig)
+	config := configutil.GetConfig(context.Background())
 
 	// Dependencies
 	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, log.GetInstance())
@@ -101,20 +101,4 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		log.Info("No images to rebuild. Run with -b to force rebuilding")
 	}
-}
-
-func (cmd *BuildCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
-	}
-
-	return config
 }

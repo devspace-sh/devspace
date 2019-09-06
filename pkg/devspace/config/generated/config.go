@@ -9,33 +9,17 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// DefaultConfigName is the default
-const DefaultConfigName = "default"
-
 // Config specifies the runtime config struct
 type Config struct {
-	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
-	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
-	CloudSpace   *CloudSpaceConfig       `yaml:"space,omitempty"`
+	ActiveProfile string                  `yaml:"activeProfile,omitempty"`
+	Vars          map[string]string       `yaml:"vars,omitempty"`
+	Profiles      map[string]*CacheConfig `yaml:"profiles,omitempty"`
 }
 
-// CloudSpaceConfig holds all the informations about a certain cloud space
-type CloudSpaceConfig struct {
-	SpaceID      int                       `yaml:"spaceID,omitempty"`
-	OwnerID      int                       `yaml:"ownerID,omitempty"`
-	Owner        string                    `yaml:"owner,omitempty"`
-	ProviderName string                    `yaml:"providerName,omitempty"`
-	KubeContext  string                    `yaml:"kubeContext,omitempty"`
-	Namespace    string                    `yaml:"namespace,omitempty"`
-	Name         string                    `yaml:"name,omitempty"`
-	Domains      []*CloudSpaceDomainConfig `yaml:"domains,omitempty"`
-	Created      string                    `yaml:"created,omitempty"`
-}
-
-// CloudSpaceDomainConfig holds the space domain related information
-type CloudSpaceDomainConfig struct {
-	DomainID int    `yaml:"id,omitempty"`
-	URL      string `yaml:"url,omitempty"`
+// LastContextConfig holds all the informations about the last used kubernetes context
+type LastContextConfig struct {
+	Namespace string `yaml:"namespace,omitempty"`
+	Context   string `yaml:"context,omitempty"`
 }
 
 // CacheConfig holds all the information specific to a certain config
@@ -43,7 +27,7 @@ type CacheConfig struct {
 	Deployments  map[string]*DeploymentCache `yaml:"deployments,omitempty"`
 	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
 	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
-	Vars         map[string]string           `yaml:"vars,omitempty"`
+	LastContext  *LastContextConfig          `yaml:"lastContext,omitempty"`
 }
 
 // ImageCache holds the cache related information about a certain image
@@ -102,8 +86,9 @@ func LoadConfigFromPath(path string) (*Config, error) {
 	data, readErr := ioutil.ReadFile(path)
 	if readErr != nil {
 		loadedConfig = &Config{
-			ActiveConfig: DefaultConfigName,
-			Configs:      make(map[string]*CacheConfig),
+			ActiveProfile: "",
+			Profiles:      make(map[string]*CacheConfig),
+			Vars:          make(map[string]string),
 		}
 	} else {
 		loadedConfig = &Config{}
@@ -112,15 +97,15 @@ func LoadConfigFromPath(path string) (*Config, error) {
 			return nil, err
 		}
 
-		if loadedConfig.ActiveConfig == "" {
-			loadedConfig.ActiveConfig = DefaultConfigName
+		if loadedConfig.Profiles == nil {
+			loadedConfig.Profiles = make(map[string]*CacheConfig)
 		}
-		if loadedConfig.Configs == nil {
-			loadedConfig.Configs = make(map[string]*CacheConfig)
+		if loadedConfig.Vars == nil {
+			loadedConfig.Vars = make(map[string]string)
 		}
 	}
 
-	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveProfile)
 	return loadedConfig, nil
 }
 
@@ -131,14 +116,13 @@ func NewCache() *CacheConfig {
 		Images:      make(map[string]*ImageCache),
 
 		Dependencies: make(map[string]string),
-		Vars:         make(map[string]string),
 	}
 }
 
 // GetActive returns the currently active devspace config
 func (config *Config) GetActive() *CacheConfig {
-	InitDevSpaceConfig(config, config.ActiveConfig)
-	return config.Configs[config.ActiveConfig]
+	InitDevSpaceConfig(config, config.ActiveProfile)
+	return config.Profiles[config.ActiveProfile]
 }
 
 // GetImageCache returns the image cache if it exists and creates one if not
@@ -161,22 +145,19 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
-	if _, ok := config.Configs[configName]; ok == false {
-		config.Configs[configName] = NewCache()
+	if _, ok := config.Profiles[configName]; ok == false {
+		config.Profiles[configName] = NewCache()
 		return
 	}
 
-	if config.Configs[configName].Deployments == nil {
-		config.Configs[configName].Deployments = make(map[string]*DeploymentCache)
+	if config.Profiles[configName].Deployments == nil {
+		config.Profiles[configName].Deployments = make(map[string]*DeploymentCache)
 	}
-	if config.Configs[configName].Images == nil {
-		config.Configs[configName].Images = make(map[string]*ImageCache)
+	if config.Profiles[configName].Images == nil {
+		config.Profiles[configName].Images = make(map[string]*ImageCache)
 	}
-	if config.Configs[configName].Dependencies == nil {
-		config.Configs[configName].Dependencies = make(map[string]string)
-	}
-	if config.Configs[configName].Vars == nil {
-		config.Configs[configName].Vars = make(map[string]string)
+	if config.Profiles[configName].Dependencies == nil {
+		config.Profiles[configName].Dependencies = make(map[string]string)
 	}
 }
 
@@ -192,7 +173,7 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
-	InitDevSpaceConfig(config, config.ActiveConfig)
+	InitDevSpaceConfig(config, config.ActiveProfile)
 
 	configPath := filepath.Join(workdir, ConfigPath)
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)

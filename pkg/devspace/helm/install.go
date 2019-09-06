@@ -10,7 +10,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -52,13 +51,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
-		// Use default namespace here
-		defaultNamespace, err := configutil.GetDefaultNamespace(client.config)
-		if err != nil {
-			return nil, err
-		}
-
-		releaseNamespace = defaultNamespace
+		releaseNamespace = client.kubectl.Namespace
 	}
 
 	chart, err := helmchartutil.Load(chartPath)
@@ -200,7 +193,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 // InstallChart installs the given chart by name under the releasename in the releasenamespace
 func (client *Client) InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	chart := helmConfig.Chart
-	chartPath, err := locateChartPath(client.Settings, ptr.ReverseString(chart.RepoURL), ptr.ReverseString(chart.Username), ptr.ReverseString(chart.Password), ptr.ReverseString(chart.Name), ptr.ReverseString(chart.Version), false, "", "", "", "")
+	chartPath, err := locateChartPath(client.Settings, chart.RepoURL, chart.Username, chart.Password, chart.Name, chart.Version, false, "", "", "", "")
 	if err != nil {
 		return nil, errors.Wrap(err, "locate chart path")
 	}

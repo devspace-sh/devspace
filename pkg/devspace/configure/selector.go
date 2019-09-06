@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -9,15 +10,15 @@ import (
 
 // AddSelector adds a selector
 func AddSelector(name string, labelSelector string, namespace string, save bool) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
-	var labelSelectorMap map[string]*string
+	var labelSelectorMap map[string]string
 	var err error
 
 	if labelSelector == "" {
-		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
-			services := *config.Dev.Selectors
-			labelSelectorMap = *services[0].LabelSelector
+		if config.Dev != nil && config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
+			services := config.Dev.Selectors
+			labelSelectorMap = services[0].LabelSelector
 		} else {
 			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 		}
@@ -35,16 +36,16 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 	}
 	if config.Dev.Selectors == nil {
 		emptyServiceList := make([]*v1.SelectorConfig, 0)
-		config.Dev.Selectors = &emptyServiceList
+		config.Dev.Selectors = emptyServiceList
 	}
 
-	servicesConfig := append(*config.Dev.Selectors, &v1.SelectorConfig{
-		LabelSelector: &labelSelectorMap,
-		Namespace:     &namespace,
-		Name:          &name,
+	servicesConfig := append(config.Dev.Selectors, &v1.SelectorConfig{
+		LabelSelector: labelSelectorMap,
+		Namespace:     namespace,
+		Name:          name,
 	})
 
-	config.Dev.Selectors = &servicesConfig
+	config.Dev.Selectors = servicesConfig
 
 	if save {
 		err = configutil.SaveLoadedConfig()
@@ -58,7 +59,7 @@ func AddSelector(name string, labelSelector string, namespace string, save bool)
 
 // RemoveSelector removes a service from the devspace
 func RemoveSelector(removeAll bool, name string, labelSelector string, namespace string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -69,21 +70,21 @@ func RemoveSelector(removeAll bool, name string, labelSelector string, namespace
 		return fmt.Errorf("You have to specify at least one of the supported flags or specify the selectors' name")
 	}
 
-	if config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
-		newServicesPaths := make([]*v1.SelectorConfig, 0, len(*config.Dev.Selectors)-1)
+	if config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
+		newServicesPaths := make([]*v1.SelectorConfig, 0, len(config.Dev.Selectors)-1)
 
-		for _, v := range *config.Dev.Selectors {
+		for _, v := range config.Dev.Selectors {
 			if removeAll ||
-				(name == *v.Name && name != "") ||
-				(namespace == *v.Namespace && namespace != "") ||
-				(areLabelMapsEqual(labelSelectorMap, *v.LabelSelector) && len(labelSelectorMap) != 0) {
+				(name == v.Name && name != "") ||
+				(namespace == v.Namespace && namespace != "") ||
+				(areLabelMapsEqual(labelSelectorMap, v.LabelSelector) && len(labelSelectorMap) != 0) {
 				continue
 			}
 
 			newServicesPaths = append(newServicesPaths, v)
 		}
 
-		config.Dev.Selectors = &newServicesPaths
+		config.Dev.Selectors = newServicesPaths
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {

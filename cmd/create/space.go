@@ -2,6 +2,7 @@ package create
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -13,7 +14,7 @@ import (
 )
 
 // DevSpaceCloudHostedCluster is the option that is shown during cluster select to select the hosted devspace cloud clusters
-const DevSpaceCloudHostedCluster = "DevSpace Cloud Hosted"
+const DevSpaceCloudHostedCluster = "Clusters managed by DevSpace"
 
 type spaceCmd struct {
 	Active   bool
@@ -88,8 +89,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		projectID = projects[0].ProjectID
 	}
 
-	var cluster *cloud.Cluster
-
+	var cluster *latest.Cluster
 	if cmd.Cluster == "" {
 		cluster, err = getCluster(provider)
 		if err != nil {
@@ -130,22 +130,24 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving kube config: %v", err)
 	}
 
-	// Set tiller env
-	err = cloud.SetTillerNamespace(serviceAccount)
+	// Cache space
+	err = provider.CacheSpace(space, serviceAccount)
 	if err != nil {
-		// log.Warnf("Couldn't set tiller namespace environment variable: %v", err)
+		log.Fatal(err)
 	}
 
-	// Set space as active space
-	if cmd.Active && configExists {
+	if configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Cache space
-		err = provider.CacheSpace(generatedConfig, space)
+		// Reset namespace cache
+		generatedConfig.GetActive().LastContext = nil
+
+		// Save generated config
+		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -156,11 +158,11 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	log.Infof("Your kubectl context has been updated automatically.")
 
 	if configExists {
-		log.Infof("\r          \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
+		log.Infof("\r         \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
 	}
 }
 
-func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
+func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
 	log.StartWait("Retrieving clusters")
 	defer log.StopWait()
 
@@ -175,7 +177,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	log.StopWait()
 
 	// Check if the user has access to a connected cluster
-	connectedClusters := make([]*cloud.Cluster, 0, len(clusters))
+	connectedClusters := make([]*latest.Cluster, 0, len(clusters))
 	for _, cluster := range clusters {
 		if cluster.Owner != nil {
 			connectedClusters = append(connectedClusters, cluster)
@@ -217,7 +219,7 @@ func getCluster(p *cloud.Provider) (*cloud.Cluster, error) {
 	}
 
 	// Select a devspace cluster
-	devSpaceClusters := make([]*cloud.Cluster, 0, len(clusters))
+	devSpaceClusters := make([]*latest.Cluster, 0, len(clusters))
 	for _, cluster := range clusters {
 		if cluster.Owner == nil {
 			devSpaceClusters = append(devSpaceClusters, cluster)

@@ -9,11 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
@@ -33,9 +31,9 @@ type ComponentsGenerator struct {
 
 // ComponentSchema is the component schema
 type ComponentSchema struct {
-	Name           string             `yaml:"name"`
-	Description    string             `yaml:"description"`
-	Variables      []configs.Variable `yaml:"variables"`
+	Name           string            `yaml:"name"`
+	Description    string            `yaml:"description"`
+	Variables      []latest.Variable `yaml:"variables"`
 	VariableValues map[string]string
 }
 
@@ -56,12 +54,12 @@ func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) 
 	varName := strings.TrimSpace(value[2 : len(value)-1])
 	if _, ok := c.VariableValues[varName]; ok == false {
 		// Get variable from component
-		variable := &configs.Variable{
-			Name:     &varName,
-			Question: ptr.String("Please enter a value for " + varName),
+		variable := &latest.Variable{
+			Name:     varName,
+			Question: "Please enter a value for " + varName,
 		}
 		for _, v := range c.Variables {
-			if v.Name != nil && *v.Name == varName {
+			if v.Name != "" && v.Name == varName {
 				variable = &v
 				break
 			}
@@ -84,38 +82,38 @@ func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) 
 }
 
 // askQuestion asks the user a question depending on the variable options
-func (c *ComponentSchema) askQuestion(variable *configs.Variable) {
+func (c *ComponentSchema) askQuestion(variable *latest.Variable) {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
 		params.Question = "Please enter a value"
 	} else {
-		if variable.Question == nil {
-			if variable.Name == nil {
-				variable.Name = ptr.String("variable")
+		if variable.Question == "" {
+			if variable.Name == "" {
+				variable.Name = "variable"
 			}
 
-			params.Question = "Please enter a value for " + *variable.Name
+			params.Question = "Please enter a value for " + variable.Name
 		} else {
-			params.Question = *variable.Question
+			params.Question = variable.Question
 		}
 
-		if variable.Default != nil {
-			params.DefaultValue = *variable.Default
+		if variable.Default != "" {
+			params.DefaultValue = variable.Default
 		}
 
 		if variable.Options != nil {
-			params.Options = *variable.Options
-		} else if variable.ValidationPattern != nil {
-			params.ValidationRegexPattern = *variable.ValidationPattern
+			params.Options = variable.Options
+		} else if variable.ValidationPattern != "" {
+			params.ValidationRegexPattern = variable.ValidationPattern
 
-			if variable.ValidationMessage != nil {
-				params.ValidationMessage = *variable.ValidationMessage
+			if variable.ValidationMessage != "" {
+				params.ValidationMessage = variable.ValidationMessage
 			}
 		}
 	}
 
-	c.VariableValues[*variable.Name] = survey.Question(params)
+	c.VariableValues[variable.Name] = survey.Question(params)
 }
 
 // NewComponentGenerator creates a new component generator for the given path
@@ -207,7 +205,7 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.Compon
 		return nil, err
 	}
 
-	yamlFileContent, err = configutil.CustomResolveVars(yamlFileContent, component.varMatchFn, component.varReplaceFn)
+	yamlFileContent, err = CustomResolveVars(yamlFileContent, component.varMatchFn, component.varReplaceFn)
 	if err != nil {
 		return nil, fmt.Errorf("Error resolving variables: %v", err)
 	}
@@ -219,4 +217,26 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.Compon
 	}
 
 	return componentTemplate, nil
+}
+
+// CustomResolveVars resolves variables with a custom replace function
+func CustomResolveVars(yamlFileContent []byte, matchFn func(string, string, string) bool, replaceFn func(string, string) (interface{}, error)) ([]byte, error) {
+	rawConfig := make(map[interface{}]interface{})
+
+	err := yaml.Unmarshal(yamlFileContent, &rawConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = walk.Walk(rawConfig, matchFn, replaceFn)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := yaml.Marshal(rawConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

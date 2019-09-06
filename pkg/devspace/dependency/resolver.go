@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -79,7 +80,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 }
 
 // Resolve implements interface
-func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, update bool) ([]*Dependency, error) {
+func (r *Resolver) Resolve(ctx context.Context, dependencies []*latest.DependencyConfig, update bool) ([]*Dependency, error) {
 	r.log.StartWait("Resolving dependencies")
 	defer r.log.StopWait()
 
@@ -88,7 +89,7 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, update bool)
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
-	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, update)
+	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, update)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return nil, err
@@ -122,7 +123,7 @@ func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
+func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
 	for _, dependencyConfig := range dependencies {
 		ID := r.getDependencyID(basePath, dependencyConfig)
 
@@ -140,7 +141,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 				}
 			}
 		} else {
-			dependency, err := r.resolveDependency(basePath, dependencyConfig, update)
+			dependency, err := r.resolveDependency(ctx, basePath, dependencyConfig, update)
 			if err != nil {
 				return err
 			}
@@ -152,8 +153,8 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
-				if dependency.Config.Dependencies != nil && len(*dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(dependency.LocalPath, ID, *dependency.Config.Dependencies, update)
+				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
+					err = r.resolveRecursive(ctx, dependency.LocalPath, ID, dependency.Config.Dependencies, update)
 					if err != nil {
 						return err
 					}
@@ -165,18 +166,16 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 	return nil
 }
 
-func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
+func (r *Resolver) resolveDependency(ctx context.Context, basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
 	var (
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
 		err       error
-
-		loadConfig = generated.DefaultConfigName
 	)
 
 	// Resolve source
-	if dependency.Source.Git != nil {
-		gitPath := strings.TrimSpace(*dependency.Source.Git)
+	if dependency.Source.Git != "" {
+		gitPath := strings.TrimSpace(dependency.Source.Git)
 
 		os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
@@ -191,18 +190,10 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 		if update {
 			var (
 				gitRepo  = git.NewGitRepository(localPath, gitPath)
-				tag      string
-				branch   string
-				revision string
+				tag      = dependency.Source.Tag
+				branch   = dependency.Source.Branch
+				revision = dependency.Source.Revision
 			)
-
-			if dependency.Source.Tag != nil {
-				tag = *dependency.Source.Tag
-			} else if dependency.Source.Branch != nil {
-				branch = *dependency.Source.Branch
-			} else if dependency.Source.Revision != nil {
-				revision = *dependency.Source.Revision
-			}
 
 			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
 			if err != nil {
@@ -218,41 +209,27 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 			r.log.Donef("Pulled %s", ID)
 		}
-	} else if dependency.Source.Path != nil {
-		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(*dependency.Source.Path)))
+	} else if dependency.Source.Path != "" {
+		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(dependency.Source.Path)))
 		if err != nil {
 			return nil, errors.Wrap(err, "filepath absolute")
 		}
 	}
 
-	if dependency.Config != nil {
-		loadConfig = *dependency.Config
-	}
+	// Set profile to load
+	ctx = context.WithValue(ctx, constants.ProfileContextKey, dependency.Profile)
 
-	if dependency.Source.SubPath != nil {
-		localPath = filepath.Join(localPath, filepath.FromSlash(*dependency.Source.SubPath))
+	if dependency.Source.SubPath != "" {
+		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(localPath, loadConfig, true, r.BaseCache, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
 
-	// Exchange cluster config
-	dConfig.Cluster = &latest.Cluster{}
-	if r.BaseConfig.Cluster != nil {
-		err = util.Convert(r.BaseConfig.Cluster, dConfig.Cluster)
-		if err != nil {
-			return nil, errors.Wrap(err, "convert cluster config")
-		}
-	}
-
-	// Exchange namespace if defined
-	if dependency.Namespace != nil {
-		dConfig.Cluster.Namespace = dependency.Namespace
-	}
-
+	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config
@@ -260,8 +237,9 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
-	dGeneratedConfig.ActiveConfig = loadConfig
-	generated.InitDevSpaceConfig(dGeneratedConfig, loadConfig)
+
+	dGeneratedConfig.ActiveProfile = dependency.Profile
+	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
 
 	return &Dependency{
 		ID:        ID,
@@ -278,31 +256,31 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
 
 func (r *Resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
-	if dependency.Source.Git != nil {
+	if dependency.Source.Git != "" {
 		// Erase authentication credentials
-		id := strings.TrimSpace(*dependency.Source.Git)
+		id := strings.TrimSpace(dependency.Source.Git)
 		id = authRegEx.ReplaceAllString(id, "$1$2")
 
-		if dependency.Source.Tag != nil {
-			id += "@" + *dependency.Source.Tag
-		} else if dependency.Source.Branch != nil {
-			id += "@" + *dependency.Source.Branch
-		} else if dependency.Source.Revision != nil {
-			id += "@" + *dependency.Source.Revision
+		if dependency.Source.Tag != "" {
+			id += "@" + dependency.Source.Tag
+		} else if dependency.Source.Branch != "" {
+			id += "@" + dependency.Source.Branch
+		} else if dependency.Source.Revision != "" {
+			id += "@" + dependency.Source.Revision
 		}
 
-		if dependency.Source.SubPath != nil {
-			id += ":" + *dependency.Source.SubPath
+		if dependency.Source.SubPath != "" {
+			id += ":" + dependency.Source.SubPath
 		}
 
-		if dependency.Config != nil {
-			id += " - config " + *dependency.Config
+		if dependency.Profile != "" {
+			id += " - profile " + dependency.Profile
 		}
 
 		return id
-	} else if dependency.Source.Path != nil {
+	} else if dependency.Source.Path != "" {
 		// Check if it's an git repo
-		filePath := filepath.Join(basePath, *dependency.Source.Path)
+		filePath := filepath.Join(basePath, dependency.Source.Path)
 
 		gitRepo := git.NewGitRepository(filePath, "")
 		remote, err := gitRepo.GetRemote()
@@ -310,8 +288,8 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 			return remote
 		}
 
-		if dependency.Config != nil {
-			filePath += " - config " + *dependency.Config
+		if dependency.Profile != "" {
+			filePath += " - profile " + dependency.Profile
 		}
 
 		return filePath
