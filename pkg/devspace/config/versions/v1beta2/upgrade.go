@@ -43,5 +43,14 @@ func (c *Config) Upgrade() (config.Config, error) {
 		}
 	}
 
+	// Upgrade images
+	if c.Images != nil {
+		for imageName, image := range *c.Images {
+			if image.CreatePullSecret == nil {
+				nextConfig.Images[imageName].CreatePullSecret = ptr.Bool(false)
+			}
+		}
+	}
+
 	return nextConfig, nil
 }

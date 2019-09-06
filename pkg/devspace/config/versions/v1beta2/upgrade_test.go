@@ -38,11 +38,19 @@ func TestSimple(t *testing.T) {
 						Disabled: ptr.Bool(true),
 					},
 				},
+				Images: &map[string]*ImageConfig{
+					"default": &ImageConfig{},
+				},
 			},
 			expected: &next.Config{
 				Dev: &next.DevConfig{
 					Terminal: &next.Terminal{
 						Enabled: ptr.Bool(false),
+					},
+				},
+				Images: map[string]*next.ImageConfig{
+					"default": &next.ImageConfig{
+						CreatePullSecret: ptr.Bool(false),
 					},
 				},
 			},

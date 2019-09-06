@@ -20,7 +20,7 @@ func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClie
 		pullSecrets := []string{}
 
 		for _, imageConf := range config.Images {
-			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
+			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
 				registryURL, err := GetRegistryFromImageName(imageConf.Image)
 				if err != nil {
 					return err
