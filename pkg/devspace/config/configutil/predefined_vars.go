@@ -133,7 +133,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		Fill: func(ctx context.Context) (*string, error) {
 			kubeContext, err := kubeconfig.GetCurrentContext()
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 			if ctx.Value(constants.KubeContextKey) != nil {
 				kubeContext = ctx.Value(constants.KubeContextKey).(string)
@@ -141,7 +141,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 
 			cloudConfigData, err := cloudconfig.ParseProviderConfig()
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 
 			_, providerName, err := kubeconfig.GetSpaceID(kubeContext)

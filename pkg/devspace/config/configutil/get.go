@@ -24,7 +24,6 @@ var config *latest.Config // merged config
 
 // Thread-safety helper
 var getConfigOnce sync.Once
-var validateOnce sync.Once
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
 func ConfigExists() bool {
@@ -64,21 +63,20 @@ func InitConfig() *latest.Config {
 
 // GetBaseConfig returns the config
 func GetBaseConfig(ctx context.Context) *latest.Config {
-	GetConfigOnce(ctx, false)
-	ValidateOnce()
+	loadConfigOnce(ctx, false)
 
 	return config
 }
 
 // GetConfig returns the config merged with all potential overwrite files
 func GetConfig(ctx context.Context) *latest.Config {
-	GetConfigOnce(ctx, true)
-	ValidateOnce()
+	loadConfigOnce(ctx, true)
 
 	return config
 }
 
-func loadConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
+// GetConfigFromPath loads the config from a given base path
+func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
 	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Check devspace.yaml
@@ -109,32 +107,33 @@ func loadConfigFromPath(ctx context.Context, generatedConfig *generated.Config, 
 		return nil, err
 	}
 
+	// Now we validate the config
+	err = validate(loadedConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	err = ApplyReplace(loadedConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// Apply patches
-	return ApplyPatches(loadedConfig)
-}
-
-// GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
-	config, err := loadConfigFromPath(ctx, generatedConfig, basePath, log)
+	loadedConfig, err = ApplyPatches(loadedConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	err = validate(config)
+	err = validate(loadedConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Error validating config in %s: %v", basePath, err)
+		return nil, err
 	}
 
-	return config, nil
+	return loadedConfig, nil
 }
 
-// GetConfigOnce loads the config globally once
-func GetConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
+// loadConfigOnce loads the config globally once
+func loadConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
 	getConfigOnce.Do(func() {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig()
@@ -150,7 +149,7 @@ func GetConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
 		}
 
 		// Load base config
-		config, err = loadConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
+		config, err = GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -163,16 +162,6 @@ func GetConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
 	})
 
 	return config
-}
-
-// ValidateOnce ensures that specific values are set in the config
-func ValidateOnce() {
-	validateOnce.Do(func() {
-		err := validate(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-	})
 }
 
 func validate(config *latest.Config) error {
