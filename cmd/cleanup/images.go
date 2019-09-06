@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/docker/api/types/filters"
@@ -46,14 +47,20 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load config
-	config := configutil.GetConfig()
-	if config.Images == nil || len(*config.Images) == 0 {
+	config := configutil.GetConfig(context.Background())
+	if config.Images == nil || len(config.Images) == 0 {
 		log.Done("No images found in config to delete")
 		return
 	}
 
+	// Get active context
+	kubeContext, err := kubeconfig.GetCurrentContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create docker client
-	client, err := docker.NewClient(config, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,10 +73,10 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	defer log.StopWait()
 
 	// Delete all images
-	for _, imageConfig := range *config.Images {
-		log.StartWait("Deleting local image " + *imageConfig.Image)
+	for _, imageConfig := range config.Images {
+		log.StartWait("Deleting local image " + imageConfig.Image)
 
-		response, err := docker.DeleteImageByName(client, *imageConfig.Image, log.GetInstance())
+		response, err := docker.DeleteImageByName(client, imageConfig.Image, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

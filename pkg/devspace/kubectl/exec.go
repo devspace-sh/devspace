@@ -10,8 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
@@ -21,12 +19,12 @@ import (
 )
 
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
-func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, client kubernetes.Interface, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
 
-	execRequest := client.CoreV1().RESTClient().Post().
+	execRequest := client.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -75,22 +73,17 @@ func ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader
 }
 
 // ExecStream executes a command and streams the output to the given streams
-func ExecStream(restConfig *rest.Config, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	client, err := kubernetes.NewForConfig(restConfig)
+func (client *Client) ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(client.RestConfig)
 	if err != nil {
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(restConfig)
-	if err != nil {
-		return err
-	}
-
-	return ExecStreamWithTransport(wrapper, upgradeRoundTripper, client, pod, container, command, tty, stdin, stdout, stderr)
+	return client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container, command, tty, stdin, stdout, stderr)
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func ExecBuffered(restConfig *rest.Config, pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+func (client *Client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
 	stdoutOutput, err := ioutil.TempFile("", "")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "create temp file")
@@ -103,7 +96,7 @@ func ExecBuffered(restConfig *rest.Config, pod *k8sv1.Pod, container string, com
 	}
 	defer os.Remove(stderrOutput.Name())
 
-	kubeExecError := ExecStream(restConfig, pod, container, command, false, input, stdoutOutput, stderrOutput)
+	kubeExecError := client.ExecStream(pod, container, command, false, input, stdoutOutput, stderrOutput)
 	if kubeExecError != nil {
 		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
 			return nil, nil, kubeExecError

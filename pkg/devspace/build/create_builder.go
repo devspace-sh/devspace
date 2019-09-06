@@ -11,26 +11,29 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-
-	"k8s.io/client-go/kubernetes"
+	"github.com/pkg/errors"
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
-	var imageBuilder builder.Interface
+func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
+	var (
+		imageBuilder builder.Interface
+		err          error
+	)
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(config, false, log)
+		dockerClient, err := dockerclient.NewClient(log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
 		if client == nil {
 			// Create kubectl client if not specified
-			client, err = kubectl.NewClient(config)
+			client, err = kubectl.NewDefaultClient()
 			if err != nil {
 				return nil, fmt.Errorf("Unable to create new kubectl client: %v", err)
 			}
@@ -48,7 +51,17 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 			preferMinikube = *imageConf.Build.Docker.PreferMinikube
 		}
 
-		dockerClient, err := dockerclient.NewClient(config, preferMinikube, log)
+		kubeContext := ""
+		if client == nil {
+			kubeContext, err = kubeconfig.GetCurrentContext()
+			if err != nil {
+				return nil, errors.Wrap(err, "get current context")
+			}
+		} else {
+			kubeContext = client.CurrentContext
+		}
+
+		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker client: %v", err)
 		}
@@ -65,7 +78,7 @@ func CreateBuilder(config *latest.Config, client kubernetes.Interface, imageConf
 			return CreateBuilder(config, client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, skipPush, isDev, log)
 		}
 
-		imageBuilder, err = docker.NewBuilder(config, dockerClient, imageConfigName, imageConf, imageTag, skipPush, isDev)
+		imageBuilder, err = docker.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, skipPush, isDev)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating docker builder: %v", err)
 		}

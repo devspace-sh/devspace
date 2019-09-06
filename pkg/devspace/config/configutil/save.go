@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configs"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -40,6 +39,25 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		walk.Walk(configMap, matchVar, replaceVar)
 	}
 
+	// Shallow merge with config from file to add vars, configs etc.
+	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	originalConfig := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(bytes, &originalConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now merge missing from original into new
+	for key := range originalConfig {
+		if _, ok := configMap[key]; !ok {
+			configMap[key] = originalConfig[key]
+		}
+	}
+
 	// Cloned config
 	clonedConfig := &latest.Config{}
 
@@ -49,25 +67,15 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
-	// Erase default values
-	if clonedConfig.Dev != nil && *clonedConfig.Dev == (latest.DevConfig{}) {
-		clonedConfig.Dev = nil
-	}
-	if clonedConfig.Cluster != nil && *clonedConfig.Cluster == (latest.Cluster{}) {
-		clonedConfig.Cluster = nil
-	}
-	if clonedConfig.Deployments != nil && len(*clonedConfig.Deployments) == 0 {
-		clonedConfig.Deployments = nil
-	}
-	if clonedConfig.Images != nil && len(*clonedConfig.Images) == 0 {
-		clonedConfig.Images = nil
-	}
-
 	return clonedConfig, nil
 }
 
 // SaveLoadedConfig writes the data of a config to its yaml file
 func SaveLoadedConfig() error {
+	if len(config.Profiles) != 0 {
+		return fmt.Errorf("Cannot save when a profile is applied")
+	}
+
 	// RestoreVars restores the variables in the config
 	clonedConfig, err := RestoreVars(config)
 	if err != nil {
@@ -86,41 +94,7 @@ func SaveConfig(config *latest.Config) error {
 	}
 
 	// Path to save the configuration to
-	savePath := constants.DefaultConfigPath
-
-	// Check if we have to save to configs.yaml
-	if LoadedConfig != "" {
-		configs := configs.Configs{}
-
-		// Load configs
-		err = LoadConfigs(&configs, constants.DefaultConfigsPath)
-		if err != nil {
-			return fmt.Errorf("Error loading %s: %v", constants.DefaultConfigsPath, err)
-		}
-
-		configDefinition := configs[LoadedConfig]
-
-		// We have to save the config in the configs.yaml
-		if configDefinition.Config.Data != nil {
-			configDefinition.Config.Data = config
-			configYaml, err := yaml.Marshal(configs)
-			if err != nil {
-				return err
-			}
-
-			err = ioutil.WriteFile(constants.DefaultConfigsPath, configYaml, os.ModePerm)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		// Save config in save path
-		savePath = *configDefinition.Config.Path
-	}
-
-	err = ioutil.WriteFile(savePath, configYaml, os.ModePerm)
+	err = ioutil.WriteFile(constants.DefaultConfigPath, configYaml, os.ModePerm)
 	if err != nil {
 		return err
 	}

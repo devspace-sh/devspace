@@ -3,10 +3,9 @@ package analyze
 import (
 	"fmt"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
-
-	"k8s.io/client-go/kubernetes"
 )
 
 // ReportItem is the struct that holds the problems
@@ -27,7 +26,7 @@ const HeaderChar = "="
 var paddingLeft = newString(" ", PaddingLeft)
 
 // Analyze analyses a given
-func Analyze(client kubernetes.Interface, namespace string, noWait bool, log log.Logger) error {
+func Analyze(client *kubectl.Client, namespace string, noWait bool, log log.Logger) error {
 	report, err := CreateReport(client, namespace, noWait)
 	if err != nil {
 		return err
@@ -40,7 +39,7 @@ func Analyze(client kubernetes.Interface, namespace string, noWait bool, log log
 }
 
 // CreateReport creates a new report about a certain namespace
-func CreateReport(client kubernetes.Interface, namespace string, noWait bool) ([]*ReportItem, error) {
+func CreateReport(client *kubectl.Client, namespace string, noWait bool) ([]*ReportItem, error) {
 	report := []*ReportItem{}
 
 	// Analyze pods
@@ -60,7 +59,7 @@ func CreateReport(client kubernetes.Interface, namespace string, noWait bool) ([
 
 	// Analyze replicasets
 	if checkEvents == false {
-		replicaSetProblems, err := ReplicaSets(client, namespace)
+		replicaSetProblems, err := ReplicaSets(client.Client, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("Error during analyzing replica sets: %v", err)
 		}
@@ -71,7 +70,7 @@ func CreateReport(client kubernetes.Interface, namespace string, noWait bool) ([
 
 	// Analyze statefulsets
 	if checkEvents == false {
-		statefulSetProblems, err := StatefulSets(client, namespace)
+		statefulSetProblems, err := StatefulSets(client.Client, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("Error during analyzing stateful sets: %v", err)
 		}
@@ -82,7 +81,7 @@ func CreateReport(client kubernetes.Interface, namespace string, noWait bool) ([
 
 	if checkEvents {
 		// Analyze events
-		problems, err = Events(client, namespace)
+		problems, err = Events(client.Client, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("Error during analyzing events: %v", err)
 		}
@@ -103,7 +102,7 @@ func ReportToString(report []*ReportItem) string {
 	reportString := ""
 
 	if len(report) == 0 {
-		reportString += fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs -p", "white+b"))
+		reportString += fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs --pick", "white+b"))
 	} else {
 		reportString += "\n"
 

@@ -61,8 +61,8 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	}
 
 	// Set snapshot mode
-	if kanikoOptions.SnapshotMode != nil {
-		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*kanikoOptions.SnapshotMode)
+	if kanikoOptions.SnapshotMode != "" {
+		kanikoArgs = append(kanikoArgs, "--snapshotMode="+kanikoOptions.SnapshotMode)
 	} else {
 		kanikoArgs = append(kanikoArgs, "--snapshotMode=time")
 	}
@@ -80,8 +80,8 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 
 	// Extra flags
 	if kanikoOptions.Flags != nil {
-		for _, flag := range *kanikoOptions.Flags {
-			kanikoArgs = append(kanikoArgs, *flag)
+		for _, flag := range kanikoOptions.Flags {
+			kanikoArgs = append(kanikoArgs, flag)
 		}
 	}
 
@@ -184,7 +184,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 
 // Determine available resources (This is only necessary in the devspace cloud)
 func (b *Builder) getAvailableResources() (*availableResources, error) {
-	quota, err := b.kubectl.CoreV1().ResourceQuotas(b.BuildNamespace).Get(devspaceQuota, metav1.GetOptions{})
+	quota, err := b.helper.KubeClient.Client.CoreV1().ResourceQuotas(b.BuildNamespace).Get(devspaceQuota, metav1.GetOptions{})
 	if err != nil {
 		return defaultResources, nil
 	}
@@ -210,7 +210,7 @@ func (b *Builder) getAvailableResources() (*availableResources, error) {
 	}
 
 	// Get limitrange
-	limitrange, err := b.kubectl.CoreV1().LimitRanges(b.BuildNamespace).Get(devspaceLimitRange, metav1.GetOptions{})
+	limitrange, err := b.helper.KubeClient.Client.CoreV1().LimitRanges(b.BuildNamespace).Get(devspaceLimitRange, metav1.GetOptions{})
 	if err != nil {
 		return availableResources, nil
 	}

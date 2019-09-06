@@ -29,7 +29,7 @@ Flags:
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
       --local-path string       Local path to use (Default is current directory (default ".")
   -n, --namespace string        Namespace where to select pods
-  -p, --pick                    Select a pod 
+      --pick                    Select a pod 
       --pod string              Pod to open a shell to
   -s, --selector string         Selector name (in config) to select pod/container for terminal
       --verbose                 Shows every file that is synced

@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,21 +9,20 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 // AddSyncPath adds a new sync path to the config
 func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 
 	if config.Dev == nil {
 		config.Dev = &latest.DevConfig{}
 	}
 	if config.Dev.Sync == nil {
-		config.Dev.Sync = &[]*latest.SyncConfig{}
+		config.Dev.Sync = []*latest.SyncConfig{}
 	}
 
-	var labelSelectorMap map[string]*string
+	var labelSelectorMap map[string]string
 	var err error
 
 	if labelSelector != "" && serviceName != "" {
@@ -30,19 +30,19 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	}
 
 	if labelSelector == "" {
-		if config.Dev != nil && config.Dev.Selectors != nil && len(*config.Dev.Selectors) > 0 {
-			services := *config.Dev.Selectors
+		if config.Dev != nil && config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
+			services := config.Dev.Selectors
 
 			var service *latest.SelectorConfig
 			if serviceName != "" {
-				service = getServiceWithName(*config.Dev.Selectors, serviceName)
+				service = getServiceWithName(config.Dev.Selectors, serviceName)
 				if service == nil {
 					return fmt.Errorf("no service with name %v exists", serviceName)
 				}
 			} else {
 				service = services[0]
 			}
-			labelSelectorMap = *service.LabelSelector
+			labelSelectorMap = service.LabelSelector
 		} else {
 			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 		}
@@ -81,16 +81,16 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		labelSelectorMap = nil
 	}
 
-	Sync := append(*config.Dev.Sync, &latest.SyncConfig{
-		LabelSelector: &labelSelectorMap,
-		ContainerPath: ptr.String(containerPath),
-		LocalSubPath:  ptr.String(localPath),
-		ExcludePaths:  &excludedPaths,
-		Namespace:     &namespace,
-		Selector:      &serviceName,
+	Sync := append(config.Dev.Sync, &latest.SyncConfig{
+		LabelSelector: labelSelectorMap,
+		ContainerPath: containerPath,
+		LocalSubPath:  localPath,
+		ExcludePaths:  excludedPaths,
+		Namespace:     namespace,
+		Selector:      serviceName,
 	})
 
-	config.Dev.Sync = &Sync
+	config.Dev.Sync = Sync
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
@@ -102,7 +102,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 // RemoveSyncPath removes a sync path from the config
 func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -113,21 +113,21 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 		return fmt.Errorf("You have to specify at least one of the supported flags")
 	}
 
-	if config.Dev.Sync != nil && len(*config.Dev.Sync) > 0 {
-		newSyncPaths := make([]*latest.SyncConfig, 0, len(*config.Dev.Sync)-1)
+	if config.Dev.Sync != nil && len(config.Dev.Sync) > 0 {
+		newSyncPaths := make([]*latest.SyncConfig, 0, len(config.Dev.Sync)-1)
 
-		for _, v := range *config.Dev.Sync {
+		for _, v := range config.Dev.Sync {
 			if removeAll ||
-				localPath == *v.LocalSubPath ||
-				containerPath == *v.ContainerPath ||
-				areLabelMapsEqual(labelSelectorMap, *v.LabelSelector) {
+				localPath == v.LocalSubPath ||
+				containerPath == v.ContainerPath ||
+				areLabelMapsEqual(labelSelectorMap, v.LabelSelector) {
 				continue
 			}
 
 			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		config.Dev.Sync = &newSyncPaths
+		config.Dev.Sync = newSyncPaths
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {
@@ -138,8 +138,8 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 	return nil
 }
 
-func parseSelectors(selectorString string) (map[string]*string, error) {
-	selectorMap := make(map[string]*string)
+func parseSelectors(selectorString string) (map[string]string, error) {
+	selectorMap := make(map[string]string)
 
 	if selectorString == "" {
 		return selectorMap, nil
@@ -154,19 +154,19 @@ func parseSelectors(selectorString string) (map[string]*string, error) {
 			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
 		}
 		labelSelector := strings.TrimSpace(keyValue[1])
-		selectorMap[strings.TrimSpace(keyValue[0])] = &labelSelector
+		selectorMap[strings.TrimSpace(keyValue[0])] = labelSelector
 	}
 
 	return selectorMap, nil
 }
 
-func areLabelMapsEqual(map1 map[string]*string, map2 map[string]*string) bool {
+func areLabelMapsEqual(map1 map[string]string, map2 map[string]string) bool {
 	if len(map1) != len(map2) {
 		return false
 	}
 
 	for map1Index, map1Value := range map1 {
-		if map2Value, map2Contains := map2[map1Index]; !map2Contains || *map2Value != *map1Value {
+		if map2Value, map2Contains := map2[map1Index]; !map2Contains || map2Value != map1Value {
 			return false
 		}
 	}

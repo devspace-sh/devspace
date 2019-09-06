@@ -11,25 +11,25 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	kubectlpkg "github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes"
 )
 
 // All deploys all deployments in the config
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
-	if config.Deployments != nil && len(*config.Deployments) > 0 {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg.Client, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
+	if config.Deployments != nil && len(config.Deployments) > 0 {
 		// Execute before deployments deploy hook
 		err := hook.Execute(config, hook.Before, hook.StageDeployments, hook.All, log)
 		if err != nil {
 			return err
 		}
 
-		for _, deployConfig := range *config.Deployments {
+		for _, deployConfig := range config.Deployments {
 			if len(deployments) > 0 {
 				shouldSkip := true
 
 				for _, deployment := range deployments {
-					if deployment == strings.TrimSpace(*deployConfig.Name) {
+					if deployment == strings.TrimSpace(deployConfig.Name) {
 						shouldSkip = false
 						break
 					}
@@ -49,49 +49,49 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "kubectl"
 			} else if deployConfig.Helm != nil {
 				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "helm"
 			} else if deployConfig.Component != nil {
 				deployClient, err = component.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", *deployConfig.Name, err)
+					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "component"
 			} else {
-				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", *deployConfig.Name)
+				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			// Execute before deploment deploy hook
-			err = hook.Execute(config, hook.Before, hook.StageDeployments, *deployConfig.Name, log)
+			err = hook.Execute(config, hook.Before, hook.StageDeployments, deployConfig.Name, log)
 			if err != nil {
 				return err
 			}
 
 			wasDeployed, err := deployClient.Deploy(cache, forceDeploy, builtImages)
 			if err != nil {
-				return fmt.Errorf("Error deploying %s: %v", *deployConfig.Name, err)
+				return fmt.Errorf("Error deploying %s: %v", deployConfig.Name, err)
 			}
 
 			if wasDeployed {
-				log.Donef("Successfully deployed %s with %s", *deployConfig.Name, method)
+				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deploment deploy hook
-				err = hook.Execute(config, hook.After, hook.StageDeployments, *deployConfig.Name, log)
+				err = hook.Execute(config, hook.After, hook.StageDeployments, deployConfig.Name, log)
 				if err != nil {
 					return err
 				}
 			} else {
-				log.Infof("Skipping deployment %s", *deployConfig.Name)
+				log.Infof("Skipping deployment %s", deployConfig.Name)
 			}
 		}
 
@@ -106,18 +106,18 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 }
 
 // PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, deployments []string, log log.Logger) {
+func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg.Client, deployments []string, log log.Logger) {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
 
 	if config.Deployments != nil {
 		// Reverse them
-		for i := len(*config.Deployments) - 1; i >= 0; i-- {
+		for i := len(config.Deployments) - 1; i >= 0; i-- {
 			var (
 				err          error
 				deployClient deploy.Interface
-				deployConfig = (*config.Deployments)[i]
+				deployConfig = (config.Deployments)[i]
 			)
 
 			// Check if we should skip deleting deployment
@@ -125,7 +125,7 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 				found := false
 
 				for _, value := range deployments {
-					if value == *deployConfig.Name {
+					if value == deployConfig.Name {
 						found = true
 						break
 					}
@@ -157,14 +157,14 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 				}
 			}
 
-			log.StartWait("Deleting deployment " + *deployConfig.Name)
+			log.StartWait("Deleting deployment " + deployConfig.Name)
 			err = deployClient.Delete(cache)
 			log.StopWait()
 			if err != nil {
-				log.Warnf("Error deleting deployment %s: %v", *deployConfig.Name, err)
+				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
 			}
 
-			log.Donef("Successfully deleted deployment %s", *deployConfig.Name)
+			log.Donef("Successfully deleted deployment %s", deployConfig.Name)
 		}
 	}
 }

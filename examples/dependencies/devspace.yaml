@@ -1,13 +1,12 @@
-version: v1beta2
+version: v1beta3
 deployments:
   - name: root
     component:
       containers:
-        - image: nginx
+        - image: nginx:latest
 dependencies:
   - source:
       path: dependency1
-    namespace: dependency-1
   - source:
       path: dependency2
   - source:

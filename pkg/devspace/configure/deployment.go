@@ -1,7 +1,9 @@
 package configure
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -15,35 +17,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+var imageNameCleaningRegex = regexp.MustCompile("[^a-z0-9]")
+
 // GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
 func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
 	if imageName == "" {
-		var providerName *string
-		if generatedConfig.CloudSpace != nil {
-			providerName = &generatedConfig.CloudSpace.ProviderName
-		}
-
-		imageConfig, err = GetImageConfigFromDockerfile(config, dockerfile, context, providerName)
+		imageName = imageNameCleaningRegex.ReplaceAllString(strings.ToLower(name), "")
+		imageConfig, err = GetImageConfigFromDockerfile(config, imageName, dockerfile, context)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}
+		imageName = imageConfig.Image
 	} else {
 		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
 	}
 
-	if imageName == "" {
-		imageName = *imageConfig.Image
-	}
-
 	// Prepare return deployment config
 	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: &imageName,
+					Image: imageName,
 				},
 			},
 		},
@@ -57,7 +54,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 			port = strconv.Itoa(ports[0])
 		} else if len(ports) > 1 {
 			port = survey.Question(&survey.QuestionOptions{
-				Question:     "Which port is the container listening on?",
+				Question:     "Which port is your application listening on?",
 				DefaultValue: strconv.Itoa(ports[0]),
 			})
 			if port == "" {
@@ -67,7 +64,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 	}
 	if port == "" {
 		port = survey.Question(&survey.QuestionOptions{
-			Question: "Which port is the container listening on? (Enter to skip)",
+			Question: "Which port is your application listening on? (Enter to skip)",
 		})
 	}
 	if port != "" {
@@ -77,7 +74,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
-			Ports: &[]*latest.ServicePortConfig{
+			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
 				},
@@ -91,11 +88,11 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 // GetImageComponentDeployment returns a new deployment that deploys an image via a component
 func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: &imageName,
+					Image: imageName,
 				},
 			},
 		},
@@ -112,7 +109,7 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 		}
 
 		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
-			Ports: &[]*latest.ServicePortConfig{
+			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
 				},
@@ -140,7 +137,7 @@ func GetPredefinedComponentDeployment(name, component string) (*latest.Deploymen
 	}
 
 	return &latest.DeploymentConfig{
-		Name:      &name,
+		Name:      name,
 		Component: template,
 	}, nil
 }
@@ -148,17 +145,17 @@ func GetPredefinedComponentDeployment(name, component string) (*latest.Deploymen
 // GetKubectlDeployment retruns a new kubectl deployment
 func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, error) {
 	splitted := strings.Split(manifests, ",")
-	splittedPointer := []*string{}
+	splittedPointer := []string{}
 
 	for _, s := range splitted {
 		trimmed := strings.TrimSpace(s)
-		splittedPointer = append(splittedPointer, &trimmed)
+		splittedPointer = append(splittedPointer, trimmed)
 	}
 
 	return &v1.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Kubectl: &v1.KubectlConfig{
-			Manifests: &splittedPointer,
+			Manifests: splittedPointer,
 		},
 	}, nil
 }
@@ -166,19 +163,19 @@ func GetKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, err
 // GetHelmDeployment returns a new helm deployment
 func GetHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error) {
 	retDeploymentConfig := &v1.DeploymentConfig{
-		Name: &name,
+		Name: name,
 		Helm: &v1.HelmConfig{
 			Chart: &v1.ChartConfig{
-				Name: &chartName,
+				Name: chartName,
 			},
 		},
 	}
 
 	if chartRepo != "" {
-		retDeploymentConfig.Helm.Chart.RepoURL = &chartRepo
+		retDeploymentConfig.Helm.Chart.RepoURL = chartRepo
 	}
 	if chartVersion != "" {
-		retDeploymentConfig.Helm.Chart.Version = &chartVersion
+		retDeploymentConfig.Helm.Chart.Version = chartVersion
 	}
 
 	return retDeploymentConfig, nil
@@ -190,21 +187,21 @@ func RemoveDeployment(removeAll bool, name string) (bool, error) {
 		return false, errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
-	config := configutil.GetBaseConfig()
+	config := configutil.GetBaseConfig(context.Background())
 	found := false
 
 	if config.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
 
-		for _, deployConfig := range *config.Deployments {
-			if removeAll == false && *deployConfig.Name != name {
+		for _, deployConfig := range config.Deployments {
+			if removeAll == false && deployConfig.Name != name {
 				newDeployments = append(newDeployments, deployConfig)
 			} else {
 				found = true
 			}
 		}
 
-		config.Deployments = &newDeployments
+		config.Deployments = newDeployments
 	}
 
 	err := configutil.SaveLoadedConfig()

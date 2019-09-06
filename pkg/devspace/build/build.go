@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
@@ -22,7 +21,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.Interface, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -32,12 +31,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 	)
 
 	// Check if we have at least 1 image to build
-	if config.Images == nil || len(*config.Images) == 0 {
+	if len(config.Images) == 0 {
 		return builtImages, nil
 	}
 
 	// Build not in parallel when we only have one image to build
-	if sequential == false && len(*config.Images) <= 1 {
+	if sequential == false && len(config.Images) <= 1 {
 		sequential = true
 	}
 
@@ -48,7 +47,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 	}
 
 	imagesToBuild := 0
-	for key, imageConf := range *config.Images {
+	for key, imageConf := range config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
 			continue
@@ -56,7 +55,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 
 		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
 		cImageConf := *imageConf
-		imageName := *cImageConf.Image
+		imageName := cImageConf.Image
 		imageConfigName := key
 
 		// Get image tag
@@ -64,8 +63,8 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubernetes.
 		if err != nil {
 			return nil, fmt.Errorf("Image building failed: %v", err)
 		}
-		if imageConf.Tag != nil {
-			imageTag = *imageConf.Tag
+		if imageConf.Tag != "" {
+			imageTag = imageConf.Tag
 		}
 
 		// Create new builder

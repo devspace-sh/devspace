@@ -43,7 +43,7 @@ func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag 
 
 // ShouldRebuild implements interface
 func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	if b.imageConf.Build.Custom.OnChange == nil || len(*b.imageConf.Build.Custom.OnChange) == 0 {
+	if b.imageConf.Build.Custom.OnChange == nil || len(b.imageConf.Build.Custom.OnChange) == 0 {
 		return true, nil
 	}
 
@@ -56,7 +56,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
 
 	// Loop over on change globs
 	customFilesHash := ""
-	for _, pattern := range *b.imageConf.Build.Custom.OnChange {
+	for _, pattern := range b.imageConf.Build.Custom.OnChange {
 		files, err := doublestar.Glob(*pattern)
 		if err != nil {
 			return false, err
@@ -89,20 +89,20 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	// Build arguments
 	args := []string{}
 
-	if b.imageConf.Build.Custom.ImageFlag != nil {
-		args = append(args, *b.imageConf.Build.Custom.ImageFlag, *b.imageConf.Image+":"+b.imageTag)
+	if b.imageConf.Build.Custom.ImageFlag != "" {
+		args = append(args, b.imageConf.Build.Custom.ImageFlag, b.imageConf.Image+":"+b.imageTag)
 	} else {
-		args = append(args, *b.imageConf.Image+":"+b.imageTag)
+		args = append(args, b.imageConf.Image+":"+b.imageTag)
 	}
 
 	if b.imageConf.Build.Custom.Args != nil {
-		for _, arg := range *b.imageConf.Build.Custom.Args {
+		for _, arg := range b.imageConf.Build.Custom.Args {
 			args = append(args, *arg)
 		}
 	}
 
 	if b.cmd == nil {
-		b.cmd = command.NewStreamCommand(filepath.FromSlash(*b.imageConf.Build.Custom.Command), args)
+		b.cmd = command.NewStreamCommand(filepath.FromSlash(b.imageConf.Build.Custom.Command), args)
 	}
 
 	// Determine output writer
@@ -113,13 +113,13 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		writer = log
 	}
 
-	log.Infof("Build %s:%s with custom command %s %s", *b.imageConf.Image, b.imageTag, *b.imageConf.Build.Custom.Command, strings.Join(args, " "))
+	log.Infof("Build %s:%s with custom command %s %s", b.imageConf.Image, b.imageTag, b.imageConf.Build.Custom.Command, strings.Join(args, " "))
 
 	err := b.cmd.Run(writer, writer, nil)
 	if err != nil {
 		return fmt.Errorf("Error building image: %v", err)
 	}
 
-	log.Done("Done processing image '" + *b.imageConf.Image + "'")
+	log.Done("Done processing image '" + b.imageConf.Image + "'")
 	return nil
 }

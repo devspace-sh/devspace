@@ -20,8 +20,8 @@ import (
 // Deploy deploys the given deployment with helm
 func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	var (
-		releaseName = *d.DeploymentConfig.Name
-		chartPath   = *d.DeploymentConfig.Helm.Chart.Name
+		releaseName = d.DeploymentConfig.Name
+		chartPath   = d.DeploymentConfig.Helm.Chart.Name
 		hash        = ""
 	)
 
@@ -36,15 +36,15 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Ensure deployment config is there
-	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
+	deployCache := cache.GetDeploymentCache(d.DeploymentConfig.Name)
 
 	// Check values files for changes
 	helmOverridesHash := ""
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
-		for _, override := range *d.DeploymentConfig.Helm.ValuesFiles {
-			hash, err := hashpkg.Directory(*override)
+		for _, override := range d.DeploymentConfig.Helm.ValuesFiles {
+			hash, err := hashpkg.Directory(override)
 			if err != nil {
-				return false, fmt.Errorf("Error stating override file %s: %v", *override, err)
+				return false, fmt.Errorf("Error stating override file %s: %v", override, err)
 			}
 
 			helmOverridesHash += hash
@@ -61,7 +61,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
 		if err != nil {
 			return false, fmt.Errorf("Error creating helm client: %v", err)
 		}
@@ -106,17 +106,14 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
 	var (
-		releaseName     = *d.DeploymentConfig.Name
-		chartPath       = *d.DeploymentConfig.Helm.Chart.Name
+		releaseName     = d.DeploymentConfig.Name
+		chartPath       = d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = filepath.Join(chartPath, "values.yaml")
 		overwriteValues = map[interface{}]interface{}{}
 	)
 
 	// Get release namespace
-	releaseNamespace := ""
-	if d.DeploymentConfig.Namespace != nil {
-		releaseNamespace = *d.DeploymentConfig.Namespace
-	}
+	releaseNamespace := d.DeploymentConfig.Namespace
 
 	// Check if its a local chart
 	_, err := os.Stat(chartValuesPath)
@@ -133,10 +130,10 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 
 	// Load override values from path
 	if d.DeploymentConfig.Helm.ValuesFiles != nil {
-		for _, overridePath := range *d.DeploymentConfig.Helm.ValuesFiles {
-			overwriteValuesPath, err := filepath.Abs(*overridePath)
+		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
+			overwriteValuesPath, err := filepath.Abs(overridePath)
 			if err != nil {
-				return false, fmt.Errorf("Error retrieving absolute path from %s: %v", *overridePath, err)
+				return false, fmt.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
 			}
 
 			overwriteValuesFromPath := map[interface{}]interface{}{}
@@ -151,7 +148,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.Values != nil {
-		Values(overwriteValues).MergeInto(*d.DeploymentConfig.Helm.Values)
+		Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
 	}
 
 	// Add devspace specific values
@@ -168,13 +165,13 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		return false, nil
 	}
 
-	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", *d.DeploymentConfig.Helm.Chart.Name, *d.DeploymentConfig.Name))
+	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
 	defer d.Log.StopWait()
 
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return false, fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+*d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return false, fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 
 	// Print revision

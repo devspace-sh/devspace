@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
@@ -8,8 +9,8 @@ import (
 	"github.com/mgutz/ansi"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,8 @@ type BuildCmd struct {
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDependencies bool
+
+	Profile string
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -41,6 +44,7 @@ Builds all defined images and pushes them
 	}
 
 	buildCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	buildCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	buildCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
@@ -65,14 +69,20 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
+	// Get config with adjusted cluster config
+	ctx := context.Background()
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	}
+
 	// Load config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(ctx)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Get the config
-	config := cmd.loadConfig(generatedConfig)
+	config := configutil.GetConfig(ctx)
 
 	// Dependencies
 	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, log.GetInstance())
@@ -101,20 +111,4 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	} else {
 		log.Info("No images to rebuild. Run with -b to force rebuilding")
 	}
-}
-
-func (cmd *BuildCmd) loadConfig(generatedConfig *generated.Config) *latest.Config {
-	// Load Config and modify it
-	config, err := configutil.GetConfigFromPath(".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
-	if err != nil {
-		log.Fatalf("Couldn't save generated config: %v", err)
-	}
-
-	return config
 }

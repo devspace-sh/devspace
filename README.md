@@ -76,7 +76,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 ### Powerful Configuration
 - **Declarative Configuration File** that can be versioned and shared just like the source code of your project (e.g. via git)
 - **Config Variables** which allow you to parameterize the config and share a unified config file with your team
-- **Config Overrides** for overriding Dockerfiles or ENTRPOINTs (e.g. to separate development, staging and production)
+- **Config Overrides** for overriding Dockerfiles or ENTRYPOINTs (e.g. to separate development, staging and production)
 - **Hooks** for executing custom commands before or after each build and deployment step
 - **Multiple Configs** for advanced deployment scenarios
 
@@ -179,44 +179,51 @@ cd /path/to/my/project/root
 
 <br>
 
-### 3. Deploy
+### 3. Initialize Your Project
+Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
+```bash
+devspace init
+```
+> Take a look at the [Configuration Examples](#configuration-examples) to learn more about `devspace.yaml`
 
-Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is fairly easy to switch between the options listed here.
+<br>
 
+### 4. Choose a Kubernetes Cluster
+Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is very easy to switch between the options later on.
+<br>
 
 <details>
-<summary><b>DevSpace Cloud (fully managed clusters, SaaS version)</b>
+<summary><b>Hosted Spaces sponsored by DevSpace (managed Kubernetes namespaces)</b>
 <br>&nbsp;&nbsp;&nbsp;
 <i>
-<u>free</u> for one project, includes 1 GB RAM
+FREE for one project, includes 1 GB RAM
 </i>
 </summary>
 
 <br>
 
 ```bash
-devspace init
-devspace create space my-app
-devspace deploy
+devspace create space my-app # requires login via GitHub or email
 ```
+> DevSpace automatically sets up a kube-context for this space, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 </details>
 
 <br>
 
 <details>
-<summary><b>DevSpace Cloud (connect your own cluster, SaaS version)</b> 
+<summary><b>Your own local cluster</b>
 <br>&nbsp;&nbsp;&nbsp;
-for clusters with public IP address, e.g. Google Cloud, AWS, Azure
+<i>
+works with any local Kubernetes cluster (minikube, kind, k3s, mikrok8s etc.)
+</i>
 </summary>
 
 <br>
 
 ```bash
-devspace connect cluster
-devspace init
-devspace create space my-app
-devspace deploy
+# Tell DevSpace which namespace to use (will be created automatically during deployment)
+devspace use namespace my-namespace
 ```
 
 </details>
@@ -224,91 +231,155 @@ devspace deploy
 <br>
 
 <details>
-<summary><b>DevSpace Cloud (self-hosted version)</b> 
+<summary><b>Your own remote cluster</b>
 <br>&nbsp;&nbsp;&nbsp;
-for clusters <u>without</u> public IP address, e.g. bare metal clusters within a VPN
+<i>
+works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
+</i>
 </summary>
+
+<img src="docs/website/static/img/readme/line.svg" height="1">
+
+#### Option A: You want to use this cluster alone
+```bash
+# Tell DevSpace which namespace to use (will be created automatically during deployment)
+devspace use namespace my-namespace
+```
+
+#### Option B: You want to share this cluster with your team
+```bash
+# Connect your cluster to DevSpace Cloud
+devspace connect cluster # requires login via GitHub or email
+
+# Create an isolated Kubernetes namespace in your cluster via DevSpace Cloud
+devspace create space my-namespace
+```
+
+> DevSpace automatically sets up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 <br>
 
-**1. Install DevSpace Cloud**  
-&nbsp;&nbsp;&nbsp;
-See [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions.
+<details>
+  <summary><b>What is DevSpace Cloud?</b></summary>
 
-**2. Tell DevSpace to use your self-hosted DevSpace Cloud**  
+DevSpace Cloud allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc.
+
+> You can use DevSpace Cloud as SaaS platform or use the [on-premise edition](https://github.com/devspace-cloud/devspace-cloud) to run it yourself.
+
+<br>
+</details>
+
+<details>
+  <summary><b>How are Spaces isolated? Why is it safe to share a cluster?</b></summary>
+
+DevSpace Cloud makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that DevSpace Cloud enforces using the UI of DevSpace Cloud and even set custom limits for different members of your team.
+
+<br>
+</details>
+
+<details>
+  <summary><b>How can I add my team mates, so we can share this cluster?</b></summary>
+
+1. Connect your cluster to DevSpace Cloud using `devspace connect cluster`
+2. Go to **Clusters** in the UI of DevSpace Cloud: [https://app.devspace.cloud/clusters](https://app.devspace.cloud/clusters)
+3. Click on your cluster
+4. Go to the **Invites** tab
+5. Click on the **Add Invite** button
+6. Click on the invite link in the table and send the link to a team mate
+7. After clicking on the link and defining an encryption key, your team mate will be able to create isolated namespaces.
+
+<br>
+</details>
+
+<details>
+  <summary><b>It it safe to connect my cluster to DevSpace Cloud?</b></summary>
+
+**Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encrytion key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
+
+- If you use DevSpace from a different computer, you will have to enter the encryption key again or re-connect the cluster which generates a new access token and encrypts it with a new key.
+- If you add a team member, you will have to send them a secure invite link which makes sure that they also get cluster access. This procedure is very safe and your key is never sent to our platform. After clicking on the invite link, your colleagues will define a separate encryption key for secure access to their namespaces.
+
+> If you are still hesitant, you can run DevSpace Cloud in your own Kubernetes cluster using the on-premise edition: [https://github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)
+
+<br>
+</details>
+
+<details>
+  <summary><b>Can I run DevSpace Cloud on-premise in my own cluster?</b></summary>
+  
+  **Yes**. Follow these intructions to run DevSpace Cloud yourself:
+
+  **1. Install DevSpace Cloud**  
+  &nbsp;&nbsp;&nbsp;
+  See [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions.
+
+  **2. Tell DevSpace to use your self-hosted DevSpace Cloud**  
 ```bash
 devspace use provider devspace.my-domain.com
 ```
 
-**3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**  
+  **3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**  
 ```bash
 devspace connect cluster
 ```
 
-**4. Deploy your project**  
+  **4. Create an isolated namespace**  
 ```bash
-devspace init
 devspace create space my-app
-devspace deploy
 ```
 
+  </details>
+
+<img src="docs/website/static/img/readme/line.svg" height="1">
 </details>
 
 <br>
 
-<details>
-<summary><b>Use current kubectl context (without DevSpace Cloud)</b>
-<br>&nbsp;&nbsp;&nbsp;
-for local clusters, e.g. minikube, kind, Docker Kubernetes
-</summary>
-
-<br>
-
+### 5. Deploy
+Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
 ```bash
-devspace init
 devspace deploy
 ```
 
-</details>
+> **Having issues?** Take a look at the **[Troubleshooting Guides](#troubleshooting)** and learn how to fix common issues.
 
 <br>
 
-> **Having issues?** Take a look at the **[Troubleshooting](#troubleshooting)** section and learn about common mistakes.
-
-<br>
-
-### 4. Develop
+### 6. Develop
 After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
 devspace dev
 ```
-DevSpace will deploy your application, wait until your pods are ready and open the terminal of a pod that is specified in your config. You can now start your application manually using a command such as `npm start` or `npm run develop` and access your application via `localhost:PORT` in your browser. Edit your source code files and DevSpace will automatically synchronize them to the containers in your Kubernetes cluster.
+You can now:
+- Access your application via `http://localhost:PORT` in your browser
+- Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
+- Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-> If you are using DevSpace Cloud, you can now `devspace ui` to open the graphical user interface in your browser, stream logs, add new users to your cluster and configure permissions for everyone on your team.
+> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`
 
 <br>
 
-### 5. Learn more
+### 7. Learn more
 
 <details>
-<summary>Show useful commands for development
+<summary>See useful commands for development
 </summary>
 
 <br>
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags                                                                                      |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `devspace dev`<br> Starts the development mode                      | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`                                |
-| `devspace enter`<br> Opens a terminal session for a container       | `-p • Pick a container instead of using the default one`                                             |
+| `devspace dev`<br> Starts the development mode                      | `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and opens terminal)` <br> `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`                                |
+| `devspace enter`<br> Opens a terminal session for a container       | `--pick • Pick a container instead of using the default one`                                             |
 | `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
-| `devspace logs` <br> Prints the logs of a container                 | `-p • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
+| `devspace logs` <br> Prints the logs of a container                 | `--pick • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
 | `devspace analyze` <br> Analyzes your deployments for issues        |                                                                                                      |
 
 </details>
 
 <details>
-<summary>Show how to use multiple Spaces and switch between them
+<summary>See how to use multiple Spaces and switch between them
 </summary>
 
 Whenever you run `devspace create space [space-name]` within a project, DevSpace will set this newly created Space as active Space which is used for `devspace deploy` and `devspace dev`.
@@ -358,7 +429,7 @@ dependencies:           # Tells DevSpace which related projects should be deploy
 ```
 
 <details>
-<summary>Show me an example of a devspace.yaml config file</summary>
+<summary>See an example of a devspace.yaml config file</summary>
 
 ```yaml
 # File: ./devspace.yaml
@@ -386,13 +457,16 @@ dev:
   overrideImages:
   - name: default
     entrypoint:
-    - sleep
-    - 9999999
+    - npm
+    - run
+    - dev
+  terminal:
+    disabled: true
   ports:
     forward:
+    - port: 3000
     - port: 8080
       remotePort: 80
-    - port: 3000
     labelSelector:
       app.kubernetes.io/component: default
       app.kubernetes.io/name: devspace-app
@@ -634,7 +708,7 @@ dependencies:
 - source:
     git: https://github.com/my-api-server
 - source:
-    git: https://myuser:mypass@my-private-git.com/my-auth-server 
+    git: https:/my-private-git.tld/my-auth-server 
 - source:
     path: ../my-auth-server
   config: default
@@ -663,11 +737,12 @@ dev:
   overrideImages:
   - name: default
     entrypoint:
-    - sleep
-    - 9999999
+    - npm
+    - run
+    - develop
 ```
 
-When running `devspace dev` instead of `devspace deploy`, DevSpace would override the ENTRYPOINT og the Dockerfile with `[sleep, 9999999]` when building this image.
+When running `devspace dev` instead of `devspace deploy`, DevSpace would override the ENTRYPOINT of the Dockerfile with `[npm, run, develop]` when building this image.
 
 Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -687,7 +762,7 @@ dev:
   overrideImages:
   - name: default
     dockerfile: ./development/Dockerfile.development
-    # Optional: use different context
+    # use different context path = root path for Dockerfile commans like ADD or COPY (optional)
     # context: ./development
 ```
 
@@ -854,6 +929,42 @@ Take a look at the documentation to learn more about [using hooks](https://devsp
 <br>
 
 ## Troubleshooting
+
+<details>
+<summary>My application is not working</code></summary>
+
+This problem can be caused by many different things. Here are some steps to troubleshoot this:
+
+#### 1. Let DevSpace analyze your deployment
+Run this command within your project:
+```
+devspace analyze
+```
+
+#### 2. Check your Dockerfile
+Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using). 
+
+If your pods are crashing, you might have the wrong `ENTRYPOINT` or something is missing within your containers. A great way to debug this is to start the interactive development mode using:
+```bash
+devspace dev -i
+```
+With the interactive mode, DevSpace will override the `ENTRYPOINT` in our Dockerfile with `[sleep, 999999]` and open a terminal proxy. That means your containers will definitively start but only in sleep mode. After the terminal opens you can run the start command for your application yourself, e.g. `npm start`.
+
+#### 3. Debug your application with kubectl
+Run the following commands to find issues:
+```bash
+# Failing Pods
+kubectl get po                  # Look for crashed or pending pods
+kubectl describe po [POD_NAME]  # Look at the crash reports Kubernetes provides
+
+# Network issues
+kubectl get svc                 # See if there is a service for your app
+kubectl get ep                  # Make sure every service has endpoints (if not: make sure you are using the right ports in your devspace.yaml and make sure your pods are running)
+kubectl get ing                 # Make sure there is an ingress for your app
+```
+
+<img src="docs/website/static/img/readme/line.svg" height="1">
+</details>
 
 <details>
 <summary>DevSpace hangs at <code>[wait] Logging into cloud provider...</code></summary>

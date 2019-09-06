@@ -1,6 +1,8 @@
 package update
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -45,7 +47,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config
-	configutil.GetConfigWithoutDefaults(false)
+	configutil.GetBaseConfig(context.Background())
 
 	// Save it
 	err = configutil.SaveLoadedConfig()
