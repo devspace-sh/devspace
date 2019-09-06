@@ -27,8 +27,8 @@
 ## Contents
 - [Why DevSpace?](#why-devspace)
 - [Features](#features)
-- [Architecture](#architecture)
-- [Quickstart](#quickstart)
+- [Architecture & Workflow](#architecture--workflow)
+- [Quickstart Guide](#quickstart)
 - [Config Examples](#configuration-examples)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -102,6 +102,13 @@ DevSpace is battle tested with any major Kubernetes distributions including:
 <br>
 </details>
 
+<br>
+
+
+## Architecture & Workflow
+![DevSpace Workflow](docs/website/static/img/processes/workflow-devspace.png)
+
+DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kube context, just like kubectl.
 
 <br>
 
@@ -157,7 +164,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 
 ### Lightweight & Easy to Setup
-- **Client-Only Binary** (server-side DevSpace Cloud is optional for visual UI and team management, see [Architecture](#architecture))
+- **Client-Only Binary** (server-side DevSpace Cloud is optional for visual UI and team management, see [DevSpace Cloud Documentation](https://devspace.cloud/docs/cloud/what-is-devspace-cloud))
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
@@ -174,15 +181,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 <br>
 
-
-## Architecture
-![DevSpace Architecture](docs/website/static/img/devspace-architecture.png)
-
-DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kubectl context.
-
-You can, however, connect your Kubernetes cluster to DevSpace Cloud to manage cluster users, namespaces and permissions with a central management UI. DevSpace Cloud can either be used [as-a-Service on devspace.cloud](https://devspace.cloud) or installed as an on-premise version (see [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions).
-
-<br>
 
 ## Quickstart
 

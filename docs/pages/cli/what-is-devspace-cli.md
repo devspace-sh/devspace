@@ -82,7 +82,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 - [Automatic Deployment](/docs/cli/deployment/workflow-basics) via `devspace deploy`
 - [Efficient In-Cluster Development](/docs/cli/development/workflow-basics) via `devspace dev`
 
-
 ## How does it work?
 DevSpace reads the configuration file `devspace.yaml` which you can simply generate for any of your project via `devspace init`. This config file allows you to define:
 - [which Dockerfiles should be built](/docs/cli/image-building/configuration) (either with Docker, kaniko or with a custom build command), how to tag your images and where to store them (e.g. push to Docker Hub or any private registry)
@@ -91,3 +90,5 @@ DevSpace reads the configuration file `devspace.yaml` which you can simply gener
 - [how your application should be developed within Kubernetes](/docs/cli/development/configuration/overview-specification) (e.g. configuring log streaming, terminal access, port fowarding, real-time file synchronization or remote debugging)
 
 > **DevSpace is designed for teams** and its configuration is highly paramterizable, so that you can use dynamic variables within your `devspace.yaml`, commit the config via git together with the rest of your code and share your build, deployment and development workflows with your team mates.
+
+![DevSpace Workflow](/img/processes/workflow-devspace.png)
