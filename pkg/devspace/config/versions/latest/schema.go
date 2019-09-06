@@ -49,9 +49,10 @@ type ProfileConfig struct {
 
 // PatchConfig describes a config patch and how it should be applied
 type PatchConfig struct {
-	Operation string `yaml:"op"`
-	Path      string `yaml:"path"`
-	Value     string `yaml:"value"`
+	Operation string      `yaml:"op"`
+	Path      string      `yaml:"path"`
+	From      string      `yaml:"from"`
+	Value     interface{} `yaml:"value"`
 }
 
 // ReplaceConfig defines a replace config that can override certain parts of the config completely

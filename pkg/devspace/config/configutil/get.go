@@ -114,9 +114,8 @@ func loadConfigFromPath(ctx context.Context, generatedConfig *generated.Config, 
 		return nil, err
 	}
 
-	// TODO: PATCHES
-
-	return loadedConfig, nil
+	// Apply patches
+	return ApplyPatches(loadedConfig)
 }
 
 // GetConfigFromPath loads the config from a given base path
@@ -243,6 +242,23 @@ func validate(config *latest.Config) error {
 			}
 			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 				return fmt.Errorf("deployments[%d].kubectl.manifests is required", index)
+			}
+		}
+	}
+
+	if len(config.Profiles) > 0 {
+		for idx, profile := range config.Profiles {
+			if profile.Name == "" {
+				return fmt.Errorf("profiles.%d.name is missing", idx)
+			}
+
+			for patchIdx, patch := range profile.Patches {
+				if patch.Operation == "" {
+					return fmt.Errorf("profiles.%s.patches.%d.op is missing", profile.Name, patchIdx)
+				}
+				if patch.Path == "" {
+					return fmt.Errorf("profiles.%s.patches.%d.path is missing", profile.Name, patchIdx)
+				}
 			}
 		}
 	}
