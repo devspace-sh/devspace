@@ -8,7 +8,7 @@
 
 ### DevSpace makes it much faster to develop applications for Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
-- **Enable Hot Reloading**: updates your running containers without rebuilding images or restarting containers
+- **Develop with hot reloading**: updates your running containers without rebuilding images or restarting containers
 - **Unify deployment workflows** within your team and across dev, staging and production
 - **Automate repetitive tasks** for image building and deployment
 
@@ -37,16 +37,16 @@
 <br>
 
 ## Why DevSpace?
-Building modern, distributed and highly scalable microservices with Kubernetes is hard - and it is even harder in a large team of developers. DevSpace is the next-generation tool for fast cloud-native software development.
+Building modern, distributed and highly scalable microservices with Kubernetes is hard - and it is even harder for large teams of developers. DevSpace is the next-generation tool for fast cloud-native software development.
 
 <details>
 <summary><b>Standardize & Version Your Workflows</b></summary>
 <br>
 
 DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
-- Codify workflow knowledge about building images, deploying your project and its dependencies, debugging and developing a project etc.
-- Version your workflows together with your code (i.e. you can check out any old version and get it up and running with just a single command) 
-- Easily share your workflows with your team mates
+- **Codify workflow knowledge** about building images, deploying your project and its dependencies etc.
+- **Version your workflows together with your code** (i.e. you can get any old version up and running with just a single command) 
+- **Share your workflows** with your team mates
 
 <br>
 </details>
@@ -58,9 +58,9 @@ DevSpace allows you to store all your workflows in one declarative config file: 
 DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
 - The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
-- The configuration of DevSpace is highly dynamic, so you can configure everything using variables that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
+- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/deployment/advanced/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
-> Giving everyone on your team access to a Kubernetes cluster means a lot of work for admins and requires a lot of knowledge from developers. DevSpace Cloud makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
+> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
 
 <br>
 </details>
@@ -69,9 +69,9 @@ DevSpace helps your team to standardize deployment and development workflows wit
 <summary><b>Speed Up Cloud-Native Development</b></summary>
 <br>
 
-Instead of rebuilding images and redeploying containers, DevSpace allows you to hot reload running containers while you code:
+Instead of rebuilding images and redeploying containers, DevSpace allows you to **hot reload running containers while you are coding**:
 - Simply edit your files with your IDE and see how your application reloads within the running container.
-- The high performance, bi-directional file synchronization detects code changes immediately and synchronizes files immediately between your local dev environment and the containers running in Kubernetes
+- The **high performance, bi-directional file synchronization** detects code changes immediately and synchronizes files immediately between your local dev environment and the containers running in Kubernetes
 - Stream logs, connect debuggers or open a container terminal directly from your IDE with just a single command.
 
 <br>
@@ -81,9 +81,9 @@ Instead of rebuilding images and redeploying containers, DevSpace allows you to 
 <summary><b>Automate Repetitive Tasks</b></summary>
 <br>
 
-Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repetedly run command like `kubectl get po` and copy pod ids. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
-- DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application including its dependencies with just a single command
-- Let DevSpace automatically start port-foward and log streaming, so you don't have to get the pod ids and run 10 commands to get everything started.
+Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repeatedly run commands like `kubectl get po` and copy pod ids back and forth. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
+- DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application (including its dependencies) with just a single command
+- Let DevSpace automatically start port-fowarding and log streaming, so you don't have to constantly copy and paste pod ids or run 10 commands to get everything started.
 
 <br>
 </details>
@@ -92,12 +92,12 @@ Deploying and debugging services with Kubernetes requires a lot of knowledge and
 <summary><b>Works with Any Kubernetes Clusters</b></summary>
 <br>
 
-DevSpace is battle tested with any major Kubernetes distributions including:
-- local Kubernetes clusters like minikube, k3s, MikroK8s, kind
-- managed Kubernetes clusters in GKE (Google Cloud), EKS (Amazon Web Service), AKS (Microsoft Azure), Digital Ocean
-- self-managed Kubernetes clusters created with Rancher
+DevSpace is battle tested with many Kubernetes distributions including:
+- **local Kubernetes clusters** like minikube, k3s, MikroK8s, kind
+- **managed Kubernetes clusters** in GKE (Google Cloud), EKS (Amazon Web Service), AKS (Microsoft Azure), Digital Ocean
+- **self-managed Kubernetes clusters** created with Rancher
 
-> DevSpace also let you switch seamlessly between clusters. You can work with a local clusters as long as that is sufficient. If things get more advanced, you need cloud power like GPUs or you simply want to share a complex system such as Kafka with your team, simply tell DevSpace to use a remote cluster and continue working.
+> DevSpace also lets you switch seamlessly between clusters and namespaces. You can work with a local cluster as long as that is sufficient. If things get more advanced, you need cloud power like GPUs or you simply want to share a complex system such as Kafka with your team, simply tell DevSpace to use a remote cluster by switching your kube-context and continue working.
 
 <br>
 </details>
@@ -108,7 +108,7 @@ DevSpace is battle tested with any major Kubernetes distributions including:
 ## Architecture & Workflow
 ![DevSpace Workflow](docs/website/static/img/processes/workflow-devspace.png)
 
-DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kube context, just like kubectl.
+DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kube-context, just like kubectl.
 
 <br>
 
@@ -1135,7 +1135,7 @@ Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud an
 
 **Yes.** You have multiple options:
 
-1. Use DevSpace with your current kubectl context (not using DevSpace Cloud at all).
+1. Use DevSpace with your current kube-context (not using DevSpace Cloud at all).
 2. Using the SaaS version of DevSpace Cloud and connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to automatically manage cluster users and permissions. This lets you created isolated namespaces (Spaces) within your Kubernetes clusters.
 3. Run DevSpace Cloud on-premise and connect your Kubernetes cluster to it in the same way you would use the SaaS version of DevSpace Cloud.
 

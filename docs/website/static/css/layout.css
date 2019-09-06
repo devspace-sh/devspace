@@ -2,6 +2,10 @@ body {
   overflow-x: hidden;
 }
 
+article p img {
+  display: inline-block;
+}
+
 .navPusher {
   padding-top: 100px;
 }
