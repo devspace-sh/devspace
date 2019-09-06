@@ -489,8 +489,11 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
+	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
+	ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfigFromPath(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), ".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

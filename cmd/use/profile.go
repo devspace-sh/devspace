@@ -9,12 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type profileCmd struct{}
+type profileCmd struct {
+	Reset bool
+}
 
 func newProfileCmd() *cobra.Command {
 	cmd := &profileCmd{}
 
-	return &cobra.Command{
+	useProfile := &cobra.Command{
 		Use:   "profile",
 		Short: "Use a specific DevSpace profile",
 		Long: `
@@ -25,15 +27,20 @@ Use a specific DevSpace profile
 
 Example:
 devspace use profile myconfig
+devspace use profile --reset
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		Run:  cmd.RunUseProfile,
 	}
+
+	useProfile.Flags().BoolVar(&cmd.Reset, "reset", false, "Don't use a profile anymore")
+
+	return useProfile
 }
 
 // RunUseProfile executes the "devspace use config command" logic
-func (*profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
+func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -49,26 +56,28 @@ func (*profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	}
 
 	profileName := ""
-	if len(args) > 0 {
-		profileName = args[0]
-	} else {
-		profileName = survey.Question(&survey.QuestionOptions{
-			Question: "Please select a profile to use",
-			Options:  profiles,
-		})
-	}
-
-	// Check if config exists
-	found := false
-	for _, profile := range profiles {
-		if profile == profileName {
-			found = true
-			break
+	if cmd.Reset == false {
+		if len(args) > 0 {
+			profileName = args[0]
+		} else {
+			profileName = survey.Question(&survey.QuestionOptions{
+				Question: "Please select a profile to use",
+				Options:  profiles,
+			})
 		}
-	}
 
-	if found == false {
-		log.Fatalf("Profile '%s' does not exist in devspace.yaml", profileName)
+		// Check if config exists
+		found := false
+		for _, profile := range profiles {
+			if profile == profileName {
+				found = true
+				break
+			}
+		}
+
+		if found == false {
+			log.Fatalf("Profile '%s' does not exist in devspace.yaml", profileName)
+		}
 	}
 
 	// Load generated config
@@ -86,5 +95,9 @@ func (*profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving generated config: %v", err)
 	}
 
-	log.Infof("Successfully switched to profile '%s'", profileName)
+	if cmd.Reset {
+		log.Info("Successfully resetted profile")
+	} else {
+		log.Infof("Successfully switched to profile '%s'", profileName)
+	}
 }
