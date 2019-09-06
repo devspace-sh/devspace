@@ -15,6 +15,7 @@ import (
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -154,7 +155,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		openLocal(devspaceConfig, client, domain)
+		openLocal(devspaceConfig, nil, client, domain)
 		return
 	}
 
@@ -295,7 +296,7 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 	return nil
 }
 
-func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain string) {
+func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, domain string) {
 	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace, domain, true)
 	if err != nil {
 		log.Fatal("Unable to get service: %v", err)
@@ -333,7 +334,7 @@ func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain str
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, client, log.GetInstance())
+	}, generatedConfig, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to start portforwarding: %v", err)
 	}

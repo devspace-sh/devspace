@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/client-go/tools/portforward"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -15,18 +16,26 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(config *latest.Config, client *kubectl.Client, log log.Logger) ([]*portforward.PortForwarder, error) {
+func StartPortForwarding(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, log log.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(config.Dev.Ports))
 
 		for portConfigIndex, portForwarding := range config.Dev.Ports {
+			var imageSelector []string
+			if portForwarding.ImageName != "" && generatedConfig != nil {
+				imageConfigCache := generatedConfig.GetActive().GetImageCache(portForwarding.ImageName)
+				if imageConfigCache.ImageName != "" {
+					imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+				}
+			}
+
 			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Selector:      portForwarding.Selector,
 					Namespace:     portForwarding.Namespace,
 					LabelSelector: portForwarding.LabelSelector,
 				},
-			}, false, nil)
+			}, false, imageSelector)
 			if err != nil {
 				return nil, fmt.Errorf("Error creating target selector: %v", err)
 			}

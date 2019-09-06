@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -88,13 +89,21 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 }
 
 // StartSync starts the syncing functionality
-func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
+func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeClient *kubectl.Client, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
 	if config.Dev.Sync == nil {
 		return []*sync.Sync{}, nil
 	}
 
 	syncClients := make([]*sync.Sync, 0, len(config.Dev.Sync))
 	for _, syncConfig := range config.Dev.Sync {
+		var imageSelector []string
+		if syncConfig.ImageName != "" {
+			imageConfigCache := generatedConfig.GetActive().GetImageCache(syncConfig.ImageName)
+			if imageConfigCache.ImageName != "" {
+				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+			}
+		}
+
 		selector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
 				Selector:      syncConfig.Selector,
@@ -102,7 +111,7 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 				LabelSelector: syncConfig.LabelSelector,
 				ContainerName: syncConfig.ContainerName,
 			},
-		}, false, nil)
+		}, false, imageSelector)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating target selector: %v", err)
 		}

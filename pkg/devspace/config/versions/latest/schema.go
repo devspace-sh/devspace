@@ -329,6 +329,7 @@ type TerminalConfig struct {
 type PortForwardingConfig struct {
 	Selector      string            `yaml:"selector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty"`
+	ImageName     string            `yaml:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
 	PortMappings  []*PortMapping    `yaml:"forward,omitempty"`
 }
@@ -349,6 +350,7 @@ type OpenConfig struct {
 type SyncConfig struct {
 	Selector             string            `yaml:"selector,omitempty"`
 	Namespace            string            `yaml:"namespace,omitempty"`
+	ImageName            string            `yaml:"imageName,omitempty"`
 	LabelSelector        map[string]string `yaml:"labelSelector,omitempty"`
 	ContainerName        string            `yaml:"containerName,omitempty"`
 	LocalSubPath         string            `yaml:"localSubPath,omitempty"`

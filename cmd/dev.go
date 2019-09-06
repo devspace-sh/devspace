@@ -276,7 +276,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 
 func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(config, client, log)
+		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
 			return 0, fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -289,7 +289,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, generatedConfig, client, cmd.VerboseSync, log)
 		if err != nil {
 			return 0, fmt.Errorf("Unable to start sync: %v", err)
 		}
