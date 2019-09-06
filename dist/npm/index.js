@@ -77,7 +77,7 @@ const getLatestVersion = function(callback) {
       process.exit(1);
     }
     const latestVersion = releasePage.replace(
-      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s,
+      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s,
       "$1"
     );
 
@@ -96,6 +96,20 @@ if (action == "update-version") {
 
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
 
+    process.exit(0);
+  });
+  return;
+}
+
+if (action == "get-tag") {
+  getLatestVersion(function(latestVersion) {
+    let tagRegex = /^.*-([a-z]*)(\.)?([0-9]*)?$/i
+    let tag = "latest"
+    
+    if (latestVersion.match(tagRegex)) {
+      tag = latestVersion.replace(tagRegex, "$1")
+    }
+    process.stdout.write(tag);
     process.exit(0);
   });
   return;
