@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
@@ -170,8 +171,6 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
 		err       error
-
-		loadConfig = generated.DefaultConfigName
 	)
 
 	// Resolve source
@@ -217,16 +216,15 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		}
 	}
 
-	if dependency.Config != "" {
-		loadConfig = dependency.Config
-	}
+	// Set profile to load
+	ctx = context.WithValue(ctx, constants.ProfileContextKey, dependency.Profile)
 
 	if dependency.Source.SubPath != "" {
 		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(ctx, localPath, loadConfig, true, r.BaseCache, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
@@ -238,8 +236,9 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
-	dGeneratedConfig.ActiveConfig = loadConfig
-	generated.InitDevSpaceConfig(dGeneratedConfig, loadConfig)
+
+	dGeneratedConfig.ActiveProfile = dependency.Profile
+	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
 
 	return &Dependency{
 		ID:        ID,
@@ -273,8 +272,8 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 			id += ":" + dependency.Source.SubPath
 		}
 
-		if dependency.Config != "" {
-			id += " - config " + dependency.Config
+		if dependency.Profile != "" {
+			id += " - profile " + dependency.Profile
 		}
 
 		return id
@@ -288,8 +287,8 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 			return remote
 		}
 
-		if dependency.Config != "" {
-			filePath += " - config " + dependency.Config
+		if dependency.Profile != "" {
+			filePath += " - profile " + dependency.Profile
 		}
 
 		return filePath

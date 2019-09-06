@@ -34,5 +34,14 @@ func (c *Config) Upgrade() (config.Config, error) {
 		nextConfig.Dev.Terminal.Enabled = ptr.Bool(true)
 	}
 
+	// Upgrade dependencies
+	if c.Dependencies != nil {
+		for idx, dependency := range *c.Dependencies {
+			if dependency.Config != nil {
+				nextConfig.Dependencies[idx].Profile = *dependency.Config
+			}
+		}
+	}
+
 	return nextConfig, nil
 }

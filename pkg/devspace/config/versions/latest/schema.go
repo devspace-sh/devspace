@@ -379,7 +379,7 @@ type SelectorConfig struct {
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	Source             *SourceConfig `yaml:"source"`
-	Config             string        `yaml:"config"`
+	Profile            string        `yaml:"profile"`
 	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
 	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
 	Namespace          string        `yaml:"namespace,omitempty"`

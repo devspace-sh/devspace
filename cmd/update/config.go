@@ -47,7 +47,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config
-	configutil.GetConfigWithoutDefaults(context.Background(), false)
+	configutil.GetBaseConfig(context.Background())
 
 	// Save it
 	err = configutil.SaveLoadedConfig()

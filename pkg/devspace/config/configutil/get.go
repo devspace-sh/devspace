@@ -121,11 +121,6 @@ func loadConfigFromPath(ctx context.Context, generatedConfig *generated.Config, 
 
 // GetConfigFromPath loads the config from a given base path
 func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
-	// Check if we should load a specific config
-	if generatedConfig.ActiveProfile != "" && ctx.Value(constants.ProfileContextKey) == nil {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
-	}
-
 	config, err := loadConfigFromPath(ctx, generatedConfig, basePath, log)
 	if err != nil {
 		return nil, err
