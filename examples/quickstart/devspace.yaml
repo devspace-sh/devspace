@@ -12,12 +12,10 @@ deployments:
       - port: 3000
 dev:
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: quickstart
+  - imageName: default
     forward:
     - port: 3000
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: quickstart
+  - imageName: default
     excludePaths:
     - node_modules

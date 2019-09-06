@@ -12,12 +12,10 @@ dev:
     images:
     - name: default
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: default
+  - imageName: default
     forward:
     - port: 3000
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: default
+  - imageName: default
     excludePaths:
     - node_modules

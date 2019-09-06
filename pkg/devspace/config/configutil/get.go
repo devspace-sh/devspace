@@ -176,8 +176,8 @@ func validate(config *latest.Config) error {
 
 		if config.Dev.Ports != nil {
 			for index, port := range config.Dev.Ports {
-				if port.Selector == "" && port.LabelSelector == nil {
-					return fmt.Errorf("Error in config: selector and label selector are nil in port config at index %d", index)
+				if port.ImageName == "" && port.Selector == "" && port.LabelSelector == nil {
+					return fmt.Errorf("Error in config: imageName, selector and label selector are nil in port config at index %d", index)
 				}
 				if port.PortMappings == nil {
 					return fmt.Errorf("Error in config: portMappings is empty in port config at index %d", index)
@@ -187,8 +187,8 @@ func validate(config *latest.Config) error {
 
 		if config.Dev.Sync != nil {
 			for index, sync := range config.Dev.Sync {
-				if sync.Selector == "" && sync.LabelSelector == nil {
-					return fmt.Errorf("Error in config: selector and label selector are nil in sync config at index %d", index)
+				if sync.ImageName == "" && sync.Selector == "" && sync.LabelSelector == nil {
+					return fmt.Errorf("Error in config: imageName, selector and label selector are nil in sync config at index %d", index)
 				}
 			}
 		}

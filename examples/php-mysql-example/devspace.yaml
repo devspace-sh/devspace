@@ -33,11 +33,9 @@ deployments:
       - port: 80
 dev:
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: php-mysql-example
+  - imageName: default
     forward:
     - port: 8080
       remotePort: 80
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: php-mysql-example
+  - imageName: default

@@ -29,13 +29,11 @@ profiles:
         images:
         - name: service-image-1
       ports:
-        - labelSelector:
-            app.kubernetes.io/component: service-1
+        - imageName: service-image-1
           forward:
             - port: 8080
       sync:
-        - labelSelector:
-            app.kubernetes.io/component: service-1
+        - imageName: service-image-1
           localSubPath: ./service1
 # Use the config with 'devspace use profile dev-service2-only'
 - name: dev-service2-only
@@ -45,13 +43,11 @@ profiles:
         images:
         - name: service-image-2
       ports:
-        - labelSelector:
-            app.kubernetes.io/component: service-2
+        - imageName: service-image-2
           forward:
             - port: 8080
       sync:
-        - labelSelector:
-            app.kubernetes.io/component: service-2
+        - imageName: service-image-2
           localSubPath: ./service2
   # Patches allow you to make specific changes in the config
   patches:

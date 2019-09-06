@@ -26,16 +26,13 @@ dev:
     images:
     - name: node
   ports:
-  - labelSelector:
-      release: devspace-node
+  - imageName: node
     forward:
     - port: 3000
   sync:
-  - labelSelector:
-      release: devspace-node
+  - imageName: node
     localSubPath: ./node
     excludePaths:
     - node_modules
-  - labelSelector:
-      release: devspace-php
+  - imageName: php
     localSubPath: ./php

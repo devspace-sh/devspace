@@ -16,10 +16,8 @@ deployments:
         - kube
 dev:
   ports:
-    - labelSelector:
-        app.kubernetes.io/component: devspace-default
+    - imageName: default
       forward:
         - port: 8080
   sync:
-    - labelSelector:
-        app.kubernetes.io/component: devspace-default
+    - imageName: default
