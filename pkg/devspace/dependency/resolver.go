@@ -229,6 +229,7 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
 
+	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config

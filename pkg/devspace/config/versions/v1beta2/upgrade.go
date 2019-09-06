@@ -18,20 +18,49 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 	// Check if old cluster exists
 	if c.Cluster != nil && (c.Cluster.KubeContext != nil || c.Cluster.Namespace != nil) {
-		log.Warnf("cluster config option is not supported anymore in v1beta2 and devspace v3")
+		log.Warnf("cluster config option is not supported anymore in v1beta2 and devspace v4")
 	}
 
 	if nextConfig.Dev == nil {
 		nextConfig.Dev = &next.DevConfig{}
 	}
-	if nextConfig.Dev.Terminal == nil {
-		nextConfig.Dev.Terminal = &next.Terminal{}
+	if nextConfig.Dev.Interactive == nil {
+		nextConfig.Dev.Interactive = &next.InteractiveConfig{}
 	}
 
 	if c.Dev != nil && c.Dev.Terminal != nil && c.Dev.Terminal.Disabled != nil {
-		nextConfig.Dev.Terminal.Enabled = ptr.Bool(!*c.Dev.Terminal.Disabled)
+		nextConfig.Dev.Interactive.Enabled = ptr.Bool(!*c.Dev.Terminal.Disabled)
 	} else {
-		nextConfig.Dev.Terminal.Enabled = ptr.Bool(true)
+		nextConfig.Dev.Interactive.Enabled = ptr.Bool(true)
+	}
+
+	// Convert override images
+	if c.Dev != nil && c.Dev.OverrideImages != nil && len(*c.Dev.OverrideImages) > 0 {
+		nextConfig.Dev.Interactive.Images = []*next.InteractiveImageConfig{}
+
+		for _, overrideImage := range *c.Dev.OverrideImages {
+			if overrideImage.Name == nil {
+				continue
+			}
+			if overrideImage.Dockerfile != nil {
+				log.Warnf("dev.overrideImages[*].dockerfile is not supported anymore, please use profiles instead")
+			}
+			if overrideImage.Context != nil {
+				log.Warnf("dev.overrideImages[*].context is not supported anymore, please use profiles instead")
+			}
+
+			entrypoint := []string{}
+			if overrideImage.Entrypoint != nil {
+				for _, s := range *overrideImage.Entrypoint {
+					entrypoint = append(entrypoint, *s)
+				}
+			}
+
+			nextConfig.Dev.Interactive.Images = append(nextConfig.Dev.Interactive.Images, &next.InteractiveImageConfig{
+				Name:       *overrideImage.Name,
+				Entrypoint: entrypoint,
+			})
+		}
 	}
 
 	// Upgrade dependencies

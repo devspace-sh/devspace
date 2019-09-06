@@ -193,10 +193,10 @@ func validate(config *latest.Config) error {
 			}
 		}
 
-		if config.Dev.OverrideImages != nil {
-			for index, overrideImageConfig := range config.Dev.OverrideImages {
-				if overrideImageConfig.Name == "" {
-					return fmt.Errorf("Error in config: Unnamed override image config at index %d", index)
+		if config.Dev.Interactive != nil {
+			for index, imageConf := range config.Dev.Interactive.Images {
+				if imageConf.Name == "" {
+					return fmt.Errorf("Error in config: Unnamed interactive image config at index %d", index)
 				}
 			}
 		}

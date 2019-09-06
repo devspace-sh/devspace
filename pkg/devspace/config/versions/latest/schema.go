@@ -43,7 +43,7 @@ type Config struct {
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
 	Name    string         `yaml:"name"`
-	Replace *ReplaceConfig `yaml:"replaceConfig,omitempty"`
+	Replace *ReplaceConfig `yaml:"replace,omitempty"`
 	Patches []*PatchConfig `yaml:"patches,omitempty"`
 }
 
@@ -51,8 +51,8 @@ type ProfileConfig struct {
 type PatchConfig struct {
 	Operation string      `yaml:"op"`
 	Path      string      `yaml:"path"`
-	From      string      `yaml:"from"`
-	Value     interface{} `yaml:"value"`
+	From      string      `yaml:"from,omitempty"`
+	Value     interface{} `yaml:"value,omitempty"`
 }
 
 // ReplaceConfig defines a replace config that can override certain parts of the config completely
@@ -294,30 +294,34 @@ type KubectlConfig struct {
 
 // DevConfig defines the devspace deployment
 type DevConfig struct {
-	OverrideImages []*ImageOverrideConfig  `yaml:"overrideImages,omitempty"`
-	Terminal       *Terminal               `yaml:"terminal,omitempty"`
-	Ports          []*PortForwardingConfig `yaml:"ports,omitempty"`
-	Open           []*OpenConfig           `yaml:"open,omitempty"`
-	Sync           []*SyncConfig           `yaml:"sync,omitempty"`
-	AutoReload     *AutoReloadConfig       `yaml:"autoReload,omitempty"`
-	Selectors      []*SelectorConfig       `yaml:"selectors,omitempty"`
+	Ports       []*PortForwardingConfig `yaml:"ports,omitempty"`
+	Open        []*OpenConfig           `yaml:"open,omitempty"`
+	Sync        []*SyncConfig           `yaml:"sync,omitempty"`
+	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty"`
+	Interactive *InteractiveConfig      `yaml:"interactive,omitempty"`
+	Selectors   []*SelectorConfig       `yaml:"selectors,omitempty"`
 }
 
-// ImageOverrideConfig holds information about what parts of the image config are overwritten during devspace dev
-type ImageOverrideConfig struct {
-	Name       string   `yaml:"name"`
+// InteractiveConfig defines the default interactive config
+type InteractiveConfig struct {
+	Enabled  *bool                     `yaml:"enabled,omitempty"`
+	Terminal *TerminalConfig           `yaml:"terminal,omitempty"`
+	Images   []*InteractiveImageConfig `yaml:"images,omitempty"`
+}
+
+// InteractiveImageConfig describes the interactive mode options for an image
+type InteractiveImageConfig struct {
+	Name       string   `yaml:"name,omitempty"`
 	Entrypoint []string `yaml:"entrypoint,omitempty"`
-	Dockerfile string   `yaml:"dockerfile,omitempty"`
-	Context    string   `yaml:"context,omitempty"`
 }
 
-// Terminal describes the terminal options
-type Terminal struct {
-	Enabled       *bool             `yaml:"enabled,omitempty"`
+// TerminalConfig describes the terminal options
+type TerminalConfig struct {
 	Selector      string            `yaml:"selector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty"`
+	ImageName     string            `yaml:"imageName,omitempty"`
 	Command       []string          `yaml:"command,omitempty"`
 }
 

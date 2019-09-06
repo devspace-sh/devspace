@@ -1,8 +1,7 @@
-version: v1beta2
+version: v1beta3
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace
-    createPullSecret: true
 deployments:
 - name: mysql
   component:

@@ -48,8 +48,8 @@ func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineNam
 	// Check if we should overwrite entrypoint
 	var entrypoint []string
 	if isDev {
-		if config.Dev != nil && config.Dev.OverrideImages != nil {
-			for _, imageOverrideConfig := range config.Dev.OverrideImages {
+		if config.Dev != nil && config.Dev.Interactive != nil {
+			for _, imageOverrideConfig := range config.Dev.Interactive.Images {
 				if imageOverrideConfig.Name == imageConfigName {
 					entrypoint = imageOverrideConfig.Entrypoint
 					break

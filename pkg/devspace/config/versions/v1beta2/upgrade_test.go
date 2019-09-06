@@ -25,7 +25,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Dev: &next.DevConfig{
-					Terminal: &next.Terminal{
+					Interactive: &next.InteractiveConfig{
 						Enabled: ptr.Bool(true),
 					},
 				},
@@ -34,6 +34,12 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Dev: &DevConfig{
+					OverrideImages: &[]*ImageOverrideConfig{
+						{
+							Name:       ptr.String("test"),
+							Entrypoint: &[]*string{ptr.String("my"), ptr.String("command")},
+						},
+					},
 					Terminal: &Terminal{
 						Disabled: ptr.Bool(true),
 					},
@@ -44,8 +50,14 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Dev: &next.DevConfig{
-					Terminal: &next.Terminal{
+					Interactive: &next.InteractiveConfig{
 						Enabled: ptr.Bool(false),
+						Images: []*next.InteractiveImageConfig{
+							{
+								Name:       "test",
+								Entrypoint: []string{"my", "command"},
+							},
+						},
 					},
 				},
 				Images: map[string]*next.ImageConfig{

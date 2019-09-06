@@ -1,8 +1,7 @@
-version: v1beta2
+version: v1beta3
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace
-    createPullSecret: true
 deployments:
 - name: quickstart
   component:
@@ -12,11 +11,6 @@ deployments:
       ports:
       - port: 3000
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
   ports:
   - labelSelector:
       app.kubernetes.io/component: quickstart

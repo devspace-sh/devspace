@@ -14,21 +14,8 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, args []string, imageSelector []string, interrupt chan error, log log.Logger) (int, error) {
+func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParameter *targetselector.SelectorParameter, args []string, imageSelector []string, interrupt chan error, log log.Logger) (int, error) {
 	command := getCommand(config, args)
-
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: cmdParameter,
-	}
-
-	if config != nil && config.Dev != nil && config.Dev.Terminal != nil {
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Selector:      config.Dev.Terminal.Selector,
-			Namespace:     config.Dev.Terminal.Namespace,
-			LabelSelector: config.Dev.Terminal.LabelSelector,
-			ContainerName: config.Dev.Terminal.ContainerName,
-		}
-	}
 
 	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, imageSelector)
 	if err != nil {
@@ -69,8 +56,8 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, cmdParameter t
 func getCommand(config *latest.Config, args []string) []string {
 	var command []string
 
-	if config != nil && config.Dev != nil && config.Dev.Terminal != nil && len(config.Dev.Terminal.Command) > 0 {
-		for _, cmd := range config.Dev.Terminal.Command {
+	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil && len(config.Dev.Interactive.Terminal.Command) > 0 {
+		for _, cmd := range config.Dev.Interactive.Terminal.Command {
 			command = append(command, cmd)
 		}
 	}

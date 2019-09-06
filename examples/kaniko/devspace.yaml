@@ -1,4 +1,4 @@
-version: v1beta2
+version: v1beta3
 images:
   default:
     image: devspacecloud/devspace
@@ -11,11 +11,9 @@ deployments:
       chart:
         name: ./chart
 dev:
-  overrideImages:
+  interactive:
+    images:
     - name: default
-      entrypoint:
-        - sleep
-        - "999999999999"
   ports:
     - labelSelector:
         app.kubernetes.io/component: default

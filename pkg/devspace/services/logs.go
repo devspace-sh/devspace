@@ -23,15 +23,6 @@ func StartLogsWithWriter(config *latest.Config, client *kubectl.Client, cmdParam
 		CmdParameter: cmdParameter,
 	}
 
-	if config != nil && config.Dev != nil && config.Dev.Terminal != nil {
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Selector:      config.Dev.Terminal.Selector,
-			Namespace:     config.Dev.Terminal.Namespace,
-			LabelSelector: config.Dev.Terminal.LabelSelector,
-			ContainerName: config.Dev.Terminal.ContainerName,
-		}
-	}
-
 	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, nil)
 	if err != nil {
 		return err

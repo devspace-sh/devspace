@@ -1,8 +1,8 @@
-# This example only works with minikube
+# This example only works with minikube and docker desktop
 # If you want to try this example in other
 # Clusters you have to exchange the image names
 # and enable image pushing
-version: v1beta2
+version: v1beta3
 images:
   node:
     image: node
@@ -22,14 +22,9 @@ deployments:
     chart:
       name: php/chart
 dev:
-  overrideImages:
-  - name: node
-    entrypoint:
-    - sleep
-    - "9999999999"
-  terminal:
-    labelSelector:
-      release: devspace-node
+  interactive:
+    images:
+    - name: node
   ports:
   - labelSelector:
       release: devspace-node

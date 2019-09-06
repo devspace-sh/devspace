@@ -249,19 +249,18 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 		fileContent, err := ioutil.ReadFile(ignoreFile)
 		if err != nil {
 			return fmt.Errorf("Error reading file %s: %v", ignoreFile, err)
-		} else {
-			// append only if not found in file content
-			if strings.Contains(string(fileContent), content) == false {
-				file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
-				if err != nil {
-					return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
-				} else {
-					defer file.Close()
+		}
 
-					if _, err = file.WriteString(content); err != nil {
-						return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
-					}
-				}
+		// append only if not found in file content
+		if strings.Contains(string(fileContent), content) == false {
+			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
+			if err != nil {
+				return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+
+			defer file.Close()
+			if _, err = file.WriteString(content); err != nil {
+				return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
 			}
 		}
 	}

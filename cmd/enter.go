@@ -101,19 +101,21 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build params
-	params := targetselector.CmdParameter{
-		Selector:      cmd.Selector,
-		ContainerName: cmd.Container,
-		LabelSelector: cmd.LabelSelector,
-		Namespace:     cmd.Namespace,
-		PodName:       cmd.Pod,
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: targetselector.CmdParameter{
+			Selector:      cmd.Selector,
+			ContainerName: cmd.Container,
+			LabelSelector: cmd.LabelSelector,
+			Namespace:     cmd.Namespace,
+			PodName:       cmd.Pod,
+		},
 	}
 	if cmd.Pick != false {
-		params.Pick = &cmd.Pick
+		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(config, client, params, args, nil, make(chan error), log.GetInstance())
+	exitCode, err := services.StartTerminal(config, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

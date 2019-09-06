@@ -34,19 +34,6 @@ func GetDockerfileAndContext(config *latest.Config, imageConfigName string, imag
 		contextPath = imageConf.Context
 	}
 
-	if isDev && config.Dev != nil && config.Dev.OverrideImages != nil {
-		for _, overrideConfig := range config.Dev.OverrideImages {
-			if overrideConfig.Name == imageConfigName {
-				if overrideConfig.Dockerfile != "" {
-					dockerfilePath = overrideConfig.Dockerfile
-				}
-				if overrideConfig.Context != "" {
-					contextPath = overrideConfig.Context
-				}
-			}
-		}
-	}
-
 	return dockerfilePath, contextPath
 }
 

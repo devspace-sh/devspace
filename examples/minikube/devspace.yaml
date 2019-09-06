@@ -1,7 +1,4 @@
-version: v1beta2
-cluster:
-  kubeContext: minikube
-  namespace: devspace
+version: v1beta3
 images:
   default:
     image: devspace
@@ -11,11 +8,9 @@ deployments:
     chart:
       name: ./chart
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
+  interactive:
+    images:
+    - name: default
   ports:
   - labelSelector:
       app.kubernetes.io/component: default
