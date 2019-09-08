@@ -4,15 +4,9 @@ title: 2. Deploy to Kubernetes
 
 After installing DevSpace, you are ready to deploy your first project.
 
-## Choose a project
+## Choose a Project
 You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:
 <!--DOCUSAURUS_CODE_TABS-->
-<!--Your Project-->
-```bash
-# Navigate to the root directory of your project
-cd /path/to/your/project
-```
-
 <!--Node.js Demo-->
 ```bash
 git clone https://github.com/devspace-cloud/quickstart-nodejs
@@ -31,34 +25,35 @@ git clone https://github.com/devspace-cloud/quickstart-golang
 cd quickstart-golang
 ```
 
+<!--PHP Demo-->
+```json
+git clone https://github.com/devspace-cloud/quickstart-php
+cd quickstart-php
+```
+
 <!--Ruby Demo-->
 ```bash
 git clone https://github.com/devspace-cloud/quickstart-ruby
 cd quickstart-ruby
 ```
 
-<!--PHP Demo-->
-```json
-git clone https://github.com/devspace-cloud/quickstart-php
-cd quickstart-php
+<!--Your Project-->
+```bash
+# Navigate to the root directory of your project
+cd /path/to/your/project
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-> If you are using DevSpace for the first time, we recommend that you are using one of the demo projects.
+> If you are using DevSpace for the first time, it is highly recommended that you use one of the demo projects.
 
-## Initialize your project
-Run this command in your project directory to initialize your application with DevSpace:
+## Initialize Your Project
+Run this command in your project directory to create a `devspace.yaml` config file for your project:
 ```bash
 devspace init
 ```
 
-While initializing your project, DevSpace will ask you a couple of questions and then create a `devspace.yaml` file within your project which contains a basic configuration for building and deploying your application.
-
-
-<details>
-<summary>
-### What is defined in the basic configuration of this `devspace.yaml`?
-</summary>
+While initializing your project, DevSpace will ask you a couple of questions and then create a config file which will look similar to this one:
 
 ```yaml
 # Config version
@@ -67,7 +62,7 @@ version: v1beta2
 # Defines all Dockerfiles that DevSpace will build, tag and push
 images:
   default:                              # Key 'default' = Name of this image
-    image: dscr.io/username/devspace    # Registry and image name for pushing the image (dscr.io is the private registry provided by DevSpace Cloud)
+    image: reg.tld/username/devspace    # Registry and image name for pushing the image
     createPullSecret: true  
 
 # Defines an array of everything (component, Helm chart, Kubernetes maninfests) 
@@ -76,7 +71,7 @@ deployments:
 - name: quickstart-nodejs               # Name of this deployment
   component:                            # Deploy a component (alternatives: helm, kubectl)
     containers:                         # Defines an array of containers that run in the same pods started by this component
-    - image: dscr.io/username/devspace  # Image of this container
+    - image: reg.tld/username/devspace  # Image of this container
       resources:
         limits:
           cpu: "400m"                   # CPU limit for this container
@@ -85,7 +80,7 @@ deployments:
       ports:                            # Array of container ports to expose through the service
       - port: 3000                      # Exposes container port 3000 on service port 3000            # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
-# Development-specific configuration (will be explained later)
+# Settings for development mode (will be explained later)
 dev: ...
 ```
 
