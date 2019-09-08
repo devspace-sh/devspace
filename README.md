@@ -448,7 +448,9 @@ You can now:
 - Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
 - Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing.
+Quickstart projects work out of the box in development mode because the `ENTRYPOINT` of the provided Dockerfiles start the projects in hot reloading mode. If you want to configure your own application to work well with `devspace dev`, it is highly recommended that you take a look at the documentation, to understand the [workflow and basics of the developing cloud-native software with DevSpace](https://devspace.cloud/docs/cli/development/workflow-basics).
+
+> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing or starting an application in hot reloading mode when the Dockerfile ENTRYPOINT generally starts a rather production-like version of the application.
 
 <br>
 
