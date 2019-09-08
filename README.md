@@ -294,6 +294,8 @@ works with any local Kubernetes cluster (minikube, kind, k3s, mikrok8s etc.)
 
 <br>
 
+If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
+
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
@@ -314,12 +316,14 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
 #### Option A: You want to use this cluster alone
+If you want to deploy to a remote Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
 ```
 
 #### Option B: You want to share this cluster with your team
+To share a cluster, connect it to [DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) and then create an isolated Kubernetes namespace.
 ```bash
 # Connect your cluster to DevSpace Cloud
 devspace connect cluster # requires login via GitHub or email
@@ -335,9 +339,11 @@ devspace create space my-namespace
 <details>
   <summary><b>What is DevSpace Cloud?</b></summary>
 
-DevSpace Cloud allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc.
+[DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) is the optional server-side component for DevSpace that allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network & pod security policies etc.
 
-> You can use DevSpace Cloud as SaaS platform or use the [on-premise edition](https://github.com/devspace-cloud/devspace-cloud) to run it yourself.
+> You can either
+> - use the fully managed **[SaaS edition of DevSpace Cloud](https://app.devspace.cloud)**
+> - or run it on your clusters using the <img width="20px" style="vertical-align: sub" src="/img/logos/github-logo.svg" alt="DevSpace Demo"> **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
 
 <br>
 </details>
