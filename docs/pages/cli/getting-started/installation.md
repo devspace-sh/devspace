@@ -2,10 +2,10 @@
 title: 1. Install DevSpace
 ---
 
-To build and deploy applications with DevSpace, you need to install DevSpace.
+DevSpace is a client-only command-line tool that runs as a single binary directly on your computer. DevSpace does not require any other programs or dependencies to be installed.
 
 ## Install DevSpace
-Install DevSpace with NPM (recommended for Windows users) or any of the platform-specific installation scripts shown below.
+Install DevSpace either via NPM (recommended for Windows) or using any of the platform-specific scripts below:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NPM-->
@@ -28,26 +28,36 @@ sudo mv devspace /usr/local/bin;
 <!--Windows Powershell-->
 ```powershell
 md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+$env:Path += ";" + $Env:APPDATA + "\devspace";
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Alternatively, you can simply download the binary for your platform from the [GitHub Releases](https://github.com/devspace-cloud/devspace/releases) page and add the binary to your PATH.
+Alternatively, you can simply download the binary for your platform from the [GitHub Releases](https://github.com/devspace-cloud/devspace/releases) page and add this binary to your PATH.
+
+<details>
+<summary>
+### How to upgrade DevSpace?
+</summary>
+
+Upgrading DevSpace is as easy as running:
+```bash
+devspace upgrade
+```
+
+</details>
 
 <details>
 <summary>
 ### How to uninstall DevSpace?
 </summary>
 
-Uninstalling DevSpace is as easy as removing the devspace binary from your machine. You can use the following commands for removing the binary and optionally also deleting the DevSpace folder in your home directory:
+Uninstalling DevSpace is as easy as removing the DevSpace binary from your machine. You can use the following commands for removing the binary and optionally also deleting the global DevSpace config folder in your home directory:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NPM-->
 ```bash
 npm uninstall -g devspace
-
-# If you also want to delete the DevSpace configuration folder:
-rm "~/.devspace";           # for Mac and Linux
-Remove-Item "~\.devspace";  # for Windows
 ```
 
 <!--Mac Terminal-->
