@@ -238,10 +238,10 @@ devspace deploy
 ```
 
 This command will do the following:
-1. Build the Dockerfiles specified in the `images` section of your `devspace.yaml`
-2. Tag the images with an auto-generated tag according to a customizable tag schema
+1. Build the Dockerfile(s) specified in the `images` section of your `devspace.yaml`
+2. Tag the resulting image(s) with an auto-generated tag according to a [customizable tag schema](/docs/cli/image-building/configuration#TODO)
 3. Push the resulting Docker images to the specified registries
-4. Create image pull secrets in your Kubernetes namespace 
+4. Create image pull secrets in your Kubernetes namespace (optional)
 5. Deploy everything that is defined unter `deployments` in your `devspace.yaml`
 
 <img src="/img/processes/deployment-process-devspace.svg" alt="DevSpace Deployment Process" style="width: 100%;">
