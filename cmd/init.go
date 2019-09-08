@@ -351,7 +351,7 @@ func (cmd *InitCmd) addDevConfig() {
 			if err == nil {
 				dockerignoreRules := strings.Split(string(dockerignore), "\n")
 				for _, ignoreRule := range dockerignoreRules {
-					if len(ignoreRule) > 0 {
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] {
 						excludePaths = append(excludePaths, ignoreRule)
 					}
 				}
