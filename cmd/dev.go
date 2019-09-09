@@ -15,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
+	"github.com/skratchdot/open-golang/open"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -26,7 +27,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
@@ -385,25 +385,23 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 
 	// Build an image selector
 	imageSelector := []string{}
-	for _, imageConfigCache := range generatedConfig.GetActive().Images {
+	for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
 		if imageConfigCache.ImageName != "" {
-			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+			// Check that they are also in the real config
+			for configImageName := range config.Images {
+				if configImageName == generatedImageName {
+					imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+					break
+				}
+			}
 		}
 	}
 
 	// Run dev.open configs
 	if config.Dev.Open != nil {
-		logFile := logutil.GetFileLogger("default")
-
 		for _, openConfig := range config.Dev.Open {
 			if openConfig.URL != "" {
-				go func() {
-					err := openURL(openConfig.URL, nil, "", logFile)
-					if err != nil {
-						// Use warn instead of fatal to prevent exit
-						logFile.Warn(err)
-					}
-				}()
+				open.Start(openConfig.URL)
 			}
 		}
 	}
