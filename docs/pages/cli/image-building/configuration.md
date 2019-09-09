@@ -3,6 +3,32 @@ title: Configure Image Building
 sidebar_label: Configuration
 ---
 
+## Useful Commands
+
+### `devspace add image`
+To tell DevSpace to build an additional image, simply use the `devspace add image` command.
+```bash
+devspace add image database --dockerfile=./db/Dockerfile --context=./db --image=dscr.io/username/mysql
+```
+
+The command shown above would add a new image to your DevSpace configuration. The resulting configuration would look similar to this one:
+
+```yaml
+images:
+  database:                         # from --name
+    image: dscr.io/username/image   # from args[0]
+    dockerfile: ./db/Dockerfile     # from --dockerfile
+    context: ./db                   # from --context
+```
+
+### `devspace remove image`
+Instead of manually removing an image from your configuration file, you can simply run:
+```bash
+devspace remove image database
+```
+This command would remove the image with name `database` from your `devspace.yaml`.
+
+
 ## Tagging
 If you have any image defined in your `devspace.yaml`, DevSpace will tag this image after building with a random string and push it to the defined registry. DevSpace will then replace the image name with the just build tag in memory in the resources that should be deployed (kubernetes manifests, helm chart values or component values).  
 
@@ -145,3 +171,7 @@ options:                            # struct   | Options for building images
   network: ""                       # string   | Network mode used for building the image
   buildArgs: {}                     # map[string]string | Key-value map specifying build arguments that will be passed to the build tool (e.g. docker)
 ```
+
+
+
+TODO: ENV VARS

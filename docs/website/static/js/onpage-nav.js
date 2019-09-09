@@ -51,7 +51,7 @@ const highlightActiveOnPageLink = function() {
                 for (let i = 0; i < anchors.length; i++) {
                     const anchor = anchors[i];
     
-                    if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.7) {
+                    if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.5) {
                         activeHash = anchor.attributes.id.value;
                     } else {
                         break;

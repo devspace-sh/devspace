@@ -2,90 +2,141 @@
 title: Workflow & Basics
 ---
 
-DevSpace can automatically build, tag and push all images needed for your application. Additionally, DevSpace can also create and manage image pull secrets in Kubernetes, so your cluster can pull images from private registries.
+DevSpace fully automates the manual work of building, tagging and pushing Docker images.
 
-## Image Building Process
-DevSpace fully automates the manual work of building, tagging and pushing Docker images and executes the following steps during `devspace deploy` and `devspace dev`:
-1. Build a new image (if the Dockerfile or the Docker context has changed)
-2. Apply [entrypoint overrides](/docs/development/overrides) for development (only when running `devspace dev`)
-3. Tag this new image with an auto-generated tag
-4. Push this image to any [Docker registry](/docs/image-building/registries/authentication) of your choice
-5. Create [image pull secrets](/docs/image-building/registries/pull-secrets) for your registries
-
+<br>
 <img src="/img/processes/image-building-process-devspace.svg" alt="DevSpace Image Building Process" style="width: 100%;">
 
+## Commands Triggering Image Building
+When you run one of the following commands, DevSpace will run the image building process:
+- `devspace build` (only image building without deployment)
+- `devspace deploy` (before deploying the application)
+- `devspace dev` (before deploying the application and starting the development mode)
 
-## Important Commands
+## Image Building Process
+DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
+
+> You can use the `--build-sequential` flag to tell DevSpace to build images sequentially instead of using the parallel approach.
 
 
-### `devspace add image`
+### 1. Load Dockerfile
+DevSpace loads the contents of the Dockerfile specified in `dockerfile` (defaults to `./Dockerfile`). 
 
+> Dockerfile paths used in `dockerfile` should be relative to the `devspace.yaml`.
 
-### `devspace remove image`
+### 2. Apply Entrypoint Override (if configured) 
+DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `entrypoint` option should be defined as an array. 
 
-### Replacing image tags before deployment
-After building your images as part of `devspace deploy` or `devspace dev`, DevSpace will continue with deploying your application as defined in the `deployments`. Before deploying, DevSpace will use the newly generated tag and replace every occurence of the same image in your deployment files (e.g. Helm charts or Kubernetes manifests) with the newly generated tag, so that you are always deploying the newest version of your application. This tag replacement happens entirely in-memory, so your deployment files will not be altered.
+> Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](#TODO) in your `devspace.yaml`.
 
-### Skipping image building
-DevSpace automatically skips image building when neither the Dockerfile nor the context has changed since the last time an image bas been build from the repective Dockerfile.
+### 3. Load Build Context
+DevSpace loads the the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
 
-## Configuring the image building process
-There are a couple of configuration options to influence the image building process.
+See: [What does "context" mean in terms of image building?](#what-does-context-mean-in-terms-of-image-building) 
+
+> Context paths used in `context` should be relative to the `devspace.yaml`.
+
+### 4. Skip Image (if possible)
+DevSpace tries to speed up image building by skipping images when they have not changed since the last build process. To do this, DevSpace caches the following information after building an image:
+- a hash of the `Dockerfile` used to build the image (including ENTRYPOINT override)
+- a hash over all files in the `context` used to build this image (excluding files in `.dockerignore`)
+
+Next time you trigger the image building process, DevSpace will generate these hashes again and compare them to the hashes of the last image building process. If all newly generated hashes are equal to the old ones stored during the last image building process, then nothing has changed and DevSpace will skip this image.
+
+> You can use the `-b / --force-build` flag to tell DevSpace to build all images even if nothing has changed.
+
+### 5. Build Image
+DevSpace uses one of the following [build tools](/docs/cli/image-building/build-tools/what-are-build-tools) to create an image based on your Dockerfile and the provided context:
+- [`docker`](/docs/cli/image-building/build-tools/docker) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
+- [`kaniko`](/docs/cli/image-building/build-tools/kaniko) for building images directly inside Kubernetes ([fallback for `docker`](#kaniko-as-fallback-for-docker))
+- [`custom`](/docs/cli/image-building/build-tools/custom-build-commands) for building images with a custom build command (e.g. for using Google Cloud Build)
 
 <details>
 <summary>
-### Creating image pull secrets
+#### Kaniko as Fallback for Docker
 </summary>
-To make sure that Kubernetes can pull your image even when you are pushing to a private registry (such as dscr.io), DevSpace will also create an [image pull secret](/docs/image-building/registries/pull-secrets) containing credentials for your registry.
 
-## Default image created by `devspace init`
-When running `devspace init` within your project, DevSpace defines an image called `default` within your config file `devspace.yaml`.
-```yaml
-images:
-  default:
-    image: dscr.io/username/devspace
-```
-Because this image called `default` only has the `image` option configured, DevSpace will automatically conclude that:
+When using `docker` as build tool, DevSpace checks if Docker is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image.
 
-1. The image should be built using your local Docker daemon
-2. The Dockerfile for building the image will be located inside the root folder of your project (i.e. ./Dockerfile)
-3. The context for building the image will be the root folder of your project (i.e. ./)
 </details>
 
 <details>
 <summary>
-### Build images with kaniko instead of Docker (experimental)
+#### Docker Daemon of Local Kubernetes Clusters
 </summary>
-Instead of using your local Docker daemon to build your images, you can also use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Docker images. Using kaniko has the advantage that you are building the image inside a container that runs remotely on top of Kubernetes. Using DevSpace Cloud, this container would run inside the Space that you are currently working with.
-```yaml
-images:
-  default:
-    image: dscr.io/username/devspace
-    build:
-      kaniko:
-        cache: true
-```
-The config excerpt shown above would tell DevSpace to build the image `default` with kaniko and to use caching while building the image.
 
-> In comparison to using a local Docker daemon, **kaniko is currently rather slow** at building images. Therefore, it is currently recommended to use Docker for building images.
+DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named `minikube`, `docker-desktop` or `docker-for-desktop`.
+
+</details>
+
+### 6. Tag Image
+DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
+
+[Learn more about defining a custom tagging schema](#TODO)
+
+> Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](/docs/cli/deployment/helm-charts/configuration/overview-specification) and [components](/docs/cli/deployment/components/configuration/overview-specification), so they will be deployed using the most recently built images.
+
+### 7. Push Image
+DevSpace automatically pushes your images to the respective registry that should be specified as part of the `image` option. Just as with regular Docker images, DevSpace uses Docker Hub if no registry hostname is provided within `image`.
+
+> You can skip this step when proving the `--skip-push` flag. Beware that deploying your application after using `--skip-push` will only work when [using a local Kubernetes cluster](#skip-image-push-for-local-clusters-if-possible).
+
+<details>
+<summary>
+#### Registry Authentication
+</summary>
+
+DevSpace uses the same credential store as Docker. So, if you already have Docker installed and you are logged in to a private registry before, DevSpace will be able to push to this registry. So, if you want to push to a registry using DevSpace, simply authenticate using this command:
+```bash
+docker login            # for Docker Hub
+docker login [REGISTRY] # for any other registry (e.g. my-registry.tld)
+```
+
+> If you do not have Docker installed, DevSpace initializes a Docker credential store for you and store your login information just like Docker would do it (currently only for Docker Hub or dscr.io).
+
 </details>
 
 <details>
 <summary>
-### Skip image pushing (for development with minikube)
+#### Skip Image Push for Local Clusters (if possible)
 </summary>
-If you are using minikube for development, you usually do not need to push your images to a registry because DevSpace will build your images with minikube's Docker daemon and the image will already be present and does not need to be pulled from a registry.
-```yaml
-images:
-  default:
-    image: my-registry.tld/username/image
-    build:
-      docker:
-        skipPush: true
-```
-Defining `skipPush: true` tells DevSpace not to push an image after building and tagging it.
+
+If you are using a local Kubernetes cluster, DevSpace will try to [build the image using the Docker deamon of this local cluster](#docker-daemon-of-local-kubernetes-clusters). If this process is successful, DevSpace will skip the step of pushing the image to a registry as it is not required for deploying your application.
+
 </details>
 
+
+### 8. Create Image Pull Secret
+When deploying your application via DevSpace, Kubernetes needs to be able to pull your images from the registry that is used to store your images when pushing them. For this purpose, Kubernetes relies on so-called image pull secrets. DevSpace can automatically create these secrets for you, if you configure `createPullSecret: true` for the respective image in your `devspace.yaml`.
+
+> You do not need to change anything in your Kubernetes manifests, helm charts or components to use the image pull secrets that DevSpace creates because DevSpace automatically [adds the secrets to the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) used to deploy your project.
+
+
+## Best Practices
+
+### Optimize Dockerfiles
+#TODO
+
+### Use `.dockerignore`
+DevSpace respects the `.dockerignore` file when defined on the root level of your context directory. This file follows a similar syntax as the `.gitignore` file but instead of excluding files from git, the `.dockerignore` file defines files and folders which should not be included in the context for building an image. 
+
+> Adding paths to the `.dockerignore` file makes sure that DevSpace is not forced to rebuild images when files belonging to theses paths change.
+
+It can often be useful to:
+- Add `devspace.yaml` to `.dockerignore` to prevent config changes from triggering image rebuilding (`devspace init` does this by default)
+- Add temporary files (e.g. `.DS_Store`) to `.dockerignore` (DevSpace ALWAYS ignores `.devspace/` temp folder even if not specified in `.dockerignore`)
+- Add dependency folders to `.dockerignore`, here are a few examples of dependency folders for different languages:
+
+#### Recommended Paths for `.dockerignore`
+| Language / Dependency Tool | `.dockerignore` statements                                                                                    |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| All Languages | `devspace.yaml` |
+| PHP / composer | `composer.phar`<br>`vendor/` |
+| Node.js / npm | `node_modules/`<br>`npm-debug.log*`<br>`report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json`<br>`pids`<br>`*.pid*`<br>`*.seed*`<br>`*.pid.lock*` |
+| Python / pip | `__pycache__/`<br>`wheels/`<br>`pip-log.txt`<br>`pip-wheel-metadata/` |
+
+
+<br>
 
 ---
 ## FAQ
@@ -100,58 +151,3 @@ That means that a Dockerfile statement such as `COPY ./src /app` would copy the 
 
 > Paths to Dockerfiles and image contexts are always relative to the root directory of your project (i.e. the folder where your `.devspace/` folder is inside).
 </details>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-To tell DevSpace to build an additional image, simply use the `devspace add image` command.
-```bash
-devspace add image database --dockerfile=./db/Dockerfile --context=./db --image=dscr.io/username/mysql
-```
-
-The command shown above would add a new image to your DevSpace configuration. The resulting configuration would look similar to this one:
-
-```yaml
-images:
-  database:                         # from --name
-    image: dscr.io/username/image   # from args[0]
-    dockerfile: ./db/Dockerfile     # from --dockerfile
-    context: ./db                   # from --context
-```
-
-
-
-
-
-
-
-
-Instead of manually removing an image from your configuration file, you can simply run:
-```bash
-devspace remove image database
-```
-This command would remove the image with name `database` from your `devspace.yaml`.
-
-
-
-
-
-TODO: ENV VARS
