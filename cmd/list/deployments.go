@@ -60,7 +60,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Show warning if the old kube context was different
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,36 +75,36 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
+		for _, deployConfig := range config.Deployments {
 			var deployClient deploy.Interface
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
 				deployClient, err = deployKubectl.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
 				deployClient, err = deployHelm.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create helm deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Component != nil {
 				deployClient, err = deployComponent.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
-					log.Warnf("Unable to create component deploy config for %s: %v", *deployConfig.Name, err)
+					log.Warnf("Unable to create component deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else {
-				log.Warnf("No deployment method defined for deployment %s", *deployConfig.Name)
+				log.Warnf("No deployment method defined for deployment %s", deployConfig.Name)
 				continue
 			}
 
 			status, err := deployClient.Status()
 			if err != nil {
-				log.Warnf("Error retrieving status for deployment %s: %v", *deployConfig.Name, err)
+				log.Warnf("Error retrieving status for deployment %s: %v", deployConfig.Name, err)
 				continue
 			}
 

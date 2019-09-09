@@ -1,6 +1,10 @@
 package use
 
 import (
+	contextpkg "context"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -35,6 +39,12 @@ devspace use context my-context
 
 // RunUseContext executes the functionality "devspace use namespace"
 func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
+	// Set config root
+	configExists, err := configutil.SetDevSpaceRoot()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Load kube-config
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
@@ -69,6 +79,23 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 
 		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))
+
+		if configExists {
+			// Get generated config
+			generatedConfig, err := generated.LoadConfig(contextpkg.Background())
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Reset namespace cache
+			generatedConfig.GetActive().LastContext = nil
+
+			// Save generated config
+			err = generated.SaveConfig(generatedConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	log.Donef("Successfully set kube-context to '%s'", ansi.Color(context, "white+b"))

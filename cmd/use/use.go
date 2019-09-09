@@ -17,7 +17,7 @@ func NewUseCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	useCmd.AddCommand(newConfigCmd())
+	useCmd.AddCommand(newProfileCmd())
 	useCmd.AddCommand(newContextCmd())
 	useCmd.AddCommand(newNamespaceCmd())
 	useCmd.AddCommand(newProviderCmd())

@@ -45,7 +45,7 @@ Execute a command or start a new terminal in your
 devspace:
 
 devspace enter
-devspace enter -p # Select pod to enter
+devspace enter --pick # Select pod to enter
 devspace enter bash
 devspace enter -s my-selector
 devspace enter -c my-container
@@ -64,7 +64,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
 	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
-	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
+	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return enterCmd
 }
@@ -83,7 +83,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,28 +101,21 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build params
-	params := targetselector.CmdParameter{}
-	if cmd.Selector != "" {
-		params.Selector = &cmd.Selector
-	}
-	if cmd.Container != "" {
-		params.ContainerName = &cmd.Container
-	}
-	if cmd.LabelSelector != "" {
-		params.LabelSelector = &cmd.LabelSelector
-	}
-	if cmd.Namespace != "" {
-		params.Namespace = &cmd.Namespace
-	}
-	if cmd.Pod != "" {
-		params.PodName = &cmd.Pod
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: targetselector.CmdParameter{
+			Selector:      cmd.Selector,
+			ContainerName: cmd.Container,
+			LabelSelector: cmd.LabelSelector,
+			Namespace:     cmd.Namespace,
+			PodName:       cmd.Pod,
+		},
 	}
 	if cmd.Pick != false {
-		params.Pick = &cmd.Pick
+		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(config, client, params, args, make(chan error), log.GetInstance())
+	exitCode, err := services.StartTerminal(config, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

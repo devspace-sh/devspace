@@ -24,6 +24,7 @@ type PurgeCmd struct {
 
 	Namespace   string
 	KubeContext string
+	Profile     string
 }
 
 // NewPurgeCmd creates a new purge command
@@ -49,6 +50,7 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
 	purgeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
+	purgeCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -70,15 +72,29 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
+	// Get config with adjusted cluster config
+	ctx := context.Background()
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	}
+
+	generatedConfig, err := generated.LoadConfig(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(ctx, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Add kube context to context
+	context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -86,13 +102,8 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+	config := configutil.GetConfig(ctx)
 
 	deployments := []string{}
 	if cmd.Deployments != "" {

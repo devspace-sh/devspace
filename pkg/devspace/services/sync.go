@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -41,7 +42,7 @@ const SyncHelperContainerPath = "/tmp/sync"
 func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
 	targetSelector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
-	}, true)
+	}, true, nil)
 	if err != nil {
 		return err
 	}
@@ -60,11 +61,11 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 
 	syncDone := make(chan bool)
 	syncConfig := &latest.SyncConfig{
-		LocalSubPath:  &localPath,
-		ContainerPath: &containerPath,
+		LocalSubPath:  localPath,
+		ContainerPath: containerPath,
 	}
 	if len(exclude) > 0 {
-		syncConfig.ExcludePaths = &exclude
+		syncConfig.ExcludePaths = exclude
 	}
 
 	log.StartWait("Starting sync...")
@@ -88,13 +89,21 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 }
 
 // StartSync starts the syncing functionality
-func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
+func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeClient *kubectl.Client, verboseSync bool, log log.Logger) ([]*sync.Sync, error) {
 	if config.Dev.Sync == nil {
 		return []*sync.Sync{}, nil
 	}
 
-	syncClients := make([]*sync.Sync, 0, len(*config.Dev.Sync))
-	for _, syncConfig := range *config.Dev.Sync {
+	syncClients := make([]*sync.Sync, 0, len(config.Dev.Sync))
+	for _, syncConfig := range config.Dev.Sync {
+		var imageSelector []string
+		if syncConfig.ImageName != "" {
+			imageConfigCache := generatedConfig.GetActive().GetImageCache(syncConfig.ImageName)
+			if imageConfigCache.ImageName != "" {
+				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+			}
+		}
+
 		selector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
 				Selector:      syncConfig.Selector,
@@ -102,7 +111,7 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 				LabelSelector: syncConfig.LabelSelector,
 				ContainerName: syncConfig.ContainerName,
 			},
-		}, false)
+		}, false, imageSelector)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating target selector: %v", err)
 		}
@@ -127,8 +136,8 @@ func StartSync(config *latest.Config, kubeClient *kubectl.Client, verboseSync bo
 		}
 
 		containerPath := "."
-		if syncConfig.ContainerPath != nil {
-			containerPath = *syncConfig.ContainerPath
+		if syncConfig.ContainerPath != "" {
+			containerPath = syncConfig.ContainerPath
 		}
 
 		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
@@ -153,13 +162,13 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 	}
 
 	localPath := "."
-	if syncConfig.LocalSubPath != nil {
-		localPath = *syncConfig.LocalSubPath
+	if syncConfig.LocalSubPath != "" {
+		localPath = syncConfig.LocalSubPath
 	}
 
 	containerPath := "."
-	if syncConfig.ContainerPath != nil {
-		containerPath = *syncConfig.ContainerPath
+	if syncConfig.ContainerPath != "" {
+		containerPath = syncConfig.ContainerPath
 	}
 
 	options := &sync.Options{
@@ -168,16 +177,16 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 		Log:      customLog,
 	}
 
-	if syncConfig.ExcludePaths != nil {
-		options.ExcludePaths = *syncConfig.ExcludePaths
+	if len(syncConfig.ExcludePaths) > 0 {
+		options.ExcludePaths = syncConfig.ExcludePaths
 	}
 
-	if syncConfig.DownloadExcludePaths != nil {
-		options.DownloadExcludePaths = *syncConfig.DownloadExcludePaths
+	if len(syncConfig.DownloadExcludePaths) > 0 {
+		options.DownloadExcludePaths = syncConfig.DownloadExcludePaths
 	}
 
-	if syncConfig.UploadExcludePaths != nil {
-		options.UploadExcludePaths = *syncConfig.UploadExcludePaths
+	if len(syncConfig.UploadExcludePaths) > 0 {
+		options.UploadExcludePaths = syncConfig.UploadExcludePaths
 	}
 
 	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {

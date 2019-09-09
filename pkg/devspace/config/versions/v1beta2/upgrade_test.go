@@ -23,7 +23,49 @@ func TestSimple(t *testing.T) {
 					KubeContext: ptr.String("kubecontext"),
 				},
 			},
-			expected: &next.Config{},
+			expected: &next.Config{
+				Dev: &next.DevConfig{
+					Interactive: &next.InteractiveConfig{
+						Enabled: ptr.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			in: &Config{
+				Dev: &DevConfig{
+					OverrideImages: &[]*ImageOverrideConfig{
+						{
+							Name:       ptr.String("test"),
+							Entrypoint: &[]*string{ptr.String("my"), ptr.String("command")},
+						},
+					},
+					Terminal: &Terminal{
+						Disabled: ptr.Bool(true),
+					},
+				},
+				Images: &map[string]*ImageConfig{
+					"default": &ImageConfig{},
+				},
+			},
+			expected: &next.Config{
+				Dev: &next.DevConfig{
+					Interactive: &next.InteractiveConfig{
+						Enabled: ptr.Bool(false),
+						Images: []*next.InteractiveImageConfig{
+							{
+								Name:       "test",
+								Entrypoint: []string{"my", "command"},
+							},
+						},
+					},
+				},
+				Images: map[string]*next.ImageConfig{
+					"default": &next.ImageConfig{
+						CreatePullSecret: ptr.Bool(false),
+					},
+				},
+			},
 		},
 	}
 

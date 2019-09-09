@@ -1,4 +1,4 @@
-version: v1beta2
+version: v1beta3
 images:
   default:
     image: yourusername/devspace
@@ -9,18 +9,14 @@ deployments:
     - kube
     kustomize: true
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
+  interactive:
+    images:
+    - name: default
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: default
+  - imageName: default
     forward:
     - port: 3000
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: default
+  - imageName: default
     excludePaths:
     - node_modules

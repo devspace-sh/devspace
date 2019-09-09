@@ -171,29 +171,22 @@ func DeleteTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	// Delete serviceaccount
 	client.Client.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-	appNamespaces := []*string{
-		&tillerNamespace,
+	appNamespaces := []string{
+		tillerNamespace,
 	}
 
-	if config.Deployments != nil {
-		for _, deployConfig := range *config.Deployments {
-			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
-				if *deployConfig.Namespace == "" {
-					appNamespaces = append(appNamespaces, &client.Namespace)
-					continue
-				}
-
-				appNamespaces = append(appNamespaces, deployConfig.Namespace)
-			}
+	for _, deployConfig := range config.Deployments {
+		if deployConfig.Namespace != "" && deployConfig.Helm != nil {
+			appNamespaces = append(appNamespaces, deployConfig.Namespace)
 		}
 	}
 
 	for _, appNamespace := range appNamespaces {
-		client.Client.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1beta1().Roles(appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 		// client.Client.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-		client.Client.RbacV1beta1().Roles(*appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		client.Client.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1beta1().Roles(appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1beta1().RoleBindings(appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}
 
 	return nil

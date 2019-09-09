@@ -31,17 +31,12 @@ func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNames
 	}
 
 	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings
-	appNamespaces := []*string{&tillerNamespace}
+	appNamespaces := []string{tillerNamespace}
 
 	// Add all namespaces that need our permission
-	if config.Deployments != nil && len(*config.Deployments) > 0 {
-		for _, deployConfig := range *config.Deployments {
-			if deployConfig.Namespace != nil && deployConfig.Helm != nil {
-				if *deployConfig.Namespace == "" {
-					appNamespaces = append(appNamespaces, &client.Namespace)
-					continue
-				}
-
+	if config.Deployments != nil && len(config.Deployments) > 0 {
+		for _, deployConfig := range config.Deployments {
+			if deployConfig.Namespace != "" && deployConfig.Helm != nil {
 				appNamespaces = append(appNamespaces, deployConfig.Namespace)
 			}
 		}
@@ -49,15 +44,15 @@ func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNames
 
 	// Add the correct access rights to the tiller server
 	for _, appNamespace := range appNamespaces {
-		if *appNamespace != "default" {
+		if appNamespace != "default" {
 			// Create namespaces if they are not there already
-			_, err := client.Client.CoreV1().Namespaces().Get(*appNamespace, metav1.GetOptions{})
+			_, err := client.Client.CoreV1().Namespaces().Get(appNamespace, metav1.GetOptions{})
 			if err != nil {
-				log.Donef("Create namespace %s", *appNamespace)
+				log.Donef("Create namespace %s", appNamespace)
 
 				_, err = client.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: *appNamespace,
+						Name: appNamespace,
 					},
 				})
 				if err != nil {
@@ -66,7 +61,7 @@ func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNames
 			}
 		}
 
-		err = addDeployAccessToTiller(client, tillerNamespace, *appNamespace)
+		err = addDeployAccessToTiller(client, tillerNamespace, appNamespace)
 		if err != nil {
 			return err
 		}

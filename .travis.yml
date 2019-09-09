@@ -7,16 +7,16 @@ env:
     - secure: "BoHOoj/n7ND5GSntul4hMqov/iPWbqpC3uYEFMyEprIUphYy9ANch43iMt2+O0coS122/Q4uZlWKIX3TViTHlPeAF2Aun92puL/ADoD1ureq64kOYm8X9RKHYs2fr/1vvCK95mFDZXdS1cgH87qvxk3TCMZ+NoG4x9V6gmLaUb93D3tTNdJzYnz1cUH2e+uecqX//pYHx/R35fIvthWhV7/gYV94DnXgRhKBO6zn1Y8RxtT1PfzjGxY1ohqzT7d7fu0O1Gau8CM20yCJGOTr1ASYHv21wJQWVztYi/CaIcM5LJ/LFmkumeAgxeavgVnv8XYPPimFr5WoRn8nvebjFUaHb/nxGsC4gKK5Peu4oIIrBLIDqxHt2r6yF+JB6aNQFl5y/3ivid/XafQ37xBDXcj8yzYp4wtVL1UVTbdHYGOFLyByTP/Pbor6L2aLYhXppjoqKA7zeHYpzNI+uLC3pAKWyVhpFZM7ekqR4VaK77evFB8mIvGH0MCLiVH6kkFFhraw57HgGjLpr0BXCeNNqd7sFP+mhBRJbQwaBBdjgqvaoGLl3WeKdNBVEBeX5aB3F390g38SuC/DawWzPz35b/BE7lqSL6AdReasGGfUOIeyFrQzY3wUZD1jIK22LpcQFB6sFs4CUY1T0Hic720BM9nqpyd3eXD7mSWBOePM92A="
 jobs:
   include:
-    - stage: test
-      go_import_path: github.com/devspace-cloud/devspace
-      install:
-        - npm install -g codeclimate-test-reporter
-      os: osx
-      go: 1.12.6
-      script:
-        - "./scripts/coverage.bash"
-      after_success:
-        - codeclimate-test-reporter < coverage.txt
+    #- stage: test
+    #  go_import_path: github.com/devspace-cloud/devspace
+    #  install:
+    #    - npm install -g codeclimate-test-reporter
+    #  os: osx
+    #  go: 1.12.6
+    #  script:
+    #    - "./scripts/coverage.bash"
+    #  after_success:
+    #    - codeclimate-test-reporter < coverage.txt
     - stage: deploy
       go: 1.12.6
       os: osx

@@ -43,7 +43,7 @@ func TestAnalyze(t *testing.T) {
 	assert.NilError(t, err, "Error while analyzing")
 	assert.Equal(t, writtenText, `
   No problems found.
-  Run `+"`"+ansi.Color("devspace logs -p", "white+b")+"`"+` if you want show pod logs
+  Run `+"`"+ansi.Color("devspace logs --pick", "white+b")+"`"+` if you want show pod logs
 
 `, "Wrong analyze result")
 

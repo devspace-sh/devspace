@@ -19,9 +19,9 @@ func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClie
 	if config.Images != nil {
 		pullSecrets := []string{}
 
-		for _, imageConf := range *config.Images {
-			if imageConf.CreatePullSecret != nil && *imageConf.CreatePullSecret == true {
-				registryURL, err := GetRegistryFromImageName(*imageConf.Image)
+		for _, imageConf := range config.Images {
+			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
+				registryURL, err := GetRegistryFromImageName(imageConf.Image)
 				if err != nil {
 					return err
 				}
@@ -100,12 +100,12 @@ func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, 
 	}
 
 	if config.Deployments != nil && username != "" && password != "" {
-		for _, deployConfig := range *config.Deployments {
+		for _, deployConfig := range config.Deployments {
 			email := "noreply@devspace.cloud"
 
 			namespace := client.Namespace
-			if deployConfig.Namespace != nil {
-				namespace = *deployConfig.Namespace
+			if deployConfig.Namespace != "" {
+				namespace = deployConfig.Namespace
 			}
 
 			err := CreatePullSecret(client, namespace, registryURL, username, password, email, log)

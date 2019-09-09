@@ -73,7 +73,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
 	var (
 		fullImageName      = b.helper.ImageName + ":" + b.helper.ImageTag
 		displayRegistryURL = "hub.docker.com"
@@ -90,7 +90,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 
 	// We skip pushing when it is the minikube client
 	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
-		if b.helper.KubeClient != nil && b.helper.KubeClient.IsMinikube() {
+		if b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
 			b.skipPush = true
 		}
 	}
@@ -111,13 +111,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.Options != nil {
 		if b.helper.ImageConf.Build.Docker.Options.BuildArgs != nil {
-			options.BuildArgs = *b.helper.ImageConf.Build.Docker.Options.BuildArgs
+			options.BuildArgs = b.helper.ImageConf.Build.Docker.Options.BuildArgs
 		}
-		if b.helper.ImageConf.Build.Docker.Options.Target != nil {
-			options.Target = *b.helper.ImageConf.Build.Docker.Options.Target
+		if b.helper.ImageConf.Build.Docker.Options.Target != "" {
+			options.Target = b.helper.ImageConf.Build.Docker.Options.Target
 		}
-		if b.helper.ImageConf.Build.Docker.Options.Network != nil {
-			options.NetworkMode = *b.helper.ImageConf.Build.Docker.Options.Network
+		if b.helper.ImageConf.Build.Docker.Options.Network != "" {
+			options.NetworkMode = b.helper.ImageConf.Build.Docker.Options.Network
 		}
 	}
 
@@ -174,8 +174,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint *[]*
 	}
 
 	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(*entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, *entrypoint)
+	if entrypoint != nil && len(entrypoint) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint)
 		if err != nil {
 			return err
 		}

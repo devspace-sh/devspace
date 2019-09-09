@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,13 +20,15 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
 
-const configGitignore = "\n\n# Exclude .devspace generated files\n.devspace/\n"
+const gitIgnoreFile = ".gitignore"
+const dockerIgnoreFile = ".dockerignore"
+const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml/\n"
 
 const (
 	// Dockerfile not found options
@@ -193,7 +196,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig(context.Background())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -202,13 +205,25 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Add devspace.yaml to .dockerignore
+		err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+
+	// Add .devspace/ to .gitignore
+	err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
+	if err != nil {
+		log.Warn(err)
 	}
 
 	if newImage != nil {
-		(*config.Images)["default"] = newImage
+		config.Images["default"] = newImage
 	}
 	if newDeployment != nil {
-		config.Deployments = &[]*latest.DeploymentConfig{newDeployment}
+		config.Deployments = []*latest.DeploymentConfig{newDeployment}
 	}
 
 	// Add the development configuration
@@ -220,35 +235,36 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Config error: %v", err)
 	}
 
-	// Check if .gitignore exists
-	_, err = os.Stat(".gitignore")
-	if os.IsNotExist(err) {
-		fsutil.WriteToFile([]byte(configGitignore), ".gitignore")
-	} else {
-		gitignoreContent, err := ioutil.ReadFile(".gitignore")
-		if err != nil {
-			log.Warnf("Error reading .gitignore: %v", err)
-		} else {
-			gitignoreRegexp := regexp.MustCompile("(?ms)(^|[^!]).devspace/(\\n|$)")
-
-			if gitignoreRegexp.MatchString(string(gitignoreContent)) == false {
-				gitignore, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0600)
-				if err != nil {
-					log.Warnf("Error writing to .gitignore: %v", err)
-				} else {
-					defer gitignore.Close()
-
-					if _, err = gitignore.WriteString(configGitignore); err != nil {
-						log.Warnf("Error writing to .gitignore: %v", err)
-					}
-				}
-			}
-		}
-	}
-
 	log.WriteString("\n")
 	log.Done("Project successfully initialized")
 	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+}
+
+func appendToIgnoreFile(ignoreFile, content string) error {
+	// Check if ignoreFile exists
+	_, err := os.Stat(ignoreFile)
+	if os.IsNotExist(err) {
+		fsutil.WriteToFile([]byte(content), ignoreFile)
+	} else {
+		fileContent, err := ioutil.ReadFile(ignoreFile)
+		if err != nil {
+			return fmt.Errorf("Error reading file %s: %v", ignoreFile, err)
+		}
+
+		// append only if not found in file content
+		if strings.Contains(string(fileContent), content) == false {
+			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
+			if err != nil {
+				return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+
+			defer file.Close()
+			if _, err = file.WriteString(content); err != nil {
+				return fmt.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+		}
+	}
+	return nil
 }
 
 func getDeploymentName() (string, error) {
@@ -274,8 +290,8 @@ func (cmd *InitCmd) addDevConfig() {
 	config := configutil.GetConfig(context.Background())
 
 	// Forward ports
-	if len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil && (*config.Deployments)[0].Component.Service != nil && (*config.Deployments)[0].Component.Service.Ports != nil && len(*(*config.Deployments)[0].Component.Service.Ports) > 0 {
-		servicePort := (*(*config.Deployments)[0].Component.Service.Ports)[0]
+	if len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
+		servicePort := config.Deployments[0].Component.Service.Ports[0]
 
 		if servicePort.Port != nil {
 			localPortPtr := servicePort.Port
@@ -304,22 +320,30 @@ func (cmd *InitCmd) addDevConfig() {
 				RemotePort: remotePortPtr,
 			})
 
-			config.Dev.Ports = &[]*latest.PortForwardingConfig{
+			// Add dev.ports config
+			config.Dev.Ports = []*latest.PortForwardingConfig{
 				{
-					LabelSelector: &map[string]*string{
-						"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+					LabelSelector: map[string]string{
+						"app.kubernetes.io/component": (config.Deployments)[0].Name,
 					},
-					PortMappings: &portMappings,
+					PortMappings: portMappings,
+				},
+			}
+
+			// Add dev.open config
+			config.Dev.Open = []*latest.OpenConfig{
+				&latest.OpenConfig{
+					URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
 				},
 			}
 		}
 	}
 
 	// Specify sync path
-	if len(*config.Images) > 0 && len(*config.Deployments) > 0 && (*config.Deployments)[0].Component != nil {
-		if (*config.Images)["default"].Build == nil || (*config.Images)["default"].Build.Disabled == nil {
+	if len(config.Images) > 0 && len(config.Deployments) > 0 && (config.Deployments)[0].Component != nil {
+		if (config.Images)["default"].Build == nil || (config.Images)["default"].Build.Disabled == nil {
 			if config.Dev.Sync == nil {
-				config.Dev.Sync = &[]*latest.SyncConfig{}
+				config.Dev.Sync = []*latest.SyncConfig{}
 			}
 
 			dockerignore, err := ioutil.ReadFile(".dockerignore")
@@ -327,27 +351,20 @@ func (cmd *InitCmd) addDevConfig() {
 			if err == nil {
 				dockerignoreRules := strings.Split(string(dockerignore), "\n")
 				for _, ignoreRule := range dockerignoreRules {
-					if len(ignoreRule) > 0 {
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] {
 						excludePaths = append(excludePaths, ignoreRule)
 					}
 				}
 			}
 
-			syncConfig := append(*config.Dev.Sync, &latest.SyncConfig{
-				LabelSelector: &map[string]*string{
-					"app.kubernetes.io/component": (*config.Deployments)[0].Name,
+			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
+				LabelSelector: map[string]string{
+					"app.kubernetes.io/component": config.Deployments[0].Name,
 				},
-				ExcludePaths: &excludePaths,
+				ExcludePaths: excludePaths,
 			})
 
-			config.Dev.Sync = &syncConfig
-		}
-	}
-
-	// Disable terminal by default
-	if len(*config.Images) > 0 {
-		config.Dev.Terminal = &latest.Terminal{
-			Disabled: ptr.Bool(true),
+			config.Dev.Sync = syncConfig
 		}
 	}
 }

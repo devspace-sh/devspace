@@ -15,13 +15,13 @@ import (
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"crypto/sha1"
@@ -99,7 +99,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(context.Background(), false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,10 +151,11 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			openDomainOption + ingressControllerWarning,
 		},
 	})
+	log.WriteString("\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		openLocal(devspaceConfig, client, domain)
+		openLocal(devspaceConfig, nil, client, domain)
 		return
 	}
 
@@ -208,11 +209,19 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				Rules: []v1beta1.IngressRule{
 					v1beta1.IngressRule{
 						Host: domain,
+						IngressRuleValue: v1beta1.IngressRuleValue{
+							HTTP: &v1beta1.HTTPIngressRuleValue{
+								Paths: []v1beta1.HTTPIngressPath{
+									v1beta1.HTTPIngressPath{
+										Backend: v1beta1.IngressBackend{
+											ServiceName: serviceName,
+											ServicePort: intstr.FromInt(servicePort),
+										},
+									},
+								},
+							},
+						},
 					},
-				},
-				Backend: &v1beta1.IngressBackend{
-					ServiceName: serviceName,
-					ServicePort: intstr.FromInt(servicePort),
 				},
 				TLS: []v1beta1.IngressTLS{
 					v1beta1.IngressTLS{
@@ -243,6 +252,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		domain = "http://" + domain
 	}
 
+	err = openURL(domain, client, namespace, log.GetInstance())
+	if err != nil {
+		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
+	}
+}
+
+func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger) error {
 	// Loop and check if http code is != 502
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
@@ -252,36 +268,33 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	now := time.Now()
 	for time.Since(now) < time.Minute*4 {
-		// Check if domain is ready
-		resp, err := http.Get(domain)
-		if err != nil {
-			log.Fatalf("Error making request to %s: %v", domain, err)
-		} else if resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
+		// Check if domain is ready => ignore error as we will retry request
+		resp, _ := http.Get(url)
+		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
-			open.Start(domain)
-			log.Donef("Successfully opened %s", domain)
-			return
+			open.Start(url)
+			log.Donef("Successfully opened %s", url)
+			return nil
 		}
 
-		// Analyze space for issues
-		report, err := analyze.CreateReport(client, namespace, false)
-		if err != nil {
-			log.Fatalf("Error analyzing space: %v", err)
-		}
-		if len(report) > 0 {
-			reportString := analyze.ReportToString(report)
-			log.WriteString(reportString)
-			log.Fatal("")
+		if kubectlClient != nil && analyzeNamespace != "" {
+			// Analyze space for issues
+			report, err := analyze.CreateReport(kubectlClient, analyzeNamespace, false)
+			if err != nil {
+				return errors.Errorf("Error analyzing space: %v", err)
+			}
+			if len(report) > 0 {
+				reportString := analyze.ReportToString(report)
+				log.WriteString(reportString)
+			}
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 3)
 	}
-
-	log.StopWait()
-	log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port", domain)
+	return nil
 }
 
-func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain string) {
+func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, domain string) {
 	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace, domain, true)
 	if err != nil {
 		log.Fatal("Unable to get service: %v", err)
@@ -293,7 +306,7 @@ func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain str
 		localPort = localPort + 8000
 	}
 
-	domain = "localhost:" + strconv.Itoa(localPort)
+	domain = "http://localhost:" + strconv.Itoa(localPort)
 
 	portMappings := []*latest.PortMapping{
 		&latest.PortMapping{
@@ -301,25 +314,25 @@ func openLocal(devspaceConfig *latest.Config, client *kubectl.Client, domain str
 			RemotePort: &servicePort,
 		},
 	}
-	labelSelector := map[string]*string{}
 
+	labelSelector := map[string]string{}
 	for key, value := range *serviceLabels {
-		labelSelector[key] = ptr.String(value)
+		labelSelector[key] = value
 	}
 
 	portforwardingConfig := []*latest.PortForwardingConfig{
 		&latest.PortForwardingConfig{
-			PortMappings:  &portMappings,
-			LabelSelector: &labelSelector,
+			PortMappings:  portMappings,
+			LabelSelector: labelSelector,
 		},
 	}
 
 	// start port-forwarding for localhost access
 	portForwarder, err := services.StartPortForwarding(&latest.Config{
 		Dev: &latest.DevConfig{
-			Ports: &portforwardingConfig,
+			Ports: portforwardingConfig,
 		},
-	}, client, log.GetInstance())
+	}, generatedConfig, client, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Unable to start portforwarding: %v", err)
 	}

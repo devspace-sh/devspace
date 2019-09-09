@@ -44,7 +44,7 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 
 	config := configutil.GetConfig(context.Background())
 
-	if config.Dev.Selectors == nil || len(*config.Dev.Selectors) == 0 {
+	if config.Dev.Selectors == nil || len(config.Dev.Selectors) == 0 {
 		log.Info("No selectors are configured. Run `devspace add selector` to add new selector\n")
 		return
 	}
@@ -56,17 +56,17 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 		"Container",
 	}
 
-	selectors := make([][]string, 0, len(*config.Dev.Selectors))
+	selectors := make([][]string, 0, len(config.Dev.Selectors))
 
 	// Transform values into string arrays
-	for _, value := range *config.Dev.Selectors {
+	for _, value := range config.Dev.Selectors {
 		selector := ""
-		for k, v := range *value.LabelSelector {
+		for k, v := range value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
 			}
 
-			selector += k + "=" + *v
+			selector += k + "=" + v
 		}
 
 		namespace, err := kubeconfig.GetCurrentNamespace()
@@ -74,17 +74,17 @@ func (cmd *selectorsCmd) RunListSelectors(cobraCmd *cobra.Command, args []string
 			log.Fatal(err)
 		}
 
-		if value.Namespace != nil {
-			namespace = *value.Namespace
+		if value.Namespace != "" {
+			namespace = value.Namespace
 		}
 
 		containerName := ""
-		if value.ContainerName != nil {
-			containerName = *value.ContainerName
+		if value.ContainerName != "" {
+			containerName = value.ContainerName
 		}
 
 		selectors = append(selectors, []string{
-			*value.Name,
+			value.Name,
 			namespace,
 			selector,
 			containerName,

@@ -1,6 +1,8 @@
 package reset
 
 import (
+	"context"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -45,13 +47,13 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(context.Background())
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Clear the vars map
-	generatedConfig.GetActive().Vars = map[string]string{}
+	generatedConfig.Vars = map[string]string{}
 
 	// Save the config
 	err = generated.SaveConfig(generatedConfig)
@@ -59,5 +61,5 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Error saving config: %v", err)
 	}
 
-	log.Donef("Successfully deleted all variables in config %s", generatedConfig.ActiveConfig)
+	log.Donef("Successfully deleted all variables")
 }

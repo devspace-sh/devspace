@@ -43,18 +43,18 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 	}
 
 	namespace := kubeClient.Namespace
-	if deployConfig.Namespace != nil && *deployConfig.Namespace != "" {
-		namespace = *deployConfig.Namespace
+	if deployConfig.Namespace != "" {
+		namespace = deployConfig.Namespace
 	}
 
 	cmdPath := "kubectl"
-	if deployConfig.Kubectl.CmdPath != nil {
-		cmdPath = *deployConfig.Kubectl.CmdPath
+	if deployConfig.Kubectl.CmdPath != "" {
+		cmdPath = deployConfig.Kubectl.CmdPath
 	}
 
 	manifests := []string{}
-	for _, ptrManifest := range *deployConfig.Kubectl.Manifests {
-		manifest := strings.Replace(*ptrManifest, "*", "", -1)
+	for _, ptrManifest := range deployConfig.Kubectl.Manifests {
+		manifest := strings.Replace(ptrManifest, "*", "", -1)
 		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize == true {
 			manifest = strings.TrimSuffix(manifest, "kustomization.yaml")
 		}
@@ -63,7 +63,7 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 	}
 
 	return &DeployConfig{
-		Name:       *deployConfig.Name,
+		Name:       deployConfig.Name,
 		KubeClient: kubeClient,
 		CmdPath:    cmdPath,
 		Context:    kubeClient.CurrentContext,
@@ -117,13 +117,13 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	delete(cache.Deployments, *d.DeploymentConfig.Name)
+	delete(cache.Deployments, d.DeploymentConfig.Name)
 	return nil
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
 func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
-	deployCache := cache.GetDeploymentCache(*d.DeploymentConfig.Name)
+	deployCache := cache.GetDeploymentCache(d.DeploymentConfig.Name)
 
 	// Hash the manifests
 	manifestsHash := ""
@@ -165,8 +165,8 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
 			if d.DeploymentConfig.Kubectl.Flags != nil {
-				for _, flag := range *d.DeploymentConfig.Kubectl.Flags {
-					args = append(args, *flag)
+				for _, flag := range d.DeploymentConfig.Kubectl.Flags {
+					args = append(args, flag)
 				}
 			}
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
@@ -152,8 +153,8 @@ func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID stri
 
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
-				if dependency.Config.Dependencies != nil && len(*dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(ctx, dependency.LocalPath, ID, *dependency.Config.Dependencies, update)
+				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
+					err = r.resolveRecursive(ctx, dependency.LocalPath, ID, dependency.Config.Dependencies, update)
 					if err != nil {
 						return err
 					}
@@ -170,13 +171,11 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
 		err       error
-
-		loadConfig = generated.DefaultConfigName
 	)
 
 	// Resolve source
-	if dependency.Source.Git != nil {
-		gitPath := strings.TrimSpace(*dependency.Source.Git)
+	if dependency.Source.Git != "" {
+		gitPath := strings.TrimSpace(dependency.Source.Git)
 
 		os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
@@ -191,18 +190,10 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		if update {
 			var (
 				gitRepo  = git.NewGitRepository(localPath, gitPath)
-				tag      string
-				branch   string
-				revision string
+				tag      = dependency.Source.Tag
+				branch   = dependency.Source.Branch
+				revision = dependency.Source.Revision
 			)
-
-			if dependency.Source.Tag != nil {
-				tag = *dependency.Source.Tag
-			} else if dependency.Source.Branch != nil {
-				branch = *dependency.Source.Branch
-			} else if dependency.Source.Revision != nil {
-				revision = *dependency.Source.Revision
-			}
 
 			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
 			if err != nil {
@@ -218,36 +209,37 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 
 			r.log.Donef("Pulled %s", ID)
 		}
-	} else if dependency.Source.Path != nil {
-		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(*dependency.Source.Path)))
+	} else if dependency.Source.Path != "" {
+		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(dependency.Source.Path)))
 		if err != nil {
 			return nil, errors.Wrap(err, "filepath absolute")
 		}
 	}
 
-	if dependency.Config != nil {
-		loadConfig = *dependency.Config
-	}
+	// Set profile to load
+	ctx = context.WithValue(ctx, constants.ProfileContextKey, dependency.Profile)
 
-	if dependency.Source.SubPath != nil {
-		localPath = filepath.Join(localPath, filepath.FromSlash(*dependency.Source.SubPath))
+	if dependency.Source.SubPath != "" {
+		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(ctx, localPath, loadConfig, true, r.BaseCache, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
 
+	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config
-	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
+	dGeneratedConfig, err := generated.LoadConfigFromPath(ctx, filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
-	dGeneratedConfig.ActiveConfig = loadConfig
-	generated.InitDevSpaceConfig(dGeneratedConfig, loadConfig)
+
+	dGeneratedConfig.ActiveProfile = dependency.Profile
+	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
 
 	return &Dependency{
 		ID:        ID,
@@ -264,34 +256,31 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
 
 func (r *Resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
-	if dependency.Source.Git != nil {
+	if dependency.Source.Git != "" {
 		// Erase authentication credentials
-		id := strings.TrimSpace(*dependency.Source.Git)
+		id := strings.TrimSpace(dependency.Source.Git)
 		id = authRegEx.ReplaceAllString(id, "$1$2")
 
-		if dependency.Source.Tag != nil {
-			id += "@" + *dependency.Source.Tag
-		} else if dependency.Source.Branch != nil {
-			id += "@" + *dependency.Source.Branch
-		} else if dependency.Source.Revision != nil {
-			id += "@" + *dependency.Source.Revision
+		if dependency.Source.Tag != "" {
+			id += "@" + dependency.Source.Tag
+		} else if dependency.Source.Branch != "" {
+			id += "@" + dependency.Source.Branch
+		} else if dependency.Source.Revision != "" {
+			id += "@" + dependency.Source.Revision
 		}
 
-		if dependency.Source.SubPath != nil {
-			id += ":" + *dependency.Source.SubPath
+		if dependency.Source.SubPath != "" {
+			id += ":" + dependency.Source.SubPath
 		}
 
-		if dependency.Config != nil {
-			id += " - config " + *dependency.Config
+		if dependency.Profile != "" {
+			id += " - profile " + dependency.Profile
 		}
 
 		return id
-	} else if dependency.Source.Path != nil {
+	} else if dependency.Source.Path != "" {
 		// Check if it's an git repo
-		filePath, err := filepath.Abs(filepath.Join(basePath, *dependency.Source.Path))
-		if err != nil {
-			filePath = filepath.Join(basePath, *dependency.Source.Path)
-		}
+		filePath := filepath.Join(basePath, dependency.Source.Path)
 
 		gitRepo := git.NewGitRepository(filePath, "")
 		remote, err := gitRepo.GetRemote()
@@ -299,8 +288,8 @@ func (r *Resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 			return remote
 		}
 
-		if dependency.Config != nil {
-			filePath += " - config " + *dependency.Config
+		if dependency.Profile != "" {
+			filePath += " - profile " + dependency.Profile
 		}
 
 		return filePath

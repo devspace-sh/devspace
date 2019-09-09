@@ -61,8 +61,8 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	}
 
 	// Set snapshot mode
-	if kanikoOptions.SnapshotMode != nil {
-		kanikoArgs = append(kanikoArgs, "--snapshotMode="+*kanikoOptions.SnapshotMode)
+	if kanikoOptions.SnapshotMode != "" {
+		kanikoArgs = append(kanikoArgs, "--snapshotMode="+kanikoOptions.SnapshotMode)
 	} else {
 		kanikoArgs = append(kanikoArgs, "--snapshotMode=time")
 	}
@@ -80,8 +80,8 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 
 	// Extra flags
 	if kanikoOptions.Flags != nil {
-		for _, flag := range *kanikoOptions.Flags {
-			kanikoArgs = append(kanikoArgs, *flag)
+		for _, flag := range kanikoOptions.Flags {
+			kanikoArgs = append(kanikoArgs, flag)
 		}
 	}
 

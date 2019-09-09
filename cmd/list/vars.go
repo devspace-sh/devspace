@@ -48,14 +48,14 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	configutil.GetConfig(context.Background())
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// No variable found
-	if generatedConfig.GetActive().Vars == nil || len(generatedConfig.GetActive().Vars) == 0 {
-		log.Infof("No variable found for config %s", generatedConfig.ActiveConfig)
+	if generatedConfig.Vars == nil || len(generatedConfig.Vars) == 0 {
+		log.Info("No variables found")
 		return
 	}
 
@@ -65,9 +65,9 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 		"Value",
 	}
 
-	varRow := make([][]string, 0, len(generatedConfig.GetActive().Vars))
+	varRow := make([][]string, 0, len(generatedConfig.Vars))
 
-	for name, value := range generatedConfig.GetActive().Vars {
+	for name, value := range generatedConfig.Vars {
 		varRow = append(varRow, []string{
 			name,
 			fmt.Sprintf("%v", value),

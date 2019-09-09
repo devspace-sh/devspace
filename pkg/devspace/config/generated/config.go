@@ -1,21 +1,23 @@
 package generated
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 
-// DefaultConfigName is the default
-const DefaultConfigName = "default"
-
 // Config specifies the runtime config struct
 type Config struct {
-	ActiveConfig string                  `yaml:"activeConfig,omitempty"`
-	Configs      map[string]*CacheConfig `yaml:"configs,omitempty"`
+	OverrideProfile *string                 `yaml:"lastOverrideProfile,omitempty"`
+	ActiveProfile   string                  `yaml:"activeProfile,omitempty"`
+	Vars            map[string]string       `yaml:"vars,omitempty"`
+	Profiles        map[string]*CacheConfig `yaml:"profiles,omitempty"`
 }
 
 // LastContextConfig holds all the informations about the last used kubernetes context
@@ -29,7 +31,6 @@ type CacheConfig struct {
 	Deployments  map[string]*DeploymentCache `yaml:"deployments,omitempty"`
 	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
 	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
-	Vars         map[string]string           `yaml:"vars,omitempty"`
 	LastContext  *LastContextConfig          `yaml:"lastContext,omitempty"`
 }
 
@@ -78,25 +79,27 @@ func ResetConfig() {
 }
 
 // LoadConfig loads the config from the filesystem
-func LoadConfig() (*Config, error) {
+func LoadConfig(ctx context.Context) (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		loadedConfig, err = LoadConfigFromPath(ConfigPath)
+		loadedConfig, err = LoadConfigFromPath(ctx, ConfigPath)
 	})
 
 	return loadedConfig, err
 }
 
 // LoadConfigFromPath loads the generated config from a given path
-func LoadConfigFromPath(path string) (*Config, error) {
+func LoadConfigFromPath(ctx context.Context, path string) (*Config, error) {
 	var loadedConfig *Config
 
 	data, readErr := ioutil.ReadFile(path)
 	if readErr != nil {
 		loadedConfig = &Config{
-			ActiveConfig: DefaultConfigName,
-			Configs:      make(map[string]*CacheConfig),
+			OverrideProfile: nil,
+			ActiveProfile:   "",
+			Profiles:        make(map[string]*CacheConfig),
+			Vars:            make(map[string]string),
 		}
 	} else {
 		loadedConfig = &Config{}
@@ -105,15 +108,22 @@ func LoadConfigFromPath(path string) (*Config, error) {
 			return nil, err
 		}
 
-		if loadedConfig.ActiveConfig == "" {
-			loadedConfig.ActiveConfig = DefaultConfigName
+		if loadedConfig.Profiles == nil {
+			loadedConfig.Profiles = make(map[string]*CacheConfig)
 		}
-		if loadedConfig.Configs == nil {
-			loadedConfig.Configs = make(map[string]*CacheConfig)
+		if loadedConfig.Vars == nil {
+			loadedConfig.Vars = make(map[string]string)
 		}
 	}
 
-	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveConfig)
+	// Set override profile
+	if ctx.Value(constants.ProfileContextKey) != nil && ctx.Value(constants.ProfileContextKey).(string) != "" {
+		loadedConfig.OverrideProfile = ptr.String(ctx.Value(constants.ProfileContextKey).(string))
+	} else {
+		loadedConfig.OverrideProfile = nil
+	}
+
+	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveProfile)
 	return loadedConfig, nil
 }
 
@@ -124,14 +134,18 @@ func NewCache() *CacheConfig {
 		Images:      make(map[string]*ImageCache),
 
 		Dependencies: make(map[string]string),
-		Vars:         make(map[string]string),
 	}
 }
 
 // GetActive returns the currently active devspace config
 func (config *Config) GetActive() *CacheConfig {
-	InitDevSpaceConfig(config, config.ActiveConfig)
-	return config.Configs[config.ActiveConfig]
+	active := config.ActiveProfile
+	if config.OverrideProfile != nil {
+		active = *config.OverrideProfile
+	}
+
+	InitDevSpaceConfig(config, active)
+	return config.Profiles[active]
 }
 
 // GetImageCache returns the image cache if it exists and creates one if not
@@ -154,22 +168,19 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
-	if _, ok := config.Configs[configName]; ok == false {
-		config.Configs[configName] = NewCache()
+	if _, ok := config.Profiles[configName]; ok == false {
+		config.Profiles[configName] = NewCache()
 		return
 	}
 
-	if config.Configs[configName].Deployments == nil {
-		config.Configs[configName].Deployments = make(map[string]*DeploymentCache)
+	if config.Profiles[configName].Deployments == nil {
+		config.Profiles[configName].Deployments = make(map[string]*DeploymentCache)
 	}
-	if config.Configs[configName].Images == nil {
-		config.Configs[configName].Images = make(map[string]*ImageCache)
+	if config.Profiles[configName].Images == nil {
+		config.Profiles[configName].Images = make(map[string]*ImageCache)
 	}
-	if config.Configs[configName].Dependencies == nil {
-		config.Configs[configName].Dependencies = make(map[string]string)
-	}
-	if config.Configs[configName].Vars == nil {
-		config.Configs[configName].Vars = make(map[string]string)
+	if config.Profiles[configName].Dependencies == nil {
+		config.Profiles[configName].Dependencies = make(map[string]string)
 	}
 }
 
@@ -185,7 +196,7 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
-	InitDevSpaceConfig(config, config.ActiveConfig)
+	InitDevSpaceConfig(config, config.ActiveProfile)
 
 	configPath := filepath.Join(workdir, ConfigPath)
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)

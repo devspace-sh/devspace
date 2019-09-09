@@ -26,6 +26,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
@@ -50,13 +51,14 @@ type DevCmd struct {
 	SwitchContext   bool
 	Portforwarding  bool
 	VerboseSync     bool
-	Interactive     string
+	Interactive     bool
 	Selector        string
 	Container       string
 	LabelSelector   string
 
 	KubeContext string
 	Namespace   string
+	Profile     string
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -77,7 +79,12 @@ Starts your project in development mode:
 2. Deploys the deployments via helm or kubectl
 3. Forwards container ports to the local computer
 4. Starts the sync client
-5. Enters the container shell
+5. Streams the logs of deployed containers
+
+Use Interactive Mode:
+- Use "devspace dev -i" for interactive mode (terminal)
+- Use "devspace dev -i image1,image2,..." to override
+  entrypoints for images1,image2,... and open terminal
 #######################################################`,
 		Run: cmd.Run,
 	}
@@ -100,22 +107,18 @@ Starts your project in development mode:
 
 	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
-	devCmd.Flags().BoolVar(&cmd.Terminal, "terminal", true, "Enable terminal (true or false)")
 	devCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
 	devCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name where to open the shell")
 	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
 
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	devCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	devCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 
-	devCmd.Flags().StringVarP(&cmd.Interactive, "interactive", "i", "", "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
-
-	// Allows to use `devspace dev -i` without providing a value for the flag, see https://github.com/spf13/pflag#setting-no-option-default-values-for-flags
-	devCmd.Flags().Lookup("interactive").NoOptDefVal = interactiveDefaultPickerValue
-
+	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
 	return devCmd
 }
 
@@ -136,8 +139,14 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	ctx := context.Background()
+	// Get config with adjusted cluster config
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	}
+
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(ctx)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -148,13 +157,16 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(true, log.GetInstance())
+	err = client.PrintWarning(ctx, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Add kube context to context
+	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+
 	// Get the config
-	config := cmd.loadConfig(client, generatedConfig)
+	config := cmd.loadConfig(ctx, client, generatedConfig)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -186,7 +198,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -195,7 +207,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
@@ -255,15 +267,15 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(ctx, config, generatedConfig, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(client, generatedConfig)
+				config := cmd.loadConfig(ctx, client, generatedConfig)
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(config, generatedConfig, client, args)
+				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
 			}
 
 			return 0, err
@@ -273,9 +285,9 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(config, client, log)
+		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
 			return 0, fmt.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -288,7 +300,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, 
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, client, cmd.VerboseSync, log)
+		syncConfigs, err := services.StartSync(config, generatedConfig, client, cmd.VerboseSync, log)
 		if err != nil {
 			return 0, fmt.Errorf("Unable to start sync: %v", err)
 		}
@@ -300,16 +312,23 @@ func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, 
 		}()
 	}
 
-	exitChan := make(chan error)
-	autoReloadPaths := GetPaths(config)
+	var (
+		exitChan        = make(chan error)
+		autoReloadPaths = GetPaths(config)
+		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true
+	)
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
 		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
 			once.Do(func() {
-				log.Info("Change detected, will reload in 2 seconds")
-				time.Sleep(time.Second * 2)
+				if interactiveMode {
+					log.Info("Change detected, will reload in 2 seconds")
+					time.Sleep(time.Second * 2)
+				} else {
+					log.Info("Change detected, will reload")
+				}
 
 				exitChan <- &reloadError{}
 			})
@@ -324,36 +343,81 @@ func (cmd *DevCmd) startServices(config *latest.Config, client *kubectl.Client, 
 		defer watcher.Stop()
 	}
 
-	// Build params
-	params := targetselector.CmdParameter{}
-	if cmd.Selector != "" {
-		params.Selector = &cmd.Selector
-	}
-	if cmd.Container != "" {
-		params.ContainerName = &cmd.Container
-	}
-	if cmd.LabelSelector != "" {
-		params.LabelSelector = &cmd.LabelSelector
-	}
-	if cmd.Namespace != "" {
-		params.Namespace = &cmd.Namespace
+	// Check if we should open a terminal
+	if interactiveMode {
+		var imageSelector []string
+		if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
+			imageConfigCache := generatedConfig.GetActive().GetImageCache(config.Dev.Interactive.Terminal.ImageName)
+			if imageConfigCache.ImageName != "" {
+				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+			}
+		} else if len(config.Dev.Interactive.Images) > 0 {
+			imageSelector = []string{}
+			cache := generatedConfig.GetActive()
+
+			for _, imageConfig := range config.Dev.Interactive.Images {
+				imageConfigCache := cache.GetImageCache(imageConfig.Name)
+				if imageConfigCache.ImageName != "" {
+					imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+				}
+			}
+		}
+
+		selectorParameter := &targetselector.SelectorParameter{
+			CmdParameter: targetselector.CmdParameter{
+				Selector:      cmd.Selector,
+				ContainerName: cmd.Container,
+				LabelSelector: cmd.LabelSelector,
+				Namespace:     cmd.Namespace,
+			},
+		}
+
+		if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+				Selector:      config.Dev.Interactive.Terminal.Selector,
+				Namespace:     config.Dev.Interactive.Terminal.Namespace,
+				LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
+				ContainerName: config.Dev.Interactive.Terminal.ContainerName,
+			}
+		}
+
+		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, log)
 	}
 
-	if cmd.Terminal && (config.Dev == nil || config.Dev.Terminal == nil || config.Dev.Terminal.Disabled == nil || *config.Dev.Terminal.Disabled == false) {
-		return services.StartTerminal(config, client, params, args, exitChan, log)
+	// Build an image selector
+	imageSelector := []string{}
+	for _, imageConfigCache := range generatedConfig.GetActive().Images {
+		if imageConfigCache.ImageName != "" {
+			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+		}
 	}
 
-	log.Info("Will now try to print the logs of a running pod...")
+	// Run dev.open configs
+	if config.Dev.Open != nil {
+		logFile := logutil.GetFileLogger("default")
 
-	// Start attaching to a running pod
-	_, err := services.StartAttach(config, client, params, exitChan, log)
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
+				go func() {
+					err := openURL(openConfig.URL, nil, "", logFile)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						logFile.Warn(err)
+					}
+				}()
+			}
+		}
+	}
+
+	// Log multiple pods
+	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
 	if err != nil {
-		// If it's a reload error we return that so we can rebuild & redeploy
+		// Check if we should reload
 		if _, ok := err.(*reloadError); ok {
 			return 0, err
 		}
 
-		log.Infof("Couldn't print logs of running pod: %v", err)
+		log.Warnf("Couldn't print logs: %v", err)
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
@@ -373,13 +437,13 @@ func GetPaths(config *latest.Config) []string {
 	// Add the deploy manifest paths
 	if config.Dev != nil && config.Dev.AutoReload != nil {
 		if config.Dev.AutoReload.Deployments != nil && config.Deployments != nil {
-			for _, deployName := range *config.Dev.AutoReload.Deployments {
-				for _, deployConf := range *config.Deployments {
-					if *deployName == *deployConf.Name {
-						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != nil {
-							_, err := os.Stat(*deployConf.Helm.Chart.Name)
+			for _, deployName := range config.Dev.AutoReload.Deployments {
+				for _, deployConf := range config.Deployments {
+					if deployName == deployConf.Name {
+						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != "" {
+							_, err := os.Stat(deployConf.Helm.Chart.Name)
 							if err == nil {
-								chartPath := *deployConf.Helm.Chart.Name
+								chartPath := deployConf.Helm.Chart.Name
 								if chartPath[len(chartPath)-1] != '/' {
 									chartPath += "/"
 								}
@@ -387,8 +451,8 @@ func GetPaths(config *latest.Config) []string {
 								paths = append(paths, chartPath+"**")
 							}
 						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
-							for _, manifestPath := range *deployConf.Kubectl.Manifests {
-								paths = append(paths, *manifestPath)
+							for _, manifestPath := range deployConf.Kubectl.Manifests {
+								paths = append(paths, manifestPath)
 							}
 						}
 					}
@@ -398,12 +462,12 @@ func GetPaths(config *latest.Config) []string {
 
 		// Add the dockerfile paths
 		if config.Dev.AutoReload.Images != nil && config.Images != nil {
-			for _, imageName := range *config.Dev.AutoReload.Images {
-				for imageConfName, imageConf := range *config.Images {
-					if *imageName == imageConfName {
+			for _, imageName := range config.Dev.AutoReload.Images {
+				for imageConfName, imageConf := range config.Images {
+					if imageName == imageConfName {
 						dockerfilePath := "./Dockerfile"
-						if imageConf.Dockerfile != nil {
-							dockerfilePath = *imageConf.Dockerfile
+						if imageConf.Dockerfile != "" {
+							dockerfilePath = imageConf.Dockerfile
 						}
 
 						paths = append(paths, dockerfilePath)
@@ -414,8 +478,8 @@ func GetPaths(config *latest.Config) []string {
 
 		// Add the additional paths
 		if config.Dev.AutoReload.Paths != nil {
-			for _, path := range *config.Dev.AutoReload.Paths {
-				paths = append(paths, *path)
+			for _, path := range config.Dev.AutoReload.Paths {
+				paths = append(paths, path)
 			}
 		}
 	}
@@ -430,78 +494,75 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
+func (cmd *DevCmd) loadConfig(ctx context.Context, client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
+	if cmd.Profile != "" {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
+	} else {
+		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+	}
+
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfigFromPath(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), ".", generatedConfig.ActiveConfig, true, generatedConfig, log.GetInstance())
+	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Adjust config for interactive mode
-	if cmd.Interactive != "" {
-		if config.Images == nil || len(*config.Images) == 0 {
-			log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
-		}
-		images := *config.Images
+	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && ((config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true) || len(config.Dev.Interactive.Images) > 0 || config.Dev.Interactive.Terminal != nil)
+	if config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == false {
+		interactiveModeInConfigEnabled = false
+	}
 
-		if cmd.Interactive == interactiveDefaultPickerValue {
+	if cmd.Interactive || interactiveModeInConfigEnabled {
+		if config.Dev == nil {
+			config.Dev = &latest.DevConfig{}
+		}
+		if config.Dev.Interactive == nil {
+			config.Dev.Interactive = &latest.InteractiveConfig{}
+		}
+
+		images := config.Images
+		if cmd.Interactive && !interactiveModeInConfigEnabled {
+			if config.Images == nil || len(config.Images) == 0 {
+				log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
+			}
+
 			imageNames := make([]string, 0, len(images))
 			for k := range images {
 				imageNames = append(imageNames, k)
 			}
 
 			// If only one image exists, use it, otherwise show image picker
+			imageName := ""
 			if len(imageNames) == 1 {
-				cmd.Interactive = imageNames[0]
+				imageName = imageNames[0]
 			} else {
-				cmd.Interactive = survey.Question(&survey.QuestionOptions{
-					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?\nIf you want to apply this override to multiple images run `devspace dev -i image1,image2,...`",
+				imageName = survey.Question(&survey.QuestionOptions{
+					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?",
 					Options:  imageNames,
 				})
 			}
-		}
 
-		// Make sure dev section exists in config
-		if config.Dev == nil {
-			config.Dev = &latest.DevConfig{}
-		}
-
-		// Make sure dev.overrideImages section exists in config
-		if config.Dev.OverrideImages == nil {
-			imageOverrideConfig := []*latest.ImageOverrideConfig{}
-			config.Dev.OverrideImages = &imageOverrideConfig
-		}
-		imageOverrideConfig := *config.Dev.OverrideImages
-
-		// Entrypoint used for interactive mode
-		entrypointOverride := []*string{
-			ptr.String("sleep"),
-			ptr.String("999999"),
-		}
-
-		// Set all entrypoint overrides for specified interactive images
-		interactiveImages := strings.Split(cmd.Interactive, ",")
-		for i := range interactiveImages {
-			imageName := strings.TrimSpace(interactiveImages[i])
-			if _, ok := images[imageName]; !ok {
-				log.Fatalf("Unable to find image '%s' in configuration", imageName)
+			config.Dev.Interactive.Images = []*latest.InteractiveImageConfig{
+				{
+					Name: imageName,
+				},
 			}
-			imageOverrideConfig = append(imageOverrideConfig, &latest.ImageOverrideConfig{
-				Name:       &imageName,
-				Entrypoint: &entrypointOverride,
-			})
-			log.Infof("Interactive mode: override image %s with 'ENTRYPOINT [sleep, 999999]'", imageName)
-		}
-		config.Dev.OverrideImages = &imageOverrideConfig
-
-		// Make sure dev.terminal section exists in config
-		if config.Dev.Terminal == nil {
-			config.Dev.Terminal = &latest.Terminal{}
 		}
 
-		// Set dev.terminal.disabled = false
-		config.Dev.Terminal.Disabled = ptr.Bool(false)
+		// Set image entrypoints if necessary
+		for _, imageConf := range config.Dev.Interactive.Images {
+			if len(imageConf.Entrypoint) == 0 {
+				imageConf.Entrypoint = []string{"sleep", "9999999999"}
+			}
+		}
+
 		log.Info("Interactive mode: enable terminal")
+		config.Dev.Interactive.Enabled = ptr.Bool(true)
+	} else {
+		if config.Dev != nil && config.Dev.Interactive != nil {
+			config.Dev.Interactive = nil
+		}
 	}
 
 	return config

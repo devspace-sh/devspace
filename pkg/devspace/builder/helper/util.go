@@ -26,25 +26,12 @@ func GetDockerfileAndContext(config *latest.Config, imageConfigName string, imag
 		contextPath    = DefaultContextPath
 	)
 
-	if imageConf.Dockerfile != nil {
-		dockerfilePath = *imageConf.Dockerfile
+	if imageConf.Dockerfile != "" {
+		dockerfilePath = imageConf.Dockerfile
 	}
 
-	if imageConf.Context != nil {
-		contextPath = *imageConf.Context
-	}
-
-	if isDev && config.Dev != nil && config.Dev.OverrideImages != nil {
-		for _, overrideConfig := range *config.Dev.OverrideImages {
-			if *overrideConfig.Name == imageConfigName {
-				if overrideConfig.Dockerfile != nil {
-					dockerfilePath = *overrideConfig.Dockerfile
-				}
-				if overrideConfig.Context != nil {
-					contextPath = *overrideConfig.Context
-				}
-			}
-		}
+	if imageConf.Context != "" {
+		contextPath = imageConf.Context
 	}
 
 	return dockerfilePath, contextPath
@@ -78,7 +65,7 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 }
 
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
-func CreateTempDockerfile(dockerfile string, entrypointArr []*string) (string, error) {
+func CreateTempDockerfile(dockerfile string, entrypointArr []string) (string, error) {
 	if entrypointArr == nil || len(entrypointArr) == 0 {
 		return "", errors.New("Entrypoint is empty")
 	}
@@ -86,8 +73,8 @@ func CreateTempDockerfile(dockerfile string, entrypointArr []*string) (string, e
 	// Convert to string array
 	entrypoint := []string{}
 	for _, str := range entrypointArr {
-		if str != nil {
-			entrypoint = append(entrypoint, *str)
+		if str != "" {
+			entrypoint = append(entrypoint, str)
 		}
 	}
 	if len(entrypoint) == 0 {

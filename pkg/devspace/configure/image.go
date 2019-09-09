@@ -37,12 +37,12 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 	}
 
 	retImageConfig := &latest.ImageConfig{
-		Image:            &imageName,
+		Image:            imageName,
 		CreatePullSecret: ptr.Bool(true),
 	}
 
 	if imageTag != "" {
-		retImageConfig.Tag = &imageTag
+		retImageConfig.Tag = imageTag
 	}
 	if dockerfile == "" {
 		retImageConfig.Build = &latest.BuildConfig{
@@ -50,10 +50,10 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 		}
 	} else {
 		if dockerfile != helper.DefaultDockerfilePath {
-			retImageConfig.Dockerfile = &dockerfile
+			retImageConfig.Dockerfile = dockerfile
 		}
 		if context != "" && context != helper.DefaultContextPath {
-			retImageConfig.Context = &context
+			retImageConfig.Context = context
 		}
 	}
 
@@ -68,13 +68,13 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	)
 
 	// Ignore error as context may not be a Space
-	context, err := kubeconfig.GetCurrentContext()
+	kubeContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
 		return nil, err
 	}
 
 	// Get docker client
-	client, err := docker.NewClientWithMinikube(context, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -108,10 +108,17 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	if registryURL == cloudRegistryHostname {
 		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
+		log.StartWait("Checking Docker credentials")
+		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		log.StopWait()
+		if err == nil {
+			dockerUsername = dockerAuthConfig.Username
+		}
+
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
-			DefaultValue:      dockerUsername + "/devspace",
-			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			DefaultValue:      dockerUsername + "/" + imageName,
+			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
@@ -129,7 +136,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		imageName = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
-			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
+			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
@@ -154,14 +161,14 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Set image name
-	retImageConfig.Image = &imageName
+	retImageConfig.Image = imageName
 
 	// Set image specifics
 	if dockerfile != "" && dockerfile != helper.DefaultDockerfilePath {
-		retImageConfig.Dockerfile = &dockerfile
+		retImageConfig.Dockerfile = dockerfile
 	}
 	if context != "" && context != helper.DefaultContextPath {
-		retImageConfig.Context = &context
+		retImageConfig.Context = context
 	}
 
 	retImageConfig.CreatePullSecret = ptr.Bool(true)
@@ -253,7 +260,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 				break
 			}
 		} else if selectedRegistry == useDevSpaceRegistry {
-			return "", loginDevSpaceCloud(*cloudProvider)
+			return registryURL, loginDevSpaceCloud(*cloudProvider)
 		} else {
 			return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}
@@ -326,17 +333,17 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 	config := configutil.GetBaseConfig(context.Background())
 
 	imageConfig := &v1.ImageConfig{
-		Image: &name,
+		Image: name,
 	}
 
 	if tag != "" {
-		imageConfig.Tag = &tag
+		imageConfig.Tag = tag
 	}
 	if contextPath != "" {
-		imageConfig.Context = &contextPath
+		imageConfig.Context = contextPath
 	}
 	if dockerfilePath != "" {
-		imageConfig.Dockerfile = &dockerfilePath
+		imageConfig.Dockerfile = dockerfilePath
 	}
 
 	if buildEngine == "docker" {
@@ -357,10 +364,10 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 
 	if config.Images == nil {
 		images := make(map[string]*v1.ImageConfig)
-		config.Images = &images
+		config.Images = images
 	}
 
-	(*config.Images)[nameInConfig] = imageConfig
+	config.Images[nameInConfig] = imageConfig
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
@@ -383,7 +390,7 @@ func RemoveImage(removeAll bool, names []string) error {
 	if !removeAll && config.Images != nil {
 
 	ImagesLoop:
-		for nameInConfig, imageConfig := range *config.Images {
+		for nameInConfig, imageConfig := range config.Images {
 			for _, deletionName := range names {
 				if deletionName == nameInConfig {
 					continue ImagesLoop
@@ -394,7 +401,7 @@ func RemoveImage(removeAll bool, names []string) error {
 		}
 	}
 
-	config.Images = &newImageList
+	config.Images = newImageList
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {

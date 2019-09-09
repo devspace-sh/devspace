@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"context"
 	"strconv"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -131,7 +132,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 
 	if configExists {
 		// Get current space
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig(context.Background())
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -17,32 +17,6 @@ const MinimumPodAge = 10 * time.Second
 // WaitTimeout is the amount of time to wait for a pod to start
 const WaitTimeout = 120 * time.Second
 
-// WaitStatus are the status to wait
-var WaitStatus = []string{
-	"ContainerCreating",
-	"PodInitializing",
-	"Pending",
-	"Terminating",
-}
-
-// CriticalStatus container status
-var CriticalStatus = map[string]string{
-	"Error":                      "",
-	"Unknown":                    "",
-	"ImagePullBackOff":           "",
-	"CrashLoopBackOff":           "",
-	"RunContainerError":          "",
-	"ErrImagePull":               "",
-	"CreateContainerConfigError": "",
-	"InvalidImageName":           "",
-}
-
-// OkayStatus container status
-var OkayStatus = map[string]string{
-	"Completed": "",
-	"Running":   "",
-}
-
 // IgnoreRestartsSince if they happened 2 hours or later ago
 const IgnoreRestartsSince = time.Hour * 2
 
@@ -73,7 +47,7 @@ func Pods(client *kubectl.Client, namespace string, noWait bool) ([]string, erro
 			if pods.Items != nil {
 				for _, pod := range pods.Items {
 					podStatus := kubectl.GetPodStatus(&pod)
-					for _, status := range WaitStatus {
+					for _, status := range kubectl.WaitStatus {
 						if podStatus == status {
 							loop = true
 							log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
@@ -172,7 +146,7 @@ func checkPod(client *kubectl.Client, pod *v1.Pod) *podProblem {
 	}
 
 	// Check for unusual status
-	if _, ok := OkayStatus[podProblem.Status]; ok == false {
+	if _, ok := kubectl.OkayStatus[podProblem.Status]; ok == false {
 		if strings.HasPrefix(podProblem.Status, "Init") == false {
 			hasProblem = true
 		}
@@ -241,7 +215,7 @@ func getContainerProblem(client *kubectl.Client, pod *v1.Pod, containerStatus *v
 			containerProblem.LastExitReason = containerStatus.LastTerminationState.Terminated.Reason
 
 			if containerProblem.LastExitCode != 0 {
-				containerProblem.LastFaultyExecutionLog, _ = client.Logs(pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
 			}
 		}
 	}
@@ -259,7 +233,7 @@ func getContainerProblem(client *kubectl.Client, pod *v1.Pod, containerStatus *v
 			containerProblem.LastExitCode = int(containerStatus.State.Terminated.ExitCode)
 			if containerProblem.LastExitCode != 0 {
 				hasProblem = true
-				containerProblem.LastFaultyExecutionLog, _ = client.Logs(pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {
 			hasProblem = true

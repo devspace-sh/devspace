@@ -17,10 +17,10 @@ func SetFakeConfig(fakeConfig *latest.Config) {
 	}
 
 	if fakeConfig.Deployments == nil {
-		fakeConfig.Deployments = &[]*latest.DeploymentConfig{}
+		fakeConfig.Deployments = []*latest.DeploymentConfig{}
 	}
 	if fakeConfig.Images == nil {
-		fakeConfig.Images = &map[string]*latest.ImageConfig{}
+		fakeConfig.Images = map[string]*latest.ImageConfig{}
 	}
 	if fakeConfig.Dev == nil {
 		fakeConfig.Dev = &latest.DevConfig{}

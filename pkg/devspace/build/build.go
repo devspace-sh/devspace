@@ -31,12 +31,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 	)
 
 	// Check if we have at least 1 image to build
-	if config.Images == nil || len(*config.Images) == 0 {
+	if len(config.Images) == 0 {
 		return builtImages, nil
 	}
 
 	// Build not in parallel when we only have one image to build
-	if sequential == false && len(*config.Images) <= 1 {
+	if sequential == false && len(config.Images) <= 1 {
 		sequential = true
 	}
 
@@ -47,7 +47,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 	}
 
 	imagesToBuild := 0
-	for key, imageConf := range *config.Images {
+	for key, imageConf := range config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
 			continue
@@ -55,7 +55,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 
 		// This is necessary for parallel build otherwise we would override the image conf pointer during the loop
 		cImageConf := *imageConf
-		imageName := *cImageConf.Image
+		imageName := cImageConf.Image
 		imageConfigName := key
 
 		// Get image tag
@@ -63,8 +63,8 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 		if err != nil {
 			return nil, fmt.Errorf("Image building failed: %v", err)
 		}
-		if imageConf.Tag != nil {
-			imageTag = *imageConf.Tag
+		if imageConf.Tag != "" {
+			imageTag = imageConf.Tag
 		}
 
 		// Create new builder

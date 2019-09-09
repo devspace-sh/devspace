@@ -42,22 +42,22 @@ var (
 
 // Execute executes hooks at a specific time
 func Execute(config *latest.Config, when When, stage Stage, which string, log logpkg.Logger) error {
-	if config.Hooks != nil && len(*config.Hooks) > 0 {
+	if config.Hooks != nil && len(config.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute
-		for _, hook := range *config.Hooks {
+		for _, hook := range config.Hooks {
 			if hook.When != nil {
 				if when == Before && hook.When.Before != nil {
-					if stage == StageDeployments && hook.When.Before.Deployments != nil && strings.TrimSpace(*hook.When.Before.Deployments) == strings.TrimSpace(which) {
+					if stage == StageDeployments && hook.When.Before.Deployments != "" && strings.TrimSpace(hook.When.Before.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.Before.Images != nil && strings.TrimSpace(*hook.When.Before.Images) == strings.TrimSpace(which) {
+					} else if stage == StageImages && hook.When.Before.Images != "" && strings.TrimSpace(hook.When.Before.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == After && hook.When.After != nil {
-					if stage == StageDeployments && hook.When.After.Deployments != nil && strings.TrimSpace(*hook.When.After.Deployments) == strings.TrimSpace(which) {
+					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.After.Images != nil && strings.TrimSpace(*hook.When.After.Images) == strings.TrimSpace(which) {
+					} else if stage == StageImages && hook.When.After.Images != "" && strings.TrimSpace(hook.When.After.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				}
@@ -68,14 +68,13 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 		for _, hook := range hooksToExecute {
 			// Build arguments
 			args := []string{}
-
 			if hook.Args != nil {
-				for _, arg := range *hook.Args {
-					args = append(args, *arg)
+				for _, arg := range hook.Args {
+					args = append(args, arg)
 				}
 			}
 
-			cmd := command.NewStreamCommand(*hook.Command, args)
+			cmd := command.NewStreamCommand(hook.Command, args)
 
 			// Determine output writer
 			var writer io.Writer
@@ -85,7 +84,7 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 				writer = log
 			}
 
-			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", *hook.Command, strings.Join(args, "' '")), "white+b"))
+			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
 			err := cmd.Run(writer, writer, nil)
 			if err != nil {
 				return fmt.Errorf("Error executing hook: %v", err)

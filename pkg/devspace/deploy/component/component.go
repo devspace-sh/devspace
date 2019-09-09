@@ -8,7 +8,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
 // DeployConfig holds the informations for deploying a component
@@ -18,9 +17,9 @@ type DeployConfig struct {
 
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
-	Name:    ptr.String("component-chart"),
-	Version: ptr.String("v0.0.3"),
-	RepoURL: ptr.String("https://charts.devspace.cloud"),
+	Name:    "component-chart",
+	Version: "v0.0.3",
+	RepoURL: "https://charts.devspace.cloud",
 }
 
 // New creates a new helm deployment client
@@ -43,7 +42,7 @@ func New(config *latest.Config, kubectl *kubectl.Client, deployConfig *latest.De
 		Namespace: deployConfig.Namespace,
 		Helm: &latest.HelmConfig{
 			Chart:           DevSpaceChartConfig,
-			Values:          &values,
+			Values:          values,
 			Wait:            deployConfig.Component.Options.Wait,
 			Rollback:        deployConfig.Component.Options.Rollback,
 			Force:           deployConfig.Component.Options.Force,
