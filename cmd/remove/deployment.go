@@ -82,7 +82,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			deployments = []string{args[0]}
 		}
 
-		generatedConfig, err := generated.LoadConfig(context.Background())
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Errorf("Error loading generated.yaml: %v", err)
 			return

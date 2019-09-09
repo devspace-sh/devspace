@@ -52,10 +52,10 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get the config
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), "")
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(context.Background())
+	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}

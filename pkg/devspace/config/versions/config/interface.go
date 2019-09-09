@@ -1,7 +1,5 @@
 package config
 
-import "context"
-
 // Config is the interface for each config version
 type Config interface {
 	GetVersion() string
@@ -15,4 +13,4 @@ type New func() Config
 type Variables func(data map[interface{}]interface{}) (map[interface{}]interface{}, error)
 
 // Prepare prepares a config for variable loading and strips unused configuration
-type Prepare func(ctx context.Context, data map[interface{}]interface{}) (map[interface{}]interface{}, error)
+type Prepare func(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error)

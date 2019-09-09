@@ -93,13 +93,22 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		ingressControllerWarning = ""
 	)
 
+	// Load generated config if possible
+	var generatedConfig *generated.Config
+	if configExists {
+		generatedConfig, err = generated.LoadConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Get kubernetes client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = client.PrintWarning(context.Background(), false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,7 +123,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
 	}
 
 	namespace := client.Namespace

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
@@ -216,15 +215,12 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 		}
 	}
 
-	// Set profile to load
-	ctx = context.WithValue(ctx, constants.ProfileContextKey, dependency.Profile)
-
 	if dependency.Source.SubPath != "" {
 		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, dependency.Profile, log.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
@@ -233,7 +229,7 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 	dConfig.Dev = &latest.DevConfig{}
 
 	// Load dependency generated config
-	dGeneratedConfig, err := generated.LoadConfigFromPath(ctx, filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
+	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)), dependency.Profile)
 	if err != nil {
 		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}

@@ -99,14 +99,8 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
-	// Get config with adjusted cluster config
-	ctx := context.Background()
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	}
-
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(ctx)
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -118,15 +112,15 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(ctx, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Add current kube context to context
-	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
 
-	config := configutil.GetConfig(ctx)
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

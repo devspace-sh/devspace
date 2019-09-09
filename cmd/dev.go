@@ -139,14 +139,11 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	// Create context
 	ctx := context.Background()
-	// Get config with adjusted cluster config
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(ctx)
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -157,7 +154,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(ctx, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,7 +163,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
 
 	// Get the config
-	config := cmd.loadConfig(ctx, client, generatedConfig)
+	config := cmd.loadConfig(ctx)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -272,7 +269,7 @@ func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, ge
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(ctx, client, generatedConfig)
+				config := cmd.loadConfig(ctx)
 
 				// Trigger rebuild & redeploy
 				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
@@ -494,18 +491,11 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(ctx context.Context, client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	} else {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
-	}
+func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
+	configutil.ResetConfig()
 
-	// Get config with adjusted cluster config
-	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Load config
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && ((config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true) || len(config.Dev.Interactive.Images) > 0 || config.Dev.Interactive.Terminal != nil)

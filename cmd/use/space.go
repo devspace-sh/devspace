@@ -1,7 +1,6 @@
 package use
 
 import (
-	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -179,7 +178,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig(context.Background())
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}
