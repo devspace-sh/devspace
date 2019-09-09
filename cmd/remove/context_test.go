@@ -205,7 +205,7 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Your kube-context has been updated to '%s'\nDone Kube-context 'current' has been successfully deleted", ansi.Color("next", "white+b")),
+			expectedOutput: fmt.Sprintf("\nInfo Your kube-context has been updated to '%s'\nDone Kube-context 'current' has been successfully removed", ansi.Color("next", "white+b")),
 		},
 	}
 
