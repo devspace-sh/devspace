@@ -28,12 +28,13 @@ type DeployCmd struct {
 
 	DockerTarget string
 
-	ForceBuild        bool
-	SkipBuild         bool
-	BuildSequential   bool
-	ForceDeploy       bool
-	Deployments       string
-	ForceDependencies bool
+	ForceBuild          bool
+	SkipBuild           bool
+	BuildSequential     bool
+	ForceDeploy         bool
+	Deployments         string
+	ForceDependencies   bool
+	VerboseDependencies bool
 
 	SwitchContext bool
 	SkipPush      bool
@@ -64,6 +65,7 @@ devspace deploy --kube-context=deploy-context
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
 
 	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
@@ -153,7 +155,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}

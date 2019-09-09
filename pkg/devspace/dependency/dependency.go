@@ -51,7 +51,7 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 }
 
 // BuildAll will build all dependencies if there are any
-func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild bool, logger log.Logger) error {
+func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild, verbose bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
@@ -74,15 +74,27 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 
 	defer logger.StopWait()
 
+	if verbose == false {
+		logger.Infof("To display the complete dependency build run with the '--verbose-dependencies' flag")
+	}
+
 	// Deploy all dependencies
 	for i := 0; i < len(dependencies); i++ {
-		dependency := dependencies[i]
+		var (
+			dependency       = dependencies[i]
+			buff             = &bytes.Buffer{}
+			dependencyLogger = logger
+		)
 
-		logger.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-		buff := &bytes.Buffer{}
-		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+		// If not verbose log to a stream
+		if verbose == false {
+			logger.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+		} else {
+			logger.Infof(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+		}
 
-		err := dependency.Build(skipPush, forceDeployDependencies, forceBuild, streamLog)
+		err := dependency.Build(skipPush, forceDeployDependencies, forceBuild, dependencyLogger)
 		if err != nil {
 			return fmt.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
@@ -97,7 +109,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy bool, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, verbose bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
@@ -120,15 +132,27 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 
 	defer logger.StopWait()
 
+	if verbose == false {
+		logger.Infof("To display the complete dependency deployment run with the '--verbose-dependencies' flag")
+	}
+
 	// Deploy all dependencies
 	for i := 0; i < len(dependencies); i++ {
-		dependency := dependencies[i]
+		var (
+			dependency       = dependencies[i]
+			buff             = &bytes.Buffer{}
+			dependencyLogger = logger
+		)
 
-		logger.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-		buff := &bytes.Buffer{}
-		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+		// If not verbose log to a stream
+		if verbose == false {
+			logger.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+		} else {
+			logger.Infof(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+		}
 
-		err := dependency.Deploy(client, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, streamLog)
+		err := dependency.Deploy(client, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, dependencyLogger)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
@@ -144,7 +168,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic bool, logger log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, verbose bool, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
@@ -167,15 +191,25 @@ func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Cl
 
 	defer logger.StopWait()
 
+	if verbose == false {
+		logger.Infof("To display the complete dependency deletion run with the '--verbose-dependencies' flag")
+	}
+
 	// Purge all dependencies
 	for i := len(dependencies) - 1; i >= 0; i-- {
-		logger.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
-		dependency := dependencies[i]
+		var (
+			dependency       = dependencies[i]
+			buff             = &bytes.Buffer{}
+			dependencyLogger = logger
+		)
 
-		buff := &bytes.Buffer{}
-		streamLog := log.NewStreamLogger(buff, logrus.InfoLevel)
+		// If not verbose log to a stream
+		if verbose == false {
+			logger.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
+			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+		}
 
-		err := dependency.Purge(client, streamLog)
+		err := dependency.Purge(client, dependencyLogger)
 		if err != nil {
 			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}

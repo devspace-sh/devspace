@@ -20,6 +20,7 @@ import (
 type PurgeCmd struct {
 	Deployments             string
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
 	PurgeDependencies       bool
 
 	Namespace   string
@@ -55,6 +56,7 @@ devspace purge -d my-deployment
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
 	return purgeCmd
 }
@@ -113,7 +115,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, log.GetInstance())
+		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}
