@@ -87,8 +87,8 @@ func TestDeleteKubeContext(t *testing.T) {
 	config, err = kubeconfig.LoadRawConfig()
 	assert.NilError(t, err, "Error loading kubeConfig")
 	assert.Equal(t, len(config.Contexts), 1, "kube context not correctly deleted")
-	assert.Equal(t, len(config.Clusters), 0, "kube context not correctly deleted")
-	assert.Equal(t, len(config.AuthInfos), 0, "kube context not correctly deleted")
+	assert.Equal(t, len(config.Clusters), 1, "kube context not correctly deleted")
+	assert.Equal(t, len(config.AuthInfos), 1, "kube context not correctly deleted")
 	assert.Equal(t, config.CurrentContext, "otherContext", "kube context not correctly deleted")
 
 	err = DeleteKubeContext(&latest.Space{Name: "space.Name", ProviderName: "space.ProviderName"})

@@ -28,7 +28,7 @@ func TestShouldRebuild(t *testing.T) {
 	}
 
 	imageConf := &latest.ImageConfig{
-		Image: ptr.String("test-image"),
+		Image: "test-image",
 		Build: &latest.BuildConfig{
 			Custom: &latest.CustomConfig{},
 		},
@@ -45,7 +45,7 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	imageConf.Build.Custom.OnChange = &[]*string{
+	imageConf.Build.Custom.OnChange = []*string{
 		ptr.String("./**"),
 	}
 
@@ -70,7 +70,7 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal("2: Expected rebuild false, got true")
 	}
 
-	imageConf.Image = ptr.String("test-image-new")
+	imageConf.Image = "test-image-new"
 	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
 	if err != nil {
 		log.Fatal(err)
@@ -82,15 +82,15 @@ func TestShouldRebuild(t *testing.T) {
 
 func TestBuild(t *testing.T) {
 	imageConf := &latest.ImageConfig{
-		Image: ptr.String("test-image"),
+		Image: "test-image",
 		Build: &latest.BuildConfig{
 			Custom: &latest.CustomConfig{
-				Command: ptr.String("my-command"),
-				Args: &[]*string{
+				Command: "my-command",
+				Args: []*string{
 					ptr.String("flag1"),
 					ptr.String("flag2"),
 				},
-				ImageFlag: ptr.String("--imageflag"),
+				ImageFlag: "--imageflag",
 			},
 		},
 	}
