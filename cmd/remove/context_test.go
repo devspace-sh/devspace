@@ -135,7 +135,7 @@ func TestRunRemoveContext(t *testing.T) {
 				},
 			},
 			fakeKubeConfig: &customKubeConfig{},
-			expectedOutput: "\nDone Deleted kubectl context for space \nDone All space kubectl contexts removed",
+			expectedOutput: "\nDone Removed kubectl context for space \nDone All space kubectl contexts removed",
 		},
 		removeContextTestCase{
 			name:     "Delete one context successfully",
@@ -161,9 +161,15 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			args:           []string{"a:b"},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedOutput: "\nDone Kube-context 'a:b' has been successfully deleted",
+			args: []string{"myContext"},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"myContext": &clientcmdapi.Context{},
+					},
+				},
+			},
+			expectedOutput: "\nDone Kube-context 'myContext' has been successfully removed",
 		},
 		removeContextTestCase{
 			name:     "Delete current context successfully",

@@ -130,8 +130,8 @@ func testRunAddPort(t *testing.T, testCase addPortTestCase) {
 
 	config := configutil.GetBaseConfig(context.Background())
 
-	assert.Equal(t, len(testCase.expectedPorts), len(*(*config.Dev.Ports)[0].PortMappings), "Wrong number of port mappings in testCase %s", testCase.name)
-	for index, portMapping := range *(*config.Dev.Ports)[0].PortMappings {
+	assert.Equal(t, len(testCase.expectedPorts), len(config.Dev.Ports[0].PortMappings), "Wrong number of port mappings in testCase %s", testCase.name)
+	for index, portMapping := range config.Dev.Ports[0].PortMappings {
 		assert.Equal(t, *testCase.expectedPorts[index].LocalPort, *portMapping.LocalPort, "Local port unexpected in testCase %s", testCase.name)
 	}
 

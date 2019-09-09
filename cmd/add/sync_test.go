@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
@@ -58,11 +57,11 @@ func TestRunAddSync(t *testing.T) {
 			expectedOutput: "\nDone Successfully added sync between local path / and container path /",
 			expectedSync: []*latest.SyncConfig{
 				&latest.SyncConfig{
-					LabelSelector: &map[string]*string{
-						"app.kubernetes.io/component": ptr.String("devspace"),
+					LabelSelector: map[string]string{
+						"app.kubernetes.io/component": "devspace",
 					},
-					LocalSubPath:  ptr.String("/"),
-					ContainerPath: ptr.String("/"),
+					LocalSubPath:  "/",
+					ContainerPath: "/",
 				},
 			},
 			expectConfigFile: true,
@@ -144,51 +143,51 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 
 	config := configutil.GetBaseConfig(context.Background())
 
-	assert.Equal(t, len(testCase.expectedSync), len(*config.Dev.Sync), "Wrong number of selectors in testCase %s", testCase.name)
-	for index, sync := range *config.Dev.Sync {
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSync[index].Selector), ptr.ReverseString(sync.Selector), "Selector of sync unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSync[index].Namespace), ptr.ReverseString(sync.Namespace), "Namespace of sync unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSync[index].ContainerName), ptr.ReverseString(sync.ContainerName), "Container of sync unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSync[index].LocalSubPath), ptr.ReverseString(sync.LocalSubPath), "Local path of sync unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSync[index].ContainerPath), ptr.ReverseString(sync.ContainerPath), "Containerpat of sync unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseBool(testCase.expectedSync[index].WaitInitialSync), ptr.ReverseBool(sync.WaitInitialSync), "WaitInitialSync of sync unexpected in testCase %s", testCase.name)
+	assert.Equal(t, len(testCase.expectedSync), len(config.Dev.Sync), "Wrong number of selectors in testCase %s", testCase.name)
+	for index, sync := range config.Dev.Sync {
+		assert.Equal(t, testCase.expectedSync[index].Selector, sync.Selector, "Selector of sync unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSync[index].Namespace, sync.Namespace, "Namespace of sync unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSync[index].ContainerName, sync.ContainerName, "Container of sync unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSync[index].LocalSubPath, sync.LocalSubPath, "Local path of sync unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSync[index].ContainerPath, sync.ContainerPath, "Containerpat of sync unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSync[index].WaitInitialSync, sync.WaitInitialSync, "WaitInitialSync of sync unexpected in testCase %s", testCase.name)
 
 		if testCase.expectedSync[index].ExcludePaths == nil {
-			testCase.expectedSync[index].ExcludePaths = &[]string{}
+			testCase.expectedSync[index].ExcludePaths = []string{}
 		}
 		if sync.ExcludePaths == nil {
-			sync.ExcludePaths = &[]string{}
+			sync.ExcludePaths = []string{}
 		}
-		for index, excludePath := range *sync.ExcludePaths {
-			assert.Equal(t, (*testCase.expectedSync[index].ExcludePaths)[index], excludePath, "ExcludePaths of sync unexpected in testCase %s", testCase.name)
+		for index, excludePath := range sync.ExcludePaths {
+			assert.Equal(t, (testCase.expectedSync[index].ExcludePaths)[index], excludePath, "ExcludePaths of sync unexpected in testCase %s", testCase.name)
 		}
 
 		if testCase.expectedSync[index].DownloadExcludePaths == nil {
-			testCase.expectedSync[index].DownloadExcludePaths = &[]string{}
+			testCase.expectedSync[index].DownloadExcludePaths = []string{}
 		}
 		if sync.DownloadExcludePaths == nil {
-			sync.DownloadExcludePaths = &[]string{}
+			sync.DownloadExcludePaths = []string{}
 		}
-		for index, excludePath := range *sync.DownloadExcludePaths {
-			assert.Equal(t, (*testCase.expectedSync[index].DownloadExcludePaths)[index], excludePath, "DownloadExcludePaths of sync unexpected in testCase %s", testCase.name)
+		for index, excludePath := range sync.DownloadExcludePaths {
+			assert.Equal(t, (testCase.expectedSync[index].DownloadExcludePaths)[index], excludePath, "DownloadExcludePaths of sync unexpected in testCase %s", testCase.name)
 		}
 
 		if testCase.expectedSync[index].UploadExcludePaths == nil {
-			testCase.expectedSync[index].UploadExcludePaths = &[]string{}
+			testCase.expectedSync[index].UploadExcludePaths = []string{}
 		}
 		if sync.UploadExcludePaths == nil {
-			sync.UploadExcludePaths = &[]string{}
+			sync.UploadExcludePaths = []string{}
 		}
-		for index, excludePath := range *sync.UploadExcludePaths {
-			assert.Equal(t, (*testCase.expectedSync[index].UploadExcludePaths)[index], excludePath, "UploadExcludePaths of sync unexpected in testCase %s", testCase.name)
+		for index, excludePath := range sync.UploadExcludePaths {
+			assert.Equal(t, (testCase.expectedSync[index].UploadExcludePaths)[index], excludePath, "UploadExcludePaths of sync unexpected in testCase %s", testCase.name)
 		}
 
 		if testCase.expectedSync[index].LabelSelector == nil {
-			testCase.expectedSync[index].LabelSelector = &map[string]*string{}
+			testCase.expectedSync[index].LabelSelector = map[string]string{}
 		}
-		assert.Equal(t, len(*testCase.expectedSync[index].LabelSelector), len(*sync.LabelSelector), "Unexpected labelselector length in in testCase %s", testCase.name)
-		for key, value := range *testCase.expectedSync[index].LabelSelector {
-			assert.Equal(t, ptr.ReverseString((*sync.LabelSelector)[key]), ptr.ReverseString(value), "Unexpected labelselector value of key %s in testCase %s", key, testCase.name)
+		assert.Equal(t, len(testCase.expectedSync[index].LabelSelector), len(sync.LabelSelector), "Unexpected labelselector length in in testCase %s", testCase.name)
+		for key, value := range testCase.expectedSync[index].LabelSelector {
+			assert.Equal(t, sync.LabelSelector[key], value, "Unexpected labelselector value of key %s in testCase %s", key, testCase.name)
 		}
 	}
 

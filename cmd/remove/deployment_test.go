@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -67,9 +66,9 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name: "Remove existent deployment",
 			fakeConfig: &latest.Config{
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: ptr.String("Exists"),
+						Name: "Exists",
 					},
 				},
 			},
@@ -81,9 +80,9 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name: "Remove all one deployments",
 			fakeConfig: &latest.Config{
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: ptr.String("Exists"),
+						Name: "Exists",
 					},
 				},
 			},

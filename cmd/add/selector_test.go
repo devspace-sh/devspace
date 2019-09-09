@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
@@ -51,8 +50,8 @@ func TestRunAddSelector(t *testing.T) {
 			expectedOutput: "\nDone Successfully added new service ",
 			expectedSelectors: []*latest.SelectorConfig{
 				&latest.SelectorConfig{
-					LabelSelector: &map[string]*string{
-						"app.kubernetes.io/component": ptr.String("devspace"),
+					LabelSelector: map[string]string{
+						"app.kubernetes.io/component": "devspace",
 					},
 				},
 			},
@@ -131,17 +130,17 @@ func testRunAddSelector(t *testing.T, testCase addSelectorTestCase) {
 
 	config := configutil.GetBaseConfig(context.Background())
 
-	assert.Equal(t, len(testCase.expectedSelectors), len(*config.Dev.Selectors), "Wrong number of selectors in testCase %s", testCase.name)
-	for index, selector := range *config.Dev.Selectors {
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSelectors[index].Name), ptr.ReverseString(selector.Name), "Local port unexpected in testCase %s", testCase.name)
-		assert.Equal(t, ptr.ReverseString(testCase.expectedSelectors[index].Namespace), ptr.ReverseString(selector.Namespace), "Local port unexpected in testCase %s", testCase.name)
+	assert.Equal(t, len(testCase.expectedSelectors), len(config.Dev.Selectors), "Wrong number of selectors in testCase %s", testCase.name)
+	for index, selector := range config.Dev.Selectors {
+		assert.Equal(t, testCase.expectedSelectors[index].Name, selector.Name, "Local port unexpected in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectedSelectors[index].Namespace, selector.Namespace, "Local port unexpected in testCase %s", testCase.name)
 
 		if testCase.expectedSelectors[index].LabelSelector == nil {
-			testCase.expectedSelectors[index].LabelSelector = &map[string]*string{}
+			testCase.expectedSelectors[index].LabelSelector = map[string]string{}
 		}
-		assert.Equal(t, len(*testCase.expectedSelectors[index].LabelSelector), len(*selector.LabelSelector), "Unexpected labelselector length in selector %s in testCase %s", ptr.ReverseString(selector.Name), testCase.name)
-		for key, value := range *testCase.expectedSelectors[index].LabelSelector {
-			assert.Equal(t, ptr.ReverseString((*selector.LabelSelector)[key]), ptr.ReverseString(value), "Unexpected labelselector value of key %s in selector %s in testCase %s", key, ptr.ReverseString(selector.Name), testCase.name)
+		assert.Equal(t, len(testCase.expectedSelectors[index].LabelSelector), len(selector.LabelSelector), "Unexpected labelselector length in selector %s in testCase %s", selector.Name, testCase.name)
+		for key, value := range testCase.expectedSelectors[index].LabelSelector {
+			assert.Equal(t, selector.LabelSelector[key], value, "Unexpected labelselector value of key %s in selector %s in testCase %s", key, selector.Name, testCase.name)
 		}
 	}
 

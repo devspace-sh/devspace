@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
@@ -42,20 +41,20 @@ func TestListSyncs(t *testing.T) {
 			name: "Print one sync path",
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{
-					Sync: &[]*latest.SyncConfig{
+					Sync: []*latest.SyncConfig{
 						&latest.SyncConfig{
-							LocalSubPath:  ptr.String("local"),
-							ContainerPath: ptr.String("container"),
-							Selector:      ptr.String("mySelector"),
-							ExcludePaths:  &[]string{"path1", "path2"},
+							LocalSubPath:  "local",
+							ContainerPath: "container",
+							Selector:      "mySelector",
+							ExcludePaths:  []string{"path1", "path2"},
 						},
 						&latest.SyncConfig{
-							LocalSubPath:  ptr.String("local2"),
-							ContainerPath: ptr.String("container2"),
-							LabelSelector: &map[string]*string{
+							LocalSubPath:  "local2",
+							ContainerPath: "container2",
+							LabelSelector: map[string]string{
 								//The order can be any way, so we do a little trick so the selectors are printed equally
-								"a":   ptr.String("b="),
-								"a=b": ptr.String(""),
+								"a":   "b=",
+								"a=b": "",
 							},
 						},
 					},

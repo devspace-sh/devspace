@@ -74,18 +74,20 @@ func TestRunAddDeployment(t *testing.T) {
 			name: "Add already existing deployment",
 			args: []string{"exists"},
 			fakeConfig: &latest.Config{
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: ptr.String("exists"),
+						Name: "exists",
 					},
 				},
 			},
 			expectedPanic: "Deployment exists already exists",
 		},
 		addDeploymentTestCase{
-			name:       "Valid kubectl deployment",
-			args:       []string{"newKubectlDeployment"},
-			fakeConfig: &latest.Config{},
+			name: "Valid kubectl deployment",
+			args: []string{"newKubectlDeployment"},
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+			},
 
 			cmdManifests: "these, are, manifests",
 			cmdNamespace: "kubectlNamespace",
@@ -98,9 +100,11 @@ func TestRunAddDeployment(t *testing.T) {
 			expectedDeploymentKubectlManifests: []string{"these", "are", "manifests"},
 		},
 		addDeploymentTestCase{
-			name:       "Valid helm deployment",
-			args:       []string{"newHelmDeployment"},
-			fakeConfig: &latest.Config{},
+			name: "Valid helm deployment",
+			args: []string{"newHelmDeployment"},
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+			},
 
 			cmdChart:        "myChart",
 			cmdChartRepo:    "myChartRepo",
@@ -115,10 +119,12 @@ func TestRunAddDeployment(t *testing.T) {
 			expectedHelmChartVersion:  "myChartVersion",
 		},
 		addDeploymentTestCase{
-			name:       "Valid dockerfile deployment",
-			args:       []string{"newDockerfileDeployment"},
-			answers:    []string{"1234"},
-			fakeConfig: &latest.Config{},
+			name:    "Valid dockerfile deployment",
+			args:    []string{"newDockerfileDeployment"},
+			answers: []string{"1234"},
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+			},
 
 			cmdDockerfile: "myDockerfile",
 			cmdImage:      "myImage",
@@ -140,9 +146,10 @@ func TestRunAddDeployment(t *testing.T) {
 			args:    []string{"newImageDeployment"},
 			answers: []string{"1234"},
 			fakeConfig: &latest.Config{
-				Images: &map[string]*latest.ImageConfig{
+				Version: "v1beta3",
+				Images: map[string]*latest.ImageConfig{
 					"someImage": &latest.ImageConfig{
-						Image: ptr.String("someImage"),
+						Image: "someImage",
 					},
 				},
 			},
@@ -242,33 +249,33 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		config, err := loadConfigFromPath()
 		assert.NilError(t, err, "Error loading config after adding deployment in testCase %s. Maybe it was unexpectedly not saved in %s", testCase.name, constants.DefaultConfigPath)
 
-		assert.Equal(t, len(*config.Deployments), testCase.expectedDeploymentsNumber, "Unexpected number of deployments in testCase %s", testCase.name)
+		assert.Equal(t, len(config.Deployments), testCase.expectedDeploymentsNumber, "Unexpected number of deployments in testCase %s", testCase.name)
 		if testCase.expectedDeploymentsNumber != 0 {
-			assert.Equal(t, *(*config.Deployments)[0].Name, testCase.expectedDeploymentName, "Unexpected name of new deployment in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*config.Deployments)[0].Namespace), testCase.expectedDeploymentNamespace, "Unexpected name of new deployment in testCase %s", testCase.name)
+			assert.Equal(t, config.Deployments[0].Name, testCase.expectedDeploymentName, "Unexpected name of new deployment in testCase %s", testCase.name)
+			assert.Equal(t, config.Deployments[0].Namespace, testCase.expectedDeploymentNamespace, "Unexpected name of new deployment in testCase %s", testCase.name)
 
 			if len(testCase.expectedDeploymentKubectlManifests) != 0 {
-				assert.Equal(t, (*config.Deployments)[0].Kubectl == nil || (*config.Deployments)[0].Kubectl.Manifests == nil, false, "Kubectl manifests are unexpectedly nil in testCase %s", testCase.name)
-				assert.Equal(t, len(*(*config.Deployments)[0].Kubectl.Manifests), len(testCase.expectedDeploymentKubectlManifests), "Returned manifest has unexpected length in testCase %s", testCase.name)
+				assert.Equal(t, config.Deployments[0].Kubectl == nil || config.Deployments[0].Kubectl.Manifests == nil, false, "Kubectl manifests are unexpectedly nil in testCase %s", testCase.name)
+				assert.Equal(t, len(config.Deployments[0].Kubectl.Manifests), len(testCase.expectedDeploymentKubectlManifests), "Returned manifest has unexpected length in testCase %s", testCase.name)
 				for index, expected := range testCase.expectedDeploymentKubectlManifests {
-					assert.Equal(t, *(*(*config.Deployments)[0].Kubectl.Manifests)[index], expected, "Returned manifest in index %d is unexpected in testCase %s", index, testCase.name)
+					assert.Equal(t, config.Deployments[0].Kubectl.Manifests[index], expected, "Returned manifest in index %d is unexpected in testCase %s", index, testCase.name)
 				}
 			} else if testCase.expectedHelmChartName != "" {
-				assert.Equal(t, (*config.Deployments)[0].Helm == nil || (*config.Deployments)[0].Helm.Chart == nil, false, "Helm field is unexpectedly nil in testCase %s", testCase.name)
-				assert.Equal(t, *(*config.Deployments)[0].Helm.Chart.Name, testCase.expectedHelmChartName, "Helm chart of new deployment has wrong name in testCase %s", testCase.name)
-				assert.Equal(t, *(*config.Deployments)[0].Helm.Chart.RepoURL, testCase.expectedHelmChartRepoURL, "Helm chart of new deployment has wrong RepoURL in testCase %s", testCase.name)
-				assert.Equal(t, *(*config.Deployments)[0].Helm.Chart.Version, testCase.expectedHelmChartVersion, "Helm chart of new deployment has wrong version in testCase %s", testCase.name)
+				assert.Equal(t, config.Deployments[0].Helm == nil || config.Deployments[0].Helm.Chart == nil, false, "Helm field is unexpectedly nil in testCase %s", testCase.name)
+				assert.Equal(t, config.Deployments[0].Helm.Chart.Name, testCase.expectedHelmChartName, "Helm chart of new deployment has wrong name in testCase %s", testCase.name)
+				assert.Equal(t, config.Deployments[0].Helm.Chart.RepoURL, testCase.expectedHelmChartRepoURL, "Helm chart of new deployment has wrong RepoURL in testCase %s", testCase.name)
+				assert.Equal(t, config.Deployments[0].Helm.Chart.Version, testCase.expectedHelmChartVersion, "Helm chart of new deployment has wrong version in testCase %s", testCase.name)
 			}
 		}
 
-		assert.Equal(t, len(*config.Images), testCase.expectedImagesNumber, "Unexpected number of images in testCase %s", testCase.name)
+		assert.Equal(t, len(config.Images), testCase.expectedImagesNumber, "Unexpected number of images in testCase %s", testCase.name)
 		if testCase.expectedImagesNumber != 0 {
-			assert.Equal(t, (*config.Images)[testCase.expectedDeploymentName] == nil, false, "No image with expected name in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*config.Images)[testCase.expectedDeploymentName].Image), testCase.expectedImageName, "Image has unexpected name in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*config.Images)[testCase.expectedDeploymentName].Tag), testCase.expectedImageTag, "Image has unexpected tag in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*config.Images)[testCase.expectedDeploymentName].Dockerfile), testCase.expectedImageDockerfile, "Image has unexpected dockerfile in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*config.Images)[testCase.expectedDeploymentName].Context), testCase.expectedImageContext, "Image has unexpected context in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseBool((*config.Images)[testCase.expectedDeploymentName].CreatePullSecret), testCase.expectedImageCreatePullSecrets, "Image has unexpected pull secrets settings name in testCase %s", testCase.name)
+			assert.Equal(t, config.Images[testCase.expectedDeploymentName] == nil, false, "No image with expected name in testCase %s", testCase.name)
+			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Image, testCase.expectedImageName, "Image has unexpected name in testCase %s", testCase.name)
+			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Tag, testCase.expectedImageTag, "Image has unexpected tag in testCase %s", testCase.name)
+			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Dockerfile, testCase.expectedImageDockerfile, "Image has unexpected dockerfile in testCase %s", testCase.name)
+			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Context, testCase.expectedImageContext, "Image has unexpected context in testCase %s", testCase.name)
+			assert.Equal(t, ptr.ReverseBool(config.Images[testCase.expectedDeploymentName].CreatePullSecret), testCase.expectedImageCreatePullSecrets, "Image has unexpected pull secrets settings name in testCase %s", testCase.name)
 		}
 	}
 

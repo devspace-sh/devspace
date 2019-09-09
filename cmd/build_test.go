@@ -18,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 
 	"gopkg.in/yaml.v2"
@@ -75,8 +74,6 @@ func TestBuild(t *testing.T) {
 		}
 	}()
 
-	_, err = os.Open("doesn'tExist")
-	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 	err = command.NewStreamCommand(" ", []string{}).Run(nil, nil, nil)
 	pathVarKey := strings.TrimPrefix(err.Error(), "exec: \" \": executable file not found in ")
 
@@ -94,56 +91,52 @@ func TestBuild(t *testing.T) {
 			expectedPanic: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		buildTestCase{
-			name:          "No devspace.yaml",
-			fakeConfig:    &latest.Config{},
-			expectedPanic: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
-		},
-		buildTestCase{
-			name: "generated.yaml can't be saved",
-			files: map[string]interface{}{
-				"devspace.yaml":                     &latest.Config{},
-				".devspace/generated.yaml/someFile": "",
-			},
-			expectedPanic:  fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},
-		buildTestCase{
 			name: "Circle dependency",
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+				Dependencies: []*latest.DependencyConfig{
+					&latest.DependencyConfig{
+						Source: &latest.SourceConfig{
+							Path: "dependency1",
+						},
+					},
+				},
+			},
 			files: map[string]interface{}{
 				"devspace.yaml": &latest.Config{
-					Dependencies: &[]*latest.DependencyConfig{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
 							Source: &latest.SourceConfig{
-								Path: ptr.String("dependency1"),
+								Path: "dependency1",
 							},
 						},
 					},
 				},
 				"dependency1/devspace.yaml": &latest.Config{
-					Dependencies: &[]*latest.DependencyConfig{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
 							Source: &latest.SourceConfig{
-								Path: ptr.String(".."),
+								Path: "..",
 							},
 						},
 					},
 				},
 			},
 			expectedPanic:  fmt.Sprintf("Error deploying dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml\nWait Resolving dependencies",
+			expectedOutput: "\nWait Resolving dependencies",
 		},
 		buildTestCase{
 			name: "1 undeployable image",
-			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{
-					Images: &map[string]*latest.ImageConfig{
-						"buildThis": &latest.ImageConfig{
-							Image: ptr.String("someImage"),
-							Tag:   ptr.String("someTag"),
-							Build: &latest.BuildConfig{
-								Custom: &latest.CustomConfig{
-									Command: ptr.String(" "),
-								},
+			fakeConfig: &latest.Config{
+				Images: map[string]*latest.ImageConfig{
+					"buildThis": &latest.ImageConfig{
+						Image: "someImage",
+						Tag:   "someTag",
+						Build: &latest.BuildConfig{
+							Custom: &latest.CustomConfig{
+								Command: " ",
 							},
 						},
 					},
@@ -151,20 +144,19 @@ func TestBuild(t *testing.T) {
 			},
 			buildSequentialFlag: true,
 			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" \": executable file not found in %s", pathVarKey),
-			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command   someImage:someTag",
+			expectedOutput:      "\nInfo Build someImage:someTag with custom command   someImage:someTag",
 		},
 		buildTestCase{
 			name: "Deploy 1 image that is too big (Or manipulate the error message to pretend to)",
-			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{
-					Images: &map[string]*latest.ImageConfig{
-						"buildThis": &latest.ImageConfig{
-							Image: ptr.String("someImage"),
-							Tag:   ptr.String("someTag"),
-							Build: &latest.BuildConfig{
-								Custom: &latest.CustomConfig{
-									Command: ptr.String(" no space left on device "), //It's a bit dirty. Force specific kind of error
-								},
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+				Images: map[string]*latest.ImageConfig{
+					"buildThis": &latest.ImageConfig{
+						Image: "someImage",
+						Tag:   "someTag",
+						Build: &latest.BuildConfig{
+							Custom: &latest.CustomConfig{
+								Command: " no space left on device ", //It's a bit dirty. Force specific kind of error
 							},
 						},
 					},
@@ -172,15 +164,12 @@ func TestBuild(t *testing.T) {
 			},
 			buildSequentialFlag: true,
 			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
-			expectedOutput:      "\nInfo Loaded config from devspace.yaml\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
+			expectedOutput:      "\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},
 		buildTestCase{
-			name:       "Nothing to build",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{},
-			},
-			expectedOutput: "\nInfo Loaded config from devspace.yaml\nInfo No images to rebuild. Run with -b to force rebuilding",
+			name:           "Nothing to build",
+			fakeConfig:     &latest.Config{},
+			expectedOutput: "\nInfo No images to rebuild. Run with -b to force rebuilding",
 		},
 	}
 

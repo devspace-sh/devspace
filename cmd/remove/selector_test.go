@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -42,9 +41,9 @@ func TestRunRemoveSelector(t *testing.T) {
 			args: []string{"mySelector"},
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{
-					Selectors: &[]*latest.SelectorConfig{
+					Selectors: []*latest.SelectorConfig{
 						&latest.SelectorConfig{
-							Name: ptr.String("mySelector"),
+							Name: "mySelector",
 						},
 					},
 				},

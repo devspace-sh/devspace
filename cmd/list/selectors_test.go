@@ -44,9 +44,9 @@ func TestListSelectors(t *testing.T) {
 			name: "invalid kubeconfig",
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{
-					Selectors: &[]*latest.SelectorConfig{
+					Selectors: []*latest.SelectorConfig{
 						&latest.SelectorConfig{
-							LabelSelector: &map[string]*string{},
+							LabelSelector: map[string]string{},
 						},
 					},
 				},

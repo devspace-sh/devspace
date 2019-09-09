@@ -43,19 +43,18 @@ func TestListVars(t *testing.T) {
 		listVarsTestCase{
 			name:           "no vars",
 			fakeConfig:     &latest.Config{},
-			expectedOutput: "\nInfo No variable found for config default",
+			expectedOutput: "\nInfo No variables found",
 		},
 		listVarsTestCase{
 			name:       "one var",
 			fakeConfig: &latest.Config{},
 			generatedYamlContent: generated.Config{
-				ActiveConfig: "myConf",
-				Configs: map[string]*generated.CacheConfig{
-					"myConf": &generated.CacheConfig{
-						Vars: map[string]string{
-							"hello": "world",
-						},
-					},
+				ActiveProfile: "myConf",
+				Profiles: map[string]*generated.CacheConfig{
+					"myConf": &generated.CacheConfig{},
+				},
+				Vars: map[string]string{
+					"hello": "world",
 				},
 			},
 			expectedOutput: "\n" + expectedHeader + "\n hello      world  \n\n",
@@ -126,6 +125,4 @@ func testListVars(t *testing.T, testCase listVarsTestCase) {
 	}()
 
 	(&varsCmd{}).RunListVars(nil, []string{})
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

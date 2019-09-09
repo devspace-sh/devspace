@@ -42,10 +42,10 @@ func TestListPorts(t *testing.T) {
 			name: "two ports forwarded",
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{
-					Ports: &[]*latest.PortForwardingConfig{
+					Ports: []*latest.PortForwardingConfig{
 						&latest.PortForwardingConfig{
-							Selector: ptr.String("mySelector"),
-							PortMappings: &[]*latest.PortMapping{
+							Selector: "mySelector",
+							PortMappings: []*latest.PortMapping{
 								&latest.PortMapping{
 									LocalPort:  ptr.Int(1234),
 									RemotePort: ptr.Int(4321),
@@ -58,11 +58,11 @@ func TestListPorts(t *testing.T) {
 						},
 						&latest.PortForwardingConfig{
 							//The order can be any way, so we do a little trick so the selectors are printed equally
-							LabelSelector: &map[string]*string{
-								"a":   ptr.String("b="),
-								"a=b": ptr.String(""),
+							LabelSelector: map[string]string{
+								"a":   "b=",
+								"a=b": "",
 							},
-							PortMappings: &[]*latest.PortMapping{
+							PortMappings: []*latest.PortMapping{
 								&latest.PortMapping{
 									LocalPort:  ptr.Int(9012),
 									RemotePort: ptr.Int(2109),
