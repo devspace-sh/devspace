@@ -133,16 +133,6 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
 	var err error
 
-	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint)
-		if err != nil {
-			return err
-		}
-
-		defer os.RemoveAll(filepath.Dir(dockerfilePath))
-	}
-
 	// Buildoptions
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Kaniko != nil && b.helper.ImageConf.Build.Kaniko.Options != nil {
@@ -155,6 +145,16 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		if b.helper.ImageConf.Build.Kaniko.Options.Network != "" {
 			options.NetworkMode = b.helper.ImageConf.Build.Kaniko.Options.Network
 		}
+	}
+
+	// Check if we should overwrite entrypoint
+	if entrypoint != nil && len(entrypoint) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, options.Target)
+		if err != nil {
+			return err
+		}
+
+		defer os.RemoveAll(filepath.Dir(dockerfilePath))
 	}
 
 	// Generate the build pod spec

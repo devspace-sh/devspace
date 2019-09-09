@@ -175,7 +175,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Check if we should overwrite entrypoint
 	if entrypoint != nil && len(entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint)
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, options.Target)
 		if err != nil {
 			return err
 		}
