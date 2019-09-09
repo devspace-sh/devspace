@@ -13,25 +13,22 @@
     ],
     "Image Building": [
       "cli/image-building/workflow-basics",
-      "cli/image-building/configuration",
       {
         "type": "subcategory",
-        "label": "Build Tools",
+        "label": "Configuration",
         "ids": [
-          "cli/image-building/build-tools/what-are-build-tools",
-          "cli/image-building/build-tools/docker",
-          "cli/image-building/build-tools/kaniko",
-          "cli/image-building/build-tools/custom-build-commands"
+          "cli/image-building/configuration/overview-specification",
+          "cli/image-building/configuration/build-tools",
+          "cli/image-building/configuration/build-options"
         ]
       },
       {
         "type": "subcategory",
         "label": "Advanced Topics",
         "ids": [
-          "cli/image-building/advanced/tagging",
-          "cli/image-building/advanced/registry-authentication",
+          "cli/image-building/advanced/advanced-topics",
+          "cli/image-building/advanced/best-practices",
           "cli/image-building/advanced/cleanup",
-          "cli/image-building/advanced/sequential-builds",
           "cli/image-building/advanced/variables"
         ]
       }

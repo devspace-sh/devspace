@@ -1,5 +1,5 @@
 ---
-title: Cleanup images
+title: Cleanup Images
 ---
 
 When using Docker for image building, disk space on your local computer can get sparse after a lot of Docker builds. DevSpace provides a convenient command to clean up all images that were built with your local Docker daemon using DevSpace DevSpace CLI. This command does not remove any pushed images remotely and just clears local images and space.

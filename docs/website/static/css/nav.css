@@ -250,6 +250,10 @@
   margin: 0;
 }
 
+.separateOnPageNav .navPusher .onPageNav > ul > li > a {
+  font-weight: 600;
+}
+
 .separateOnPageNav .navPusher .onPageNav a.active {
   color: #1c65f7;
   position: relative;

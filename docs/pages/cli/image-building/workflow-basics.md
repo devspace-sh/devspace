@@ -46,28 +46,10 @@ Next time you trigger the image building process, DevSpace will generate these h
 > You can use the `-b / --force-build` flag to tell DevSpace to build all images even if nothing has changed.
 
 ### 5. Build Image
-DevSpace uses one of the following [build tools](/docs/cli/image-building/build-tools/what-are-build-tools) to create an image based on your Dockerfile and the provided context:
-- [`docker`](/docs/cli/image-building/build-tools/docker) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
-- [`kaniko`](/docs/cli/image-building/build-tools/kaniko) for building images directly inside Kubernetes ([fallback for `docker`](#kaniko-as-fallback-for-docker))
-- [`custom`](/docs/cli/image-building/build-tools/custom-build-commands) for building images with a custom build command (e.g. for using Google Cloud Build)
-
-<details>
-<summary>
-#### Kaniko as Fallback for Docker
-</summary>
-
-When using `docker` as build tool, DevSpace checks if Docker is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image.
-
-</details>
-
-<details>
-<summary>
-#### Docker Daemon of Local Kubernetes Clusters
-</summary>
-
-DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named `minikube`, `docker-desktop` or `docker-for-desktop`.
-
-</details>
+DevSpace uses one of the following [build tools](/docs/cli/image-building/configuration/build-tools) to create an image based on your Dockerfile and the provided context:
+- [`docker`](#TODO) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
+- [`kaniko`](#TODO) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
+- [`custom`](#TODO) for building images with a custom build command (e.g. for using Google Cloud Build)
 
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
@@ -76,7 +58,7 @@ DevSpace automatically tags all images after building them using a tagging schem
 
 > Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](/docs/cli/deployment/helm-charts/configuration/overview-specification) and [components](/docs/cli/deployment/components/configuration/overview-specification), so they will be deployed using the most recently built images.
 
-### 7. Push Image
+### 7. Push Image *+ Registry Authentication*
 DevSpace automatically pushes your images to the respective registry that should be specified as part of the `image` option. Just as with regular Docker images, DevSpace uses Docker Hub if no registry hostname is provided within `image`.
 
 > You can skip this step when proving the `--skip-push` flag. Beware that deploying your application after using `--skip-push` will only work when [using a local Kubernetes cluster](#skip-image-push-for-local-clusters-if-possible).
@@ -111,30 +93,11 @@ When deploying your application via DevSpace, Kubernetes needs to be able to pul
 
 > You do not need to change anything in your Kubernetes manifests, helm charts or components to use the image pull secrets that DevSpace creates because DevSpace automatically [adds the secrets to the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) used to deploy your project.
 
-
-## Best Practices
-
-### Optimize Dockerfiles
-#TODO
-
-### Use `.dockerignore`
-DevSpace respects the `.dockerignore` file when defined on the root level of your context directory. This file follows a similar syntax as the `.gitignore` file but instead of excluding files from git, the `.dockerignore` file defines files and folders which should not be included in the context for building an image. 
-
-> Adding paths to the `.dockerignore` file makes sure that DevSpace is not forced to rebuild images when files belonging to theses paths change.
-
-It can often be useful to:
-- Add `devspace.yaml` to `.dockerignore` to prevent config changes from triggering image rebuilding (`devspace init` does this by default)
-- Add temporary files (e.g. `.DS_Store`) to `.dockerignore` (DevSpace ALWAYS ignores `.devspace/` temp folder even if not specified in `.dockerignore`)
-- Add dependency folders to `.dockerignore`, here are a few examples of dependency folders for different languages:
-
-#### Recommended Paths for `.dockerignore`
-| Language / Dependency Tool | `.dockerignore` statements                                                                                    |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| All Languages | `devspace.yaml` |
-| PHP / composer | `composer.phar`<br>`vendor/` |
-| Node.js / npm | `node_modules/`<br>`npm-debug.log*`<br>`report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json`<br>`pids`<br>`*.pid*`<br>`*.seed*`<br>`*.pid.lock*` |
-| Python / pip | `__pycache__/`<br>`wheels/`<br>`pip-log.txt`<br>`pip-wheel-metadata/` |
-
+After running `devspace deploy` or `devspace dev`, you should be able to see the auto-generated pull secrets created by DevSpace when you run the following command:
+```bash
+kubectl get serviceaccount default -o yaml
+```
+Take a look at the `imagePullSecrets` section of the output showing the yaml definition of the service account `default`.
 
 <br>
 
