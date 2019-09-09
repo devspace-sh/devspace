@@ -13,11 +13,13 @@ When you run one of the following commands, DevSpace will run the image building
 - `devspace deploy` (before deploying the application)
 - `devspace dev` (before deploying the application and starting the development mode)
 
+### Important Flags
+The following flags are available for all commands that trigger image building:
+- `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
+- `--build-sequential` build images sequentially instead of in parallel
+
 ## Image Building Process
 DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
-
-> You can use the `--build-sequential` flag to tell DevSpace to build images sequentially instead of using the parallel approach.
-
 
 ### 1. Load Dockerfile
 DevSpace loads the contents of the Dockerfile specified in `dockerfile` (defaults to `./Dockerfile`). 

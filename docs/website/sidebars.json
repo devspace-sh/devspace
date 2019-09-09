@@ -45,6 +45,7 @@
           "cli/deployment/helm-charts/what-are-helm-charts"
         ]
       },
+      "cli/deployment/configuration",
       {
         "type": "subcategory",
         "label": "Configuration (Components)",

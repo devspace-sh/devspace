@@ -2,90 +2,18 @@
 title: Types of Deployments
 ---
 
-DevSpace is able to deploy any kubernetes manifest via `kubectl apply -f`. Make sure you have `kubectl` installed for this to work.
-
-> For a complete example using kubectl as deployment method take a look at [quickstart-kubectl](https://github.com/devspace-cloud/devspace/tree/master/examples/quickstart-kubectl)
-
-## Deploy via kubectl
-
-A minimal `devspace.yaml` deployment config example can look like this:
-```yaml
-deployments:
-- name: devspace-default
-  kubectl:
-    manifests:
-    - kube
-    - kube2
-```
-
-This will translate during deployment into the following commands:
-```bash
-kubectl apply -f kube
-kubectl apply -f kube2
-```
-
-If you have an image defined in your `devspace.yaml` that should be build before deploying like this:
-```yaml
-images:
-  default:
-    # The name defined here is the name DevSpace will search for in kubernetes manifests
-    image: dscr.io/yourusername/devspace
-    createPullSecret: true
-```
-
-DevSpace will search through all the kubernetes manifests that should be deployed before actual deployment and replace any 
-```yaml
-image: dscr.io/yourusername/devspace
-```
-
-with 
-
-```yaml
-image: dscr.io/yourusername/devspace:the-tag-that-was-just-build
-```
-
-The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your kubernetes manifests. This makes sure the just build image will actually be deployed.  
+DevSpace lets you deploy the following types of deployments:
+- **Components** using `helm` &bull; [What are Components?](#TODO)
+- **Kubernetes Manifests** using `kubectl` &bull; [What are Manifests?](#TODO)
+- **Kustomizations** using `kubectl` and `kustomize` &bull; [What are Kustomizations?](#TODO)
+- **Helm Charts** using `helm` &bull; [What are Helm Charts?](#TODO)
 
 
-## Kubectl deployment configuration options
-
-### deployments[\*].kubectl
-```yaml
-kubectl:                            # struct   | Options for deploying with "kubectl apply"
-  cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
-  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
-  kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
-  flags: []                         # string[] | Array of flags for the "kubectl apply" command
-```
-
-
-
-
-
-
-
-DevSpace CLI lets you deploy one or even multiple applications. In DevSpace a **deployment** defines a specific part of an application or a whole application that should be deployed.  The configuration for these deployments can be found in the `deployments` section within your `devspace.yaml`.
-
-## Deployment process
-Running `devspace deploy` or `devspace dev` will do the following:
-1. Build all Docker [`images` that you specified in `devspace.yaml`](/docs/image-building/configuration)
-2. Push the Docker images to any [Docker registry](/docs/image-building/registries/authentication)
-3. Create [image pull secrets](/docs/image-building/registries/pull-secrets) if specified
-4. Deploy all deployments defined in the `devspace.yaml` in the specified order with the built images
-
-## Types of deployments
-DevSpace CLI lets you define the following types of deployments:
-- [Components (Easy way to deploy common kubernetes resources)](/docs/deployment/components/what-are-components)
-- [Helm charts](/docs/deployment/helm-charts/what-are-helm-charts)
-- [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
-- [Kustomize manifests](/docs/deployment/kubernetes-manifests/kustomize)
-
-> Take a look at the [examples](https://github.com/devspace-cloud/devspace/tree/master/examples) if you want to see example configurations for a certain deployment method.
 
 ## Structure of a deployment
 A standard `devspace.yaml` with a single deployment could look like this:
 ```yaml
-# An array of deployments (kubectl, helm, component) which will be deployed with DevSpace CLI in the specified order
+# An array of deployments (kubectl, helm, component) which will be deployed with DevSpace in the specified order
 deployments:
 - name: my-deployment                   # Name of this deployment
   # Choose ONE of the following three deployment methods
@@ -100,7 +28,7 @@ deployments:
 ```
 This deployment is configured to deploy the [Helm chart for DevSpace Components](/docs/deployment/components/what-are-components) using the values specified in the `component` section.
 
-Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace CLI will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
+Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
 
 ## Add additonal deployments
 DevSpace provides convenience commands for adding deployments to the `devspace.yaml`. If you don't want to add additional deployments in the config manually, you have the following options:
@@ -116,7 +44,7 @@ devspace add deployment [deployment-name] --component=[component-name]
 Example: `devspace add deployment database --component=mysql`
 
 #### List of predefined components
-DevSpace CLI provides the following predefined components:
+DevSpace provides the following predefined components:
 - mariadb
 - mongodb
 - mysql
@@ -134,7 +62,7 @@ Run one of the following commands to add a custom component to your deployments 
 devspace add deployment [deployment-name] --dockerfile=""
 devspace add deployment [deployment-name] --dockerfile="" --image="my-registry.tld/[username]/[image]"
 ```
-The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace CLI would assume that you want to use the [DevSpace Container Registry](/docs/cloud/images/dscr-io) provided by DevSpace Cloud.
+The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace would assume that you want to use the [DevSpace Container Registry](/docs/cloud/images/dscr-io) provided by DevSpace Cloud.
 
 > If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
 
@@ -205,16 +133,16 @@ devspace purge --deployments=my-deployment-1,my-deployment-2
 ```
 
 ## Removing deployments from the config
-If you want to remove the deployment from the configuration, DevSpace CLI provides a convenient command `devspace remove deployment`, so instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
+If you want to remove the deployment from the configuration, DevSpace provides a convenient command `devspace remove deployment`, so instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
 ```bash
 devspace remove deployment [deployment-name]
 ```
 
-The benefit of running `devspace remove deployment` is that DevSpace CLI will ask you this question:
+The benefit of running `devspace remove deployment` is that DevSpace will ask you this question:
 ```bash
 ? Do you want to delete all deployment resources deployed?  [Use arrows to move, type to filter]
 > yes
   no
 ```
 
-If you select yes, DevSpace CLI will remove your deployment from your Kubernetes cluster before deleting it in your `devspace.yaml`. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.
+If you select yes, DevSpace  will remove your deployment from your Kubernetes cluster before deleting it in your `devspace.yaml`. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.

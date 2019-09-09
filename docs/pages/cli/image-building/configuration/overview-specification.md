@@ -216,10 +216,3 @@ Instead of manually removing an image from your configuration file, you can simp
 devspace remove image database
 ```
 This command would remove the image `database` from your `devspace.yaml`.
-
-
-
-
-TODO: ENV VARS
-TODO: BUILD ARGS
-TODO: env vars for prod / dev

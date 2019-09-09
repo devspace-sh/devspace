@@ -188,44 +188,16 @@
   display: none;
 }
 
-.navGroups > .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
-.navGroups > .navGroup:nth-child(3) .navListItem:nth-child(7)::before,
-.navGroups > .navGroup:nth-child(3) .navListItem:nth-child(9)::before,
-.navGroups > .navGroup:nth-child(4) .navListItem:nth-child(1)::before,
-.navGroups > .navGroup:nth-child(4) .navListItem:nth-child(5)::before,
-.navGroups > .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
-  display: block;
-  margin: 5px 0 0 23px;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(4) .navItem,
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(5) .navItem,
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(6) .navItem {
+  text-indent: 15px;
 }
 
-.navGroups > .navGroup:nth-child(3) .navListItem:nth-child(7)::before {
-  content: "Registry";
-}
-
-.navGroups > .navGroup:nth-child(3) .navListItem:nth-child(9)::before {
-  content: "Build Tools";
-}
-
-.navGroups > .navGroup:nth-child(4) .navListItem:nth-child(5)::before {
-  content: "Configure components";
-}
-
-.navGroups > .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
-  content: "Configure containers";
-}
-
-.navGroups > .navGroup:nth-child(2) .navListItem:nth-child(3) .navItem,
-.navGroups > .navGroup:nth-child(2) .navListItem:nth-child(4) .navItem,
-.navGroups > .navGroup:nth-child(2) .navListItem:nth-child(5) .navItem,
-.navGroups
-  .navGroup:nth-child(2)
-  .navListItem:nth-child(n + 7):nth-child(-n + 12)
-  .navItem,
-.navGroups > .navGroup:nth-child(3) .navListItem:nth-child(n + 7) .navItem {
-  padding-left: 36px;
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(4)::after,
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(5)::after,
+.navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(6)::after {
+  width: 32px;
 }
 
 
