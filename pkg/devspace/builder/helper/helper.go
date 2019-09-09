@@ -107,11 +107,6 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
 	imageCache := cache.GetImageCache(b.ImageConfigName)
 
-	// In devspace dev we only rebuild if we are forced to or no cache exists
-	if b.IsDev && imageCache.Tag != "" {
-		return false, nil
-	}
-
 	// Hash dockerfile
 	_, err := os.Stat(b.DockerfilePath)
 	if err != nil {

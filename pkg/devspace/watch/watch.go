@@ -8,6 +8,8 @@ import (
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
+	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 // Callback is the function type
@@ -15,7 +17,9 @@ type Callback func(changed []string, deleted []string) error
 
 // Watcher is the struct that contains the watching information
 type Watcher struct {
-	Paths        []string
+	Paths   []string
+	Exclude gitignore.IgnoreParser
+
 	PollInterval time.Duration
 	FileMap      map[string]os.FileInfo
 	Callback     Callback
@@ -28,9 +32,15 @@ type Watcher struct {
 }
 
 // New watches a given glob paths array for changes
-func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
+func New(paths []string, exclude []string, callback Callback, log log.Logger) (*Watcher, error) {
+	ignoreMatcher, err := compilePaths(exclude)
+	if err != nil {
+		return nil, err
+	}
+
 	watcher := &Watcher{
 		Paths:        paths,
+		Exclude:      ignoreMatcher,
 		PollInterval: time.Second,
 		Callback:     callback,
 		FileMap:      make(map[string]os.FileInfo),
@@ -39,7 +49,7 @@ func New(paths []string, callback Callback, log log.Logger) (*Watcher, error) {
 	}
 
 	// Initialize filemap
-	_, _, err := watcher.Update()
+	_, _, err = watcher.Update()
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +103,10 @@ func (w *Watcher) Update() ([]string, []string, error) {
 		}
 
 		for _, file := range files {
+			if w.Exclude != nil && w.Exclude.MatchesPath(file) {
+				continue
+			}
+
 			stat, err := os.Stat(file)
 			if err != nil {
 				continue
@@ -143,4 +157,18 @@ func (w *Watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []st
 	}
 
 	return changed, deleted
+}
+
+// compilePaths compiles the exclude paths into an ignore parser
+func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
+	if len(excludePaths) > 0 {
+		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
+		if err != nil {
+			return nil, errors.Wrap(err, "compile ignore lines")
+		}
+
+		return ignoreParser, nil
+	}
+
+	return nil, nil
 }

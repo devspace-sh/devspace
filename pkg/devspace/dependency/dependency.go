@@ -267,7 +267,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 	builtImages := make(map[string]string)
 	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
 		// Build images
-		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), nil, skipPush, false, forceBuild, false, log)
+		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), nil, skipPush, false, forceBuild, false, false, log)
 		if err != nil {
 			return err
 		}
@@ -344,7 +344,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 	builtImages := make(map[string]string)
 	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
 		// Build images
-		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, skipPush, false, forceBuild, false, log)
+		builtImages, err = build.All(d.Config, d.GeneratedConfig.GetActive(), client, skipPush, false, forceBuild, false, false, log)
 		if err != nil {
 			return err
 		}
