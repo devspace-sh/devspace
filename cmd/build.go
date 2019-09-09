@@ -9,7 +9,6 @@ import (
 	"github.com/mgutz/ansi"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -69,20 +68,14 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start file logging
 	log.StartFileLogging()
 
-	// Get config with adjusted cluster config
-	ctx := context.Background()
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	}
-
 	// Load config
-	generatedConfig, err := generated.LoadConfig(ctx)
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Get the config
-	config := configutil.GetConfig(ctx)
+	config := configutil.GetConfig(context.Background(), cmd.Profile)
 
 	// Dependencies
 	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, log.GetInstance())

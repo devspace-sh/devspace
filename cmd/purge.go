@@ -73,12 +73,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	ctx := context.Background()
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	}
-
-	generatedConfig, err := generated.LoadConfig(ctx)
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,13 +83,13 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(ctx, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Add kube context to context
-	context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -103,7 +98,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(ctx)
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	deployments := []string{}
 	if cmd.Deployments != "" {

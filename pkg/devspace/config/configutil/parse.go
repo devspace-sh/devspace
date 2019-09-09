@@ -66,7 +66,7 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseConfig fills the variables in the data and parses the config
-func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}) (*latest.Config, error) {
+func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}, profile string) (*latest.Config, error) {
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -74,7 +74,7 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	}
 
 	// Prepare config for variable loading
-	preparedConfig, err := versions.Prepare(ctx, data)
+	preparedConfig, err := versions.Prepare(data, profile)
 	if err != nil {
 		return nil, err
 	}

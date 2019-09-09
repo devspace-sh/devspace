@@ -196,7 +196,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig(context.Background())
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -287,7 +287,7 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) addDevConfig() {
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), "")
 
 	// Forward ports
 	if len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
