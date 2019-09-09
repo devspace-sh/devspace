@@ -39,22 +39,26 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		walk.Walk(configMap, matchVar, replaceVar)
 	}
 
-	// Shallow merge with config from file to add vars, configs etc.
-	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
-	if err != nil {
-		return nil, err
-	}
+	// Check if config exists
+	_, err = os.Stat(constants.DefaultConfigPath)
+	if err == nil {
+		// Shallow merge with config from file to add vars, configs etc.
+		bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+		if err != nil {
+			return nil, err
+		}
 
-	originalConfig := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(bytes, &originalConfig)
-	if err != nil {
-		return nil, err
-	}
+		originalConfig := map[interface{}]interface{}{}
+		err = yaml.Unmarshal(bytes, &originalConfig)
+		if err != nil {
+			return nil, err
+		}
 
-	// Now merge missing from original into new
-	for key := range originalConfig {
-		if _, ok := configMap[key]; !ok {
-			configMap[key] = originalConfig[key]
+		// Now merge missing from original into new
+		for key := range originalConfig {
+			if _, ok := configMap[key]; !ok {
+				configMap[key] = originalConfig[key]
+			}
 		}
 	}
 
