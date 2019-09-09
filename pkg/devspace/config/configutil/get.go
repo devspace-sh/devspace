@@ -97,7 +97,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		// Check for legacy devspace-configs.yaml
 		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
 		if err == nil {
-			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use the new config option 'configs' in 'devspace.yaml'")
+			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
 		return nil, fmt.Errorf("Couldn't find '%s': %v", err)
