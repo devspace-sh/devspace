@@ -30,6 +30,7 @@ type BuildHelper struct {
 	ImageTag   string
 	Entrypoint []string
 
+	IsDev      bool
 	KubeClient *kubectl.Client
 }
 
@@ -72,6 +73,7 @@ func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineNam
 		Entrypoint: entrypoint,
 		Config:     config,
 
+		IsDev:      isDev,
 		KubeClient: kubeClient,
 	}
 }
@@ -103,6 +105,13 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 
 // ShouldRebuild determines if the image should be rebuilt
 func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
+	imageCache := cache.GetImageCache(b.ImageConfigName)
+
+	// In devspace dev we only rebuild if we are forced to or no cache exists
+	if b.IsDev && imageCache.Tag != "" {
+		return false, nil
+	}
+
 	// Hash dockerfile
 	_, err := os.Stat(b.DockerfilePath)
 	if err != nil {
@@ -132,8 +141,6 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 	if err != nil {
 		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
 	}
-
-	imageCache := cache.GetImageCache(b.ImageConfigName)
 
 	// Hash image config
 	configStr, err := yaml.Marshal(*b.ImageConf)
