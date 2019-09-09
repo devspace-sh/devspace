@@ -80,8 +80,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 
 // Resolve implements interface
 func (r *Resolver) Resolve(ctx context.Context, dependencies []*latest.DependencyConfig, update bool) ([]*Dependency, error) {
-	r.log.StartWait("Resolving dependencies")
-	defer r.log.StopWait()
+	r.log.Info("Start resolving dependencies")
 
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
@@ -97,8 +96,14 @@ func (r *Resolver) Resolve(ctx context.Context, dependencies []*latest.Dependenc
 		return nil, errors.Wrap(err, "resolve dependencies recursive")
 	}
 
-	r.log.StopWait()
 	r.log.Donef("Resolved %d dependencies", len(r.DependencyGraph.Nodes)-1)
+
+	// Save generated
+	err = generated.SaveConfig(r.BaseCache)
+	if err != nil {
+		return nil, err
+	}
+
 	return r.buildDependencyQueue()
 }
 
