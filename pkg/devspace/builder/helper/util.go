@@ -2,15 +2,17 @@ package helper
 
 import (
 	"archive/tar"
-	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
 )
 
 // DefaultDockerfilePath is the default dockerfile path to use
@@ -65,7 +67,7 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 }
 
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
-func CreateTempDockerfile(dockerfile string, entrypointArr []string) (string, error) {
+func CreateTempDockerfile(dockerfile string, entrypointArr []string, target string) (string, error) {
 	if entrypointArr == nil || len(entrypointArr) == 0 {
 		return "", errors.New("Entrypoint is empty")
 	}
@@ -87,19 +89,57 @@ func CreateTempDockerfile(dockerfile string, entrypointArr []string) (string, er
 	}
 
 	// Overwrite entrypoint and cmd
-	newDockerfileContents := string(data)
-	newDockerfileContents += "\n\nENTRYPOINT [\"" + entrypoint[0] + "\"]"
-	newDockerfileContents += "\nCMD [\"" + strings.Join(entrypoint[1:], "\",\"") + "\"]"
-
 	tmpDir, err := ioutil.TempDir("", "example")
 	if err != nil {
 		return "", err
 	}
 
+	// add the new entrypoint
+	newData, err := addNewEntrypoint(string(data), entrypointArr, target)
+	if err != nil {
+		return "", errors.Wrap(err, "add entrypoint")
+	}
+
 	tmpfn := filepath.Join(tmpDir, "Dockerfile")
-	if err := ioutil.WriteFile(tmpfn, []byte(newDockerfileContents), 0666); err != nil {
+	if err := ioutil.WriteFile(tmpfn, []byte(newData), 0666); err != nil {
 		return "", err
 	}
 
 	return tmpfn, nil
+}
+
+var nextFromFinder = regexp.MustCompile("(?i)\n\\s*FROM")
+
+func addNewEntrypoint(content string, entrypoint []string, target string) (string, error) {
+	entrypointStr := "\n\nENTRYPOINT [\"" + entrypoint[0] + "\"]\n"
+	if len(entrypoint) > 1 {
+		entrypointStr += "CMD [\"" + strings.Join(entrypoint[1:], "\",\"") + "\"]\n"
+	} else {
+		entrypointStr += "CMD []\n"
+	}
+
+	if target == "" {
+		return content + entrypointStr, nil
+	}
+
+	// Find the target
+	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.]+)\\s+AS\\s+%s\\s*($|\n)", target))
+	if err != nil {
+		return "", err
+	}
+
+	matches := targetFinder.FindAllStringIndex(content, -1)
+	if len(matches) == 0 {
+		return "", fmt.Errorf("Coulnd't find target '%s' in dockerfile", target)
+	} else if len(matches) > 1 {
+		return "", fmt.Errorf("Multiple matches for target '%s' in dockerfile", target)
+	}
+
+	// Find the next FROM statement
+	nextFrom := nextFromFinder.FindStringIndex(content[matches[0][1]:])
+	if len(nextFrom) != 2 {
+		return content + entrypointStr, nil
+	}
+
+	return content[:matches[0][1]+nextFrom[0]] + entrypointStr + content[matches[0][1]+nextFrom[0]:], nil
 }

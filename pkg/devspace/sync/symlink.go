@@ -50,7 +50,7 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) 
 		watchPath += "/**"
 	}
 
-	watcher, err := watch.New([]string{watchPath}, symlink.handleChange, log.Discard)
+	watcher, err := watch.New([]string{watchPath}, []string{}, symlink.handleChange, log.Discard)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,6 @@
 package use
 
 import (
-	"context"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -118,7 +116,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 
 	if configExists {
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig(context.Background())
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}

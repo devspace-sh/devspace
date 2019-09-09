@@ -36,6 +36,7 @@ import (
 type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -90,6 +91,7 @@ Use Interactive Mode:
 	}
 
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -139,14 +141,11 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	// Create context
 	ctx := context.Background()
-	// Get config with adjusted cluster config
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(ctx)
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -157,7 +156,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(ctx, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,7 +165,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
 
 	// Get the config
-	config := cmd.loadConfig(ctx, client, generatedConfig)
+	config := cmd.loadConfig(ctx)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -198,7 +197,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -207,10 +206,10 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
 			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -218,7 +217,7 @@ func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, ge
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -272,10 +271,10 @@ func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, ge
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(ctx, client, generatedConfig)
+				config := cmd.loadConfig(ctx)
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
+				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, false)
 			}
 
 			return 0, err
@@ -321,7 +320,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
-		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
+		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, func(changed []string, deleted []string) error {
 			once.Do(func() {
 				if interactiveMode {
 					log.Info("Change detected, will reload in 2 seconds")
@@ -494,18 +493,11 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(ctx context.Context, client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
-	if cmd.Profile != "" {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, cmd.Profile)
-	} else {
-		ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
-	}
+func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
+	configutil.ResetConfig()
 
-	// Get config with adjusted cluster config
-	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Load config
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && ((config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true) || len(config.Dev.Interactive.Images) > 0 || config.Dev.Interactive.Terminal != nil)

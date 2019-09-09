@@ -1,14 +1,11 @@
 package generated
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -73,18 +70,18 @@ func SetTestConfig(config *Config) {
 }
 
 // LoadConfig loads the config from the filesystem
-func LoadConfig(ctx context.Context) (*Config, error) {
+func LoadConfig(profile string) (*Config, error) {
 	var err error
 
 	loadedConfigOnce.Do(func() {
-		loadedConfig, err = LoadConfigFromPath(ctx, ConfigPath)
+		loadedConfig, err = LoadConfigFromPath(ConfigPath, profile)
 	})
 
 	return loadedConfig, err
 }
 
 // LoadConfigFromPath loads the generated config from a given path
-func LoadConfigFromPath(ctx context.Context, path string) (*Config, error) {
+func LoadConfigFromPath(path, profile string) (*Config, error) {
 	var loadedConfig *Config
 
 	data, readErr := ioutil.ReadFile(path)
@@ -111,8 +108,8 @@ func LoadConfigFromPath(ctx context.Context, path string) (*Config, error) {
 	}
 
 	// Set override profile
-	if ctx.Value(constants.ProfileContextKey) != nil && ctx.Value(constants.ProfileContextKey).(string) != "" {
-		loadedConfig.OverrideProfile = ptr.String(ctx.Value(constants.ProfileContextKey).(string))
+	if profile != "" {
+		loadedConfig.OverrideProfile = &profile
 	} else {
 		loadedConfig.OverrideProfile = nil
 	}

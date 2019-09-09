@@ -1,8 +1,6 @@
 package create
 
 import (
-	"context"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -140,7 +138,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 
 	if configExists {
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig(context.Background())
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}

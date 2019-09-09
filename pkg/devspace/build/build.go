@@ -21,7 +21,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential, skipBuildIfAlreadyBuilt bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -78,7 +78,9 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 		if err != nil {
 			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
 		}
-		if forceRebuild == false && needRebuild == false {
+
+		imageCache := cache.GetImageCache(imageConfigName)
+		if forceRebuild == false && (needRebuild == false || (skipBuildIfAlreadyBuilt && imageCache.Tag != "")) {
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
@@ -93,6 +95,10 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 
 			// Update cache
 			imageCache := cache.GetImageCache(imageConfigName)
+			if imageCache.Tag == imageTag {
+				log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTag)
+			}
+
 			imageCache.ImageName = imageName
 			imageCache.Tag = imageTag
 
@@ -137,6 +143,10 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 
 				// Update cache
 				imageCache := cache.GetImageCache(done.imageConfigName)
+				if imageCache.Tag == done.imageTag {
+					log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
+				}
+
 				imageCache.ImageName = done.imageName
 				imageCache.Tag = done.imageTag
 
