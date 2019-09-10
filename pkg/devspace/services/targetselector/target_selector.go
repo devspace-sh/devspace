@@ -8,11 +8,11 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // DefaultPodQuestion defines the default question for selecting a pod
@@ -94,7 +94,7 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 			if len(pods) == 1 {
 				return pods[0], nil
 			}
-			
+
 			// Show picker if allowed
 			if t.allowPick {
 				podNames := []string{}
@@ -108,11 +108,11 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 					Options:  podNames,
 				})
 				return podMap[podName], nil
-			} 
-			
+			}
+
 			// Take first pod and print warning if picker cannot be shown
 			if len(pods) > 0 {
-				log.Warn("Multiple pods with image selector %s found. Using first pod found", t.imageSelector)
+				log.Warnf("Multiple pods with image selector %s found. Using first pod found", t.imageSelector)
 
 				return pods[0], nil
 			}
