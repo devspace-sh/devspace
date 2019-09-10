@@ -28,12 +28,13 @@ type DeployCmd struct {
 
 	DockerTarget string
 
-	ForceBuild        bool
-	SkipBuild         bool
-	BuildSequential   bool
-	ForceDeploy       bool
-	Deployments       string
-	ForceDependencies bool
+	ForceBuild          bool
+	SkipBuild           bool
+	BuildSequential     bool
+	ForceDeploy         bool
+	Deployments         string
+	ForceDependencies   bool
+	VerboseDependencies bool
 
 	SwitchContext bool
 	SkipPush      bool
@@ -64,6 +65,7 @@ devspace deploy --kube-context=deploy-context
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
 
 	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
@@ -153,7 +155,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}
@@ -161,7 +163,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
 				err = fmt.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))

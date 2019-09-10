@@ -91,6 +91,8 @@ type ImageConfig struct {
 	Tag              string       `yaml:"tag,omitempty"`
 	Dockerfile       string       `yaml:"dockerfile,omitempty"`
 	Context          string       `yaml:"context,omitempty"`
+	Entrypoint       []string     `yaml:"entrypoint,omitempty"`
+	Cmd              []string     `yaml:"cmd,omitempty"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
@@ -255,24 +257,25 @@ type IngressRuleConfig struct {
 
 // ComponentConfigOptions defines the specific helm options used during deployment of a component
 type ComponentConfigOptions struct {
-	Wait            *bool  `yaml:"wait,omitempty"`
-	Rollback        *bool  `yaml:"rollback,omitempty"`
-	Force           *bool  `yaml:"force,omitempty"`
-	Timeout         *int64 `yaml:"timeout,omitempty"`
-	TillerNamespace string `yaml:"tillerNamespace,omitempty"`
+	Wait             *bool  `yaml:"wait,omitempty"`
+	Rollback         *bool  `yaml:"rollback,omitempty"`
+	Force            *bool  `yaml:"force,omitempty"`
+	Timeout          *int64 `yaml:"timeout,omitempty"`
+	TillerNamespace  string `yaml:"tillerNamespace,omitempty"`
+	ReplaceImageTags *bool  `yaml:"replaceImageTags,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart           *ChartConfig                `yaml:"chart,omitempty"`
-	Wait            *bool                       `yaml:"wait,omitempty"`
-	Rollback        *bool                       `yaml:"rollback,omitempty"`
-	Force           *bool                       `yaml:"force,omitempty"`
-	Timeout         *int64                      `yaml:"timeout,omitempty"`
-	TillerNamespace string                      `yaml:"tillerNamespace,omitempty"`
-	DevSpaceValues  *bool                       `yaml:"devSpaceValues,omitempty"`
-	ValuesFiles     []string                    `yaml:"valuesFiles,omitempty"`
-	Values          map[interface{}]interface{} `yaml:"values,omitempty"`
+	Chart            *ChartConfig                `yaml:"chart,omitempty"`
+	Wait             *bool                       `yaml:"wait,omitempty"`
+	Rollback         *bool                       `yaml:"rollback,omitempty"`
+	Force            *bool                       `yaml:"force,omitempty"`
+	Timeout          *int64                      `yaml:"timeout,omitempty"`
+	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
+	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
+	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
+	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
@@ -286,10 +289,11 @@ type ChartConfig struct {
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	CmdPath   string   `yaml:"cmdPath,omitempty"`
-	Manifests []string `yaml:"manifests,omitempty"`
-	Kustomize *bool    `yaml:"kustomize,omitempty"`
-	Flags     []string `yaml:"flags,omitempty"`
+	CmdPath          string   `yaml:"cmdPath,omitempty"`
+	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
+	Manifests        []string `yaml:"manifests,omitempty"`
+	Kustomize        *bool    `yaml:"kustomize,omitempty"`
+	Flags            []string `yaml:"flags,omitempty"`
 }
 
 // DevConfig defines the devspace deployment
@@ -300,6 +304,14 @@ type DevConfig struct {
 	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty"`
 	Interactive *InteractiveConfig      `yaml:"interactive,omitempty"`
 	Selectors   []*SelectorConfig       `yaml:"selectors,omitempty"`
+	Logs        *LogsConfig             `yaml:"logs,omitempty"`
+}
+
+// LogsConfig specifies the logs options for devspace dev
+type LogsConfig struct {
+	Disabled *bool    `yaml:"disabled,omitempty"`
+	ShowLast *int     `yaml:"showLast,omitempty"`
+	Images   []string `yaml:"images,omitempty"`
 }
 
 // InteractiveConfig defines the default interactive config
@@ -313,6 +325,7 @@ type InteractiveConfig struct {
 type InteractiveImageConfig struct {
 	Name       string   `yaml:"name,omitempty"`
 	Entrypoint []string `yaml:"entrypoint,omitempty"`
+	Cmd        []string `yaml:"cmd,omitempty"`
 }
 
 // TerminalConfig describes the terminal options

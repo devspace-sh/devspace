@@ -36,6 +36,8 @@ import (
 type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
+	SkipOpen                bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -90,6 +92,7 @@ Use Interactive Mode:
 	}
 
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -195,7 +198,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -204,10 +207,10 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
 			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -215,7 +218,7 @@ func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, ge
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -272,7 +275,7 @@ func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, ge
 				config := cmd.loadConfig(ctx)
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args)
+				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, false)
 			}
 
 			return 0, err
@@ -318,7 +321,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
-		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
+		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, func(changed []string, deleted []string) error {
 			once.Do(func() {
 				if interactiveMode {
 					log.Info("Change detected, will reload in 2 seconds")
@@ -338,6 +341,29 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 
 		watcher.Start()
 		defer watcher.Stop()
+	}
+
+	// Run dev.open configs
+	if config.Dev.Open != nil && cmd.SkipOpen == false {
+		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
+		cmd.SkipOpen = true
+
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
+				maxWait := 4 * time.Minute
+				log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
+
+				go func() {
+					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
+					err := openURL(openConfig.URL, nil, "", logutil.Discard, maxWait)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						// Do not print warning
+						// log.Warn(err)
+					}
+				}()
+			}
+		}
 	}
 
 	// Check if we should open a terminal
@@ -366,6 +392,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 				ContainerName: cmd.Container,
 				LabelSelector: cmd.LabelSelector,
 				Namespace:     cmd.Namespace,
+				Interactive:   true,
 			},
 		}
 
@@ -381,40 +408,52 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, log)
 	}
 
-	// Build an image selector
-	imageSelector := []string{}
-	for _, imageConfigCache := range generatedConfig.GetActive().Images {
-		if imageConfigCache.ImageName != "" {
-			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-		}
-	}
-
-	// Run dev.open configs
-	if config.Dev.Open != nil {
-		logFile := logutil.GetFileLogger("default")
-
-		for _, openConfig := range config.Dev.Open {
-			if openConfig.URL != "" {
-				go func() {
-					err := openURL(openConfig.URL, nil, "", logFile)
-					if err != nil {
-						// Use warn instead of fatal to prevent exit
-						logFile.Warn(err)
+	// Check if we should show logs
+	if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		// Build an image selector
+		imageSelector := []string{}
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for _, configImageName := range config.Dev.Logs.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
 					}
-				}()
+				}
+			}
+		} else {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for configImageName := range config.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
+					}
+				}
 			}
 		}
-	}
 
-	// Log multiple pods
-	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
-	if err != nil {
-		// Check if we should reload
-		if _, ok := err.(*reloadError); ok {
-			return 0, err
+		// Show last log lines
+		tail := int64(50)
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
+			tail = int64(*config.Dev.Logs.ShowLast)
 		}
 
-		log.Warnf("Couldn't print logs: %v", err)
+		// Log multiple images at once
+		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, log)
+		if err != nil {
+			// Check if we should reload
+			if _, ok := err.(*reloadError); ok {
+				return 0, err
+			}
+
+			log.Warnf("Couldn't print logs: %v", err)
+		}
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
@@ -542,8 +581,9 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 
 		// Set image entrypoints if necessary
 		for _, imageConf := range config.Dev.Interactive.Images {
-			if len(imageConf.Entrypoint) == 0 {
-				imageConf.Entrypoint = []string{"sleep", "9999999999"}
+			if len(imageConf.Entrypoint) == 0 && len(imageConf.Cmd) == 0 {
+				imageConf.Entrypoint = []string{"sleep"}
+				imageConf.Cmd = []string{"999999999"}
 			}
 		}
 

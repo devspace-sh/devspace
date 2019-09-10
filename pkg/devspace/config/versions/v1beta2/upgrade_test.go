@@ -55,7 +55,8 @@ func TestSimple(t *testing.T) {
 						Images: []*next.InteractiveImageConfig{
 							{
 								Name:       "test",
-								Entrypoint: []string{"my", "command"},
+								Entrypoint: []string{"my"},
+								Cmd:        []string{"command"},
 							},
 						},
 					},
