@@ -59,7 +59,7 @@ func CreatePullSecret(client *kubectl.Client, namespace, registryURL, username, 
 		}
 
 		log.Donef("Created image pull secret %s/%s", namespace, pullSecretName)
-	} else if string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
+	} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
 		_, err = client.Client.CoreV1().Secrets(namespace).Update(registryPullSecret)
 		if err != nil {
 			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
