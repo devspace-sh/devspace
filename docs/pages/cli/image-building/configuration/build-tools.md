@@ -9,7 +9,7 @@ The `build` option of each image (under `images`) defines which build tool DevSp
 - [`custom`](#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
 - [`disabled`](#disabled) for disabling image building for this image
 
-> Different images can be build using different build tools.
+> Different images can be built using different build tools.
 
 
 ## `docker` (default)

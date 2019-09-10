@@ -108,7 +108,7 @@ images:
 ```
 **Explanation:**  
 - The first image would be built using the Dockerfile in `./Dockerfile` and the context path `./`.
-- The second image would be build using the Dockerfile in `./frontend/Dockerfile` and the context path `./frontend/`.
+- The second image would be built using the Dockerfile in `./frontend/Dockerfile` and the context path `./frontend/`.
 - Switching the `context` for image `frontend` would assure that a statement like `ADD file.txt` or  `COPY file.txt .` in `./frontend/Dockerfile` would use the local file `./frontend/file.txt` instead of `./file.txt`.
 - In this example, it would probably be useful to have a `./.dockerignore` file which ignores the `frontend/` folder when building the first image called `backend`.
 

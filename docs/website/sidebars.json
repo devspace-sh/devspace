@@ -91,9 +91,9 @@
           "cli/development/configuration/overview-specification",
           "cli/development/configuration/file-synchronization",
           "cli/development/configuration/port-forwarding",
-          "cli/development/configuration/interactive-mode",
-          "cli/development/configuration/terminal-proxy-logs",
-          "cli/development/configuration/auto-reloading"
+          "cli/development/configuration/logs-streaming",
+          "cli/development/configuration/auto-reloading",
+          "cli/development/configuration/interactive-mode"
         ]
       },
       {
@@ -101,16 +101,14 @@
         "label": "Advanced Topics",
         "ids": [
           "cli/development/advanced/advanced-topics",
-          "cli/development/advanced/remote-debuggers",
-          "cli/development/advanced/optimize-development-workflow"
+          "cli/development/advanced/remote-debuggers"
         ]
       }
     ],
     "Advanced Configuration": [
       "cli/configuration/reference",
       "cli/configuration/variables",
-      "cli/configuration/multiple-configs",
-      "cli/configuration/overrides",
+      "cli/configuration/profiles-patches",
       "cli/configuration/hooks"
     ],
     "CLI Reference": [

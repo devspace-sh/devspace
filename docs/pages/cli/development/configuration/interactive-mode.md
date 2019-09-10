@@ -3,66 +3,131 @@ title: Configuring Interactive Mode
 sidebar_label: Interactive Mode
 ---
 
-When developing your application, it is often useful to override the image entrypoints or use a separate Dockerfile. DevSpace applies this special configuration only during `devspace dev` and not during `devspace deploy`. 
+The development mode of DevSpace can be started using the `-i / --interactive` flag which overrides the `ENTRYPOINT` of an image with `[sleep, 999999]` and opens an interactive terminal session for one of the containers that use the 'sleeping' image. Due to the `ENTRYPOINT` override, the application has not been started within the container and the user can start the application manually through the interactive terminal session.
 
-## Configuring a different Dockerfile during `devspace dev`
-You can tell DevSpace to use a different Dockerfile during `devspace dev` within the `dev.overrideImages` section of `devspace.yaml`:
+To control the default behavior when using the interactive mode, you can configure the `dev.interactive` section in the `devspace.yaml`.
 ```yaml
-dev:
-  overrideImages:
-  - name: default
-    dockerfile: ./development/Dockerfile.development
-    # Optional use different context
-    # context: ./development
 images:
-  default:
-    image: dscr.io/my-username/my-image
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+  database:
+    image: john/database
+deployments:
+- name: app-frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+- name: app-backend
+  component:
+    containers:
+    - image: john/appbackend
+      name: some-container
+    - image: john/appbackend
+dev:
+  interactive:
+    images:
+    - name: backend
+      entrypoint:
+      - tail
+      cmd:
+      - -f
+      - /dev/null
+    - name: frontend
+      entrypoint:
+      - /debug_entrypoing.sh
+    terminal:
+      imageName: backend
+      containerName: some-container
 ```
 
-## Configuring entrypoint overrides
-You can also configure an entrypoint override, then `devspace dev` will do the following:
+## `dev.interactive.images`
+The `images` option expects an array of objects having the following properties:
+- `name` stating an image name which references an image in the `images` within `devspace.yaml` (required)
+- `entrypoint` defining an [`ENTRYPOINT` override](http://localhost:3000/docs/cli/image-building/configuration/overview-specification#images-entrypoint) that will be applied only in interactive mode (optional)
+- `cmd` defining a [`CMD` override](http://localhost:3000/docs/cli/image-building/configuration/overview-specification#images-cmd) that will be applied only in interactive mode (optional)
 
-1. Load the Dockerfile for this image
-2. Override the entrypoint for this image **in-memory**
-3. Building your image with overridden entrypoint
-4. Pushing the image to the registry under a randomly generated tag
+> `ENTRYPOINT` and `CMD` overrides for interactive mode work the same way as regular [overrides for image building](/docs/cli/image-building/configuration/overview-specification#overriding-entrypoint-cmd). However, they take precedence over regular overrides and are only used during interactive mode.
 
-> Overriding an entrypoint will **not** change your Dockerfile. Image overriding happen entirely in-memory before building the image.
+> By default, DevSpace asks which image to override when starting interactive mode (or skips the question if only one image is defined). This image will then be built using the `ENTRYPOINT [sleep, 999999]` override if not configured differently via `dev.interactive.images`.
 
-You can configure entrypoint overrides within the `dev.overrideImages` section of `devspace.yaml`. 
+#### Example: Setting Interactive Mode Images
 ```yaml
-dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - 9999999
 images:
-  default:
-    image: dscr.io/my-username/my-image
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+  database:
+    image: john/database
+deployments:
+- name: app-frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+- name: app-backend
+  component:
+    containers:
+    - image: john/appbackend
+      name: some-container
+    - image: john/appbackend-sidecar
+dev:
+  interactive:
+    images:
+    - name: backend
+      entrypoint:
+      - tail
+      cmd:
+      - -f
+      - /dev/null
+    - name: frontend
+      entrypoint:
+      - /debug_entrypoing.sh
 ```
-The example above defines an image `default` which will be built and then pushed to `dscr.io/my-username/my-image` whenevery you run `devspace deploy` or `devspace dev`. When running `devspace dev`, however, the `dev.overrideImages` configuration would define that this image with name `default` would be build with an overridden entrypoint. 
+**Explanation:**  
+- The above example defines 3 images and 2 deployments.
+- The `dev.interactive.images` option defines that the image `backend` should be built using a `ENTRYPOINT [tail]` and using `CMD [-f, /dev/null]` when building this image in interactive mode
+- The `dev.interactive.images` option defines that the image `frontend` should be built using a `ENTRYPOINT [7debug_entrypoint.sh]` when building this image in interactive mode
 
-> Everything within the `dev` section of the DevSpace config (including `overrideImages`) will  only be applied when running `devspace dev`.
 
-In the example above, the result would be that the container that uses the `default` image would not start the application but just enter sleep mode. This has the advantage that you can start the application manually by entering a command in the terminal that is opened by `devspace dev`.
+## `dev.interactive.terminal`
+The `terminal` option expects an objects having the following container selection properties:
+- `imageName` to select a container based on an image specified in `images` (precedence over `labelSelector`)
+- `labelSelector` to select a pod based a Kubernetes label selector
+- `containerName` to select a container based on its name
+- `namespace` to select a container from a namespace different than the default namespace of the current kube-context
 
----
-## FAQ
+Additionally, the object expected in `terminal` has the following non-selection property:
+- `command` defines a command to run when starting the terminal session (default: `/bin/bash` with fallback `/bin/sh`)
 
-<details>
-<summary>
-### When should I use entrypoint overrides?
-</summary>
-Common use cases for overriding entrypoints are:
-1. You want to start your application in dev mode with hot reloading (e.g. `npm run watch` using nodemon instead of `npm start`).
-2. You want to increase the log level or set environment variables before starting your app (e.g. `NODE_ENV=development && npm start`).
-3. You want to start a container without starting your application (e.g. `sleep 99999999`) because you want to start the application manually via the [terminal proxy](/docs/development/terminal).
-</details>
+> If `command` is a non-interactive command that terminates, DevSpace will run the command and exit after the command has terminated.
 
-<details>
-<summary>
-### Will image overrides also work for `devspace deploy`?
-</summary>
-**No.** Image overriding will only be executing when running `devspace dev`. It is recommended that you define a production version of your application which is supposed to be executed when running `devspace deploy`. Overrides are meant to override this production configuration when you are developing your application with `devspace dev`.
-</details>
+#### Example: Configuring Terminal for Interactive Mode
+```yaml
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+  database:
+    image: john/database
+deployments:
+- name: app-frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+- name: app-backend
+  component:
+    containers:
+    - image: john/appbackend
+      name: some-container
+    - image: john/appbackend-sidecar
+dev:
+  interactive:
+    terminal:
+      imageName: backend
+      containerName: some-container
+```
+**Explanation:**  
+The above configuration would open the container with name `some-container` that belongs to the deployment `app-backend` when running `devspace dev -i`.

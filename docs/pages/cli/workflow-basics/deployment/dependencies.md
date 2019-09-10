@@ -10,7 +10,7 @@ When a DevSpace project has dependencies, DevSpace will:
 3. Choose a leave node from the dependency tree, build its images (unless skip is defined) and deploy its deployments
 4. Remove the leave node from the tree and repeat step 3 until everything has been deployed
 
-The algorithm used by DevSpace for building and deploying dependencies ensures that all dependencies have been deployed in the correct order before the project you are calling DevSpace from will be build and deployed.
+The algorithm used by DevSpace for building and deploying dependencies ensures that all dependencies have been deployed in the correct order before the project you are calling DevSpace from will be built and deployed.
 
 ## Define Dependencies
 DevSpace is able to work with dependencies from the following sources:

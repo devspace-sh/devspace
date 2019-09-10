@@ -21,7 +21,7 @@ hooks:
         images: all
 ```
 
-This tells DevSpace to execute the command `echo before image building` before any image will be build. You are able to define hooks for the following life cycle events:
+This tells DevSpace to execute the command `echo before image building` before any image will be built. You are able to define hooks for the following life cycle events:
 - **before image building**: Will be executed before building any images. Value: `when.before.images: all`
 - **after image building**: Will be executed after images have been successfully built. Value: `when.after.images: all`
 - **before deploying**: Will be executed before any deployment is deployed. Value: `when.before.deployments: all`

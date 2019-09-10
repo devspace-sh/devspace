@@ -1,5 +1,5 @@
 ---
-title: Advanced Topics
+title: "Advanced Topics - Deployment with DevSpace"
 sidebar_label: Advanced Topics
 ---
 

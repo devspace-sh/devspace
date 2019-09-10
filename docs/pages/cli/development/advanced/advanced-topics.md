@@ -1,6 +1,7 @@
 ---
-title: Advanced Topics
+title: "Advanced Topics - Cloud-Native Development"
 sidebar_label: Advanced Topics
 ---
 
-TODO
+Take a look at these pages for advanced topics related to image building:
+- [Attaching Remote Debuggers](/docs/cli/development/advanced/remote-debuggers)

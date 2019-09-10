@@ -94,14 +94,23 @@ vars:                               # struct   | Options for variables
   validationMessage: "Wrong ..."    # string   | The error message to print if the entered value does not match the pattern
 ```
 
+
+
 ---
-## FAQ
+## Useful Commands
 
-<details>
-<summary>
-### What is the difference between config overrides and dynamic configs?
-</summary>
-While config overriding is very useful for different deployment environments, it is not as suitable for managing configs that vary between different developers. Imaging having 80 people working on a project: Do you want to manage 80 different configurations and version them via git? Dynamic configs allow you to version one config file which uses variables that are saved outside the git repository on the local machine of the developer.
+### `devspace list vars`
+To get a list of all variables defined in the `devspace.yaml`, you can run this command:
+```bash
+devspace list vars
+```
 
-Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. using DevSpace within CI/CD pipelines.
-</details>
+### `devspace reset vars`
+Once DevSpace asks you to provide a value for a variable, this value will be stored in the variables cache, so you will not asked about this variable again.
+
+To reset the variables cache:
+```bash
+devspace reset vars
+```
+
+> DevSpace will fill the variables cache again, once you run the next build or deployment command.
