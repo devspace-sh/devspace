@@ -83,13 +83,26 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 
 			return pod, nil
 		} else if len(t.imageSelector) > 0 {
-			// Retrieve the first running pod with that image
+			// Retrieve pods running with that image
 			pods, err := t.kubeClient.GetRunningPodsWithImage(t.imageSelector, t.namespace, time.Second*120)
 			if err != nil {
 				return nil, err
 			}
-			if len(pods) > 0 {
+
+			if len(pods) == 1 {
 				return pods[0], nil
+			} else {
+				podNames := []string{}
+				podMap := map[string]*v1.Pod{}
+				for _, pod := range pods {
+					podNames = append(podNames, pod.Name)
+					podMap[pod.Name] = pod
+				}
+				podName := survey.Question(&survey.QuestionOptions{
+					Question: *t.PodQuestion,
+					Options:  podNames,
+				})
+				return podMap[podName], nil
 			}
 		} else if t.labelSelector != "" {
 			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.namespace, time.Second*120)

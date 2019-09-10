@@ -15,7 +15,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
-	"github.com/skratchdot/open-golang/open"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -27,6 +26,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
@@ -37,6 +37,7 @@ type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
+	SkipOpen                bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -342,6 +343,29 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 		defer watcher.Stop()
 	}
 
+	// Run dev.open configs
+	if config.Dev.Open != nil && cmd.SkipOpen == false {
+		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
+		cmd.SkipOpen = true
+
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
+				maxWait := 4 * time.Minute
+				log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
+
+				go func() {
+					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
+					err := openURL(openConfig.URL, nil, "", logutil.Discard, maxWait)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						// Do not print warning
+						// log.Warn(err)
+					}
+				}()
+			}
+		}
+	}
+
 	// Check if we should open a terminal
 	if interactiveMode {
 		var imageSelector []string
@@ -393,15 +417,6 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 					imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
 					break
 				}
-			}
-		}
-	}
-
-	// Run dev.open configs
-	if config.Dev.Open != nil {
-		for _, openConfig := range config.Dev.Open {
-			if openConfig.URL != "" {
-				open.Start(openConfig.URL)
 			}
 		}
 	}

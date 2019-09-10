@@ -261,13 +261,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		domain = "http://" + domain
 	}
 
-	err = openURL(domain, client, namespace, log.GetInstance())
+	err = openURL(domain, client, namespace, log.GetInstance(), 4*time.Minute)
 	if err != nil {
 		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
 	}
 }
 
-func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger) error {
+func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
 	// Loop and check if http code is != 502
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
@@ -276,7 +276,7 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 	time.Sleep(time.Second * 2)
 
 	now := time.Now()
-	for time.Since(now) < time.Minute*4 {
+	for time.Since(now) < maxWait {
 		// Check if domain is ready => ignore error as we will retry request
 		resp, _ := http.Get(url)
 		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
