@@ -66,8 +66,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	return b.helper.ShouldRebuild(cache)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
 }
 
 // BuildImage builds a dockerimage with the docker cli
@@ -171,14 +171,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	})
 	if err != nil {
 		return err
-	}
-
-	// Use config override if there is any
-	if len(b.helper.ImageConf.Entrypoint) > 0 && len(entrypoint) == 0 {
-		entrypoint = b.helper.ImageConf.Entrypoint
-	}
-	if len(b.helper.ImageConf.Cmd) > 0 && len(cmd) == 0 {
-		cmd = b.helper.ImageConf.Cmd
 	}
 
 	// Check if we should overwrite entrypoint

@@ -288,10 +288,11 @@ type ChartConfig struct {
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	CmdPath   string   `yaml:"cmdPath,omitempty"`
-	Manifests []string `yaml:"manifests,omitempty"`
-	Kustomize *bool    `yaml:"kustomize,omitempty"`
-	Flags     []string `yaml:"flags,omitempty"`
+	CmdPath          string   `yaml:"cmdPath,omitempty"`
+	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
+	Manifests        []string `yaml:"manifests,omitempty"`
+	Kustomize        *bool    `yaml:"kustomize,omitempty"`
+	Flags            []string `yaml:"flags,omitempty"`
 }
 
 // DevConfig defines the devspace deployment

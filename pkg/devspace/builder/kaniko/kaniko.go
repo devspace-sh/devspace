@@ -94,8 +94,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	return b.helper.ShouldRebuild(cache)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
@@ -145,13 +145,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		if b.helper.ImageConf.Build.Kaniko.Options.Network != "" {
 			options.NetworkMode = b.helper.ImageConf.Build.Kaniko.Options.Network
 		}
-	}
-
-	if len(b.helper.ImageConf.Entrypoint) > 0 && len(entrypoint) == 0 {
-		entrypoint = b.helper.ImageConf.Entrypoint
-	}
-	if len(b.helper.ImageConf.Cmd) > 0 && len(cmd) == 0 {
-		cmd = b.helper.ImageConf.Cmd
 	}
 
 	// Check if we should overwrite entrypoint

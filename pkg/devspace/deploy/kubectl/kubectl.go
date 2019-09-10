@@ -200,9 +200,11 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 	}
 
 	// Split output into the yamls
-	splitted := regexp.MustCompile(`(^|\n)apiVersion`).Split(string(manifestYamlBytes), -1)
-	replaceManifests := []string{}
-	shouldRedeploy := false
+	var (
+		splitted         = regexp.MustCompile(`(^|\n)apiVersion`).Split(string(manifestYamlBytes), -1)
+		replaceManifests = []string{}
+		shouldRedeploy   = false
+	)
 
 	for _, resource := range splitted {
 		if resource == "" {
@@ -217,7 +219,9 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 		}
 
 		if len(cache.Images) > 0 {
-			shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages) || shouldRedeploy
+			if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
+				shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages) || shouldRedeploy
+			}
 		}
 
 		replacedManifest, err := yaml.Marshal(manifestYaml)
