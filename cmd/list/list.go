@@ -20,7 +20,6 @@ func NewListCmd() *cobra.Command {
 	listCmd.AddCommand(newSyncCmd())
 	listCmd.AddCommand(newSpacesCmd())
 	listCmd.AddCommand(newClustersCmd())
-	listCmd.AddCommand(newSelectorsCmd())
 	listCmd.AddCommand(newPortsCmd())
 	listCmd.AddCommand(newProfilesCmd())
 	listCmd.AddCommand(newVarsCmd())

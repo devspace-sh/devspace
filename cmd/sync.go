@@ -17,7 +17,6 @@ import (
 
 // SyncCmd is a struct that defines a command call for "sync"
 type SyncCmd struct {
-	Selector      string
 	Namespace     string
 	KubeContext   string
 	LabelSelector string
@@ -54,7 +53,6 @@ devspace sync --container-path=/my-path
 		Run: cmd.Run,
 	}
 
-	syncCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -106,7 +104,6 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Build params
 	params := targetselector.CmdParameter{
-		Selector:      cmd.Selector,
 		ContainerName: cmd.Container,
 		LabelSelector: cmd.LabelSelector,
 		Namespace:     cmd.Namespace,

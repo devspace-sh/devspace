@@ -106,7 +106,6 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 
 		selector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 			ConfigParameter: targetselector.ConfigParameter{
-				Selector:      syncConfig.Selector,
 				Namespace:     syncConfig.Namespace,
 				LabelSelector: syncConfig.LabelSelector,
 				ContainerName: syncConfig.ContainerName,

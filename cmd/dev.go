@@ -50,13 +50,9 @@ type DevCmd struct {
 	Terminal        bool
 	ExitAfterDeploy bool
 	SkipPipeline    bool
-	SwitchContext   bool
 	Portforwarding  bool
 	VerboseSync     bool
 	Interactive     bool
-	Selector        string
-	Container       string
-	LabelSelector   string
 
 	KubeContext string
 	Namespace   string
@@ -110,17 +106,11 @@ Use Interactive Mode:
 
 	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
-	devCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pods/container for terminal")
-	devCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name where to open the shell")
-	devCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list to use for terminal (e.g. release=test)")
-
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	devCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	devCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
-	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
-
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
 	return devCmd
 }
@@ -152,7 +142,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -388,17 +378,13 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 
 		selectorParameter := &targetselector.SelectorParameter{
 			CmdParameter: targetselector.CmdParameter{
-				Selector:      cmd.Selector,
-				ContainerName: cmd.Container,
-				LabelSelector: cmd.LabelSelector,
-				Namespace:     cmd.Namespace,
-				Interactive:   true,
+				Namespace:   cmd.Namespace,
+				Interactive: true,
 			},
 		}
 
 		if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
 			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-				Selector:      config.Dev.Interactive.Terminal.Selector,
 				Namespace:     config.Dev.Interactive.Terminal.Namespace,
 				LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
 				ContainerName: config.Dev.Interactive.Terminal.ContainerName,

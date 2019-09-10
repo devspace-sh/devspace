@@ -31,7 +31,6 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 
 			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
-					Selector:      portForwarding.Selector,
 					Namespace:     portForwarding.Namespace,
 					LabelSelector: portForwarding.LabelSelector,
 				},
