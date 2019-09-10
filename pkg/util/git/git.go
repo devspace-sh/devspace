@@ -165,10 +165,12 @@ func (gr *Repository) Update(merge bool) error {
 func (gr *Repository) Checkout(tag, branch, revision string) error {
 	if isGitCommandAvailable() {
 		checkout := ""
+		pull := false
 		if tag != "" {
 			checkout = tag
 		} else if branch != "" {
 			checkout = branch
+			pull = true
 		} else if revision != "" {
 			checkout = revision
 		} else {
@@ -178,6 +180,13 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 		out, err := exec.Command("git", "-C", gr.LocalPath, "checkout", checkout).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("Error running 'git checkout %s': %v -> %s", checkout, err, string(out))
+		}
+
+		if pull {
+			out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
+			}
 		}
 
 		return nil

@@ -266,15 +266,15 @@ type ComponentConfigOptions struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart           *ChartConfig                `yaml:"chart,omitempty"`
-	Wait            *bool                       `yaml:"wait,omitempty"`
-	Rollback        *bool                       `yaml:"rollback,omitempty"`
-	Force           *bool                       `yaml:"force,omitempty"`
-	Timeout         *int64                      `yaml:"timeout,omitempty"`
-	TillerNamespace string                      `yaml:"tillerNamespace,omitempty"`
-	DevSpaceValues  *bool                       `yaml:"devSpaceValues,omitempty"`
-	ValuesFiles     []string                    `yaml:"valuesFiles,omitempty"`
-	Values          map[interface{}]interface{} `yaml:"values,omitempty"`
+	Chart            *ChartConfig                `yaml:"chart,omitempty"`
+	Wait             *bool                       `yaml:"wait,omitempty"`
+	Rollback         *bool                       `yaml:"rollback,omitempty"`
+	Force            *bool                       `yaml:"force,omitempty"`
+	Timeout          *int64                      `yaml:"timeout,omitempty"`
+	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
+	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
+	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
+	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
 }
 
 // ChartConfig defines the helm chart options

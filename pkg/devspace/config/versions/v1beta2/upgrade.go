@@ -89,5 +89,14 @@ func (c *Config) Upgrade() (config.Config, error) {
 		}
 	}
 
+	// Update deployments
+	if c.Deployments != nil {
+		for idx, deployment := range *c.Deployments {
+			if deployment.Helm != nil {
+				nextConfig.Deployments[idx].Helm.ReplaceImageTags = deployment.Helm.DevSpaceValues
+			}
+		}
+	}
+
 	return nextConfig, nil
 }
