@@ -4,7 +4,7 @@ package server
 
 import (
 	"os"
-	"syscalL"
+	"syscall"
 )
 
 // Chown sets the given stat owner and group id to the filepath
