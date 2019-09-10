@@ -581,7 +581,7 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 
 		// Set image entrypoints if necessary
 		for _, imageConf := range config.Dev.Interactive.Images {
-			if len(imageConf.Entrypoint) == 0 && len(imageConf.Cmd) == 0 {
+			if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
 				imageConf.Entrypoint = []string{"sleep"}
 				imageConf.Cmd = []string{"999999999"}
 			}

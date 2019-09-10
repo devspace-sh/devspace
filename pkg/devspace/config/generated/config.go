@@ -120,7 +120,6 @@ func LoadConfigFromPath(path, profile string) (*Config, error) {
 		loadedConfig.OverrideProfile = nil
 	}
 
-	InitDevSpaceConfig(loadedConfig, loadedConfig.ActiveProfile)
 	return loadedConfig, nil
 }
 
@@ -192,8 +191,6 @@ func SaveConfig(config *Config) error {
 	if err != nil {
 		return err
 	}
-
-	InitDevSpaceConfig(config, config.ActiveProfile)
 
 	configPath := filepath.Join(workdir, ConfigPath)
 	err = os.MkdirAll(filepath.Dir(configPath), 0755)

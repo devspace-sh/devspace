@@ -38,6 +38,9 @@ const (
 	enterManifestsOption        = "Enter path to your Kubernetes manifests"
 	enterHelmChartOption        = "Enter path to your Helm chart"
 	useExistingImageOption      = "Use existing image (e.g. from Docker Hub)"
+
+	// The default image name in the config
+	defaultImageName = "default"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -220,7 +223,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	if newImage != nil {
-		config.Images["default"] = newImage
+		config.Images[defaultImageName] = newImage
 	}
 	if newDeployment != nil {
 		config.Deployments = []*latest.DeploymentConfig{newDeployment}
@@ -290,7 +293,7 @@ func (cmd *InitCmd) addDevConfig() {
 	config := configutil.GetConfig(context.Background(), "")
 
 	// Forward ports
-	if len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
+	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
 		servicePort := config.Deployments[0].Component.Service.Ports[0]
 
 		if servicePort.Port != nil {
@@ -323,9 +326,7 @@ func (cmd *InitCmd) addDevConfig() {
 			// Add dev.ports config
 			config.Dev.Ports = []*latest.PortForwardingConfig{
 				{
-					LabelSelector: map[string]string{
-						"app.kubernetes.io/component": (config.Deployments)[0].Name,
-					},
+					ImageName:    defaultImageName,
 					PortMappings: portMappings,
 				},
 			}
@@ -340,8 +341,8 @@ func (cmd *InitCmd) addDevConfig() {
 	}
 
 	// Specify sync path
-	if len(config.Images) > 0 && len(config.Deployments) > 0 && (config.Deployments)[0].Component != nil {
-		if (config.Images)["default"].Build == nil || (config.Images)["default"].Build.Disabled == nil {
+	if len(config.Images) > 0 {
+		if (config.Images)[defaultImageName].Build == nil || (config.Images)[defaultImageName].Build.Disabled == nil {
 			if config.Dev.Sync == nil {
 				config.Dev.Sync = []*latest.SyncConfig{}
 			}
@@ -358,9 +359,7 @@ func (cmd *InitCmd) addDevConfig() {
 			}
 
 			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
-				LabelSelector: map[string]string{
-					"app.kubernetes.io/component": config.Deployments[0].Name,
-				},
+				ImageName:    defaultImageName,
 				ExcludePaths: excludePaths,
 			})
 

@@ -15,8 +15,6 @@ import (
 
 const registryAuthSecretNamePrefix = "devspace-auth-"
 
-var pullSecretNames = []string{}
-
 var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
 // CreatePullSecret creates an image pull secret for a registry
@@ -53,7 +51,7 @@ func CreatePullSecret(client *kubectl.Client, namespace, registryURL, username, 
 		Type: k8sv1.SecretTypeDockerConfigJson,
 	}
 
-	_, err := client.Client.CoreV1().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
+	secret, err := client.Client.CoreV1().Secrets(namespace).Get(pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		_, err = client.Client.CoreV1().Secrets(namespace).Create(registryPullSecret)
 		if err != nil {
@@ -61,14 +59,13 @@ func CreatePullSecret(client *kubectl.Client, namespace, registryURL, username, 
 		}
 
 		log.Donef("Created image pull secret %s/%s", namespace, pullSecretName)
-	} else {
+	} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
 		_, err = client.Client.CoreV1().Secrets(namespace).Update(registryPullSecret)
 		if err != nil {
 			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
 		}
 	}
 
-	pullSecretNames = append(pullSecretNames, pullSecretName)
 	return nil
 }
 
@@ -79,9 +76,4 @@ func GetRegistryAuthSecretName(registryURL string) string {
 	}
 
 	return registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-")
-}
-
-// GetPullSecretNames returns all names of auto-generated image pull secrets
-func GetPullSecretNames() []string {
-	return pullSecretNames
 }

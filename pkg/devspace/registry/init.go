@@ -18,6 +18,7 @@ import (
 func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClient client.CommonAPIClient, log log.Logger) error {
 	if config.Images != nil {
 		pullSecrets := []string{}
+		createPullSecrets := map[string]bool{}
 
 		for _, imageConf := range config.Images {
 			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
@@ -25,20 +26,25 @@ func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClie
 				if err != nil {
 					return err
 				}
-				displayRegistryURL := registryURL
 
-				if displayRegistryURL == "" {
-					displayRegistryURL = "hub.docker.com"
-				}
-				log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
-				err = createPullSecretForRegistry(config, client, dockerClient, registryURL, log)
-				log.StopWait()
-				if err != nil {
-					return fmt.Errorf("Failed to create pull secret for registry: %v", err)
-				}
-
-				pullSecrets = append(pullSecrets, GetRegistryAuthSecretName(registryURL))
+				createPullSecrets[registryURL] = true
 			}
+		}
+
+		for registryURL := range createPullSecrets {
+			displayRegistryURL := registryURL
+			if displayRegistryURL == "" {
+				displayRegistryURL = "hub.docker.com"
+			}
+
+			log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
+			err := createPullSecretForRegistry(config, client, dockerClient, registryURL, log)
+			log.StopWait()
+			if err != nil {
+				return fmt.Errorf("Failed to create pull secret for registry: %v", err)
+			}
+
+			pullSecrets = append(pullSecrets, GetRegistryAuthSecretName(registryURL))
 		}
 
 		if len(pullSecrets) > 0 {
