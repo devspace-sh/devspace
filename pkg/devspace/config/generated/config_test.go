@@ -46,7 +46,7 @@ func TestLoadConfigFromPath(t *testing.T) {
 		t.Fatalf("Error loading config from non existent path: %v", err)
 	}
 	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
-	assert.Equal(t, 1, len(returnedConfig.Profiles), "Wrong initial config returned")
+	assert.Equal(t, 0, len(returnedConfig.Profiles), "Wrong initial config returned")
 	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
 
 	ConfigPath = "generated.yaml"
@@ -57,7 +57,7 @@ func TestLoadConfigFromPath(t *testing.T) {
 		t.Fatalf("Error loading config from existent path with empty content: %v", err)
 	}
 	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
-	assert.Equal(t, 1, len(returnedConfig.Profiles), "Wrong initial config returned")
+	assert.Equal(t, 0, len(returnedConfig.Profiles), "Wrong initial config returned")
 	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
 }
 

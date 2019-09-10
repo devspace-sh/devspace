@@ -15,8 +15,6 @@ import (
 )
 
 func TestCreatePullSecret(t *testing.T) {
-	pullSecretNames = []string{}
-
 	namespace := "myns"
 	//Setting up kubeClient
 	kubeClient := &kubectl.Client{
@@ -36,11 +34,7 @@ func TestCreatePullSecret(t *testing.T) {
 		t.Fatalf("Error creating namespace: %v", err)
 	}
 
-	secretNames := GetPullSecretNames()
-	assert.Equal(t, 1, len(secretNames), "Wrong number of secret names after creating one secret.")
-	assert.Equal(t, "devspace-auth-docker", secretNames[0], "Wrong saved sercet name")
-
-	resultSecret, err := kubeClient.Client.CoreV1().Secrets(namespace).Get(secretNames[0], metav1.GetOptions{})
+	resultSecret, err := kubeClient.Client.CoreV1().Secrets(namespace).Get("devspace-auth-docker", metav1.GetOptions{})
 	assert.Equal(t, "devspace-auth-docker", resultSecret.ObjectMeta.Name, "Saved secret has wrong name")
 	assert.Equal(t, `{
 			"auths": {

@@ -93,7 +93,6 @@ StopWait`,
 	}
 
 	for _, testCase := range testCases {
-		pullSecretNames = []string{}
 		//Setting up kubeClient
 		kubeClient := &kubectl.Client{
 			Client:    fake.NewSimpleClientset(),
