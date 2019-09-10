@@ -50,7 +50,6 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 	}
 
 	headerColumnNames := []string{
-		"Selector",
 		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
@@ -59,19 +58,14 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 
 	// Transform values into string arrays
 	for _, value := range config.Dev.Ports {
-		service := ""
 		selector := ""
 
-		if value.Selector != "" {
-			service = value.Selector
-		} else {
-			for k, v := range value.LabelSelector {
-				if len(selector) > 0 {
-					selector += ", "
-				}
-
-				selector += k + "=" + v
+		for k, v := range value.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
 			}
+
+			selector += k + "=" + v
 		}
 
 		portMappings := ""
@@ -86,7 +80,6 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		}
 
 		portForwards = append(portForwards, []string{
-			service,
 			selector,
 			portMappings,
 		})

@@ -20,11 +20,9 @@ import (
 
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
-	Selector      string
 	LabelSelector string
 	Container     string
 	Pod           string
-	SwitchContext bool
 	Pick          bool
 
 	Namespace   string
@@ -56,7 +54,6 @@ devspace enter bash -l release=test
 		Run: cmd.Run,
 	}
 
-	enterCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -64,7 +61,6 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
 	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
-	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return enterCmd
@@ -88,7 +84,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
@@ -113,7 +109,6 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Build params
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: targetselector.CmdParameter{
-			Selector:      cmd.Selector,
 			ContainerName: cmd.Container,
 			LabelSelector: cmd.LabelSelector,
 			Namespace:     cmd.Namespace,

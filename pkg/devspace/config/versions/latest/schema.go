@@ -303,7 +303,6 @@ type DevConfig struct {
 	Sync        []*SyncConfig           `yaml:"sync,omitempty"`
 	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty"`
 	Interactive *InteractiveConfig      `yaml:"interactive,omitempty"`
-	Selectors   []*SelectorConfig       `yaml:"selectors,omitempty"`
 	Logs        *LogsConfig             `yaml:"logs,omitempty"`
 }
 
@@ -330,7 +329,6 @@ type InteractiveImageConfig struct {
 
 // TerminalConfig describes the terminal options
 type TerminalConfig struct {
-	Selector      string            `yaml:"selector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty"`
@@ -340,7 +338,6 @@ type TerminalConfig struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	Selector      string            `yaml:"selector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
@@ -361,7 +358,6 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	Selector             string            `yaml:"selector,omitempty"`
 	Namespace            string            `yaml:"namespace,omitempty"`
 	ImageName            string            `yaml:"imageName,omitempty"`
 	LabelSelector        map[string]string `yaml:"labelSelector,omitempty"`
@@ -386,14 +382,6 @@ type AutoReloadConfig struct {
 	Paths       []string `yaml:"paths,omitempty"`
 	Deployments []string `yaml:"deployments,omitempty"`
 	Images      []string `yaml:"images,omitempty"`
-}
-
-// SelectorConfig defines the selectors that belong to the devspace
-type SelectorConfig struct {
-	Name          string            `yaml:"name,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector"`
-	ContainerName string            `yaml:"containerName,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

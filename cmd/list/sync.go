@@ -49,7 +49,6 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	headerColumnNames := []string{
-		"Selector",
 		"Label Selector",
 		"Local Path",
 		"Container Path",
@@ -60,19 +59,14 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 	// Transform values into string arrays
 	for _, value := range config.Dev.Sync {
-		service := ""
 		selector := ""
 
-		if value.Selector != "" {
-			service = value.Selector
-		} else {
-			for k, v := range value.LabelSelector {
-				if len(selector) > 0 {
-					selector += ", "
-				}
-
-				selector += k + "=" + v
+		for k, v := range value.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
 			}
+
+			selector += k + "=" + v
 		}
 		excludedPaths := ""
 
@@ -87,7 +81,6 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		}
 
 		syncPaths = append(syncPaths, []string{
-			service,
 			selector,
 			value.LocalSubPath,
 			value.ContainerPath,

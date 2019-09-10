@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -181,18 +180,10 @@ func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *lat
 
 func validate(config *latest.Config) error {
 	if config.Dev != nil {
-		if config.Dev.Selectors != nil {
-			for index, selectorConfig := range config.Dev.Selectors {
-				if selectorConfig.Name == "" {
-					return fmt.Errorf("Error in config: Unnamed selector at index %d", index)
-				}
-			}
-		}
-
 		if config.Dev.Ports != nil {
 			for index, port := range config.Dev.Ports {
-				if port.ImageName == "" && port.Selector == "" && port.LabelSelector == nil {
-					return fmt.Errorf("Error in config: imageName, selector and label selector are nil in port config at index %d", index)
+				if port.ImageName == "" && port.LabelSelector == nil {
+					return fmt.Errorf("Error in config: imageName and label selector are nil in port config at index %d", index)
 				}
 				if port.PortMappings == nil {
 					return fmt.Errorf("Error in config: portMappings is empty in port config at index %d", index)
@@ -202,8 +193,8 @@ func validate(config *latest.Config) error {
 
 		if config.Dev.Sync != nil {
 			for index, sync := range config.Dev.Sync {
-				if sync.ImageName == "" && sync.Selector == "" && sync.LabelSelector == nil {
-					return fmt.Errorf("Error in config: imageName, selector and label selector are nil in sync config at index %d", index)
+				if sync.ImageName == "" && sync.LabelSelector == nil {
+					return fmt.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
 				}
 			}
 		}
@@ -308,17 +299,4 @@ func SetDevSpaceRoot() (bool, error) {
 	}
 
 	return false, nil
-}
-
-// GetSelector returns the service referenced by serviceName
-func GetSelector(config *latest.Config, selectorName string) (*latest.SelectorConfig, error) {
-	if config.Dev.Selectors != nil {
-		for _, selector := range config.Dev.Selectors {
-			if selector.Name == selectorName {
-				return selector, nil
-			}
-		}
-	}
-
-	return nil, errors.New("Unable to find selector: " + selectorName)
 }

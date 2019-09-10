@@ -12,7 +12,7 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
+func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
 	config := configutil.GetBaseConfig(context.Background())
 
 	if config.Dev == nil {
@@ -25,27 +25,8 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 	var labelSelectorMap map[string]string
 	var err error
 
-	if labelSelector != "" && serviceName != "" {
-		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
-	}
-
 	if labelSelector == "" {
-		if config.Dev != nil && config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
-			services := config.Dev.Selectors
-
-			var service *latest.SelectorConfig
-			if serviceName != "" {
-				service = getServiceWithName(config.Dev.Selectors, serviceName)
-				if service == nil {
-					return fmt.Errorf("no service with name %v exists", serviceName)
-				}
-			} else {
-				service = services[0]
-			}
-			labelSelectorMap = service.LabelSelector
-		} else {
-			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
-		}
+		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 	}
 
 	if labelSelectorMap == nil {
@@ -76,18 +57,12 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
-	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
-	if serviceName != "" {
-		labelSelectorMap = nil
-	}
-
 	Sync := append(config.Dev.Sync, &latest.SyncConfig{
 		LabelSelector: labelSelectorMap,
 		ContainerPath: containerPath,
 		LocalSubPath:  localPath,
 		ExcludePaths:  excludedPaths,
 		Namespace:     namespace,
-		Selector:      serviceName,
 	})
 
 	config.Dev.Sync = Sync
