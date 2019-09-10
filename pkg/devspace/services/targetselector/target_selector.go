@@ -110,12 +110,12 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 				return podMap[podName], nil
 			}
 
-			// Take first pod and print warning if picker cannot be shown
-			if len(pods) > 0 {
-				log.Warnf("Multiple pods with image selector %s found. Using first pod found", t.imageSelector)
-
-				return pods[0], nil
+			if len(pods) == 0 {
+				return nil, fmt.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
+
+			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
+			return pods[0], nil
 		} else if t.labelSelector != "" {
 			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.namespace, time.Second*120)
 			if err != nil {
