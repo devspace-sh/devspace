@@ -163,6 +163,26 @@ func (gr *Repository) Update(merge bool) error {
 
 // Checkout certain tag, branch or hash
 func (gr *Repository) Checkout(tag, branch, revision string) error {
+	if isGitCommandAvailable() {
+		checkout := ""
+		if tag != "" {
+			checkout = tag
+		} else if branch != "" {
+			checkout = branch
+		} else if revision != "" {
+			checkout = revision
+		} else {
+			return errors.New("Tag, branch or hash has to be defined")
+		}
+
+		out, err := exec.Command("git", "-C", gr.LocalPath, "checkout", checkout).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("Error running 'git checkout %s': %v -> %s", checkout, err, string(out))
+		}
+
+		return nil
+	}
+
 	r, err := git.PlainOpen(gr.LocalPath)
 	if err != nil {
 		return err

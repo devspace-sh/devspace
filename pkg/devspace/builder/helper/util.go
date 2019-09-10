@@ -105,7 +105,7 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 		entrypointStr += "\n\nENTRYPOINT [\"" + strings.Join(entrypoint, "\",\"") + "\"]\n"
 	}
 	if len(cmd) > 0 {
-		entrypointStr += "CMD [\"" + strings.Join(cmd, "\",\"") + "\"]\n"
+		entrypointStr += "\n\nCMD [\"" + strings.Join(cmd, "\",\"") + "\"]\n"
 	}
 
 	if target == "" {
