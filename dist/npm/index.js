@@ -4,6 +4,7 @@ const path = require("path");
 const exec = require("child_process").exec;
 const request = require("request");
 const Spinner = require("cli-spinner").Spinner;
+const inquirer = require('inquirer');
 
 const downloadPathTemplate =
   "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
@@ -77,7 +78,7 @@ const getLatestVersion = function(callback) {
       process.exit(1);
     }
     const latestVersion = releasePage.replace(
-      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s,
+      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s,
       "$1"
     );
 
@@ -99,6 +100,61 @@ if (action == "update-version") {
     process.exit(0);
   });
   return;
+}
+
+if (action == "get-tag") {
+  getLatestVersion(function(latestVersion) {
+    let tagRegex = /^.*-([a-z]*)(\.)?([0-9]*)?$/i
+    let tag = "latest"
+    
+    if (latestVersion.match(tagRegex)) {
+      tag = latestVersion.replace(tagRegex, "$1")
+    }
+    process.stdout.write(tag);
+    process.exit(0);
+  });
+  return;
+}
+
+/**
+ * Remove directory recursively
+ * @param {string} dir_path
+ * @see https://stackoverflow.com/a/42505874/3027390
+ */
+function rimraf(dir_path) {
+  if (fs.existsSync(dir_path)) {
+      fs.readdirSync(dir_path).forEach(function(entry) {
+          var entry_path = path.join(dir_path, entry);
+          if (fs.lstatSync(entry_path).isDirectory()) {
+              rimraf(entry_path);
+          } else {
+              fs.unlinkSync(entry_path);
+          }
+      });
+      fs.rmdirSync(dir_path);
+  }
+}
+
+if (action == "uninstall") {
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        name: "removeGlobalFolder",
+        message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
+        choices: ["no", "yes"],
+      },
+    ])
+    .then(answers => {
+      if (answers.removeGlobalFolder == "yes") {
+        try {
+          let homedir = require('os').homedir();
+          rimraf(homedir + path.sep + ".devspace");
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    });
 }
 
 let version = packageJson.version;
