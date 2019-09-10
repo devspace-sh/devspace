@@ -24,14 +24,11 @@ func GetNameOfFirstDeployment(config *latest.Config) string {
 }
 
 // AddPort adds a port to the config
-func AddPort(namespace, labelSelector, serviceName string, args []string) error {
+func AddPort(namespace, labelSelector string, args []string) error {
 	var labelSelectorMap map[string]string
 	var err error
 
 	config := configutil.GetBaseConfig(context.Background())
-	if labelSelector != "" && serviceName != "" {
-		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
-	}
 
 	portMappings, err := parsePortMappings(args[0])
 	if err != nil {
@@ -39,7 +36,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 	}
 
 	// Add to first existing port mapping if labelselector and service name are empty
-	if labelSelector == "" && serviceName == "" && config.Dev != nil && config.Dev.Ports != nil && len(config.Dev.Ports) > 0 {
+	if labelSelector == "" && config.Dev != nil && config.Dev.Ports != nil && len(config.Dev.Ports) > 0 {
 		if (config.Dev.Ports)[0].PortMappings == nil {
 			(config.Dev.Ports)[0].PortMappings = []*latest.PortMapping{}
 		}
@@ -50,22 +47,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 
 		return configutil.SaveLoadedConfig()
 	} else if labelSelector == "" {
-		if config.Dev != nil && config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
-			services := config.Dev.Selectors
-
-			var service *latest.SelectorConfig
-			if serviceName != "" {
-				service = getServiceWithName(config.Dev.Selectors, serviceName)
-				if service == nil {
-					return fmt.Errorf("no service with name %v exists", serviceName)
-				}
-			} else {
-				service = services[0]
-			}
-			labelSelectorMap = service.LabelSelector
-		} else {
-			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
-		}
+		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
 	}
 
 	if labelSelectorMap == nil {
@@ -75,7 +57,7 @@ func AddPort(namespace, labelSelector, serviceName string, args []string) error 
 		}
 	}
 
-	insertOrReplacePortMapping(config, namespace, labelSelectorMap, serviceName, portMappings)
+	insertOrReplacePortMapping(config, namespace, labelSelectorMap, portMappings)
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
@@ -150,7 +132,7 @@ func containsPort(port string, ports []string) bool {
 	return false
 }
 
-func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSelectorMap map[string]string, selector string, portMappings []*latest.PortMapping) {
+func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSelectorMap map[string]string, portMappings []*latest.PortMapping) {
 	if config.Dev.Ports == nil {
 		config.Dev.Ports = []*latest.PortForwardingConfig{}
 	}
@@ -177,9 +159,6 @@ func insertOrReplacePortMapping(config *latest.Config, namespace string, labelSe
 	}
 	if labelSelectorMap != nil {
 		newPortConfig.LabelSelector = labelSelectorMap
-	}
-	if selector != "" {
-		newPortConfig.Selector = selector
 	}
 	if namespace != "" {
 		newPortConfig.Namespace = namespace
@@ -224,14 +203,4 @@ func parsePortMappings(portMappingsString string) ([]*latest.PortMapping, error)
 	}
 
 	return portMappings, nil
-}
-
-func getServiceWithName(services []*latest.SelectorConfig, name string) *latest.SelectorConfig {
-	for _, service := range services {
-		if service.Name == name {
-			return service
-		}
-	}
-
-	return nil
 }

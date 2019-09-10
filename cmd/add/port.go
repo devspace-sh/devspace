@@ -10,7 +10,6 @@ import (
 type portCmd struct {
 	LabelSelector string
 	Namespace     string
-	Service       string
 }
 
 func newPortCmd() *cobra.Command {
@@ -34,7 +33,6 @@ devspace add port 8080:80,3000
 
 	addPortCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
-	addPortCmd.Flags().StringVar(&cmd.Service, "selector", "", "Name of a selector defined in your DevSpace config")
 
 	return addPortCmd
 }
@@ -50,7 +48,7 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddPort(cmd.Namespace, cmd.LabelSelector, cmd.Service, args)
+	err = configure.AddPort(cmd.Namespace, cmd.LabelSelector, args)
 	if err != nil {
 		log.Fatal(err)
 	}

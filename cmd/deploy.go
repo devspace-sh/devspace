@@ -26,8 +26,6 @@ type DeployCmd struct {
 	KubeContext string
 	Profile     string
 
-	DockerTarget string
-
 	ForceBuild          bool
 	SkipBuild           bool
 	BuildSequential     bool
@@ -36,9 +34,7 @@ type DeployCmd struct {
 	ForceDependencies   bool
 	VerboseDependencies bool
 
-	SwitchContext bool
-	SkipPush      bool
-
+	SkipPush                bool
 	AllowCyclicDependencies bool
 }
 
@@ -71,7 +67,6 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
 	deployCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
-	deployCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switches the kube context to the deploy context")
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
@@ -108,7 +103,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}

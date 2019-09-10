@@ -34,10 +34,71 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Dev: &DevConfig{
+					Selectors: &[]*SelectorConfig{
+						{
+							Name:          ptr.String("test"),
+							Namespace:     ptr.String("namespace"),
+							ContainerName: ptr.String("container"),
+							LabelSelector: &map[string]*string{
+								"my":   ptr.String("app"),
+								"test": ptr.String("test"),
+							},
+						},
+					},
+					Terminal: &Terminal{
+						Selector: ptr.String("test"),
+						Command: &[]*string{
+							ptr.String("test"),
+							ptr.String("test2"),
+						},
+					},
+				},
+			},
+			expected: &next.Config{
+				Dev: &next.DevConfig{
+					Interactive: &next.InteractiveConfig{
+						Enabled: ptr.Bool(true),
+						Terminal: &next.TerminalConfig{
+							Namespace:     "namespace",
+							ContainerName: "container",
+							LabelSelector: map[string]string{
+								"my":   "app",
+								"test": "test",
+							},
+							Command: []string{"test", "test2"},
+						},
+					},
+				},
+			},
+		},
+		{
+			in: &Config{
+				Dev: &DevConfig{
 					OverrideImages: &[]*ImageOverrideConfig{
 						{
 							Name:       ptr.String("test"),
 							Entrypoint: &[]*string{ptr.String("my"), ptr.String("command")},
+						},
+					},
+					Selectors: &[]*SelectorConfig{
+						{
+							Name:          ptr.String("test"),
+							Namespace:     ptr.String("namespace"),
+							ContainerName: ptr.String("container"),
+							LabelSelector: &map[string]*string{
+								"my":   ptr.String("app"),
+								"test": ptr.String("test"),
+							},
+						},
+					},
+					Ports: &[]*PortForwardingConfig{
+						{
+							Selector: ptr.String("test"),
+						},
+					},
+					Sync: &[]*SyncConfig{
+						{
+							Selector: ptr.String("test"),
 						},
 					},
 					Terminal: &Terminal{
@@ -57,6 +118,25 @@ func TestSimple(t *testing.T) {
 								Name:       "test",
 								Entrypoint: []string{"my"},
 								Cmd:        []string{"command"},
+							},
+						},
+					},
+					Ports: []*next.PortForwardingConfig{
+						{
+							Namespace: "namespace",
+							LabelSelector: map[string]string{
+								"my":   "app",
+								"test": "test",
+							},
+						},
+					},
+					Sync: []*next.SyncConfig{
+						{
+							Namespace:     "namespace",
+							ContainerName: "container",
+							LabelSelector: map[string]string{
+								"my":   "app",
+								"test": "test",
 							},
 						},
 					},

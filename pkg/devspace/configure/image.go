@@ -171,8 +171,6 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		retImageConfig.Context = context
 	}
 
-	retImageConfig.CreatePullSecret = ptr.Bool(true)
-
 	return retImageConfig, nil
 }
 

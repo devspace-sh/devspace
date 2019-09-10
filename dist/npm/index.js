@@ -58,7 +58,7 @@ const requestHeaders = {
 };
 let packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
 
-const getLatestVersion = function(callback) {
+const getLatestVersion = function(callback, includePreReleases) {
   const releasesURL = "https://github.com/devspace-cloud/devspace/releases";
 
   request({ uri: releasesURL, headers: requestHeaders }, function(
@@ -77,8 +77,15 @@ const getLatestVersion = function(callback) {
       console.error(err);
       process.exit(1);
     }
-    const latestVersion = releasePage.replace(
-      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s,
+    let versionRegex = 
+    /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s;
+
+    if (includePreReleases) {
+      versionRegex = 
+      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s;
+    }
+    
+    const latestVersion = releasePage.replace(versionRegex,
       "$1"
     );
 
@@ -98,7 +105,7 @@ if (action == "update-version") {
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
 
     process.exit(0);
-  });
+  }, true);
   return;
 }
 
@@ -112,7 +119,7 @@ if (action == "get-tag") {
     }
     process.stdout.write(tag);
     process.exit(0);
-  });
+  }, true);
   return;
 }
 

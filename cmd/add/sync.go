@@ -13,7 +13,6 @@ type syncCmd struct {
 	ContainerPath string
 	ExcludedPaths string
 	Namespace     string
-	Service       string
 }
 
 func newSyncCmd() *cobra.Command {
@@ -41,7 +40,6 @@ devspace add sync --local=app --container=/app
 	addSyncCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
-	addSyncCmd.Flags().StringVar(&cmd.Service, "selector", "", "Name of a selector defined in your DevSpace config")
 
 	addSyncCmd.MarkFlagRequired("local")
 	addSyncCmd.MarkFlagRequired("container")
@@ -60,7 +58,7 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths, cmd.Service)
+	err = configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}

@@ -17,11 +17,11 @@ import (
 
 // LogsCmd holds the logs cmd flags
 type LogsCmd struct {
-	Selector          string
-	LabelSelector     string
-	Container         string
-	Pod               string
-	Pick              bool
+	LabelSelector string
+	Container     string
+	Pod           string
+	Pick          bool
+
 	Follow            bool
 	LastAmountOfLines int
 
@@ -52,7 +52,6 @@ devspace logs --namespace=mynamespace
 		Run:  cmd.RunLogs,
 	}
 
-	logsCmd.Flags().StringVarP(&cmd.Selector, "selector", "s", "", "Selector name (in config) to select pod/container for terminal")
 	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -107,7 +106,6 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 
 	// Build params
 	params := targetselector.CmdParameter{
-		Selector:      cmd.Selector,
 		ContainerName: cmd.Container,
 		LabelSelector: cmd.LabelSelector,
 		Namespace:     cmd.Namespace,
