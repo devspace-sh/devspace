@@ -2,10 +2,12 @@ package configutil
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"testing"      
 
@@ -172,10 +174,13 @@ type getConfigTestCase struct {
 }
 
 func TestGetConfig(t *testing.T) {
+	_, err := os.Stat("NotThere")
+	notThereError := strings.ReplaceAll(err.Error(), "NotThere", "%s")
+
 	testCases := []getConfigTestCase{
 		getConfigTestCase{
 			name: "no files",
-			expectedPanic: "Couldn't find 'devspace.yaml': CreateFile devspace.yaml: The system cannot find the file specified.",
+			expectedPanic: fmt.Sprintf("Couldn't find 'devspace.yaml': " + notThereError, "devspace.yaml"),
 		},
 		getConfigTestCase{
 			name: "unparsable generated.yaml",
