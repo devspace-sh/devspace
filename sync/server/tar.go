@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -95,9 +94,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 		_ = os.Chmod(outFileName, stat.Mode())
 
 		// Set old owner & group correctly
-		if _, ok := stat.Sys().(*syscall.Stat_t); ok {
-			_ = os.Chown(outFileName, int(stat.Sys().(*syscall.Stat_t).Uid), int(stat.Sys().(*syscall.Stat_t).Gid))
-		}
+		_ = Chown(outFileName, stat)
 	}
 
 	// Set mod time from tar header

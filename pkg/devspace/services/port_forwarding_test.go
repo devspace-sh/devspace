@@ -13,7 +13,7 @@ func TestStartPortForwarding(t *testing.T) {
 	config := &latest.Config{
 		Dev : &latest.DevConfig{},
 	}
-	portForwarder, err := StartPortForwarding(config, nil, nil, &log.DiscardLogger{})
+	portForwarder, err := StartPortForwarding(config, nil, nil, &log.DiscardLogger{}) 
 	if err != nil {
 		t.Fatalf("Error starting port forwarding with nil ports to forward: %v", err)
 	}
