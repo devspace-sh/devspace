@@ -32,4 +32,4 @@ kubectl apply -k more-manifests/
 ```
 If you only want one of the folders to be deployed via `kustomize`, you will need to put them in separate deployment configurations.
 
-> Note the missing `*` in the `manifests` section of the configuration with `kustomize: true`. Removing the `*` when using kustomize is highly recommended.
+> Note that the `*` in the `manifests` section have been removed in the second config example which is using `kustomize: true`.

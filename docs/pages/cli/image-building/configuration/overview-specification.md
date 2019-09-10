@@ -260,15 +260,15 @@ DevSpace provides a couple of convenience commands for configuring the `images` 
 ### `devspace add image`
 To tell DevSpace to build an additional image, simply use the `devspace add image` command.
 ```bash
-devspace add image database --dockerfile=./db/Dockerfile --context=./db --image=dscr.io/username/mysql
+devspace add image database --image=dscr.io/username/mysql --dockerfile=./db/Dockerfile --context=./db
 ```
 
 This would add a new image called `database` to the `images` section. The resulting configuration would look similar to this one:
 
 ```yaml
 images:
-  database:                         # from --name
-    image: dscr.io/username/image   # from args[0]
+  database:                         # from args[0]
+    image: dscr.io/username/image   # from --image
     dockerfile: ./db/Dockerfile     # from --dockerfile
     context: ./db                   # from --context
 ```

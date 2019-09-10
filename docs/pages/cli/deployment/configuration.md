@@ -20,7 +20,14 @@ deployments:
 
 > Unlike images which are build in parallel, deployments will be deployed sequentially following the order in which they are specified in the `devspace.yaml`.
 
-How to configure a single deployment depends on the type of the deployment:
-- [**Component Configuration**](/docs/cli/deployment/components/configuration/overview-specification)
-- [**Manifest Configuration**](/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification)
-- [**Helm Chart Configuration**](/docs/cli/deployment/helm-charts/configuration/overview-specification)
+## Config Options
+The following config options exist for every deployment:
+- `name` stating the name of the deployment (required)
+- `component` for [**Configuring Component Deployments**](/docs/cli/deployment/components/configuration/overview-specification)
+- `kubectl` for [**Configuring Manifest Deployments**](/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification)
+- `helm` for [**Configuring Helm Chart Deployments**](/docs/cli/deployment/helm-charts/configuration/overview-specification)
+- `namespace` stating a namespace to deploy to (optional, see note below)
+
+> **Note:** Use `namespace` **only** if you want to run a deployment in another namespace than the remaining deployments. Generally, DevSpace uses the default namespace of the current kube-context and runs all deployments in the same namespace.
+
+> You **cannot** use `component`, `helm` and `kubectl` in combination. You must specify **exactly one** of the three. 

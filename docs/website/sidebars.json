@@ -40,8 +40,8 @@
         "ids": [
           "cli/deployment/deployment-types",
           "cli/deployment/components/what-are-components",
-          "cli/deployment/kubernetes-manifests/what-are-manifests",
-          "cli/deployment/helm-charts/what-are-helm-charts"
+          "cli/deployment/helm-charts/what-are-helm-charts",
+          "cli/deployment/kubernetes-manifests/what-are-manifests"
         ]
       },
       "cli/deployment/configuration",
@@ -59,17 +59,17 @@
       },
       {
         "type": "subcategory",
-        "label": "Configuration (Manifests)",
+        "label": "Configuration (Helm Charts)",
         "ids": [
-          "cli/deployment/kubernetes-manifests/configuration/overview-specification",
-          "cli/deployment/kubernetes-manifests/configuration/kustomize"
+          "cli/deployment/helm-charts/configuration/overview-specification"
         ]
       },
       {
         "type": "subcategory",
-        "label": "Configuration (Helm Charts)",
+        "label": "Configuration (Manifests)",
         "ids": [
-          "cli/deployment/helm-charts/configuration/overview-specification"
+          "cli/deployment/kubernetes-manifests/configuration/overview-specification",
+          "cli/deployment/kubernetes-manifests/configuration/kustomize"
         ]
       },
       {
@@ -89,8 +89,9 @@
         "label": "Configuration",
         "ids": [
           "cli/development/configuration/overview-specification",
-          "cli/development/configuration/file-synchronization",
           "cli/development/configuration/port-forwarding",
+          "cli/development/configuration/auto-open",
+          "cli/development/configuration/file-synchronization",
           "cli/development/configuration/logs-streaming",
           "cli/development/configuration/auto-reloading",
           "cli/development/configuration/interactive-mode"

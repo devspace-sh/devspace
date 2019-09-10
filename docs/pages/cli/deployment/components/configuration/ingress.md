@@ -20,6 +20,8 @@ deployments:
         path: /login
 ```
 
+> You need to define a `service` with at least one `port` to be able to use the `ingress` option.
+
 [What are components?](/docs/cli/deployment/components/what-are-components)
 
 
@@ -48,6 +50,7 @@ deployments:
       - host: ${DYNAMIC_HOSTNAME}
 ```
 
+
 ### `rules[*].tls`
 The `tls` option expects either:
 - a string stating the name of a Kubernetes secret which contains the TLS certificate to use for SSL
@@ -60,7 +63,7 @@ The `tls` option expects either:
 tls: false
 ```
 
-#### Example: Enabling TLS
+#### Example: Enabling TLS for Single Hosts
 ```yaml
 deployments:
 - name: frontend
@@ -74,7 +77,9 @@ deployments:
       rules:
       - host: my-static-host.tld
         tls: true
+      - host: my-static-host2.tld
 ```
+
 
 ### `rules[*].path`
 The `path` option expects a URL path which is used for routing. Only requests to this `path` will be forwarded to the service of this component.
@@ -100,6 +105,7 @@ deployments:
         path: /login
 ```
 
+
 ### `rules[*].servicePort`
 The `servicePort` option expects an integer stating the port of the service to which the traffic should be routed for the hostname stated in `host`.
 
@@ -120,4 +126,43 @@ deployments:
       rules:
       - host: my-static-host.tld
         servicePort: 8000
+```
+
+
+## Ingress Options
+
+### `name`
+#TODO
+
+### `labels`
+#TODO
+
+### `annotations`
+#TODO
+
+### `tls`
+The `tls` option expects either:
+- a string stating the name of a Kubernetes secret which contains the TLS certificate to use for SSL
+- a boolean to enable/disable TLS (an auto-generated name of a secret will be created referencing a Kubernetes secret containing the TLS certificate to use for SSL)
+
+#### Default Value For `tls`
+```yaml
+tls: false
+```
+
+#### Example: Enabling TLS for All Hosts
+```yaml
+deployments:
+- name: frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    service:
+      ports:
+      - port: 3000
+    ingress:
+      tls: true
+      rules:
+      - host: my-static-host.tld
+      - host: my-static-host2.tld
 ```

@@ -153,13 +153,13 @@ See [Scaling](/docs/cli/deployment/components/configuration/containers) for deta
 ### `deployments[*].component.rollingUpdate`
 The `rollingUpdate` option the Kubernetes configuration for rolling updates. 
 
-The following fields are supported for StatefulSets (at least one of the containers mounts a persistent volume):
-- `partition`
-
-The following fields are supported for Deployments (none of the containers mounts any persistent volumes):
+The following fields are supported for **Deployments** (none of the containers mounts any persistent volumes):
 - `enabled`
 - `maxSurge`
 - `maxUnavailable`
+
+The following fields are supported for **StatefulSets** (at least one of the containers mounts a persistent volume):
+- `partition`
 
 > If `enabled = true`, the Kubernetes rolling update type will be set to `RollingUpdate`. By default, this value is `Recreate`.
 

@@ -44,7 +44,7 @@ The image `backend` would be built using `docker` and `docker build` would be ca
 
 
 ## `buildArgs`
-The `buildArgs` option expects an array of strings representing values for the `--build-arg` flag used for `docker` or `kaniko` build commands.
+The `buildArgs` option expects a map of buildArgs representing values for the `--build-arg` flag used for `docker` or `kaniko` build commands.
 
 #### Example: Defining Build Args for Docker
 ```yaml
@@ -55,10 +55,8 @@ images:
       docker:
         options:
           buildArgs:
-          - "arg1"
-          - "arg-value-2"
-          - "arg2"
-          - "arg-value-2"
+            arg1: arg-value-2
+            arg2: arg-value-2
 ```
 **Explanation:**  
 The image `backend` would be built using `docker` and `docker build` would be called using the `--build-arg arg1=arg-value-1 --build-arg arg2=arg-value-2` flags.
