@@ -99,18 +99,18 @@ func TestResolver(t *testing.T) {
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
 						Git:      "https://github.com/devspace-cloud/example-dependency.git",
-						Revision: "2724aff6cc3f93f9066770fd630170d19744b906",
+						Revision: "f8b2aa8cf8ac03238a28e8f78382b214d619893f",
 						SubPath:  "mysubpath",
 					},
 				},
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					ID:        "https://github.com/devspace-cloud/example-dependency.git@2724aff6cc3f93f9066770fd630170d19744b906:mysubpath",
-					LocalPath: filepath.Join(DependencyFolderPath, "7136a1278b7b1ada5638f91b974342daf7191b774022bf445c4be5f7f8472330", "mysubpath"),
+					ID:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
+					LocalPath: filepath.Join(DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
-			expectedLog: "\nWait Resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@2724aff6cc3f93f9066770fd630170d19744b906:mysubpath\nDone Resolved 1 dependencies",
+			expectedLog: "\nWait Resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic allowed dependency",
