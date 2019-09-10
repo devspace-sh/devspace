@@ -125,7 +125,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			expectedPanic:  fmt.Sprintf("Error deploying dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
-			expectedOutput: "\nWait Resolving dependencies",
+			expectedOutput: "\nInfo Start resolving dependencies",
 		},
 		buildTestCase{
 			name: "1 undeployable image",
