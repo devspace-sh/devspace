@@ -392,6 +392,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 				ContainerName: cmd.Container,
 				LabelSelector: cmd.LabelSelector,
 				Namespace:     cmd.Namespace,
+				Interactive:   true,
 			},
 		}
 

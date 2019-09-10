@@ -8,6 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	v1 "k8s.io/api/core/v1"
@@ -89,9 +90,13 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 				return nil, err
 			}
 
+			// Take first pod if only one is found
 			if len(pods) == 1 {
 				return pods[0], nil
-			} else {
+			}
+
+			// Show picker if allowed
+			if t.allowPick {
 				podNames := []string{}
 				podMap := map[string]*v1.Pod{}
 				for _, pod := range pods {
@@ -103,6 +108,13 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 					Options:  podNames,
 				})
 				return podMap[podName], nil
+			}
+
+			// Take first pod and print warning if picker cannot be shown
+			if len(pods) > 0 {
+				log.Warnf("Multiple pods with image selector %s found. Using first pod found", t.imageSelector)
+
+				return pods[0], nil
 			}
 		} else if t.labelSelector != "" {
 			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.namespace, time.Second*120)
