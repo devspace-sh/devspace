@@ -12,7 +12,7 @@ type imageCmd struct {
 	Tag            string
 	ContextPath    string
 	DockerfilePath string
-	BuildEngine    string
+	BuildTool    string
 }
 
 func newImageCmd() *cobra.Command {
@@ -44,7 +44,7 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=kani
 	addImageCmd.Flags().StringVar(&cmd.Tag, "tag", "", "The tag of the image")
 	addImageCmd.Flags().StringVar(&cmd.ContextPath, "context", "", "The path of the images' context")
 	addImageCmd.Flags().StringVar(&cmd.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
-	addImageCmd.Flags().StringVar(&cmd.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
+	addImageCmd.Flags().StringVar(&cmd.BuildTool, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
 
 	addImageCmd.MarkFlagRequired("image")
 	return addImageCmd
@@ -61,7 +61,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddImage(args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildEngine)
+	err = configure.AddImage(args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
 	if err != nil {
 		log.Fatal(err)
 	}

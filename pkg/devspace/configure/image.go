@@ -327,7 +327,7 @@ func loginDevSpaceCloud(cloudProvider string) error {
 }
 
 // AddImage adds an image to the devspace
-func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
+func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildTool string) error {
 	config := configutil.GetBaseConfig(context.Background())
 
 	imageConfig := &v1.ImageConfig{
@@ -344,20 +344,20 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 		imageConfig.Dockerfile = dockerfilePath
 	}
 
-	if buildEngine == "docker" {
+	if buildTool == "docker" {
 		if imageConfig.Build == nil {
 			imageConfig.Build = &v1.BuildConfig{}
 		}
 
 		imageConfig.Build.Docker = &v1.DockerConfig{}
-	} else if buildEngine == "kaniko" {
+	} else if buildTool == "kaniko" {
 		if imageConfig.Build == nil {
 			imageConfig.Build = &v1.BuildConfig{}
 		}
 
 		imageConfig.Build.Kaniko = &v1.KanikoConfig{}
-	} else if buildEngine != "" {
-		log.Errorf("BuildEngine %v unknown. Please select one of docker|kaniko", buildEngine)
+	} else if buildTool != "" {
+		log.Errorf("BuildTool %v unknown. Please select one of docker|kaniko", buildTool)
 	}
 
 	if config.Images == nil {

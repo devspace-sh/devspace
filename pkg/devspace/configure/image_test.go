@@ -250,7 +250,7 @@ func TestAddAndRemoveImage(t *testing.T) { //Create tempDir and go into it
 	assert.Equal(t, "SecoundImageName", *(*config.Images)["SecoundTestImage"].Image, "New image not correctly added")
 	assert.Equal(t, "v2", *(*config.Images)["SecoundTestImage"].Tag, "New image not correctly added")
 
-	AddImage("ThirdTestImage", "ThirdImageName", "v3", "mycontext", "Dockerfile", "wrongBuildEngine")
+	AddImage("ThirdTestImage", "ThirdImageName", "v3", "mycontext", "Dockerfile", "wrongBuildTool")
 	assert.Equal(t, 3, len(*config.Images), "New image not added: Wrong number of images")
 	assert.Equal(t, "ThirdImageName", *(*config.Images)["ThirdTestImage"].Image, "New image not correctly added")
 	assert.Equal(t, "v3", *(*config.Images)["ThirdTestImage"].Tag, "New image not correctly added")
