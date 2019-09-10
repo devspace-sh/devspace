@@ -21,7 +21,7 @@ type imageNameAndTag struct {
 }
 
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential, skipBuildIfAlreadyBuilt bool, log logpkg.Logger) (map[string]string, error) {
+func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Client, skipPush, isDev, forceRebuild, sequential, ignoreContextPathChanges bool, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -74,13 +74,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(cache)
+		needRebuild, err := builder.ShouldRebuild(cache, ignoreContextPathChanges)
 		if err != nil {
 			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
 		}
 
-		imageCache := cache.GetImageCache(imageConfigName)
-		if forceRebuild == false && (needRebuild == false || (skipBuildIfAlreadyBuilt && imageCache.Tag != "")) {
+		if forceRebuild == false && needRebuild == false {
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}

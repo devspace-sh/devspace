@@ -22,6 +22,7 @@ type CmdParameter struct {
 	ContainerName string
 	PodName       string
 	Pick          *bool
+	Interactive   bool
 }
 
 // ConfigParameter holds the parameter we receive from the config

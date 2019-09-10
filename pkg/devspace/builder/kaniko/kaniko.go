@@ -94,8 +94,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	return b.helper.ShouldRebuild(cache)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
@@ -130,7 +130,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
 	var err error
 
 	// Buildoptions
@@ -148,8 +148,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
 		if err != nil {
 			return err
 		}

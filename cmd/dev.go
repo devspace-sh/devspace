@@ -37,6 +37,7 @@ type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
+	SkipOpen                bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -342,6 +343,29 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 		defer watcher.Stop()
 	}
 
+	// Run dev.open configs
+	if config.Dev.Open != nil && cmd.SkipOpen == false {
+		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
+		cmd.SkipOpen = true
+
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
+				maxWait := 4 * time.Minute
+				log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
+
+				go func() {
+					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
+					err := openURL(openConfig.URL, nil, "", logutil.Discard, maxWait)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						// Do not print warning
+						// log.Warn(err)
+					}
+				}()
+			}
+		}
+	}
+
 	// Check if we should open a terminal
 	if interactiveMode {
 		var imageSelector []string
@@ -368,6 +392,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 				ContainerName: cmd.Container,
 				LabelSelector: cmd.LabelSelector,
 				Namespace:     cmd.Namespace,
+				Interactive:   true,
 			},
 		}
 
@@ -383,40 +408,52 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, log)
 	}
 
-	// Build an image selector
-	imageSelector := []string{}
-	for _, imageConfigCache := range generatedConfig.GetActive().Images {
-		if imageConfigCache.ImageName != "" {
-			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-		}
-	}
-
-	// Run dev.open configs
-	if config.Dev.Open != nil {
-		logFile := logutil.GetFileLogger("default")
-
-		for _, openConfig := range config.Dev.Open {
-			if openConfig.URL != "" {
-				go func() {
-					err := openURL(openConfig.URL, nil, "", logFile)
-					if err != nil {
-						// Use warn instead of fatal to prevent exit
-						logFile.Warn(err)
+	// Check if we should show logs
+	if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		// Build an image selector
+		imageSelector := []string{}
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for _, configImageName := range config.Dev.Logs.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
 					}
-				}()
+				}
+			}
+		} else {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for configImageName := range config.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
+					}
+				}
 			}
 		}
-	}
 
-	// Log multiple pods
-	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
-	if err != nil {
-		// Check if we should reload
-		if _, ok := err.(*reloadError); ok {
-			return 0, err
+		// Show last log lines
+		tail := int64(50)
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
+			tail = int64(*config.Dev.Logs.ShowLast)
 		}
 
-		log.Warnf("Couldn't print logs: %v", err)
+		// Log multiple images at once
+		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, log)
+		if err != nil {
+			// Check if we should reload
+			if _, ok := err.(*reloadError); ok {
+				return 0, err
+			}
+
+			log.Warnf("Couldn't print logs: %v", err)
+		}
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
@@ -544,8 +581,9 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 
 		// Set image entrypoints if necessary
 		for _, imageConf := range config.Dev.Interactive.Images {
-			if len(imageConf.Entrypoint) == 0 {
-				imageConf.Entrypoint = []string{"sleep", "9999999999"}
+			if len(imageConf.Entrypoint) == 0 && len(imageConf.Cmd) == 0 {
+				imageConf.Entrypoint = []string{"sleep"}
+				imageConf.Cmd = []string{"999999999"}
 			}
 		}
 

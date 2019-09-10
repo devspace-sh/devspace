@@ -152,7 +152,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	}
 
 	// Add devspace specific values
-	if d.DeploymentConfig.Helm.DevSpaceValues == nil || *d.DeploymentConfig.Helm.DevSpaceValues == true {
+	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags == true {
 		// Replace image names
 		shouldRedeploy := replaceContainerNames(overwriteValues, cache, builtImages)
 		if forceDeploy == false && shouldRedeploy {

@@ -41,13 +41,14 @@ func New(config *latest.Config, kubectl *kubectl.Client, deployConfig *latest.De
 		Name:      deployConfig.Name,
 		Namespace: deployConfig.Namespace,
 		Helm: &latest.HelmConfig{
-			Chart:           DevSpaceChartConfig,
-			Values:          values,
-			Wait:            deployConfig.Component.Options.Wait,
-			Rollback:        deployConfig.Component.Options.Rollback,
-			Force:           deployConfig.Component.Options.Force,
-			Timeout:         deployConfig.Component.Options.Timeout,
-			TillerNamespace: deployConfig.Component.Options.TillerNamespace,
+			Chart:            DevSpaceChartConfig,
+			Values:           values,
+			ReplaceImageTags: deployConfig.Component.Options.ReplaceImageTags,
+			Wait:             deployConfig.Component.Options.Wait,
+			Rollback:         deployConfig.Component.Options.Rollback,
+			Force:            deployConfig.Component.Options.Force,
+			Timeout:          deployConfig.Component.Options.Timeout,
+			TillerNamespace:  deployConfig.Component.Options.TillerNamespace,
 		},
 	}, log)
 	if err != nil {

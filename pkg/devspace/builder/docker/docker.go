@@ -66,14 +66,14 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
-	return b.helper.ShouldRebuild(cache)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
 }
 
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
 	var (
 		fullImageName      = b.helper.ImageName + ":" + b.helper.ImageTag
 		displayRegistryURL = "hub.docker.com"
@@ -174,8 +174,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
 		if err != nil {
 			return err
 		}
