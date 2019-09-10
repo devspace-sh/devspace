@@ -257,11 +257,12 @@ type IngressRuleConfig struct {
 
 // ComponentConfigOptions defines the specific helm options used during deployment of a component
 type ComponentConfigOptions struct {
-	Wait            *bool  `yaml:"wait,omitempty"`
-	Rollback        *bool  `yaml:"rollback,omitempty"`
-	Force           *bool  `yaml:"force,omitempty"`
-	Timeout         *int64 `yaml:"timeout,omitempty"`
-	TillerNamespace string `yaml:"tillerNamespace,omitempty"`
+	Wait             *bool  `yaml:"wait,omitempty"`
+	Rollback         *bool  `yaml:"rollback,omitempty"`
+	Force            *bool  `yaml:"force,omitempty"`
+	Timeout          *int64 `yaml:"timeout,omitempty"`
+	TillerNamespace  string `yaml:"tillerNamespace,omitempty"`
+	ReplaceImageTags *bool  `yaml:"replaceImageTags,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
