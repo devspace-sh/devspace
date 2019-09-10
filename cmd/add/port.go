@@ -10,7 +10,6 @@ import (
 type portCmd struct {
 	LabelSelector string
 	Namespace     string
-	Service       string
 }
 
 func newPortCmd() *cobra.Command {
