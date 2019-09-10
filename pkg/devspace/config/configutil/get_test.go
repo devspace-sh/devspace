@@ -174,8 +174,37 @@ type getConfigTestCase struct {
 }
 
 func TestGetConfig(t *testing.T) {
-	_, err := os.Stat("NotThere")
+	//Create tempDir and go into it
+	dir, err := ioutil.TempDir("", "testDir")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	// Delete temp folder after test
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
+
+	_, err = os.Stat("NotThere")
 	notThereError := strings.ReplaceAll(err.Error(), "NotThere", "%s")
+	_, err = ioutil.ReadFile(dir)
+	isDirError := strings.ReplaceAll(err.Error(), dir, "%s")
 
 	testCases := []getConfigTestCase{
 		getConfigTestCase{
@@ -208,7 +237,7 @@ func TestGetConfig(t *testing.T) {
 			files: map[string]interface{}{
 				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
 			},
-			expectedPanic: "read devspace.yaml: The handle is invalid.",
+			expectedPanic: fmt.Sprintf(isDirError, constants.DefaultConfigPath),
 		},
 		getConfigTestCase{
 			name: "invalid version",
