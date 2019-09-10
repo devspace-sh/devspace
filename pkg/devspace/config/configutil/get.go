@@ -24,6 +24,7 @@ var config *latest.Config // merged config
 
 // Thread-safety helper
 var getConfigOnce sync.Once
+var getConfigOnceMutex sync.Mutex
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
 func ConfigExists() bool {
@@ -52,8 +53,19 @@ func configExistsInPath(path string) bool {
 	return false // Normal config file found
 }
 
+// ResetConfig resets the current config
+func ResetConfig() {
+	getConfigOnceMutex.Lock()
+	defer getConfigOnceMutex.Unlock()
+
+	getConfigOnce = sync.Once{}
+}
+
 // InitConfig initializes the config objects
 func InitConfig() *latest.Config {
+	getConfigOnceMutex.Lock()
+	defer getConfigOnceMutex.Unlock()
+
 	getConfigOnce.Do(func() {
 		config = latest.New().(*latest.Config)
 	})
@@ -63,20 +75,20 @@ func InitConfig() *latest.Config {
 
 // GetBaseConfig returns the config
 func GetBaseConfig(ctx context.Context) *latest.Config {
-	loadConfigOnce(ctx, false)
+	loadConfigOnce(ctx, "", false)
 
 	return config
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig(ctx context.Context) *latest.Config {
-	loadConfigOnce(ctx, true)
+func GetConfig(ctx context.Context, profile string) *latest.Config {
+	loadConfigOnce(ctx, profile, true)
 
 	return config
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, log log.Logger) (*latest.Config, error) {
+func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, profile string, log log.Logger) (*latest.Config, error) {
 	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Check devspace.yaml
@@ -85,7 +97,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		// Check for legacy devspace-configs.yaml
 		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
 		if err == nil {
-			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use the new config option 'configs' in 'devspace.yaml'")
+			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
 		return nil, fmt.Errorf("Couldn't find '%s': %v", err)
@@ -102,7 +114,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap)
+	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -133,23 +145,26 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 }
 
 // loadConfigOnce loads the config globally once
-func loadConfigOnce(ctx context.Context, allowProfile bool) *latest.Config {
+func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *latest.Config {
+	getConfigOnceMutex.Lock()
+	defer getConfigOnceMutex.Unlock()
+
 	getConfigOnce.Do(func() {
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig(profile)
 		if err != nil {
 			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
 		}
 
 		// Check if we should load a specific config
-		if allowProfile && generatedConfig.ActiveProfile != "" && ctx.Value(constants.ProfileContextKey) == nil {
-			ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+		if allowProfile && generatedConfig.ActiveProfile != "" && profile == "" {
+			profile = generatedConfig.ActiveProfile
 		} else if !allowProfile {
-			ctx = context.WithValue(ctx, constants.ProfileContextKey, nil)
+			profile = ""
 		}
 
 		// Load base config
-		config, err = GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
+		config, err = GetConfigFromPath(ctx, generatedConfig, ".", profile, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

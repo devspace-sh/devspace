@@ -93,13 +93,22 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		ingressControllerWarning = ""
 	)
 
+	// Load generated config if possible
+	var generatedConfig *generated.Config
+	if configExists {
+		generatedConfig, err = generated.LoadConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Get kubernetes client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,7 +123,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
 	}
 
 	namespace := client.Namespace
@@ -252,13 +261,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		domain = "http://" + domain
 	}
 
-	err = openURL(domain, client, namespace, log.GetInstance())
+	err = openURL(domain, client, namespace, log.GetInstance(), 4*time.Minute)
 	if err != nil {
 		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
 	}
 }
 
-func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger) error {
+func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
 	// Loop and check if http code is != 502
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
@@ -267,12 +276,10 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 	time.Sleep(time.Second * 2)
 
 	now := time.Now()
-	for time.Since(now) < time.Minute*4 {
-		// Check if domain is ready
-		resp, err := http.Get(url)
-		if err != nil {
-			return errors.Errorf("Error making request to %s: %v", url, err)
-		} else if resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
+	for time.Since(now) < maxWait {
+		// Check if domain is ready => ignore error as we will retry request
+		resp, _ := http.Get(url)
+		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
 			open.Start(url)
 			log.Donef("Successfully opened %s", url)
@@ -291,7 +298,7 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 			}
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 3)
 	}
 	return nil
 }

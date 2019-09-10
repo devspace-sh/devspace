@@ -45,10 +45,10 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Fill variables config
-	configutil.GetConfig(context.Background())
+	configutil.GetConfig(context.Background(), "")
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
 		log.Fatal(err)
 	}

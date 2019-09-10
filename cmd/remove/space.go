@@ -131,7 +131,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 
 	if configExists {
 		// Get current space
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}

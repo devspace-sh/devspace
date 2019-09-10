@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
@@ -53,6 +54,12 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		"STATUS",
 	}
 
+	// Load generated
+	generatedConfig, err := generated.LoadConfig("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create new kube client
 	client, err := kubectl.NewDefaultClient()
 	if err != nil {
@@ -60,13 +67,13 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Show warning if the old kube context was different
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), "")
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

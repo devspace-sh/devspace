@@ -114,7 +114,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	} else if cmd.Chart != "" {
 		newDeployment, err = configure.GetHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
 	} else if cmd.Dockerfile != "" {
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}

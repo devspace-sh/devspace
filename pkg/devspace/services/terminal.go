@@ -38,6 +38,11 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 	log.WriteString("\n")
 
+	if selectorParameter.CmdParameter.Interactive == true && len(container.Command) > 0 {
+		log.WriteString("\n")
+		log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.\n", container.Command)
+	}
+
 	go func() {
 		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)
 	}()

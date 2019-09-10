@@ -55,7 +55,7 @@ The first command listed above would open an interactive terminal proxy and star
 ## Open terminals for other containers
 The `devspace enter` command supports a variety of flags to open terminals for containers other than the detault container specified in the configuration.
 ```bash
-devspace enter -p                   # --pick | Show a list of pods and containers to enter into
+devspace enter --pick               # --pick | Show a list of pods and containers to enter into
 devspace enter -c my-container      # --container | Select container "my-container" within the default terminal component
 devspace enter -s mysql             # --selector | Use the selector with name "mysql" to start the terminal proxy
 devspace enter -l "release=test"    # --label-sector | Use the label selector "release=test" to start the terminal proxy

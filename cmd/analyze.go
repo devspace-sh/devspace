@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -51,9 +52,18 @@ devspace analyze --namespace=mynamespace
 // RunAnalyze executes the functionality "devspace analyze"
 func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	// Set config root
-	_, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Load generated config if possible
+	var generatedConfig *generated.Config
+	if configExists {
+		generatedConfig, err = generated.LoadConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Create kubectl client
@@ -63,7 +73,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Print warning
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -7,6 +7,6 @@ import (
 
 // Interface defines methods for builders docker, kaniko and custom
 type Interface interface {
-	ShouldRebuild(cache *generated.CacheConfig) (bool, error)
+	ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error)
 	Build(log log.Logger) error
 }

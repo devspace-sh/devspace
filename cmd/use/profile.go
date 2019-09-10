@@ -81,7 +81,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
 		log.Fatalf("Cannot load generated config: %v", err)
 	}

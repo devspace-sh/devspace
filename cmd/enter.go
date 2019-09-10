@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -45,7 +46,7 @@ Execute a command or start a new terminal in your
 devspace:
 
 devspace enter
-devspace enter -p # Select pod to enter
+devspace enter --pick # Select pod to enter
 devspace enter bash
 devspace enter -s my-selector
 devspace enter -c my-container
@@ -64,7 +65,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
 	enterCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", false, "Switch kubectl context to the DevSpace context")
-	enterCmd.Flags().BoolVarP(&cmd.Pick, "pick", "p", false, "Select a pod")
+	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return enterCmd
 }
@@ -72,9 +73,18 @@ devspace enter bash -l release=test
 // Run executes the command logic
 func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Set config root
-	_, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Load generated config if possible
+	var generatedConfig *generated.Config
+	if configExists {
+		generatedConfig, err = generated.LoadConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Get kubectl client
@@ -83,7 +93,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,7 +107,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Get config
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
 	}
 
 	// Build params

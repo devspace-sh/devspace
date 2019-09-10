@@ -20,6 +20,3 @@ const DevSpaceCloudNamespace = "devspace-cloud"
 
 // KubeContextKey is used in contexts
 const KubeContextKey = "kubecontext"
-
-// ProfileContextKey is used in contexts
-const ProfileContextKey = "profile"

@@ -41,7 +41,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), "")
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")

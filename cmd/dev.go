@@ -36,6 +36,8 @@ import (
 type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
+	SkipOpen                bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -58,6 +60,7 @@ type DevCmd struct {
 
 	KubeContext string
 	Namespace   string
+	Profile     string
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -89,6 +92,7 @@ Use Interactive Mode:
 	}
 
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -112,6 +116,7 @@ Use Interactive Mode:
 
 	devCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
 	devCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
+	devCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	devCmd.Flags().BoolVar(&cmd.SwitchContext, "switch-context", true, "Switch kubectl context to the DevSpace context")
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
@@ -137,8 +142,11 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Validate flags
 	cmd.validateFlags()
 
+	// Create context
+	ctx := context.Background()
+
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
@@ -149,13 +157,16 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Add kube context to context
+	ctx = context.WithValue(ctx, constants.KubeContextKey, client.CurrentContext)
+
 	// Get the config
-	config := cmd.loadConfig(client, generatedConfig)
+	config := cmd.loadConfig(ctx)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -187,7 +198,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args)
+	exitCode, err := cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -196,10 +207,10 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 	os.Exit(exitCode)
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
 			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -207,7 +218,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -256,15 +267,15 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, generatedConfig, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(ctx, config, generatedConfig, client, args, log.GetInstance())
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig(client, generatedConfig)
+				config := cmd.loadConfig(ctx)
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(config, generatedConfig, client, args)
+				return cmd.buildAndDeploy(ctx, config, generatedConfig, client, args, false)
 			}
 
 			return 0, err
@@ -274,7 +285,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
@@ -310,7 +321,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
-		watcher, err := watch.New(autoReloadPaths, func(changed []string, deleted []string) error {
+		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, func(changed []string, deleted []string) error {
 			once.Do(func() {
 				if interactiveMode {
 					log.Info("Change detected, will reload in 2 seconds")
@@ -330,6 +341,29 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 		watcher.Start()
 		defer watcher.Stop()
+	}
+
+	// Run dev.open configs
+	if config.Dev.Open != nil && cmd.SkipOpen == false {
+		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
+		cmd.SkipOpen = true
+
+		for _, openConfig := range config.Dev.Open {
+			if openConfig.URL != "" {
+				maxWait := 4 * time.Minute
+				log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
+
+				go func() {
+					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
+					err := openURL(openConfig.URL, nil, "", logutil.Discard, maxWait)
+					if err != nil {
+						// Use warn instead of fatal to prevent exit
+						// Do not print warning
+						// log.Warn(err)
+					}
+				}()
+			}
+		}
 	}
 
 	// Check if we should open a terminal
@@ -358,6 +392,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 				ContainerName: cmd.Container,
 				LabelSelector: cmd.LabelSelector,
 				Namespace:     cmd.Namespace,
+				Interactive:   true,
 			},
 		}
 
@@ -373,40 +408,52 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, log)
 	}
 
-	// Build an image selector
-	imageSelector := []string{}
-	for _, imageConfigCache := range generatedConfig.GetActive().Images {
-		if imageConfigCache.ImageName != "" {
-			imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-		}
-	}
-
-	// Run dev.open configs
-	if config.Dev.Open != nil {
-		logFile := logutil.GetFileLogger("default")
-
-		for _, openConfig := range config.Dev.Open {
-			if openConfig.URL != "" {
-				go func() {
-					err := openURL(openConfig.URL, nil, "", logFile)
-					if err != nil {
-						// Use warn instead of fatal to prevent exit
-						logFile.Warn(err)
+	// Check if we should show logs
+	if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		// Build an image selector
+		imageSelector := []string{}
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for _, configImageName := range config.Dev.Logs.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
 					}
-				}()
+				}
+			}
+		} else {
+			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
+				if imageConfigCache.ImageName != "" {
+					// Check that they are also in the real config
+					for configImageName := range config.Images {
+						if configImageName == generatedImageName {
+							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
+							break
+						}
+					}
+				}
 			}
 		}
-	}
 
-	// Log multiple pods
-	err := client.LogMultiple(imageSelector, exitChan, nil, os.Stdout, log)
-	if err != nil {
-		// Check if we should reload
-		if _, ok := err.(*reloadError); ok {
-			return 0, err
+		// Show last log lines
+		tail := int64(50)
+		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
+			tail = int64(*config.Dev.Logs.ShowLast)
 		}
 
-		log.Warnf("Couldn't print logs: %v", err)
+		// Log multiple images at once
+		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, log)
+		if err != nil {
+			// Check if we should reload
+			if _, ok := err.(*reloadError); ok {
+				return 0, err
+			}
+
+			log.Warnf("Couldn't print logs: %v", err)
+		}
 	}
 
 	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
@@ -483,15 +530,11 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated.Config) *latest.Config {
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
-	ctx = context.WithValue(ctx, constants.ProfileContextKey, generatedConfig.ActiveProfile)
+func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
+	configutil.ResetConfig()
 
-	// Get config with adjusted cluster config
-	config, err := configutil.GetConfigFromPath(ctx, generatedConfig, ".", log.GetInstance())
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Load config
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && ((config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true) || len(config.Dev.Interactive.Images) > 0 || config.Dev.Interactive.Terminal != nil)
@@ -538,8 +581,9 @@ func (cmd *DevCmd) loadConfig(client *kubectl.Client, generatedConfig *generated
 
 		// Set image entrypoints if necessary
 		for _, imageConf := range config.Dev.Interactive.Images {
-			if len(imageConf.Entrypoint) == 0 {
-				imageConf.Entrypoint = []string{"sleep", "9999999999"}
+			if len(imageConf.Entrypoint) == 0 && len(imageConf.Cmd) == 0 {
+				imageConf.Entrypoint = []string{"sleep"}
+				imageConf.Cmd = []string{"999999999"}
 			}
 		}
 

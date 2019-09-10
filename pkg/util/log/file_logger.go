@@ -2,6 +2,7 @@ package log
 
 import (
 	"os"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -11,6 +12,8 @@ import (
 var Logdir = "./.devspace/logs/"
 
 var logs = map[string]Logger{}
+var logsMutext sync.Mutex
+
 var runtimeErrorHandlersOverriden bool
 
 type fileLogger struct {
@@ -19,8 +22,10 @@ type fileLogger struct {
 
 // GetFileLogger returns a logger instance for the specified filename
 func GetFileLogger(filename string) Logger {
-	log, _ := logs[filename]
+	logsMutext.Lock()
+	defer logsMutext.Unlock()
 
+	log := logs[filename]
 	if log == nil {
 		newLogger := &fileLogger{
 			logger: logrus.New(),
@@ -30,7 +35,6 @@ func GetFileLogger(filename string) Logger {
 		os.MkdirAll(Logdir, os.ModePerm)
 
 		logFile, err := os.OpenFile(Logdir+filename+".log", os.O_APPEND|os.O_CREATE|os.O_RDWR, os.ModePerm)
-
 		if err != nil {
 			newLogger.Warnf("Unable to open " + filename + " log file. Will log to stdout.")
 		} else {

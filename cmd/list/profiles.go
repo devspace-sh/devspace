@@ -49,7 +49,7 @@ func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
 		log.Fatal(err)
 	}

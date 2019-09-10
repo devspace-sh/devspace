@@ -29,13 +29,15 @@ type BuildHelper struct {
 	ImageName  string
 	ImageTag   string
 	Entrypoint []string
+	Cmd        []string
 
+	IsDev      bool
 	KubeClient *kubectl.Client
 }
 
 // BuildHelperInterface is the interface the build helper uses to build an image
 type BuildHelperInterface interface {
-	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, log log.Logger) error
+	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, cmd []string, log log.Logger) error
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
@@ -46,16 +48,27 @@ func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineNam
 	)
 
 	// Check if we should overwrite entrypoint
-	var entrypoint []string
+	var (
+		entrypoint []string
+		cmd        []string
+	)
 	if isDev {
 		if config.Dev != nil && config.Dev.Interactive != nil {
 			for _, imageOverrideConfig := range config.Dev.Interactive.Images {
 				if imageOverrideConfig.Name == imageConfigName {
 					entrypoint = imageOverrideConfig.Entrypoint
+					cmd = imageOverrideConfig.Cmd
 					break
 				}
 			}
 		}
+	}
+
+	if len(imageConf.Entrypoint) > 0 && len(entrypoint) == 0 {
+		entrypoint = imageConf.Entrypoint
+	}
+	if len(imageConf.Cmd) > 0 && len(cmd) == 0 {
+		cmd = imageConf.Cmd
 	}
 
 	return &BuildHelper{
@@ -70,8 +83,10 @@ func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineNam
 		EngineName: engineName,
 
 		Entrypoint: entrypoint,
+		Cmd:        cmd,
 		Config:     config,
 
+		IsDev:      isDev,
 		KubeClient: kubeClient,
 	}
 }
@@ -92,7 +107,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 	log.Infof("Building image '%s' with engine '%s'", b.ImageName, b.EngineName)
 
 	// Build Image
-	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, log)
+	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)
 	if err != nil {
 		return fmt.Errorf("Error during image build: %v", err)
 	}
@@ -102,7 +117,9 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 }
 
 // ShouldRebuild determines if the image should be rebuilt
-func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) {
+func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+	imageCache := cache.GetImageCache(b.ImageConfigName)
+
 	// Hash dockerfile
 	_, err := os.Stat(b.DockerfilePath)
 	if err != nil {
@@ -112,28 +129,6 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 	if err != nil {
 		return false, errors.Wrap(err, "hash dockerfile")
 	}
-
-	// Hash context path
-	contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
-	if err != nil {
-		return false, errors.Wrap(err, "get context from local dir")
-	}
-
-	excludes, err := build.ReadDockerignore(contextDir)
-	if err != nil {
-		return false, fmt.Errorf("Error reading .dockerignore: %v", err)
-	}
-
-	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
-	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
-	excludes = append(excludes, ".devspace/")
-
-	contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
-	if err != nil {
-		return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
-	}
-
-	imageCache := cache.GetImageCache(b.ImageConfigName)
 
 	// Hash image config
 	configStr, err := yaml.Marshal(*b.ImageConf)
@@ -145,19 +140,48 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig) (bool, error) 
 
 	// Hash entrypoint
 	entrypointHash := ""
-	if b.Entrypoint != nil {
+	if len(b.Entrypoint) > 0 {
 		for _, str := range b.Entrypoint {
 			entrypointHash += str
 		}
-
-		entrypointHash = hash.String(string(entrypointHash))
+	}
+	if len(b.Cmd) > 0 {
+		for _, str := range b.Cmd {
+			entrypointHash += str
+		}
+	}
+	if entrypointHash != "" {
+		entrypointHash = hash.String(entrypointHash)
 	}
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
-	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ContextHash != contextHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+	if ignoreContextPathChanges == false {
+		// Hash context path
+		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
+		if err != nil {
+			return false, errors.Wrap(err, "get context from local dir")
+		}
+
+		excludes, err := build.ReadDockerignore(contextDir)
+		if err != nil {
+			return false, fmt.Errorf("Error reading .dockerignore: %v", err)
+		}
+
+		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+		excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+		excludes = append(excludes, ".devspace/")
+
+		contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
+		if err != nil {
+			return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
+		}
+
+		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash
+		imageCache.ContextHash = contextHash
+	}
 
 	imageCache.DockerfileHash = dockerfileHash
-	imageCache.ContextHash = contextHash
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.EntrypointHash = entrypointHash
 

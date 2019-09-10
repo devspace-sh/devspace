@@ -20,10 +20,12 @@ import (
 type PurgeCmd struct {
 	Deployments             string
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
 	PurgeDependencies       bool
 
 	Namespace   string
 	KubeContext string
+	Profile     string
 }
 
 // NewPurgeCmd creates a new purge command
@@ -49,10 +51,12 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
 	purgeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
+	purgeCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
 	return purgeCmd
 }
@@ -70,15 +74,24 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	log.StartFileLogging()
 
+	// Get config with adjusted cluster config
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Add kube context to context
+	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
@@ -86,13 +99,8 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext))
+	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	deployments := []string{}
 	if cmd.Deployments != "" {
@@ -107,7 +115,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, log.GetInstance())
+		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}

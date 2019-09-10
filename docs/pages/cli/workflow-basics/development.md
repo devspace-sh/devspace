@@ -32,9 +32,9 @@ Running `devspace dev` will do the following:
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags |
 |---|---|
 |`devspace dev`<br> <small>Starts the development mode</small> | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)` |
-|`devspace enter`<br> <small>Opens a terminal session for a container</small> | `-p • Pick a container instead of using the default one` |
+|`devspace enter`<br> <small>Opens a terminal session for a container</small> | `--pick • Pick a container instead of using the default one` |
 |`devspace enter [command]`<br> <small>Runs a command inside a container</small> | |
-|`devspace logs` <br> <small>Prints the logs of a container</small> | `-p • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
+|`devspace logs` <br> <small>Prints the logs of a container</small> | `--pick • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
 |`devspace analyze` <br> <small>Analyzes your deployments for issues</small> |  |
 
 ## Configuration options

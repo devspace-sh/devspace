@@ -1,7 +1,6 @@
 package versions
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
@@ -35,7 +34,7 @@ var versionLoader = map[string]*loader{
 }
 
 // Prepare prepares the config for variable loading
-func Prepare(ctx context.Context, data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		// This is needed because overrides usually don't have versions
@@ -59,7 +58,7 @@ func Prepare(ctx context.Context, data map[interface{}]interface{}) (map[interfa
 		return cloned, nil
 	}
 
-	return prepareFunc(ctx, data)
+	return prepareFunc(data, profile)
 }
 
 // ParseVariables parses only the variables from the config

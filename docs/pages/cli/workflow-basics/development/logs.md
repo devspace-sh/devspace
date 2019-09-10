@@ -9,9 +9,9 @@ devspace logs
 By default, this will show the last 200 log lines of the first container within your `default` sector. 
 
 ## Show logs of different containers
-If you want to access the logs of a container other than your default container, you can specify flags like `-l / --label-selector` or `--selector`. Alternatively, you can use the `-p / --pick` flag to get a list of available containers.
+If you want to access the logs of a container other than your default container, you can specify flags like `-l / --label-selector` or `--selector`. Alternatively, you can use the `--pick / --pick` flag to get a list of available containers.
 ```bash
-devspace logs -p
+devspace logs --pick
 ```
 
 ## Stream logs in real-time

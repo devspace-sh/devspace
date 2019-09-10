@@ -178,7 +178,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		}
 
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}

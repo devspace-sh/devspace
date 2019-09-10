@@ -80,7 +80,7 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 
 		if configExists {
 			// Get generated config
-			generatedConfig, err := generated.LoadConfig()
+			generatedConfig, err := generated.LoadConfig("")
 			if err != nil {
 				log.Fatal(err)
 			}

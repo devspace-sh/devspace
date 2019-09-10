@@ -196,7 +196,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig()
+		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -287,7 +287,7 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) addDevConfig() {
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), "")
 
 	// Forward ports
 	if len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
@@ -351,7 +351,7 @@ func (cmd *InitCmd) addDevConfig() {
 			if err == nil {
 				dockerignoreRules := strings.Split(string(dockerignore), "\n")
 				for _, ignoreRule := range dockerignoreRules {
-					if len(ignoreRule) > 0 {
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] {
 						excludePaths = append(excludePaths, ignoreRule)
 					}
 				}

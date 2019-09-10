@@ -8,9 +8,9 @@ devspace enter
 ```
 
 ## Open terminals for different containers
-If you want to open a terminal for a container other than your default container, you can specify flags like `-l / --label-selector` or `--selector`. Alternatively, you can use the `-p / --pick` flag to get a list of available containers.
+If you want to open a terminal for a container other than your default container, you can specify flags like `-l / --label-selector` or `--selector`. Alternatively, you can use the `--pick / --pick` flag to get a list of available containers.
 ```bash
-devspace enter -p
+devspace enter --pick
 ```
 Running this command will give you a list of containers that you can open a terminal for.
 

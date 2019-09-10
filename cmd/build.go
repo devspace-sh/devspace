@@ -18,10 +18,13 @@ import (
 type BuildCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
+	VerboseDependencies     bool
 
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDependencies bool
+
+	Profile string
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -41,10 +44,12 @@ Builds all defined images and pushes them
 	}
 
 	buildCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
+	buildCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	buildCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
+	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
@@ -66,22 +71,22 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) {
 	log.StartFileLogging()
 
 	// Load config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
 	// Get the config
-	config := configutil.GetConfig(context.Background())
+	config := configutil.GetConfig(context.Background(), cmd.Profile)
 
 	// Dependencies
-	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, log.GetInstance())
+	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.VerboseDependencies, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error deploying dependencies: %v", err)
 	}
 
 	// Build images if necessary
-	builtImages, err := build.All(config, generatedConfig.GetActive(), nil, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, log.GetInstance())
+	builtImages, err := build.All(config, generatedConfig.GetActive(), nil, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
 	if err != nil {
 		if strings.Index(err.Error(), "no space left on device") != -1 {
 			log.Fatalf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))

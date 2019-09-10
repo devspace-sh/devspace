@@ -45,7 +45,7 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig()
+	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
