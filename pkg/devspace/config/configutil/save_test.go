@@ -1,10 +1,12 @@
 package configutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -41,6 +43,36 @@ type saveLoadedConfigTestCase struct {
 }
 
 func TestSaveLoadedConfig(t *testing.T) {
+	//Create tempDir and go into it
+	dir, err := ioutil.TempDir("", "testDir")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	// Delete temp folder after test
+	defer func() {
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
+
+	_, err = ioutil.ReadFile(dir)
+	isDirError := strings.ReplaceAll(err.Error(), dir, "%s")
+
 	testCases := []saveLoadedConfigTestCase{
 		saveLoadedConfigTestCase{
 			name: "1 Profile",
@@ -57,7 +89,7 @@ func TestSaveLoadedConfig(t *testing.T) {
 			files: map[string]interface{}{
 				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
 			},
-			expectedErr: "restore vars: read devspace.yaml: The handle is invalid.",
+			expectedErr: fmt.Sprintf("restore vars: " + isDirError, constants.DefaultConfigPath),
 		},
 		saveLoadedConfigTestCase{
 			name:   "unparsable devspace.yaml",
@@ -68,7 +100,7 @@ func TestSaveLoadedConfig(t *testing.T) {
 			expectedErr: "restore vars: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
 		},
 		saveLoadedConfigTestCase{
-			name:   "save with success",
+			name: "save with success",
 			config: &latest.Config{
 				Version: latest.Version,
 			},
