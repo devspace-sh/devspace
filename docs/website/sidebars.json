@@ -28,8 +28,7 @@
         "ids": [
           "cli/image-building/advanced/advanced-topics",
           "cli/image-building/advanced/best-practices",
-          "cli/image-building/advanced/cleanup",
-          "cli/image-building/advanced/variables"
+          "cli/image-building/advanced/cleanup"
         ]
       }
     ],
@@ -70,8 +69,7 @@
         "type": "subcategory",
         "label": "Configuration (Helm Charts)",
         "ids": [
-          "cli/deployment/helm-charts/configuration/overview-specification",
-          "cli/deployment/helm-charts/configuration/override-values"
+          "cli/deployment/helm-charts/configuration/overview-specification"
         ]
       },
       {
@@ -79,9 +77,7 @@
         "label": "Advanced Topics",
         "ids": [
           "cli/deployment/advanced/advanced-topics",
-          "cli/deployment/advanced/dependencies",
-          "cli/deployment/advanced/ci-cd-pipelines",
-          "cli/deployment/advanced/variables"
+          "cli/deployment/advanced/dependencies"
         ]
       }
     ],
@@ -95,7 +91,7 @@
           "cli/development/configuration/overview-specification",
           "cli/development/configuration/file-synchronization",
           "cli/development/configuration/port-forwarding",
-          "cli/development/configuration/dev-overrides",
+          "cli/development/configuration/interactive-mode",
           "cli/development/configuration/terminal-proxy-logs",
           "cli/development/configuration/auto-reloading"
         ]

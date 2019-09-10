@@ -6,7 +6,7 @@ title: devspace upgrade
 #######################################################
 ################## devspace upgrade ###################
 #######################################################
-Upgrades the DevSpace CLI to the newest version
+Upgrades the DevSpace to the newest version
 #######################################################
 
 Usage:

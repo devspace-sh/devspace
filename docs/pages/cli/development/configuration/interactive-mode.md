@@ -1,6 +1,6 @@
 ---
-title: Configuring Development Overrides (e.g. entrypoint)
-sidebar_label: Overrides (e.g. entrypoint)
+title: Configuring Interactive Mode
+sidebar_label: Interactive Mode
 ---
 
 When developing your application, it is often useful to override the image entrypoints or use a separate Dockerfile. DevSpace applies this special configuration only during `devspace dev` and not during `devspace deploy`. 

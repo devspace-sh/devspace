@@ -3,7 +3,7 @@ title: Dynamic Configuration using Config Variables
 sidebar_label: Config Variables
 ---
 
-DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace CLI also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  
+DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  
 
 Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.
 
@@ -29,7 +29,7 @@ config1:
 
 If a user runs `devspace deploy` for the first time after defining the config variable as shown above, the question `Which database image do you want to use?` will appear within the terminal and the user would be asked to enter a value for this config variable. Setting a value for the config variables would **not** alter the configuration in any way because values of config variables are stored separately from the configuration in the `.devspace/generated.yaml`. You can print all configured variables with `devspace list vars`.  
 
-> DevSpace CLI only asks the user once to provide the values for environment variables 
+> DevSpace only asks the user once to provide the values for environment variables 
 
 > For a working example take a look at [dynamic-config](https://github.com/devspace-cloud/devspace/tree/master/examples/dynamic-config)
 

@@ -7,7 +7,7 @@ To make it easier for you to get started with Kubernetes, DevSpace Cloud provide
 > Images in dscr.io have the following format: **dscr.io/[USERNAME]/[IMAGE_NAME]:[TAG]**
 
 ## Login to dscr.io
-The authentication credentials for dscr.io are automatically generated and fully managed by DevSpace CLI. That means DevSpace CLI will automatically retrieve and securely store your credentials when you login to DevSpace Cloud via:
+The authentication credentials for dscr.io are automatically generated and fully managed by DevSpace. That means DevSpace will automatically retrieve and securely store your credentials when you login to DevSpace Cloud via:
 ```bash
 devspace login
 ```

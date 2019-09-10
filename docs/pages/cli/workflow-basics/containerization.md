@@ -2,7 +2,7 @@
 title: Containerize a project
 ---
 
-If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes.
+If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace can help you containerize your projects and prepare them to be deployed to Kubernetes.
 
 ## Containerize a project
 The easiest way to containerize an existing project is to run this command:
@@ -10,7 +10,7 @@ The easiest way to containerize an existing project is to run this command:
 devspace init
 ```
 
-During the initialization process, DevSpace CLI will ask you the following question:
+During the initialization process, DevSpace will ask you the following question:
 ```bash
 ? Seems like you do not have a Dockerfile. What do you want to do?  [Use arrows to move, type to filter]
 > Create a Dockerfile for me                            
@@ -19,9 +19,9 @@ During the initialization process, DevSpace CLI will ask you the following quest
   Enter path to your Helm chart
   Use existing image (e.g. from Docker Hub)
 ```
-If you already have a Dockerfile, let DevSpace CLI use this Dockerfile for packaging your application. If you do not have a Dockerfile yet, you can choose the first option and let DevSpace CLI create a Dockerfile for you. 
+If you already have a Dockerfile, let DevSpace use this Dockerfile for packaging your application. If you do not have a Dockerfile yet, you can choose the first option and let DevSpace create a Dockerfile for you. 
 
-In order to create a Dockerfile for your project, DevSpace CLI will ask for the programming language of your application:
+In order to create a Dockerfile for your project, DevSpace will ask for the programming language of your application:
 ```bash
 ? Select programming language of project  [Use arrows to move, type to filter]
   csharp                       
@@ -33,12 +33,12 @@ In order to create a Dockerfile for your project, DevSpace CLI will ask for the 
   python
 ```
 
-Additionally, DevSpace CLI will ask about the port your application is running on:
+Additionally, DevSpace will ask about the port your application is running on:
 ```bash
 ? Which port is the container listening on? (Enter to skip)
 ```
 
-With the answers to the above questions, DevSpace CLI will not only generate a Dockerfile for you but also add the configuration file `devspace.yaml`. You can freely edit your Dockerfile as well as the DevSpace configuration using any text editor or IDE.
+With the answers to the above questions, DevSpace will not only generate a Dockerfile for you but also add the configuration file `devspace.yaml`. You can freely edit your Dockerfile as well as the DevSpace configuration using any text editor or IDE.
 
 ## Containerize a project containing multiple microservices
 If you have multiple applications inside a single project directory (i.e. monorepo) and you want to deploy these applications together as a set of microservices, the following procedure is recommended to initialize your project:
@@ -55,7 +55,7 @@ devspace add deployment [service-name] --image="hub.docker.com/[docker-username]
 ```
 
 ## Creating a Dockerfile
-DevSpace CLI lets you create a Dockerfile for a project without fully initializing your project. In order to generate a Dockerfile for a project run this command inside the root directory of your project:
+DevSpace lets you create a Dockerfile for a project without fully initializing your project. In order to generate a Dockerfile for a project run this command inside the root directory of your project:
 ```bash
 devspace containerize
 ```

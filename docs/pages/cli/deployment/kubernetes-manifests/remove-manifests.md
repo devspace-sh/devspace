@@ -7,7 +7,7 @@ Run the following command to remove a manifest deployment:
 devspace remove deployment [deployment-name]
 ```
 
-Before actually removing the manifest deployment, DevSpace CLI will ask you the following question:
+Before actually removing the manifest deployment, DevSpace will ask you the following question:
 ```bash
 ? Do you want to delete all deployment resources deployed?  [Use arrows to move, type to filter]
 > yes

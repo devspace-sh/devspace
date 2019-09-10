@@ -3,7 +3,7 @@ title: Using Multiple Configurations
 sidebar_label: Multiple Configs
 ---
 
-Sometimes it might be useful to define multiple configurations (e.g. for deploying to different environments). To support this case, DevSpace CLI allows you to create the file `devspace-configs.yaml` where you can define multiple configurations.
+Sometimes it might be useful to define multiple configurations (e.g. for deploying to different environments). To support this case, DevSpace allows you to create the file `devspace-configs.yaml` where you can define multiple configurations.
 
 > Using multiple configs is an advanced feature. To define a different behavior for `devspace deploy` and `devspace dev`, you should consider [overriding the entrypoints of your images](/docs/development/overrides#configuring-entrypoint-overrides).
 
@@ -33,7 +33,7 @@ To switch between different configs, you can run:
 devspace use config [CONFIG_NAME]
 ```
 
-> After adding a newly created `devspace-configs.yaml` to your project, you will need to run `devspace use config [CONFIG_NAME]` to tell DevSpace CLI which configuration to use.
+> After adding a newly created `devspace-configs.yaml` to your project, you will need to run `devspace use config [CONFIG_NAME]` to tell DevSpace which configuration to use.
 
 ## List all configs
 To get a list of defined config, you can run:

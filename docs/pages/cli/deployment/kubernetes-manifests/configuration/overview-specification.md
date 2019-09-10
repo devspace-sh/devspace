@@ -3,140 +3,177 @@ title: Configure Manifest Deployments
 sidebar_label: Manifests (kubectl)
 ---
 
-DevSpace is able to deploy any kubernetes manifest via `kubectl apply -f`. Make sure you have `kubectl` installed for this to work.
-
-> For a complete example using kubectl as deployment method take a look at [quickstart-kubectl](https://github.com/devspace-cloud/devspace/tree/master/examples/quickstart-kubectl)
-
-## Deploy via kubectl
-
-A minimal `devspace.yaml` deployment config example can look like this:
+To deploy plain Kubernetes manifests with `kubectl apply` or Kustomizations with `kustomize`, you need to configure them within the `deployments` section of the `devspace.yaml`.
 ```yaml
 deployments:
-- name: devspace-default
+- name: backend
   kubectl:
     manifests:
-    - kube
-    - kube2
+    - backend/
+    - backend-extra/
+- name: frontend
+  kubectl:
+    manifests:
+    - frontend/manifest.yaml
 ```
 
-This will translate during deployment into the following commands:
+The above example will be executing during the deployment process as follows:
 ```bash
-kubectl apply -f kube
-kubectl apply -f kube2
+kubectl apply -f backend
+kubectl apply -f backend-extra
+kubectl apply -f frontend/manifest.yaml
 ```
 
-If you have an image defined in your `devspace.yaml` that should be build before deploying like this:
-```yaml
-images:
-  default:
-    # The name defined here is the name DevSpace will search for in kubernetes manifests
-    image: dscr.io/yourusername/devspace
-    createPullSecret: true
-```
+> Deployments with `kubectl` require `kubectl` to be installed. The `kubectl` binary either needs to be found through your `PATH` variable or by specifying the [`cmdPath` option](#cmdpath).
 
-DevSpace will search through all the kubernetes manifests that should be deployed before actual deployment and replace any 
-```yaml
-image: dscr.io/yourusername/devspace
-```
-
-with 
-
-```yaml
-image: dscr.io/yourusername/devspace:the-tag-that-was-just-build
-```
-
-The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your kubernetes manifests. This makes sure the just build image will actually be deployed.  
+[What are Kubernetes manifests?](/docs/cli/deployment/kubernetes-manifests/what-are-manifests)
 
 
-## Kubectl deployment configuration options
+## Manifests
 
-### deployments[\*].kubectl
-```yaml
-kubectl:                            # struct   | Options for deploying with "kubectl apply"
-  cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
-  manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
-  kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
-  flags: []                         # string[] | Array of flags for the "kubectl apply" command
-```
+### `deployments[*].kubectl.manifests`
+The `manifests` option expects an array of paths or path globs that point to Kubernetes manifest files (yaml or json files) or to folders containing Kubernetes manifests or Kustomizations.
 
-DevSpace CLI lets you deploy existing Helm charts (either from your local filesystem or from a Helm registry).
+> Configuring `manifests` is mandatory for `kubectl` deployments.
 
-> For a complete example using helm as deployment method take a look at [minikube](https://github.com/devspace-cloud/devspace/tree/master/examples/minikube)
-
-## Deploy via helm
-
-A minimal `devspace.yaml` deployment config example can look like this:
+#### Example: Manifests
 ```yaml
 deployments:
-- name: default
-  helm:
-    chart:
-      name: ./chart
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+    - glob/path/to/manifests/*
+```
+**Explanation:**  
+Instead of the default name `backend-headless`, the headless service for the ReplicaSet created by this component would be `custom-name-for-headless-service`.
+
+
+### `deployments[*].kubectl.kustomize`
+The `kustomize` option expects a boolean stating if DevSpace should deploy using `kustomize`.
+
+> If you set `kustomize = true`, all of your `manifests` must be paths to Kustomizations. If you want to deploy some plain manifests and some Kustomizations, create multiple deployments for each of them.
+
+
+#### Default Value for `kustomize`
+```yaml
+kustomize: false
 ```
 
-This tells DevSpace to deploy a local chart in `./chart`. If you want to deploy a remote chart you can also specify:
+#### Example: Kustomize
 ```yaml
 deployments:
-- name: default
-  helm:
-    chart:
-      name: redis
-      version: "6.1.4"
-      repo: https://kubernetes-charts.storage.googleapis.com
+- name: backend
+  kubectl:
+    manifests:
+    - kustomization1/
+    - glob/path/to/more/kustomizations/*
+    kustomize: true
 ```
 
-If you have an image defined in your `devspace.yaml` that should be build before deploying like this:
+
+### `deployments[*].kubectl.replaceImageTags`
+The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](/docs/cli/deployment/workflow-basics#3-tag-replacement).
+
+By default, DevSpace searches all your manifests for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the [image building process](/docs/cli/image-building/workflow-basics). Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+
+> Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
+
+#### Default Value for `replaceImageTags`
 ```yaml
-images:
-  default:
-    # The name defined here is the name DevSpace will search for in kubernetes manifests
-    image: dscr.io/yourusername/devspace
-    createPullSecret: true
+replaceImageTags: true
 ```
 
-DevSpace will search through all the override values defined in the local chart at `localchartpath/values.yaml` or defined in `deployments[].helm.values` or `deployments[].helm.valuesFiles` and replace the image name `dscr.io/yourusername/devspace` with the image name and the just build tag.  
-
-The replacement **only** takes place in memory and is **not** written to the filesystem and hence will **never** change any of your configuration files. This makes sure the just build image will actually be deployed.  
-
-## Helm deployment configuration options
-
-### deployments[\*].helm
+#### Example: Disable Tag Replacement
 ```yaml
-helm:                               # struct   | Options for deploying with Helm
-  chart: ...                        # struct   | Relative path 
-  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
-  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
-  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
-  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
-  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
-  devSpaceValues: true              # bool     | If DevSpace CLI should replace images overrides and values.yaml before deploying (Default: true)
-  valuesFiles:                      # string[] | Array of paths to values files
-  - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
-  values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+    - glob/path/to/manifests/*
+    replaceImageTags: false
 ```
 
-### deployments[\*].helm.chart
+
+## Kubectl Options
+
+### `deployments[*].kubectl.flags`
+The `flags` option expects an array of string stating additional flags and flag values that should be used when calling `kubectl apply`.
+
+#### Default Value for `flags`
 ```yaml
-chart:                              # struct   | Chart to deploy
-  name: my-chart                    # string   | Chart name
-  version: v1.0.1                   # string   | Chart version
-  repo: "https://my-repo.tld/"      # string   | Helm chart repository
-  username: "my-username"           # string   | Username for Helm chart repository
-  password: "my-password"           # string   | Password for Helm chart repository
+flags: []
 ```
 
-## Remove Helm charts
+#### Example: Custom Kubectl Flags
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    flags:
+    - --timeout
+    - 10s
+    - --grace-period
+    - "30"
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kubectl apply --timeout=10s --grace-period=30 -f backend/
+```
 
-Run the following command to remove a Helm chart from your deployments:
+
+### `deployments[*].kubectl.cmdPath`
+The `cmdPath` option expects an array of string stating additional flags and flag values that should be used when calling `kubectl apply`.
+
+> Setting `cmdPath` makes it much harder to share your `devspace.yaml` with other team mates. It is recommended to add `kubectl` to your `$PATH` environment variable instead.
+
+#### Example: Setting Path To Kubectl Binary
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    cmdPath: /path/to/kubectl
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+/path/to/kubectl apply -f backend/
+```
+
+
+
+<br>
+
+---
+## Useful Commands
+
+### `devspace add deployment [NAME] --manifests="./my/manifests/"`
+```bash
+devspace add deployment [deployment-name] --manifests="./path/to/your/manifests"
+```
+If you want to add existing Kubernetes manifests as deployments, you can do so by specifying a glob pattern for the `--manifests` flag as sown above. 
+
+You can use [globtester.com](http://www.globtester.com/#p=eJzT0y9ILMnQL8nXr8wvLdLPTczLTEstLinW19ICAIcMCZc%3D&r=eJyVzMENgCAMAMBVDAPQBSq7VKiRhAKhlYTt9e3PAe4w5bnFQqq7E7J4ueChk11gDVa7BwjVfLKaQuJe2hKu5hdJwWMEhNcH%2FJEoj5kjf4YH8%2BAw7w%3D%3D&) to verify that your pattern matches the relative paths to your manifests. Paths should be relative to the root directory of your project which also contains your `devspace.yaml`.
+
+### `devspace remove deployment [NAME]`
+Instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
 ```bash
 devspace remove deployment [deployment-name]
 ```
 
-Before actually removing the deployment, DevSpace CLI will ask you the following question:
+The benefit of running `devspace remove deployment` is that DevSpace will ask you this question:
 ```bash
 ? Do you want to delete all deployment resources deployed?  [Use arrows to move, type to filter]
 > yes
   no
 ```
 
-> Deleting all resources deployed to Kubernetes before removing a Helm chart deployment is very useful, so you do not end up with untracked resources which waste computing resources although they are not needed anymore.
+If you select yes, DevSpace  will remove your deployment from your Kubernetes cluster before deleting it in your `devspace.yaml`. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.

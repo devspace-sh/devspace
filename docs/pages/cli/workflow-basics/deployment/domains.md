@@ -29,7 +29,7 @@ There are two options to configure an ingress:
 2. Configure an ingress [manually](#configure-ingresses-manually)
 
 ### Configure ingresses with DevSpace Cloud UI
-This obviously only works if you use DevSpace CLI in combination with DevSpace Cloud. To configure an ingress with DevSpace Cloud, you need to connect a domain to the respective Space:
+This obviously only works if you use DevSpace in combination with DevSpace Cloud. To configure an ingress with DevSpace Cloud, you need to connect a domain to the respective Space:
 1. Go to: [https://app.devspace.cloud/spaces](https://app.devspace.cloud/spaces)
 2. Open the tab "Domains" for the Space you want to connect the domain to
 3. Connect a domain as explained in the UI (if there is not one already)

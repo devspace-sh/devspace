@@ -2,7 +2,7 @@
 title: Develop with DevSpace
 ---
 
-DevSpace CLI lets you build applications directly inside a Kubernetes cluster with this command:
+DevSpace lets you build applications directly inside a Kubernetes cluster with this command:
 ```bash
 devspace dev
 ```
@@ -38,7 +38,7 @@ Running `devspace dev` will do the following:
 |`devspace analyze` <br> <small>Analyzes your deployments for issues</small> |  |
 
 ## Configuration options
-DevSpace CLI lets you define the following types of deployments:
+DevSpace lets you define the following types of deployments:
 - [dev.overrideImages](/docs/development/overrides)
 - [dev.ports](/docs/development/port-forwarding)
 - [dev.sync](/docs/development/synchronization)

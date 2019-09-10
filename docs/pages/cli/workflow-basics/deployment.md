@@ -2,7 +2,7 @@
 title: Deploy with DevSpace
 ---
 
-DevSpace CLI lets you deploy one or even multiple applications. In DevSpace a **deployment** defines a specific part of an application or a whole application that should be deployed.  The configuration for these deployments can be found in the `deployments` section within your `devspace.yaml`.
+DevSpace lets you deploy one or even multiple applications. In DevSpace a **deployment** defines a specific part of an application or a whole application that should be deployed.  The configuration for these deployments can be found in the `deployments` section within your `devspace.yaml`.
 
 ## Deployment process
 Running `devspace deploy` or `devspace dev` will do the following:
@@ -12,7 +12,7 @@ Running `devspace deploy` or `devspace dev` will do the following:
 4. Deploy all deployments defined in the `devspace.yaml` in the specified order with the built images
 
 ## Types of deployments
-DevSpace CLI lets you define the following types of deployments:
+DevSpace lets you define the following types of deployments:
 - [Components (Easy way to deploy common kubernetes resources)](/docs/deployment/components/what-are-components)
 - [Helm charts](/docs/deployment/helm-charts/what-are-helm-charts)
 - [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
@@ -23,7 +23,7 @@ DevSpace CLI lets you define the following types of deployments:
 ## Structure of a deployment
 A standard `devspace.yaml` with a single deployment could look like this:
 ```yaml
-# An array of deployments (kubectl, helm, component) which will be deployed with DevSpace CLI in the specified order
+# An array of deployments (kubectl, helm, component) which will be deployed with DevSpace in the specified order
 deployments:
 - name: my-deployment                   # Name of this deployment
   # Choose ONE of the following three deployment methods
@@ -38,7 +38,7 @@ deployments:
 ```
 This deployment is configured to deploy the [Helm chart for DevSpace Components](/docs/deployment/components/what-are-components) using the values specified in the `component` section.
 
-Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace CLI will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
+Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
 
 ## Add additonal deployments
 DevSpace provides convenience commands for adding deployments to the `devspace.yaml`. If you don't want to add additional deployments in the config manually, you have the following options:
@@ -54,7 +54,7 @@ devspace add deployment [deployment-name] --component=[component-name]
 Example: `devspace add deployment database --component=mysql`
 
 #### List of predefined components
-DevSpace CLI provides the following predefined components:
+DevSpace provides the following predefined components:
 - mariadb
 - mongodb
 - mysql
@@ -67,14 +67,7 @@ DevSpace CLI provides the following predefined components:
 <summary>
 ### Add custom components for existing Dockerfiles
 </summary>
-Run one of the following commands to add a custom component to your deployments based on an existing Dockerfile:
-```bash
-devspace add deployment [deployment-name] --dockerfile=""
-devspace add deployment [deployment-name] --dockerfile="" --image="my-registry.tld/[username]/[image]"
-```
-The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace CLI would assume that you want to use the [DevSpace Container Registry](/docs/cloud/images/dscr-io) provided by DevSpace Cloud.
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
 
 </details>
 
@@ -143,16 +136,16 @@ devspace purge --deployments=my-deployment-1,my-deployment-2
 ```
 
 ## Removing deployments from the config
-If you want to remove the deployment from the configuration, DevSpace CLI provides a convenient command `devspace remove deployment`, so instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
+If you want to remove the deployment from the configuration, DevSpace provides a convenient command `devspace remove deployment`, so instead of manually removing a deployment from your `devspace.yaml`, it is recommended to run this command instead:
 ```bash
 devspace remove deployment [deployment-name]
 ```
 
-The benefit of running `devspace remove deployment` is that DevSpace CLI will ask you this question:
+The benefit of running `devspace remove deployment` is that DevSpace will ask you this question:
 ```bash
 ? Do you want to delete all deployment resources deployed?  [Use arrows to move, type to filter]
 > yes
   no
 ```
 
-If you select yes, DevSpace CLI will remove your deployment from your Kubernetes cluster before deleting it in your `devspace.yaml`. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.
+If you select yes, DevSpace will remove your deployment from your Kubernetes cluster before deleting it in your `devspace.yaml`. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.

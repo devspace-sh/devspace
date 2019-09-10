@@ -12,7 +12,7 @@ devspace deploy
 ```
 
 ## List of predefined components
-DevSpace CLI provides the following predefined components:
+DevSpace provides the following predefined components:
 - mariadb
 - mongodb
 - mysql
@@ -25,7 +25,7 @@ To add mysql as predefined component to your deployments, run this command:
 devspace add deployment database --component=mysql
 ```
 
-DevSpace CLI will ask a couple of questions before adding the component.
+DevSpace will ask a couple of questions before adding the component.
 ```bash
 ? Please specify the mysql version you want to use 5.7
 ? Please specify the mysql root password my-password-123
@@ -61,7 +61,7 @@ deployments:
 - ... # your previously defined deployments
 ```
 
-> DevSpace CLI always **prepends** new components in the deployments array within your `devspace.yaml`, so that the components you need will be deployed before your application will be started.
+> DevSpace always **prepends** new components in the deployments array within your `devspace.yaml`, so that the components you need will be deployed before your application will be started.
 
 After adding the mysql database component, you need to redeploy:
 ```bash

@@ -82,7 +82,7 @@ The value of an environment variable can be either set:
 </details>
 
 ## Volume Mounts
-TODO
+See [Volumes](/docs/cli/deployment/components/configuration/volumes#mount-volumes-into-containers) for details.
 
 
 ## Resource Limits & Requests

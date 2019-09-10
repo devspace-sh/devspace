@@ -3,7 +3,7 @@ title: Configuring Terminal & Log Streaming
 sidebar_label: Terminal & Logs
 ---
 
-After running `devspace dev`, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers.
+After running `devspace dev`, DevSpace will open a terminal proxy, which lets you run commands within your deployed containers.
 
 ## Start your application via terminal proxy
 Starting your application with the terminal proxy works the same way as starting it with your local terminal. Common commands to start your applications in development mode would be:

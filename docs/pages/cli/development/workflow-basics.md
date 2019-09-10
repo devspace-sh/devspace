@@ -2,7 +2,7 @@
 title: Workflow & Basics
 ---
 
-DevSpace CLI lets you build applications directly inside a Kubernetes cluster with this command:
+DevSpace lets you build applications directly inside a Kubernetes cluster with this command:
 ```bash
 devspace dev
 ```
@@ -40,7 +40,7 @@ Running `devspace dev` will do the following:
 |`devspace analyze` <br> <small>Analyzes your deployments for issues</small> |  |
 
 ## Configuration options
-DevSpace CLI lets you define the following types of deployments:
+DevSpace lets you define the following types of deployments:
 - [dev.overrideImages](/docs/development/overrides)
 - [dev.ports](/docs/development/port-forwarding)
 - [dev.sync](/docs/development/synchronization)
@@ -56,7 +56,7 @@ DevSpace CLI lets you define the following types of deployments:
 
 
 
-DevSpace CLI provides useful features for developing your application directly in kubernetes. The command `devspace dev` can be used to start an application in development mode and starts services like file synchronization, port forwarding and terminal proxying automatically based on the configuration.  
+DevSpace provides useful features for developing your application directly in kubernetes. The command `devspace dev` can be used to start an application in development mode and starts services like file synchronization, port forwarding and terminal proxying automatically based on the configuration.  
 
 The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to develop in any kubernetes cluster, either locally or in any remote kubernetes cluster.   
   
@@ -73,7 +73,3 @@ When running `devspace dev` will do the following:
 If you are using **DevSpace in a team**, DevSpace also allows you to define [variables](/docs/configuration/variables) in your configuration that are filled dynamically during development based on user input, environment variables or other runtime specific circumstances. This can be very helpful to build a common config that can be shared accross your team and checked into a version control system, but still behaves differently for each developer.  
 
 If you want to allow your developers to develop applications inside a single cluster, you should also take a look at [DevSpace Cloud Spaces](/docs/cloud/spaces/what-are-spaces). They are essentially flexible isolated kubernetes namespaces that can be spinned up and shutdown by the user itself.
-
-
-
-TODO: ENV VARS

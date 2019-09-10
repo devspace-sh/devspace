@@ -2,7 +2,7 @@
 title: Analyze issues
 ---
 
-DevSpace CLI can automatically identify and analyze potential issues with your deployments:
+DevSpace can automatically identify and analyze potential issues with your deployments:
 ```bash
 devspace analyze
 ```

@@ -13,7 +13,7 @@ You can connect any Kubernetes cluster, by running the following command:
 devspace connect cluster
 ```
 
-DevSpace CLI will ask you a couple of questions and connect your cluster. The output will look similar to this one:
+DevSpace will ask you a couple of questions and connect your cluster. The output will look similar to this one:
 ```bash
 $ devspace connect cluster    
 ? Please enter a cluster name (e.g. my-cluster) my-cluster

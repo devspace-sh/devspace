@@ -45,19 +45,19 @@ images:
 ```
 **Explanation:**
 - The first image `backend` would be tagged as `appbackend:[TAG]` pushed to Docker Hub using the path `john` (which generally could be your Docker Hub username).
-- The second image `frontend` would be tagged as `appfrontend:[TAG]` and pushed to `dscr.io` using the path `${DEVSPACE_USERNAME}` which is a [dynamic config variable](#TODO) that resolves to your username in DevSpace Cloud. 
+- The second image `frontend` would be tagged as `appfrontend:[TAG]` and pushed to `dscr.io` using the path `${DEVSPACE_USERNAME}` which is a [dynamic config variable](/docs/cli/configuration/variables) that resolves to your username in DevSpace Cloud. 
 
 > See **[`images[*].tag` *Tagging Schema*](#images-tag-tagging-schema)** for details on how the image `[TAG]` would be set in this case.
 
 
 ### `images[*].tag` *Tagging Schema*
-The `tag` option expects a string containing a custom tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](#TODO). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
+The `tag` option expects a string containing a custom tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](/docs/cli/configuration/variables). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
 - **DEVSPACE_RANDOM**: A random 6 character long string
 - **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
 - **DEVSPACE_GIT_COMMIT**: A short hash of the local repos current git commit
 - **DEVSPACE_USERNAME**: The username currently logged into devspace cloud
 
-**See also: [How does DevSpace replace tags in my deployments?](#TODO)**
+**See also: [How does DevSpace replace tags in my deployments?](/docs/cli/deployment/workflow-basics#3-tag-replacement)**
 
 > **Make sure tags are unique** when defining a custom tagging schema. Unique tags ensure that when your application gets started with the newly built image instead of using an older, cached version. 
 > 
@@ -128,6 +128,69 @@ context: ./
 **See "[Example: Different Dockerfiles](#example-different-dockerfiles)"**
 
 
+## Overriding `ENTRYPOINT` & `CMD`
+
+### `images[*].entrypoint`
+The `entrypoint` option expects an array of strings which tells DevSpace to overrides the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.
+
+[Learn more about how overrides are applied during image building](/docs/cli/image-building/workflow-basics#2-apply-entrypoint-override-if-configured).
+
+> Overriding `ENTRYPOINT` also works for multi-stage builds.
+
+#### Default Value For `entrypoint`
+```yaml
+entrypoint: []
+```
+
+#### Example: Override ENTRYPOINT For Image
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    entrypoint:
+    - npm
+    - run
+    - dev
+```
+**Explanation:**  
+- The first image `backend` will be built using the regular `ENTRYPOINT` (e.g. `[npm, start]`) defined by the Dockerfile located in `./Dockerfile`
+- The second image `frontend` will be built using the same Dockerfile but instead of the original `ENTRYPOINT`, DevSpace would use the `[npm, run, dev]` as value for `ENTRYPOINT`
+
+
+### `images[*].cmd`
+The `cmd` option expects an array of strings which tells DevSpace to overrides the `CMD` defined in the `Dockerfile` during the image building process.
+
+[Learn more about how overrides are applied during image building](/docs/cli/image-building/workflow-basics#2-apply-entrypoint-override-if-configured).
+
+> Overriding `CMD` also works for multi-stage builds.
+
+> `CMD` generally defines the arguments for `ENTRYPOINT`.
+
+#### Default Value For `cmd`
+```yaml
+cmd: []
+```
+
+#### Example: Override CMD For Image
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    cmd:
+    - run
+    - dev
+```
+**Explanation:**  
+- The first image `backend` will be built using the regular `CMD` (e.g. `[start]`) for `ENTRYPOINT` (e.g. `[npm]`) defined by the Dockerfile located in `./Dockerfile`
+- The second image `frontend` will be built using the same Dockerfile but instead of the original `CMD`, DevSpace would use the `[run, dev]` as value for `CMD`
+
+
+## Image Pull Secrets
+
 ### `images[*].createPullSecret`
 The `createPullSecret` option expects a boolean that tells DevSpace if a pull secret should be created for the registry where this image will be pushed to.
 - If there are multiple images with the **same registry** and any of the images will define `createPullSecret: true`, the pull secret will be created no matter if any of the other images using the same registry explicitly defines `createPullSecret: false`.
@@ -155,22 +218,22 @@ images:
 
 ## **Build Tools**
 The `build` section defines which build tool DevSpace uses to build the image. The following build tools are currently supported:
-- [`disabled`](#TODO) for disabling image building for this image
-- [`docker`](#TODO) for building images using a Docker daemon (**default build tool**, [prefers Docker daemon of local Kubernetes clusters](/docs/cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters))
-- [`kaniko`](#TODO) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
-- [`custom`](#TODO) for building images with a custom build command (e.g. for using Google Cloud Build)
-
-### `images[*].build.disabled`
-See [Build Tools](/docs/cli/image-building/configuration/build-tools#TODO) for details.
+- [`docker`](/docs/cli/image-building/configuration/build-tools#docker) for building images using a Docker daemon (**default build tool**, [prefers Docker daemon of local Kubernetes clusters](/docs/cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters))
+- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
+- [`custom`](/docs/cli/image-building/configuration/build-tools#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
+- [`disabled`](/docs/cli/image-building/configuration/build-tools#disabled) for disabling image building for this image
 
 ### `images[*].build.docker`
-See [Build Tools](/docs/cli/image-building/configuration/build-tools#TODO) for details.
+See [Build Tools](/docs/cli/image-building/configuration/build-tools#docker) for details.
 
 ### `images[*].build.kaniko`
-See [Build Tools](/docs/cli/image-building/configuration/build-tools#TODO) for details.
+See [Build Tools](/docs/cli/image-building/configuration/build-tools#kaniko) for details.
 
 ### `images[*].build.custom`
-See [Build Tools](/docs/cli/image-building/configuration/build-tools#TODO) for details.
+See [Build Tools](/docs/cli/image-building/configuration/build-tools#custom) for details.
+
+### `images[*].build.disabled`
+See [Build Tools](/docs/cli/image-building/configuration/build-tools#disabled) for details.
 
 
 ## Build Options
@@ -180,13 +243,13 @@ The build tools `docker` and `kaniko` allow you to define an `options` section f
 - `buildArgs` to pass arguments to the Dockerfile during the build process
 
 ### `images[*].build.*.options.target`
-See [Build Options](/docs/cli/image-building/configuration/build-options#TODO) for details.
+See [Build Options](/docs/cli/image-building/configuration/build-options#target) for details.
 
 ### `images[*].build.*.options.network`
-See [Build Options](/docs/cli/image-building/configuration/build-options#TODO) for details.
+See [Build Options](/docs/cli/image-building/configuration/build-options#network) for details.
 
 ### `images[*].build.*.options.buildArgs`
-See [Build Options](/docs/cli/image-building/configuration/build-options#TODO) for details.
+See [Build Options](/docs/cli/image-building/configuration/build-options#buildargs) for details.
 
 <br>
 

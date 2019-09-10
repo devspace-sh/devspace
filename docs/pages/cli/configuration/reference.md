@@ -47,7 +47,7 @@ Notice:
 - Setting `docker`, `kaniko` or `custom` will define the build tool for this image.
 - You **cannot** use `docker`, `kaniko` and `custom` in combination. 
 - If neither `docker`, `kaniko` nor `custom` is specified, `docker` will be used by default.
-- By default `docker` will use `kaniko` as fallback when DevSpace CLI is unable to reach the Docker host.
+- By default `docker` will use `kaniko` as fallback when DevSpace is unable to reach the Docker host.
 
 ### images[\*].build.docker
 ```yaml
@@ -75,7 +75,7 @@ kaniko:                             # struct   | Options for building images wit
 custom:                             # struct   | Options for building images with a custom build script
   command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
   args: []                          # string[] | Array of arguments for the custom build command
-  imageFlag: string                 # string   | Name of the flag that DevSpace CLI uses to pass the image name + tag to the build script
+  imageFlag: string                 # string   | Name of the flag that DevSpace uses to pass the image name + tag to the build script
   onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
 ```
 
@@ -205,7 +205,7 @@ helm:                               # struct   | Options for deploying with Helm
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
   timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
-  devSpaceValues: true              # bool     | If DevSpace CLI should replace images overrides and values.yaml before deploying (Default: true)
+  devSpaceValues: true              # bool     | If DevSpace should replace images overrides and values.yaml before deploying (Default: true)
   valuesFiles:                      # string[] | Array of paths to values files
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
   values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
@@ -350,7 +350,7 @@ hooks:                              # struct[]  | Array of hooks to be executed
 
 ---
 ## cluster
-> **Warning:** Change the cluster configuration only if you *really* know what you are doing. Editing this configuration can lead to issues with when running DevSpace CLI commands.
+> **Warning:** Change the cluster configuration only if you *really* know what you are doing. Editing this configuration can lead to issues with when running DevSpace commands.
 
 ```yaml
 cluster:                            # struct   | Cluster configuration

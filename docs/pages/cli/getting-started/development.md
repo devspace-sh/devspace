@@ -37,7 +37,7 @@ Learn more about how to [configure port forwarding](/docs/cli/development/config
 While `devspace dev` is still running, your source code files will be synchronized between your local project and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. `nodemon`) to update the application without having to rebuild your images or redeploy your containers.
 
 > This step requires your application to start with a hot reloading tool, e.g. nodemon. To do this, you have two options:
-> - **Option 1: Edit the ENTRYPOINT in your Dockerfile** (easy and simple to share with others but often requires to setup a [separate profile for staging or production-like deployments](#TODO))
+> - **Option 1: Edit the ENTRYPOINT in your Dockerfile** (easy and simple to share with others but often requires to setup a [separate profile for staging or production-like deployments](/docs/cli/configuration/profiles))
 > - **Option 2: Start the development in interactive mode** using `devspace dev -i` and run the start command manually after the terminal opens, e.g. `npm run develop` (quick and non-intrusive but hard to share with your team mates)
 > If you are using one of the quickstart projects, you can see that the ENTRYPOINT in your Dockerfile is already starting the application using hot reloading (Option 1).
 

@@ -15,7 +15,7 @@ deployments:
     - more-manifests/*
 ```
 
-You can easily create a `kustomization.yaml` file within your `my-manifests` and within your `more-manifests` folder and tell DevSpace CLI to deploy these manifest via `kustomize` by modifying the configuration as follows:
+You can easily create a `kustomization.yaml` file within your `my-manifests` and within your `more-manifests` folder and tell DevSpace to deploy these manifest via `kustomize` by modifying the configuration as follows:
 ```yaml
 deployments:
 - name: my-deployment
@@ -25,7 +25,7 @@ deployments:
     - more-manifests/
     kustomize: true
 ```
-This configuration would tell DevSpace CLI to deploy our application with the following commands:
+This configuration would tell DevSpace to deploy our application with the following commands:
 ```
 kubectl apply -k manifests/
 kubectl apply -k more-manifests/

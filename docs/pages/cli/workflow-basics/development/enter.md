@@ -15,7 +15,7 @@ devspace enter -p
 Running this command will give you a list of containers that you can open a terminal for.
 
 ## Run a command after opening the terminal
-If you provide arguments to `devspace enter`, DevSpace CLI will execute the arguments string as a command inside the container instead of opening a terminal.
+If you provide arguments to `devspace enter`, DevSpace will execute the arguments string as a command inside the container instead of opening a terminal.
 ```bash
 devspace enter [command]
 ```

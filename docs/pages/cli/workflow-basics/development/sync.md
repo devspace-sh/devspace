@@ -2,7 +2,7 @@
 title: Synchronize files on-demand
 ---
 
-DevSpace CLI is able to synchronize files from the local computer into any running pod on-demand. This can be useful for debugging to change container files on the fly without constantly running `kubectl cp` after every file change.  
+DevSpace is able to synchronize files from the local computer into any running pod on-demand. This can be useful for debugging to change container files on the fly without constantly running `kubectl cp` after every file change.  
 
 Run the following command to start syncing files between the local computer
 ```bash
@@ -35,4 +35,4 @@ Flags:
       --verbose                 Shows every file that is synced
 ```
 
-You can also tell DevSpace CLI to start automatically synchronizing files on `devspace dev`. Take a look at [synchronizing files](/docs/development/synchronization) for more information.
+You can also tell DevSpace to start automatically synchronizing files on `devspace dev`. Take a look at [synchronizing files](/docs/development/synchronization) for more information.
