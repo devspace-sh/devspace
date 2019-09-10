@@ -28,7 +28,7 @@ var returnErr error
 
 type fakeBuilder struct{}
 
-func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, log log.Logger) error {
+func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, cmd []string, log log.Logger) error {
 	assert.Equal(usedT, expectedAbsoluteContextPath, absoluteContextPath, "Wrong context path given to builder")
 	assert.Equal(usedT, expectedAbsoluteDockerfilePath, absoluteDockerfilePath, "Wrong dockerfile path given to builder")
 	assert.Equal(usedT, expectedEntryPoint, expectedEntryPoint, "Wrong entryPoints given to builder")
@@ -111,14 +111,14 @@ func TestShouldRebuild(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		expectedErrorString = "Dockerfile Doesn'tExist missing: stat Doesn'tExist: no such file or directory"
 	}
-	shouldRebuild, err := helper.ShouldRebuild(cache)
+	shouldRebuild, err := helper.ShouldRebuild(cache, false)
 	assert.Error(t, err, expectedErrorString)
 	assert.Equal(t, false, shouldRebuild, "After an error occurred a rebuild is recommended.")
 
 	helper.DockerfilePath = "IsFile"
 	err = fsutil.WriteToFile([]byte(""), "IsFile")
 	assert.NilError(t, err, "Error creating File")
-	shouldRebuild, err = helper.ShouldRebuild(cache)
+	shouldRebuild, err = helper.ShouldRebuild(cache, false)
 	assert.NilError(t, err, "Error when asking whether we should rebuild with basic setting")
 	assert.Equal(t, true, shouldRebuild, "After an error occurred a rebuild is recommended.")
 	assert.Equal(t, false, cache.Images["ImageConf"].DockerfileHash == "", "DockerfileHash not set")

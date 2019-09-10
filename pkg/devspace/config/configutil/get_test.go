@@ -223,7 +223,7 @@ func TestGetConfig(t *testing.T) {
 			files: map[string]interface{}{
 				constants.DefaultConfigsPath: "",
 			},
-			expectedPanic: "devspace-configs.yaml is not supported anymore in devspace v4. Please use the new config option 'configs' in 'devspace.yaml'",
+			expectedPanic: "devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead",
 		},
 		getConfigTestCase{
 			name: "unparsable devspace.yaml",

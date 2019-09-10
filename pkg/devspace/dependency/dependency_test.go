@@ -94,7 +94,7 @@ func TestUpdateAll(t *testing.T) {
 				Dependencies: map[string]string{},
 			},
 			allowCyclicParam: true,
-			expectedLog:      "\nWait Update dependencies\nWait Resolving dependencies\nDone Resolved 1 dependencies",
+			expectedLog:      "\nWait Update dependencies\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 	}
 
@@ -263,7 +263,7 @@ Done Resolved 1 dependencies`,
 		Client: fake.NewSimpleClientset(),
 	}
 
-		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
+		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -379,7 +379,7 @@ Done Resolved 1 dependencies`,
 		Client: fake.NewSimpleClientset(),
 	}
 
-		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, &testLogger{})
+		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

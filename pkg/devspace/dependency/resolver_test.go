@@ -66,7 +66,7 @@ func TestResolver(t *testing.T) {
 	testCases := []resolverTestCase{
 		resolverTestCase{
 			name:        "No depependency tasks",
-			expectedLog: "\nWait Resolving dependencies\nDone Resolved 0 dependencies",
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 0 dependencies",
 		},
 		resolverTestCase{
 			name: "Simple local dependency",
@@ -88,7 +88,7 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(dir, "dependency1"),
 				},
 			},
-			expectedLog: "\nWait Resolving dependencies\nDone Resolved 1 dependencies",
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Simple git dependency",
@@ -110,7 +110,7 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
-			expectedLog: "\nWait Resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath\nDone Resolved 1 dependencies",
+			expectedLog: "\nInfo Start resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic allowed dependency",
@@ -141,7 +141,7 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(dir, "dependency1"),
 				},
 			},
-			expectedLog: "\nWait Resolving dependencies\nDone Resolved 1 dependencies",
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic unallowed dependency",
@@ -165,7 +165,7 @@ func TestResolver(t *testing.T) {
 				},
 			},
 			expectedErr: fmt.Sprintf("Cyclic dependency found: \n%s\n%s\n%s", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1")),
-			expectedLog: "\nWait Resolving dependencies",
+			expectedLog: "\nInfo Start resolving dependencies",
 		},
 	}
 

@@ -77,7 +77,7 @@ func TestBuild(t *testing.T) {
 
 	//Test without images
 	go makeAllPodsRunning(t, kubeClient, configutil.TestNamespace)
-	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, log.GetInstance())
+	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 0 images: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestBuild(t *testing.T) {
 	testConfig.Images["firstimg"] = &latest.ImageConfig{
 		Image: "firstimg",
 	}
-	images, err = All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, false, log.GetInstance())
+	images, err = All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, false, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 1 images: %v", err)
 	}

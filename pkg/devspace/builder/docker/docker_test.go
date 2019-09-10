@@ -122,7 +122,7 @@ func TestDockerBuild(t *testing.T) {
 		t.Fatalf("Builder creation failed: %v", err)
 	}
 
-	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, log.GetInstance())
+	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, nil, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
 	}
@@ -222,8 +222,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 		t.Fatalf("Builder creation failed: %v", err)
 	}
 
-	entrypoint := []string{"node index.js"}
-	err = imageBuilder.BuildImage(dir, "Dockerfile", entrypoint, log.GetInstance())
+	err = imageBuilder.BuildImage(dir, "Dockerfile", []string{"node"}, []string{"index.js"}, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
 	}

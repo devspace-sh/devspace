@@ -34,7 +34,7 @@ func TestShouldRebuild(t *testing.T) {
 		},
 	}
 
-	shouldRebuild, err := NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(nil)
+	shouldRebuild, err := NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(nil, false)
 	if shouldRebuild == false {
 		t.Fatal("Expected rebuild true, got false")
 	}
@@ -54,7 +54,7 @@ func TestShouldRebuild(t *testing.T) {
 	imageCache := cache.GetImageCache(imageConfigName)
 	imageCache.Tag = imageTag
 
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal("1: Expected rebuild true, got false")
 	}
 
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestShouldRebuild(t *testing.T) {
 	}
 
 	imageConf.Image = "test-image-new"
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}

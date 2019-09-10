@@ -153,9 +153,9 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	}()
 
 	// 4. Build image with kaniko, but don't push it (In kaniko options use "--no-push" as flag)
-	entrypoint := []string{"go", "run", "main.go"}
+	entrypoint := []string{"go"}
 
-	err = builder.BuildImage(".", "Dockerfile", entrypoint, log.GetInstance())
+	err = builder.BuildImage(".", "Dockerfile", entrypoint, []string{"run", "main.go"}, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building image: %v", err)
 	}
