@@ -67,20 +67,9 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 }
 
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
-func CreateTempDockerfile(dockerfile string, entrypointArr []string, target string) (string, error) {
-	if entrypointArr == nil || len(entrypointArr) == 0 {
-		return "", errors.New("Entrypoint is empty")
-	}
-
-	// Convert to string array
-	entrypoint := []string{}
-	for _, str := range entrypointArr {
-		if str != "" {
-			entrypoint = append(entrypoint, str)
-		}
-	}
-	if len(entrypoint) == 0 {
-		return "", errors.New("Entrypoint is empty")
+func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, target string) (string, error) {
+	if len(entrypoint) == 0 && len(cmd) == 0 {
+		return "", errors.New("Entrypoint & cmd are empty")
 	}
 
 	data, err := ioutil.ReadFile(dockerfile)
@@ -95,7 +84,7 @@ func CreateTempDockerfile(dockerfile string, entrypointArr []string, target stri
 	}
 
 	// add the new entrypoint
-	newData, err := addNewEntrypoint(string(data), entrypointArr, target)
+	newData, err := addNewEntrypoint(string(data), entrypoint, cmd, target)
 	if err != nil {
 		return "", errors.Wrap(err, "add entrypoint")
 	}
@@ -110,12 +99,13 @@ func CreateTempDockerfile(dockerfile string, entrypointArr []string, target stri
 
 var nextFromFinder = regexp.MustCompile("(?i)\n\\s*FROM")
 
-func addNewEntrypoint(content string, entrypoint []string, target string) (string, error) {
-	entrypointStr := "\n\nENTRYPOINT [\"" + entrypoint[0] + "\"]\n"
-	if len(entrypoint) > 1 {
-		entrypointStr += "CMD [\"" + strings.Join(entrypoint[1:], "\",\"") + "\"]\n"
-	} else {
-		entrypointStr += "CMD []\n"
+func addNewEntrypoint(content string, entrypoint []string, cmd []string, target string) (string, error) {
+	entrypointStr := ""
+	if len(entrypoint) > 0 {
+		entrypointStr += "\n\nENTRYPOINT [\"" + strings.Join(entrypoint, "\",\"") + "\"]\n"
+	}
+	if len(cmd) > 0 {
+		entrypointStr += "CMD [\"" + strings.Join(cmd, "\",\"") + "\"]\n"
 	}
 
 	if target == "" {

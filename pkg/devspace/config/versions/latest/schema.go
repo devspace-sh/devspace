@@ -91,6 +91,8 @@ type ImageConfig struct {
 	Tag              string       `yaml:"tag,omitempty"`
 	Dockerfile       string       `yaml:"dockerfile,omitempty"`
 	Context          string       `yaml:"context,omitempty"`
+	Entrypoint       []string     `yaml:"entrypoint,omitempty"`
+	Cmd              []string     `yaml:"cmd,omitempty"`
 	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
 	Build            *BuildConfig `yaml:"build,omitempty"`
 }
@@ -300,6 +302,14 @@ type DevConfig struct {
 	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty"`
 	Interactive *InteractiveConfig      `yaml:"interactive,omitempty"`
 	Selectors   []*SelectorConfig       `yaml:"selectors,omitempty"`
+	Logs        *LogsConfig             `yaml:"logs,omitempty"`
+}
+
+// LogsConfig specifies the logs options for devspace dev
+type LogsConfig struct {
+	Disabled *bool    `yaml:"disabled,omitempty"`
+	ShowLast *int     `yaml:"showLast,omitempty"`
+	Images   []string `yaml:"images,omitempty"`
 }
 
 // InteractiveConfig defines the default interactive config
@@ -313,6 +323,7 @@ type InteractiveConfig struct {
 type InteractiveImageConfig struct {
 	Name       string   `yaml:"name,omitempty"`
 	Entrypoint []string `yaml:"entrypoint,omitempty"`
+	Cmd        []string `yaml:"cmd,omitempty"`
 }
 
 // TerminalConfig describes the terminal options

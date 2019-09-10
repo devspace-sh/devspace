@@ -50,15 +50,23 @@ func (c *Config) Upgrade() (config.Config, error) {
 			}
 
 			entrypoint := []string{}
-			if overrideImage.Entrypoint != nil {
-				for _, s := range *overrideImage.Entrypoint {
-					entrypoint = append(entrypoint, *s)
+			cmd := []string{}
+			if overrideImage.Entrypoint != nil && len(*overrideImage.Entrypoint) > 0 {
+				entrypoint = []string{*(*overrideImage.Entrypoint)[0]}
+
+				for i, s := range *overrideImage.Entrypoint {
+					if i == 0 {
+						continue
+					}
+
+					cmd = append(cmd, *s)
 				}
 			}
 
 			nextConfig.Dev.Interactive.Images = append(nextConfig.Dev.Interactive.Images, &next.InteractiveImageConfig{
 				Name:       *overrideImage.Name,
 				Entrypoint: entrypoint,
+				Cmd:        cmd,
 			})
 		}
 	}

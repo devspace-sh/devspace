@@ -130,7 +130,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
 	var err error
 
 	// Buildoptions
@@ -147,9 +147,16 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 
+	if len(b.helper.ImageConf.Entrypoint) > 0 && len(entrypoint) == 0 {
+		entrypoint = b.helper.ImageConf.Entrypoint
+	}
+	if len(b.helper.ImageConf.Cmd) > 0 && len(cmd) == 0 {
+		cmd = b.helper.ImageConf.Cmd
+	}
+
 	// Check if we should overwrite entrypoint
-	if entrypoint != nil && len(entrypoint) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 {
+		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
 		if err != nil {
 			return err
 		}
