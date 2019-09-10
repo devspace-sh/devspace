@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"gotest.tools/assert"
 )
 
@@ -33,8 +32,8 @@ func TestAddSelector(t *testing.T) {
 			name: "Empty input",
 			expectedSelectorsAfterwards: []v1.SelectorConfig{
 				v1.SelectorConfig{
-					LabelSelector: &map[string]*string{
-						"app.kubernetes.io/component": ptr.String("devspace"),
+					LabelSelector: map[string]string{
+						"app.kubernetes.io/component": "devspace",
 					},
 				},
 			},
@@ -52,26 +51,26 @@ func TestAddSelector(t *testing.T) {
 			save:         true,
 			selectorsBefore: []*v1.SelectorConfig{
 				&v1.SelectorConfig{
-					Name:      ptr.String("DefinedBeforeTest"),
-					Namespace: ptr.String("somens"),
-					LabelSelector: &map[string]*string{
-						"whendefined": ptr.String("before"),
+					Name:      "DefinedBeforeTest",
+					Namespace: "somens",
+					LabelSelector: map[string]string{
+						"whendefined": "before",
 					},
 				},
 			},
 			expectedSelectorsAfterwards: []v1.SelectorConfig{
 				v1.SelectorConfig{
-					Name:      ptr.String("DefinedBeforeTest"),
-					Namespace: ptr.String("somens"),
-					LabelSelector: &map[string]*string{
-						"whendefined": ptr.String("before"),
+					Name:      "DefinedBeforeTest",
+					Namespace: "somens",
+					LabelSelector: map[string]string{
+						"whendefined": "before",
 					},
 				},
 				v1.SelectorConfig{
-					Name:      ptr.String("newSelector"),
-					Namespace: ptr.String("namespace-for-new-selector"),
-					LabelSelector: &map[string]*string{
-						"whendefined": ptr.String("before"),
+					Name:      "newSelector",
+					Namespace: "namespace-for-new-selector",
+					LabelSelector: map[string]string{
+						"whendefined": "before",
 					},
 				},
 			},
@@ -109,11 +108,10 @@ func TestAddSelector(t *testing.T) {
 		fakeConfig := &latest.Config{}
 		if testCase.selectorsBefore != nil {
 			fakeConfig.Dev = &v1.DevConfig{
-				Selectors: &testCase.selectorsBefore,
+				Selectors: testCase.selectorsBefore,
 			}
 		}
 		configutil.SetFakeConfig(fakeConfig)
-		configutil.LoadedConfig = ""
 		if testCase.selectorsBefore == nil {
 			fakeConfig.Dev = nil
 		}
@@ -121,15 +119,15 @@ func TestAddSelector(t *testing.T) {
 		err := AddSelector(testCase.selectorName, testCase.labelSelector, testCase.namespace, testCase.save)
 
 		if fakeConfig.Dev == nil {
-			fakeConfig.Dev = &v1.DevConfig{Selectors: &[]*v1.SelectorConfig{}}
+			fakeConfig.Dev = &v1.DevConfig{Selectors: []*v1.SelectorConfig{}}
 		}
-		assert.Equal(t, len(*fakeConfig.Dev.Selectors), len(testCase.expectedSelectorsAfterwards), "Unexpected amount of selectors in testCase %s", testCase.name)
+		assert.Equal(t, len(fakeConfig.Dev.Selectors), len(testCase.expectedSelectorsAfterwards), "Unexpected amount of selectors in testCase %s", testCase.name)
 		for index, expectedSelector := range testCase.expectedSelectorsAfterwards {
-			assert.Equal(t, *(*fakeConfig.Dev.Selectors)[index].Name, ptr.ReverseString(expectedSelector.Name), "Unexpected selector name in testCase %s", testCase.name)
-			assert.Equal(t, *(*fakeConfig.Dev.Selectors)[index].Namespace, ptr.ReverseString(expectedSelector.Namespace), "Unexpected selector namespace in testCase %s", testCase.name)
-			assert.Equal(t, len(*(*fakeConfig.Dev.Selectors)[index].LabelSelector), len(*expectedSelector.LabelSelector), "Unexpected amount of labelselectors in selector %s in testCase %s", ptr.ReverseString(expectedSelector.Name), testCase.name)
-			for key, value := range *expectedSelector.LabelSelector {
-				assert.Equal(t, *(*(*fakeConfig.Dev.Selectors)[index].LabelSelector)[key], ptr.ReverseString(value), "Unexpected labelselector value of key %s in selector %s in testCase %s", key, ptr.ReverseString(expectedSelector.Name), testCase.name)
+			assert.Equal(t, fakeConfig.Dev.Selectors[index].Name, expectedSelector.Name, "Unexpected selector name in testCase %s", testCase.name)
+			assert.Equal(t, fakeConfig.Dev.Selectors[index].Namespace, expectedSelector.Namespace, "Unexpected selector namespace in testCase %s", testCase.name)
+			assert.Equal(t, len(fakeConfig.Dev.Selectors[index].LabelSelector), len(expectedSelector.LabelSelector), "Unexpected amount of labelselectors in selector %s in testCase %s", expectedSelector.Name, testCase.name)
+			for key, value := range expectedSelector.LabelSelector {
+				assert.Equal(t, fakeConfig.Dev.Selectors[index].LabelSelector[key], value, "Unexpected labelselector value of key %s in selector %s in testCase %s", key, expectedSelector.Name, testCase.name)
 			}
 		}
 
@@ -261,37 +259,36 @@ func TestRemoveSelector(t *testing.T) {
 		fakeConfig := &latest.Config{}
 		if testCase.defineBeforeSelector {
 			fakeConfig.Dev = &v1.DevConfig{
-				Selectors: &[]*v1.SelectorConfig{
+				Selectors: []*v1.SelectorConfig{
 					&v1.SelectorConfig{
-						Name:      ptr.String("DefinedBeforeTest"),
-						Namespace: ptr.String("somens"),
-						LabelSelector: &map[string]*string{
-							"whendefined": ptr.String("before"),
+						Name:      "DefinedBeforeTest",
+						Namespace: "somens",
+						LabelSelector: map[string]string{
+							"whendefined": "before",
 						},
 					},
 				},
 			}
 		}
 		configutil.SetFakeConfig(fakeConfig)
-		configutil.LoadedConfig = ""
 
 		err := RemoveSelector(testCase.removeAllFlag, testCase.selectorName, testCase.labelSelector, testCase.namespace)
 
 		if fakeConfig.Dev.Selectors == nil {
-			fakeConfig.Dev.Selectors = &[]*v1.SelectorConfig{}
+			fakeConfig.Dev.Selectors = []*v1.SelectorConfig{}
 		}
 
 		expectedSelectorLength := 0
 		if testCase.expectBeforeSelectorAfterwards {
 			expectedSelectorLength = 1
 		}
-		assert.Equal(t, len(*fakeConfig.Dev.Selectors), expectedSelectorLength, "Unexpected amount of selectors in testCase %s", testCase.name)
+		assert.Equal(t, len(fakeConfig.Dev.Selectors), expectedSelectorLength, "Unexpected amount of selectors in testCase %s", testCase.name)
 
-		for _, selector := range *fakeConfig.Dev.Selectors {
-			assert.Equal(t, *selector.Name, "DefinedBeforeTest", "Unexpected selector change in testCase %s", testCase.name)
-			assert.Equal(t, *selector.Namespace, "somens", "Unexpected selector change in testCase %s", testCase.name)
-			assert.Equal(t, len(*selector.LabelSelector), 1, "Unexpected selector change in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString((*selector.LabelSelector)["whendefined"]), "before", "Unexpected selector change in testCase %s", testCase.name)
+		for _, selector := range fakeConfig.Dev.Selectors {
+			assert.Equal(t, selector.Name, "DefinedBeforeTest", "Unexpected selector change in testCase %s", testCase.name)
+			assert.Equal(t, selector.Namespace, "somens", "Unexpected selector change in testCase %s", testCase.name)
+			assert.Equal(t, len(selector.LabelSelector), 1, "Unexpected selector change in testCase %s", testCase.name)
+			assert.Equal(t, selector.LabelSelector["whendefined"], "before", "Unexpected selector change in testCase %s", testCase.name)
 		}
 
 		if testCase.expectedErr == "" {

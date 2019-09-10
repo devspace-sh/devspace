@@ -5,13 +5,11 @@ import (
 	"os"
 	"testing"
 
-	//"strings"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,31 +30,24 @@ const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
 func TestKubectlManifests(t *testing.T) {
 	t.Skip("Not yet testable")
 	namespace := "testnamespace"
-	manifests := make([]*string, 1)
-	manifests0 := "kube"
-	manifests[0] = &manifests0
-
-	flags := make([]*string, 1)
-	flags0 := "--dry-run"
-	flags[0] = &flags0
 	// 1. Create fake config & generated config
 
 	// Create fake devspace config
 	deploymentConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Kubectl: &latest.KubectlConfig{
-			Manifests: &manifests,
-			Flags:     &flags,
+			Manifests: []string{"kube"},
+			Flags:     []string{"--dry-run"},
 		},
 	}
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deploymentConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
@@ -64,8 +55,8 @@ func TestKubectlManifests(t *testing.T) {
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -110,8 +101,10 @@ func TestKubectlManifests(t *testing.T) {
 	}
 
 	// 3. Init kubectl & create test namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -126,7 +119,7 @@ func TestKubectlManifests(t *testing.T) {
 		t.Fatalf("Error creating deployConfig: %v", err)
 	}
 
-	isDeployed, err := deployConfig.Deploy(generatedConfig.Configs["default"], true, nil)
+	isDeployed, err := deployConfig.Deploy(generatedConfig.Profiles["default"], true, nil)
 	if err != nil {
 		t.Fatalf("Error deploying chart: %v", err)
 	}

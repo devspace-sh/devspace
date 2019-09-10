@@ -5,7 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -13,22 +13,22 @@ import (
 func createFakeConfig() *latest.Config {
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name:      ptr.String("test-deployment"),
-				Namespace: ptr.String(configutil.TestNamespace),
+				Name:      "test-deployment",
+				Namespace: configutil.TestNamespace,
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
-						Name: ptr.String("stable/nginx"),
+						Name: "stable/nginx",
 					},
 				},
 			},
 			&latest.DeploymentConfig{
-				Name:      ptr.String("test-deployment"),
-				Namespace: ptr.String(""),
+				Name:      "test-deployment",
+				Namespace: "",
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
-						Name: ptr.String("stable/nginx"),
+						Name: "stable/nginx",
 					},
 				},
 			},
@@ -42,7 +42,9 @@ func TestCreateTiller(t *testing.T) {
 	config := createFakeConfig()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	client := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
 	err := createTillerRBAC(config, client, "tiller-namespace")
 	if err != nil {

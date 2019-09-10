@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -135,17 +135,16 @@ func TestVarReplaceFn(t *testing.T) {
 			"isThisATest": "true",
 			"OnePlusOne":  "2",
 		},
-		Variables: []configs.Variable{
-			configs.Variable{
-				Name:    ptr.String("NeedsQuestion"),
-				Options: &[]string{},
+		Variables: []latest.Variable{
+			latest.Variable{
+				Name: "NeedsQuestion",
 			},
-			configs.Variable{
-				Name:              ptr.String("AlsoNeedsQuestion"),
-				Question:          ptr.String("SomeQuestion"),
-				Default:           ptr.String("SomeDefault"),
-				ValidationPattern: ptr.String("SomeValidationPattern"),
-				ValidationMessage: ptr.String("SomeValidationMessage"),
+			latest.Variable{
+				Name:              "AlsoNeedsQuestion",
+				Question:          "SomeQuestion",
+				Default:           "SomeDefault",
+				ValidationPattern: "SomeValidationPattern",
+				ValidationMessage: "SomeValidationMessage",
 			},
 		},
 	}

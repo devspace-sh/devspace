@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
@@ -66,10 +67,12 @@ func TestTillerEnsure(t *testing.T) {
 	config := createFakeConfig()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	client := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
 	// Inject an event into the fake client.
-	err := createTestResources(client)
+	err := createTestResources(client.Client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,13 +88,13 @@ func TestTillerEnsure(t *testing.T) {
 	}
 
 	//Break deployment
-	deployment, err := client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	deployment, err := client.Client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Error breaking deployment: %v", err)
 	}
 	deployment.Status.Replicas = 1
 	deployment.Status.ReadyReplicas = 2
-	client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Update(deployment)
+	client.Client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Update(deployment)
 
 	isTillerDeployed = IsTillerDeployed(config, client, configutil.TestNamespace)
 	assert.Equal(t, false, isTillerDeployed, "Tiller declared deployed despite deployment being broken")
@@ -101,7 +104,9 @@ func TestTillerCreate(t *testing.T) {
 	config := createFakeConfig()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	client := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
 	tillerOptions := getTillerOptions(configutil.TestNamespace)
 
@@ -115,7 +120,9 @@ func TestTillerDelete(t *testing.T) {
 	config := createFakeConfig()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	client := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
 	// Inject an event into the fake client.
 	err := DeleteTiller(config, client, configutil.TestNamespace)

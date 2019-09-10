@@ -41,23 +41,23 @@ func TestLoadConfigFromPath(t *testing.T) {
 
 	ConfigPath = "NotExistent"
 	loadedConfigOnce = sync.Once{}
-	returnedConfig, err := LoadConfig()
+	returnedConfig, err := LoadConfig("")
 	if err != nil {
 		t.Fatalf("Error loading config from non existent path: %v", err)
 	}
-	assert.Equal(t, DefaultConfigName, returnedConfig.ActiveConfig, "Wrong initial config returned")
-	assert.Equal(t, 1, len(returnedConfig.Configs), "Wrong initial config returned")
+	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
+	assert.Equal(t, 1, len(returnedConfig.Profiles), "Wrong initial config returned")
 	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
 
 	ConfigPath = "generated.yaml"
 	loadedConfigOnce = sync.Once{}
 	fsutil.WriteToFile([]byte(""), "generated.yaml")
-	returnedConfig, err = LoadConfig()
+	returnedConfig, err = LoadConfig("")
 	if err != nil {
 		t.Fatalf("Error loading config from existent path with empty content: %v", err)
 	}
-	assert.Equal(t, DefaultConfigName, returnedConfig.ActiveConfig, "Wrong initial config returned")
-	assert.Equal(t, 1, len(returnedConfig.Configs), "Wrong initial config returned")
+	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
+	assert.Equal(t, 1, len(returnedConfig.Profiles), "Wrong initial config returned")
 	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
 }
 
@@ -91,8 +91,8 @@ func TestSaveConfig(t *testing.T) {
 
 	testDontSaveConfig = false
 	err = SaveConfig(&Config{
-		ActiveConfig: "SavedActiveConfig",
-		Configs: map[string]*CacheConfig{
+		ActiveProfile: "SavedActiveConfig",
+		Profiles: map[string]*CacheConfig{
 			"SavedActiveConfig": &CacheConfig{},
 		},
 	})
@@ -100,17 +100,17 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("Error saving config: %v", err)
 	}
 
-	returnedConfig, err := LoadConfigFromPath(ConfigPath)
+	returnedConfig, err := LoadConfigFromPath(ConfigPath, "")
 	if err != nil {
 		t.Fatalf("Error loading config: %v", err)
 	}
-	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveConfig, "Wrong config saved or returned")
+	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveProfile, "Wrong config saved or returned")
 
 	//Now with testDontSaveConfig set true. Loaded config shouldn't change
 	SetTestConfig(&Config{})
 	err = SaveConfig(&Config{
-		ActiveConfig: "NewActiveConfig",
-		Configs: map[string]*CacheConfig{
+		ActiveProfile: "NewActiveConfig",
+		Profiles: map[string]*CacheConfig{
 			"NewActiveConfig": &CacheConfig{},
 		},
 	})
@@ -118,25 +118,24 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("Error saving config: %v", err)
 	}
 
-	returnedConfig, err = LoadConfigFromPath(ConfigPath)
+	returnedConfig, err = LoadConfigFromPath(ConfigPath, "")
 	if err != nil {
 		t.Fatalf("Error loading config: %v", err)
 	}
-	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveConfig, "Wrong config saved or returned")
+	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveProfile, "Wrong config saved or returned")
 }
 
 func TestGetCaches(t *testing.T) {
 	dsConfig := &Config{
-		Configs: map[string]*CacheConfig{
+		Profiles: map[string]*CacheConfig{
 			"SomeConfig": &CacheConfig{},
 		},
 	}
 	InitDevSpaceConfig(dsConfig, "SomeConfig")
-	cacheConfig := dsConfig.Configs["SomeConfig"]
+	cacheConfig := dsConfig.Profiles["SomeConfig"]
 	assert.Equal(t, 0, len(cacheConfig.Deployments), "Deployments wrong initialized")
 	assert.Equal(t, 0, len(cacheConfig.Images), "Images wrong initialized")
 	assert.Equal(t, 0, len(cacheConfig.Dependencies), "Dependencies wrong initialized")
-	assert.Equal(t, 0, len(cacheConfig.Vars), "Vars wrong initialized")
 
 	imageCache := cacheConfig.GetImageCache("NewImageCache")
 	assert.Equal(t, 1, len(cacheConfig.Images), "New imageCache not added to cache")

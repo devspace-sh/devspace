@@ -74,11 +74,12 @@ func TestLocateChartPathDependencies(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-
 		dir, err := ioutil.TempDir("", "test")
 		if err != nil {
 			t.Fatalf("Error creating temporary directory: %v", err)
 		}
+		dir, err = filepath.EvalSymlinks(dir)
+		assert.NilError(t, err, "Error extending expected returned string in testCase %s", testCase.name)
 
 		wdBackup, err := os.Getwd()
 		if err != nil {
@@ -109,8 +110,6 @@ func TestLocateChartPathDependencies(t *testing.T) {
 		}
 
 		if testCase.expectReturnedStringToBeAbsolutePathInDir {
-			dir, err = filepath.EvalSymlinks(dir)
-			assert.NilError(t, err, "Error extending expected returned string in testCase %s", testCase.name)
 			testCase.expectedReturnedString = filepath.Join(dir, testCase.expectedReturnedString)
 		}
 		assert.Equal(t, returnedString, testCase.expectedReturnedString, "Wrong string returned in testCase %s", testCase.name)

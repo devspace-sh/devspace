@@ -8,7 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	
@@ -32,33 +32,30 @@ func TestHelmDeployment(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("don'tDeploy"),
+				Name: "don'tDeploy",
 			},
 			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
+				Name: "test-deployment",
 				Kubectl: &latest.KubectlConfig{
-					Manifests: &[]*string{},
+					Manifests: []string{},
 				},
 			},
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
-		},
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String(namespace),
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -103,8 +100,10 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 3. Init kubectl & create test namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -127,9 +126,9 @@ func TestHelmDeployment(t *testing.T) {
 		t.Fatalf("Unexpected deployment status: %s != Deployed", status.Status)
 	}*/
 
-	*testConfig.Deployments = []*latest.DeploymentConfig{
+	testConfig.Deployments = []*latest.DeploymentConfig{
 		&latest.DeploymentConfig{
-			Name: ptr.String("test-deployment"),
+			Name: "test-deployment",
 			Kubectl: &latest.KubectlConfig{},
 		},
 	}
@@ -138,9 +137,9 @@ func TestHelmDeployment(t *testing.T) {
 		t.Fatal("No Error deploying with an invalid Kubectl in deployment config.")
 	}
 
-	*testConfig.Deployments = []*latest.DeploymentConfig{
+	testConfig.Deployments = []*latest.DeploymentConfig{
 		&latest.DeploymentConfig{
-			Name: ptr.String("test-deployment"),
+			Name: "test-deployment",
 		},
 	}
 	err = All(testConfig, cache, kubeClient, true, true, map[string]string{"default": "nginx"}, []string{"test-deployment"}, &log.DiscardLogger{})
@@ -149,7 +148,7 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 7. Delete test namespace
-	err =  kubeClient.CoreV1().Namespaces().Delete(namespace, nil)
+	err =  kubeClient.Client.CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}
@@ -165,30 +164,27 @@ func TestPurgeDeployments(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
+				Name: "test-deployment",
 				Kubectl: &latest.KubectlConfig{
-					Manifests: &[]*string{},
+					Manifests: []string{},
 				},
 			},
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
-		},
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String(namespace),
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -233,8 +229,10 @@ func TestPurgeDeployments(t *testing.T) {
 	}
 
 	// 3. Init kubectl & create test namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -247,15 +245,15 @@ func TestPurgeDeployments(t *testing.T) {
 		Deployments: make(map[string]*generated.DeploymentCache),
 	}
 	PurgeDeployments(testConfig, cache, kubeClient, []string{}, &log.DiscardLogger{})
-	testConfig.Deployments = &[]*latest.DeploymentConfig{
+	testConfig.Deployments = []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("test-deployment"),
+				Name: "test-deployment",
 				Kubectl: &latest.KubectlConfig{
-					Manifests: &[]*string{},
+					Manifests: []string{},
 				},
 			},
 			&latest.DeploymentConfig{
-				Name: ptr.String("NotListed"),
+				Name: "NotListed",
 			},
 		}
 	PurgeDeployments(testConfig, cache, kubeClient, []string{"test-deployment"}, &log.DiscardLogger{})

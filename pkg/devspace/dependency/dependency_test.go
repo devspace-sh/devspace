@@ -9,11 +9,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var logOutput string
@@ -80,9 +81,8 @@ func TestUpdateAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someConfig"),
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -133,11 +133,11 @@ func TestUpdateAll(t *testing.T) {
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
@@ -221,9 +221,9 @@ func TestDeployAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
+					Profile: "someDir/devspace.yaml",
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -250,16 +250,20 @@ Done Resolved 1 dependencies`,
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
 
-		err = DeployAll(testConfig, generatedConfig, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+
+		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -333,9 +337,9 @@ func TestPurgeAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
+					Profile: "someDir/devspace.yaml",
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -362,16 +366,20 @@ Done Resolved 1 dependencies`,
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
+		
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
-		err = PurgeAll(testConfig, generatedConfig, testCase.allowCyclicParam, &testLogger{})
+		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -16,15 +17,15 @@ import (
 
 func TestComponentDeployment(t *testing.T) {
 	deployConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: ptr.String("nginx"),
+					Image: "nginx",
 				},
 			},
 			Service: &latest.ServiceConfig{
-				Ports: &[]*latest.ServicePortConfig{
+				Ports: []*latest.ServicePortConfig{
 					{
 						Port: ptr.Int(3000),
 					},
@@ -35,13 +36,13 @@ func TestComponentDeployment(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
@@ -49,8 +50,8 @@ func TestComponentDeployment(t *testing.T) {
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -63,8 +64,10 @@ func TestComponentDeployment(t *testing.T) {
 	generated.InitDevSpaceConfig(generatedConfig, "default")
 
 	// Create the fake client.
-	kubeClient := fake.NewSimpleClientset()
-	helmClient := helm.NewFakeClient(kubeClient, configutil.TestNamespace)
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	helmClient := helm.NewFakeClient(kubeClient.Client, configutil.TestNamespace)
 
 	// Init handler
 	deployHandler, err := New(testConfig, kubeClient, deployConfig, log.GetInstance())

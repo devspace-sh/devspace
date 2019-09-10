@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"gotest.tools/assert"
 
@@ -71,12 +71,14 @@ func TestResolver(t *testing.T) {
 		resolverTestCase{
 			name: "Simple local dependency",
 			files: map[string]*latest.Config{
-				"dependency1/devspace.yaml": &latest.Config{},
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+				},
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("dependency1"),
+						Path: "dependency1",
 					},
 				},
 			},
@@ -96,28 +98,29 @@ func TestResolver(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Git:      ptr.String("https://github.com/devspace-cloud/example-dependency.git"),
-						Revision: ptr.String("9e0a7b806035b92d98eb1a71f650f695a2dd8b24"),
-						SubPath:  ptr.String("mysubpath"),
+						Git:      "https://github.com/devspace-cloud/example-dependency.git",
+						Revision: "2724aff6cc3f93f9066770fd630170d19744b906",
+						SubPath:  "mysubpath",
 					},
 				},
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					ID:        "https://github.com/devspace-cloud/example-dependency.git@9e0a7b806035b92d98eb1a71f650f695a2dd8b24:mysubpath",
-					LocalPath: filepath.Join(DependencyFolderPath, "9fb6955fb5f5fcce7a3277f4b3e8ac447aeba1d3ac8e4f4107be7e0ac7d3ce5f", "mysubpath"),
+					ID:        "https://github.com/devspace-cloud/example-dependency.git@2724aff6cc3f93f9066770fd630170d19744b906:mysubpath",
+					LocalPath: filepath.Join(DependencyFolderPath, "7136a1278b7b1ada5638f91b974342daf7191b774022bf445c4be5f7f8472330", "mysubpath"),
 				},
 			},
-			expectedLog: "\nWait Resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@9e0a7b806035b92d98eb1a71f650f695a2dd8b24:mysubpath\nDone Resolved 1 dependencies",
+			expectedLog: "\nWait Resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@2724aff6cc3f93f9066770fd630170d19744b906:mysubpath\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic allowed dependency",
 			files: map[string]*latest.Config{
 				"dependency1/devspace.yaml": &latest.Config{
-					Dependencies: &[]*latest.DependencyConfig{
+					Version: latest.Version,
+					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
 							Source: &latest.SourceConfig{
-								Path: ptr.String(".."),
+								Path: "..",
 							},
 						},
 					},
@@ -126,9 +129,9 @@ func TestResolver(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("dependency1"),
+						Path: "dependency1",
 					},
-					Namespace: ptr.String("someNamespace"),
+					Namespace: "someNamespace",
 				},
 			},
 			allowCyclic: true,
@@ -144,10 +147,11 @@ func TestResolver(t *testing.T) {
 			name: "Cyclic unallowed dependency",
 			files: map[string]*latest.Config{
 				"dependency1/devspace.yaml": &latest.Config{
-					Dependencies: &[]*latest.DependencyConfig{
+					Version: latest.Version,
+					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
 							Source: &latest.SourceConfig{
-								Path: ptr.String(".."),
+								Path: "..",
 							},
 						},
 					},
@@ -156,7 +160,7 @@ func TestResolver(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("dependency1"),
+						Path: "dependency1",
 					},
 				},
 			},
@@ -180,7 +184,7 @@ func TestResolver(t *testing.T) {
 		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &testLogger{})
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
-		dependencies, err := testResolver.Resolve(testCase.dependencyTasks, testCase.updateParam)
+		dependencies, err := testResolver.Resolve(context.Background(), testCase.dependencyTasks, testCase.updateParam)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)

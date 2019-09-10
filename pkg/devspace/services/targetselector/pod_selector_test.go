@@ -3,6 +3,8 @@ package targetselector
 import (
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	
 	"k8s.io/client-go/kubernetes/fake"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,8 +16,10 @@ func TestPodSelectionOneNotRunningPodLabelMatches(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -27,7 +31,7 @@ func TestPodSelectionOneNotRunningPodLabelMatches(t *testing.T) {
 	//Create one Pod with label that will match
 	matchingPodLabels := make(map[string]string, 1)
 	matchingPodLabels["DoesItMatch"] = "Yes"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "MatchingPod",
@@ -40,7 +44,7 @@ func TestPodSelectionOneNotRunningPodLabelMatches(t *testing.T) {
 	//Create Pod wit label that does not match
 	unmatchingPodLabels := make(map[string]string, 1)
 	unmatchingPodLabels["DoesItMatch"] = "No"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: unmatchingPodLabels,
 			Name: "UnMatchingPod",
@@ -63,8 +67,10 @@ func TestPodSelectionTwoNotRunningPodsLabelMatches(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -76,7 +82,7 @@ func TestPodSelectionTwoNotRunningPodsLabelMatches(t *testing.T) {
 	//Create two Pods with label that will match
 	matchingPodLabels := make(map[string]string, 1)
 	matchingPodLabels["DoesItMatch"] = "Yes"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "MatchingPod",
@@ -85,7 +91,7 @@ func TestPodSelectionTwoNotRunningPodsLabelMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "OtherMatchingPod",
@@ -98,7 +104,7 @@ func TestPodSelectionTwoNotRunningPodsLabelMatches(t *testing.T) {
 	//Create Pod wit label that does not match
 	unmatchingPodLabels := make(map[string]string, 1)
 	unmatchingPodLabels["DoesItMatch"] = "No"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: unmatchingPodLabels,
 			Name: "UnMatchingPod",
@@ -121,8 +127,8 @@ func TestPodSelectionOneRunningOneNotRunningPodsLabelMatches(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{ 		Client: fake.NewSimpleClientset(), 	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -134,7 +140,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsLabelMatches(t *testing.T) {
 	//Create two Pods with label that will match
 	matchingPodLabels := make(map[string]string, 1)
 	matchingPodLabels["DoesItMatch"] = "Yes"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "RunningMatchingPod",
@@ -146,7 +152,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsLabelMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "StoppedMatchingPod",
@@ -162,7 +168,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsLabelMatches(t *testing.T) {
 	//Create Pod wit label that does not match
 	unmatchingPodLabels := make(map[string]string, 1)
 	unmatchingPodLabels["DoesItMatch"] = "No"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: unmatchingPodLabels,
 			Name: "UnMatchingPod",
@@ -190,8 +196,8 @@ func TestPodSelectionOneNotRunningPodNoLabel(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{ 		Client: fake.NewSimpleClientset(), 	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -201,7 +207,7 @@ func TestPodSelectionOneNotRunningPodNoLabel(t *testing.T) {
 	}
 
 	//Create one Pod with label that will match
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "StoppedPod",
 		},
@@ -222,8 +228,8 @@ func TestPodSelectionTwoNotRunningPodsNoLabel(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{ 		Client: fake.NewSimpleClientset(), 	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -233,7 +239,7 @@ func TestPodSelectionTwoNotRunningPodsNoLabel(t *testing.T) {
 	}
 
 	//Create two Pods
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "StoppedPod",
 		},
@@ -241,7 +247,7 @@ func TestPodSelectionTwoNotRunningPodsNoLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "OtherStoppedPod",
 		},
@@ -262,8 +268,8 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{ 		Client: fake.NewSimpleClientset(), 	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -273,7 +279,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	}
 
 	//Create two Pods
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "RunningPod",
 		},
@@ -284,7 +290,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "StoppedPod",
 		},
@@ -309,8 +315,8 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	namespace := "test"
 	
 	//Create namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{ 		Client: fake.NewSimpleClientset(), 	}
+	_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -322,7 +328,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	//Create two Pods with label that will match
 	matchingPodLabels := make(map[string]string, 1)
 	matchingPodLabels["DoesItMatch"] = "Yes"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "MatchingPod",
@@ -331,7 +337,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: matchingPodLabels,
 			Name: "OtherMatchingPod",
@@ -344,7 +350,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	//Create Pod wit label that does not match
 	unmatchingPodLabels := make(map[string]string, 1)
 	unmatchingPodLabels["DoesItMatch"] = "No"
-	_, err = kubeClient.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
+	_, err = kubeClient.Client.CoreV1().Pods(namespace).Create(&k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: unmatchingPodLabels,
 			Name: "UnMatchingPod",
@@ -365,7 +371,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	assert.Equal(t, returnedPod.Name == "MatchingPod" || returnedPod.Name == "OtherMatchingPod", true, "SelectPod returned the wrong pod")
 
 	//Delete othermatching pod and try again
-	err = kubeClient.CoreV1().Pods(namespace).Delete("OtherMatchingPod", &metav1.DeleteOptions{})
+	err = kubeClient.Client.CoreV1().Pods(namespace).Delete("OtherMatchingPod", &metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Error deleting pod: %v", err)
 	}
@@ -378,7 +384,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	assert.Equal(t, returnedPod.Name, "MatchingPod", "SelectPod returned deleted pod")
 	
 	//Delete matching pod and try again
-	err = kubeClient.CoreV1().Pods(namespace).Delete("OtherMatchingPod", &metav1.DeleteOptions{})
+	err = kubeClient.Client.CoreV1().Pods(namespace).Delete("OtherMatchingPod", &metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Error deleting pod: %v", err)
 	}
