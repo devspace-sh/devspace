@@ -119,7 +119,7 @@ if (action == "get-tag") {
     }
     process.stdout.write(tag);
     process.exit(0);
-  });
+  }, true);
   return;
 }
 
