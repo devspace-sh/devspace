@@ -1,25 +1,26 @@
 {
-  "name": "devspace",
-  "version": "3.5.13-beta",
-  "description": "DevSpace CLI - the swiss-army knife for Kubernetes. DevSpace CLI accelerates developing, deploying and debugging applications with Docker and Kubernetes.",
-  "bin": {
-    "devspace": "bin/devspace"
-  },
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/devspace-cloud/devspace"
-  },
-  "homepage": "https://github.com/devspace-cloud/devspace",
-  "scripts": {
-    "postinstall": "node index.js install",
-    "preuninstall": "node index.js uninstall",
-    "prepare": "node index.js update-version",
-    "test": "node index.js noop"
-  },
-  "dependencies": {
-    "cli-spinner": "^0.2.10",
-    "request": "^2.81.0"
-  },
-  "license": "Apache-2.0"
+    "name": "devspace",
+    "version": "3.5.18",
+    "description": "DevSpace CLI - the swiss-army knife for Kubernetes. DevSpace CLI accelerates developing, deploying and debugging applications with Docker and Kubernetes.",
+    "bin": {
+        "devspace": "bin/devspace"
+    },
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/devspace-cloud/devspace"
+    },
+    "homepage": "https://github.com/devspace-cloud/devspace",
+    "scripts": {
+        "postinstall": "node index.js install",
+        "preuninstall": "node index.js uninstall",
+        "prepare": "node index.js update-version",
+        "test": "node index.js noop"
+    },
+    "dependencies": {
+        "cli-spinner": "^0.2.10",
+        "inquirer": "^7.0.0",
+        "request": "^2.81.0"
+    },
+    "license": "Apache-2.0"
 }
