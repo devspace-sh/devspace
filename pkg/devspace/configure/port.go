@@ -1,12 +1,12 @@
 package configure
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/pkg/errors"
 )
 
 // GetNameOfFirstDeployment retrieves the first deployment name
@@ -29,7 +29,7 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 
 	portMappings, err := parsePortMappings(args[0])
 	if err != nil {
-		return fmt.Errorf("Error parsing port mappings: %s", err.Error())
+		return errors.Errorf("Error parsing port mappings: %s", err.Error())
 	}
 
 	// Add to first existing port mapping if labelselector and service name are empty
@@ -50,14 +50,14 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 	if labelSelectorMap == nil {
 		labelSelectorMap, err = parseSelectors(labelSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing selectors: %s", err.Error())
+			return errors.Errorf("Error parsing selectors: %s", err.Error())
 		}
 	}
 
 	insertOrReplacePortMapping(baseConfig, namespace, labelSelectorMap, portMappings)
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string, args []string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {
-		return fmt.Errorf("Error parsing selectors: %s", err.Error())
+		return errors.Errorf("Error parsing selectors: %s", err.Error())
 	}
 
 	argPorts := ""
@@ -76,7 +76,7 @@ func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string,
 	}
 
 	if len(labelSelectorMap) == 0 && removeAll == false && argPorts == "" {
-		return fmt.Errorf("You have to specify at least one of the supported flags")
+		return errors.Errorf("You have to specify at least one of the supported flags")
 	}
 
 	ports := strings.Split(argPorts, ",")
@@ -110,7 +110,7 @@ func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string,
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {
-			return fmt.Errorf("Couldn't save config file: %s", err.Error())
+			return errors.Errorf("Couldn't save config file: %s", err.Error())
 		}
 	}
 
@@ -171,7 +171,7 @@ func parsePortMappings(portMappingsString string) ([]*latest.PortMapping, error)
 		portMapping := strings.Split(v, ":")
 
 		if len(portMapping) != 1 && len(portMapping) != 2 {
-			return nil, fmt.Errorf("Error parsing port mapping: %s", v)
+			return nil, errors.Errorf("Error parsing port mapping: %s", v)
 		}
 
 		portMappingStruct := &latest.PortMapping{}

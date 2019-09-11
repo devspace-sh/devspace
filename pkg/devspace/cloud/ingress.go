@@ -49,7 +49,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return fmt.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+		return errors.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 

@@ -33,7 +33,7 @@ devspace connect cluster
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunConnectCluster,
+		RunE: cmd.RunConnectCluster,
 	}
 
 	clusterCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -53,7 +53,7 @@ devspace connect cluster
 }
 
 // RunConnectCluster executes the connect cluster command logic
-func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string) {
+func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string) error {
 	// Check if user has specified a certain provider
 	var cloudProvider *string
 	if cmd.Provider != "" {
@@ -63,7 +63,7 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 	// Get provider
 	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if use host network was used
@@ -74,8 +74,9 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 	// Connect cluster
 	err = provider.ConnectCluster(cmd.Options, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Donef("Successfully connected cluster to DevSpace Cloud. \n\nYou can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
+	return nil
 }

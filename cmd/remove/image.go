@@ -1,6 +1,8 @@
 package remove
 
 import (
+	"errors"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -27,7 +29,7 @@ devspace remove image --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunRemoveImage,
+		RunE: cmd.RunRemoveImage,
 	}
 
 	imageCmd.Flags().BoolVar(&cmd.RemoveAll, "all", false, "Remove all images")
@@ -36,21 +38,24 @@ devspace remove image --all
 }
 
 // RunRemoveImage executes the remove image command logic
-func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) {
+func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		return err
+	}
 
 	err = configure.RemoveImage(config, cmd.RemoveAll, args)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if cmd.RemoveAll {
@@ -58,4 +63,6 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) {
 	} else {
 		log.Donef("Successfully removed image %s", args[0])
 	}
+
+	return nil
 }

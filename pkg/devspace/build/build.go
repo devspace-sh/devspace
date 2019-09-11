@@ -61,7 +61,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 		// Get image tag
 		imageTag, err := randutil.GenerateRandomString(7)
 		if err != nil {
-			return nil, fmt.Errorf("Image building failed: %v", err)
+			return nil, errors.Errorf("Image building failed: %v", err)
 		}
 		if imageConf.Tag != "" {
 			imageTag = imageConf.Tag
@@ -76,7 +76,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 		// Check if rebuild is needed
 		needRebuild, err := builder.ShouldRebuild(cache, ignoreContextPathChanges)
 		if err != nil {
-			return nil, fmt.Errorf("Error during shouldRebuild check: %v", err)
+			return nil, errors.Errorf("Error during shouldRebuild check: %v", err)
 		}
 
 		if forceRebuild == false && needRebuild == false {
@@ -113,7 +113,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectl.Cl
 				// Build the image
 				err := builder.Build(streamLog)
 				if err != nil {
-					errChan <- fmt.Errorf("Error building image %s:%s: %s %v", imageName, imageTag, buff.String(), err)
+					errChan <- errors.Errorf("Error building image %s:%s: %s %v", imageName, imageTag, buff.String(), err)
 					return
 				}
 

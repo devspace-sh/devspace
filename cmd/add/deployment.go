@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +58,7 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunAddDeployment,
+		RunE: cmd.RunAddDeployment,
 	}
 
 	addDeploymentCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to use for deploying")
@@ -80,24 +81,27 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 }
 
 // RunAddDeployment executes the add deployment command logic
-func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) {
+func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		return err
+	}
 	if config.Deployments != nil {
 		for _, deployConfig := range config.Deployments {
 			if deployConfig.Name == deploymentName {
-				log.Fatalf("Deployment %s already exists", deploymentName)
+				return errors.Errorf("Deployment %s already exists", deploymentName)
 			}
 		}
 	} else {
@@ -115,7 +119,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	} else if cmd.Dockerfile != "" {
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, log.GetInstance())
@@ -124,10 +128,10 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	} else if cmd.Component != "" {
 		newDeployment, err = configure.GetPredefinedComponentDeployment(deploymentName, cmd.Component, log.GetInstance())
 	} else {
-		log.Fatal("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
+		return errors.New("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
 	}
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Add namespace if defined
@@ -138,7 +142,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	// Restore vars in config
 	clonedConfig, err := configutil.RestoreVars(config)
 	if err != nil {
-		log.Fatalf("Error restoring vars: %v", err)
+		return errors.Errorf("Error restoring vars: %v", err)
 	}
 
 	// Add image config if necessary
@@ -193,8 +197,9 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	// Save config
 	err = configutil.SaveConfig(clonedConfig)
 	if err != nil {
-		log.Fatalf("Couldn't save config file: %s", err.Error())
+		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	log.Donef("Successfully added %s as new deployment", args[0])
+	return nil
 }

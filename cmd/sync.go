@@ -48,7 +48,7 @@ devspace sync --exclude=node_modules --exclude=test
 devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
 #######################################################`,
-		Run: cmd.Run,
+		RunE: cmd.Run,
 	}
 
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
@@ -65,14 +65,14 @@ devspace sync --container-path=/my-path
 }
 
 // Run executes the command logic
-func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Load generated config if possible
 	var err error
 	var generatedConfig *generated.Config
 	if configutil.ConfigExists() {
 		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -84,18 +84,21 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		config, err = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Build params
@@ -112,6 +115,8 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Start terminal
 	err = services.StartSyncFromCmd(config, client, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

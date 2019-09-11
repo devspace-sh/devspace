@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/add"
@@ -35,6 +34,8 @@ var rootCmd = &cobra.Command{
 	devspace init`,
 }
 
+var globalFlags *flags.GlobalFlags
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -54,16 +55,19 @@ func Execute() {
 
 	// Execute command
 	err := rootCmd.Execute()
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	cloudanalytics.SendCommandEvent(err)
+	if err != nil {
+		if globalFlags.Debug {
+			log.Fatalf("%+v", err)
+		} else {
+			log.Fatal(err)
+		}
+	}
 }
 
 func init() {
 	persistentFlags := rootCmd.PersistentFlags()
-	globalFlags := flags.SetGlobalFlags(persistentFlags)
+	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
 	// Add sub commands
 	rootCmd.AddCommand(add.NewAddCmd(globalFlags))

@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -13,6 +12,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	kubectlpkg "github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 )
 
 // All deploys all deployments in the config
@@ -49,26 +50,26 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "kubectl"
 			} else if deployConfig.Helm != nil {
 				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "helm"
 			} else if deployConfig.Component != nil {
 				deployClient, err = component.New(config, client, deployConfig, log)
 				if err != nil {
-					return fmt.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "component"
 			} else {
-				return fmt.Errorf("Error deploying devspace: deployment %s has no deployment method", deployConfig.Name)
+				return errors.Errorf("Error deploying devspace: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			// Execute before deploment deploy hook
@@ -79,7 +80,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg
 
 			wasDeployed, err := deployClient.Deploy(cache, forceDeploy, builtImages)
 			if err != nil {
-				return fmt.Errorf("Error deploying %s: %v", deployConfig.Name, err)
+				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
 			}
 
 			if wasDeployed {

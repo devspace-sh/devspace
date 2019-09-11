@@ -1,8 +1,6 @@
 package targetselector
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -12,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -80,7 +79,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			podStatus := kubectl.GetPodStatus(pod)
 			if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-				return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
+				return nil, errors.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
 			}
 
 			return pod, nil
@@ -117,7 +116,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 			}
 
 			if len(pods) == 0 {
-				return nil, fmt.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
+				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
 
 			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
@@ -153,7 +152,7 @@ func (t *TargetSelector) GetContainer(log log.Logger) (*v1.Pod, *v1.Container, e
 		return nil, nil, err
 	}
 	if pod == nil {
-		return nil, nil, fmt.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
+		return nil, nil, errors.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
 	}
 
 	// Select container if necessary
@@ -168,12 +167,12 @@ func (t *TargetSelector) GetContainer(log log.Logger) (*v1.Pod, *v1.Container, e
 				}
 			}
 
-			return nil, nil, fmt.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
+			return nil, nil, errors.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
 		}
 
 		// Don't allow pick
 		if t.allowPick == false {
-			return nil, nil, fmt.Errorf("Couldn't select a container in pod %s, because no container name was specified", pod.Name)
+			return nil, nil, errors.Errorf("Couldn't select a container in pod %s, because no container name was specified", pod.Name)
 		}
 
 		options := []string{}

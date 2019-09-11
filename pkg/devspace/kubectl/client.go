@@ -1,7 +1,6 @@
 package kubectl
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -51,7 +50,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 			err = kubeconfig.SaveConfig(&kubeConfig)
 			if err != nil {
-				return nil, fmt.Errorf("Error saving kube config: %v", err)
+				return nil, errors.Errorf("Error saving kube config: %v", err)
 			}
 		}
 	}
@@ -68,7 +67,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 	if kubeConfig.Contexts[activeContext] == nil {
-		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+		return nil, errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
 	}
 
 	restConfig, err := clientConfig.ClientConfig()

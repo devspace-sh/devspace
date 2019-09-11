@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -28,6 +27,7 @@ import (
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -81,7 +81,7 @@ Use Interactive Mode:
 - Use "devspace dev -i image1,image2,..." to override
   entrypoints for images1,image2,... and open terminal
 #######################################################`,
-		Run: cmd.Run,
+		RunE: cmd.Run,
 	}
 
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -109,58 +109,64 @@ Use Interactive Mode:
 }
 
 // Run executes the command logic
-func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.Errorf("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Start file logging
 	log.StartFileLogging()
 
 	// Validate flags
-	cmd.validateFlags()
+	err = cmd.validateFlags()
+	if err != nil {
+		return err
+	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Create kubectl client and switch context if specified
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get the config
-	config := cmd.loadConfig()
+	config, err := cmd.loadConfig()
+	if err != nil {
+		return err
+	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create namespace if necessary
 	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
-		log.Fatalf("Unable to create namespace: %v", err)
+		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster role binding if necessary
 	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
 	if err != nil {
-		log.Fatalf("Unable to create ClusterRoleBinding: %v", err)
+		return err
 	}
 
 	// Create the image pull secrets and add them to the default service account
@@ -171,17 +177,19 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Build and deploy images
 	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args, true)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	cloudanalytics.SendCommandEvent(nil)
 	os.Exit(exitCode)
+
+	return nil
 }
 
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
@@ -189,7 +197,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 		if err != nil {
-			return 0, fmt.Errorf("Error deploying dependencies: %v", err)
+			return 0, errors.Errorf("Error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary
@@ -198,17 +206,17 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
-					return 0, fmt.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 				}
 
-				return 0, fmt.Errorf("Error building image: %v", err)
+				return 0, errors.Errorf("Error building image: %v", err)
 			}
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
 				err := generated.SaveConfig(generatedConfig)
 				if err != nil {
-					return 0, fmt.Errorf("Error saving generated config: %v", err)
+					return 0, errors.Errorf("Error saving generated config: %v", err)
 				}
 			}
 		}
@@ -227,13 +235,13 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			// Deploy all
 			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
 			if err != nil {
-				return 0, fmt.Errorf("Error deploying: %v", err)
+				return 0, errors.Errorf("Error deploying: %v", err)
 			}
 
 			// Save Config
 			err = generated.SaveConfig(generatedConfig)
 			if err != nil {
-				return 0, fmt.Errorf("Error saving generated config: %v", err)
+				return 0, errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 	}
@@ -249,7 +257,10 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config := cmd.loadConfig()
+				config, err := cmd.loadConfig()
+				if err != nil {
+					return 0, err
+				}
 
 				// Trigger rebuild & redeploy
 				return cmd.buildAndDeploy(config, generatedConfig, client, args, false)
@@ -266,7 +277,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
-			return 0, fmt.Errorf("Unable to start portforwarding: %v", err)
+			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
 
 		defer func() {
@@ -279,7 +290,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	if cmd.Sync {
 		syncConfigs, err := services.StartSync(config, generatedConfig, client, cmd.VerboseSync, log)
 		if err != nil {
-			return 0, fmt.Errorf("Unable to start sync: %v", err)
+			return 0, errors.Errorf("Unable to start sync: %v", err)
 		}
 
 		defer func() {
@@ -433,10 +444,12 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	return 0, <-exitChan
 }
 
-func (cmd *DevCmd) validateFlags() {
+func (cmd *DevCmd) validateFlags() error {
 	if cmd.SkipBuild && cmd.ForceBuild {
-		log.Fatal("Flags --skip-build & --force-build cannot be used together")
+		return errors.New("Flags --skip-build & --force-build cannot be used together")
 	}
+
+	return nil
 }
 
 // GetPaths retrieves the watch paths from the config object
@@ -503,13 +516,14 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig() *latest.Config {
-	var err error
-
+func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	configutil.ResetConfig()
 
 	// Load config
-	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return nil, err
+	}
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
@@ -524,7 +538,7 @@ func (cmd *DevCmd) loadConfig() *latest.Config {
 		images := config.Images
 		if config.Dev.Interactive.Images == nil && config.Dev.Interactive.Terminal == nil {
 			if config.Images == nil || len(config.Images) == 0 {
-				log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
+				return nil, errors.New("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
 			}
 
 			imageNames := make([]string, 0, len(images))
@@ -542,7 +556,7 @@ func (cmd *DevCmd) loadConfig() *latest.Config {
 					Options:  imageNames,
 				}, log.GetInstance())
 				if err != nil {
-					log.Fatal(err)
+					return nil, err
 				}
 			}
 
@@ -569,5 +583,5 @@ func (cmd *DevCmd) loadConfig() *latest.Config {
 		}
 	}
 
-	return config
+	return config, nil
 }

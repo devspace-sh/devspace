@@ -9,7 +9,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +36,7 @@ devspace use namespace my-namespace
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunUseNamespace,
+		RunE: cmd.RunUseNamespace,
 	}
 
 	useNamespace.Flags().BoolVar(&cmd.Reset, "reset", false, "Resets the default namespace of the current kube-context")
@@ -43,36 +45,36 @@ devspace use namespace my-namespace
 }
 
 // RunUseNamespace executes the functionality "devspace use namespace"
-func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string) {
+func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get default context
 	client, err := kubectl.NewDefaultClient()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if current kube context belongs to a space
 	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext)
 	if err != nil {
-		log.Fatalf("Unable to check if context belongs to Space: %v", err)
+		return errors.Errorf("Unable to check if context belongs to Space: %v", err)
 	}
 	if isSpace {
-		log.Fatalf("Current kube-context belongs to a Space created by DevSpace Cloud. Changing the default namespace for a Space context is not possible.")
+		return errors.Errorf("Current kube-context belongs to a Space created by DevSpace Cloud. Changing the default namespace for a Space context is not possible.")
 	}
 
 	// Load kube-config
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
-		log.Fatalf("Unable to load kube-config: %v", err)
+		return errors.Errorf("Unable to load kube-config: %v", err)
 	}
 
 	if kubeConfig.Contexts[client.CurrentContext] == nil {
-		log.Fatalf("Couldn't find kube context '%s' in kube config", client.CurrentContext)
+		return errors.Errorf("Couldn't find kube context '%s' in kube config", client.CurrentContext)
 	}
 
 	// Remember current default namespace
@@ -84,7 +86,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 	} else if !cmd.Reset {
 		namespaceList, err := client.Client.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
-			log.Fatalf("Unable to list namespaces: %v", err)
+			return errors.Errorf("Unable to list namespaces: %v", err)
 		}
 
 		namespaces := []string{}
@@ -97,7 +99,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 			Options:  namespaces,
 		}, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -108,7 +110,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		// Save updated kube-config
 		err = kubeconfig.SaveConfig(kubeConfig)
 		if err != nil {
-			log.Fatalf("Error saving kube config: %v")
+			return errors.Errorf("Error saving kube config: %v", err)
 		}
 
 		log.Infof("The default namespace of your current kube-context '%s' has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"), ansi.Color(namespace, "white+b"))
@@ -121,7 +123,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Reset namespace cache
@@ -130,9 +132,11 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
+
+	return nil
 }

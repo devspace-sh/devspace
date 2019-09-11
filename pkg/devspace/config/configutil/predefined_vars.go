@@ -202,7 +202,7 @@ func getPredefinedVar(name, overrideKubeContext string) (bool, string, error) {
 	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
 		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
 		if err != nil {
-			return false, "", fmt.Errorf("Error parsing variable %s: %v", name, err)
+			return false, "", errors.Errorf("Error parsing variable %s: %v", name, err)
 		}
 
 		kubeContext, err := kubeconfig.GetCurrentContext()
@@ -215,7 +215,7 @@ func getPredefinedVar(name, overrideKubeContext string) (bool, string, error) {
 
 		spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
 		if err != nil {
-			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 		}
 
 		cloudConfigData, err := cloudconfig.ParseProviderConfig()
@@ -225,17 +225,17 @@ func getPredefinedVar(name, overrideKubeContext string) (bool, string, error) {
 
 		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
 		if provider == nil {
-			return false, "", fmt.Errorf("Couldn't find space provider: %s", providerName)
+			return false, "", errors.Errorf("Couldn't find space provider: %s", providerName)
 		}
 		if provider.Spaces == nil {
-			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 		}
 		if provider.Spaces[spaceID] == nil {
-			return false, "", fmt.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
+			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
 		}
 
 		if len(provider.Spaces[spaceID].Space.Domains) <= idx-1 {
-			return false, "", fmt.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(provider.Spaces[spaceID].Space.Domains), idx)
+			return false, "", errors.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(provider.Spaces[spaceID].Space.Domains), idx)
 		}
 
 		return true, provider.Spaces[spaceID].Space.Domains[idx-1].URL, nil

@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -137,13 +136,13 @@ func GetPredefinedComponentDeployment(name, component string, log log.Logger) (*
 	// Create component generator
 	componentGenerator, err := generator.NewComponentGenerator()
 	if err != nil {
-		return nil, fmt.Errorf("Error initializing component generator: %v", err)
+		return nil, errors.Errorf("Error initializing component generator: %v", err)
 	}
 
 	// Get component template
 	template, err := componentGenerator.GetComponentTemplate(component, log)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving template: %v", err)
+		return nil, errors.Errorf("Error retrieving template: %v", err)
 	}
 
 	return &latest.DeploymentConfig{
@@ -215,7 +214,7 @@ func RemoveDeployment(baseConfig *latest.Config, removeAll bool, name string) (b
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
-		return false, fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return false, errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return found, nil

@@ -8,6 +8,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +36,7 @@ devspace remove deployment --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunRemoveDeployment,
+		RunE: cmd.RunRemoveDeployment,
 	}
 
 	deploymentCmd.Flags().BoolVar(&cmd.RemoveAll, "all", false, "Remove all deployments")
@@ -43,14 +45,14 @@ devspace remove deployment --all
 }
 
 // RunRemoveDeployment executes the specified deployment
-func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) {
+func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	name := ""
@@ -59,7 +61,10 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		return err
+	}
 
 	shouldPurgeDeployment, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
@@ -70,12 +75,12 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		},
 	}, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if shouldPurgeDeployment == "yes" {
 		client, err := kubectl.NewDefaultClient()
 		if err != nil {
-			log.Fatalf("Unable to create new kubectl client: %v", err)
+			return errors.Errorf("Unable to create new kubectl client: %v", err)
 		}
 
 		deployments := []string{}
@@ -86,7 +91,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
 			log.Errorf("Error loading generated.yaml: %v", err)
-			return
+			return nil
 		}
 
 		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
@@ -99,7 +104,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 
 	found, err := configure.RemoveDeployment(config, cmd.RemoveAll, name)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if found {
@@ -115,4 +120,6 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			log.Warnf("Couldn't find deployment %s", args[0])
 		}
 	}
+
+	return nil
 }

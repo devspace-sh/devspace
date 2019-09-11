@@ -124,9 +124,9 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 
 	matches := targetFinder.FindAllStringIndex(content, -1)
 	if len(matches) == 0 {
-		return "", fmt.Errorf("Coulnd't find target '%s' in dockerfile", target)
+		return "", errors.Errorf("Coulnd't find target '%s' in dockerfile", target)
 	} else if len(matches) > 1 {
-		return "", fmt.Errorf("Multiple matches for target '%s' in dockerfile", target)
+		return "", errors.Errorf("Multiple matches for target '%s' in dockerfile", target)
 	}
 
 	// Find the next FROM statement

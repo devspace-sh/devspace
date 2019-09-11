@@ -1,7 +1,6 @@
 package configutil
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -39,7 +38,7 @@ func GetProfiles(basePath string) ([]string, error) {
 	rawMap := map[interface{}]interface{}{}
 	err = yaml.Unmarshal(bytes, &rawMap)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing devspace.yaml: %v", err)
+		return nil, errors.Errorf("Error parsing devspace.yaml: %v", err)
 	}
 
 	profiles, ok := rawMap["profiles"].([]interface{})
@@ -137,7 +136,7 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, lo
 
 		isInEnv := os.Getenv(VarEnvPrefix+strings.ToUpper(name)) != "" || os.Getenv(name) != ""
 		if variable.Source != nil && *variable.Source == latest.VariableSourceEnv && isInEnv == false {
-			return fmt.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
+			return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
 		}
 
 		// Check if variable is in environment

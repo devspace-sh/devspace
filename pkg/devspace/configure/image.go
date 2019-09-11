@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/pkg/errors"
 )
 
 const dockerHubHostname = "hub.docker.com"
@@ -75,7 +76,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	// Get docker client
 	client, err := docker.NewClientWithMinikube(kubeContext, true, log)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot create docker client: %v", err)
+		return nil, errors.Errorf("Cannot create docker client: %v", err)
 	}
 
 	// Check if docker is installed
@@ -198,7 +199,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	// Initialize docker
 	dockerClient, err := docker.NewClient(log)
 	if err != nil {
-		return "", fmt.Errorf("Error creating docker client: %v", err)
+		return "", errors.Errorf("Error creating docker client: %v", err)
 	}
 
 	authConfig, err := docker.GetAuthConfig(dockerClient, dockerHubHostname, true)
@@ -284,7 +285,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		} else if selectedRegistry == useDevSpaceRegistry {
 			return registryURL, loginDevSpaceCloud(*cloudProvider, log)
 		} else {
-			return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}
 	}
 
@@ -302,12 +303,12 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 		// Get default registry
 		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 		if err != nil {
-			return "", fmt.Errorf("Error login into cloud provider: %v", err)
+			return "", errors.Errorf("Error login into cloud provider: %v", err)
 		}
 
 		registries, err := provider.GetRegistries()
 		if err != nil {
-			return "", fmt.Errorf("Error retrieving registries: %v", err)
+			return "", errors.Errorf("Error retrieving registries: %v", err)
 		}
 		if len(registries) > 0 {
 			registryURL = registries[0].URL
@@ -394,7 +395,7 @@ func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, d
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return nil
@@ -403,7 +404,7 @@ func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, d
 //RemoveImage removes an image from the devspace
 func RemoveImage(baseConfig *latest.Config, removeAll bool, names []string) error {
 	if len(names) == 0 && removeAll == false {
-		return fmt.Errorf("You have to specify at least one image")
+		return errors.Errorf("You have to specify at least one image")
 	}
 
 	newImageList := make(map[string]*v1.ImageConfig)
@@ -425,7 +426,7 @@ func RemoveImage(baseConfig *latest.Config, removeAll bool, names []string) erro
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %v", err)
+		return errors.Errorf("Couldn't save config file: %v", err)
 	}
 
 	return nil

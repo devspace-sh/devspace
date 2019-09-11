@@ -1,7 +1,6 @@
 package helm
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -43,7 +42,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 	}
 
 	if len(missing) > 0 {
-		return fmt.Errorf("found in requirements.yaml, but missing in charts/ directory: %s", strings.Join(missing, ", "))
+		return errors.Errorf("found in requirements.yaml, but missing in charts/ directory: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -81,7 +80,7 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 			}
 		}
 	} else if err != helmchartutil.ErrRequirementsNotFound {
-		return nil, fmt.Errorf("cannot load requirements: %v", err)
+		return nil, errors.Errorf("cannot load requirements: %v", err)
 	}
 
 	releaseExists := ReleaseExists(client.helm, releaseName)
@@ -124,7 +123,7 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		)
 
 		if err != nil {
-			err = client.analyzeError(fmt.Errorf("helm upgrade: %v", err), releaseNamespace)
+			err = client.analyzeError(errors.Errorf("helm upgrade: %v", err), releaseNamespace)
 			if err != nil {
 				if rollback {
 					log.Warn("Try to roll back back chart because of previous error")
@@ -153,7 +152,7 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		k8shelm.InstallReuseName(true),
 	)
 	if err != nil {
-		err = client.analyzeError(fmt.Errorf("helm install: %v", err), releaseNamespace)
+		err = client.analyzeError(errors.Errorf("helm install: %v", err), releaseNamespace)
 		if err != nil {
 			if rollback {
 				// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error

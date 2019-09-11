@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 )
 
 // StartPortForwarding starts the port forwarding functionality
@@ -36,21 +36,21 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 				},
 			}, false, imageSelector)
 			if err != nil {
-				return nil, fmt.Errorf("Error creating target selector: %v", err)
+				return nil, errors.Errorf("Error creating target selector: %v", err)
 			}
 
 			log.StartWait("Port-Forwarding: Waiting for pods...")
 			pod, err := selector.GetPod(log)
 			log.StopWait()
 			if err != nil {
-				return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
+				return nil, errors.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
 			} else if pod != nil {
 				ports := make([]string, len(portForwarding.PortMappings))
 				addresses := make([]string, len(portForwarding.PortMappings))
 
 				for index, value := range portForwarding.PortMappings {
 					if value.LocalPort == nil {
-						return nil, fmt.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
+						return nil, errors.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
 					}
 
 					localPort := strconv.Itoa(*value.LocalPort)
@@ -71,7 +71,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 
 				pf, err := client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
-					return nil, fmt.Errorf("Error starting port forwarding: %v", err)
+					return nil, errors.Errorf("Error starting port forwarding: %v", err)
 				}
 
 				go func() {
@@ -88,7 +88,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 
 					portforwarder = append(portforwarder, pf)
 				case <-time.After(20 * time.Second):
-					return nil, fmt.Errorf("Timeout waiting for port forwarding to start")
+					return nil, errors.Errorf("Timeout waiting for port forwarding to start")
 				}
 			}
 		}

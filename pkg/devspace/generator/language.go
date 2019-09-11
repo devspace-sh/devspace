@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 
 	enry "gopkg.in/src-d/enry.v1"
 )
@@ -136,7 +136,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
-		return nil, fmt.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
+		return nil, errors.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
 	}
 
 	if len(cg.supportedLanguages) == 0 {
@@ -166,7 +166,7 @@ func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
 	// Check if language is available
 	_, err = os.Stat(filepath.Join(cg.gitRepo.LocalPath, language))
 	if err != nil {
-		return fmt.Errorf("Template for language %s not found", language)
+		return errors.Errorf("Template for language %s not found", language)
 	}
 
 	// Copy dockerfile

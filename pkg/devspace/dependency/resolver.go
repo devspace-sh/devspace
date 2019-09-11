@@ -1,7 +1,6 @@
 package dependency
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -226,7 +225,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Load config
 	dConfig, err := configutil.GetConfigFromPath(r.BaseCache, localPath, overrideKubeContext, dependency.Profile, log.Discard)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
+		return nil, errors.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
 
 	// Override complete dev config
@@ -235,7 +234,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Load dependency generated config
 	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)), dependency.Profile)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
+		return nil, errors.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
 
 	dGeneratedConfig.ActiveProfile = dependency.Profile

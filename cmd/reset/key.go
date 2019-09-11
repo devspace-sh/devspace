@@ -28,7 +28,7 @@ devspace reset key my-cluster
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunResetkey,
+		RunE: cmd.RunResetkey,
 	}
 
 	keyCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -37,7 +37,7 @@ devspace reset key my-cluster
 }
 
 // RunResetkey executes the reset key command logic
-func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) {
+func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) error {
 	// Check if user has specified a certain provider
 	var cloudProvider *string
 	if cmd.Provider != "" {
@@ -47,14 +47,15 @@ func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) {
 	// Get provider
 	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Reset the key
 	err = provider.ResetKey(args[0], log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Donef("Successfully reseted key for cluster %s", args[0])
+	return nil
 }

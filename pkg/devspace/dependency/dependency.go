@@ -39,7 +39,7 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 	_, err = resolver.Resolve(config.Dependencies, overrideKubeContext, true)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
-			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return err
@@ -64,7 +64,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 	dependencies, err := resolver.Resolve(config.Dependencies, overrideKubeContext, updateDependencies)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
-			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return err
@@ -94,7 +94,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 
 		err := dependency.Build(skipPush, forceDeployDependencies, forceBuild, dependencyLogger)
 		if err != nil {
-			return fmt.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		logger.Donef("Built dependency %s", dependency.ID)
@@ -122,7 +122,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 	dependencies, err := resolver.Resolve(config.Dependencies, client.CurrentContext, updateDependencies)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
-			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return err
@@ -152,7 +152,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 
 		err := dependency.Deploy(client, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, dependencyLogger)
 		if err != nil {
-			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		// Prettify path if its a path deployment
@@ -181,7 +181,7 @@ func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Cl
 	dependencies, err := resolver.Resolve(config.Dependencies, client.CurrentContext, false)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
-			return fmt.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return errors.Wrap(err, "resolve dependencies")
@@ -209,7 +209,7 @@ func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Cl
 
 		err := dependency.Purge(client, dependencyLogger)
 		if err != nil {
-			return fmt.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		logger.Donef("Purged dependency %s", dependency.ID)
@@ -274,7 +274,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 		if len(builtImages) > 0 {
 			err := generated.SaveConfig(d.GeneratedConfig)
 			if err != nil {
-				return fmt.Errorf("Error saving generated config: %v", err)
+				return errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 	}
@@ -323,7 +323,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 	// Create namespace if necessary
 	err = client.EnsureDefaultNamespace(log)
 	if err != nil {
-		return fmt.Errorf("Unable to create namespace: %v", err)
+		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create docker client
@@ -351,7 +351,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 		if len(builtImages) > 0 {
 			err := generated.SaveConfig(d.GeneratedConfig)
 			if err != nil {
-				return fmt.Errorf("Error saving generated config: %v", err)
+				return errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 	}
@@ -365,7 +365,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 	// Save Config
 	err = generated.SaveConfig(d.GeneratedConfig)
 	if err != nil {
-		return fmt.Errorf("Error saving generated config: %v", err)
+		return errors.Errorf("Error saving generated config: %v", err)
 	}
 
 	log.Donef("Deployed dependency %s", d.ID)

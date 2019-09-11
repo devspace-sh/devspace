@@ -1,8 +1,6 @@
 package versions
 
 import (
-	"fmt"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
@@ -44,7 +42,7 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 
 	loader, ok := versionLoader[version]
 	if ok == false {
-		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
 	prepareFunc := loader.Prepare
@@ -72,7 +70,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 
 	loader, ok := versionLoader[version]
 	if ok == false {
-		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
 	variablesLoadFunc := loader.Variables
@@ -104,7 +102,7 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 
 	loader, ok := versionLoader[version]
 	if ok == false {
-		return nil, fmt.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
 	versionLoadFunc := loader.New
@@ -117,14 +115,14 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	}
 	err = yaml.UnmarshalStrict(out, latestConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading config: %v", err)
+		return nil, errors.Errorf("Error loading config: %v", err)
 	}
 
 	// Upgrade config to latest
 	for latestConfig.GetVersion() != latest.Version {
 		upgradedConfig, err := latestConfig.Upgrade()
 		if err != nil {
-			return nil, fmt.Errorf("Error upgrading config from version %s: %v", latestConfig.GetVersion(), err)
+			return nil, errors.Errorf("Error upgrading config from version %s: %v", latestConfig.GetVersion(), err)
 		}
 
 		latestConfig = upgradedConfig
@@ -133,7 +131,7 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	// Convert
 	latestConfigConverted, ok := latestConfig.(*latest.Config)
 	if ok == false {
-		return nil, fmt.Errorf("Error converting config, latest config is not the latest version")
+		return nil, errors.Errorf("Error converting config, latest config is not the latest version")
 	}
 
 	// Update version to latest

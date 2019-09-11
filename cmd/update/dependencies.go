@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ in the devspace.yaml
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunDependencies,
+		RunE: cmd.RunDependencies,
 	}
 
 	dependenciesCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -42,29 +43,33 @@ in the devspace.yaml
 }
 
 // RunDependencies executes the functionality "devspace update dependencies"
-func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []string) {
+func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Get the config
-	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, cmd.KubeContext, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Donef("Successfully updated all dependencies")
+	return nil
 }

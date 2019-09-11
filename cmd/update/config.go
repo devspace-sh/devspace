@@ -3,6 +3,7 @@ package update
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -27,21 +28,21 @@ Note: This does not upgrade the overwrite configs
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunConfig,
+		RunE: cmd.RunConfig,
 	}
 
 	return configCmd
 }
 
 // RunConfig executes the functionality "devspace update config"
-func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
+func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Get config
@@ -50,8 +51,9 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) {
 	// Save it
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
-		log.Fatalf("Error saving config: %v", err)
+		return errors.Errorf("Error saving config: %v", err)
 	}
 
 	log.Infof("Successfully converted base config to current version")
+	return nil
 }

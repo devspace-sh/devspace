@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"encoding/base64"
-	"fmt"
 	"regexp"
 	"time"
 
@@ -612,7 +611,7 @@ func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, err
 
 func getClusterName(clusterName string, log log.Logger) (string, error) {
 	if clusterName != "" && ClusterNameValidationRegEx.MatchString(clusterName) == false {
-		return "", fmt.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
+		return "", errors.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
 	} else if clusterName != "" {
 		return clusterName, nil
 	}
@@ -655,7 +654,7 @@ func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 		return nil, errors.Wrap(err, "list cluster nodes")
 	}
 	if len(nodeList.Items) == 0 {
-		return nil, fmt.Errorf("The cluster specified has no nodes, please choose a cluster where at least one node is up and running")
+		return nil, errors.Errorf("The cluster specified has no nodes, please choose a cluster where at least one node is up and running")
 	}
 
 	groupResources, err := client.Discovery().ServerResources()
@@ -756,7 +755,7 @@ func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
 		return err
 	}
 	if client.RestConfig.Host != *cluster.Server {
-		return fmt.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig.Host, *cluster.Server)
+		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig.Host, *cluster.Server)
 	}
 
 	key, err := getKey(p, true, log)

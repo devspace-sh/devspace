@@ -1,13 +1,12 @@
 package configure
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/pkg/errors"
 )
 
 // AddSyncPath adds a new sync path to the config
@@ -29,7 +28,7 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 	if labelSelectorMap == nil {
 		labelSelectorMap, err = parseSelectors(labelSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing selectors: %s", err.Error())
+			return errors.Errorf("Error parsing selectors: %s", err.Error())
 		}
 	}
 
@@ -45,7 +44,7 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 
 	workdir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Unable to determine current workdir: %s", err.Error())
+		return errors.Errorf("Unable to determine current workdir: %s", err.Error())
 	}
 
 	localPath = strings.TrimPrefix(localPath, workdir)
@@ -66,7 +65,7 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return nil
@@ -77,11 +76,11 @@ func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, contai
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
-		return fmt.Errorf("Error parsing selectors: %v", err)
+		return errors.Errorf("Error parsing selectors: %v", err)
 	}
 
 	if len(labelSelectorMap) == 0 && removeAll == false && localPath == "" && containerPath == "" {
-		return fmt.Errorf("You have to specify at least one of the supported flags")
+		return errors.Errorf("You have to specify at least one of the supported flags")
 	}
 
 	if baseConfig.Dev.Sync != nil && len(baseConfig.Dev.Sync) > 0 {
@@ -102,7 +101,7 @@ func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, contai
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {
-			return fmt.Errorf("Couldn't save config file: %v", err)
+			return errors.Errorf("Couldn't save config file: %v", err)
 		}
 	}
 
@@ -122,7 +121,7 @@ func parseSelectors(selectorString string) (map[string]string, error) {
 		keyValue := strings.Split(v, "=")
 
 		if len(keyValue) != 2 {
-			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
+			return nil, errors.Errorf("Wrong selector format: %s", selectorString)
 		}
 		labelSelector := strings.TrimSpace(keyValue[1])
 		selectorMap[strings.TrimSpace(keyValue[0])] = labelSelector

@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -96,12 +95,12 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 	// Get absolute paths
 	absoluteDockerfilePath, err := filepath.Abs(b.DockerfilePath)
 	if err != nil {
-		return fmt.Errorf("Couldn't determine absolute path for %s", b.DockerfilePath)
+		return errors.Errorf("Couldn't determine absolute path for %s", b.DockerfilePath)
 	}
 
 	absoluteContextPath, err := filepath.Abs(b.ContextPath)
 	if err != nil {
-		return fmt.Errorf("Couldn't determine absolute path for %s", b.ContextPath)
+		return errors.Errorf("Couldn't determine absolute path for %s", b.ContextPath)
 	}
 
 	log.Infof("Building image '%s' with engine '%s'", b.ImageName, b.EngineName)
@@ -109,7 +108,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 	// Build Image
 	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)
 	if err != nil {
-		return fmt.Errorf("Error during image build: %v", err)
+		return errors.Errorf("Error during image build: %v", err)
 	}
 
 	log.Done("Done processing image '" + b.ImageName + "'")
@@ -123,7 +122,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 	// Hash dockerfile
 	_, err := os.Stat(b.DockerfilePath)
 	if err != nil {
-		return false, fmt.Errorf("Dockerfile %s missing: %v", b.DockerfilePath, err)
+		return false, errors.Errorf("Dockerfile %s missing: %v", b.DockerfilePath, err)
 	}
 	dockerfileHash, err := hash.Directory(b.DockerfilePath)
 	if err != nil {
@@ -165,7 +164,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 
 		excludes, err := build.ReadDockerignore(contextDir)
 		if err != nil {
-			return false, fmt.Errorf("Error reading .dockerignore: %v", err)
+			return false, errors.Errorf("Error reading .dockerignore: %v", err)
 		}
 
 		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
@@ -174,7 +173,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 
 		contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
 		if err != nil {
-			return false, fmt.Errorf("Error hashing %s: %v", contextDir, err)
+			return false, errors.Errorf("Error hashing %s: %v", contextDir, err)
 		}
 
 		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash

@@ -63,7 +63,7 @@ devspace open
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunOpen,
+		RunE: cmd.RunOpen,
 	}
 
 	openCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -72,11 +72,11 @@ devspace open
 }
 
 // RunOpen executes the functionality "devspace open"
-func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
+func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var (
@@ -93,32 +93,35 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	if configExists {
 		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	// Get kubernetes client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get default namespace
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		devspaceConfig, err = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		if err != nil {
+			return err
+		}
 	}
 
 	namespace := client.Namespace
@@ -134,13 +137,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		// Get provider
 		provider, err = cloud.GetProvider(providerName, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Get space
 		space, err = provider.GetSpace(spaceID)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
@@ -156,21 +159,21 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		},
 	}, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.WriteString("\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
 		openLocal(devspaceConfig, nil, client, domain)
-		return
+		return nil
 	}
 
 	// create ingress for public access via domain
 	if space != nil {
 		// Check if domain there is a domain for the space
 		if len(space.Domains) == 0 {
-			log.Fatalf("Space %s has no connected domain", space.Name)
+			return errors.Errorf("Space %s has no connected domain", space.Name)
 		}
 
 		// Select domain
@@ -187,7 +190,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 				Options:  domains,
 			}, log.GetInstance())
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 		}
 	} else {
@@ -195,21 +198,21 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 			Question: "Which domain do you want to use? (must be connected via DNS)",
 		}, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	// Check if ingress for domain already exists
 	existingIngressDomain, existingIngressTLS, err := findDomain(client, namespace, domain)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// No suitable ingress found => create ingress
 	if existingIngressDomain == "" {
 		serviceName, servicePort, _, err := getService(devspaceConfig, client, namespace, domain, false)
 		if err != nil {
-			log.Fatalf("Error getting service: %v", err)
+			return errors.Wrap(err, "get service")
 		}
 
 		hash := sha1.New()
@@ -246,12 +249,12 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		})
 		if err != nil {
 			log.WriteString("\n")
-			log.Fatalf("Unable to create ingress for domain %s: %v", domain, err)
+			return errors.Errorf("Unable to create ingress for domain %s: %v", domain, err)
 		}
 
 		domain, tls, err = findDomain(client, namespace, domain)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		domain = existingIngressDomain
@@ -267,8 +270,10 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 
 	err = openURL(domain, client, namespace, log.GetInstance(), 4*time.Minute)
 	if err != nil {
-		log.Fatalf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
+		return errors.Errorf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
 	}
+
+	return nil
 }
 
 func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
@@ -307,10 +312,10 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 	return nil
 }
 
-func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, domain string) {
+func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, domain string) error {
 	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace, domain, true)
 	if err != nil {
-		log.Fatal("Unable to get service: %v", err)
+		return errors.Errorf("Unable to get service: %v", err)
 	}
 
 	localPort := servicePort
@@ -347,7 +352,7 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 		},
 	}, generatedConfig, client, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Unable to start portforwarding: %v", err)
+		return errors.Wrap(err, "start port forwarding")
 	}
 
 	defer func() {
@@ -372,7 +377,7 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	// Wait until user aborts the program or presses ENTER
 	reader := bufio.NewReader(os.Stdin)
 	_, _, _ = reader.ReadRune()
-	return
+	return nil
 }
 
 func getService(config *latest.Config, client *kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
@@ -417,7 +422,7 @@ func getService(config *latest.Config, client *kubectl.Client, namespace, host s
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return "", 0, nil, fmt.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+		return "", 0, nil, errors.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 
@@ -455,7 +460,7 @@ func findDomain(client *kubectl.Client, namespace, host string) (string, bool, e
 	// List all ingresses and only create one if there is none already
 	ingressList, err := client.Client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return "", false, fmt.Errorf("Error listing ingresses: %v", err)
+		return "", false, errors.Errorf("Error listing ingresses: %v", err)
 	}
 
 	// Check ingresses for our domain

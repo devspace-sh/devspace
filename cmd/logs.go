@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ devspace logs --namespace=mynamespace
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunLogs,
+		RunE: cmd.RunLogs,
 	}
 
 	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
@@ -59,11 +60,11 @@ devspace logs --namespace=mynamespace
 }
 
 // RunLogs executes the functionality devspace logs
-func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
+func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Load generated config if possible
@@ -71,25 +72,25 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	if configExists {
 		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	// Get kubectl client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return errors.Wrap(err, "create kube client")
 	}
 
 	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Build params
@@ -106,6 +107,8 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	// Start terminal
 	err = services.StartLogs(nil, client, params, cmd.Follow, int64(cmd.LastAmountOfLines), log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

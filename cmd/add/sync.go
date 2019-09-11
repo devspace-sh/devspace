@@ -5,6 +5,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +36,7 @@ devspace add sync --local=app --container=/app
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunAddSync,
+		RunE: cmd.RunAddSync,
 	}
 
 	addSyncCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -49,22 +51,26 @@ devspace add sync --local=app --container=/app
 }
 
 // RunAddSync executes the add sync command logic
-func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
+func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetBaseConfig(cmd.KubeContext)
+	config, err := configutil.GetBaseConfig(cmd.KubeContext)
+	if err != nil {
+		return err
+	}
 
 	err = configure.AddSyncPath(config, cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
 	if err != nil {
-		log.Fatalf("Error adding sync path: %v", err)
+		return errors.Wrap(err, "add sync path")
 	}
 
 	log.Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
+	return nil
 }

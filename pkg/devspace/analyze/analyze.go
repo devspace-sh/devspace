@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 )
 
 // ReportItem is the struct that holds the problems
@@ -45,7 +46,7 @@ func CreateReport(client *kubectl.Client, namespace string, noWait bool) ([]*Rep
 	// Analyze pods
 	problems, err := Pods(client, namespace, noWait)
 	if err != nil {
-		return nil, fmt.Errorf("Error during analyzing pods: %v", err)
+		return nil, errors.Errorf("Error during analyzing pods: %v", err)
 	}
 	if len(problems) > 0 {
 		report = append(report, &ReportItem{
@@ -61,7 +62,7 @@ func CreateReport(client *kubectl.Client, namespace string, noWait bool) ([]*Rep
 	if checkEvents == false {
 		replicaSetProblems, err := ReplicaSets(client.Client, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("Error during analyzing replica sets: %v", err)
+			return nil, errors.Errorf("Error during analyzing replica sets: %v", err)
 		}
 		if len(replicaSetProblems) > 0 {
 			checkEvents = true
@@ -72,7 +73,7 @@ func CreateReport(client *kubectl.Client, namespace string, noWait bool) ([]*Rep
 	if checkEvents == false {
 		statefulSetProblems, err := StatefulSets(client.Client, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("Error during analyzing stateful sets: %v", err)
+			return nil, errors.Errorf("Error during analyzing stateful sets: %v", err)
 		}
 		if len(statefulSetProblems) > 0 {
 			checkEvents = true
@@ -83,7 +84,7 @@ func CreateReport(client *kubectl.Client, namespace string, noWait bool) ([]*Rep
 		// Analyze events
 		problems, err = Events(client.Client, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("Error during analyzing events: %v", err)
+			return nil, errors.Errorf("Error during analyzing events: %v", err)
 		}
 		if len(problems) > 0 {
 			// Prepend to report

@@ -1,7 +1,6 @@
 package cloud
 
 import (
-	"fmt"
 	"time"
 
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -28,7 +27,7 @@ func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
 	// Retrieve space id and cloud provider
 	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(client.CurrentContext)
 	if err != nil {
-		return fmt.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext, err)
+		return errors.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext, err)
 	}
 
 	p, err := GetProvider(&cloudProvider, log)

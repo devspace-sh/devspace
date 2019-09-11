@@ -6,6 +6,7 @@ import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +31,7 @@ devspace remove cluster my-cluster
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunRemoveCluster,
+		RunE: cmd.RunRemoveCluster,
 	}
 
 	clusterCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -39,7 +40,7 @@ devspace remove cluster my-cluster
 }
 
 // RunRemoveCluster executes the devspace remove cluster functionality
-func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) {
+func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) error {
 	// Check if user has specified a certain provider
 	var cloudProvider *string
 	if cmd.Provider != "" {
@@ -49,7 +50,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	// Get provider
 	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
+		return errors.Wrap(err, "log into provider")
 	}
 
 	// Verify user is sure to delete the cluster
@@ -62,16 +63,16 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 		},
 	}, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if deleteCluster != "Yes" {
-		return
+		return nil
 	}
 
 	// Get cluster by name
 	cluster, err := provider.GetClusterByName(args[0])
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Delete all spaces?
@@ -84,7 +85,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 		},
 	}, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Delete services
@@ -97,22 +98,23 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 		},
 	}, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Delete cluster
 	log.StartWait("Deleting cluster " + cluster.Name)
 	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes", log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.StopWait()
 
 	delete(provider.ClusterKey, cluster.ClusterID)
 	err = provider.Save()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Donef("Successfully deleted cluster %s", args[0])
+	return nil
 }

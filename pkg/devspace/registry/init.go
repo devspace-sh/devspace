@@ -1,8 +1,6 @@
 package registry
 
 import (
-	"fmt"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
@@ -41,7 +39,7 @@ func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClie
 			err := createPullSecretForRegistry(config, client, dockerClient, registryURL, log)
 			log.StopWait()
 			if err != nil {
-				return fmt.Errorf("Failed to create pull secret for registry: %v", err)
+				return errors.Errorf("Failed to create pull secret for registry: %v", err)
 			}
 
 			pullSecrets = append(pullSecrets, GetRegistryAuthSecretName(registryURL))

@@ -1,7 +1,6 @@
 package log
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,8 +8,6 @@ import (
 
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/mgutz/ansi"
-
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -256,7 +253,6 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 	s.writeMessageToFileLogger(fatalFn, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }
@@ -271,7 +267,6 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 	s.writeMessageToFileLoggerf(fatalFn, format, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }

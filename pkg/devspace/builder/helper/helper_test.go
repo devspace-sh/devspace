@@ -68,7 +68,7 @@ func TestBuild(t *testing.T) {
 	assert.NilError(t, err, "Error building image")
 	assert.Equal(t, true, buildImageCalled, "BuildImage of ImageBuilder is not called")
 
-	returnErr = fmt.Errorf("SomeErr")
+	returnErr = errors.Errorf("SomeErr")
 	buildImageCalled = false
 	err = helper.Build(fakeBuilder{}, expectedLog)
 	assert.Equal(t, true, buildImageCalled, "BuildImage of ImageBuilder is not called")

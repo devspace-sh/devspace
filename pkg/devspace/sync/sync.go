@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/sync/remote"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
@@ -467,7 +469,10 @@ func (s *Sync) Stop(fatalError error) {
 
 			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
 			// or runtime error here
-			log.Fatalf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
+			sendError := fmt.Errorf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
+			log.Error(sendError)
+			cloudanalytics.SendCommandEvent(sendError)
+			os.Exit(1)
 		}
 	})
 }

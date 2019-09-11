@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ devspace analyze --namespace=mynamespace
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunAnalyze,
+		RunE: cmd.RunAnalyze,
 	}
 
 	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
@@ -47,11 +48,11 @@ devspace analyze --namespace=mynamespace
 }
 
 // RunAnalyze executes the functionality "devspace analyze"
-func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
+func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Load generated config if possible
@@ -59,26 +60,26 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 	if configExists {
 		generatedConfig, err = generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Print warning
 	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Override namespace
@@ -89,6 +90,8 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) {
 
 	err = analyze.Analyze(client, namespace, !cmd.Wait, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error during analyze: %v", err)
+		return errors.Wrap(err, "analyze")
 	}
+
+	return nil
 }

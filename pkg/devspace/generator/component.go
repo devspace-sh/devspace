@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -169,7 +169,7 @@ func (cg *ComponentsGenerator) GetComponent(name string) (*ComponentSchema, erro
 	componentFile := filepath.Join(cg.gitRepo.LocalPath, "components", name, "component.yaml")
 	_, err := os.Stat(componentFile)
 	if err != nil {
-		return nil, fmt.Errorf("Component %s does not exist", name)
+		return nil, errors.Errorf("Component %s does not exist", name)
 	}
 
 	// Load component
@@ -181,7 +181,7 @@ func (cg *ComponentsGenerator) GetComponent(name string) (*ComponentSchema, erro
 	component := &ComponentSchema{}
 	err = yaml.UnmarshalStrict(yamlFileContent, component)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading component: %v", err)
+		return nil, errors.Errorf("Error loading component: %v", err)
 	}
 
 	component.VariableValues = make(map[string]string)
@@ -204,7 +204,7 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string, log log.Logger)
 	componentTemplateFile := filepath.Join(cg.gitRepo.LocalPath, "components", name, "template.yaml")
 	_, err = os.Stat(componentTemplateFile)
 	if err != nil {
-		return nil, fmt.Errorf("Component Template %s does not exist", name)
+		return nil, errors.Errorf("Component Template %s does not exist", name)
 	}
 
 	// Load component
@@ -217,13 +217,13 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string, log log.Logger)
 		return component.varReplaceFn(path, value, log)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error resolving variables: %v", err)
+		return nil, errors.Errorf("Error resolving variables: %v", err)
 	}
 
 	componentTemplate := &latest.ComponentConfig{}
 	err = yaml.UnmarshalStrict(yamlFileContent, componentTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("Error unmarshalling yaml: %v", err)
+		return nil, errors.Errorf("Error unmarshalling yaml: %v", err)
 	}
 
 	return componentTemplate, nil

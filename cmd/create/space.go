@@ -39,7 +39,7 @@ devspace create space myspace
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunCreateSpace,
+		RunE: cmd.RunCreateSpace,
 	}
 
 	spaceCmd.Flags().BoolVar(&cmd.Active, "active", true, "Use the new Space as active Space for the current project")
@@ -50,11 +50,11 @@ devspace create space myspace
 }
 
 // RunCreateSpace executes the "devspace create space" command logic
-func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
+func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if user has specified a certain provider
@@ -66,7 +66,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	// Get provider
 	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.StartWait("Retrieving clusters")
@@ -75,7 +75,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	// Get projects
 	projects, err := provider.GetProjects()
 	if err != nil {
-		log.Fatalf("Error retrieving projects: %v", err)
+		return errors.Wrap(err, "get projects")
 	}
 
 	// Create project if needed
@@ -83,7 +83,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	if len(projects) == 0 {
 		projectID, err = createProject(provider)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		projectID = projects[0].ProjectID
@@ -93,12 +93,12 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	if cmd.Cluster == "" {
 		cluster, err = getCluster(provider)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		cluster, err = provider.GetClusterByName(cmd.Cluster)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -108,39 +108,39 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	// Create space
 	spaceID, err := provider.CreateSpace(args[0], projectID, cluster, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error creating space: %v", err)
+		return errors.Wrap(err, "create space")
 	}
 
 	// Get Space
 	space, err := provider.GetSpace(spaceID)
 	if err != nil {
-		log.Fatalf("Error retrieving space information: %v", err)
+		return errors.Wrap(err, "get space")
 	}
 
 	// Get service account
 	serviceAccount, err := provider.GetServiceAccount(space, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error retrieving space service account: %v", err)
+		return errors.Wrap(err, "get serviceaccount")
 	}
 
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, spaceID, provider.Name, true)
 	if err != nil {
-		log.Fatalf("Error saving kube config: %v", err)
+		return errors.Wrap(err, "update kube context")
 	}
 
 	// Cache space
 	err = provider.CacheSpace(space, serviceAccount)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if configExists {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Reset namespace cache
@@ -149,7 +149,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -160,6 +160,8 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	if configExists {
 		log.Infof("\r         \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
 	}
+
+	return nil
 }
 
 func getCluster(p *cloud.Provider) (*latest.Cluster, error) {

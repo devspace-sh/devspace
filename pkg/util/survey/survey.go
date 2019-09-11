@@ -1,12 +1,11 @@
 package survey
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
@@ -77,7 +76,7 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 					return errors.New(params.ValidationMessage)
 				}
 
-				return fmt.Errorf("Answer has to match pattern: %s", compiledRegex.String())
+				return errors.Errorf("Answer has to match pattern: %s", compiledRegex.String())
 			}
 
 			// Check function
@@ -88,7 +87,7 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 						return errors.New(params.ValidationMessage)
 					}
 
-					return fmt.Errorf("%v", err)
+					return errors.Errorf("%v", err)
 				}
 			}
 
