@@ -132,13 +132,102 @@ deployments:
 ## Ingress Options
 
 ### `name`
-#TODO
+The `name` option expects a string that will be used as a name for the ingress that is being created for this component.
+
+> **The `name` field is optional.** By default, the component chart will name the ingress after the [component `service`](#TODO) it is referencing.
+
+#### Example: Custom Name for Headless Service
+```yaml
+deployments:
+- name: frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    service:
+      ports:
+      - port: 3000
+    ingress:
+      name: custom-ingress-name
+      tls: true
+      rules:
+      - host: my-static-host.tld
+      - host: my-static-host2.tld
+```
+**Explanation:**  
+Instead of the default name `frontend`, the ingress of this component would be named `custom-ingress-name`.
 
 ### `labels`
-#TODO
+The `labels` option expects a map with Kubernetes labels. 
+
+By default, the component chart sets a couple of labels following the best practices described in the Kubernetes documentation:
+- `app.kubernetes.io/name: devspace-app`
+- `app.kubernetes.io/component: [DEPLOYMENT_NAME]`
+
+> You can specify additional labels using the `labels` option but the default / best practice labels will still be set for the component.
+
+All additional labels will be added to the ingress created for this component.
+
+#### Default Value For `labels`
+```yaml
+labels: []
+```
+
+#### Example: Additional Labels
+```yaml
+deployments:
+- name: frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    service:
+      ports:
+      - port: 3000
+    ingress:
+      tls: true
+      rules:
+      - host: my-static-host.tld
+      - host: my-static-host2.tld
+      labels:
+        label1: label-value-1
+        label1: label-value-2
+```
+
 
 ### `annotations`
-#TODO
+The `annotations` option expects a map with Kubernetes annotations. 
+
+By default, the component chart sets a couple of annotations following the best practices described in the Kubernetes documentation:
+- `helm.sh/chart: component-chart-vX.Y.Z`
+
+> You can specify additional annotations using the `annotations` option but the default / best practice annotations will still be set for the component.
+
+All additional annotations will be added to the ingress created for this component.
+
+#### Default Value For `annotations`
+```yaml
+annotations: []
+```
+
+#### Example: Additional Annotations
+```yaml
+deployments:
+- name: frontend
+  component:
+    containers:
+    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    service:
+      ports:
+      - port: 3000
+    ingress:
+      tls: true
+      rules:
+      - host: my-static-host.tld
+      - host: my-static-host2.tld
+      annotations:
+        annotation1: annotation-value-1
+        annotation1: annotation-value-2
+```
+
 
 ### `tls`
 The `tls` option expects either:
