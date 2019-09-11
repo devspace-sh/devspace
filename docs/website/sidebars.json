@@ -115,173 +115,213 @@
     "CLI Reference": [
       {
         "type": "subcategory",
-        "label": "devspace analyze",
-        "ids": [
-          "cli/commands/analyze"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace deploy",
-        "ids": [
-          "cli/commands/deploy"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace dev",
-        "ids": [
-          "cli/commands/dev"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace enter",
-        "ids": [
-          "cli/commands/enter"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace help",
-        "ids": [
-          "cli/commands/help"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace init",
-        "ids": [
-          "cli/commands/init"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace install",
-        "ids": [
-          "cli/commands/install"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace login",
-        "ids": [
-          "cli/commands/login"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace logs",
-        "ids": [
-          "cli/commands/logs"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace purge",
-        "ids": [
-          "cli/commands/purge"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace sync",
-        "ids": [
-          "cli/commands/sync"
-        ]
-      },
-      {
-        "type": "subcategory",
-        "label": "devspace upgrade",
-        "ids": [
-          "cli/commands/upgrade"
-        ]
-      },
-      {
-        "type": "subcategory",
         "label": "devspace add",
         "ids": [
-          "cli/commands/add/overview",
-          "cli/commands/add/deployment",
-          "cli/commands/add/image",
-          "cli/commands/add/port",
-          "cli/commands/add/provider",
-          "cli/commands/add/selector",
-          "cli/commands/add/sync"
+          "cli/commands/devspace_add",
+          "cli/commands/devspace_add_deployment",
+          "cli/commands/devspace_add_image",
+          "cli/commands/devspace_add_port",
+          "cli/commands/devspace_add_provider",
+          "cli/commands/devspace_add_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace analyze",
+        "ids": [
+          "cli/commands/devspcae_analyze"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace build",
+        "ids": [
+          "cli/commands/devspace_build"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace cleanup",
+        "ids": [
+          "cli/commands/devspace_cleanup",
+          "cli/commands/devspace_cleanup_images"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace connect",
         "ids": [
-          "cli/commands/connect/cluster"
+          "cli/commands/devspace_connect",
+          "cli/commands/devspace_connect_cluster"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace create",
         "ids": [
-          "cli/commands/create/space"
+          "cli/commands/devspace_create",
+          "cli/commands/devspace_create_space"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace deploy",
+        "ids": [
+          "cli/commands/devspace_deploy"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace dev",
+        "ids": [
+          "cli/commands/devspace_dev"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace enter",
+        "ids": [
+          "cli/commands/devspace_enter"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace init",
+        "ids": [
+          "cli/commands/devspace_init"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace list",
         "ids": [
-          "cli/commands/list/overview",
-          "cli/commands/list/clusters",
-          "cli/commands/list/configs",
-          "cli/commands/list/ports",
-          "cli/commands/list/providers",
-          "cli/commands/list/selectors",
-          "cli/commands/list/spaces",
-          "cli/commands/list/sync",
-          "cli/commands/list/vars"
+          "cli/commands/devspace_list",
+          "cli/commands/devspace_list_available-components",
+          "cli/commands/devspace_list_clusters",
+          "cli/commands/devspace_list_deployments",
+          "cli/commands/devspace_list_ports",
+          "cli/commands/devspace_list_profiles",
+          "cli/commands/devspace_list_providers",
+          "cli/commands/devspace_list_spaces",
+          "cli/commands/devspace_list_sync",
+          "cli/commands/devspace_list_vars"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace login",
+        "ids": [
+          "cli/commands/devspace_login"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace logs",
+        "ids": [
+          "cli/commands/devspace_logs"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace open",
+        "ids": [
+          "cli/commands/devspace_open"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace purge",
+        "ids": [
+          "cli/commands/devspace_purge"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace remove",
         "ids": [
-          "cli/commands/remove/overview",
-          "cli/commands/remove/cluster",
-          "cli/commands/remove/deployment",
-          "cli/commands/remove/image",
-          "cli/commands/remove/port",
-          "cli/commands/remove/provider",
-          "cli/commands/remove/selector",
-          "cli/commands/remove/space",
-          "cli/commands/remove/sync"
+          "cli/commands/devspace_remove",
+          "cli/commands/devspace_remove_cluster",
+          "cli/commands/devspace_remove_context",
+          "cli/commands/devspace_remove_deployment",
+          "cli/commands/devspace_remove_image",
+          "cli/commands/devspace_remove_port",
+          "cli/commands/devspace_remove_provider",
+          "cli/commands/devspace_remove_space",
+          "cli/commands/devspace_remove_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace sync",
+        "ids": [
+          "cli/commands/devspace_sync"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace reset",
         "ids": [
-          "cli/commands/reset/key"
+          "cli/commands/devspace_reset",
+          "cli/commands/devspace_reset_key",
+          "cli/commands/devspace_reset_vars"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace set",
+        "ids": [
+          "cli/commands/devspace_set",
+          "cli/commands/devspace_set_analytics"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace status",
         "ids": [
-          "cli/commands/status/sync"
+          "cli/commands/devspace_status",
+          "cli/commands/devspace_status_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace sync",
+        "ids": [
+          "cli/commands/devspace_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace ui",
+        "ids": [
+          "cli/commands/devspace_ui"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace update",
         "ids": [
-          "cli/commands/update/config"
+          "cli/commands/devspace_update",
+          "cli/commands/devspace_update_config",
+          "cli/commands/devspace_update_dependencies"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace upgrade",
+        "ids": [
+          "cli/commands/devspace_upgrade"
         ]
       },
       {
         "type": "subcategory",
         "label": "devspace use",
         "ids": [
-          "cli/commands/use/overview",
-          "cli/commands/use/config",
-          "cli/commands/use/space"
+          "cli/commands/devspace_use",
+          "cli/commands/devspace_use_context",
+          "cli/commands/devspace_use_namespace",
+          "cli/commands/devspace_use_profile",
+          "cli/commands/devspace_use_provider",
+          "cli/commands/devspace_use_space"
         ]
       }
     ],
