@@ -40,51 +40,6 @@ type Config struct {
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
 }
 
-// ProfileConfig defines a profile config
-type ProfileConfig struct {
-	Name    string         `yaml:"name"`
-	Replace *ReplaceConfig `yaml:"replace,omitempty"`
-	Patches []*PatchConfig `yaml:"patches,omitempty"`
-}
-
-// PatchConfig describes a config patch and how it should be applied
-type PatchConfig struct {
-	Operation string      `yaml:"op"`
-	Path      string      `yaml:"path"`
-	From      string      `yaml:"from,omitempty"`
-	Value     interface{} `yaml:"value,omitempty"`
-}
-
-// ReplaceConfig defines a replace config that can override certain parts of the config completely
-type ReplaceConfig struct {
-	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
-	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Dev          *DevConfig              `yaml:"dev,omitempty"`
-	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
-	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
-}
-
-// Variable describes the var definition
-type Variable struct {
-	Name              string          `yaml:"name"`
-	Source            *VariableSource `yaml:"source,omitempty"`
-	Options           []string        `yaml:"options,omitempty"`
-	Default           string          `yaml:"default,omitempty"`
-	Question          string          `yaml:"question,omitempty"`
-	ValidationPattern string          `yaml:"validationPattern,omitempty"`
-	ValidationMessage string          `yaml:"validationMessage,omitempty"`
-}
-
-// VariableSource is type of a variable source
-type VariableSource string
-
-// List of values that source can take
-const (
-	VariableSourceAll   VariableSource = "all"
-	VariableSourceEnv   VariableSource = "env"
-	VariableSourceInput VariableSource = "input"
-)
-
 // ImageConfig defines the image specification
 type ImageConfig struct {
 	Image            string       `yaml:"image"`
@@ -99,10 +54,10 @@ type ImageConfig struct {
 
 // BuildConfig defines the build process for an image
 type BuildConfig struct {
-	Disabled *bool         `yaml:"disabled,omitempty"`
 	Docker   *DockerConfig `yaml:"docker,omitempty"`
 	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
 	Custom   *CustomConfig `yaml:"custom,omitempty"`
+	Disabled *bool         `yaml:"disabled,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
@@ -151,17 +106,17 @@ type DeploymentConfig struct {
 // ComponentConfig holds the component information
 type ComponentConfig struct {
 	Containers          []*ContainerConfig      `yaml:"containers,omitempty"`
-	Replicas            *int                    `yaml:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
 	Labels              map[string]string       `yaml:"labels,omitempty"`
 	Annotations         map[string]string       `yaml:"annotations,omitempty"`
 	Volumes             []*VolumeConfig         `yaml:"volumes,omitempty"`
 	Service             *ServiceConfig          `yaml:"service,omitempty"`
 	ServiceName         string                  `yaml:"serviceName,omitempty"`
 	Ingress             *IngressConfig          `yaml:"ingress,omitempty"`
-	PodManagementPolicy string                  `yaml:"podManagementPolicy,omitempty"`
+	Replicas            *int                    `yaml:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
 	PullSecrets         []*string               `yaml:"pullSecrets,omitempty"`
+	PodManagementPolicy string                  `yaml:"podManagementPolicy,omitempty"`
 	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
 }
 
@@ -191,6 +146,50 @@ type VolumeMountVolumeConfig struct {
 	ReadOnly *bool  `yaml:"readOnly,omitempty"`
 }
 
+// VolumeConfig holds the configuration for a specific volume
+type VolumeConfig struct {
+	Name        string                      `yaml:"name,omitempty"`
+	Labels      map[string]string           `yaml:"labels,omitempty"`
+	Annotations map[string]string           `yaml:"annotations,omitempty"`
+	Size        string                      `yaml:"size,omitempty"`
+	ConfigMap   map[interface{}]interface{} `yaml:"configMap,omitempty"`
+	Secret      map[interface{}]interface{} `yaml:"secret,omitempty"`
+}
+
+// ServiceConfig holds the configuration of a component service
+type ServiceConfig struct {
+	Name        string               `yaml:"name,omitempty"`
+	Labels      map[string]string    `yaml:"labels,omitempty"`
+	Annotations map[string]string    `yaml:"annotations,omitempty"`
+	Type        string               `yaml:"type,omitempty"`
+	Ports       []*ServicePortConfig `yaml:"ports,omitempty"`
+	ExternalIPs []string             `yaml:"externalIPs,omitempty"`
+}
+
+// ServicePortConfig holds the port configuration of a component service
+type ServicePortConfig struct {
+	Port          *int   `yaml:"port,omitempty"`
+	ContainerPort *int   `yaml:"containerPort,omitempty"`
+	Protocol      string `yaml:"protocol,omitempty"`
+}
+
+// IngressConfig holds the configuration of a component ingress
+type IngressConfig struct {
+	Name        string               `yaml:"name,omitempty"`
+	Labels      map[string]string    `yaml:"labels,omitempty"`
+	Annotations map[string]string    `yaml:"annotations,omitempty"`
+	TLS         string               `yaml:"tls,omitempty"`
+	Rules       []*IngressRuleConfig `yaml:"rules,omitempty"`
+}
+
+// IngressRuleConfig holds the port configuration of a component service
+type IngressRuleConfig struct {
+	Host        string `yaml:"host,omitempty"`
+	TLS         string `yaml:"tls,omitempty"`
+	Path        string `yaml:"path,omitempty"`
+	ServicePort *int   `yaml:"servicePort,omitempty"`
+}
+
 // AutoScalingConfig holds the autoscaling config of a component
 type AutoScalingConfig struct {
 	Horizontal *AutoScalingHorizontalConfig `yaml:"horizontal,omitempty"`
@@ -211,71 +210,27 @@ type RollingUpdateConfig struct {
 	Partition      *int   `yaml:"partition,omitempty"`
 }
 
-// VolumeConfig holds the configuration for a specific volume
-type VolumeConfig struct {
-	Name        string                      `yaml:"name,omitempty"`
-	Size        string                      `yaml:"size,omitempty"`
-	ConfigMap   map[interface{}]interface{} `yaml:"configMap,omitempty"`
-	Secret      map[interface{}]interface{} `yaml:"secret,omitempty"`
-	Labels      map[string]string           `yaml:"labels,omitempty"`
-	Annotations map[string]string           `yaml:"annotations,omitempty"`
-}
-
-// ServiceConfig holds the configuration of a component service
-type ServiceConfig struct {
-	Name        string               `yaml:"name,omitempty"`
-	Type        string               `yaml:"type,omitempty"`
-	Ports       []*ServicePortConfig `yaml:"ports,omitempty"`
-	ExternalIPs []string             `yaml:"externalIPs,omitempty"`
-	Labels      map[string]string    `yaml:"labels,omitempty"`
-	Annotations map[string]string    `yaml:"annotations,omitempty"`
-}
-
-// ServicePortConfig holds the port configuration of a component service
-type ServicePortConfig struct {
-	Port          *int   `yaml:"port,omitempty"`
-	ContainerPort *int   `yaml:"containerPort,omitempty"`
-	Protocol      string `yaml:"protocol,omitempty"`
-}
-
-// IngressConfig holds the configuration of a component ingress
-type IngressConfig struct {
-	Name        string               `yaml:"name,omitempty"`
-	TLS         string               `yaml:"tls,omitempty"`
-	Labels      map[string]string    `yaml:"labels,omitempty"`
-	Annotations map[string]string    `yaml:"annotations,omitempty"`
-	Rules       []*IngressRuleConfig `yaml:"rules,omitempty"`
-}
-
-// IngressRuleConfig holds the port configuration of a component service
-type IngressRuleConfig struct {
-	Host        string `yaml:"host,omitempty"`
-	ServicePort *int   `yaml:"servicePort,omitempty"`
-	Path        string `yaml:"path,omitempty"`
-	TLS         string `yaml:"tls,omitempty"`
-}
-
 // ComponentConfigOptions defines the specific helm options used during deployment of a component
 type ComponentConfigOptions struct {
+	ReplaceImageTags *bool  `yaml:"replaceImageTags,omitempty"`
 	Wait             *bool  `yaml:"wait,omitempty"`
+	Timeout          *int64 `yaml:"timeout,omitempty"`
 	Rollback         *bool  `yaml:"rollback,omitempty"`
 	Force            *bool  `yaml:"force,omitempty"`
-	Timeout          *int64 `yaml:"timeout,omitempty"`
 	TillerNamespace  string `yaml:"tillerNamespace,omitempty"`
-	ReplaceImageTags *bool  `yaml:"replaceImageTags,omitempty"`
 }
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
 	Chart            *ChartConfig                `yaml:"chart,omitempty"`
+	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
+	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
+	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
 	Wait             *bool                       `yaml:"wait,omitempty"`
+	Timeout          *int64                      `yaml:"timeout,omitempty"`
 	Rollback         *bool                       `yaml:"rollback,omitempty"`
 	Force            *bool                       `yaml:"force,omitempty"`
-	Timeout          *int64                      `yaml:"timeout,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
-	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
-	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
@@ -289,11 +244,11 @@ type ChartConfig struct {
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	CmdPath          string   `yaml:"cmdPath,omitempty"`
 	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
 	Manifests        []string `yaml:"manifests,omitempty"`
 	Kustomize        *bool    `yaml:"kustomize,omitempty"`
 	Flags            []string `yaml:"flags,omitempty"`
+	CmdPath          string   `yaml:"cmdPath,omitempty"`
 }
 
 // DevConfig defines the devspace deployment
@@ -301,46 +256,16 @@ type DevConfig struct {
 	Ports       []*PortForwardingConfig `yaml:"ports,omitempty"`
 	Open        []*OpenConfig           `yaml:"open,omitempty"`
 	Sync        []*SyncConfig           `yaml:"sync,omitempty"`
+	Logs        *LogsConfig             `yaml:"logs,omitempty"`
 	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty"`
 	Interactive *InteractiveConfig      `yaml:"interactive,omitempty"`
-	Logs        *LogsConfig             `yaml:"logs,omitempty"`
-}
-
-// LogsConfig specifies the logs options for devspace dev
-type LogsConfig struct {
-	Disabled *bool    `yaml:"disabled,omitempty"`
-	ShowLast *int     `yaml:"showLast,omitempty"`
-	Images   []string `yaml:"images,omitempty"`
-}
-
-// InteractiveConfig defines the default interactive config
-type InteractiveConfig struct {
-	Enabled  *bool                     `yaml:"enabled,omitempty"`
-	Terminal *TerminalConfig           `yaml:"terminal,omitempty"`
-	Images   []*InteractiveImageConfig `yaml:"images,omitempty"`
-}
-
-// InteractiveImageConfig describes the interactive mode options for an image
-type InteractiveImageConfig struct {
-	Name       string   `yaml:"name,omitempty"`
-	Entrypoint []string `yaml:"entrypoint,omitempty"`
-	Cmd        []string `yaml:"cmd,omitempty"`
-}
-
-// TerminalConfig describes the terminal options
-type TerminalConfig struct {
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty"`
-	ImageName     string            `yaml:"imageName,omitempty"`
-	Command       []string          `yaml:"command,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	Namespace     string            `yaml:"namespace,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty"`
 	PortMappings  []*PortMapping    `yaml:"forward,omitempty"`
 }
 
@@ -358,16 +283,16 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	Namespace            string            `yaml:"namespace,omitempty"`
 	ImageName            string            `yaml:"imageName,omitempty"`
 	LabelSelector        map[string]string `yaml:"labelSelector,omitempty"`
 	ContainerName        string            `yaml:"containerName,omitempty"`
+	Namespace            string            `yaml:"namespace,omitempty"`
 	LocalSubPath         string            `yaml:"localSubPath,omitempty"`
 	ContainerPath        string            `yaml:"containerPath,omitempty"`
-	WaitInitialSync      *bool             `yaml:"waitInitialSync,omitempty"`
 	ExcludePaths         []string          `yaml:"excludePaths,omitempty"`
 	DownloadExcludePaths []string          `yaml:"downloadExcludePaths,omitempty"`
 	UploadExcludePaths   []string          `yaml:"uploadExcludePaths,omitempty"`
+	WaitInitialSync      *bool             `yaml:"waitInitialSync,omitempty"`
 	BandwidthLimits      *BandwidthLimits  `yaml:"bandwidthLimits,omitempty"`
 }
 
@@ -377,11 +302,41 @@ type BandwidthLimits struct {
 	Upload   *int64 `yaml:"upload,omitempty"`
 }
 
+// LogsConfig specifies the logs options for devspace dev
+type LogsConfig struct {
+	Disabled *bool    `yaml:"disabled,omitempty"`
+	ShowLast *int     `yaml:"showLast,omitempty"`
+	Images   []string `yaml:"images,omitempty"`
+}
+
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths
 type AutoReloadConfig struct {
 	Paths       []string `yaml:"paths,omitempty"`
 	Deployments []string `yaml:"deployments,omitempty"`
 	Images      []string `yaml:"images,omitempty"`
+}
+
+// InteractiveConfig defines the default interactive config
+type InteractiveConfig struct {
+	Enabled  *bool                     `yaml:"enabled,omitempty"`
+	Images   []*InteractiveImageConfig `yaml:"images,omitempty"`
+	Terminal *TerminalConfig           `yaml:"terminal,omitempty"`
+}
+
+// InteractiveImageConfig describes the interactive mode options for an image
+type InteractiveImageConfig struct {
+	Name       string   `yaml:"name,omitempty"`
+	Entrypoint []string `yaml:"entrypoint,omitempty"`
+	Cmd        []string `yaml:"cmd,omitempty"`
+}
+
+// TerminalConfig describes the terminal options
+type TerminalConfig struct {
+	ImageName     string            `yaml:"imageName,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty"`
+	Command       []string          `yaml:"command,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency
@@ -422,4 +377,49 @@ type HookWhenConfig struct {
 type HookWhenAtConfig struct {
 	Images      string `yaml:"images,omitempty"`
 	Deployments string `yaml:"deployments,omitempty"`
+}
+
+// Variable describes the var definition
+type Variable struct {
+	Name              string          `yaml:"name"`
+	Question          string          `yaml:"question,omitempty"`
+	Options           []string        `yaml:"options,omitempty"`
+	ValidationPattern string          `yaml:"validationPattern,omitempty"`
+	ValidationMessage string          `yaml:"validationMessage,omitempty"`
+	Default           string          `yaml:"default,omitempty"`
+	Source            *VariableSource `yaml:"source,omitempty"`
+}
+
+// VariableSource is type of a variable source
+type VariableSource string
+
+// List of values that source can take
+const (
+	VariableSourceAll   VariableSource = "all"
+	VariableSourceEnv   VariableSource = "env"
+	VariableSourceInput VariableSource = "input"
+)
+
+// ProfileConfig defines a profile config
+type ProfileConfig struct {
+	Name    string         `yaml:"name"`
+	Patches []*PatchConfig `yaml:"patches,omitempty"`
+	Replace *ReplaceConfig `yaml:"replace,omitempty"`
+}
+
+// PatchConfig describes a config patch and how it should be applied
+type PatchConfig struct {
+	Operation string      `yaml:"op"`
+	Path      string      `yaml:"path"`
+	Value     interface{} `yaml:"value,omitempty"`
+	From      string      `yaml:"from,omitempty"`
+}
+
+// ReplaceConfig defines a replace config that can override certain parts of the config completely
+type ReplaceConfig struct {
+	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
+	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
+	Dev          *DevConfig              `yaml:"dev,omitempty"`
+	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
+	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
 }
