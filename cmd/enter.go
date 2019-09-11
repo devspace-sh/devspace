@@ -29,7 +29,7 @@ type EnterCmd struct {
 	KubeContext string
 }
 
-// NewEnterCmd creates a new init command
+// NewEnterCmd creates a new enter command
 func NewEnterCmd() *cobra.Command {
 	cmd := &EnterCmd{}
 

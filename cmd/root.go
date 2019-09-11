@@ -89,6 +89,11 @@ func init() {
 	rootCmd.AddCommand(NewOpenCmd())
 	rootCmd.AddCommand(NewUICmd())
 
+	// Add docs generator command if in dev mode
+	if upgrade.GetVersion() == "" {
+		rootCmd.AddCommand(newGenDocsCmd())
+	}
+
 	cobra.OnInitialize(initConfig)
 }
 
