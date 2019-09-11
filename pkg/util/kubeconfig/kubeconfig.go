@@ -2,10 +2,10 @@ package kubeconfig
 
 import (
 	"encoding/base64"
-	"fmt"
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -144,7 +144,7 @@ func IsCloudSpace(context string) (bool, error) {
 	// Get AuthInfo for context
 	authInfo, err := getAuthInfo(kubeConfig, context)
 	if err != nil {
-		return false, fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
+		return false, errors.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
 	return authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand, nil
@@ -160,15 +160,15 @@ func GetSpaceID(context string) (int, string, error) {
 	// Get AuthInfo for context
 	authInfo, err := getAuthInfo(kubeConfig, context)
 	if err != nil {
-		return 0, "", fmt.Errorf("Unable to get AuthInfo for kube-context: %v", err)
+		return 0, "", errors.Errorf("Unable to get AuthInfo for kube-context: %v", err)
 	}
 
 	if authInfo.Exec == nil || authInfo.Exec.Command != AuthCommand {
-		return 0, "", fmt.Errorf("Kube-context does not belong to a Space")
+		return 0, "", errors.Errorf("Kube-context does not belong to a Space")
 	}
 
 	if len(authInfo.Exec.Args) < 6 {
-		return 0, "", fmt.Errorf("Kube-context is misconfigured. Please run `devspace use space [SPACE_NAME]` to setup a new context")
+		return 0, "", errors.Errorf("Kube-context is misconfigured. Please run `devspace use space [SPACE_NAME]` to setup a new context")
 	}
 	spaceID, err := strconv.Atoi(authInfo.Exec.Args[5])
 
@@ -180,13 +180,13 @@ func getAuthInfo(kubeConfig *api.Config, context string) (*api.AuthInfo, error) 
 	// Get context
 	contextRaw, ok := kubeConfig.Contexts[context]
 	if !ok {
-		return nil, fmt.Errorf("Unable to find kube-context '%s' in kube-config file", context)
+		return nil, errors.Errorf("Unable to find kube-context '%s' in kube-config file", context)
 	}
 
 	// Get AuthInfo for context
 	authInfo, ok := kubeConfig.AuthInfos[contextRaw.AuthInfo]
 	if !ok {
-		return nil, fmt.Errorf("Unable to find user information for context in kube-config file")
+		return nil, errors.Errorf("Unable to find user information for context in kube-config file")
 	}
 
 	return authInfo, nil
@@ -197,7 +197,7 @@ func DeleteKubeContext(kubeConfig *api.Config, kubeContext string) error {
 	// Get context
 	contextRaw, ok := kubeConfig.Contexts[kubeContext]
 	if !ok {
-		// return fmt.Errorf("Unable to find current kube-context '%s' in kube-config file", kubeContext)
+		// return errors.Errorf("Unable to find current kube-context '%s' in kube-config file", kubeContext)
 		// This is debatable but usually we don't care when the context is not there
 		return nil
 	}

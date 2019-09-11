@@ -3,7 +3,6 @@ package server
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -24,7 +23,7 @@ type fileInformation struct {
 func untarAll(reader io.Reader, destPath, prefix string) error {
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
-		return fmt.Errorf("Error decompressing: %v", err)
+		return errors.Errorf("Error decompressing: %v", err)
 	}
 
 	defer gzr.Close()

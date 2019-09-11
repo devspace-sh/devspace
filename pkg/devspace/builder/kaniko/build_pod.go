@@ -254,7 +254,7 @@ func getAvailableResourceQuantity(defaultQuantity resource.Quantity, resourceNam
 
 	// Check if limit == 0 or below zero
 	if retLimit.Sign() != 1 {
-		return resource.MustParse("0"), fmt.Errorf("Available %s resource is zero or below zero: %s", resourceName, retLimit.String())
+		return resource.MustParse("0"), errors.Errorf("Available %s resource is zero or below zero: %s", resourceName, retLimit.String())
 	}
 
 	return retLimit, nil

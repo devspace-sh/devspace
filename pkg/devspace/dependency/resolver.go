@@ -1,8 +1,6 @@
 package dependency
 
 import (
-	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -79,7 +77,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 }
 
 // Resolve implements interface
-func (r *Resolver) Resolve(ctx context.Context, dependencies []*latest.DependencyConfig, update bool) ([]*Dependency, error) {
+func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, overrideKubeContext string, update bool) ([]*Dependency, error) {
 	r.log.Info("Start resolving dependencies")
 
 	currentWorkingDirectory, err := os.Getwd()
@@ -87,7 +85,7 @@ func (r *Resolver) Resolve(ctx context.Context, dependencies []*latest.Dependenc
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
-	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, update)
+	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, overrideKubeContext, update)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return nil, err
@@ -127,7 +125,7 @@ func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
+func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, overrideKubeContext string, update bool) error {
 	for _, dependencyConfig := range dependencies {
 		ID := r.getDependencyID(basePath, dependencyConfig)
 
@@ -145,7 +143,7 @@ func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID stri
 				}
 			}
 		} else {
-			dependency, err := r.resolveDependency(ctx, basePath, dependencyConfig, update)
+			dependency, err := r.resolveDependency(basePath, dependencyConfig, overrideKubeContext, update)
 			if err != nil {
 				return err
 			}
@@ -158,7 +156,7 @@ func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID stri
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
 				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(ctx, dependency.LocalPath, ID, dependency.Config.Dependencies, update)
+					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, overrideKubeContext, update)
 					if err != nil {
 						return err
 					}
@@ -170,7 +168,7 @@ func (r *Resolver) resolveRecursive(ctx context.Context, basePath, parentID stri
 	return nil
 }
 
-func (r *Resolver) resolveDependency(ctx context.Context, basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
+func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, overrideKubeContext string, update bool) (*Dependency, error) {
 	var (
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
@@ -225,9 +223,9 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 	}
 
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(ctx, r.BaseCache, localPath, dependency.Profile, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(r.BaseCache, localPath, overrideKubeContext, dependency.Profile, log.Discard)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading config for dependency %s: %v", ID, err)
+		return nil, errors.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
 
 	// Override complete dev config
@@ -236,7 +234,7 @@ func (r *Resolver) resolveDependency(ctx context.Context, basePath string, depen
 	// Load dependency generated config
 	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)), dependency.Profile)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading generated config for dependency %s: %v", ID, err)
+		return nil, errors.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
 
 	dGeneratedConfig.ActiveProfile = dependency.Profile

@@ -1,14 +1,13 @@
 package configutil
 
 import (
-	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -73,21 +72,17 @@ func InitConfig() *latest.Config {
 }
 
 // GetBaseConfig returns the config
-func GetBaseConfig(ctx context.Context) *latest.Config {
-	loadConfigOnce(ctx, "", false)
-
-	return config
+func GetBaseConfig(overrideKubeContext string) (*latest.Config, error) {
+	return loadConfigOnce(overrideKubeContext, "", false)
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig(ctx context.Context, profile string) *latest.Config {
-	loadConfigOnce(ctx, profile, true)
-
-	return config
+func GetConfig(overrideKubeContext, profile string) (*latest.Config, error) {
+	return loadConfigOnce(overrideKubeContext, profile, true)
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, profile string, log log.Logger) (*latest.Config, error) {
+func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
 	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Check devspace.yaml
@@ -96,10 +91,10 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		// Check for legacy devspace-configs.yaml
 		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
 		if err == nil {
-			return nil, fmt.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
+			return nil, errors.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
-		return nil, fmt.Errorf("Couldn't find '%s': %v", err)
+		return nil, errors.Errorf("Couldn't find '%s': %v", err)
 	}
 
 	fileContent, err := ioutil.ReadFile(configPath)
@@ -113,7 +108,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap, profile)
+	loadedConfig, err := ParseConfig(generatedConfig, rawMap, kubeContext, profile, log)
 	if err != nil {
 		return nil, err
 	}
@@ -144,15 +139,17 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 }
 
 // loadConfigOnce loads the config globally once
-func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *latest.Config {
+func loadConfigOnce(kubeContext, profile string, allowProfile bool) (*latest.Config, error) {
 	getConfigOnceMutex.Lock()
 	defer getConfigOnceMutex.Unlock()
 
+	var retError error
 	getConfigOnce.Do(func() {
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig(profile)
 		if err != nil {
-			log.Panicf("Error loading %s: %v", generated.ConfigPath, err)
+			retError = err
+			return
 		}
 
 		// Check if we should load a specific config
@@ -163,19 +160,21 @@ func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *lat
 		}
 
 		// Load base config
-		config, err = GetConfigFromPath(ctx, generatedConfig, ".", profile, log.GetInstance())
+		config, err = GetConfigFromPath(generatedConfig, ".", kubeContext, profile, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			retError = err
+			return
 		}
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatalf("Couldn't save generated config: %v", err)
+			retError = err
+			return
 		}
 	})
 
-	return config
+	return config, retError
 }
 
 func validate(config *latest.Config) error {
@@ -183,10 +182,10 @@ func validate(config *latest.Config) error {
 		if config.Dev.Ports != nil {
 			for index, port := range config.Dev.Ports {
 				if port.ImageName == "" && port.LabelSelector == nil {
-					return fmt.Errorf("Error in config: imageName and label selector are nil in port config at index %d", index)
+					return errors.Errorf("Error in config: imageName and label selector are nil in port config at index %d", index)
 				}
 				if port.PortMappings == nil {
-					return fmt.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
 				}
 			}
 		}
@@ -194,7 +193,7 @@ func validate(config *latest.Config) error {
 		if config.Dev.Sync != nil {
 			for index, sync := range config.Dev.Sync {
 				if sync.ImageName == "" && sync.LabelSelector == nil {
-					return fmt.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
+					return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
 				}
 			}
 		}
@@ -202,7 +201,7 @@ func validate(config *latest.Config) error {
 		if config.Dev.Interactive != nil {
 			for index, imageConf := range config.Dev.Interactive.Images {
 				if imageConf.Name == "" {
-					return fmt.Errorf("Error in config: Unnamed interactive image config at index %d", index)
+					return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
 				}
 			}
 		}
@@ -211,7 +210,7 @@ func validate(config *latest.Config) error {
 	if config.Hooks != nil {
 		for index, hookConfig := range config.Hooks {
 			if hookConfig.Command == "" {
-				return fmt.Errorf("hooks[%d].command is required", index)
+				return errors.Errorf("hooks[%d].command is required", index)
 			}
 		}
 	}
@@ -219,7 +218,7 @@ func validate(config *latest.Config) error {
 	if config.Images != nil {
 		for imageConfigName, imageConf := range config.Images {
 			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
-				return fmt.Errorf("images.%s.build.custom.command is required", imageConfigName)
+				return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
 			}
 		}
 	}
@@ -227,16 +226,16 @@ func validate(config *latest.Config) error {
 	if config.Deployments != nil {
 		for index, deployConfig := range config.Deployments {
 			if deployConfig.Name == "" {
-				return fmt.Errorf("deployments[%d].name is required", index)
+				return errors.Errorf("deployments[%d].name is required", index)
 			}
 			if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
-				return fmt.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", deployConfig.Name)
+				return errors.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 			}
 			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") {
-				return fmt.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
+				return errors.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
 			}
 			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-				return fmt.Errorf("deployments[%d].kubectl.manifests is required", index)
+				return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
 			}
 		}
 	}
@@ -244,15 +243,15 @@ func validate(config *latest.Config) error {
 	if len(config.Profiles) > 0 {
 		for idx, profile := range config.Profiles {
 			if profile.Name == "" {
-				return fmt.Errorf("profiles.%d.name is missing", idx)
+				return errors.Errorf("profiles.%d.name is missing", idx)
 			}
 
 			for patchIdx, patch := range profile.Patches {
 				if patch.Operation == "" {
-					return fmt.Errorf("profiles.%s.patches.%d.op is missing", profile.Name, patchIdx)
+					return errors.Errorf("profiles.%s.patches.%d.op is missing", profile.Name, patchIdx)
 				}
 				if patch.Path == "" {
-					return fmt.Errorf("profiles.%s.patches.%d.path is missing", profile.Name, patchIdx)
+					return errors.Errorf("profiles.%s.patches.%d.path is missing", profile.Name, patchIdx)
 				}
 			}
 		}

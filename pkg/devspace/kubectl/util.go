@@ -1,7 +1,6 @@
 package kubectl
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1beta1"
@@ -181,7 +181,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 					for _, imageName := range imageNames {
 						if imageName == container.Image {
 							if CriticalStatus[podStatus] {
-								return nil, fmt.Errorf("Pod '%s' cannot start (Status: %s)", currentPod.Name, podStatus)
+								return nil, errors.Errorf("Pod '%s' cannot start (Status: %s)", currentPod.Name, podStatus)
 							} else if podStatus == "Completed" {
 								break Outer
 							} else if podStatus != "Running" {
@@ -205,7 +205,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, fmt.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
+	return nil, errors.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
@@ -243,7 +243,7 @@ func (client *Client) GetNewestRunningPod(labelSelector, namespace string, maxWa
 				if podStatus == "Running" {
 					return selectedPod, nil
 				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
-					return nil, fmt.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
+					return nil, errors.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
 				}
 			}
 		}
@@ -252,7 +252,7 @@ func (client *Client) GetNewestRunningPod(labelSelector, namespace string, maxWa
 		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, fmt.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
+	return nil, errors.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

@@ -2,12 +2,12 @@ package docker
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/registry"
+	"github.com/pkg/errors"
 )
 
 // GetRegistryEndpoint retrieves the correct registry url
@@ -84,12 +84,12 @@ func Login(client client.CommonAPIClient, registryURL, user, password string, ch
 
 		err = configfile.GetCredentialsStore(serverAddress).Store(*authConfig)
 		if err != nil {
-			return nil, fmt.Errorf("Error saving auth info in credentials store: %v", err)
+			return nil, errors.Errorf("Error saving auth info in credentials store: %v", err)
 		}
 
 		err = configfile.Save()
 		if err != nil {
-			return nil, fmt.Errorf("Error saving docker config: %v", err)
+			return nil, errors.Errorf("Error saving docker config: %v", err)
 		}
 	}
 

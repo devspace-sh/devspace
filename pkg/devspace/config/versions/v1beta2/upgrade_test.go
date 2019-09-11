@@ -26,7 +26,7 @@ func TestSimple(t *testing.T) {
 			expected: &next.Config{
 				Dev: &next.DevConfig{
 					Interactive: &next.InteractiveConfig{
-						Enabled: ptr.Bool(true),
+						DefaultEnabled: ptr.Bool(true),
 					},
 				},
 			},
@@ -57,7 +57,7 @@ func TestSimple(t *testing.T) {
 			expected: &next.Config{
 				Dev: &next.DevConfig{
 					Interactive: &next.InteractiveConfig{
-						Enabled: ptr.Bool(true),
+						DefaultEnabled: ptr.Bool(true),
 						Terminal: &next.TerminalConfig{
 							Namespace:     "namespace",
 							ContainerName: "container",
@@ -112,7 +112,7 @@ func TestSimple(t *testing.T) {
 			expected: &next.Config{
 				Dev: &next.DevConfig{
 					Interactive: &next.InteractiveConfig{
-						Enabled: ptr.Bool(false),
+						DefaultEnabled: ptr.Bool(false),
 						Images: []*next.InteractiveImageConfig{
 							{
 								Name:       "test",

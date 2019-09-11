@@ -1,9 +1,8 @@
 package latest
 
 import (
-	"fmt"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/pkg/errors"
 )
 
 // Variables returns only the variables from the config
@@ -39,7 +38,7 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 	// Convert to array
 	profiles, ok := loaded["profiles"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Couldn't load profile '%s': no profiles found", profile)
+		return nil, errors.Errorf("Couldn't load profile '%s': no profiles found", profile)
 	}
 
 	// Search for config
@@ -52,5 +51,5 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 	}
 
 	// Couldn't find config
-	return nil, fmt.Errorf("Couldn't find profile '%s'", profile)
+	return nil, errors.Errorf("Couldn't find profile '%s'", profile)
 }

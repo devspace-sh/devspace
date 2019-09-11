@@ -47,7 +47,7 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer()
+	pod, container, err := targetSelector.GetContainer(log)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 
 	err = syncClient.Start()
 	if err != nil {
-		return fmt.Errorf("Sync error: %v", err)
+		return errors.Errorf("Sync error: %v", err)
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
@@ -112,14 +112,14 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 			},
 		}, false, imageSelector)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating target selector: %v", err)
+			return nil, errors.Errorf("Error creating target selector: %v", err)
 		}
 
 		log.StartWait("Sync: Waiting for containers to start...")
-		pod, container, err := selector.GetContainer()
+		pod, container, err := selector.GetContainer(log)
 		log.StopWait()
 		if err != nil {
-			return nil, fmt.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
+			return nil, errors.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
 		}
 
 		log.StartWait("Starting sync...")
@@ -131,7 +131,7 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 
 		err = syncClient.Start()
 		if err != nil {
-			return nil, fmt.Errorf("Sync error: %v", err)
+			return nil, errors.Errorf("Sync error: %v", err)
 		}
 
 		containerPath := "."
@@ -272,7 +272,7 @@ func startStream(syncClient *sync.Sync, kubeClient *kubectl.Client, pod *v1.Pod,
 			stderr = []byte{}
 		}
 
-		syncClient.Stop(fmt.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err))
+		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err))
 	}
 }
 
@@ -348,7 +348,7 @@ func downloadFile(version string, filepath string) error {
 
 	matches := SyncBinaryRegEx.FindStringSubmatch(string(body))
 	if len(matches) != 2 {
-		return fmt.Errorf("Couldn't find sync helper in github release %s at url %s", version, url)
+		return errors.Errorf("Couldn't find sync helper in github release %s at url %s", version, url)
 	}
 
 	out, err := os.Create(filepath)

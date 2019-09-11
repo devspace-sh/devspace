@@ -15,7 +15,6 @@ import (
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -183,7 +182,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		buildPodCreated, err := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Create(buildPod)
 		if err != nil {
-			return fmt.Errorf("Unable to create build pod: %s", err.Error())
+			return errors.Errorf("Unable to create build pod: %s", err.Error())
 		}
 
 		now := time.Now()
@@ -197,7 +196,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			time.Sleep(5 * time.Second)
 			if time.Since(now) >= waitTimeout {
-				return fmt.Errorf("Timeout waiting for init container")
+				return errors.Errorf("Timeout waiting for init container")
 			}
 		}
 
@@ -214,19 +213,19 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// Copy complete context
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, contextPath, ignoreRules)
 		if err != nil {
-			return fmt.Errorf("Error uploading files to container: %v", err)
+			return errors.Errorf("Error uploading files to container: %v", err)
 		}
 
 		// Copy dockerfile
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
-			return fmt.Errorf("Error uploading files to container: %v", err)
+			return errors.Errorf("Error uploading files to container: %v", err)
 		}
 
 		// Tell init container we are done
 		_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile}, nil)
 		if err != nil {
-			return fmt.Errorf("Error executing command in init container: %v", err)
+			return errors.Errorf("Error executing command in init container: %v", err)
 		}
 
 		log.Done("Uploaded files to container")
@@ -241,7 +240,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			time.Sleep(2 * time.Second)
 			if time.Since(now) >= waitTimeout {
-				return fmt.Errorf("Timeout waiting for kaniko build pod")
+				return errors.Errorf("Timeout waiting for kaniko build pod")
 			}
 		}
 
@@ -261,7 +260,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// Stream the logs
 		err = services.StartLogsWithWriter(b.helper.Config, b.helper.KubeClient, targetselector.CmdParameter{PodName: buildPod.Name, ContainerName: buildPod.Spec.Containers[0].Name, Namespace: buildPod.Namespace}, true, 100, log, stdoutLogger)
 		if err != nil {
-			return fmt.Errorf("Error during printling build logs: %v", err)
+			return errors.Errorf("Error during printling build logs: %v", err)
 		}
 
 		log.StartWait("Checking build status")
@@ -271,13 +270,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			// Check if build was successfull
 			pod, err := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("Error checking if build was successful: %v", err)
+				return errors.Errorf("Error checking if build was successful: %v", err)
 			}
 
 			// Check if terminated
 			if pod.Status.ContainerStatuses[0].State.Terminated != nil {
 				if pod.Status.ContainerStatuses[0].State.Terminated.ExitCode != 0 {
-					return fmt.Errorf("Error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
+					return errors.Errorf("Error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
 				}
 
 				break

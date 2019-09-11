@@ -57,7 +57,7 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 	pods, err := client.GetRunningPodsWithImage(imageSelector, client.Namespace, time.Minute*2)
 	log.StopWait()
 	if err != nil {
-		return fmt.Errorf("Error finding images: %v", err)
+		return errors.Errorf("Error finding images: %v", err)
 	}
 	if len(pods) == 0 {
 		return nil

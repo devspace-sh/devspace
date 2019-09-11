@@ -54,4 +54,5 @@ type Logger interface {
 	WriteString(message string)
 
 	SetLevel(level logrus.Level)
+	GetLevel() logrus.Level
 }

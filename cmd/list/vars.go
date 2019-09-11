@@ -1,19 +1,22 @@
 package list
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-type varsCmd struct{}
+type varsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newVarsCmd() *cobra.Command {
-	cmd := &varsCmd{}
+func newVarsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &varsCmd{GlobalFlags: globalFlags}
 
 	varsCmd := &cobra.Command{
 		Use:   "vars",
@@ -27,36 +30,39 @@ values
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListVars,
+		RunE: cmd.RunListVars,
 	}
 
 	return varsCmd
 }
 
 // RunListVars runs the list vars command logic
-func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
+func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	// Fill variables config
-	configutil.GetConfig(context.Background(), "")
+	_, err = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := generated.LoadConfig(cmd.KubeContext)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// No variable found
 	if generatedConfig.Vars == nil || len(generatedConfig.Vars) == 0 {
 		log.Info("No variables found")
-		return
+		return nil
 	}
 
 	// Specify the table column names
@@ -75,4 +81,5 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, varRow)
+	return nil
 }

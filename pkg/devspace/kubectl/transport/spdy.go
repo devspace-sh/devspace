@@ -19,9 +19,10 @@ Modifications copyright (C) 2019 DevSpace Technologies Inc.
 package transport
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	restclient "k8s.io/client-go/rest"
@@ -70,7 +71,7 @@ func NewDialer(upgrader Upgrader, client *http.Client, method string, url *url.U
 func (d *dialer) Dial(protocols ...string) (httpstream.Connection, string, error) {
 	req, err := http.NewRequest(d.method, d.url.String(), nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("error creating request: %v", err)
+		return nil, "", errors.Errorf("error creating request: %v", err)
 	}
 	return Negotiate(d.upgrader, d.client, req, protocols...)
 }
@@ -84,7 +85,7 @@ func Negotiate(upgrader Upgrader, client *http.Client, req *http.Request, protoc
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("error sending request: %v", err)
+		return nil, "", errors.Errorf("error sending request: %v", err)
 	}
 	defer resp.Body.Close()
 	conn, err := upgrader.NewConnection(resp)

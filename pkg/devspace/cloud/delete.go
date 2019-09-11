@@ -3,13 +3,14 @@ package cloud
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 )
 
 // DeleteCluster deletes an cluster
-func (p *Provider) DeleteCluster(cluster *latest.Cluster, deleteServices, deleteKubeContexts bool) error {
-	key, err := p.GetClusterKey(cluster)
+func (p *Provider) DeleteCluster(cluster *latest.Cluster, deleteServices, deleteKubeContexts bool, log log.Logger) error {
+	key, err := p.GetClusterKey(cluster, log)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
 	}
@@ -39,8 +40,8 @@ func (p *Provider) DeleteCluster(cluster *latest.Cluster, deleteServices, delete
 }
 
 // DeleteSpace deletes a space with the given id
-func (p *Provider) DeleteSpace(space *latest.Space) error {
-	key, err := p.GetClusterKey(space.Cluster)
+func (p *Provider) DeleteSpace(space *latest.Space, log log.Logger) error {
+	key, err := p.GetClusterKey(space.Cluster, log)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
 	}

@@ -57,7 +57,7 @@ func (gr *Repository) GetRemote() (string, error) {
 	}
 
 	if len(remotes) == 0 {
-		return "", fmt.Errorf("Couldn't determine git remote in %s", gr.LocalPath)
+		return "", errors.Errorf("Couldn't determine git remote in %s", gr.LocalPath)
 	}
 
 	urls := remotes[0].Config().URLs
@@ -91,7 +91,7 @@ func (gr *Repository) Update(merge bool) error {
 		if isGitCommandAvailable() {
 			out, err := exec.Command("git", "clone", gr.RemoteURL, gr.LocalPath).CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("Error running 'git clone %s': %v -> %s", gr.RemoteURL, err, string(out))
+				return errors.Errorf("Error running 'git clone %s': %v -> %s", gr.RemoteURL, err, string(out))
 			}
 		} else {
 			// Check
@@ -112,12 +112,12 @@ func (gr *Repository) Update(merge bool) error {
 		if merge {
 			out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
+				return errors.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
 			}
 		} else {
 			out, err := exec.Command("git", "-C", gr.LocalPath, "fetch").CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("Error running 'git fetch %s': %v -> %s", gr.RemoteURL, err, string(out))
+				return errors.Errorf("Error running 'git fetch %s': %v -> %s", gr.RemoteURL, err, string(out))
 			}
 		}
 
@@ -179,13 +179,13 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 
 		out, err := exec.Command("git", "-C", gr.LocalPath, "checkout", checkout).CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("Error running 'git checkout %s': %v -> %s", checkout, err, string(out))
+			return errors.Errorf("Error running 'git checkout %s': %v -> %s", checkout, err, string(out))
 		}
 
 		if pull {
 			out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
+				return errors.Errorf("Error running 'git pull %s': %v -> %s", gr.RemoteURL, err, string(out))
 			}
 		}
 
@@ -202,12 +202,12 @@ func (gr *Repository) Checkout(tag, branch, revision string) error {
 	if tag != "" {
 		hash, err = r.ResolveRevision(plumbing.Revision(fmt.Sprintf("refs/tags/%s", tag)))
 		if err != nil {
-			return fmt.Errorf("Error resolving tag revision: %v", err)
+			return errors.Errorf("Error resolving tag revision: %v", err)
 		}
 	} else if branch != "" {
 		remoteRef, err := r.Reference(plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", branch)), true)
 		if err != nil {
-			return fmt.Errorf("Error resolving branch revision: %v", err)
+			return errors.Errorf("Error resolving branch revision: %v", err)
 		}
 
 		newRef := plumbing.NewHashReference(plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)), remoteRef.Hash())

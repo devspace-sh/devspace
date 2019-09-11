@@ -3,20 +3,23 @@ package cleanup
 import (
 	"context"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/docker/api/types/filters"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 type imagesCmd struct {
+	*flags.GlobalFlags
 }
 
-func newImagesCmd() *cobra.Command {
-	cmd := &imagesCmd{}
+func newImagesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &imagesCmd{GlobalFlags: globalFlags}
 
 	imagesCmd := &cobra.Command{
 		Use:   "images",
@@ -29,40 +32,46 @@ Deletes all locally created docker images from docker
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunCleanupImages,
+		RunE: cmd.RunCleanupImages,
 	}
 
 	return imagesCmd
 }
 
 // RunCleanupImages executes the cleanup images command logic
-func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
+func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Load config
-	config := configutil.GetConfig(context.Background(), "")
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 	if config.Images == nil || len(config.Images) == 0 {
 		log.Done("No images found in config to delete")
-		return
+		return nil
 	}
 
 	// Get active context
 	kubeContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+	if cmd.KubeContext != "" {
+		kubeContext = cmd.KubeContext
 	}
 
 	// Create docker client
 	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	_, err = client.Ping(context.Background())
@@ -78,7 +87,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 
 		response, err := docker.DeleteImageByName(client, imageConfig.Image, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		for _, t := range response {
@@ -96,7 +105,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	for {
 		response, err := docker.DeleteImageByFilter(client, filters.NewArgs(filters.Arg("dangling", "true")), log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		for _, t := range response {
@@ -114,4 +123,5 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 
 	log.StopWait()
 	log.Donef("Successfully cleaned up images")
+	return nil
 }

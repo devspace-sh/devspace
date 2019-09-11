@@ -1,7 +1,6 @@
 package kubectl
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -51,7 +50,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 			err = kubeconfig.SaveConfig(&kubeConfig)
 			if err != nil {
-				return nil, fmt.Errorf("Error saving kube config: %v", err)
+				return nil, errors.Errorf("Error saving kube config: %v", err)
 			}
 		}
 	}
@@ -68,7 +67,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 	if kubeConfig.Contexts[activeContext] == nil {
-		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+		return nil, errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
 	}
 
 	restConfig, err := clientConfig.ClientConfig()
@@ -92,7 +91,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 }
 
 // NewClientBySelect creates a new kubernetes client by user select
-func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
+func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*Client, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -108,11 +107,14 @@ func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 	}
 
 	for true {
-		kubeContext := survey.Question(&survey.QuestionOptions{
+		kubeContext, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      options,
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
 
 		// Check if cluster is in private network
 		if allowPrivate == false {

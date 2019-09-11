@@ -114,7 +114,7 @@ func TestWatcher(t *testing.T) {
 		for _, change := range changed {
 			indexInExpected := indexOf(change, *expectedChanges)
 			if indexInExpected == -1 {
-				callbackCalledChan <- fmt.Errorf("Unexpected change in %s", change)
+				callbackCalledChan <- errors.Errorf("Unexpected change in %s", change)
 				return nil
 			}
 			*expectedChanges = append((*expectedChanges)[:indexInExpected], (*expectedChanges)[indexInExpected+1:]...)
@@ -123,7 +123,7 @@ func TestWatcher(t *testing.T) {
 		for _, deletion := range deleted {
 			indexInExpected := indexOf(deletion, *expectedDeletions)
 			if indexInExpected == -1 {
-				callbackCalledChan <- fmt.Errorf("Unexpected deletion of %s", deletion)
+				callbackCalledChan <- errors.Errorf("Unexpected deletion of %s", deletion)
 				return nil
 			}
 			*expectedDeletions = append((*expectedDeletions)[:indexInExpected], (*expectedDeletions)[indexInExpected+1:]...)

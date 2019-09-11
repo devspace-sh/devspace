@@ -17,6 +17,3 @@ const DefaultHomeDevSpaceFolder = ".devspace"
 
 // DevSpaceCloudNamespace is the namespace of the devspace cloud components
 const DevSpaceCloudNamespace = "devspace-cloud"
-
-// KubeContextKey is used in contexts
-const KubeContextKey = "kubecontext"
