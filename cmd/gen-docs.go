@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
@@ -33,7 +32,7 @@ CLI commands.
 
 This command is not available in production.
 #######################################################`,
-		Run: cmd.Run,
+		RunE: cmd.Run,
 	}
 
 	return genDocsCmd
@@ -50,7 +49,7 @@ sidebar_label: %s
 var fixSynopsisRegexp = regexp.MustCompile("(?smi)(## devspace.*?\n)(.*?)#(## Synopsis\n*\\s*)(.*?)(\\s*\n\n)((```)(.*?))?#(## Options)(.*?)#(## SEE ALSO)(\\s*\\* \\[devspace\\][^\n]*)?")
 
 // Run executes the command logic
-func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	filePrepender := func(filename string) string {
 		name := filepath.Base(filename)
 		base := strings.TrimSuffix(name, path.Ext(name))
@@ -73,7 +72,7 @@ func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	err := doc.GenMarkdownTreeCustom(rootCmd, cliDocsDir, filePrepender, linkHandler)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	err = filepath.Walk(cliDocsDir, func(path string, info os.FileInfo, err error) error {
@@ -84,19 +83,18 @@ func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 		content, err := ioutil.ReadFile(path)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		newContents := fixSynopsisRegexp.ReplaceAllString(string(content), "$2$3$7$8```\n$4\n```\n$9$10## See Also")
 
 		err = ioutil.WriteFile(path, []byte(newContents), 0)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		return nil
 	})
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	return err
 }
