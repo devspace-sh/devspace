@@ -137,6 +137,10 @@ The `entrypoint` option expects an array of strings which tells DevSpace to over
 
 > Overriding `ENTRYPOINT` also works for multi-stage builds.
 
+> If you are overriding the `ENTRYPOINT`, it is often useful to also [override the `CMD` statement](#images-cmd). If you want to define `entrypoint: ...` for an image and you do **not** want the `CMD` statement from the Dockerfile, add `cmd: []` to the image configuration in your `devspace.yaml`.
+
+> If you are overriding the Dockerfile `ENTRYPOINT` using the `entrypoint` option, it only affects the image but **not** the deployment. If a deployment using this image defines the [`command` option](/docs/cli/deployment/components/configuration/containers#command), it will take precedence over the Dockerfile `ENTRYPOINT` as well as over the `entrypoint` settings configured in `devspace.yaml`.
+
 #### Default Value For `entrypoint`
 ```yaml
 entrypoint: []
@@ -167,6 +171,8 @@ The `cmd` option expects an array of strings which tells DevSpace to overrides t
 > Overriding `CMD` also works for multi-stage builds.
 
 > `CMD` generally defines the arguments for `ENTRYPOINT`.
+
+> If you are overriding the Dockerfile `CMD` using the `cmd` option, it only affects the image but **not** the deployment. If a deployment using this image defines either the [`command` option](/docs/cli/deployment/components/configuration/containers#command) or the [`args` option](/docs/cli/deployment/components/configuration/containers#args), it will take precedence over the Dockerfile `CMD` as well as over the `cmd` settings configured in `devspace.yaml`.
 
 #### Default Value For `cmd`
 ```yaml
