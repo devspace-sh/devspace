@@ -10,7 +10,7 @@ You can drastically speed up image building by optimizing your Dockerfiles with 
 - Use a small base image (e.g. alpine version)
 - Use layer caching for dependencies: Add dependency file, install dependencies, then add the rest of your source code as shown in the example snippet below
 
-```
+```Dockerfile
 FROM 8.16.1-alpine
 
 # Set working dir
