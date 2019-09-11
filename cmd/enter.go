@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -100,12 +97,6 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Get config
-	var config *latest.Config
-	if configutil.ConfigExists() {
-		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
-	}
-
 	// Build params
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: targetselector.CmdParameter{
@@ -120,7 +111,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(config, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
+	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

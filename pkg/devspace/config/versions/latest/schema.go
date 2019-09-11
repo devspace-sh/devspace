@@ -318,9 +318,9 @@ type AutoReloadConfig struct {
 
 // InteractiveConfig defines the default interactive config
 type InteractiveConfig struct {
-	Enabled  *bool                     `yaml:"enabled,omitempty"`
-	Images   []*InteractiveImageConfig `yaml:"images,omitempty"`
-	Terminal *TerminalConfig           `yaml:"terminal,omitempty"`
+	DefaultEnabled *bool                     `yaml:"defaultEnabled,omitempty"`
+	Images         []*InteractiveImageConfig `yaml:"images,omitempty"`
+	Terminal       *TerminalConfig           `yaml:"terminal,omitempty"`
 }
 
 // InteractiveImageConfig describes the interactive mode options for an image

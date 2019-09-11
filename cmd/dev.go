@@ -523,11 +523,7 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 	config := configutil.GetConfig(ctx, cmd.Profile)
 
 	// Adjust config for interactive mode
-	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && ((config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true) || len(config.Dev.Interactive.Images) > 0 || config.Dev.Interactive.Terminal != nil)
-	if config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == false {
-		interactiveModeInConfigEnabled = false
-	}
-
+	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
 	if cmd.Interactive || interactiveModeInConfigEnabled {
 		if config.Dev == nil {
 			config.Dev = &latest.DevConfig{}
@@ -537,7 +533,7 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 		}
 
 		images := config.Images
-		if cmd.Interactive && !interactiveModeInConfigEnabled {
+		if config.Dev.Interactive.Images == nil && config.Dev.Interactive.Terminal == nil {
 			if config.Images == nil || len(config.Images) == 0 {
 				log.Fatal("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
 			}

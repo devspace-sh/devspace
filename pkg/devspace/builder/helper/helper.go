@@ -64,10 +64,10 @@ func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineNam
 		}
 	}
 
-	if len(imageConf.Entrypoint) > 0 && len(entrypoint) == 0 {
+	if entrypoint == nil && imageConf.Entrypoint != nil {
 		entrypoint = imageConf.Entrypoint
 	}
-	if len(imageConf.Cmd) > 0 && len(cmd) == 0 {
+	if cmd == nil && imageConf.Cmd != nil {
 		cmd = imageConf.Cmd
 	}
 
