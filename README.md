@@ -502,16 +502,28 @@ dependencies:           # Tells DevSpace which related projects should be deploy
   - {dependency-2}      # Could point to a path on the local filesystem
   ...
 
-env:                    # Make your config dynamic and easier to share
-  - name: DOMAIN_NAME   # Use environment variables or ask questions as fallback if env var does not exist
+env:                    # Make your config dynamic and easier to share (ask a custom question if env var is not defined)
+  - name: DOMAIN_NAME   # Will be used as ${DOMAIN_NAME} in config
     question: Which hostname should we use for the ingress?
 
 profiles:               # Configure different profiles (e.g. dev, staging, prod, debug-backend)
-  - name: production
+  - name: debug-backend
     patches:            # Change the config with patches when this profile is active
       - op: replace
         path: images.default.entrypoint
-        value: [npm, run, production]
+        value: [npm, run, debug]
+
+run:                    # Share your workflows and let your colleagues use them via `devspace run [command-name]`
+  - name: debug-backend
+    command: devspace dev -i --profile=debug-backend
+
+hooks:                  # Customize all workflows using hooks
+  - command: echo
+    args:
+      - "before image building"
+    when:
+      before:
+        images: all
 ```
 
 <details>
