@@ -165,7 +165,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 
 ### Lightweight & Easy to Setup
-- **Client-Only Binary** (server-side DevSpace Cloud is optional for visual UI and team management, see [DevSpace Cloud Documentation](https://devspace.cloud/docs/cloud/what-is-devspace-cloud))
+- **Client-Only Binary** (server-side [DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) is optional for visual UI and team management)
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
@@ -461,13 +461,13 @@ Quickstart projects work out of the box in development mode because the `ENTRYPO
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags                                                                                      |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `devspace dev`<br> Starts the development mode                      | `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and opens terminal)` <br> `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`                                |
+| `devspace dev`<br> Starts the development mode                      | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`                                 |
 | `devspace enter`<br> Opens a terminal session for a container       |                                              |
 | `devspace open`<br> Opens your application after starting port-forwarding or generating an ingress    |                                                                                                      |
 | `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
 | `devspace logs` <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
 | `devspace analyze` <br> Analyzes your namespace for issues        |                                                                                                      |
-| `devspace build` <br> Only build and push images without deployment |                                                                                                      |
+| `devspace build` <br> Only build and push images (no deployment) |                                                                                                      |
 
 <br>
 
@@ -490,16 +490,28 @@ deployments:            # DevSpace will deploy these [Helm charts | manifests | 
   ...
 
 dev:                    # Special config options for `devspace dev`
-  overrideImages: ...   # Apply overrides to image building (e.g. different Dockerfile or different ENTRYPOINT)
-  terminal: ...         # Config options for opening a terminal or streaming logs
-  ports: ...            # Config options for port-forwarding
-  sync: ...             # Config options for file synchronization
+  ports: ...            # Configure port-forwarding
+  open: ...             # Configure auto-open for opening URLs after starting development mode
+  sync: ...             # Configure file synchronization
+  logs: ...             # Configure multi-container log streaming
   autoReload: ...       # Tells DevSpace when to redeploy (e.g. when a manifest file has been edited)
+  interactive: ...      # Customize Interactive Mode (devspace dev -i)
 
 dependencies:           # Tells DevSpace which related projects should be deployed before deploying this project
   - {dependency-1}      # Could be another git repository
   - {dependency-2}      # Could point to a path on the local filesystem
   ...
+
+env:                    # Make your config dynamic and easier to share
+  - name: DOMAIN_NAME   # Use environment variables or ask questions as fallback if env var does not exist
+    question: Which hostname should we use for the ingress?
+
+profiles:               # Configure different profiles (e.g. dev, staging, prod, debug-backend)
+  - name: production
+    patches:            # Change the config with patches when this profile is active
+      - op: replace
+        path: images.default.entrypoint
+        value: [npm, run, production]
 ```
 
 <details>
@@ -528,14 +540,6 @@ deployments:
       - port: 3000                      # Exposes container port 3000 on service port 3000
 
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - npm
-    - run
-    - dev
-  terminal:
-    disabled: true
   ports:
     forward:
     - port: 3000
@@ -544,6 +548,8 @@ dev:
     labelSelector:
       app.kubernetes.io/component: default
       app.kubernetes.io/name: devspace-app
+  open:
+  - url: http://localhost:3000/login
   sync:
   - localSubPath: ./src
     containerPath: .
@@ -799,55 +805,6 @@ Take a look at the documentation to learn more about [how DevSpace deploys depen
 
 <details>
 <summary>
-Override Dockerfile entrypoint
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-images:
-  default:
-    image: dscr.io/my-username/my-image
-dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - npm
-    - run
-    - develop
-```
-
-When running `devspace dev` instead of `devspace deploy`, DevSpace would override the ENTRYPOINT of the Dockerfile with `[npm, run, develop]` when building this image.
-
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
-
-<details>
-<summary>
-Use different Dockerfile for development
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-images:
-  default:
-    image: dscr.io/my-username/my-image
-dev:
-  overrideImages:
-  - name: default
-    dockerfile: ./development/Dockerfile.development
-    # use different context path = root path for Dockerfile commans like ADD or COPY (optional)
-    # context: ./development
-```
-
-When running `devspace dev` instead of `devspace deploy`, DevSpace would use the dev Dockerfile as configured in the example above.
-
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
-
-<details>
-<summary>
 Configure code synchronization
 </summary>
 
@@ -879,27 +836,6 @@ The above example would configure the sync, so that:
 - `./src/node_modules` would **not** be uploaded to the container
 
 Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/development/synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
-
-<details>
-<summary>
-Stream logs instead of opening the container terminal
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-dev:
-  terminal:
-    disabled: true
-    labelSelector:
-      app.kubernetes.io/component: default
-      app.kubernetes.io/name: devspace-app
-```
-
-Streams the logs of the selected container instead of opening an interactive terminal session.
-
-Take a look at the documentation to learn more about [configuring the terminal proxy for development](https://devspace.cloud/docs/development/terminal).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
