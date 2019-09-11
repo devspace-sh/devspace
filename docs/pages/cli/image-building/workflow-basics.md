@@ -7,7 +7,7 @@ DevSpace fully automates the manual work of building, tagging and pushing Docker
 <br>
 <img src="/img/processes/image-building-process-devspace.svg" alt="DevSpace Image Building Process" style="width: 100%;">
 
-## Commands Triggering Image Building
+## Start Image Building
 When you run one of the following commands, DevSpace will run the image building process:
 - `devspace build` (only image building without deployment)
 - `devspace deploy` (before deploying the application)

@@ -7,13 +7,13 @@ DevSpace fully automates the manual work of deploying Kubernetes manifests, Helm
 <br>
 <img src="/img/processes/deployment-process-devspace.svg" alt="DevSpace Deployment Process" style="width: 100%;">
 
-## Commands Triggering Image Building
+## Start Deployment
 When you run one of the following commands, DevSpace will run the deployment process:
 - `devspace deploy` (before deploying the application)
 - `devspace dev` (before deploying the application and starting the development mode)
 
 ### Important Flags
-The following flags are available for all commands that trigger image building:
+The following flags are available for all commands that trigger the deployment process:
 - `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
 - `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
 
@@ -47,7 +47,7 @@ Replacing or appending tags to images that are used in your deployments makes su
 
 
 ### 4. Deploy Project
-DevSpace will iterate over every item in the `deployments` array defined in the `devspace.yaml` and deploy each of the deployments using the respective deployment tool:
+DevSpace iterates over every item in the `deployments` array defined in the `devspace.yaml` and deploy each of the deployments using the respective deployment tool:
 - `kubectl` deployments will be deployed with `kubectl` (optionally using `kustomize` if `kustomize: true`)
 - `helm` deployments will be deployed with the `helm` client that comes in-built with DevSpace
 - `component` deployments will be deployed with the `helm` client that comes in-built with DevSpace
@@ -60,6 +60,29 @@ DevSpace will iterate over every item in the `deployments` array defined in the 
 
 
 ## Useful Commands
+
+### `devspace open`
+To view your project in the browser either via port-forwarding or via ingress (domain), run the following command:
+```bash
+devspace open
+```
+When DevSpace asks you how to open your application, you have two options as shown here:
+```bash
+? How do you want to open your application?
+  [Use arrows to move, space to select, type to filter]
+> via localhost (provides private access only on your computer via port-forwarding)
+  via domain (makes your application publicly available via ingress)
+```
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](/docs/cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
+
+> If your application does not open as exepected, run [`devspace analyze` and DevSpace will try to identify the issue](#devspace-analyze).
+
+### `devspace analyze`
+If your application is not starting as expected or there seems to be some kind of networking issue, you can let DevSpace run an automated analysis of your namespace using the following command:
+```bash
+devspace analyze
+```
+After analyzing your namespace, DevSpace compiles a report with potential issues, which is a good starting point for debugging and fixing issues with your deployments.
 
 ### `devspace list deployments`
 To get a list of all deployments as well as their status and other information, run the following command:

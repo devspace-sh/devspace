@@ -259,7 +259,7 @@ When DevSpace asks you how to open your application, choose the first option: **
 > via localhost (provides private access only on your computer via port-forwarding) # <<<<<<<< CHOOSE THIS ONE!
   via domain (makes your application publicly available via ingress)
 ```
-To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use DevSpace Cloud, either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](/docs/cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
 
 > **Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
 
