@@ -56,7 +56,9 @@ func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	err = configure.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
+	config := configutil.GetBaseConfig("")
+
+	err = configure.RemoveSyncPath(config, cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
 	if err != nil {
 		log.Fatal(err)
 	}

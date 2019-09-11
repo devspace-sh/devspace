@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -17,8 +15,8 @@ import (
 
 // SyncCmd is a struct that defines a command call for "sync"
 type SyncCmd struct {
-	Namespace     string
-	KubeContext   string
+	*flags.GlobalFlags
+
 	LabelSelector string
 	Container     string
 	Pod           string
@@ -31,8 +29,8 @@ type SyncCmd struct {
 }
 
 // NewSyncCmd creates a new init command
-func NewSyncCmd() *cobra.Command {
-	cmd := &SyncCmd{}
+func NewSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &SyncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
 		Use:   "sync",
@@ -56,8 +54,6 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	syncCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
-	syncCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
@@ -74,7 +70,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 	var err error
 	var generatedConfig *generated.Config
 	if configutil.ConfigExists() {
-		generatedConfig, err = generated.LoadConfig("")
+		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -99,7 +95,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) {
 
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
+		config = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 	}
 
 	// Build params

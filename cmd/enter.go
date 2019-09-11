@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -17,18 +18,17 @@ import (
 
 // EnterCmd is a struct that defines a command call for "enter"
 type EnterCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
 	Container     string
 	Pod           string
 	Pick          bool
-
-	Namespace   string
-	KubeContext string
 }
 
 // NewEnterCmd creates a new init command
-func NewEnterCmd() *cobra.Command {
-	cmd := &EnterCmd{}
+func NewEnterCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &EnterCmd{GlobalFlags: globalFlags}
 
 	enterCmd := &cobra.Command{
 		Use:   "enter",
@@ -55,9 +55,6 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
-	enterCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
-	enterCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
-
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return enterCmd
@@ -74,7 +71,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = generated.LoadConfig("")
+		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
 			log.Fatal(err)
 		}

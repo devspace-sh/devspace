@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -41,15 +40,14 @@ const openDomainOption = "via domain (makes your application publicly available 
 
 // OpenCmd holds the open cmd flags
 type OpenCmd struct {
-	Provider string
+	*flags.GlobalFlags
 
-	Namespace   string
-	KubeContext string
+	Provider string
 }
 
 // NewOpenCmd creates a new open command
-func NewOpenCmd() *cobra.Command {
-	cmd := &OpenCmd{}
+func NewOpenCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &OpenCmd{GlobalFlags: globalFlags}
 
 	openCmd := &cobra.Command{
 		Use:   "open",
@@ -69,9 +67,6 @@ devspace open
 	}
 
 	openCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
-
-	openCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to use")
-	openCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
 	return openCmd
 }
@@ -96,7 +91,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = generated.LoadConfig("")
+		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -123,7 +118,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
+		devspaceConfig = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 	}
 
 	namespace := client.Namespace

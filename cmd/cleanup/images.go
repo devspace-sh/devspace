@@ -3,6 +3,7 @@ package cleanup
 import (
 	"context"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -13,10 +14,11 @@ import (
 )
 
 type imagesCmd struct {
+	*flags.GlobalFlags
 }
 
-func newImagesCmd() *cobra.Command {
-	cmd := &imagesCmd{}
+func newImagesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &imagesCmd{GlobalFlags: globalFlags}
 
 	imagesCmd := &cobra.Command{
 		Use:   "images",
@@ -47,7 +49,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Load config
-	config := configutil.GetConfig(context.Background(), "")
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 	if config.Images == nil || len(config.Images) == 0 {
 		log.Done("No images found in config to delete")
 		return
@@ -57,6 +59,9 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) {
 	kubeContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
 		log.Fatal(err)
+	}
+	if cmd.KubeContext != "" {
+		kubeContext = cmd.KubeContext
 	}
 
 	// Create docker client

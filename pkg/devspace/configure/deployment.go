@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -193,18 +192,17 @@ func GetHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest
 }
 
 // RemoveDeployment removes one or all deployments from the config
-func RemoveDeployment(removeAll bool, name string) (bool, error) {
+func RemoveDeployment(baseConfig *latest.Config, removeAll bool, name string) (bool, error) {
 	if name == "" && removeAll == false {
 		return false, errors.New("You have to specify either a deployment name or the --all flag")
 	}
 
-	config := configutil.GetBaseConfig(context.Background())
 	found := false
 
-	if config.Deployments != nil {
+	if baseConfig.Deployments != nil {
 		newDeployments := []*v1.DeploymentConfig{}
 
-		for _, deployConfig := range config.Deployments {
+		for _, deployConfig := range baseConfig.Deployments {
 			if removeAll == false && deployConfig.Name != name {
 				newDeployments = append(newDeployments, deployConfig)
 			} else {
@@ -212,7 +210,7 @@ func RemoveDeployment(removeAll bool, name string) (bool, error) {
 			}
 		}
 
-		config.Deployments = newDeployments
+		baseConfig.Deployments = newDeployments
 	}
 
 	err := configutil.SaveLoadedConfig()

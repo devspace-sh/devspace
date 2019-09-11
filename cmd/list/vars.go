@@ -1,19 +1,21 @@
 package list
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
-type varsCmd struct{}
+type varsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newVarsCmd() *cobra.Command {
-	cmd := &varsCmd{}
+func newVarsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &varsCmd{GlobalFlags: globalFlags}
 
 	varsCmd := &cobra.Command{
 		Use:   "vars",
@@ -45,10 +47,10 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Fill variables config
-	configutil.GetConfig(context.Background(), "")
+	configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := generated.LoadConfig(cmd.KubeContext)
 	if err != nil {
 		log.Fatal(err)
 	}

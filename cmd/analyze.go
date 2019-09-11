@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -12,15 +13,14 @@ import (
 
 // AnalyzeCmd holds the analyze cmd flags
 type AnalyzeCmd struct {
-	Namespace   string
-	KubeContext string
+	*flags.GlobalFlags
 
 	Wait bool
 }
 
 // NewAnalyzeCmd creates a new analyze command
-func NewAnalyzeCmd() *cobra.Command {
-	cmd := &AnalyzeCmd{}
+func NewAnalyzeCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &AnalyzeCmd{GlobalFlags: globalFlags}
 
 	analyzeCmd := &cobra.Command{
 		Use:   "analyze",
@@ -40,9 +40,6 @@ devspace analyze --namespace=mynamespace
 		Args: cobra.NoArgs,
 		Run:  cmd.RunAnalyze,
 	}
-
-	analyzeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The kubernetes namespace to analyze")
-	analyzeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
 
 	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
 

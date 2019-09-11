@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -18,19 +17,17 @@ import (
 
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
+	*flags.GlobalFlags
+
 	Deployments             string
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	PurgeDependencies       bool
-
-	Namespace   string
-	KubeContext string
-	Profile     string
 }
 
 // NewPurgeCmd creates a new purge command
-func NewPurgeCmd() *cobra.Command {
-	cmd := &PurgeCmd{}
+func NewPurgeCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &PurgeCmd{GlobalFlags: globalFlags}
 
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
@@ -48,10 +45,6 @@ devspace purge -d my-deployment
 		Args: cobra.NoArgs,
 		Run:  cmd.Run,
 	}
-
-	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
-	purgeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
-	purgeCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -90,9 +83,6 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// Add kube context to context
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
-
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
@@ -100,7 +90,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(ctx, cmd.Profile)
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	deployments := []string{}
 	if cmd.Deployments != "" {

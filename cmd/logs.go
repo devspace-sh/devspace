@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -17,6 +14,8 @@ import (
 
 // LogsCmd holds the logs cmd flags
 type LogsCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
 	Container     string
 	Pod           string
@@ -24,14 +23,11 @@ type LogsCmd struct {
 
 	Follow            bool
 	LastAmountOfLines int
-
-	Namespace   string
-	KubeContext string
 }
 
 // NewLogsCmd creates a new login command
-func NewLogsCmd() *cobra.Command {
-	cmd := &LogsCmd{}
+func NewLogsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &LogsCmd{GlobalFlags: globalFlags}
 
 	logsCmd := &cobra.Command{
 		Use:   "logs",
@@ -59,9 +55,6 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 
-	logsCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "Namespace where to select pods")
-	logsCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
-
 	return logsCmd
 }
 
@@ -76,7 +69,7 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = generated.LoadConfig("")
+		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -99,11 +92,6 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var config *latest.Config
-	if configutil.ConfigExists() {
-		config = configutil.GetConfig(context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext), "")
-	}
-
 	// Build params
 	params := targetselector.CmdParameter{
 		ContainerName: cmd.Container,
@@ -116,7 +104,7 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Start terminal
-	err = services.StartLogs(config, client, params, cmd.Follow, int64(cmd.LastAmountOfLines), log.GetInstance())
+	err = services.StartLogs(nil, client, params, cmd.Follow, int64(cmd.LastAmountOfLines), log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

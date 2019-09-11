@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -8,15 +9,16 @@ import (
 )
 
 type syncCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
 	LocalPath     string
 	ContainerPath string
 	ExcludedPaths string
-	Namespace     string
 }
 
-func newSyncCmd() *cobra.Command {
-	cmd := &syncCmd{}
+func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	addSyncCmd := &cobra.Command{
 		Use:   "sync",
@@ -37,7 +39,6 @@ devspace add sync --local=app --container=/app
 
 	addSyncCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	addSyncCmd.Flags().StringVar(&cmd.LocalPath, "local", "", "Relative local path")
-	addSyncCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addSyncCmd.Flags().StringVar(&cmd.ContainerPath, "container", "", "Absolute container path")
 	addSyncCmd.Flags().StringVar(&cmd.ExcludedPaths, "exclude", "", "Comma separated list of paths to exclude (e.g. node_modules/,bin,*.exe)")
 
@@ -58,7 +59,9 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
+	config := configutil.GetBaseConfig(cmd.KubeContext)
+
+	err = configure.AddSyncPath(config, cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
 	if err != nil {
 		log.Fatalf("Error adding sync path: %v", err)
 	}

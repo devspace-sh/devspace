@@ -1,8 +1,7 @@
 package update
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
@@ -13,12 +12,14 @@ import (
 
 // dependenciesCmd holds the cmd flags
 type dependenciesCmd struct {
+	*flags.GlobalFlags
+
 	AllowCyclicDependencies bool
 }
 
 // newDependenciesCmd creates a new command
-func newDependenciesCmd() *cobra.Command {
-	cmd := &dependenciesCmd{}
+func newDependenciesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &dependenciesCmd{GlobalFlags: globalFlags}
 
 	dependenciesCmd := &cobra.Command{
 		Use:   "dependencies",
@@ -52,15 +53,15 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get the config
-	config := configutil.GetConfig(context.Background(), "")
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatalf("Error loading generated.yaml: %v", err)
 	}
 
-	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, log.GetInstance())
+	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, cmd.KubeContext, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

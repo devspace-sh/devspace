@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,11 +23,9 @@ func GetNameOfFirstDeployment(config *latest.Config) string {
 }
 
 // AddPort adds a port to the config
-func AddPort(namespace, labelSelector string, args []string) error {
+func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []string) error {
 	var labelSelectorMap map[string]string
 	var err error
-
-	config := configutil.GetBaseConfig(context.Background())
 
 	portMappings, err := parsePortMappings(args[0])
 	if err != nil {
@@ -36,18 +33,18 @@ func AddPort(namespace, labelSelector string, args []string) error {
 	}
 
 	// Add to first existing port mapping if labelselector and service name are empty
-	if labelSelector == "" && config.Dev != nil && config.Dev.Ports != nil && len(config.Dev.Ports) > 0 {
-		if (config.Dev.Ports)[0].PortMappings == nil {
-			(config.Dev.Ports)[0].PortMappings = []*latest.PortMapping{}
+	if labelSelector == "" && baseConfig.Dev != nil && baseConfig.Dev.Ports != nil && len(baseConfig.Dev.Ports) > 0 {
+		if (baseConfig.Dev.Ports)[0].PortMappings == nil {
+			(baseConfig.Dev.Ports)[0].PortMappings = []*latest.PortMapping{}
 		}
 
 		for _, portMapping := range portMappings {
-			(config.Dev.Ports)[0].PortMappings = append((config.Dev.Ports)[0].PortMappings, portMapping)
+			(baseConfig.Dev.Ports)[0].PortMappings = append((baseConfig.Dev.Ports)[0].PortMappings, portMapping)
 		}
 
 		return configutil.SaveLoadedConfig()
 	} else if labelSelector == "" {
-		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
+		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
 	}
 
 	if labelSelectorMap == nil {
@@ -57,7 +54,7 @@ func AddPort(namespace, labelSelector string, args []string) error {
 		}
 	}
 
-	insertOrReplacePortMapping(config, namespace, labelSelectorMap, portMappings)
+	insertOrReplacePortMapping(baseConfig, namespace, labelSelectorMap, portMappings)
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return fmt.Errorf("Couldn't save config file: %s", err.Error())
@@ -67,9 +64,7 @@ func AddPort(namespace, labelSelector string, args []string) error {
 }
 
 // RemovePort removes a port from the config
-func RemovePort(removeAll bool, labelSelector string, args []string) error {
-	config := configutil.GetBaseConfig(context.Background())
-
+func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string, args []string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {
 		return fmt.Errorf("Error parsing selectors: %s", err.Error())
@@ -85,10 +80,10 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 	}
 
 	ports := strings.Split(argPorts, ",")
-	if config.Dev.Ports != nil && len(config.Dev.Ports) > 0 {
-		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(config.Dev.Ports)-1)
+	if baseConfig.Dev.Ports != nil && len(baseConfig.Dev.Ports) > 0 {
+		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(baseConfig.Dev.Ports)-1)
 
-		for _, v := range config.Dev.Ports {
+		for _, v := range baseConfig.Dev.Ports {
 			if removeAll {
 				continue
 			}
@@ -111,7 +106,7 @@ func RemovePort(removeAll bool, labelSelector string, args []string) error {
 			}
 		}
 
-		config.Dev.Ports = newPortForwards
+		baseConfig.Dev.Ports = newPortForwards
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {

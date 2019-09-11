@@ -49,7 +49,9 @@ func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	err = configure.RemovePort(cmd.RemoveAll, cmd.LabelSelector, args)
+	config := configutil.GetBaseConfig("")
+
+	err = configure.RemovePort(config, cmd.RemoveAll, cmd.LabelSelector, args)
 	if err != nil {
 		log.Fatal(err)
 	}

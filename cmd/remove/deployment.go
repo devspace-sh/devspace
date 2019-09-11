@@ -1,8 +1,6 @@
 package remove
 
 import (
-	"context"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
@@ -61,7 +59,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config := configutil.GetBaseConfig(context.Background())
+	config := configutil.GetBaseConfig("")
 
 	shouldPurgeDeployment, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
@@ -99,7 +97,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		}
 	}
 
-	found, err := configure.RemoveDeployment(cmd.RemoveAll, name)
+	found, err := configure.RemoveDeployment(config, cmd.RemoveAll, name)
 	if err != nil {
 		log.Fatal(err)
 	}

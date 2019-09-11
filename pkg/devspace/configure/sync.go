@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,21 +11,19 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
-	config := configutil.GetBaseConfig(context.Background())
-
-	if config.Dev == nil {
-		config.Dev = &latest.DevConfig{}
+func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
+	if baseConfig.Dev == nil {
+		baseConfig.Dev = &latest.DevConfig{}
 	}
-	if config.Dev.Sync == nil {
-		config.Dev.Sync = []*latest.SyncConfig{}
+	if baseConfig.Dev.Sync == nil {
+		baseConfig.Dev.Sync = []*latest.SyncConfig{}
 	}
 
 	var labelSelectorMap map[string]string
 	var err error
 
 	if labelSelector == "" {
-		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
+		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
 	}
 
 	if labelSelectorMap == nil {
@@ -57,7 +54,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
-	Sync := append(config.Dev.Sync, &latest.SyncConfig{
+	Sync := append(baseConfig.Dev.Sync, &latest.SyncConfig{
 		LabelSelector: labelSelectorMap,
 		ContainerPath: containerPath,
 		LocalSubPath:  localPath,
@@ -65,7 +62,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		Namespace:     namespace,
 	})
 
-	config.Dev.Sync = Sync
+	baseConfig.Dev.Sync = Sync
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
@@ -76,8 +73,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 }
 
 // RemoveSyncPath removes a sync path from the config
-func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
-	config := configutil.GetBaseConfig(context.Background())
+func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, containerPath, labelSelector string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -88,10 +84,10 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 		return fmt.Errorf("You have to specify at least one of the supported flags")
 	}
 
-	if config.Dev.Sync != nil && len(config.Dev.Sync) > 0 {
-		newSyncPaths := make([]*latest.SyncConfig, 0, len(config.Dev.Sync)-1)
+	if baseConfig.Dev.Sync != nil && len(baseConfig.Dev.Sync) > 0 {
+		newSyncPaths := make([]*latest.SyncConfig, 0, len(baseConfig.Dev.Sync)-1)
 
-		for _, v := range config.Dev.Sync {
+		for _, v := range baseConfig.Dev.Sync {
 			if removeAll ||
 				localPath == v.LocalSubPath ||
 				containerPath == v.ContainerPath ||
@@ -102,7 +98,7 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		config.Dev.Sync = newSyncPaths
+		baseConfig.Dev.Sync = newSyncPaths
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {

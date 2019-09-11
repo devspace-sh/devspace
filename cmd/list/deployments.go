@@ -1,8 +1,7 @@
 package list
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -15,10 +14,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type deploymentsCmd struct{}
+type deploymentsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newDeploymentsCmd() *cobra.Command {
-	cmd := &deploymentsCmd{}
+func newDeploymentsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &deploymentsCmd{GlobalFlags: globalFlags}
 
 	return &cobra.Command{
 		Use:   "deployments",
@@ -55,13 +56,13 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Load generated
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create new kube client
-	client, err := kubectl.NewDefaultClient()
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,7 +74,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.Background(), "")
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -310,7 +309,7 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) addDevConfig() {
-	config := configutil.GetConfig(context.Background(), "")
+	config := configutil.GetConfig("", "")
 
 	// Forward ports
 	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {

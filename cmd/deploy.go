@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -22,9 +21,7 @@ import (
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	Namespace   string
-	KubeContext string
-	Profile     string
+	*flags.GlobalFlags
 
 	ForceBuild          bool
 	SkipBuild           bool
@@ -39,8 +36,8 @@ type DeployCmd struct {
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd() *cobra.Command {
-	cmd := &DeployCmd{}
+func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &DeployCmd{GlobalFlags: globalFlags}
 
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
@@ -62,10 +59,6 @@ devspace deploy --kube-context=deploy-context
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
-
-	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
-	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	deployCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
@@ -115,9 +108,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Add current kube context to context
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
-
-	config := configutil.GetConfig(ctx, cmd.Profile)
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())

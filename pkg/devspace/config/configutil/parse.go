@@ -1,7 +1,6 @@
 package configutil
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -67,7 +66,7 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseConfig fills the variables in the data and parses the config
-func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}, profile string, log log.Logger) (*latest.Config, error) {
+func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -110,14 +109,14 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	}
 
 	// Fill predefined vars
-	err = fillPredefinedVars(ctx)
+	err = fillPredefinedVars(kubeContext)
 	if err != nil {
 		return nil, err
 	}
 
 	// Walk over data and fill in variables
 	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		return varReplaceFn(ctx, path, value, generatedConfig, log)
+		return varReplaceFn(path, value, generatedConfig, kubeContext, log)
 	})
 	if err != nil {
 		return nil, err
@@ -165,16 +164,16 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, lo
 	return nil
 }
 
-func varReplaceFn(ctx context.Context, path, value string, generatedConfig *generated.Config, log log.Logger) (interface{}, error) {
+func varReplaceFn(path, value string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(ctx, v, generatedConfig, log) })
+	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig, kubeContext, log) })
 }
 
-func resolveVar(ctx context.Context, varName string, generatedConfig *generated.Config, log log.Logger) (string, error) {
+func resolveVar(varName string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (string, error) {
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(ctx, varName)
+	found, value, err := getPredefinedVar(varName, kubeContext)
 	if err != nil {
 		return "", err
 	} else if found {

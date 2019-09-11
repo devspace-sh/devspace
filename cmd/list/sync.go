@@ -1,17 +1,18 @@
 package list
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
-type syncCmd struct{}
+type syncCmd struct {
+	*flags.GlobalFlags
+}
 
-func newSyncCmd() *cobra.Command {
-	cmd := &syncCmd{}
+func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
 		Use:   "sync",
@@ -41,7 +42,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig(context.Background(), "")
+	config := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")

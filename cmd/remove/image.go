@@ -46,7 +46,9 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	err = configure.RemoveImage(cmd.RemoveAll, args)
+	config := configutil.GetBaseConfig("")
+
+	err = configure.RemoveImage(config, cmd.RemoveAll, args)
 	if err != nil {
 		log.Fatal(err)
 	}

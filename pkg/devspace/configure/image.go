@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"context"
 	contextpkg "context"
 	"fmt"
 	"os/exec"
@@ -355,9 +354,7 @@ func loginDevSpaceCloud(cloudProvider string, log log.Logger) error {
 }
 
 // AddImage adds an image to the devspace
-func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
-	config := configutil.GetBaseConfig(context.Background())
-
+func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine string) error {
 	imageConfig := &v1.ImageConfig{
 		Image: name,
 	}
@@ -388,12 +385,12 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 		log.Errorf("BuildEngine %v unknown. Please select one of docker|kaniko", buildEngine)
 	}
 
-	if config.Images == nil {
+	if baseConfig.Images == nil {
 		images := make(map[string]*v1.ImageConfig)
-		config.Images = images
+		baseConfig.Images = images
 	}
 
-	config.Images[nameInConfig] = imageConfig
+	baseConfig.Images[nameInConfig] = imageConfig
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {
@@ -404,19 +401,16 @@ func AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildEngine 
 }
 
 //RemoveImage removes an image from the devspace
-func RemoveImage(removeAll bool, names []string) error {
-	config := configutil.GetBaseConfig(context.Background())
-
+func RemoveImage(baseConfig *latest.Config, removeAll bool, names []string) error {
 	if len(names) == 0 && removeAll == false {
 		return fmt.Errorf("You have to specify at least one image")
 	}
 
 	newImageList := make(map[string]*v1.ImageConfig)
 
-	if !removeAll && config.Images != nil {
-
+	if !removeAll && baseConfig.Images != nil {
 	ImagesLoop:
-		for nameInConfig, imageConfig := range config.Images {
+		for nameInConfig, imageConfig := range baseConfig.Images {
 			for _, deletionName := range names {
 				if deletionName == nameInConfig {
 					continue ImagesLoop
@@ -427,7 +421,7 @@ func RemoveImage(removeAll bool, names []string) error {
 		}
 	}
 
-	config.Images = newImageList
+	baseConfig.Images = newImageList
 
 	err := configutil.SaveLoadedConfig()
 	if err != nil {

@@ -1,7 +1,6 @@
 package configutil
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -73,21 +72,21 @@ func InitConfig() *latest.Config {
 }
 
 // GetBaseConfig returns the config
-func GetBaseConfig(ctx context.Context) *latest.Config {
-	loadConfigOnce(ctx, "", false)
+func GetBaseConfig(overrideKubeContext string) *latest.Config {
+	loadConfigOnce(overrideKubeContext, "", false)
 
 	return config
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig(ctx context.Context, profile string) *latest.Config {
-	loadConfigOnce(ctx, profile, true)
+func GetConfig(overrideKubeContext, profile string) *latest.Config {
+	loadConfigOnce(overrideKubeContext, profile, true)
 
 	return config
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, basePath string, profile string, log log.Logger) (*latest.Config, error) {
+func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
 	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Check devspace.yaml
@@ -113,7 +112,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap, profile, log)
+	loadedConfig, err := ParseConfig(generatedConfig, rawMap, kubeContext, profile, log)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 }
 
 // loadConfigOnce loads the config globally once
-func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *latest.Config {
+func loadConfigOnce(kubeContext, profile string, allowProfile bool) *latest.Config {
 	getConfigOnceMutex.Lock()
 	defer getConfigOnceMutex.Unlock()
 
@@ -163,7 +162,7 @@ func loadConfigOnce(ctx context.Context, profile string, allowProfile bool) *lat
 		}
 
 		// Load base config
-		config, err = GetConfigFromPath(ctx, generatedConfig, ".", profile, log.GetInstance())
+		config, err = GetConfigFromPath(generatedConfig, ".", kubeContext, profile, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}

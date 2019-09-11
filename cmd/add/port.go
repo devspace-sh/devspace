@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -8,12 +9,13 @@ import (
 )
 
 type portCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
-	Namespace     string
 }
 
-func newPortCmd() *cobra.Command {
-	cmd := &portCmd{}
+func newPortCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &portCmd{GlobalFlags: globalFlags}
 
 	addPortCmd := &cobra.Command{
 		Use:   "port",
@@ -31,7 +33,6 @@ devspace add port 8080:80,3000
 		Run:  cmd.RunAddPort,
 	}
 
-	addPortCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "Namespace to use")
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
 
 	return addPortCmd
@@ -48,7 +49,9 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) {
 		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.AddPort(cmd.Namespace, cmd.LabelSelector, args)
+	config := configutil.GetBaseConfig(cmd.KubeContext)
+
+	err = configure.AddPort(config, cmd.Namespace, cmd.LabelSelector, args)
 	if err != nil {
 		log.Fatal(err)
 	}
