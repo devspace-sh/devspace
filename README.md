@@ -140,8 +140,9 @@ Stop wasting time for running the same build and deploy commands over and over a
 ### Efficient In-Cluster Development with `devspace dev`
 - **Hot Reloading** that updates your running containers without restarting them (whenever you change a line of code)
 - **Fast + Reliable File Synchronization** to keep all files in sync between your local workspace and your containers
-- **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 - **Port Forwarding** that lets you access services and pods on localhost and allows you to attach debuggers with ease
+- **Multi-Container Log Streaming** that lets you stream the logs of multiple containers at once (+ color-coded prefix)
+- **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 
 [![DevSpace Development Process](docs/website/static/img/processes/development-process-devspace.svg)](https://devspace.cloud/docs/cli/development/workflow-basics)
 
