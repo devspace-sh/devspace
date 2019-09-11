@@ -33,7 +33,7 @@ type DockerfileGenerator struct {
 }
 
 // ContainerizeApplication will create a dockerfile at the given path based on the language detected
-func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string) error {
+func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string, log log.Logger) error {
 	// Check if the user already has a dockerfile
 	_, err := os.Stat(dockerfilePath)
 	if os.IsNotExist(err) == false {
@@ -74,11 +74,15 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 	log.StopWait()
 
 	// Let the user select the language
-	selectedLanguage := survey.Question(&survey.QuestionOptions{
+	selectedLanguage, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Select the programming language of this project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,
-	})
+	}, log)
+	if err != nil {
+		return err
+	}
+
 	log.WriteString("\n")
 
 	return dockerfileGenerator.CreateDockerfile(selectedLanguage)

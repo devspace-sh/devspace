@@ -92,10 +92,13 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 			namespaces = append(namespaces, ns.Name)
 		}
 
-		namespace = survey.Question(&survey.QuestionOptions{
+		namespace, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which namespace do you want to use?",
 			Options:  namespaces,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if oldDefaultNamespace != namespace {

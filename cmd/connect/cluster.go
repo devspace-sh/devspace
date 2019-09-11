@@ -72,7 +72,7 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 	}
 
 	// Connect cluster
-	err = provider.ConnectCluster(cmd.Options)
+	err = provider.ConnectCluster(cmd.Options, log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

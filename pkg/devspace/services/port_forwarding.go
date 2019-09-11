@@ -40,7 +40,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 			}
 
 			log.StartWait("Port-Forwarding: Waiting for pods...")
-			pod, err := selector.GetPod()
+			pod, err := selector.GetPod(log)
 			log.StopWait()
 			if err != nil {
 				return nil, fmt.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())

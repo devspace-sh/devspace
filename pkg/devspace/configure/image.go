@@ -61,7 +61,7 @@ func GetImageConfigFromImageName(imageName, dockerfile, context string) *latest.
 }
 
 // GetImageConfigFromDockerfile gets the image config based on the configured cloud provider or asks the user where to push to
-func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, context string) (*latest.ImageConfig, error) {
+func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, context string, log log.Logger) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
 		retImageConfig = &latest.ImageConfig{}
@@ -74,7 +74,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Get docker client
-	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create docker client: %v", err)
 	}
@@ -100,7 +100,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		return nil, err
 	}
 
-	registryURL, err := getRegistryURL(config, cloudRegistryHostname, &cloudProvider)
+	registryURL, err := getRegistryURL(config, cloudRegistryHostname, &cloudProvider, log)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 			dockerUsername = dockerAuthConfig.Username
 		}
 
-		imageName = survey.Question(&survey.QuestionOptions{
+		imageName, err = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
 			DefaultValue:      dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
@@ -123,7 +123,11 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
+
 		imageName, _ = registry.GetStrippedDockerImageName(imageName)
 	} else if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryURL)) { // Is google registry?
 		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
@@ -133,7 +137,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 			gcloudProject = strings.TrimSpace(string(project))
 		}
 
-		imageName = survey.Question(&survey.QuestionOptions{
+		imageName, err = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
 			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
@@ -141,14 +145,18 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
+
 		imageName, _ = registry.GetStrippedDockerImageName(imageName)
 	} else {
 		if dockerUsername == "" {
 			dockerUsername = "myuser"
 		}
 
-		imageName = survey.Question(&survey.QuestionOptions{
+		imageName, err = survey.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
@@ -156,7 +164,11 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
+
 		imageName, _ = registry.GetStrippedDockerImageName(imageName)
 	}
 
@@ -174,7 +186,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	return retImageConfig, nil
 }
 
-func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudProvider *string) (string, error) {
+func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudProvider *string, log log.Logger) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
@@ -185,7 +197,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	)
 
 	// Initialize docker
-	dockerClient, err := docker.NewClient(log.GetInstance())
+	dockerClient, err := docker.NewClient(log)
 	if err != nil {
 		return "", fmt.Errorf("Error creating docker client: %v", err)
 	}
@@ -203,11 +215,14 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	}
 
 	registryOptions := []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
-	selectedRegistry := survey.Question(&survey.QuestionOptions{
+	selectedRegistry, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
 		DefaultValue: registryDefaultOption,
 		Options:      registryOptions,
-	})
+	}, log)
+	if err != nil {
+		return "", err
+	}
 
 	var registryURL string
 	if selectedRegistry == useDockerHub {
@@ -216,10 +231,14 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryURL = cloudRegistryHostname
 		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+cloudRegistryHostname)
 	} else {
-		registryURL = survey.Question(&survey.QuestionOptions{
+		registryURL, err = survey.Question(&survey.QuestionOptions{
 			Question:     "Please enter the registry URL without image name:",
 			DefaultValue: "my.registry.tld/username",
-		})
+		}, log)
+		if err != nil {
+			return "", err
+		}
+
 		registryURL = strings.Trim(registryURL, "/ ")
 		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+registryURL)
 	}
@@ -236,18 +255,24 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 			log.Warn("Installing docker is NOT required. You simply need a Docker Hub account\n")
 
 			for {
-				dockerUsername := survey.Question(&survey.QuestionOptions{
+				dockerUsername, err := survey.Question(&survey.QuestionOptions{
 					Question:               "What is your Docker Hub username?",
 					DefaultValue:           "",
 					ValidationRegexPattern: "^.*$",
-				})
+				}, log)
+				if err != nil {
+					return "", err
+				}
 
-				dockerPassword := survey.Question(&survey.QuestionOptions{
+				dockerPassword, err := survey.Question(&survey.QuestionOptions{
 					Question:               "What is your Docker Hub password? (will only be sent to Docker Hub)",
 					DefaultValue:           "",
 					ValidationRegexPattern: "^.*$",
 					IsPassword:             true,
-				})
+				}, log)
+				if err != nil {
+					return "", err
+				}
 
 				_, err = docker.Login(dockerClient, registryURL, dockerUsername, dockerPassword, false, true, true)
 				if err != nil {
@@ -258,7 +283,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 				break
 			}
 		} else if selectedRegistry == useDevSpaceRegistry {
-			return registryURL, loginDevSpaceCloud(*cloudProvider)
+			return registryURL, loginDevSpaceCloud(*cloudProvider, log)
 		} else {
 			return "", fmt.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}
@@ -295,7 +320,7 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 	return registryURL, nil
 }
 
-func loginDevSpaceCloud(cloudProvider string) error {
+func loginDevSpaceCloud(cloudProvider string, log log.Logger) error {
 	// Get provider configuration
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	if err != nil {
@@ -316,14 +341,17 @@ func loginDevSpaceCloud(cloudProvider string) error {
 			options = append(options, provider.Name)
 		}
 
-		cloudProvider = survey.Question(&survey.QuestionOptions{
+		cloudProvider, err = survey.Question(&survey.QuestionOptions{
 			Question: "Select a cloud provider",
 			Options:  options,
-		})
+		}, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Ensure user is logged in
-	return cloud.EnsureLoggedIn(providerConfig, cloudProvider, log.GetInstance())
+	return cloud.EnsureLoggedIn(providerConfig, cloudProvider, log)
 }
 
 // AddImage adds an image to the devspace

@@ -37,12 +37,12 @@ func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
 	}
 
 	// Retrieve space from cache
-	space, _, err := p.GetAndUpdateSpaceCache(spaceID, false)
+	space, _, err := p.GetAndUpdateSpaceCache(spaceID, false, log)
 	if err != nil {
 		return err
 	}
 
-	resumed, err := p.ResumeSpace(spaceID, space.Space.Cluster)
+	resumed, err := p.ResumeSpace(spaceID, space.Space.Cluster, log)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -65,7 +65,7 @@ func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
 		go func() {
 			for {
 				time.Sleep(time.Minute * 3)
-				p.ResumeSpace(spaceID, space.Space.Cluster)
+				p.ResumeSpace(spaceID, space.Space.Cluster, log)
 			}
 		}()
 	}
@@ -104,8 +104,8 @@ func WaitForSpaceResume(client *kubectl.Client) error {
 }
 
 // ResumeSpace resumes a space if its sleeping and sets the last activity to the current timestamp
-func (p *Provider) ResumeSpace(spaceID int, cluster *cloudlatest.Cluster) (bool, error) {
-	key, err := p.GetClusterKey(cluster)
+func (p *Provider) ResumeSpace(spaceID int, cluster *cloudlatest.Cluster, log log.Logger) (bool, error) {
+	key, err := p.GetClusterKey(cluster, log)
 	if err != nil {
 		return false, errors.Wrap(err, "get cluster key")
 	}

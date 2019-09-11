@@ -60,10 +60,13 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			profileName = args[0]
 		} else {
-			profileName = survey.Question(&survey.QuestionOptions{
+			profileName, err = survey.Question(&survey.QuestionOptions{
 				Question: "Please select a profile to use",
 				Options:  profiles,
-			})
+			}, log.GetInstance())
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		// Check if config exists

@@ -152,14 +152,17 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.WriteString("\n")
-	openingMode := survey.Question(&survey.QuestionOptions{
+	openingMode, err := survey.Question(&survey.QuestionOptions{
 		Question:     "How do you want to open your application?",
 		DefaultValue: openLocalHostOption,
 		Options: []string{
 			openLocalHostOption,
 			openDomainOption + ingressControllerWarning,
 		},
-	})
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.WriteString("\n")
 
 	// Check if we should open locally
@@ -184,15 +187,21 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) {
 		if len(domains) == 1 {
 			domain = domains[0]
 		} else {
-			domain = survey.Question(&survey.QuestionOptions{
+			domain, err = survey.Question(&survey.QuestionOptions{
 				Question: "Please select a domain to open",
 				Options:  domains,
-			})
+			}, log.GetInstance())
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else {
-		domain = survey.Question(&survey.QuestionOptions{
+		domain, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which domain do you want to use? (must be connected via DNS)",
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Check if ingress for domain already exists
@@ -421,10 +430,15 @@ func getService(config *latest.Config, client *kubectl.Client, namespace, host s
 		servicePort = splitted[1]
 	} else {
 		// Ask user which service
-		splitted := strings.Split(survey.Question(&survey.QuestionOptions{
+		service, err := survey.Question(&survey.QuestionOptions{
 			Question: fmt.Sprintf("Please specify the service you want to make available on '%s'", ansi.Color(host, "white+b")),
 			Options:  serviceNameList,
-		}), ":")
+		}, log.GetInstance())
+		if err != nil {
+			return "", 0, nil, err
+		}
+
+		splitted := strings.Split(service, ":")
 
 		serviceName = splitted[0]
 		servicePort = splitted[1]

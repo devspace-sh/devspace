@@ -63,15 +63,18 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	// Load base config
 	config := configutil.GetBaseConfig(context.Background())
 
-	shouldPurgeDeployment := survey.Question(&survey.QuestionOptions{
+	shouldPurgeDeployment, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
 		Options: []string{
 			"yes",
 			"no",
 		},
-	}) == "yes"
-	if shouldPurgeDeployment {
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if shouldPurgeDeployment == "yes" {
 		client, err := kubectl.NewDefaultClient()
 		if err != nil {
 			log.Fatalf("Unable to create new kubectl client: %v", err)

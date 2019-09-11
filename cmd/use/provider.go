@@ -49,10 +49,13 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) {
 			providerNames = append(providerNames, provider.Name)
 		}
 
-		providerName = survey.Question(&survey.QuestionOptions{
+		providerName, err = survey.Question(&survey.QuestionOptions{
 			Question: "Please select a default provider",
 			Options:  providerNames,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	provider := config.GetProvider(providerConfig, providerName)

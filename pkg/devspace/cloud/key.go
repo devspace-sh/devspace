@@ -9,7 +9,7 @@ import (
 )
 
 // GetClusterKey makes sure there is a correct key for the given cluster id
-func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
+func (p *Provider) GetClusterKey(cluster *latest.Cluster, log log.Logger) (string, error) {
 	if cluster.EncryptToken == false {
 		return "", nil
 	}
@@ -22,7 +22,7 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 				break
 			}
 		} else {
-			return p.AskForEncryptionKey(cluster)
+			return p.AskForEncryptionKey(cluster, log)
 		}
 	}
 
@@ -32,7 +32,7 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 		return "", errors.Wrap(err, "verify key")
 	}
 	if verified == false {
-		return p.AskForEncryptionKey(cluster)
+		return p.AskForEncryptionKey(cluster, log)
 	}
 
 	// Save the key if it was not there
@@ -53,17 +53,20 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 }
 
 // AskForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
-func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) {
+func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster, log log.Logger) (string, error) {
 	log.StopWait()
 
 	// Wait till user enters the correct key
 	for true {
-		key := survey.Question(&survey.QuestionOptions{
+		key, err := survey.Question(&survey.QuestionOptions{
 			Question:               "Please enter your encryption key for cluster " + cluster.Name,
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		})
+		}, log)
+		if err != nil {
+			return "", err
+		}
 
 		hashedKey, err := hash.Password(key)
 		if err != nil {

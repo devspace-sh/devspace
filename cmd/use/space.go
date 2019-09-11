@@ -92,10 +92,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			names = append(names, space.Name)
 		}
 
-		spaceName := survey.Question(&survey.QuestionOptions{
+		spaceName, err := survey.Question(&survey.QuestionOptions{
 			Question: "Please select the Space that you want to use",
 			Options:  names,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// Set space id
 		for _, space := range spaces {
@@ -112,7 +115,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			log.Fatalf("Error parsing space id: %v", err)
 		}
 
-		err = provider.PrintToken(spaceID)
+		err = provider.PrintToken(spaceID, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -148,7 +151,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space)
+	serviceAccount, err := provider.GetServiceAccount(space, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error retrieving space service account: %v", err)
 	}

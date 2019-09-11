@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -69,7 +70,7 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 }
 
 // GetPod retrieves a pod
-func (t *TargetSelector) GetPod() (*v1.Pod, error) {
+func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	if t.pick == false {
 		if t.podName != "" {
 			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
@@ -103,10 +104,15 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 					podNames = append(podNames, pod.Name)
 					podMap[pod.Name] = pod
 				}
-				podName := survey.Question(&survey.QuestionOptions{
+
+				podName, err := survey.Question(&survey.QuestionOptions{
 					Question: *t.PodQuestion,
 					Options:  podNames,
-				})
+				}, log)
+				if err != nil {
+					return nil, err
+				}
+
 				return podMap[podName], nil
 			}
 
@@ -132,7 +138,7 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 	}
 
 	// Ask for pod
-	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion)
+	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion, log)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +147,8 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 }
 
 // GetContainer retrieves a container and pod
-func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
-	pod, err := t.GetPod()
+func (t *TargetSelector) GetContainer(log log.Logger) (*v1.Pod, *v1.Container, error) {
+	pod, err := t.GetPod(log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,10 +185,14 @@ func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
 			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
 		}
 
-		containerName := survey.Question(&survey.QuestionOptions{
+		containerName, err := survey.Question(&survey.QuestionOptions{
 			Question: *t.ContainerQuestion,
 			Options:  options,
-		})
+		}, log)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		for _, container := range pod.Spec.Containers {
 			if container.Name == containerName {
 				return pod, &container, nil

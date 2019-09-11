@@ -24,7 +24,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
 
-	pod, container, err := targetSelector.GetContainer()
+	pod, container, err := targetSelector.GetContainer(log)
 	if err != nil {
 		return 0, err
 	}

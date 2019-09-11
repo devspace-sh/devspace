@@ -61,13 +61,13 @@ type clusterResources struct {
 }
 
 // ConnectCluster connects a new cluster to DevSpace Cloud
-func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
+func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger) error {
 	var (
 		client *kubectl.Client
 	)
 
 	// Get cluster name
-	clusterName, err := getClusterName(options.ClusterName)
+	clusterName, err := getClusterName(options.ClusterName, log)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Check what kube context to use
 	if options.KubeContext == "" {
 		// Get kube context to use
-		client, err = kubectl.NewClientBySelect(false, true)
+		client, err = kubectl.NewClientBySelect(false, true, log)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
@@ -113,7 +113,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	encryptedToken := token
 	if needKey {
 		if options.Key == "" {
-			options.Key, err = getKey(p, false)
+			options.Key, err = getKey(p, false, log)
 			if err != nil {
 				return errors.Wrap(err, "get key")
 			}
@@ -155,7 +155,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	}
 
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(client, clusterID, availableResources, options)
+	err = p.deployServices(client, clusterID, availableResources, options, log)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Set space domain
 	if options.UseDomain {
 		// Set cluster domain to use for spaces
-		err = p.specifyDomain(clusterID, options)
+		err = p.specifyDomain(clusterID, options, log)
 		if err != nil {
 			return err
 		}
@@ -299,13 +299,18 @@ func deleteCluster(p *Provider, clusterID int, key string) error {
 	return nil
 }
 
-func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) error {
+func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions, log log.Logger) error {
 	if options.Domain == "" {
-		options.Domain = survey.Question(&survey.QuestionOptions{
+		var err error
+
+		options.Domain, err = survey.Question(&survey.QuestionOptions{
 			Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
 			ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
 			ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
-		})
+		}, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	log.StartWait("Updating domain name")
@@ -340,7 +345,7 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 	return nil
 }
 
-func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
+func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions, log log.Logger) error {
 	defer log.StopWait()
 
 	// Check if devspace-cloud is deployed in the namespace
@@ -358,14 +363,19 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 	if options.DeployIngressController {
 		// Ask if we should use the host network
 		if options.UseHostNetwork == nil {
-			options.UseHostNetwork = ptr.Bool(survey.Question(&survey.QuestionOptions{
+			useHostNetwork, err := survey.Question(&survey.QuestionOptions{
 				Question:     "Should the ingress controller use a LoadBalancer or the host network?",
 				DefaultValue: loadBalancerOption,
 				Options: []string{
 					loadBalancerOption,
 					hostNetworkOption,
 				},
-			}) == hostNetworkOption)
+			}, log)
+			if err != nil {
+				return err
+			}
+
+			options.UseHostNetwork = ptr.Bool(useHostNetwork == hostNetworkOption)
 		}
 
 		log.StartWait("Deploying ingress controller")
@@ -547,7 +557,7 @@ func getServiceAccountCredentials(client *kubectl.Client) ([]byte, string, error
 	return secret.Data["token"], base64.StdEncoding.EncodeToString(secret.Data["ca.crt"]), nil
 }
 
-func getKey(provider *Provider, forceQuestion bool) (string, error) {
+func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, error) {
 	if forceQuestion == false && len(provider.ClusterKey) > 0 {
 		keyMap := make(map[string]bool)
 		useKey := ""
@@ -563,19 +573,25 @@ func getKey(provider *Provider, forceQuestion bool) (string, error) {
 	}
 
 	for true {
-		firstKey := survey.Question(&survey.QuestionOptions{
+		firstKey, err := survey.Question(&survey.QuestionOptions{
 			Question:               "Please enter a secure encryption key for your cluster credentials",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		})
+		}, log)
+		if err != nil {
+			return "", err
+		}
 
-		secondKey := survey.Question(&survey.QuestionOptions{
+		secondKey, err := survey.Question(&survey.QuestionOptions{
 			Question:               "Please re-enter the key",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		})
+		}, log)
+		if err != nil {
+			return "", err
+		}
 
 		if firstKey != secondKey {
 			log.Info("Keys do not match! Please reenter")
@@ -594,7 +610,7 @@ func getKey(provider *Provider, forceQuestion bool) (string, error) {
 	return "", nil
 }
 
-func getClusterName(clusterName string) (string, error) {
+func getClusterName(clusterName string, log log.Logger) (string, error) {
 	if clusterName != "" && ClusterNameValidationRegEx.MatchString(clusterName) == false {
 		return "", fmt.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
 	} else if clusterName != "" {
@@ -603,10 +619,13 @@ func getClusterName(clusterName string) (string, error) {
 
 	// Ask for cluster name
 	for true {
-		clusterName = survey.Question(&survey.QuestionOptions{
+		clusterName, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Please enter a cluster name (e.g. my-cluster)",
 			DefaultValue: "my-cluster",
-		})
+		}, log)
+		if err != nil {
+			return "", err
+		}
 
 		if ClusterNameValidationRegEx.MatchString(clusterName) == false {
 			log.Infof("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
@@ -721,7 +740,7 @@ func initializeNamespace(client kubernetes.Interface) error {
 }
 
 // ResetKey resets a cluster key
-func (p *Provider) ResetKey(clusterName string) error {
+func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
 	cluster, err := p.GetClusterByName(clusterName)
 	if err != nil {
 		return errors.Wrap(err, "get cluster")
@@ -732,7 +751,7 @@ func (p *Provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	client, err := kubectl.NewClientBySelect(false, false)
+	client, err := kubectl.NewClientBySelect(false, false, log)
 	if err != nil {
 		return err
 	}
@@ -740,7 +759,7 @@ func (p *Provider) ResetKey(clusterName string) error {
 		return fmt.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig.Host, *cluster.Server)
 	}
 
-	key, err := getKey(p, true)
+	key, err := getKey(p, true, log)
 	if err != nil {
 		return errors.Wrap(err, "get key")
 	}

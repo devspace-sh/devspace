@@ -115,16 +115,18 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var newImage *latest.ImageConfig
-	var newDeployment *latest.DeploymentConfig
-	var selectedOption string
+	var (
+		newImage       *latest.ImageConfig
+		newDeployment  *latest.DeploymentConfig
+		selectedOption string
+	)
 
 	// Check if dockerfile exists
 	addFromDockerfile := true
 
 	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
-		selectedOption = survey.Question(&survey.QuestionOptions{
+		selectedOption, err = survey.Question(&survey.QuestionOptions{
 			Question:     "This project does not have a Dockerfile. What do you want to do?",
 			DefaultValue: createDockerfileOption,
 			Options: []string{
@@ -134,9 +136,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				enterHelmChartOption,
 				useExistingImageOption,
 			},
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
-		selectedOption = survey.Question(&survey.QuestionOptions{
+		selectedOption, err = survey.Question(&survey.QuestionOptions{
 			Question:     "How do you want to initialize this project?",
 			DefaultValue: useExistingDockerfileOption,
 			Options: []string{
@@ -146,25 +151,34 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 				enterHelmChartOption,
 				useExistingImageOption,
 			},
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.WriteString("\n")
 
 	if selectedOption == createDockerfileOption {
 		// Containerize application if necessary
-		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "")
+		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "", log.GetInstance())
 		if err != nil {
 			log.Fatalf("Error containerizing application: %v", err)
 		}
 	} else if selectedOption == enterDockerfileOption {
-		cmd.Dockerfile = survey.Question(&survey.QuestionOptions{
+		cmd.Dockerfile, err = survey.Question(&survey.QuestionOptions{
 			Question: "Please enter a path to your Dockerfile (e.g. ./MyDockerfile)",
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else if selectedOption == enterManifestsOption {
 		addFromDockerfile = false
-		manifests := survey.Question(&survey.QuestionOptions{
+		manifests, err := survey.Question(&survey.QuestionOptions{
 			Question: "Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		newDeployment, err = configure.GetKubectlDeployment(deploymentName, manifests)
 		if err != nil {
@@ -172,9 +186,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	} else if selectedOption == enterHelmChartOption {
 		addFromDockerfile = false
-		chartName := survey.Question(&survey.QuestionOptions{
+		chartName, err := survey.Question(&survey.QuestionOptions{
 			Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		newDeployment, err = configure.GetHelmDeployment(deploymentName, chartName, "", "")
 		if err != nil {
@@ -182,11 +199,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 		}
 	} else if selectedOption == useExistingImageOption {
 		addFromDockerfile = false
-		existingImageName := survey.Question(&survey.QuestionOptions{
+		existingImageName, err := survey.Question(&survey.QuestionOptions{
 			Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName)
+		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -204,7 +224,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, log.GetInstance())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -304,10 +324,13 @@ func (cmd *InitCmd) addDevConfig() {
 				log.WriteString("\n")
 				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.\n")
 
-				portString := survey.Question(&survey.QuestionOptions{
+				portString, err := survey.Question(&survey.QuestionOptions{
 					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
 					DefaultValue: strconv.Itoa(*localPortPtr + 8000),
-				})
+				}, log.GetInstance())
+				if err != nil {
+					log.Fatal(err)
+				}
 
 				remotePortPtr = localPortPtr
 

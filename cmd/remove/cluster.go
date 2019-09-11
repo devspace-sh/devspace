@@ -53,15 +53,18 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Verify user is sure to delete the cluster
-	deleteCluster := survey.Question(&survey.QuestionOptions{
+	deleteCluster, err := survey.Question(&survey.QuestionOptions{
 		Question:     fmt.Sprintf("Are you sure you want to delete cluster %s? This action is irreversible", args[0]),
 		DefaultValue: "No",
 		Options: []string{
 			"No",
 			"Yes",
 		},
-	}) == "Yes"
-	if deleteCluster == false {
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if deleteCluster != "Yes" {
 		return
 	}
 
@@ -72,28 +75,34 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Delete all spaces?
-	deleteSpaces := survey.Question(&survey.QuestionOptions{
+	deleteSpaces, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster spaces?",
 		DefaultValue: "No",
 		Options: []string{
 			"No",
 			"Yes",
 		},
-	}) == "Yes"
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Delete services
-	deleteServices := survey.Question(&survey.QuestionOptions{
+	deleteServices, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all cluster services?",
 		DefaultValue: "No",
 		Options: []string{
 			"No",
 			"Yes",
 		},
-	}) == "Yes"
+	}, log.GetInstance())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Delete cluster
 	log.StartWait("Deleting cluster " + cluster.Name)
-	err = provider.DeleteCluster(cluster, deleteServices, deleteSpaces)
+	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes", log.GetInstance())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -97,10 +97,13 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 			contexts = append(contexts, ctx)
 		}
 
-		contextName = survey.Question(&survey.QuestionOptions{
+		contextName, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which context do you want to remove?",
 			Options:  contexts,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	oldCurrentContext := kubeConfig.CurrentContext

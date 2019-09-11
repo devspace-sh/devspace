@@ -305,7 +305,7 @@ func (cmd *DevCmd) startServices(ctx context.Context, config *latest.Config, gen
 	var (
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
-		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Enabled != nil && *config.Dev.Interactive.Enabled == true
+		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
 	)
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
@@ -517,6 +517,8 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
+	var err error
+
 	configutil.ResetConfig()
 
 	// Load config
@@ -548,10 +550,13 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 			if len(imageNames) == 1 {
 				imageName = imageNames[0]
 			} else {
-				imageName = survey.Question(&survey.QuestionOptions{
+				imageName, err = survey.Question(&survey.QuestionOptions{
 					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?",
 					Options:  imageNames,
-				})
+				}, log.GetInstance())
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			config.Dev.Interactive.Images = []*latest.InteractiveImageConfig{
@@ -570,7 +575,7 @@ func (cmd *DevCmd) loadConfig(ctx context.Context) *latest.Config {
 		}
 
 		log.Info("Interactive mode: enable terminal")
-		config.Dev.Interactive.Enabled = ptr.Bool(true)
+		config.Dev.Interactive.DefaultEnabled = ptr.Bool(true)
 	} else {
 		if config.Dev != nil && config.Dev.Interactive != nil {
 			config.Dev.Interactive = nil

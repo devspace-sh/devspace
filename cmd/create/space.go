@@ -106,7 +106,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	defer log.StopWait()
 
 	// Create space
-	spaceID, err := provider.CreateSpace(args[0], projectID, cluster)
+	spaceID, err := provider.CreateSpace(args[0], projectID, cluster, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error creating space: %v", err)
 	}
@@ -118,7 +118,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) {
 	}
 
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space)
+	serviceAccount, err := provider.GetServiceAccount(space, log.GetInstance())
 	if err != nil {
 		log.Fatalf("Error retrieving space service account: %v", err)
 	}
@@ -204,11 +204,15 @@ func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
 		}
 
 		// Choose cluster
-		chosenCluster := survey.Question(&survey.QuestionOptions{
+		chosenCluster, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which cluster should the space created in?",
 			DefaultValue: clusterNames[0],
 			Options:      clusterNames,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			return nil, err
+		}
+
 		if chosenCluster != DevSpaceCloudHostedCluster {
 			for _, cluster := range connectedClusters {
 				if cluster.Name == chosenCluster {
@@ -236,11 +240,15 @@ func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
 	}
 
 	// Choose cluster
-	chosenCluster := survey.Question(&survey.QuestionOptions{
+	chosenCluster, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Which hosted DevSpace cluster should the space created in?",
 		DefaultValue: clusterNames[0],
 		Options:      clusterNames,
-	})
+	}, log.GetInstance())
+	if err != nil {
+		return nil, err
+	}
+
 	for _, cluster := range devSpaceClusters {
 		if cluster.Name == chosenCluster {
 			return cluster, nil

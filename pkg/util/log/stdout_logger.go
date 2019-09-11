@@ -85,17 +85,12 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 
 func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
-
 	if s.level >= fnInformation.logLevel {
 		if s.loadingText != nil {
 			s.loadingText.Stop()
 		}
 
 		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
-		// ct.Foreground(fnInformation.color, false)
-		// fnInformation.stream.Write([]byte(fnInformation.tag))
-		// ct.ResetColor()
-
 		fnInformation.stream.Write([]byte(message))
 
 		if s.loadingText != nil && fnType != fatalFn {

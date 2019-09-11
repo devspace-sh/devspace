@@ -12,7 +12,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	homedir "github.com/mitchellh/go-homedir"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -44,7 +46,7 @@ func (c *ComponentSchema) varMatchFn(path, key, value string) bool {
 	return VarMatchRegex.MatchString(value)
 }
 
-func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) {
+func (c *ComponentSchema) varReplaceFn(path, value string, log log.Logger) (interface{}, error) {
 	matched := VarMatchRegex.FindStringSubmatch(value)
 	if len(matched) != 4 {
 		return "", nil
@@ -66,7 +68,7 @@ func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) 
 		}
 
 		// Fill c.VariableValues[varName]
-		c.askQuestion(variable)
+		c.askQuestion(variable, log)
 	}
 
 	retValue := matched[1] + c.VariableValues[varName] + matched[3]
@@ -82,7 +84,8 @@ func (c *ComponentSchema) varReplaceFn(path, value string) (interface{}, error) 
 }
 
 // askQuestion asks the user a question depending on the variable options
-func (c *ComponentSchema) askQuestion(variable *latest.Variable) {
+func (c *ComponentSchema) askQuestion(variable *latest.Variable, log log.Logger) error {
+	var err error
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -113,7 +116,12 @@ func (c *ComponentSchema) askQuestion(variable *latest.Variable) {
 		}
 	}
 
-	c.VariableValues[variable.Name] = survey.Question(params)
+	c.VariableValues[variable.Name], err = survey.Question(params, log)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewComponentGenerator creates a new component generator for the given path
@@ -181,7 +189,7 @@ func (cg *ComponentsGenerator) GetComponent(name string) (*ComponentSchema, erro
 }
 
 // GetComponentTemplate retrieves a component templates
-func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.ComponentConfig, error) {
+func (cg *ComponentsGenerator) GetComponentTemplate(name string, log log.Logger) (*latest.ComponentConfig, error) {
 	component, err := cg.GetComponent(name)
 	if err != nil {
 		return nil, err
@@ -189,7 +197,7 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.Compon
 
 	// Ask questions
 	for _, variable := range component.Variables {
-		component.askQuestion(&variable)
+		component.askQuestion(&variable, log)
 	}
 
 	// Check if component exists
@@ -205,7 +213,9 @@ func (cg *ComponentsGenerator) GetComponentTemplate(name string) (*latest.Compon
 		return nil, err
 	}
 
-	yamlFileContent, err = CustomResolveVars(yamlFileContent, component.varMatchFn, component.varReplaceFn)
+	yamlFileContent, err = CustomResolveVars(yamlFileContent, component.varMatchFn, func(path, value string) (interface{}, error) {
+		return component.varReplaceFn(path, value, log)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Error resolving variables: %v", err)
 	}

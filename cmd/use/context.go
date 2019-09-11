@@ -59,10 +59,13 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) {
 			contexts = append(contexts, ctx)
 		}
 
-		context = survey.Question(&survey.QuestionOptions{
+		context, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which context do you want to use?",
 			Options:  contexts,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Save old context

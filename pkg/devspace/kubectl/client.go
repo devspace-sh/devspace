@@ -92,7 +92,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 }
 
 // NewClientBySelect creates a new kubernetes client by user select
-func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
+func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*Client, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -108,11 +108,14 @@ func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 	}
 
 	for true {
-		kubeContext := survey.Question(&survey.QuestionOptions{
+		kubeContext, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      options,
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
 
 		// Check if cluster is in private network
 		if allowPrivate == false {

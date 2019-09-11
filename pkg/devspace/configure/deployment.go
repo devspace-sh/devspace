@@ -13,6 +13,7 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
@@ -20,12 +21,12 @@ import (
 var imageNameCleaningRegex = regexp.MustCompile("[^a-z0-9]")
 
 // GetDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
-func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *generated.Config, name, imageName, dockerfile, context string, log log.Logger) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
 	if imageName == "" {
 		imageName = imageNameCleaningRegex.ReplaceAllString(strings.ToLower(name), "")
-		imageConfig, err = GetImageConfigFromDockerfile(config, imageName, dockerfile, context)
+		imageConfig, err = GetImageConfigFromDockerfile(config, imageName, dockerfile, context, log)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "get image config")
 		}
@@ -53,19 +54,26 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		if len(ports) == 1 {
 			port = strconv.Itoa(ports[0])
 		} else if len(ports) > 1 {
-			port = survey.Question(&survey.QuestionOptions{
+			port, err = survey.Question(&survey.QuestionOptions{
 				Question:     "Which port is your application listening on?",
 				DefaultValue: strconv.Itoa(ports[0]),
-			})
+			}, log)
+			if err != nil {
+				return nil, nil, err
+			}
+
 			if port == "" {
 				port = strconv.Itoa(ports[0])
 			}
 		}
 	}
 	if port == "" {
-		port = survey.Question(&survey.QuestionOptions{
+		port, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which port is your application listening on? (Enter to skip)",
-		})
+		}, log)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	if port != "" {
 		port, err := strconv.Atoi(port)
@@ -86,7 +94,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 }
 
 // GetImageComponentDeployment returns a new deployment that deploys an image via a component
-func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+func GetImageComponentDeployment(name, imageName string, log log.Logger) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	retDeploymentConfig := &latest.DeploymentConfig{
 		Name: name,
 		Component: &latest.ComponentConfig{
@@ -99,9 +107,12 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 	}
 
 	// Configure port
-	port := survey.Question(&survey.QuestionOptions{
+	port, err := survey.Question(&survey.QuestionOptions{
 		Question: "Which port do you want to expose for this image? (Enter to skip)",
-	})
+	}, log)
+	if err != nil {
+		return nil, nil, err
+	}
 	if port != "" {
 		port, err := strconv.Atoi(port)
 		if err != nil {
@@ -123,7 +134,7 @@ func GetImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *
 }
 
 // GetPredefinedComponentDeployment returns deployment that uses a predefined component
-func GetPredefinedComponentDeployment(name, component string) (*latest.DeploymentConfig, error) {
+func GetPredefinedComponentDeployment(name, component string, log log.Logger) (*latest.DeploymentConfig, error) {
 	// Create component generator
 	componentGenerator, err := generator.NewComponentGenerator()
 	if err != nil {
@@ -131,7 +142,7 @@ func GetPredefinedComponentDeployment(name, component string) (*latest.Deploymen
 	}
 
 	// Get component template
-	template, err := componentGenerator.GetComponentTemplate(component)
+	template, err := componentGenerator.GetComponentTemplate(component, log)
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieving template: %v", err)
 	}

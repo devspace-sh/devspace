@@ -113,7 +113,7 @@ func GetConfigFromPath(ctx context.Context, generatedConfig *generated.Config, b
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap, profile)
+	loadedConfig, err := ParseConfig(ctx, generatedConfig, rawMap, profile, log)
 	if err != nil {
 		return nil, err
 	}

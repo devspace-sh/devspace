@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	varspkg "github.com/devspace-cloud/devspace/pkg/util/vars"
 	"github.com/pkg/errors"
@@ -66,7 +67,7 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseConfig fills the variables in the data and parses the config
-func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}, profile string) (*latest.Config, error) {
+func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}, profile string, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -101,7 +102,7 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 		}
 
 		if len(newVars) > 0 {
-			err = askQuestions(generatedConfig, newVars)
+			err = askQuestions(generatedConfig, newVars, log)
 			if err != nil {
 				return nil, err
 			}
@@ -115,7 +116,9 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	}
 
 	// Walk over data and fill in variables
-	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) { return varReplaceFn(ctx, path, value, generatedConfig) })
+	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
+		return varReplaceFn(ctx, path, value, generatedConfig, log)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +132,7 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	return parsedConfig, nil
 }
 
-func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable) error {
+func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, log log.Logger) error {
 	for _, variable := range vars {
 		name := strings.TrimSpace(variable.Name)
 
@@ -151,20 +154,25 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable) er
 		}
 
 		// Ask question
-		generatedConfig.Vars[name] = askQuestion(variable)
+		var err error
+
+		generatedConfig.Vars[name], err = askQuestion(variable, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func varReplaceFn(ctx context.Context, path, value string, generatedConfig *generated.Config) (interface{}, error) {
+func varReplaceFn(ctx context.Context, path, value string, generatedConfig *generated.Config, log log.Logger) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(ctx, v, generatedConfig) })
+	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(ctx, v, generatedConfig, log) })
 }
 
-func resolveVar(ctx context.Context, varName string, generatedConfig *generated.Config) (string, error) {
+func resolveVar(ctx context.Context, varName string, generatedConfig *generated.Config, log log.Logger) (string, error) {
 	// Is predefined variable?
 	found, value, err := getPredefinedVar(ctx, varName)
 	if err != nil {
@@ -186,14 +194,17 @@ func resolveVar(ctx context.Context, varName string, generatedConfig *generated.
 	}
 
 	// Ask for variable
-	generatedConfig.Vars[varName] = askQuestion(&latest.Variable{
+	generatedConfig.Vars[varName], err = askQuestion(&latest.Variable{
 		Question: "Please enter a value for " + varName,
-	})
+	}, log)
+	if err != nil {
+		return "", err
+	}
 
 	return generatedConfig.Vars[varName], nil
 }
 
-func askQuestion(variable *latest.Variable) string {
+func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -224,5 +235,10 @@ func askQuestion(variable *latest.Variable) string {
 		}
 	}
 
-	return survey.Question(params)
+	answer, err := survey.Question(params, log)
+	if err != nil {
+		return "", err
+	}
+
+	return answer, nil
 }
