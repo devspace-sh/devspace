@@ -156,6 +156,7 @@ deployments:
 **Explanation:**  
 Instead of the default name `frontend`, the ingress of this component would be named `custom-ingress-name`.
 
+
 ### `labels`
 The `labels` option expects a map with Kubernetes labels. 
 
