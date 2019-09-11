@@ -102,6 +102,7 @@
         "label": "Advanced Topics",
         "ids": [
           "cli/development/advanced/advanced-topics",
+          "cli/development/advanced/shared-commands",
           "cli/development/advanced/remote-debuggers"
         ]
       }

@@ -211,7 +211,7 @@ DevSpace allows you to share commands for common development tasks which can be 
 ```bash
 devspace list commands
 ```
-Learn how to [configure shared commands for `devspace run`](#TODO).
+Learn how to [configure shared commands for `devspace run`](/docs/cli/development/advanced/shared-commands).
 
 ### `devspace list deployments`
 To get a list of all deployments as well as their status and other information, run the following command:
