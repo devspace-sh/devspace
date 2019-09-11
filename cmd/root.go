@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,8 +28,15 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "devspace",
-	Short: "Welcome to the DevSpace CLI!",
+	Use:           "devspace",
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	Short:         "Welcome to the DevSpace CLI!",
+	PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+		if globalFlags.Silent {
+			log.GetInstance().SetLevel(logrus.FatalLevel)
+		}
+	},
 	Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 
 	devspace init`,

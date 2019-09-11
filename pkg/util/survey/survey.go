@@ -5,7 +5,9 @@ import (
 	"regexp"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
@@ -33,6 +35,10 @@ func SetNextAnswer(answer string) {
 
 // Question asks the user a question and returns the answer
 func Question(params *QuestionOptions, log log.Logger) (string, error) {
+	if log.GetLevel() < logrus.InfoLevel {
+		return "", errors.Errorf("Cannot ask question '%s' because logger level is too low", params.Question)
+	}
+
 	var prompt surveypkg.Prompt
 	compiledRegex := DefaultValidationRegexPattern
 	if params.ValidationRegexPattern != "" {

@@ -173,6 +173,10 @@ func (f *fileLogger) SetLevel(level logrus.Level) {
 	f.logger.SetLevel(level)
 }
 
+func (f *fileLogger) GetLevel() logrus.Level {
+	return f.logger.GetLevel()
+}
+
 func (f *fileLogger) Write(message []byte) (int, error) {
 	return f.logger.Out.Write(message)
 }

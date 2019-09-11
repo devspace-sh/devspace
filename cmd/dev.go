@@ -116,7 +116,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.Errorf("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Start file logging

@@ -281,6 +281,14 @@ func (s *StreamLogger) SetLevel(level logrus.Level) {
 	s.level = level
 }
 
+// GetLevel implements interface
+func (s *StreamLogger) GetLevel() logrus.Level {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	return s.level
+}
+
 func (s *StreamLogger) Write(message []byte) (int, error) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()

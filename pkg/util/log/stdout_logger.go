@@ -369,6 +369,13 @@ func (s *stdoutLogger) SetLevel(level logrus.Level) {
 	s.level = level
 }
 
+func (s *stdoutLogger) GetLevel() logrus.Level {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	return s.level
+}
+
 func (s *stdoutLogger) Write(message []byte) (int, error) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
