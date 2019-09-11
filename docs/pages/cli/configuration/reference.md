@@ -332,7 +332,7 @@ autoReload:                         # struct   | Options for auto-reloading (i.e
 ### `dev.interactive`
 ```yaml
 interactive:                        # struct   | Options for interactive mode
-- enabled: false                    # bool     | Start interactive mode instead of log streaming by default (Default: false)
+- defaultEnabled: false             # bool     | Start interactive mode instead of log streaming by default, even without -i / --interactive flag (Default: false)
   images:                           # struct[] | Array of image override configurations for interactive mode
   - name: default                   # string   | Name of the image to apply this override rule to (key in `images`)
     entrypoint: []                  # string[] | Array defining with the ENTRYPOINT that should be used instead of the ENTRYPOINT defined in the Dockerfile

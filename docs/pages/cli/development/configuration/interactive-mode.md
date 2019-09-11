@@ -131,3 +131,40 @@ dev:
 ```
 **Explanation:**  
 The above configuration would open the container with name `some-container` that belongs to the deployment `app-backend` when running `devspace dev -i`.
+
+
+## `dev.interactive.defaultEnabled`
+The `defaultEnabled` option expects a boolean that determines if interactive mode should be started by default even if no `-i / --interactive` flag was provided.
+
+#### Default Value For `defaultEnabled`
+```yaml
+defaultEnabled: false
+```
+
+#### Example: Enabling Interactive Mode By Default
+```yaml
+images:
+  backend:
+    image: john/appbackend
+deployments:
+- name: app-backend
+  component:
+    containers:
+    - image: john/appbackend
+      name: some-container
+    - image: john/appbackend-sidecar
+dev:
+  interactive:
+    defaultEnabled: true
+    images:
+    - name: backend
+      entrypoint:
+      - /debug_entrypoing.sh
+    terminal:
+      imageName: backend
+      containerName: some-container
+```
+**Explanation:**  
+Running `devspace dev` with the above configuration leads to:
+- during image building: the overrides defined in `dev.interactive.images`  would be applied
+- after deployment: an interactive terminal session for a container with name `some-container` and with image `ohn/appbackend` would be started
