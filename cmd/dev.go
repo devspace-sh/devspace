@@ -78,8 +78,6 @@ Starts your project in development mode:
 
 Use Interactive Mode:
 - Use "devspace dev -i" for interactive mode (terminal)
-- Use "devspace dev -i image1,image2,..." to override
-  entrypoints for images1,image2,... and open terminal
 #######################################################`,
 		RunE: cmd.Run,
 	}
