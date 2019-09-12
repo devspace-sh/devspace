@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
