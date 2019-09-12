@@ -2,6 +2,7 @@ package services
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -255,24 +255,11 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 }
 
 func startStream(syncClient *sync.Sync, kubeClient *kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
-	stderr, err := ioutil.TempFile("", "")
+	stderrBuffer := &bytes.Buffer{}
+
+	err := kubeClient.ExecStream(pod, container, command, false, reader, writer, stderrBuffer)
 	if err != nil {
-		log.Warnf("Couldn't create temp file for stream %s: %v", strings.Join(command, " "), err)
-		return
-	}
-	defer os.Remove(stderr.Name())
-
-	err = kubeClient.ExecStream(pod, container, command, false, reader, writer, stderr)
-	if err != nil {
-		stderr.Close()
-
-		// Read stderr
-		stderr, _ := ioutil.ReadFile(stderr.Name())
-		if stderr == nil {
-			stderr = []byte{}
-		}
-
-		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, string(stderr), err))
+		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, stderrBuffer.String(), err))
 	}
 }
 

@@ -3,12 +3,9 @@ package kubectl
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
-	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
@@ -107,51 +104,14 @@ func (client *Client) ExecStream(pod *k8sv1.Pod, container string, command []str
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
 func (client *Client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
-	stdoutOutput, err := ioutil.TempFile("", "")
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "create temp file")
-	}
-	defer os.Remove(stdoutOutput.Name())
+	stdoutBuffer := &bytes.Buffer{}
+	stderrBuffer := &bytes.Buffer{}
 
-	stderrOutput, err := ioutil.TempFile("", "")
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "create temp file")
-	}
-	defer os.Remove(stderrOutput.Name())
-
-	kubeExecError := client.ExecStream(pod, container, command, false, input, stdoutOutput, stderrOutput)
+	kubeExecError := client.ExecStream(pod, container, command, false, input, stdoutBuffer, stderrBuffer)
 	if kubeExecError != nil {
 		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
 			return nil, nil, kubeExecError
 		}
-	}
-
-	stdoutOutput.Close()
-	stderrOutput.Close()
-
-	stdoutBuffer := &bytes.Buffer{}
-	stderrBuffer := &bytes.Buffer{}
-
-	// Open stdout
-	stdoutOutput, err = os.Open(stdoutOutput.Name())
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "open stdout file")
-	}
-
-	_, err = stdoutBuffer.ReadFrom(stdoutOutput)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Open stderr
-	stderrOutput, err = os.Open(stdoutOutput.Name())
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "open stderr file")
-	}
-
-	_, err = stderrBuffer.ReadFrom(stdoutOutput)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), kubeExecError
