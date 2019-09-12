@@ -39,8 +39,14 @@ func ExecuteCommand(config *latest.Config, name string, args []string) error {
 		return errors.Wrap(err, "parse shell command")
 	}
 
+	// Get current working directory
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
 	// Create shell runner
-	r, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
+	r, err := interp.New(interp.Dir(pwd), interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
 	if err != nil {
 		return errors.Wrap(err, "create shell runner")
 	}
