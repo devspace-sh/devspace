@@ -18,8 +18,19 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
 )
 
+// SubResource specifies with sub resources should be used for the container connection (exec or attach)
+type SubResource string
+
+const (
+	// SubResourceExec creates a new process in the container and attaches to that
+	SubResourceExec SubResource = "exec"
+
+	// SubResourceAttach attaches to the top process of the container
+	SubResourceAttach SubResource = "attach"
+)
+
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
-func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error {
 	var t term.TTY
 	var sizeQueue remotecommand.TerminalSizeQueue
 	var streamOptions remotecommand.StreamOptions
@@ -28,7 +39,7 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
-		SubResource("exec")
+		SubResource(string(subResource))
 
 	if tty {
 		t = terminal.SetupTTY(stdin, stdout)
@@ -53,14 +64,24 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 		}
 	}
 
-	execRequest.VersionedParams(&k8sapi.PodExecOptions{
-		Container: container,
-		Command:   command,
-		Stdin:     stdin != nil,
-		Stdout:    stdout != nil,
-		Stderr:    stderr != nil,
-		TTY:       t.Raw,
-	}, legacyscheme.ParameterCodec)
+	if subResource == SubResourceExec {
+		execRequest.VersionedParams(&k8sapi.PodExecOptions{
+			Container: container,
+			Command:   command,
+			Stdin:     stdin != nil,
+			Stdout:    stdout != nil,
+			Stderr:    stderr != nil,
+			TTY:       t.Raw,
+		}, legacyscheme.ParameterCodec)
+	} else if subResource == SubResourceAttach {
+		execRequest.VersionedParams(&k8sapi.PodAttachOptions{
+			Container: container,
+			Stdin:     stdin != nil,
+			Stdout:    stdout != nil,
+			Stderr:    stderr != nil,
+			TTY:       t.Raw,
+		}, legacyscheme.ParameterCodec)
+	}
 
 	exec, err := remotecommand.NewSPDYExecutorForTransports(transport, upgrader, "POST", execRequest.URL())
 	if err != nil {
@@ -79,7 +100,7 @@ func (client *Client) ExecStream(pod *k8sv1.Pod, container string, command []str
 		return err
 	}
 
-	return client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container, command, tty, stdin, stdout, stderr)
+	return client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container, command, tty, stdin, stdout, stderr, SubResourceExec)
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers

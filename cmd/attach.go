@@ -8,15 +8,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 )
 
-// EnterCmd is a struct that defines a command call for "enter"
-type EnterCmd struct {
+// AttachCmd is a struct that defines a command call for "enter"
+type AttachCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
@@ -25,42 +24,39 @@ type EnterCmd struct {
 	Pick          bool
 }
 
-// NewEnterCmd creates a new enter command
-func NewEnterCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &EnterCmd{GlobalFlags: globalFlags}
+// NewAttachCmd creates a new attach command
+func NewAttachCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &AttachCmd{GlobalFlags: globalFlags}
 
-	enterCmd := &cobra.Command{
-		Use:   "enter",
-		Short: "Open a shell to a container",
+	attachCmd := &cobra.Command{
+		Use:   "attach",
+		Short: "Attaches to a container",
 		Long: `
 #######################################################
-################## devspace enter #####################
+################# devspace attach #####################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
+Attaches to a running container
 
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -s my-selector
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
+devspace attach
+devspace attach --pick # Select pod to enter
+devspace attach -s my-selector
+devspace attach -c my-container
+devspace attach -n my-namespace
 #######################################################`,
 		RunE: cmd.Run,
 	}
 
-	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
-	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
-	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	attachCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
+	attachCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
-	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
-	return enterCmd
+	return attachCmd
 }
 
 // Run executes the command logic
-func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *AttachCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
@@ -106,13 +102,6 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
-	// Start terminal
-	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
-	if err != nil {
-		return err
-	} else if exitCode != 0 {
-		exit.Exit(exitCode)
-	}
-
-	return nil
+	// Start attach
+	return services.StartAttach(nil, client, selectorParameter, nil, make(chan error), log.GetInstance())
 }

@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/util/exit"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -64,12 +63,12 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		shellExitError, ok := err.(interp.ShellExitStatus)
 		if ok {
-			os.Exit(int(shellExitError))
+			exit.Exit(int(shellExitError))
 		}
 
 		exitError, ok := err.(interp.ExitStatus)
 		if ok {
-			os.Exit(int(exitError))
+			exit.Exit(int(exitError))
 		}
 
 		return errors.Wrap(err, "execute command")

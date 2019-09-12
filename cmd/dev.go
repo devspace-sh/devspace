@@ -22,7 +22,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
+	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -184,10 +184,9 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args, true)
 	if err != nil {
 		return err
+	} else if exitCode != 0 {
+		exit.Exit(exitCode)
 	}
-
-	cloudanalytics.SendCommandEvent(nil)
-	os.Exit(exitCode)
 
 	return nil
 }
