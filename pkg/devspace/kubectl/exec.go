@@ -52,8 +52,8 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 		}
 
 		streamOptions = remotecommand.StreamOptions{
-			Stdin:             stdin,
-			Stdout:            stdout,
+			Stdin:             t.In,
+			Stdout:            t.Out,
 			Stderr:            stderr,
 			Tty:               t.Raw,
 			TerminalSizeQueue: sizeQueue,
