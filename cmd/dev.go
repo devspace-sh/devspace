@@ -140,7 +140,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
 	if err != nil {
 		return err
 	}

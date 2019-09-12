@@ -82,7 +82,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}

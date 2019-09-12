@@ -143,8 +143,8 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 }
 
 // PrintWarning prints a warning if the last kube context is different than this one
-func (client *Client) PrintWarning(generatedConfig *generated.Config, updateGenerated bool, log log.Logger) error {
-	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel {
+func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning, updateGenerated bool, log log.Logger) error {
+	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
 			wait := false
