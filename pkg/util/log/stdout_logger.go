@@ -160,12 +160,14 @@ func (s *stdoutLogger) StartWait(message string) {
 		s.loadingText = nil
 	}
 
-	s.loadingText = &loadingText{
-		Message: message,
-		Stream:  goansi.NewAnsiStdout(),
-	}
+	if s.level >= logrus.InfoLevel {
+		s.loadingText = &loadingText{
+			Message: message,
+			Stream:  goansi.NewAnsiStdout(),
+		}
 
-	s.loadingText.Start()
+		s.loadingText.Start()
+	}
 }
 
 // StartWait prints a wait message until StopWait is called
@@ -380,30 +382,36 @@ func (s *stdoutLogger) Write(message []byte) (int, error) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
+	if s.level >= logrus.InfoLevel {
+		if s.loadingText != nil {
+			s.loadingText.Stop()
+		}
+
+		n, err := fnTypeInformationMap[infoFn].stream.Write(message)
+
+		if s.loadingText != nil {
+			s.loadingText.Start()
+		}
+
+		return n, err
 	}
 
-	n, err := fnTypeInformationMap[infoFn].stream.Write(message)
-
-	if s.loadingText != nil {
-		s.loadingText.Start()
-	}
-
-	return n, err
+	return len(message), nil
 }
 
 func (s *stdoutLogger) WriteString(message string) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-	}
+	if s.level >= logrus.InfoLevel {
+		if s.loadingText != nil {
+			s.loadingText.Stop()
+		}
 
-	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+		fnTypeInformationMap[infoFn].stream.Write([]byte(message))
 
-	if s.loadingText != nil {
-		s.loadingText.Start()
+		if s.loadingText != nil {
+			s.loadingText.Start()
+		}
 	}
 }

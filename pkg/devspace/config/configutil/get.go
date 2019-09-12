@@ -207,6 +207,17 @@ func validate(config *latest.Config) error {
 		}
 	}
 
+	if config.Commands != nil {
+		for index, command := range config.Commands {
+			if command.Name == "" {
+				return errors.Errorf("commands[%d].name is required", index)
+			}
+			if command.Command == "" {
+				return errors.Errorf("commands[%d].command is required", index)
+			}
+		}
+	}
+
 	if config.Hooks != nil {
 		for index, hookConfig := range config.Hooks {
 			if hookConfig.Command == "" {
@@ -217,6 +228,9 @@ func validate(config *latest.Config) error {
 
 	if config.Images != nil {
 		for imageConfigName, imageConf := range config.Images {
+			if imageConf.Image == "" {
+				return errors.Errorf("images.%s.image is required", imageConfigName)
+			}
 			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
 				return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
 			}
@@ -240,7 +254,7 @@ func validate(config *latest.Config) error {
 		}
 	}
 
-	if len(config.Profiles) > 0 {
+	if config.Profiles != nil {
 		for idx, profile := range config.Profiles {
 			if profile.Name == "" {
 				return errors.Errorf("profiles.%d.name is missing", idx)

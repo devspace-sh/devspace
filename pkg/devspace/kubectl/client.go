@@ -12,6 +12,7 @@ import (
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -143,7 +144,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 
 // PrintWarning prints a warning if the last kube context is different than this one
 func (client *Client) PrintWarning(generatedConfig *generated.Config, updateGenerated bool, log log.Logger) error {
-	if generatedConfig != nil {
+	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
 			wait := false
@@ -183,18 +184,18 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, updateGene
 			time.Sleep(5 * time.Second)
 			log.StopWait()
 		}
+	}
 
-		// Update generated if we deploy the application
-		if updateGenerated {
-			generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
-				Context:   client.CurrentContext,
-				Namespace: client.Namespace,
-			}
+	// Update generated if we deploy the application
+	if generatedConfig != nil && updateGenerated {
+		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+			Context:   client.CurrentContext,
+			Namespace: client.Namespace,
+		}
 
-			err := generated.SaveConfig(generatedConfig)
-			if err != nil {
-				return errors.Wrap(err, "save generated")
-			}
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			return errors.Wrap(err, "save generated")
 		}
 	}
 
