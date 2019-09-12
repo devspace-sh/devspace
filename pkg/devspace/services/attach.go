@@ -31,7 +31,12 @@ func StartAttach(config *latest.Config, client *kubectl.Client, selectorParamete
 		return err
 	}
 
+	if container.TTY == false || container.Stdin == false {
+		log.Warnf("To be able to interact with the container options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.TTY, container.Stdin)
+	}
+
 	log.Infof("Attaching to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	log.Info("If you don't see a command prompt, try pressing enter.")
 
 	go func() {
 		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, container.TTY, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)

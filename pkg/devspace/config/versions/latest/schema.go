@@ -133,6 +133,8 @@ type ContainerConfig struct {
 	Image          string                        `yaml:"image,omitempty"`
 	Command        []string                      `yaml:"command,omitempty"`
 	Args           []string                      `yaml:"args,omitempty"`
+	Stdin          bool                          `yaml:"stdin,omitempty"`
+	TTY            bool                          `yaml:"tty,omitempty"`
 	Env            []map[interface{}]interface{} `yaml:"env,omitempty"`
 	VolumeMounts   []*VolumeMountConfig          `yaml:"volumeMounts,omitempty"`
 	Resources      map[interface{}]interface{}   `yaml:"resources,omitempty"`
