@@ -1058,8 +1058,8 @@ k8s.io/utils/net
 k8s.io/utils/path
 # mvdan.cc/sh/v3 v3.0.0-alpha2
 mvdan.cc/sh/v3/interp
-mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/syntax
+mvdan.cc/sh/v3/expand
 # sigs.k8s.io/kustomize v2.0.3+incompatible
 sigs.k8s.io/kustomize/pkg/fs
 sigs.k8s.io/kustomize/pkg/commands/build

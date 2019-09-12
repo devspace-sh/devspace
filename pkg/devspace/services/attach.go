@@ -34,7 +34,7 @@ func StartAttach(config *latest.Config, client *kubectl.Client, selectorParamete
 	log.Infof("Attaching to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
 	go func() {
-		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, true, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)
+		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, false, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)
 	}()
 
 	err = <-interrupt

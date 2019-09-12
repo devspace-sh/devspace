@@ -31,9 +31,11 @@ const (
 
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
 func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error {
-	var t term.TTY
-	var sizeQueue remotecommand.TerminalSizeQueue
-	var streamOptions remotecommand.StreamOptions
+	var (
+		t             term.TTY
+		sizeQueue     remotecommand.TerminalSizeQueue
+		streamOptions remotecommand.StreamOptions
+	)
 
 	execRequest := client.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
