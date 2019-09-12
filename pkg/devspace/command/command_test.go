@@ -13,7 +13,7 @@ import (
 func TestCommand(t *testing.T) {
 	p := syntax.NewParser()
 
-	file, err := p.Parse(strings.NewReader("go version && echo 123"), "")
+	file, err := p.Parse(strings.NewReader("printf 123 && printf '4'\"'\"'5''6'"), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,5 +31,7 @@ func TestCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Fatalf("Done - stdout '%s' - stderr '%s'", stdout.String(), stderr.String())
+	if stdout.String() != "1234'56" {
+		t.Fatalf("Expected stdout '1234'56', got stdout '%s' - stderr '%s'", stdout.String(), stderr.String())
+	}
 }

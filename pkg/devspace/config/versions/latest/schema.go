@@ -35,7 +35,7 @@ type Config struct {
 	Dev          *DevConfig              `yaml:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
-	Commands     []*CommandConfig        `yaml:"run,omitempty"`
+	Commands     []*CommandConfig        `yaml:"commands,omitempty"`
 
 	Vars     []*Variable      `yaml:"vars,omitempty"`
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`

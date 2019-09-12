@@ -104,6 +104,7 @@ func init() {
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
 	rootCmd.AddCommand(NewOpenCmd(globalFlags))
 	rootCmd.AddCommand(NewUICmd())
+	rootCmd.AddCommand(NewRunCmd(globalFlags))
 
 	cobra.OnInitialize(initConfig)
 }
