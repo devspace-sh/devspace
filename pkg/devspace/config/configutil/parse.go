@@ -139,10 +139,15 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, lo
 		if variable.Source != nil && *variable.Source == latest.VariableSourceEnv && isInEnv == false {
 			// Use default value for env variable if it is configured
 			if variable.Default != "" {
-				return os.Setenv(name, variable.Default)
-			} else {
-				return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
+				err := os.Setenv(name, variable.Default)
+				if err != nil {
+					return err
+				}
+
+				continue
 			}
+
+			return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
 		}
 
 		// Check if variable is in environment

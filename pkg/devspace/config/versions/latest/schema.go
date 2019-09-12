@@ -35,9 +35,16 @@ type Config struct {
 	Dev          *DevConfig              `yaml:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
+	Commands     []*CommandConfig        `yaml:"run,omitempty"`
 
 	Vars     []*Variable      `yaml:"vars,omitempty"`
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
+}
+
+// CommandConfig defines the command specification
+type CommandConfig struct {
+	Name    string `yaml:"name"`
+	Command string `yaml:"command"`
 }
 
 // ImageConfig defines the image specification
