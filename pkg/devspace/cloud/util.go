@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -21,7 +20,7 @@ import (
 func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 	spaces, err := p.GetSpaces()
 	if err != nil {
-		return fmt.Errorf("Error retrieving spaces: %v", err)
+		return errors.Errorf("Error retrieving spaces: %v", err)
 	}
 
 	activeSpaceID := 0
@@ -185,7 +184,7 @@ func DecryptAES(key, data []byte) ([]byte, error) {
 
 	nonceSize := gcm.NonceSize()
 	if len(data) < nonceSize {
-		return nil, fmt.Errorf("Data size is smaller than nonce size: %d < %d", len(data), nonceSize)
+		return nil, errors.Errorf("Data size is smaller than nonce size: %d < %d", len(data), nonceSize)
 	}
 
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]

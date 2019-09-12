@@ -25,20 +25,22 @@ Opens the management ui in the browser
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunUI,
+		RunE: cmd.RunUI,
 	}
 
 	return uiCmd
 }
 
 // RunUI executes the functionality "devspace ui"
-func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) {
+func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	// Get provider
 	provider, err := cloud.GetProvider(nil, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	open.Start(provider.Host)
 	log.Donef("Successfully opened %s", provider.Host)
+
+	return nil
 }

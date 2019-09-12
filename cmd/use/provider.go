@@ -2,6 +2,7 @@ package use
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -28,16 +29,16 @@ devspace use provider my.domain.com
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunUseProvider,
+		RunE: cmd.RunUseProvider,
 	}
 }
 
 // RunUseProvider executes the "devspace use provider" command logic
-func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) {
+func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error {
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
+		return errors.Errorf("Error loading provider config: %v", err)
 	}
 
 	providerName := ""
@@ -49,22 +50,26 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) {
 			providerNames = append(providerNames, provider.Name)
 		}
 
-		providerName = survey.Question(&survey.QuestionOptions{
+		providerName, err = survey.Question(&survey.QuestionOptions{
 			Question: "Please select a default provider",
 			Options:  providerNames,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			return err
+		}
 	}
 
 	provider := config.GetProvider(providerConfig, providerName)
 	if provider == nil {
-		log.Fatalf("Error provider %s does not exist! Did you run `devspace add provider %s` first?", providerName, providerName)
+		return errors.Errorf("Error provider %s does not exist! Did you run `devspace add provider %s` first?", providerName, providerName)
 	}
 
 	providerConfig.Default = provider.Name
 	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
-		log.Fatalf("Couldn't save provider config: %v", err)
+		return errors.Errorf("Couldn't save provider config: %v", err)
 	}
 
 	log.Donef("Successfully changed default cloud provider to %s", providerName)
+	return nil
 }

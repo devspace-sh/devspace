@@ -70,9 +70,9 @@ func (c *Config) Upgrade() (config.Config, error) {
 	}
 
 	if c.Dev != nil && c.Dev.Terminal != nil && c.Dev.Terminal.Disabled != nil {
-		nextConfig.Dev.Interactive.Enabled = ptr.Bool(!*c.Dev.Terminal.Disabled)
+		nextConfig.Dev.Interactive.DefaultEnabled = ptr.Bool(!*c.Dev.Terminal.Disabled)
 	} else {
-		nextConfig.Dev.Interactive.Enabled = ptr.Bool(true)
+		nextConfig.Dev.Interactive.DefaultEnabled = ptr.Bool(true)
 	}
 
 	// Convert override images

@@ -5,6 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -27,27 +28,27 @@ devspace reset vars
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunResetVars,
+		RunE: cmd.RunResetVars,
 	}
 
 	return varsCmd
 }
 
 // RunResetVars executes the reset vars command logic
-func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
+func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return err
 	}
 
 	// Clear the vars map
@@ -56,8 +57,9 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) {
 	// Save the config
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
-		log.Fatalf("Error saving config: %v", err)
+		return errors.Errorf("Error saving config: %v", err)
 	}
 
 	log.Donef("Successfully deleted all variables")
+	return nil
 }

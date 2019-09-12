@@ -91,6 +91,9 @@ func (d *DiscardLogger) StopWait() {}
 // SetLevel implements logger interface
 func (d *DiscardLogger) SetLevel(level logrus.Level) {}
 
+// GetLevel implements logger interface
+func (d *DiscardLogger) GetLevel() logrus.Level { return logrus.FatalLevel }
+
 // Write implements logger interface
 func (d *DiscardLogger) Write(message []byte) (int, error) {
 	return len(message), nil

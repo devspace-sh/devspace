@@ -1,7 +1,6 @@
 package log
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,8 +8,6 @@ import (
 
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/mgutz/ansi"
-
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,17 +82,12 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 
 func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
-
 	if s.level >= fnInformation.logLevel {
 		if s.loadingText != nil {
 			s.loadingText.Stop()
 		}
 
 		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
-		// ct.Foreground(fnInformation.color, false)
-		// fnInformation.stream.Write([]byte(fnInformation.tag))
-		// ct.ResetColor()
-
 		fnInformation.stream.Write([]byte(message))
 
 		if s.loadingText != nil && fnType != fatalFn {
@@ -261,7 +253,6 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 	s.writeMessageToFileLogger(fatalFn, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }
@@ -276,7 +267,6 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 	s.writeMessageToFileLoggerf(fatalFn, format, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }
@@ -377,6 +367,13 @@ func (s *stdoutLogger) SetLevel(level logrus.Level) {
 	defer s.logMutex.Unlock()
 
 	s.level = level
+}
+
+func (s *stdoutLogger) GetLevel() logrus.Level {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	return s.level
 }
 
 func (s *stdoutLogger) Write(message []byte) (int, error) {

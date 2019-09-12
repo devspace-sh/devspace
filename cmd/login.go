@@ -33,7 +33,7 @@ devspace login --key myaccesskey
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunLogin,
+		RunE: cmd.RunLogin,
 	}
 
 	loginCmd.Flags().StringVar(&cmd.Key, "key", "", "Access key to use")
@@ -43,10 +43,10 @@ devspace login --key myaccesskey
 }
 
 // RunLogin executes the functionality devspace login
-func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
+func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	providerName := cloudconfig.DevSpaceCloudProviderName
@@ -60,14 +60,15 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) {
 	if cmd.Key != "" {
 		err = cloud.ReLogin(providerConfig, providerName, &cmd.Key, log.GetInstance())
 		if err != nil {
-			log.Fatalf("Error logging in: %v", err)
+			return err
 		}
 	} else {
 		err = cloud.ReLogin(providerConfig, providerName, nil, log.GetInstance())
 		if err != nil {
-			log.Fatalf("Error logging in: %v", err)
+			return err
 		}
 	}
 
 	log.Infof("Successful logged into %s", providerName)
+	return nil
 }

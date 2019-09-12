@@ -28,7 +28,7 @@ func StartLogsWithWriter(config *latest.Config, client *kubectl.Client, cmdParam
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer()
+	pod, container, err := targetSelector.GetContainer(log)
 	if err != nil {
 		return err
 	}

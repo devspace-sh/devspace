@@ -3,11 +3,11 @@ package token
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // ClaimSet is the auth token claim set type
@@ -72,7 +72,7 @@ func GetAccountName(token string) (string, error) {
 func ParseTokenClaims(rawToken string) (*Token, error) {
 	parts := strings.Split(rawToken, ".")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("Token is malformed, expected 3 parts got %d", len(parts))
+		return nil, errors.Errorf("Token is malformed, expected 3 parts got %d", len(parts))
 	}
 
 	var (
@@ -82,7 +82,7 @@ func ParseTokenClaims(rawToken string) (*Token, error) {
 	)
 
 	if claimsJSON, err = joseBase64UrlDecode(rawClaims); err != nil {
-		return nil, fmt.Errorf("unable to decode claims: %s", err)
+		return nil, errors.Errorf("unable to decode claims: %s", err)
 	}
 
 	retToken := new(Token)
@@ -90,11 +90,11 @@ func ParseTokenClaims(rawToken string) (*Token, error) {
 
 	retToken.Raw = strings.Join(parts[:2], ".")
 	if retToken.Signature, err = joseBase64UrlDecode(parts[2]); err != nil {
-		return nil, fmt.Errorf("unable to decode signature: %s", err)
+		return nil, errors.Errorf("unable to decode signature: %s", err)
 	}
 
 	if err = json.Unmarshal(claimsJSON, retToken.Claims); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal claims: %s", err)
+		return nil, errors.Errorf("unable to unmarshal claims: %s", err)
 	}
 
 	return retToken, nil

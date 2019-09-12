@@ -2,8 +2,6 @@ package docker
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +11,7 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
+	"github.com/pkg/errors"
 )
 
 // NewClient retrieves a new docker client
@@ -36,7 +35,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 			// Last try to create it without the environment option
 			cli, err = newDockerClient()
 			if err != nil {
-				return nil, fmt.Errorf("Cannot create docker client: %v", err)
+				return nil, errors.Errorf("Cannot create docker client: %v", err)
 			}
 		}
 	}
@@ -48,7 +47,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 func newDockerClient() (client.CommonAPIClient, error) {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't create docker client: %s", err)
+		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
 	return cli, nil
@@ -57,7 +56,7 @@ func newDockerClient() (client.CommonAPIClient, error) {
 func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't create docker client: %s", err)
+		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
 	return cli, nil

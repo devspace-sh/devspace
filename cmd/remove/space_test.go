@@ -66,7 +66,7 @@ func TestRunRemoveSpace(t *testing.T) {
 			},
 			all: true,
 			graphQLResponses: []interface{}{
-				fmt.Errorf("TestError from graphql server"),
+				errors.Errorf("TestError from graphql server"),
 			},
 			expectedPanic: "TestError from graphql server",
 		},
@@ -94,7 +94,7 @@ func TestRunRemoveSpace(t *testing.T) {
 						}{},
 					},
 				},
-				fmt.Errorf("TestError from graphql server"),
+				errors.Errorf("TestError from graphql server"),
 			},
 			expectedPanic: "TestError from graphql server",
 		},
@@ -154,7 +154,7 @@ func TestRunRemoveSpace(t *testing.T) {
 			},
 			spaceID: "123",
 			graphQLResponses: []interface{}{
-				fmt.Errorf("TestError from graphql server"),
+				errors.Errorf("TestError from graphql server"),
 			},
 			expectedPanic:  "Error retrieving space: TestError from graphql server",
 			expectedOutput: "\nWait Delete space",

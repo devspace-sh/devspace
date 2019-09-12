@@ -20,7 +20,7 @@ import (
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string) error {
+func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string, log log.Logger) error {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceList, err := client.Client.CoreV1().Services(client.Namespace).List(metav1.ListOptions{})
@@ -49,7 +49,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return fmt.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+		return errors.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 
@@ -57,17 +57,22 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 		servicePort = splitted[1]
 	} else {
 		// Ask user which service
-		splitted := strings.Split(survey.Question(&survey.QuestionOptions{
+		service, err := survey.Question(&survey.QuestionOptions{
 			Question: fmt.Sprintf("Please specify the service you want to connect '%s' to", ansi.Color(host, "white+b")),
 			Options:  serviceNameList,
-		}), ":")
+		}, log)
+		if err != nil {
+			return nil
+		}
+
+		splitted := strings.Split(service, ":")
 
 		serviceName = splitted[0]
 		servicePort = splitted[1]
 	}
 
 	// Get the cluster key
-	key, err := p.GetClusterKey(space.Cluster)
+	key, err := p.GetClusterKey(space.Cluster, log)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
 	}

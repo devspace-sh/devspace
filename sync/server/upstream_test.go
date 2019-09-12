@@ -75,7 +75,7 @@ func compareFiles(dir string, file testFile) error {
 		return err
 	}
 	if len(file.Children) != len(files) {
-		return fmt.Errorf("dir %s expected %d children, got %d", dir, len(file.Children), len(files))
+		return errors.Errorf("dir %s expected %d children, got %d", dir, len(file.Children), len(files))
 	}
 
 	// check
@@ -84,7 +84,7 @@ func compareFiles(dir string, file testFile) error {
 		for _, f := range files {
 			if f.Name() == childName {
 				if f.IsDir() != (child.Children != nil) {
-					return fmt.Errorf("child %s in dir %s: real isDir %v != expected isDir %v", childName, dir, f.IsDir(), child.Children != nil)
+					return errors.Errorf("child %s in dir %s: real isDir %v != expected isDir %v", childName, dir, f.IsDir(), child.Children != nil)
 				}
 				if child.Data != nil {
 					data, err := ioutil.ReadFile(filepath.Join(dir, f.Name()))
@@ -92,7 +92,7 @@ func compareFiles(dir string, file testFile) error {
 						return err
 					}
 					if string(data) != string(child.Data) {
-						return fmt.Errorf("child %s in dir %s: expected data %s, got %s", childName, dir, string(child.Data), string(data))
+						return errors.Errorf("child %s in dir %s: expected data %s, got %s", childName, dir, string(child.Data), string(data))
 					}
 				}
 				if child.Children != nil {
@@ -108,7 +108,7 @@ func compareFiles(dir string, file testFile) error {
 		}
 
 		if found == false {
-			return fmt.Errorf("dir %s: path %s not found", dir, childName)
+			return errors.Errorf("dir %s: path %s not found", dir, childName)
 		}
 	}
 

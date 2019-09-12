@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,7 @@ devspace remove provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunRemoveCloudProvider,
+		RunE: cmd.RunRemoveCloudProvider,
 	}
 
 	providerCmd.Flags().StringVar(&cmd.Name, "name", "", "Cloud provider name to use")
@@ -37,13 +38,13 @@ devspace remove provider app.devspace.cloud
 }
 
 // RunRemoveCloudProvider executes the devspace remove cloud provider functionality
-func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) {
+func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
 
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
+		return errors.Wrap(err, "parse provider config")
 	}
 	if config.GetProvider(providerConfig, providerName) == nil {
 		log.Failf("Couldn't find cloud provider %s", providerName)
@@ -67,8 +68,9 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 
 	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
-		log.Fatalf("Couldn't save provider config: %v", err)
+		return errors.Wrap(err, "save provider config")
 	}
 
 	log.Donef("Successfully removed cloud provider %s", providerName)
+	return nil
 }

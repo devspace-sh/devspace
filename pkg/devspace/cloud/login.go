@@ -2,18 +2,17 @@ package cloud
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 )
 
 // LoginEndpoint is the cloud endpoint that will log you in
@@ -67,7 +66,7 @@ func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, l
 			cloudProviders += p.Name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
+		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
 	provider := &Provider{
@@ -80,7 +79,7 @@ func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, l
 		// Check if we got access
 		_, err := provider.GetSpaces()
 		if err != nil {
-			return fmt.Errorf("Access denied for key %s: %v", *key, err)
+			return errors.Errorf("Access denied for key %s: %v", *key, err)
 		}
 	} else {
 		provider.Token = ""
@@ -119,7 +118,7 @@ func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log
 			cloudProviders += p.Name + " "
 		}
 
-		return fmt.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
+		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
 	provider := &Provider{
@@ -159,32 +158,37 @@ func (p *Provider) Login(log log.Logger) error {
 	)
 	var key string
 
-	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel)
+	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel, log)
 	err := open.Run(url)
 	if err != nil {
-		log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host + "/settings/access-keys")
+		log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host+"/settings/access-keys")
 
-		key = strings.TrimSpace(survey.Question(&survey.QuestionOptions{
-			Question: "5. Enter the access key here:",
+		key, err = survey.Question(&survey.QuestionOptions{
+			Question:   "5. Enter the access key here:",
 			IsPassword: true,
-		}))
+		}, log)
+		if err != nil {
+			return err
+		}
+
+		key = strings.TrimSpace(key)
 
 		log.WriteString("\n")
-		
+
 		providerConfig, err := config.ParseProviderConfig()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		err = ReLogin(providerConfig, p.Name, &key, log)
 		if err != nil {
-			log.Fatalf("Error logging in: %v", err)
+			return errors.Wrap(err, "login")
 		}
 	} else {
 		log.Infof("If the browser does not open automatically please navigate to %s", url)
 		log.StartWait("Logging into cloud provider...")
 		defer log.StopWait()
-		
+
 		key = <-keyChannel
 	}
 
@@ -198,13 +202,13 @@ func (p *Provider) Login(log log.Logger) error {
 	return nil
 }
 
-func startServer(redirectURI string, keyChannel chan string) *http.Server {
+func startServer(redirectURI string, keyChannel chan string, log log.Logger) *http.Server {
 	srv := &http.Server{Addr: ":25853"}
 
 	http.HandleFunc("/key", func(w http.ResponseWriter, r *http.Request) {
 		keys, ok := r.URL.Query()["key"]
 		if !ok || len(keys[0]) < 1 {
-			log.Fatal("Bad request")
+			log.Warn("Bad request")
 		}
 
 		keyChannel <- keys[0]

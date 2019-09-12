@@ -1,8 +1,6 @@
 package targetselector
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -11,6 +9,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -69,7 +69,7 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 }
 
 // GetPod retrieves a pod
-func (t *TargetSelector) GetPod() (*v1.Pod, error) {
+func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	if t.pick == false {
 		if t.podName != "" {
 			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
@@ -79,7 +79,7 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 
 			podStatus := kubectl.GetPodStatus(pod)
 			if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-				return nil, fmt.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
+				return nil, errors.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
 			}
 
 			return pod, nil
@@ -103,15 +103,20 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 					podNames = append(podNames, pod.Name)
 					podMap[pod.Name] = pod
 				}
-				podName := survey.Question(&survey.QuestionOptions{
+
+				podName, err := survey.Question(&survey.QuestionOptions{
 					Question: *t.PodQuestion,
 					Options:  podNames,
-				})
+				}, log)
+				if err != nil {
+					return nil, err
+				}
+
 				return podMap[podName], nil
 			}
 
 			if len(pods) == 0 {
-				return nil, fmt.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
+				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
 
 			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
@@ -132,7 +137,7 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 	}
 
 	// Ask for pod
-	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion)
+	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion, log)
 	if err != nil {
 		return nil, err
 	}
@@ -141,13 +146,13 @@ func (t *TargetSelector) GetPod() (*v1.Pod, error) {
 }
 
 // GetContainer retrieves a container and pod
-func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
-	pod, err := t.GetPod()
+func (t *TargetSelector) GetContainer(log log.Logger) (*v1.Pod, *v1.Container, error) {
+	pod, err := t.GetPod(log)
 	if err != nil {
 		return nil, nil, err
 	}
 	if pod == nil {
-		return nil, nil, fmt.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
+		return nil, nil, errors.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
 	}
 
 	// Select container if necessary
@@ -162,12 +167,12 @@ func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
 				}
 			}
 
-			return nil, nil, fmt.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
+			return nil, nil, errors.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
 		}
 
 		// Don't allow pick
 		if t.allowPick == false {
-			return nil, nil, fmt.Errorf("Couldn't select a container in pod %s, because no container name was specified", pod.Name)
+			return nil, nil, errors.Errorf("Couldn't select a container in pod %s, because no container name was specified", pod.Name)
 		}
 
 		options := []string{}
@@ -179,10 +184,14 @@ func (t *TargetSelector) GetContainer() (*v1.Pod, *v1.Container, error) {
 			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
 		}
 
-		containerName := survey.Question(&survey.QuestionOptions{
+		containerName, err := survey.Question(&survey.QuestionOptions{
 			Question: *t.ContainerQuestion,
 			Options:  options,
-		})
+		}, log)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		for _, container := range pod.Spec.Containers {
 			if container.Name == containerName {
 				return pod, &container, nil

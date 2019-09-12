@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -101,7 +100,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		_, err = b.Authenticate()
 		log.StopWait()
 		if err != nil {
-			return fmt.Errorf("Error during image registry authentication: %v", err)
+			return errors.Errorf("Error during image registry authentication: %v", err)
 		}
 
 		log.Done("Authentication successful (" + displayRegistryURL + ")")
@@ -198,7 +197,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			buildCtx, err = helper.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
 			if err != nil {
-				return fmt.Errorf("Error overwriting %s: %v", relDockerfile, err)
+				return errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
 			}
 		}
 
@@ -238,7 +237,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
 		err = b.PushImage(writer)
 		if err != nil {
-			return fmt.Errorf("Error during image push: %v", err)
+			return errors.Errorf("Error during image push: %v", err)
 		}
 
 		log.Info("Image pushed to registry (" + displayRegistryURL + ")")

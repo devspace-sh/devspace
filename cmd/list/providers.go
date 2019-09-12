@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -24,18 +25,18 @@ Lists the providers that exist
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListProviders,
+		RunE: cmd.RunListProviders,
 	}
 
 	return providersCmd
 }
 
 // RunListProviders runs the list providers command logic
-func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string) {
+func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string) error {
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
+		return errors.Wrap(err, "log into provider")
 	}
 
 	headerColumnNames := []string{
@@ -58,4 +59,5 @@ func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, providerRows)
+	return nil
 }

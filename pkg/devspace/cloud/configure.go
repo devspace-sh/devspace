@@ -53,10 +53,13 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 				options = append(options, providerHost.Name)
 			}
 
-			providerName = survey.Question(&survey.QuestionOptions{
+			providerName, err = survey.Question(&survey.QuestionOptions{
 				Question: "Select cloud provider",
 				Options:  options,
-			})
+			}, log)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		providerName = *useProviderName
@@ -109,7 +112,7 @@ func UpdateKubeConfig(contextName string, serviceAccount *latest.ServiceAccount,
 	authInfo.Exec = &api.ExecConfig{
 		APIVersion: "client.authentication.k8s.io/v1alpha1",
 		Command:    kubeconfig.AuthCommand,
-		Args:       []string{"use", "space", "--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token"},
+		Args:       []string{"use", "space", "--provider", providerName, "--space-id", strconv.Itoa(spaceID), "--get-token", "--silent"},
 	}
 
 	config.Clusters[contextName] = cluster

@@ -24,7 +24,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
 
-	pod, container, err := targetSelector.GetContainer()
+	pod, container, err := targetSelector.GetContainer(log)
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +42,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 	}
 
 	go func() {
-		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)
+		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceExec)
 	}()
 
 	err = <-interrupt
