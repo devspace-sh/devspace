@@ -1,7 +1,6 @@
 package kubectl
 
 import (
-	"fmt"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -131,7 +130,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err := hash.Directory(manifest)
 		if err != nil {
-			return false, fmt.Errorf("Error hashing %s: %v", manifest, err)
+			return false, errors.Errorf("Error hashing %s: %v", manifest, err)
 		}
 
 		manifestsHash += hash
@@ -158,7 +157,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
 		if err != nil {
-			return false, fmt.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
+			return false, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
 
 		if shouldRedeploy || forceDeploy {
@@ -178,7 +177,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 			err = cmd.Run()
 			if err != nil {
-				return false, fmt.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
+				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}
 
 			wasDeployed = true

@@ -2,14 +2,16 @@ package targetselector
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string) (*v1.Pod, error) {
+func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string, log log.Logger) (*v1.Pod, error) {
 	if question == nil {
 		question = ptr.String(DefaultPodQuestion)
 	}
@@ -42,10 +44,13 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 
 			podName := ""
 			if len(options) > 1 {
-				podName = survey.Question(&survey.QuestionOptions{
+				podName, err = survey.Question(&survey.QuestionOptions{
 					Question: *question,
 					Options:  options,
-				})
+				}, log)
+				if err != nil {
+					return nil, err
+				}
 			} else if len(options) == 1 {
 				podName = options[0]
 			} else {
@@ -85,10 +90,13 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 
 		podName := ""
 		if len(options) > 1 {
-			podName = survey.Question(&survey.QuestionOptions{
+			podName, err = survey.Question(&survey.QuestionOptions{
 				Question: *question,
 				Options:  options,
-			})
+			}, log)
+			if err != nil {
+				return nil, err
+			}
 		} else if len(options) == 1 {
 			podName = options[0]
 		} else {

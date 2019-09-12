@@ -1,13 +1,12 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha2"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
 )
 
 // Upgrade upgrades the config
@@ -182,19 +181,19 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 			if image.Registry != nil {
 				if c.Registries == nil {
-					return nil, fmt.Errorf("Registries is nil in config")
+					return nil, errors.Errorf("Registries is nil in config")
 				}
 
 				// Get registry
 				registry, ok := (*c.Registries)[*image.Registry]
 				if ok == false {
-					return nil, fmt.Errorf("Couldn't find registry %s in registries", *image.Registry)
+					return nil, errors.Errorf("Couldn't find registry %s in registries", *image.Registry)
 				}
 				if registry.Auth != nil {
 					log.Warnf("Registry authentication is not supported any longer (Registry %s). Please use docker login [registry] instead", *image.Registry)
 				}
 				if registry.URL == nil || image.Name == nil {
-					return nil, fmt.Errorf("Registry url or image name is nil for image %s", key)
+					return nil, errors.Errorf("Registry url or image name is nil for image %s", key)
 				}
 
 				(*nextConfig.Images)[key].Image = ptr.String(*registry.URL + "/" + *image.Name)

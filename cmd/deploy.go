@@ -1,14 +1,12 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -17,14 +15,13 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 // DeployCmd holds the required data for the down cmd
 type DeployCmd struct {
-	Namespace   string
-	KubeContext string
-	Profile     string
+	*flags.GlobalFlags
 
 	ForceBuild          bool
 	SkipBuild           bool
@@ -39,8 +36,8 @@ type DeployCmd struct {
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd() *cobra.Command {
-	cmd := &DeployCmd{}
+func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &DeployCmd{GlobalFlags: globalFlags}
 
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
@@ -57,15 +54,11 @@ devspace deploy --namespace=deploy
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
-		Run:  cmd.Run,
+		RunE: cmd.Run,
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
-
-	deployCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to deploy to")
-	deployCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use for deployment")
-	deployCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
@@ -80,61 +73,65 @@ devspace deploy --kube-context=deploy-context
 }
 
 // Run executes the down command logic
-func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Start file logging
 	log.StartFileLogging()
 
 	// Validate flags
-	cmd.validateFlags()
+	err = cmd.validateFlags()
+	if err != nil {
+		return err
+	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
-		log.Fatalf("Error loading generated.yaml: %v", err)
+		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Create kubectl client
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Add current kube context to context
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
-
-	config := configutil.GetConfig(ctx, cmd.Profile)
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create namespace if necessary
 	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
-		log.Fatalf("Unable to create namespace: %v", err)
+		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create cluster binding if necessary
 	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
 	if err != nil {
-		log.Fatalf("Unable to ensure cluster-admin role binding: %v", err)
+		return errors.Errorf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
 	// Create docker client
@@ -146,13 +143,13 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Create pull secrets and private registry if necessary
 	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Dependencies
 	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error deploying dependencies: %v", err)
+		return errors.Wrap(err, "deploy dependencies")
 	}
 
 	// Build images
@@ -161,17 +158,17 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
-				err = fmt.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+				err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 			}
 
-			log.Fatal(err)
+			return err
 		}
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
 			err := generated.SaveConfig(generatedConfig)
 			if err != nil {
-				log.Fatalf("Error saving generated config: %v", err)
+				return errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 	}
@@ -188,22 +185,24 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Deploy all defined deployments
 	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Save Config
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
-		log.Fatalf("Error saving generated config: %v", err)
+		return err
 	}
 
 	log.Donef("Successfully deployed!")
-
 	log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
+	return nil
 }
 
-func (cmd *DeployCmd) validateFlags() {
+func (cmd *DeployCmd) validateFlags() error {
 	if cmd.SkipBuild && cmd.ForceBuild {
-		log.Fatal("Flags --skip-build & --force-build cannot be used together")
+		return errors.New("Flags --skip-build & --force-build cannot be used together")
 	}
+
+	return nil
 }

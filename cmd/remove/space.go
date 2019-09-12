@@ -9,6 +9,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +39,7 @@ devspace remove space --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunRemoveCloudDevSpace,
+		RunE: cmd.RunRemoveCloudDevSpace,
 	}
 
 	spaceCmd.Flags().StringVar(&cmd.SpaceID, "id", "", "SpaceID id to use")
@@ -48,11 +50,11 @@ devspace remove space --all
 }
 
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
-func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) {
+func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if user has specified a certain provider
@@ -64,32 +66,32 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	// Get provider
 	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
+		return errors.Wrap(err, "get provider")
 	}
 
 	// Delete all spaces
 	if cmd.All {
 		spaces, err := provider.GetSpaces()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		for _, space := range spaces {
-			err = provider.DeleteSpace(space)
+			err = provider.DeleteSpace(space, log.GetInstance())
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			err = cloudpkg.DeleteKubeContext(space)
 			if err != nil {
-				log.Fatalf("Error deleting kube context: %v", err)
+				return errors.Wrap(err, "delete kube context")
 			}
 
 			log.Donef("Deleted space %s", space.Name)
 		}
 
 		log.Done("All spaces removed")
-		return
+		return nil
 	}
 
 	log.StartWait("Delete space")
@@ -101,39 +103,39 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	if cmd.SpaceID != "" {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
 		if err != nil {
-			log.Fatalf("Couldn't parse space id %s: %v", cmd.SpaceID, err)
+			return errors.Wrap(err, "parse space id")
 		}
 
 		space, err = provider.GetSpace(spaceID)
 		if err != nil {
-			log.Fatalf("Error retrieving space: %v", err)
+			return errors.Wrap(err, "get space")
 		}
 	} else if len(args) > 0 {
 		space, err = provider.GetSpaceByName(args[0])
 		if err != nil {
-			log.Fatalf("Error retrieving space %s: %v", args[0], err)
+			return errors.Wrap(err, "get space")
 		}
 	} else {
-		log.Fatal("Please provide a space name or id for this command")
+		return errors.New("Please provide a space name or id for this command")
 	}
 
 	// Delete space remotely
-	err = provider.DeleteSpace(space)
+	err = provider.DeleteSpace(space, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error deleting space: %v", err)
+		return errors.Wrap(err, "delete space")
 	}
 
 	// Delete kube context
 	err = cloudpkg.DeleteKubeContext(space)
 	if err != nil {
-		log.Fatalf("Error deleting kube context: %v", err)
+		return errors.Wrap(err, "delete kube context")
 	}
 
 	if configExists {
 		// Get current space
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		if generatedConfig.GetActive().LastContext != nil && generatedConfig.GetActive().LastContext.Context != "" {
@@ -146,9 +148,10 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	log.Donef("Deleted space %s", space.Name)
+	return nil
 }

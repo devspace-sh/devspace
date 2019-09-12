@@ -1,7 +1,6 @@
 package custom
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -117,7 +116,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 
 	err := b.cmd.Run(writer, writer, nil)
 	if err != nil {
-		return fmt.Errorf("Error building image: %v", err)
+		return errors.Errorf("Error building image: %v", err)
 	}
 
 	log.Done("Done processing image '" + b.imageConf.Image + "'")

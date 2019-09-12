@@ -6,8 +6,8 @@ import (
 	"k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/repo"
 
-	"errors"
-	"fmt"
+	"github.com/pkg/errors"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +45,7 @@ func locateChartPath(settings *environment.EnvSettings, repoURL, username, passw
 		return abs, nil
 	}
 	if filepath.IsAbs(name) || strings.HasPrefix(name, ".") {
-		return name, fmt.Errorf("path %q not found", name)
+		return name, errors.Errorf("path %q not found", name)
 	}
 
 	crepo := filepath.Join(settings.Home.Repository(), name)
@@ -87,5 +87,5 @@ func locateChartPath(settings *environment.EnvSettings, repoURL, username, passw
 		return lname, nil
 	}
 
-	return filename, fmt.Errorf("failed to download %q (hint: running `helm repo update` may help)", name)
+	return filename, errors.Errorf("failed to download %q (hint: running `helm repo update` may help)", name)
 }

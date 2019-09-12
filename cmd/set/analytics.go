@@ -3,6 +3,8 @@ package set
 import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -23,15 +25,15 @@ devspace set analytics disabled true
 #######################################################
 	`,
 		Args: cobra.RangeArgs(1, 2),
-		Run:  cmd.RunAnalyticsConfig,
+		RunE: cmd.RunAnalyticsConfig,
 	}
 }
 
 // RunAnalyticsConfig executes the "devspace set analytics" logic
-func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) {
+func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) error {
 	analytics, err := analytics.GetAnalytics()
 	if err != nil {
-		log.Fatalf("Unable to get analytics config: %v", err)
+		return errors.Wrap(err, "get analytics config")
 	}
 
 	if args[0] == "disabled" {
@@ -43,8 +45,9 @@ func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) 
 	}
 
 	if err != nil {
-		log.Fatalf("Error setting analytics config: %v", err)
+		return errors.Wrap(err, "set analytics config")
 	}
 
 	log.Infof("Successfully updated analytics config")
+	return nil
 }

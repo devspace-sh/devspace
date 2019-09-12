@@ -1,7 +1,6 @@
 package log
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,8 +8,6 @@ import (
 
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/mgutz/ansi"
-
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,17 +82,12 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 
 func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
-
 	if s.level >= fnInformation.logLevel {
 		if s.loadingText != nil {
 			s.loadingText.Stop()
 		}
 
 		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
-		// ct.Foreground(fnInformation.color, false)
-		// fnInformation.stream.Write([]byte(fnInformation.tag))
-		// ct.ResetColor()
-
 		fnInformation.stream.Write([]byte(message))
 
 		if s.loadingText != nil && fnType != fatalFn {
@@ -168,12 +160,14 @@ func (s *stdoutLogger) StartWait(message string) {
 		s.loadingText = nil
 	}
 
-	s.loadingText = &loadingText{
-		Message: message,
-		Stream:  goansi.NewAnsiStdout(),
-	}
+	if s.level >= logrus.InfoLevel {
+		s.loadingText = &loadingText{
+			Message: message,
+			Stream:  goansi.NewAnsiStdout(),
+		}
 
-	s.loadingText.Start()
+		s.loadingText.Start()
+	}
 }
 
 // StartWait prints a wait message until StopWait is called
@@ -261,7 +255,6 @@ func (s *stdoutLogger) Fatal(args ...interface{}) {
 	s.writeMessageToFileLogger(fatalFn, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }
@@ -276,7 +269,6 @@ func (s *stdoutLogger) Fatalf(format string, args ...interface{}) {
 	s.writeMessageToFileLoggerf(fatalFn, format, args...)
 
 	if s.fileLogger == nil {
-		cloudanalytics.SendCommandEvent(errors.New(msg))
 		os.Exit(1)
 	}
 }
@@ -379,34 +371,47 @@ func (s *stdoutLogger) SetLevel(level logrus.Level) {
 	s.level = level
 }
 
+func (s *stdoutLogger) GetLevel() logrus.Level {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	return s.level
+}
+
 func (s *stdoutLogger) Write(message []byte) (int, error) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
+	if s.level >= logrus.InfoLevel {
+		if s.loadingText != nil {
+			s.loadingText.Stop()
+		}
+
+		n, err := fnTypeInformationMap[infoFn].stream.Write(message)
+
+		if s.loadingText != nil {
+			s.loadingText.Start()
+		}
+
+		return n, err
 	}
 
-	n, err := fnTypeInformationMap[infoFn].stream.Write(message)
-
-	if s.loadingText != nil {
-		s.loadingText.Start()
-	}
-
-	return n, err
+	return len(message), nil
 }
 
 func (s *stdoutLogger) WriteString(message string) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-	}
+	if s.level >= logrus.InfoLevel {
+		if s.loadingText != nil {
+			s.loadingText.Stop()
+		}
 
-	fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+		fnTypeInformationMap[infoFn].stream.Write([]byte(message))
 
-	if s.loadingText != nil {
-		s.loadingText.Start()
+		if s.loadingText != nil {
+			s.loadingText.Start()
+		}
 	}
 }

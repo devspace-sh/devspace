@@ -33,6 +33,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -318,7 +319,7 @@ func (s *SpdyRoundTripper) NewConnection(resp *http.Response) (httpstream.Connec
 			responseError = strings.TrimSpace(responseError)
 		}
 
-		return nil, fmt.Errorf("unable to upgrade connection: %s", responseError)
+		return nil, errors.Errorf("unable to upgrade connection: %s", responseError)
 	}
 
 	return NewClientConnection(s.conn)

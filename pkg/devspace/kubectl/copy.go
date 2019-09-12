@@ -3,7 +3,6 @@ package kubectl
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ func (client *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath st
 	_, stderr, err := client.ExecBuffered(pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
 	if err != nil {
 		if stderr != nil {
-			return fmt.Errorf("Error executing tar: %s: %v", string(stderr), err)
+			return errors.Errorf("Error executing tar: %s: %v", string(stderr), err)
 		}
 
 		return errors.Wrap(err, "exec")

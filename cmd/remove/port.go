@@ -1,6 +1,8 @@
 package remove
 
 import (
+	"errors"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -29,7 +31,7 @@ devspace remove port --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunRemovePort,
+		RunE: cmd.RunRemovePort,
 	}
 
 	portCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -39,20 +41,26 @@ devspace remove port --all
 }
 
 // RunRemovePort executes the remove port command logic
-func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) {
+func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
-	err = configure.RemovePort(cmd.RemoveAll, cmd.LabelSelector, args)
+	config, err := configutil.GetBaseConfig("")
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+
+	err = configure.RemovePort(config, cmd.RemoveAll, cmd.LabelSelector, args)
+	if err != nil {
+		return err
 	}
 
 	log.Done("Successfully removed port")
+	return nil
 }

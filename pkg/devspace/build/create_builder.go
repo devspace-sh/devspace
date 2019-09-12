@@ -2,7 +2,6 @@ package build
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/custom"
@@ -29,13 +28,13 @@ func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigNam
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(log)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating docker client: %v", err)
+			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
 		if client == nil {
 			// Create kubectl client if not specified
 			client, err = kubectl.NewDefaultClient()
 			if err != nil {
-				return nil, fmt.Errorf("Unable to create new kubectl client: %v", err)
+				return nil, errors.Errorf("Unable to create new kubectl client: %v", err)
 			}
 		}
 
@@ -43,7 +42,7 @@ func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigNam
 		defer log.StopWait()
 		imageBuilder, err = kaniko.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, isDev, log)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating kaniko builder: %v", err)
+			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
 	} else {
 		preferMinikube := true
@@ -63,14 +62,14 @@ func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigNam
 
 		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating docker client: %v", err)
+			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
 
 		// Check if docker daemon is running
 		_, err = dockerClient.Ping(context.Background())
 		if err != nil {
 			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.DisableFallback != nil && *imageConf.Build.Docker.DisableFallback {
-				return nil, fmt.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
+				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
 			}
 
 			// Fallback to kaniko
@@ -80,7 +79,7 @@ func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigNam
 
 		imageBuilder, err = docker.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, skipPush, isDev)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating docker builder: %v", err)
+			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}
 	}
 

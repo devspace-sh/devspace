@@ -13,6 +13,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -49,31 +51,31 @@ Shows the sync status
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunStatusSync,
+		RunE: cmd.RunStatusSync,
 	}
 }
 
 // RunStatusSync executes the devspace status sync commad logic
-func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
+func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	// Read syncLog
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	syncLogPath := filepath.Join(cwd, ".devspace", "logs", "sync.log")
 	data, err := ioutil.ReadFile(syncLogPath)
 	if err != nil {
-		log.Fatalf("Couldn't read %s. Do you have a sync path configured? (check `devspace list sync`)", syncLogPath)
+		return errors.Errorf("Couldn't read %s. Do you have a sync path configured? (check `devspace list sync`)", syncLogPath)
 	}
 
 	syncMap := make(map[string]*syncStatus)
@@ -87,21 +89,21 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 		jsonMap := make(map[string]string)
 		err = json.Unmarshal([]byte(line), &jsonMap)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if isSyncJSONMapInvalid(jsonMap) {
-			log.Fatalf("Error parsing %s: Json object is invalid %s", syncLogPath, line)
+			return errors.Errorf("Error parsing %s: Json object is invalid %s", syncLogPath, line)
 		}
 
 		err = updateSyncMap(syncMap, jsonMap)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	if len(syncMap) == 0 {
 		log.Info("No sync activity found. Did you run `devspace dev`?")
-		return
+		return nil
 	}
 
 	// Print table
@@ -115,7 +117,6 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	values := make([][]string, 0, len(syncMap))
-
 	for _, status := range syncMap {
 		latestActivity := status.LastActivity
 
@@ -156,6 +157,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.PrintTable(log.GetInstance(), header, values)
+	return nil
 }
 
 func intToTimeString(timeDifference int) string {

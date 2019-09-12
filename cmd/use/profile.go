@@ -6,6 +6,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +33,7 @@ devspace use profile --reset
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunUseProfile,
+		RunE: cmd.RunUseProfile,
 	}
 
 	useProfile.Flags().BoolVar(&cmd.Reset, "reset", false, "Don't use a profile anymore")
@@ -40,19 +42,19 @@ devspace use profile --reset
 }
 
 // RunUseProfile executes the "devspace use config command" logic
-func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
+func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	profiles, err := configutil.GetProfiles(".")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	profileName := ""
@@ -60,10 +62,13 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			profileName = args[0]
 		} else {
-			profileName = survey.Question(&survey.QuestionOptions{
+			profileName, err = survey.Question(&survey.QuestionOptions{
 				Question: "Please select a profile to use",
 				Options:  profiles,
-			})
+			}, log.GetInstance())
+			if err != nil {
+				return err
+			}
 		}
 
 		// Check if config exists
@@ -76,14 +81,14 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 		}
 
 		if found == false {
-			log.Fatalf("Profile '%s' does not exist in devspace.yaml", profileName)
+			return errors.Errorf("Profile '%s' does not exist in devspace.yaml", profileName)
 		}
 	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
-		log.Fatalf("Cannot load generated config: %v", err)
+		return err
 	}
 
 	// Exchange active config
@@ -92,7 +97,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	// Save generated config
 	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
-		log.Fatalf("Error saving generated config: %v", err)
+		return err
 	}
 
 	if cmd.Reset {
@@ -100,4 +105,6 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) {
 	} else {
 		log.Infof("Successfully switched to profile '%s'", profileName)
 	}
+
+	return nil
 }

@@ -3,6 +3,8 @@ package list
 import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +34,7 @@ devspace list spaces --all
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListSpaces,
+		RunE: cmd.RunListSpaces,
 	}
 
 	spacesCmd.Flags().StringVar(&cmd.Name, "name", "", "Space name to show (default: all)")
@@ -44,7 +46,7 @@ devspace list spaces --all
 }
 
 // RunListCloudDevspaces executes the "devspace list spaces" functionality
-func (cmd *spacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) {
+func (cmd *spacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) error {
 	// Check if user has specified a certain provider
 	var cloudProvider *string
 	if cmd.Provider != "" {
@@ -54,11 +56,13 @@ func (cmd *spacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) {
 	// Get provider
 	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
+		return errors.Wrap(err, "log into provider")
 	}
 
 	err = provider.PrintSpaces(cmd.Cluster, cmd.Name, cmd.All)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

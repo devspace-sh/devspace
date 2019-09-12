@@ -4,6 +4,7 @@ import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -28,20 +29,20 @@ devspace add provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		Run:  cmd.RunAddProvider,
+		RunE: cmd.RunAddProvider,
 	}
 
 	return addProviderCmd
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
-func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
+func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
 
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
-		log.Fatalf("Error loading provider config: %v", err)
+		return errors.Wrap(err, "parse provider config")
 	}
 	if providerConfig.Providers == nil {
 		providerConfig.Providers = []*latest.Provider{}
@@ -60,7 +61,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 	// Ensure user is logged in
 	err = cloudpkg.EnsureLoggedIn(providerConfig, providerName, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Couldn't login to provider: %v", err)
+		return errors.Wrap(err, "log into provider")
 	}
 
 	// Switch default provider to newly added provider name
@@ -68,8 +69,9 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) {
 
 	err = config.SaveProviderConfig(providerConfig)
 	if err != nil {
-		log.Fatalf("Couldn't save provider config: %v", err)
+		return errors.Wrap(err, "save provider config")
 	}
 
 	log.Donef("Successfully added cloud provider %s", providerName)
+	return nil
 }

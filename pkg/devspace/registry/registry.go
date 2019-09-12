@@ -2,12 +2,12 @@ package registry
 
 import (
 	"encoding/base64"
-	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,14 +55,14 @@ func CreatePullSecret(client *kubectl.Client, namespace, registryURL, username, 
 	if err != nil {
 		_, err = client.Client.CoreV1().Secrets(namespace).Create(registryPullSecret)
 		if err != nil {
-			return fmt.Errorf("Unable to create image pull secret: %s", err.Error())
+			return errors.Errorf("Unable to create image pull secret: %s", err.Error())
 		}
 
 		log.Donef("Created image pull secret %s/%s", namespace, pullSecretName)
 	} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
 		_, err = client.Client.CoreV1().Secrets(namespace).Update(registryPullSecret)
 		if err != nil {
-			return fmt.Errorf("Unable to update image pull secret: %s", err.Error())
+			return errors.Errorf("Unable to update image pull secret: %s", err.Error())
 		}
 	}
 

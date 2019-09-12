@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,7 @@ devspace use space my-space
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunUseSpace,
+		RunE: cmd.RunUseSpace,
 	}
 
 	useSpace.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -51,11 +52,11 @@ devspace use space my-space
 }
 
 // RunUseSpace executes the functionality "devspace use space"
-func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
+func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Check if user has specified a certain provider
@@ -72,19 +73,19 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	// Get cloud provider from config
 	provider, err := cloudpkg.GetProvider(cloudProvider, logger)
 	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
+		return errors.Wrap(err, "get provider")
 	}
 	if provider == nil {
-		log.Fatal("No cloud provider specified")
+		return errors.New("No cloud provider specified")
 	}
 
 	// List spaces
 	if len(args) == 0 && cmd.SpaceID == "" {
 		spaces, err := provider.GetSpaces()
 		if err != nil {
-			log.Fatalf("Error retrieving spaces: %v", err)
+			return errors.Errorf("Error retrieving spaces: %v", err)
 		} else if len(spaces) == 0 {
-			log.Fatalf("You do not have any Spaces, yet. You can create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
+			return errors.Errorf("You do not have any Spaces, yet. You can create a space with `%s`", ansi.Color("devspace create space [NAME]", "white+b"))
 		}
 
 		names := make([]string, 0, len(spaces))
@@ -92,10 +93,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 			names = append(names, space.Name)
 		}
 
-		spaceName := survey.Question(&survey.QuestionOptions{
+		spaceName, err := survey.Question(&survey.QuestionOptions{
 			Question: "Please select the Space that you want to use",
 			Options:  names,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			return err
+		}
 
 		// Set space id
 		for _, space := range spaces {
@@ -109,15 +113,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	if cmd.GetToken == true {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
 		if err != nil {
-			log.Fatalf("Error parsing space id: %v", err)
+			return errors.Wrap(err, "parse space id")
 		}
 
-		err = provider.PrintToken(spaceID)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		return
+		return provider.PrintToken(spaceID, log.GetInstance())
 	}
 
 	log.StartWait("Retrieving Space details")
@@ -128,17 +127,17 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		space, err = provider.GetSpaceByName(args[0])
 		if err != nil {
-			log.Fatalf("Error retrieving Spaces details: %v", err)
+			return errors.Errorf("Error retrieving Spaces details: %v", err)
 		}
 	} else {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
 		if err != nil {
-			log.Fatalf("Error parsing space id: %v", err)
+			return errors.Errorf("Error parsing space id: %v", err)
 		}
 
 		space, err = provider.GetSpace(spaceID)
 		if err != nil {
-			log.Fatalf("Error retrieving Spaces details: %v", err)
+			return errors.Errorf("Error retrieving Spaces details: %v", err)
 		}
 	}
 
@@ -148,39 +147,39 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space)
+	serviceAccount, err := provider.GetServiceAccount(space, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error retrieving space service account: %v", err)
+		return errors.Errorf("Error retrieving space service account: %v", err)
 	}
 
 	// Change kube context
 	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, space.SpaceID, provider.Name, true)
 	if err != nil {
-		log.Fatalf("Error saving kube config: %v", err)
+		return errors.Errorf("Error saving kube config: %v", err)
 	}
 
 	// Cache space
 	err = provider.CacheSpace(space, serviceAccount)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if configExists {
 		client, err := kubectl.NewClientFromContext(kubeContext, "", false)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Signal that we are working on the space if there is any
 		err = cloud.ResumeSpace(client, false, log.GetInstance())
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig("")
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Reset namespace cache
@@ -189,7 +188,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -197,4 +196,6 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) {
 	if configExists {
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
+
+	return nil
 }

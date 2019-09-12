@@ -5,7 +5,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +34,7 @@ devspace remove context --all-spaces
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		Run:  cmd.RunRemoveContext,
+		RunE: cmd.RunRemoveContext,
 	}
 
 	contextCmd.Flags().BoolVar(&cmd.AllSpaces, "all-spaces", false, "Remove all kubectl contexts belonging to Spaces")
@@ -42,7 +44,7 @@ devspace remove context --all-spaces
 }
 
 // RunRemoveContext executes the devspace remove context functionality
-func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) {
+func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) error {
 	// Remove all contexts
 	if cmd.AllSpaces {
 		// Check if user has specified a certain provider
@@ -54,33 +56,33 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		// Get provider
 		provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 		if err != nil {
-			log.Fatalf("Error getting cloud context: %v", err)
+			return errors.Wrap(err, "log into provider")
 		}
 
 		// Retrieve spaces
 		spaces, err := provider.GetSpaces()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		for _, space := range spaces {
 			// Remove kube context
 			err = cloudpkg.DeleteKubeContext(space)
 			if err != nil {
-				log.Fatalf("Error deleting kube context: %v", err)
+				return errors.Wrap(err, "delete kube context")
 			}
 
 			log.Donef("Removed kubectl context for space %s", space.Name)
 		}
 
 		log.Done("All space kubectl contexts removed")
-		return
+		return nil
 	}
 
 	// Load kube-config
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
-		log.Fatalf("Unable to load kube-config: %v", err)
+		return errors.Wrap(err, "load kube config")
 	}
 
 	var contextName string
@@ -89,7 +91,7 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		contextName = args[0]
 
 		if _, contextExists := kubeConfig.Contexts[contextName]; !contextExists {
-			log.Fatalf("Kube-context '%s' does not exist", contextName)
+			return errors.Errorf("Kube-context '%s' does not exist", contextName)
 		}
 	} else {
 		contexts := []string{}
@@ -97,10 +99,13 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 			contexts = append(contexts, ctx)
 		}
 
-		contextName = survey.Question(&survey.QuestionOptions{
+		contextName, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which context do you want to remove?",
 			Options:  contexts,
-		})
+		}, log.GetInstance())
+		if err != nil {
+			return err
+		}
 	}
 
 	oldCurrentContext := kubeConfig.CurrentContext
@@ -108,13 +113,13 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 	// Remove the context
 	err = kubeconfig.DeleteKubeContext(kubeConfig, contextName)
 	if err != nil {
-		log.Fatalf("Error remove context: %v", err)
+		return errors.Wrap(err, "delete kube context")
 	}
 
 	// Save updated kube-config
 	err = kubeconfig.SaveConfig(kubeConfig)
 	if err != nil {
-		log.Fatalf("Error saving kube file: %v", err)
+		return errors.Wrap(err, "save kube config")
 	}
 
 	if oldCurrentContext != kubeConfig.CurrentContext {
@@ -122,4 +127,5 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 	}
 
 	log.Donef("Kube-context '%s' has been successfully removed", args[0])
+	return nil
 }

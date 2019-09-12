@@ -3,6 +3,7 @@ package list
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/chart"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -23,14 +24,14 @@ in devspace
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListAvailableComponents,
+		RunE: cmd.RunListAvailableComponents,
 	}
 
 	return availableComponentsCmd
 }
 
 // RunListPackage runs the list available components logic
-func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Command, args []string) {
+func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Command, args []string) error {
 	headerColumnNames := []string{
 		"Name",
 		"Description",
@@ -39,7 +40,7 @@ func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Co
 
 	components, err := chart.ListAvailableComponents()
 	if err != nil {
-		log.Fatalf("Error listing components: %v", err)
+		return errors.Wrap(err, "list components")
 	}
 
 	for _, component := range components {
@@ -50,4 +51,5 @@ func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Co
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, values)
+	return nil
 }

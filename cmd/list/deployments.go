@@ -1,8 +1,7 @@
 package list
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -12,13 +11,17 @@ import (
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-type deploymentsCmd struct{}
+type deploymentsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newDeploymentsCmd() *cobra.Command {
-	cmd := &deploymentsCmd{}
+func newDeploymentsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &deploymentsCmd{GlobalFlags: globalFlags}
 
 	return &cobra.Command{
 		Use:   "deployments",
@@ -31,19 +34,19 @@ Shows the status of all deployments
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunDeploymentsStatus,
+		RunE: cmd.RunDeploymentsStatus,
 	}
 }
 
 // RunDeploymentsStatus executes the devspace status deployments command logic
-func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []string) {
+func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
 	}
 
 	var values [][]string
@@ -55,30 +58,33 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Load generated
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create new kube client
-	client, err := kubectl.NewDefaultClient()
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Show warning if the old kube context was different
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(context.Background(), "")
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if config.Deployments != nil {
@@ -121,4 +127,5 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	log.PrintTable(log.GetInstance(), headerValues, values)
+	return nil
 }

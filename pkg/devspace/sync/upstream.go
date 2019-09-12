@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -234,13 +233,13 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 	targetPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		u.sync.log.Infof("Warning: resolving symlink of %s: %v", absPath, err)
-		return nil, nil // fmt.Errorf("Error resolving symlink of %s: %v", absPath, err)
+		return nil, nil // errors.Errorf("Error resolving symlink of %s: %v", absPath, err)
 	}
 
 	stat, err := os.Stat(targetPath)
 	if err != nil {
 		u.sync.log.Infof("Warning: stating symlink %s: %v", targetPath, err)
-		return nil, nil // fmt.Errorf("Error stating symlink %s: %v", targetPath, err)
+		return nil, nil // errors.Errorf("Error stating symlink %s: %v", targetPath, err)
 	}
 
 	// Check if we already added the symlink
@@ -257,7 +256,7 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 
 	symlink, err := NewSymlink(u, absPath, targetPath, stat.IsDir())
 	if err != nil {
-		return nil, fmt.Errorf("Cannot create symlink object for %s: %v", absPath, err)
+		return nil, errors.Errorf("Cannot create symlink object for %s: %v", absPath, err)
 	}
 
 	u.symlinks[absPath] = symlink
