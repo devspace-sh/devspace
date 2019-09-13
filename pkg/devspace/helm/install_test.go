@@ -1,13 +1,13 @@
 package helm
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
 
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -65,7 +65,9 @@ func TestInstallChart(t *testing.T) {
 	config := createFakeConfig()
 
 	// Create the fake client.
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 	helmClient := &helm.FakeClient{}
 
 	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, log.GetInstance())
@@ -75,7 +77,7 @@ func TestInstallChart(t *testing.T) {
 
 	helmConfig := &latest.HelmConfig{
 		Chart: &latest.ChartConfig{
-			Name: ptr.String("stable/nginx-ingress"),
+			Name: "stable/nginx-ingress",
 		},
 	}
 
@@ -124,11 +126,13 @@ func TestAnalyzeError(t *testing.T) {
 		config := createFakeConfig()
 
 		// Create the fake client.
-		kubeClient := fake.NewSimpleClientset()
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
+		}
 		helmClient := &helm.FakeClient{}
 
 		for _, pod := range testCase.createdPods {
-			_, err := kubeClient.CoreV1().Pods(testCase.namespace).Create(pod)
+			_, err := kubeClient.Client.CoreV1().Pods(testCase.namespace).Create(pod)
 			assert.NilError(t, err, "Error creating testPod in testCase %s", testCase.name)
 		}
 

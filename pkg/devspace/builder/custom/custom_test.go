@@ -28,13 +28,13 @@ func TestShouldRebuild(t *testing.T) {
 	}
 
 	imageConf := &latest.ImageConfig{
-		Image: ptr.String("test-image"),
+		Image: "test-image",
 		Build: &latest.BuildConfig{
 			Custom: &latest.CustomConfig{},
 		},
 	}
 
-	shouldRebuild, err := NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(nil)
+	shouldRebuild, err := NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(nil, false)
 	if shouldRebuild == false {
 		t.Fatal("Expected rebuild true, got false")
 	}
@@ -45,7 +45,7 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	imageConf.Build.Custom.OnChange = &[]*string{
+	imageConf.Build.Custom.OnChange = []*string{
 		ptr.String("./**"),
 	}
 
@@ -54,7 +54,7 @@ func TestShouldRebuild(t *testing.T) {
 	imageCache := cache.GetImageCache(imageConfigName)
 	imageCache.Tag = imageTag
 
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal("1: Expected rebuild true, got false")
 	}
 
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,8 +70,8 @@ func TestShouldRebuild(t *testing.T) {
 		log.Fatal("2: Expected rebuild false, got true")
 	}
 
-	imageConf.Image = ptr.String("test-image-new")
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache)
+	imageConf.Image = "test-image-new"
+	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,15 +82,15 @@ func TestShouldRebuild(t *testing.T) {
 
 func TestBuild(t *testing.T) {
 	imageConf := &latest.ImageConfig{
-		Image: ptr.String("test-image"),
+		Image: "test-image",
 		Build: &latest.BuildConfig{
 			Custom: &latest.CustomConfig{
-				Command: ptr.String("my-command"),
-				Args: &[]*string{
+				Command: "my-command",
+				Args: []*string{
 					ptr.String("flag1"),
 					ptr.String("flag2"),
 				},
-				ImageFlag: ptr.String("--imageflag"),
+				ImageFlag: "--imageflag",
 			},
 		},
 	}

@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,9 +9,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
+
+	"k8s.io/client-go/kubernetes/fake"
 
 	"gotest.tools/assert"
 )
@@ -26,7 +28,7 @@ var returnErr error
 
 type fakeBuilder struct{}
 
-func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint *[]*string, log log.Logger) error {
+func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, cmd []string, log log.Logger) error {
 	assert.Equal(usedT, expectedAbsoluteContextPath, absoluteContextPath, "Wrong context path given to builder")
 	assert.Equal(usedT, expectedAbsoluteDockerfilePath, absoluteDockerfilePath, "Wrong dockerfile path given to builder")
 	assert.Equal(usedT, expectedEntryPoint, expectedEntryPoint, "Wrong entryPoints given to builder")
@@ -36,29 +38,21 @@ func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDocker
 }
 
 func TestBuild(t *testing.T) {
-	testConfig := &latest.Config{
-		Dev: &latest.DevConfig{
-			OverrideImages: &[]*latest.ImageOverrideConfig{
-				&latest.ImageOverrideConfig{
-					Entrypoint: &[]*string{},
-					Name:       ptr.String("imageConfigName"),
-					Dockerfile: ptr.String("OverwriteDockerfile"),
-					Context:    ptr.String("OverwriteContext"),
-				},
-			},
-		},
-	}
+	testConfig := &latest.Config{}
 	imageConfig := &latest.ImageConfig{
-		Image:      ptr.String("SomeImage"),
-		Dockerfile: ptr.String("Dockerfile"),
-		Context:    ptr.String("ImageConfigContext"),
+		Image:      "SomeImage",
+		Dockerfile: "Dockerfile",
+		Context:    "ImageConfigContext",
 	}
-	helper := NewBuildHelper(testConfig, "engineName", "imageConfigName", imageConfig, "imageTag", true)
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	helper := NewBuildHelper(testConfig, kubeClient, "engineName", "imageConfigName", imageConfig, "imageTag", true)
 
 	var err error
-	expectedAbsoluteContextPath, err = filepath.Abs("OverwriteContext")
+	expectedAbsoluteContextPath, err = filepath.Abs("ImageConfigContext")
 	assert.NilError(t, err, "Error getting absolute path")
-	expectedAbsoluteDockerfilePath, err = filepath.Abs("OverwriteDockerfile")
+	expectedAbsoluteDockerfilePath, err = filepath.Abs("Dockerfile")
 	assert.NilError(t, err, "Error getting absolute path")
 	expectedLog = &log.DiscardLogger{}
 	usedT = t
@@ -106,7 +100,7 @@ func TestShouldRebuild(t *testing.T) {
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
 		ImageConf:       &latest.ImageConfig{},
-		Entrypoint:      &[]*string{ptr.String("echo")},
+		Entrypoint:      []string{"echo"},
 		ImageConfigName: "ImageConf",
 	}
 	cache := &generated.CacheConfig{
@@ -117,14 +111,14 @@ func TestShouldRebuild(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		expectedErrorString = "Dockerfile Doesn'tExist missing: stat Doesn'tExist: no such file or directory"
 	}
-	shouldRebuild, err := helper.ShouldRebuild(cache)
+	shouldRebuild, err := helper.ShouldRebuild(cache, false)
 	assert.Error(t, err, expectedErrorString)
 	assert.Equal(t, false, shouldRebuild, "After an error occurred a rebuild is recommended.")
 
 	helper.DockerfilePath = "IsFile"
 	err = fsutil.WriteToFile([]byte(""), "IsFile")
 	assert.NilError(t, err, "Error creating File")
-	shouldRebuild, err = helper.ShouldRebuild(cache)
+	shouldRebuild, err = helper.ShouldRebuild(cache, false)
 	assert.NilError(t, err, "Error when asking whether we should rebuild with basic setting")
 	assert.Equal(t, true, shouldRebuild, "After an error occurred a rebuild is recommended.")
 	assert.Equal(t, false, cache.Images["ImageConf"].DockerfileHash == "", "DockerfileHash not set")

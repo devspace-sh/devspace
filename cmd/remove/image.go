@@ -45,7 +45,7 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) erro
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	config, err := configutil.GetBaseConfig("")

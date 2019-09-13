@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
@@ -37,9 +37,10 @@ func TestGetDockerfileComponentDeployment(t *testing.T) {
 	testCases := []GetDockerfileComponentDeploymentTestCase{
 		GetDockerfileComponentDeploymentTestCase{
 			name:          "Empty params, only answers",
-			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "1234"},
+			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename"},
 			expectedImage: "someRegistry.com/user/imagename",
 			expectedPort:  1234,
+			expectedErr:   "get image config: Registry authentication failed for someRegistry.com/user/imagename.\n         Please login via `docker login someRegistry.com/user/imagename` and try again.",
 		},
 		GetDockerfileComponentDeploymentTestCase{
 			name:               "No answers, only 1 port in dockerfile",
@@ -64,7 +65,8 @@ EXPOSE 1012`,
 		},
 		GetDockerfileComponentDeploymentTestCase{
 			name:        "Invalid port",
-			answers:     []string{"someRegistry.com", "someRegistry.com/user/imagename", "yes", "hello"},
+			imageName:   "someImage",
+			answers:     []string{"hello"},
 			expectedErr: "parsing port: strconv.Atoi: parsing \"hello\": invalid syntax",
 		},
 	}
@@ -109,16 +111,16 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, false)
+		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(imageConfig.Image), testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(imageConfig.Tag), testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(imageConfig.Dockerfile), testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(imageConfig.Context), testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Name), testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, *(*deploymentConfig.Component.Service.Ports)[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, imageConfig.Image, testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, imageConfig.Tag, testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, imageConfig.Dockerfile, testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, imageConfig.Context, testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, *deploymentConfig.Component.Service.Ports[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
@@ -148,9 +150,10 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			name:      "valid with port",
 			answers:   []string{"12345"},
 			icdName:   "someDeployment",
-			imageName: "someImage",
+			imageName: "someImage:someTag",
 
-			expectedNilImage:       true,
+			expectedImage:          "someImage",
+			expectedTag:            "someTag",
 			expectedDeploymentName: "someDeployment",
 			expectedPort:           12345,
 		},
@@ -167,7 +170,7 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetImageComponentDeployment(testCase.icdName, testCase.imageName)
+		imageConfig, deploymentConfig, err := GetImageComponentDeployment(testCase.icdName, testCase.imageName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -175,17 +178,17 @@ func TestGetImageComponentDeployment(t *testing.T) {
 				if imageConfig == nil {
 					t.Fatalf("Nil image returned in testCase %s", testCase.name)
 				}
-				assert.Equal(t, ptr.ReverseString(imageConfig.Image), testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
-				assert.Equal(t, ptr.ReverseString(imageConfig.Tag), testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
-				assert.Equal(t, ptr.ReverseString(imageConfig.Dockerfile), testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
-				assert.Equal(t, ptr.ReverseString(imageConfig.Context), testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
+				assert.Equal(t, imageConfig.Image, testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
+				assert.Equal(t, imageConfig.Tag, testCase.expectedTag, "Returned tag is unexpected in testCase %s", testCase.name)
+				assert.Equal(t, imageConfig.Dockerfile, testCase.expectedDockerfile, "Returned dockerfile is unexpected in testCase %s", testCase.name)
+				assert.Equal(t, imageConfig.Context, testCase.expectedContext, "Returned context is unexpected in testCase %s", testCase.name)
 			} else {
 				if imageConfig != nil {
 					t.Fatalf("Not nil returned in testCase %s", testCase.name)
 				}
 			}
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Name), testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, *(*deploymentConfig.Component.Service.Ports)[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, *deploymentConfig.Component.Service.Ports[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
@@ -218,12 +221,12 @@ func TestGetPredefinedComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		deploymentConfig, err := GetPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName)
+		deploymentConfig, err := GetPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Name), testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, *(*deploymentConfig.Component.Service.Ports)[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, *deploymentConfig.Component.Service.Ports[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
@@ -257,10 +260,10 @@ func TestGetKubectlDeployment(t *testing.T) {
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Name), testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, len(*deploymentConfig.Kubectl.Manifests), len(testCase.expectedSplittedPointer), "Returned manifest has unexpected length in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, len(deploymentConfig.Kubectl.Manifests), len(testCase.expectedSplittedPointer), "Returned manifest has unexpected length in testCase %s", testCase.name)
 			for index, expected := range testCase.expectedSplittedPointer {
-				assert.Equal(t, *(*deploymentConfig.Kubectl.Manifests)[index], expected, "Returned manifest in index %d is unexpected in testCase %s", index, testCase.name)
+				assert.Equal(t, deploymentConfig.Kubectl.Manifests[index], expected, "Returned manifest in index %d is unexpected in testCase %s", index, testCase.name)
 			}
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
@@ -303,10 +306,10 @@ func TestGetHelmDeployment(t *testing.T) {
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Name), testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Helm.Chart.Name), testCase.expectedHelmChartName, "Returned chart name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Helm.Chart.RepoURL), testCase.expectedHelmChartRepo, "Returned chart name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseString(deploymentConfig.Helm.Chart.Version), testCase.expectedHelmChartVersion, "Returned chart name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Helm.Chart.Name, testCase.expectedHelmChartName, "Returned chart name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Helm.Chart.RepoURL, testCase.expectedHelmChartRepo, "Returned chart name is unexpected in testCase %s", testCase.name)
+			assert.Equal(t, deploymentConfig.Helm.Chart.Version, testCase.expectedHelmChartVersion, "Returned chart name is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
@@ -336,11 +339,11 @@ func TestRemoveDeployment(t *testing.T) {
 			allFlag: true,
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      ptr.String("someDeploy"),
+					Name:      "someDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      ptr.String("otherDeploy"),
+					Name:      "otherDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 			},
@@ -357,11 +360,11 @@ func TestRemoveDeployment(t *testing.T) {
 			deploymentName: "someDeploy",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      ptr.String("someDeploy"),
+					Name:      "someDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      ptr.String("otherDeploy"),
+					Name:      "otherDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 			},
@@ -373,11 +376,11 @@ func TestRemoveDeployment(t *testing.T) {
 			deploymentName: "notExistent",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      ptr.String("someDeploy"),
+					Name:      "someDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      ptr.String("otherDeploy"),
+					Name:      "otherDeploy",
 					Component: &latest.ComponentConfig{},
 				},
 			},
@@ -415,17 +418,21 @@ func TestRemoveDeployment(t *testing.T) {
 	for _, testCase := range testCases {
 		fakeConfig := &latest.Config{}
 		if testCase.existingDeployments != nil {
-			fakeConfig.Deployments = &testCase.existingDeployments
+			fakeConfig.Deployments = testCase.existingDeployments
 		}
 		configutil.SetFakeConfig(fakeConfig)
-		configutil.LoadedConfig = ""
 
-		found, err := RemoveDeployment(testCase.allFlag, testCase.deploymentName)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		found, err := RemoveDeployment(config, testCase.allFlag, testCase.deploymentName)
 
 		assert.Equal(t, found, testCase.expectedFound, "Returned found-boolean unexpected in testCase %s", testCase.name)
-		assert.Equal(t, len(*fakeConfig.Deployments), len(testCase.expectedRemainingDeployments), "Unexpected amount of remaining deployments in testCase %s", testCase.name)
+		assert.Equal(t, len(fakeConfig.Deployments), len(testCase.expectedRemainingDeployments), "Unexpected amount of remaining deployments in testCase %s", testCase.name)
 		for index, expectedName := range testCase.expectedRemainingDeployments {
-			assert.Equal(t, *(*fakeConfig.Deployments)[index].Name, expectedName, "Unexpected remaining deployment in testCase %s", testCase.name)
+			assert.Equal(t, fakeConfig.Deployments[index].Name, expectedName, "Unexpected remaining deployment in testCase %s", testCase.name)
 		}
 
 		if testCase.expectedErr == "" {

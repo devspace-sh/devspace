@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	
 	"k8s.io/client-go/kubernetes/fake"
@@ -56,13 +56,13 @@ func TestBuild(t *testing.T) {
 	
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name:      ptr.String("test-deployment"),
-				Namespace: ptr.String(configutil.TestNamespace),
+				Name:      "test-deployment",
+				Namespace: configutil.TestNamespace,
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
-						Name: ptr.String("stable/nginx"),
+						Name: "stable/nginx",
 					},
 				},
 			},
@@ -77,22 +77,22 @@ func TestBuild(t *testing.T) {
 
 	//Test without images
 	go makeAllPodsRunning(t, kubeClient, configutil.TestNamespace)
-	images, err := All(testConfig, cache, kubeClient, true, true, true, true, log.GetInstance())
+	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 0 images: %v", err)
 	}
 	assert.Equal(t, 0, len(images), "Images returned without any image declared in config")
 
 	//Test with one image
-	(*testConfig.Images) = make(map[string]*latest.ImageConfig)
-	(*testConfig.Images)["firstimg"] = &latest.ImageConfig{
-		Image: ptr.String("firstimg"),
+	testConfig.Images = map[string]*latest.ImageConfig{}
+	testConfig.Images["firstimg"] = &latest.ImageConfig{
+		Image: "firstimg",
 	}
-	images, err = All(testConfig, cache, kubeClient, true, true, true, false, log.GetInstance())
+	images, err = All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, false, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 1 images: %v", err)
 	}
-	assert.Equal(t, false, (*testConfig.Images)["firstimg"] == nil, "Images returned without any image declared in config")
+	assert.Equal(t, false, testConfig.Images["firstimg"] == nil, "Images returned without any image declared in config")
 }
 
 func makeAllPodsRunning(t *testing.T, kubeClient *fake.Clientset, namespace string) {

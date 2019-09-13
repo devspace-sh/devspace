@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
@@ -38,10 +39,10 @@ func (t testLogger) Warnf(format string, args ...interface{}) {
 }
 
 func TestAdd(t *testing.T) {
-	addCmd := NewAddCmd()
+	addCmd := NewAddCmd(&flags.GlobalFlags{})
 	subcommands := addCmd.Commands()
 
-	expectedSubcommandNames := []string{"deployment", "image", "port", "provider", "selector", "sync"}
+	expectedSubcommandNames := []string{"deployment", "image", "port", "provider", "sync"}
 	for _, subcommand := range subcommands {
 		subCommandName := subcommand.Name()
 		index := pos(expectedSubcommandNames, subCommandName)

@@ -8,9 +8,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 //@Moretest
@@ -52,15 +55,15 @@ func TestDockerBuild(t *testing.T) {
 	}
 
 	deployConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: ptr.String("nginx"),
+					Image: "nginx",
 				},
 			},
 			Service: &latest.ServiceConfig{
-				Ports: &[]*latest.ServicePortConfig{
+				Ports: []*latest.ServicePortConfig{
 					{
 						Port: ptr.Int(3000),
 					},
@@ -71,19 +74,19 @@ func TestDockerBuild(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -94,28 +97,32 @@ func TestDockerBuild(t *testing.T) {
 		t.Fatalf("Generating imageTag failed: %v", err)
 	}
 
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+
 	// 2. Build image
 	// 3. Don't push image
 	imageName := "testimage"
 	network := "someNetwork"
 	buildArgs := make(map[string]*string)
 	imageConfig := &latest.ImageConfig{
-		Image: &imageName,
+		Image: imageName,
 		Build: &latest.BuildConfig{
 			Docker: &latest.DockerConfig{
 				Options: &latest.BuildOptions{
-					BuildArgs: &buildArgs,
-					Network:   &network,
+					BuildArgs: buildArgs,
+					Network:   network,
 				},
 			},
 		},
 	}
-	imageBuilder, err := NewBuilder(testConfig, dockerClient, imageName, imageConfig, imageTag, true, true)
+	imageBuilder, err := NewBuilder(testConfig, dockerClient, kubeClient, imageName, imageConfig, imageTag, true, true)
 	if err != nil {
 		t.Fatalf("Builder creation failed: %v", err)
 	}
 
-	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, log.GetInstance())
+	err = imageBuilder.BuildImage(dir, "Dockerfile", nil, nil, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
 	}
@@ -158,15 +165,15 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	}
 
 	deployConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: ptr.String("nginx"),
+					Image: "nginx",
 				},
 			},
 			Service: &latest.ServiceConfig{
-				Ports: &[]*latest.ServicePortConfig{
+				Ports: []*latest.ServicePortConfig{
 					{
 						Port: ptr.Int(3000),
 					},
@@ -177,19 +184,19 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
 	configutil.SetFakeConfig(testConfig)
 
-	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -200,21 +207,22 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 		t.Fatalf("Generating imageTag failed: %v", err)
 	}
 
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+
 	// 2. Build image with entrypoint override (see parameter entrypoint in BuildImage)
 	// 3. Don't push image
 	imageName := "testimage"
 	imageConfig := &latest.ImageConfig{
-		Image: &imageName,
+		Image: imageName,
 	}
-	imageBuilder, err := NewBuilder(testConfig, dockerClient, imageName, imageConfig, imageTag, true, true)
+	imageBuilder, err := NewBuilder(testConfig, dockerClient, kubeClient, imageName, imageConfig, imageTag, true, true)
 	if err != nil {
 		t.Fatalf("Builder creation failed: %v", err)
 	}
 
-	entrypoint := make([]*string, 1)
-	entryString := "node index.js"
-	entrypoint[0] = &entryString
-	err = imageBuilder.BuildImage(dir, "Dockerfile", &entrypoint, log.GetInstance())
+	err = imageBuilder.BuildImage(dir, "Dockerfile", []string{"node"}, []string{"index.js"}, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Image building failed: %v", err)
 	}

@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )
@@ -135,7 +135,7 @@ func TestWatcher(t *testing.T) {
 		return nil
 	}
 
-	watcher, err := New(watchedPaths, callback, log.GetInstance())
+	watcher, err := New(watchedPaths, []string{}, callback, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating watcher: %v", err)
 	}

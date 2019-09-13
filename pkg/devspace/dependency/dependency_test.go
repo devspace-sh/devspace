@@ -9,11 +9,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var logOutput string
@@ -22,11 +23,36 @@ type testLogger struct {
 	log.DiscardLogger
 }
 
+func (t testLogger) Info(args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
+}
+func (t testLogger) Infof(format string, args ...interface{}) {
+	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
+}
+
 func (t testLogger) Done(args ...interface{}) {
 	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
 }
 func (t testLogger) Donef(format string, args ...interface{}) {
 	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) Fail(args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
+}
+func (t testLogger) Failf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) Warn(args ...interface{}) {
+	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
+}
+func (t testLogger) Warnf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
+}
+
+func (t testLogger) StartWait(msg string) {
+	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
 }
 
 type updateAllTestCase struct {
@@ -42,8 +68,6 @@ type updateAllTestCase struct {
 }
 
 func TestUpdateAll(t *testing.T) {
-	t.Skip("Skipped for now")
-
 	testCases := []updateAllTestCase{
 		updateAllTestCase{
 			name: "No Dependencies to update",
@@ -57,9 +81,8 @@ func TestUpdateAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -71,8 +94,7 @@ func TestUpdateAll(t *testing.T) {
 				Dependencies: map[string]string{},
 			},
 			allowCyclicParam: true,
-			expectedLog: `
-Done Resolved 1 dependencies`,
+			expectedLog:      "\nWait Update dependencies\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 	}
 
@@ -111,16 +133,16 @@ Done Resolved 1 dependencies`,
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
 
-		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, &testLogger{})
+		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, "", &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
@@ -199,9 +221,9 @@ func TestDeployAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
+					Profile: "someDir/devspace.yaml",
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -228,16 +250,20 @@ Done Resolved 1 dependencies`,
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
 
-		err = DeployAll(testConfig, generatedConfig, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, &testLogger{})
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
+		}
+
+		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -311,9 +337,9 @@ func TestPurgeAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
 					Source: &latest.SourceConfig{
-						Path: ptr.String("someDir"),
+						Path: "someDir",
 					},
-					Config: ptr.String("someDir/devspace.yaml"),
+					Profile: "someDir/devspace.yaml",
 				},
 			},
 			activeConfig: &generated.CacheConfig{
@@ -340,16 +366,20 @@ Done Resolved 1 dependencies`,
 		logOutput = ""
 
 		testConfig := &latest.Config{
-			Dependencies: &testCase.dependencyTasks,
+			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{
-			ActiveConfig: "default",
-			Configs: map[string]*generated.CacheConfig{
+			ActiveProfile: "default",
+			Profiles: map[string]*generated.CacheConfig{
 				"default": testCase.activeConfig,
 			},
 		}
 
-		err = PurgeAll(testConfig, generatedConfig, testCase.allowCyclicParam, &testLogger{})
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
+		}
+
+		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)
