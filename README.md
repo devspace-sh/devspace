@@ -434,7 +434,7 @@ When DevSpace asks you how to open your application, choose the first option **"
 
 **Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
 
-<img width="300" src="https://i.gifer.com/ZIx.gif">
+<img width="300" src="docs/website/static/img/congrats.gif">
 
 <br>
 

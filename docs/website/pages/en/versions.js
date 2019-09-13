@@ -43,6 +43,9 @@ function Versions(props) {
           </header>
           <p></p>
           <h3 id="latest">Current version (Stable)</h3>
+          <p>
+            This is the documentation of the latest stable version of DevSpace.
+          </p>
           <table className="versions">
             <tbody>
               <tr>
@@ -63,11 +66,8 @@ function Versions(props) {
               </tr>
             </tbody>
           </table>
-          <p>
-            This is the version that is configured automatically when you first
-            install this project.
-          </p>
           <h3 id="rc">Pre-release versions</h3>
+          <p>This is the work-in-progress documentation for the next release.</p>
           <table className="versions">
             <tbody>
               <tr>
@@ -88,7 +88,6 @@ function Versions(props) {
               </tr>
             </tbody>
           </table>
-          <p>Other text describing this section.</p>
           <h3 id="archive">Past Versions</h3>
           <p>Here you can find previous versions of the documentation.</p>
           <table className="versions">
