@@ -57,6 +57,5 @@ test2:
       test5: null
 `
 
-	t.Log(string(output))
 	assert.Equal(t, string(output), expected)
 }

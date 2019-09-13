@@ -114,39 +114,3 @@ func TestGetPodStatus(t *testing.T) {
 		t.Fatalf("Unexpected status: %s", status)
 	}
 }
-
-func TestGetNewestRunningPod(t *testing.T) {
-	config := createTestConfig()
-
-	// Create the fake client.
-	client := fake.NewSimpleClientset()
-	err := createTestResources(client)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pod, err := GetNewestRunningPod(config, client, "app.kubernetes.io/name=devspace-app", configutil.TestNamespace, time.Minute)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if pod == nil {
-		t.Fatal("Returned pod is nil")
-	}
-	if pod.Name != "test-pod" {
-		t.Fatalf("Returned pod is wrong: %#v", *pod)
-	}
-}
-
-func TestLogs(t *testing.T) {
-	// Create the fake client.
-	client := fake.NewSimpleClientset()
-	err := createTestResources(client)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = Logs(client, configutil.TestNamespace, "test-pod", "test", false, ptr.Int64(100))
-	if err != nil && err.Error() != "Request url is empty" {
-		t.Fatal(err)
-	}
-}

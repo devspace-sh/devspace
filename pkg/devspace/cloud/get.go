@@ -1,7 +1,6 @@
 package cloud
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"

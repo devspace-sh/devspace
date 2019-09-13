@@ -3,6 +3,7 @@ package survey
 import (
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"gotest.tools/assert"
 )
 
@@ -14,7 +15,6 @@ type testCase struct {
 }
 
 func TestSurvey(t *testing.T) {
-
 	testCases := []testCase{
 		{
 			name: "Two questions",
@@ -35,8 +35,8 @@ func TestSurvey(t *testing.T) {
 			name: "Password question",
 			questions: []*QuestionOptions{
 				&QuestionOptions{
-					Question: "Password please",
-		IsPassword: true,
+					Question:   "Password please",
+					IsPassword: true,
 				},
 			},
 			answersSet:      []string{"Unsafe password"},
@@ -44,14 +44,15 @@ func TestSurvey(t *testing.T) {
 		},
 	}
 
-	for _, test := range testCases{
-		nextAnswers = []*string{}
-		for _, answer := range test.answersSet{
+	for _, test := range testCases {
+		nextAnswers = []string{}
+		for _, answer := range test.answersSet {
 			SetNextAnswer(answer)
 		}
 
-		for index, question := range test.questions{
-			assert.Equal(t, test.expectedAnswers[index], Question(question), "Wrong answer in testcase %s", test.name)
+		for index, question := range test.questions {
+			answer, _ := Question(question, log.GetInstance())
+			assert.Equal(t, test.expectedAnswers[index], answer, "Wrong answer in testcase %s", test.name)
 		}
 	}
 }

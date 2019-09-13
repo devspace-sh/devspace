@@ -8,6 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -48,30 +49,32 @@ func TestConnectCluster(t *testing.T) {
 	options := &ConnectClusterOptions{
 		ClusterName: "#",
 	}
-	err := provider.ConnectCluster(options)
+	err := provider.ConnectCluster(options, log.GetInstance())
 	assert.Error(t, err, "Cluster name # can only contain letters, numbers and dashes (-)", "Wrong or no error when connecting cluster with wrong clustername")
 
 	options.ClusterName = ""
 	survey.SetNextAnswer("aaa")
 	options.KubeContext = "invalidContext"
 
-	err = provider.ConnectCluster(options)
-	assert.Error(t, err, "new kubectl client: invalid configuration: [context was not found for specified context: invalidContext, cluster has no server defined]", "Wrong or no error when connecting cluster with invalid context")
+	err = provider.ConnectCluster(options, log.GetInstance())
+	assert.Error(t, err, "new kubectl client: Error loading kube config, context 'invalidContext' doesn't exist", "Wrong or no error when connecting cluster with invalid context")
 }
 
 func TestDefaultClusterSpaceDomain(t *testing.T) {
 	// @Florian make test faster (currently around 10 seconds)
 	t.Skip("Takes too long")
 
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 	err := defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node in cluster", "Wrong or no error when trying to get the spacedomain of the default cluster from empty setting")
 
-	kubeClient.CoreV1().Nodes().Create(&k8sv1.Node{})
+	kubeClient.Client.CoreV1().Nodes().Create(&k8sv1.Node{})
 	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node with a valid external ip in cluster, make sure your nodes are accessable from the outside", "Wrong or no error when trying to get the spacedomain of the default cluster without any ip")
 
-	kubeClient.CoreV1().Nodes().Update(&k8sv1.Node{
+	kubeClient.Client.CoreV1().Nodes().Update(&k8sv1.Node{
 		Status: k8sv1.NodeStatus{
 			Addresses: []k8sv1.NodeAddress{
 				k8sv1.NodeAddress{
@@ -88,7 +91,7 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, false, 0, "")
 	assert.Error(t, err, "Loadbalancer didn't receive a valid ip in time. Skipping configuration of default cluster space url", "Wrong or no error when trying to get the spacedomain of the default cluster without services")
 
-	kubeClient.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&k8sv1.Service{
+	kubeClient.Client.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&k8sv1.Service{
 		Spec: k8sv1.ServiceSpec{
 			Type: k8sv1.ServiceTypeLoadBalancer,
 		},
@@ -116,7 +119,7 @@ func TestDeleteClusterUnexported(t *testing.T) {
 func TestSpecifyDomain(t *testing.T) {
 	provider := &Provider{}
 	survey.SetNextAnswer("some.Domain")
-	err := provider.specifyDomain(0, &ConnectClusterOptions{})
+	err := provider.specifyDomain(0, &ConnectClusterOptions{}, log.GetInstance())
 	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 
@@ -127,8 +130,10 @@ func TestInitCore(t *testing.T) {
 }
 
 func TestGetServiceAccountCredentials(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset()
-	kubeClient.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&k8sv1.ServiceAccount{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	kubeClient.Client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: DevSpaceServiceAccount,
 		},
@@ -143,7 +148,7 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 	assert.Error(t, err, "secrets \"secret\" not found", "Wrong or no error when getting non-existent service account credentials")
 
 	flag := []byte("flag")
-	kubeClient.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&k8sv1.Secret{
+	kubeClient.Client.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&k8sv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "secret",
 		},
@@ -196,7 +201,7 @@ func TestGetKey(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		returnedKey, err := getKey(provider, testCase.forceQuestionParam)
+		returnedKey, err := getKey(provider, testCase.forceQuestionParam, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)

@@ -44,7 +44,7 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 	}
 
 	go func() {
-		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr)
+		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceExec)
 	}()
 
 	err = <-interrupt

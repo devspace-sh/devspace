@@ -1,5 +1,6 @@
 package configure
 
+/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -7,7 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
 )
@@ -21,7 +22,6 @@ type addSyncPathTestCase struct {
 	namespace                string
 	labelSelectorParam       string
 	excludedPathsStringParam string
-	serviceNameParam         string
 
 	expectedErr          string
 	expectedSyncInConfig []*latest.SyncConfig
@@ -29,24 +29,6 @@ type addSyncPathTestCase struct {
 
 func TestAddSyncPath(t *testing.T) {
 	testCases := []addSyncPathTestCase{
-		addSyncPathTestCase{
-			name:               "Add sync path with labelSelector and serviceName",
-			serviceNameParam:   "service",
-			labelSelectorParam: "hello=world",
-			expectedErr:        "both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant",
-		},
-		addSyncPathTestCase{
-			name: "Add sync path with unpresent service",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Selectors: &[]*latest.SelectorConfig{
-						&latest.SelectorConfig{Name: ptr.String("OnlySelector")},
-					},
-				},
-			},
-			serviceNameParam: "doesn'tExist",
-			expectedErr:      "no service with name doesn'tExist exists",
-		},
 		addSyncPathTestCase{
 			name:               "Add sync path with unparsable labelSelector",
 			labelSelectorParam: "unparsable",
@@ -60,25 +42,17 @@ func TestAddSyncPath(t *testing.T) {
 		addSyncPathTestCase{
 			name: "Add sync path with success",
 			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Selectors: &[]*latest.SelectorConfig{
-						&latest.SelectorConfig{
-							Name:          ptr.String("OnlySelector"),
-							LabelSelector: &map[string]*string{"Hello": ptr.String("World")},
-						},
-					},
-				},
+				Dev: &latest.DevConfig{},
 			},
 			containerPathParam:       "/containerPath",
 			excludedPathsStringParam: "./ExcludeThis",
 			expectedSyncInConfig: []*latest.SyncConfig{
 				&latest.SyncConfig{
-					LabelSelector: &map[string]*string{"Hello": ptr.String("World")},
-					ContainerPath: ptr.String("/containerPath"),
-					LocalSubPath:  ptr.String(""),
-					ExcludePaths:  &[]string{"./ExcludeThis"},
-					Namespace:     ptr.String(""),
-					Selector:      ptr.String(""),
+					LabelSelector: map[string]string{"Hello": "World"},
+					ContainerPath: "/containerPath",
+					LocalSubPath:  "",
+					ExcludePaths:  []string{"./ExcludeThis"},
+					Namespace:     "",
 				},
 			},
 		},
@@ -116,27 +90,29 @@ func TestAddSyncPath(t *testing.T) {
 			testCase.fakeConfig = &latest.Config{}
 		}
 		configutil.SetFakeConfig(testCase.fakeConfig)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err := AddSyncPath(testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam, testCase.serviceNameParam)
-
+		err = AddSyncPath(config, testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error adding sync path in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from AddSyncPath in testCase %s", testCase.name)
 		}
 
-		assert.Equal(t, len(*testCase.fakeConfig.Dev.Sync), len(testCase.expectedSyncInConfig), "Wrong number of syncs after adding in testCase %s", testCase.name)
+		assert.Equal(t, len(testCase.fakeConfig.Dev.Sync), len(testCase.expectedSyncInConfig), "Wrong number of syncs after adding in testCase %s", testCase.name)
 		for index := range testCase.expectedSyncInConfig {
-			for key, value := range *(*testCase.expectedSyncInConfig[index]).LabelSelector {
-				assert.Equal(t, *value, *(*(*testCase.fakeConfig.Dev.Sync)[index].LabelSelector)[key], "Wrong labelSelectorMap in added sync in testCase %s", testCase.name)
+			for key, value := range testCase.expectedSyncInConfig[index].LabelSelector {
+				assert.Equal(t, value, testCase.fakeConfig.Dev.Sync[index].LabelSelector[key], "Wrong labelSelectorMap in added sync in testCase %s", testCase.name)
 			}
-			assert.Equal(t, *testCase.expectedSyncInConfig[index].ContainerPath, *(*testCase.fakeConfig.Dev.Sync)[index].ContainerPath, "Wrong containerPath in added sync in testCase %s", testCase.name)
-			assert.Equal(t, *testCase.expectedSyncInConfig[index].LocalSubPath, *(*testCase.fakeConfig.Dev.Sync)[index].LocalSubPath, "Wrong LocalSubPath in added sync in testCase %s", testCase.name)
-			for excludePathIndex, excludePath := range *(*testCase.expectedSyncInConfig[index]).ExcludePaths {
-				assert.Equal(t, excludePath, (*(*testCase.fakeConfig.Dev.Sync)[index].ExcludePaths)[excludePathIndex], "Wrong excluded path in added sync in testCase %s", testCase.name)
+			assert.Equal(t, testCase.expectedSyncInConfig[index].ContainerPath, testCase.fakeConfig.Dev.Sync[index].ContainerPath, "Wrong containerPath in added sync in testCase %s", testCase.name)
+			assert.Equal(t, testCase.expectedSyncInConfig[index].LocalSubPath, testCase.fakeConfig.Dev.Sync[index].LocalSubPath, "Wrong LocalSubPath in added sync in testCase %s", testCase.name)
+			for excludePathIndex, excludePath := range testCase.expectedSyncInConfig[index].ExcludePaths {
+				assert.Equal(t, excludePath, testCase.fakeConfig.Dev.Sync[index].ExcludePaths[excludePathIndex], "Wrong excluded path in added sync in testCase %s", testCase.name)
 			}
-			assert.Equal(t, *testCase.expectedSyncInConfig[index].Namespace, *(*testCase.fakeConfig.Dev.Sync)[index].Namespace, "Wrong Namespace in added sync in testCase %s", testCase.name)
-			assert.Equal(t, *testCase.expectedSyncInConfig[index].Selector, *(*testCase.fakeConfig.Dev.Sync)[index].Selector, "Wrong Selector in added sync in testCase %s", testCase.name)
+			assert.Equal(t, testCase.expectedSyncInConfig[index].Namespace, testCase.fakeConfig.Dev.Sync[index].Namespace, "Wrong Namespace in added sync in testCase %s", testCase.name)
 		}
 	}
 }
@@ -219,19 +195,19 @@ func TestRemoveSyncPath(t *testing.T) {
 		if testCase.fakeConfig == nil {
 			testCase.fakeConfig = &latest.Config{
 				Dev: &latest.DevConfig{
-					Sync: &[]*latest.SyncConfig{
+					Sync: []*latest.SyncConfig{
 						&latest.SyncConfig{
-							LocalSubPath:  ptr.String("somePath"),
-							ContainerPath: ptr.String("someContainerPath"),
-							LabelSelector: &map[string]*string{
-								"index": ptr.String("first"),
+							LocalSubPath:  "somePath",
+							ContainerPath: "someContainerPath",
+							LabelSelector: map[string]string{
+								"index": "first",
 							},
 						},
 						&latest.SyncConfig{
-							LocalSubPath:  ptr.String("someOtherPath"),
-							ContainerPath: ptr.String("someOtherContainerPath"),
-							LabelSelector: &map[string]*string{
-								"index": ptr.String("secound"),
+							LocalSubPath:  "someOtherPath",
+							ContainerPath: "someOtherContainerPath",
+							LabelSelector: map[string]string{
+								"index": "secound",
 							},
 						},
 					},
@@ -239,19 +215,23 @@ func TestRemoveSyncPath(t *testing.T) {
 			} //default config
 		}
 		configutil.SetFakeConfig(testCase.fakeConfig)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err := RemoveSyncPath(testCase.removeAllParam, testCase.localPathParam, testCase.containerPathParam, testCase.labelSelectorParam)
+		err = RemoveSyncPath(config, testCase.removeAllParam, testCase.localPathParam, testCase.containerPathParam, testCase.labelSelectorParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error initializing namespace in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from initializing namespace in testCase %s", testCase.name)
 		}
 
-		assert.Equal(t, len(testCase.expectedSyncPathLocalPaths), len(*testCase.fakeConfig.Dev.Sync), "Wrong number of remaining syncPaths in testCase %s", testCase.name)
+		assert.Equal(t, len(testCase.expectedSyncPathLocalPaths), len(testCase.fakeConfig.Dev.Sync), "Wrong number of remaining syncPaths in testCase %s", testCase.name)
 	OUTER:
 		for _, expectedLocalPath := range testCase.expectedSyncPathLocalPaths {
-			for _, syncPath := range *testCase.fakeConfig.Dev.Sync {
-				if *syncPath.LocalSubPath == expectedLocalPath {
+			for _, syncPath := range testCase.fakeConfig.Dev.Sync {
+				if syncPath.LocalSubPath == expectedLocalPath {
 					continue OUTER
 				}
 			}
@@ -259,3 +239,4 @@ func TestRemoveSyncPath(t *testing.T) {
 		}
 	}
 }
+*/

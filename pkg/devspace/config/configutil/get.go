@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -89,12 +90,12 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext,
 	_, err := os.Stat(configPath)
 	if err != nil {
 		// Check for legacy devspace-configs.yaml
-		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
-		if err == nil {
+		_, configErr := os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
+		if configErr == nil {
 			return nil, errors.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
-		return nil, errors.Errorf("Couldn't find '%s': %v", err)
+		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
 	}
 
 	fileContent, err := ioutil.ReadFile(configPath)
@@ -207,6 +208,17 @@ func validate(config *latest.Config) error {
 		}
 	}
 
+	if config.Commands != nil {
+		for index, command := range config.Commands {
+			if command.Name == "" {
+				return errors.Errorf("commands[%d].name is required", index)
+			}
+			if command.Command == "" {
+				return errors.Errorf("commands[%d].command is required", index)
+			}
+		}
+	}
+
 	if config.Hooks != nil {
 		for index, hookConfig := range config.Hooks {
 			if hookConfig.Command == "" {
@@ -217,8 +229,14 @@ func validate(config *latest.Config) error {
 
 	if config.Images != nil {
 		for imageConfigName, imageConf := range config.Images {
+			if imageConf.Image == "" {
+				return errors.Errorf("images.%s.image is required", imageConfigName)
+			}
 			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
 				return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
+			}
+			if imageConf.Image == "" {
+				return fmt.Errorf("images.%s.image is required", imageConfigName)
 			}
 		}
 	}
@@ -240,7 +258,7 @@ func validate(config *latest.Config) error {
 		}
 	}
 
-	if len(config.Profiles) > 0 {
+	if config.Profiles != nil {
 		for idx, profile := range config.Profiles {
 			if profile.Name == "" {
 				return errors.Errorf("profiles.%d.name is missing", idx)

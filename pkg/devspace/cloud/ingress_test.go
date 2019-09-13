@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	v1 "k8s.io/api/core/v1"
@@ -118,14 +118,11 @@ func TestCreateIngress(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := Provider{}
-		kubeClient := fake.NewSimpleClientset()
-		testConfig := &latest.Config{
-			Cluster: &latest.Cluster{
-				Namespace: ptr.String(namespace),
-			},
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
 		}
 		for _, service := range testCase.createServices {
-			kubeClient.CoreV1().Services(namespace).Create(service.toService())
+			kubeClient.Client.CoreV1().Services(namespace).Create(service.toService())
 		}
 
 		if testCase.doFakeGraphQLClient {
@@ -142,7 +139,7 @@ func TestCreateIngress(t *testing.T) {
 			survey.SetNextAnswer(testCase.serviceAnswer)
 		}
 
-		err := provider.CreateIngress(testConfig, kubeClient, &cloudlatest.Space{Cluster: &cloudlatest.Cluster{}}, "")
+		err := provider.CreateIngress(kubeClient, &cloudlatest.Space{Cluster: &cloudlatest.Cluster{}}, "", log.GetInstance())
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
 		} else {

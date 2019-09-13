@@ -1,5 +1,6 @@
 package remove
 
+/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -34,7 +34,7 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name:          "No devspace config",
 			args:          []string{""},
-			expectedPanic: "Couldn't find any devspace configuration. Please run `devspace init`",
+			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removeDeploymentTestCase{
 			name:          "Don't specify what to remove",
@@ -47,7 +47,7 @@ func TestRunRemoveDeployment(t *testing.T) {
 			fakeConfig:    &latest.Config{},
 			answers:       []string{"yes"},
 			expectedPanic: "Unable to create new kubectl client: invalid configuration: no configuration has been provided",
-		},*/
+		},
 		removeDeploymentTestCase{
 			name:             "Remove not existent deployment",
 			fakeConfig:       &latest.Config{},
@@ -67,9 +67,9 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name: "Remove existent deployment",
 			fakeConfig: &latest.Config{
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: ptr.String("Exists"),
+						Name: "Exists",
 					},
 				},
 			},
@@ -81,9 +81,9 @@ func TestRunRemoveDeployment(t *testing.T) {
 		removeDeploymentTestCase{
 			name: "Remove all one deployments",
 			fakeConfig: &latest.Config{
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: ptr.String("Exists"),
+						Name: "Exists",
 					},
 				},
 			},
@@ -166,3 +166,4 @@ func testRunRemoveDeployment(t *testing.T, testCase removeDeploymentTestCase) {
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
 
 }
+*/

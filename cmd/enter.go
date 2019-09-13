@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -10,7 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
+	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
@@ -84,7 +82,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}
@@ -112,9 +110,9 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
 	if err != nil {
 		return err
+	} else if exitCode != 0 {
+		exit.Exit(exitCode)
 	}
 
-	cloudanalytics.SendCommandEvent(nil)
-	os.Exit(exitCode)
 	return nil
 }

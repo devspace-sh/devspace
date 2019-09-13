@@ -82,7 +82,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		log.Fatalf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}

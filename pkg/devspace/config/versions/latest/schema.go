@@ -35,6 +35,7 @@ type Config struct {
 	Dev          *DevConfig              `yaml:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
+	Commands     []*CommandConfig        `yaml:"commands,omitempty"`
 
 	Vars     []*Variable      `yaml:"vars,omitempty"`
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
@@ -126,6 +127,8 @@ type ContainerConfig struct {
 	Image          string                        `yaml:"image,omitempty"`
 	Command        []string                      `yaml:"command,omitempty"`
 	Args           []string                      `yaml:"args,omitempty"`
+	Stdin          bool                          `yaml:"stdin,omitempty"`
+	TTY            bool                          `yaml:"tty,omitempty"`
 	Env            []map[interface{}]interface{} `yaml:"env,omitempty"`
 	VolumeMounts   []*VolumeMountConfig          `yaml:"volumeMounts,omitempty"`
 	Resources      map[interface{}]interface{}   `yaml:"resources,omitempty"`
@@ -377,6 +380,12 @@ type HookWhenConfig struct {
 type HookWhenAtConfig struct {
 	Images      string `yaml:"images,omitempty"`
 	Deployments string `yaml:"deployments,omitempty"`
+}
+
+// CommandConfig defines the command specification
+type CommandConfig struct {
+	Name    string `yaml:"name"`
+	Command string `yaml:"command"`
 }
 
 // Variable describes the var definition

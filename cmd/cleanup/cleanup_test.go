@@ -4,11 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"gotest.tools/assert"
 )
 
 func TestNewCleanupCmd(t *testing.T) {
-	cleanupCmd := NewCleanupCmd()
+	cleanupCmd := NewCleanupCmd(&flags.GlobalFlags{})
 	subcommands := cleanupCmd.Commands()
 
 	expectedSubcommandNames := []string{"images"}

@@ -1,24 +1,24 @@
 package hash
 
-import(
+import (
 	"io/ioutil"
 	"os"
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	
+
 	"gotest.tools/assert"
 )
 
-func TestHashPassword(t *testing.T){
+func TestHashPassword(t *testing.T) {
 	hashed, err := Password("password")
-	if err != nil{
+	if err != nil {
 		t.Fatalf("Error hashing password %s: %v", "password", err)
 	}
 	assert.Equal(t, "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", hashed, "Wrong hash returned")
 }
 
-func TestHashString(t *testing.T){
+func TestHashString(t *testing.T) {
 	hashed := String("string")
 	assert.Equal(t, "473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8", hashed, "Wrong hash returned")
 }
@@ -62,7 +62,7 @@ func TestHashDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating hash of file: %v", err)
 	}
-	
+
 }
 
 func TestHashDirectoryExcludes(t *testing.T) {
@@ -99,5 +99,5 @@ func TestHashDirectoryExcludes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating hash of directory: %v", err)
 	}
-	
+
 }

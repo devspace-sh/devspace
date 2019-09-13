@@ -4,22 +4,23 @@
 # license that can be found in the LICENSE file.
 #
 # This script will generate coverage.txt
-set -e
-
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
-
-# Update vendor directory
-# go mod vendor
-
 # Test if we can build the program
-go build main.go
-
-PKGS=$(go list ./... | grep -v /vendor/)
+go build main.go || exit 1
+PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/)
+fail=false
 for pkg in $PKGS; do
-  go test -race -coverprofile=profile.out -covermode=atomic $pkg
-  if [[ -f profile.out ]]; then
-    cat profile.out >> coverage.txt
-    rm profile.out
-  fi
+ go test -race -coverprofile=profile.out -covermode=atomic $pkg
+ if [ $? -ne 0 ]; then
+   fail=true
+ fi
+ if [[ -f profile.out ]]; then
+   cat profile.out >> coverage.txt
+   rm profile.out
+ fi
 done
+if [ "$fail" = true ]; then
+ echo "Failure"
+ exit 1
+fi

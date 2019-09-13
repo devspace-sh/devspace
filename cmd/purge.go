@@ -63,7 +63,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	log.StartFileLogging()
@@ -79,7 +79,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "create kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}

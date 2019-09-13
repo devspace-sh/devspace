@@ -18,6 +18,14 @@ var loadOnce sync.Once
 var loadOnceMutext sync.Mutex
 var loadedConfig clientcmd.ClientConfig
 
+var fakeConfig clientcmd.ClientConfig
+
+//SetFakeConfig sets loadedConfig to FakeConfig !ONLY FOR TESTING!
+func SetFakeConfig(fake clientcmd.ClientConfig) {
+	loadOnce = sync.Once{}
+	fakeConfig = fake
+}
+
 // ConfigExists checks if a kube config exists
 func ConfigExists() bool {
 	return clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename() != ""
@@ -25,6 +33,10 @@ func ConfigExists() bool {
 
 // NewConfig loads a new kube config
 func NewConfig() clientcmd.ClientConfig {
+	if fakeConfig != nil {
+		return fakeConfig
+	}
+
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
 }
 

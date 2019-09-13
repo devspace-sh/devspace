@@ -33,7 +33,7 @@ Lists all DevSpace configuartions for this project
 	return profilesCmd
 }
 
-// RunListProfiles runs the list configs command logic
+// RunListProfiles runs the list profiles command logic
 func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()

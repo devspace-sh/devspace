@@ -2,10 +2,9 @@ package helm
 
 import (
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -25,7 +24,7 @@ func TestFakeInstallChart(t *testing.T) {
 	// Install release
 	release, err := fakeClient.InstallChart("test-release", configutil.TestNamespace, &map[interface{}]interface{}{}, &latest.HelmConfig{
 		Chart: &latest.ChartConfig{
-			Name: ptr.String("stable/nginx-ingress"),
+			Name: "stable/nginx-ingress",
 		},
 	})
 	if err != nil {
@@ -38,7 +37,7 @@ func TestFakeInstallChart(t *testing.T) {
 	// Update release
 	release, err = fakeClient.InstallChart("test-release", configutil.TestNamespace, &map[interface{}]interface{}{}, &latest.HelmConfig{
 		Chart: &latest.ChartConfig{
-			Name: ptr.String("stable/nginx-ingress"),
+			Name: "stable/nginx-ingress",
 		},
 	})
 	if err != nil {

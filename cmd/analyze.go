@@ -71,7 +71,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	// Print warning
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}

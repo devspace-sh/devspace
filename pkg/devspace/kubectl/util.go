@@ -158,6 +158,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 		namespace = client.Namespace
 	}
 
+	minWait := 30 * time.Second
 	waitingInterval := 1 * time.Second
 	for maxWaiting > 0 {
 		time.Sleep(waitingInterval)
@@ -197,12 +198,15 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 			}
 
 			if wait == false {
-				return pods, nil
+				if len(pods) > 0 || minWait <= 0 {
+					return pods, nil
+				}
 			}
 		}
 
 		time.Sleep(waitingInterval)
 		maxWaiting -= waitingInterval * 2
+		minWait -= waitingInterval * 2
 	}
 
 	return nil, errors.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
