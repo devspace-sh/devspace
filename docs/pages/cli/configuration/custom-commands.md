@@ -1,11 +1,11 @@
 ---
-title: "Shared Commands"
-sidebar_label: Shared Commands
+title: Custom Commands
+sidebar_label: Custom Commands
 ---
 
-**Shared commands let you make rather complex commands easy to run for everyone on your team.**
+**Custom commands let you make rather complex commands easy to run for everyone on your team.**
 
-The idea of shared commands is that the more experienced developers on your team define a set of useful commands and store them in the `devspace.yaml`, commit and push this config to the code repository via git and then, let other team mates run them without having to remember all the details or having to read through endless pages of internal workflow documentation.
+The idea of custom commands is that the more experienced developers on your team define a set of useful commands and store them in the `devspace.yaml`, commit and push this config to the code repository via git and then, let other team mates run them without having to remember all the details or having to read through endless pages of internal workflow documentation.
 
 ## Workflow
 The `commands` section in the `devspace.yaml` allows you to define commands that can be shared with other team mates. After adding a command and giving it a name (serving as an alias for the command), developers can run the command using:
@@ -30,9 +30,9 @@ profiles:
     value: ["npm", "run", "debug"]
 ```
 
-> Shared commands do not have to use `devspace`, they can also run any other script or command, set environment variables etc. If you are familiar with the `scripts` section of the `package.json` for Node.js, you will find that `devspace run [name]` works pretty much the same way as `npm run [name]`
+> Custom commands do not have to use `devspace`, they can also run any other script or command, set environment variables etc. If you are familiar with the `scripts` section of the `package.json` for Node.js, you will find that `devspace run [name]` works pretty much the same way as `npm run [name]`
 
-The above example configuration would allow a developer to the shared command `debug-backend` like this:
+The above example configuration would allow a developer to the custom command `debug-backend` like this:
 ```bash
 devspace run debug-backend
 ```
@@ -42,7 +42,7 @@ And `devspace run` would execute the following command internally:
 devspace dev -i --profile=debug-backend
 ```
 
-> Shared commands proxy input and output streams, so you can even share interactive commands such as `devspace enter`.
+> Custom commands proxy input and output streams, so you can even share interactive commands such as `devspace enter`.
 
 ## Configuration
 
@@ -70,7 +70,7 @@ See above for an [example configuration](#workflow).
 ## Useful Commands
 
 ### `devspace list commands`
-To start development in interactive mode, run:
+Run this command to list all custom commands that are configured:
 ```bash
 devspace list commands
 ```
