@@ -76,7 +76,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

@@ -3,20 +3,23 @@ package remove
 import (
 	"errors"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/spf13/cobra"
 )
 
 type syncCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
 	LocalPath     string
 	ContainerPath string
 	RemoveAll     bool
 }
 
-func newSyncCmd() *cobra.Command {
-	cmd := &syncCmd{}
+func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
 		Use:   "sync",
@@ -57,7 +60,7 @@ func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error 
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

@@ -27,7 +27,7 @@ func NewListCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	listCmd.AddCommand(newDeploymentsCmd(globalFlags))
 	listCmd.AddCommand(newProvidersCmd())
 	listCmd.AddCommand(newAvailableComponentsCmd())
-	listCmd.AddCommand(newCommandsCmd())
+	listCmd.AddCommand(newCommandsCmd(globalFlags))
 
 	return listCmd
 }

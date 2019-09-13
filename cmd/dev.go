@@ -192,7 +192,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, configutil.FromFlags(cmd.GlobalFlags), log.GetInstance())
 		if err != nil {
 			return 0, errors.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -517,7 +517,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	configutil.ResetConfig()
 
 	// Load config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return nil, err
 	}

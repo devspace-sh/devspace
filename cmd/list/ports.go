@@ -45,7 +45,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

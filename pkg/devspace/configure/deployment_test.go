@@ -422,7 +422,7 @@ func TestRemoveDeployment(t *testing.T) {
 		}
 		configutil.SetFakeConfig(fakeConfig)
 
-		config, err := configutil.GetBaseConfig("")
+		config, err := configutil.GetBaseConfig(nil)
 		if err != nil {
 			log.Fatal(err)
 		}
