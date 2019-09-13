@@ -1,6 +1,7 @@
 package update
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -8,11 +9,13 @@ import (
 )
 
 // configCmd holds the cmd flags
-type configCmd struct{}
+type configCmd struct {
+	*flags.GlobalFlags
+}
 
 // newConfigCmd creates a new command
-func newConfigCmd() *cobra.Command {
-	cmd := &configCmd{}
+func newConfigCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &configCmd{GlobalFlags: globalFlags}
 
 	configCmd := &cobra.Command{
 		Use:   "config",
@@ -46,7 +49,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get config
-	configutil.GetBaseConfig("")
+	configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 
 	// Save it
 	err = configutil.SaveLoadedConfig()

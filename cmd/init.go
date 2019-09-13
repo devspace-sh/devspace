@@ -310,7 +310,7 @@ func getDeploymentName() (string, error) {
 }
 
 func (cmd *InitCmd) addDevConfig() error {
-	config, err := configutil.GetConfig("", "")
+	config, err := configutil.GetConfig(nil)
 	if err != nil {
 		return err
 	}

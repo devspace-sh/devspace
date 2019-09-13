@@ -1,6 +1,7 @@
 package list
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -8,10 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type commandsCmd struct{}
+type commandsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newCommandsCmd() *cobra.Command {
-	cmd := &commandsCmd{}
+func newCommandsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &commandsCmd{GlobalFlags: globalFlags}
 
 	commandsCmd := &cobra.Command{
 		Use:   "commands",
@@ -43,7 +46,7 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Get config
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

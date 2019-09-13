@@ -54,7 +54,8 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get the config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
-	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, cmd.KubeContext, log.GetInstance())
+	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
 	if err != nil {
 		return err
 	}

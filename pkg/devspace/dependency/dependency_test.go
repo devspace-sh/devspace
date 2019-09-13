@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -142,7 +143,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, "", &testLogger{})
+		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, &configutil.ConfigOptions{}, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
@@ -263,7 +264,7 @@ Done Resolved 1 dependencies`,
 			Client: fake.NewSimpleClientset(),
 		}
 
-		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &testLogger{})
+		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &configutil.ConfigOptions{}, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -379,7 +380,7 @@ Done Resolved 1 dependencies`,
 			Client: fake.NewSimpleClientset(),
 		}
 
-		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &testLogger{})
+		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &configutil.ConfigOptions{}, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

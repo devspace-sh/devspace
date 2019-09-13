@@ -91,7 +91,8 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.VerboseDependencies, log.GetInstance())
+		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.VerboseDependencies, configOptions, log.GetInstance())
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}

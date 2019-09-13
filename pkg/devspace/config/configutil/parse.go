@@ -18,9 +18,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// VarEnvPrefix is the prefix environment variables should have in order to use them
-const VarEnvPrefix = "DEVSPACE_VAR_"
-
 // LoadedVars holds all variables that were loaded
 var LoadedVars = make(map[string]string)
 
@@ -65,7 +62,7 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseConfig fills the variables in the data and parses the config
-func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
+func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -73,7 +70,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	}
 
 	// Prepare config for variable loading
-	preparedConfig, err := versions.Prepare(data, profile)
+	preparedConfig, err := versions.Prepare(data, options.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +87,12 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		return nil, err
 	}
 
+	// Parse cli --var's
+	cmdVars, err := parseVarsFromOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
 	// Fill used defined variables
 	if len(vars) > 0 {
 		newVars := []*latest.Variable{}
@@ -100,7 +103,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		}
 
 		if len(newVars) > 0 {
-			err = askQuestions(generatedConfig, newVars, log)
+			err = askQuestions(generatedConfig, newVars, cmdVars, log)
 			if err != nil {
 				return nil, err
 			}
@@ -108,14 +111,14 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	}
 
 	// Fill predefined vars
-	err = fillPredefinedVars(kubeContext)
+	err = fillPredefinedVars(options)
 	if err != nil {
 		return nil, err
 	}
 
 	// Walk over data and fill in variables
 	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		return varReplaceFn(path, value, generatedConfig, kubeContext, log)
+		return varReplaceFn(path, value, generatedConfig, cmdVars, options, log)
 	})
 	if err != nil {
 		return nil, err
@@ -130,11 +133,31 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	return parsedConfig, nil
 }
 
-func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, log log.Logger) error {
+func parseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
+	vars := map[string]string{}
+
+	for _, cmdVar := range options.Vars {
+		idx := strings.Index(cmdVar, "=")
+		if idx == -1 {
+			return nil, errors.Errorf("Wrong --var format: %s, expected 'key=val'", cmdVar)
+		}
+
+		vars[strings.TrimSpace(cmdVar[:idx])] = strings.TrimSpace(cmdVar[idx+1:])
+	}
+
+	return vars, nil
+}
+
+func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, cmdVars map[string]string, log log.Logger) error {
 	for _, variable := range vars {
 		name := strings.TrimSpace(variable.Name)
 
-		isInEnv := os.Getenv(VarEnvPrefix+strings.ToUpper(name)) != "" || os.Getenv(name) != ""
+		// Check if var is provided through cli
+		if _, ok := cmdVars[name]; ok {
+			continue
+		}
+
+		isInEnv := os.Getenv(name) != ""
 		// Check if variable is defined to be env var (source: env) but not defined
 		if variable.Source != nil && *variable.Source == latest.VariableSourceEnv && isInEnv == false {
 			// Use default value for env variable if it is configured
@@ -174,16 +197,21 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, lo
 	return nil
 }
 
-func varReplaceFn(path, value string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (interface{}, error) {
+func varReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars map[string]string, options *ConfigOptions, log log.Logger) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig, kubeContext, log) })
+	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig, cmdVars, options, log) })
 }
 
-func resolveVar(varName string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (string, error) {
+func resolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string, options *ConfigOptions, log log.Logger) (string, error) {
+	// Is cli variable?
+	if val, ok := cmdVars[varName]; ok {
+		return val, nil
+	}
+
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName, kubeContext)
+	found, value, err := getPredefinedVar(varName, options)
 	if err != nil {
 		return "", err
 	} else if found {
@@ -196,9 +224,7 @@ func resolveVar(varName string, generatedConfig *generated.Config, kubeContext s
 	}
 
 	// Is in environment?
-	if os.Getenv(VarEnvPrefix+strings.ToUpper(varName)) != "" {
-		return os.Getenv(VarEnvPrefix + strings.ToUpper(varName)), nil
-	} else if os.Getenv(varName) != "" {
+	if os.Getenv(varName) != "" {
 		return os.Getenv(varName), nil
 	}
 

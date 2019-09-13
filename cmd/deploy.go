@@ -111,7 +111,8 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add current kube context to context
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, log.GetInstance())
+	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, configOptions, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")
 	}

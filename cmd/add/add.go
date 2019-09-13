@@ -21,8 +21,8 @@ func NewAddCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	addCmd.AddCommand(newSyncCmd(globalFlags))
 	addCmd.AddCommand(newProviderCmd())
 	addCmd.AddCommand(newPortCmd(globalFlags))
-	addCmd.AddCommand(newImageCmd())
-	addCmd.AddCommand(newDeploymentCmd())
+	addCmd.AddCommand(newImageCmd(globalFlags))
+	addCmd.AddCommand(newDeploymentCmd(globalFlags))
 
 	return addCmd
 }

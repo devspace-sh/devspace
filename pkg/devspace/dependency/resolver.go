@@ -77,7 +77,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 }
 
 // Resolve implements interface
-func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, overrideKubeContext string, update bool) ([]*Dependency, error) {
+func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) ([]*Dependency, error) {
 	r.log.Info("Start resolving dependencies")
 
 	currentWorkingDirectory, err := os.Getwd()
@@ -85,7 +85,7 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, overrideKube
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
-	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, overrideKubeContext, update)
+	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, configOptions, update)
 	if err != nil {
 		if _, ok := err.(*CyclicError); ok {
 			return nil, err
@@ -125,7 +125,7 @@ func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, overrideKubeContext string, update bool) error {
+func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) error {
 	for _, dependencyConfig := range dependencies {
 		ID := r.getDependencyID(basePath, dependencyConfig)
 
@@ -143,7 +143,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 				}
 			}
 		} else {
-			dependency, err := r.resolveDependency(basePath, dependencyConfig, overrideKubeContext, update)
+			dependency, err := r.resolveDependency(basePath, dependencyConfig, configOptions, update)
 			if err != nil {
 				return err
 			}
@@ -156,7 +156,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
 				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, overrideKubeContext, update)
+					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, configOptions, update)
 					if err != nil {
 						return err
 					}
@@ -168,7 +168,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 	return nil
 }
 
-func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, overrideKubeContext string, update bool) (*Dependency, error) {
+func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) (*Dependency, error) {
 	var (
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
@@ -222,8 +222,16 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
 	}
 
+	// Clone config options
+	cloned, err := configOptions.Clone()
+	if err != nil {
+		return nil, errors.Wrap(err, "clone config options")
+	}
+
+	cloned.Profile = dependency.Profile
+
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(r.BaseCache, localPath, overrideKubeContext, dependency.Profile, log.Discard)
+	dConfig, err := configutil.GetConfigFromPath(r.BaseCache, localPath, cloned, log.Discard)
 	if err != nil {
 		return nil, errors.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
