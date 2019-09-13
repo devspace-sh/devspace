@@ -3,7 +3,6 @@ package targetselector
 import (
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 )
@@ -16,7 +15,6 @@ type SelectorParameter struct {
 
 // CmdParameter holds the parameter we receive from the command
 type CmdParameter struct {
-	Selector      string
 	LabelSelector string
 	Namespace     string
 	ContainerName string
@@ -27,7 +25,6 @@ type CmdParameter struct {
 
 // ConfigParameter holds the parameter we receive from the config
 type ConfigParameter struct {
-	Selector      string
 	LabelSelector map[string]string
 	Namespace     string
 	ContainerName string
@@ -41,15 +38,6 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient *kube
 	if t.ConfigParameter.Namespace != "" {
 		return t.ConfigParameter.Namespace, nil
 	}
-	if t.ConfigParameter.Selector != "" {
-		selector, err := configutil.GetSelector(config, t.ConfigParameter.Selector)
-		if err != nil {
-			return "", err
-		}
-		if selector.Namespace != "" {
-			return selector.Namespace, nil
-		}
-	}
 
 	return kubeClient.Namespace, nil
 }
@@ -62,27 +50,6 @@ func (t *SelectorParameter) GetLabelSelector(config *latest.Config) (string, err
 	if t.ConfigParameter.LabelSelector != nil {
 		labelSelector := labelSelectorMapToString(t.ConfigParameter.LabelSelector)
 		return labelSelector, nil
-	}
-	if t.ConfigParameter.Selector != "" {
-		selector, err := configutil.GetSelector(config, t.ConfigParameter.Selector)
-		if err != nil {
-			return "", err
-		}
-		if selector.LabelSelector != nil {
-			labelSelector := labelSelectorMapToString(selector.LabelSelector)
-			return labelSelector, nil
-		}
-	}
-
-	// We get the first selector if it exists
-	if config != nil {
-		if config.Dev != nil && config.Dev.Selectors != nil {
-			selectors := config.Dev.Selectors
-			if len(selectors) == 1 && selectors[0].LabelSelector != nil {
-				labelSelector := labelSelectorMapToString(selectors[0].LabelSelector)
-				return labelSelector, nil
-			}
-		}
 	}
 
 	return "", nil

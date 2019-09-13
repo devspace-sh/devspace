@@ -157,7 +157,7 @@ func TestRunRemoveCluster(t *testing.T) {
 						&cloudlatest.Cluster{},
 					},
 				},
-				fmt.Errorf("Testerror from graphql server"),
+				errors.Errorf("Testerror from graphql server"),
 			},
 			expectedPanic:  "Testerror from graphql server",
 			expectedOutput: "\nWait Deleting cluster ",

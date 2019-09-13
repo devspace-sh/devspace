@@ -23,7 +23,6 @@ func NewRemoveCmd() *cobra.Command {
 	removeCmd.AddCommand(newImageCmd())
 	removeCmd.AddCommand(newPortCmd())
 	removeCmd.AddCommand(newProviderCmd())
-	removeCmd.AddCommand(newSelectorCmd())
 	removeCmd.AddCommand(newSpaceCmd())
 	removeCmd.AddCommand(newSyncCmd())
 

@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
+	"github.com/Masterminds/semver"
 	"github.com/devspace-cloud/devspace/cmd/add"
 	"github.com/devspace-cloud/devspace/cmd/cleanup"
 	"github.com/devspace-cloud/devspace/cmd/connect"
 	"github.com/devspace-cloud/devspace/cmd/create"
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/cmd/list"
 	"github.com/devspace-cloud/devspace/cmd/remove"
 	"github.com/devspace-cloud/devspace/cmd/reset"
@@ -19,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,67 +27,95 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "devspace",
-	Short: "Welcome to the DevSpace CLI!",
+	Use:           "devspace",
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	Short:         "Welcome to the DevSpace!",
+	PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+		if globalFlags.Silent {
+			log.GetInstance().SetLevel(logrus.FatalLevel)
+		}
+
+		// Get version of current binary
+		version := upgrade.GetVersion()
+
+		if version != "" {
+			latestStableVersion, err := upgrade.CheckForNewerVersion()
+			if err == nil { // Check versions only if newest version could be determined without errors
+				semverVersion, err := semver.NewVersion(version)
+				if err == nil { // Only compare version if version can be parsed
+					semverLatestStableVersion, err := semver.NewVersion(latestStableVersion)
+					if err == nil { // Only compare version if latestStableVersion can be parsed
+						// If latestStableVersion > version
+						if semverLatestStableVersion.Compare(semverVersion) == 1 {
+							log.Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestStableVersion)
+						}
+					}
+				}
+			}
+		}
+	},
 	Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 
 	devspace init`,
 }
 
+var globalFlags *flags.GlobalFlags
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	version := upgrade.GetVersion()
+	// Set version for --version flag
+	rootCmd.Version = upgrade.GetVersion()
+
+	// Report any panics
 	defer cloudanalytics.ReportPanics()
-
-	if version != "" {
-		rootCmd.Version = upgrade.GetVersion()
-
-		if strings.Contains(upgrade.GetVersion(), "-alpha") == false && strings.Contains(upgrade.GetVersion(), "-beta") == false {
-			newerVersion, err := upgrade.CheckForNewerVersion()
-			if err == nil && newerVersion != "" {
-				log.Warnf("There is a newer version of DevSpace CLI v%s. Run `devspace upgrade` to update the CLI.\n", newerVersion)
-			}
-		}
-	}
 
 	// Execute command
 	err := rootCmd.Execute()
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	cloudanalytics.SendCommandEvent(err)
+	if err != nil {
+		if globalFlags.Debug {
+			log.Fatalf("%+v", err)
+		} else {
+			log.Fatal(err)
+		}
+	}
 }
 
 func init() {
+	persistentFlags := rootCmd.PersistentFlags()
+	globalFlags = flags.SetGlobalFlags(persistentFlags)
+
 	// Add sub commands
-	rootCmd.AddCommand(add.NewAddCmd())
-	rootCmd.AddCommand(cleanup.NewCleanupCmd())
+	rootCmd.AddCommand(add.NewAddCmd(globalFlags))
+	rootCmd.AddCommand(cleanup.NewCleanupCmd(globalFlags))
 	rootCmd.AddCommand(connect.NewConnectCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
-	rootCmd.AddCommand(list.NewListCmd())
+	rootCmd.AddCommand(list.NewListCmd(globalFlags))
 	rootCmd.AddCommand(remove.NewRemoveCmd())
 	rootCmd.AddCommand(reset.NewResetCmd())
 	rootCmd.AddCommand(set.NewSetCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())
 	rootCmd.AddCommand(use.NewUseCmd())
-	rootCmd.AddCommand(update.NewUpdateCmd())
+	rootCmd.AddCommand(update.NewUpdateCmd(globalFlags))
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd())
-	rootCmd.AddCommand(NewDevCmd())
-	rootCmd.AddCommand(NewBuildCmd())
-	rootCmd.AddCommand(NewSyncCmd())
-	rootCmd.AddCommand(NewPurgeCmd())
+	rootCmd.AddCommand(NewDevCmd(globalFlags))
+	rootCmd.AddCommand(NewBuildCmd(globalFlags))
+	rootCmd.AddCommand(NewSyncCmd(globalFlags))
+	rootCmd.AddCommand(NewPurgeCmd(globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
-	rootCmd.AddCommand(NewDeployCmd())
-	rootCmd.AddCommand(NewEnterCmd())
+	rootCmd.AddCommand(NewDeployCmd(globalFlags))
+	rootCmd.AddCommand(NewEnterCmd(globalFlags))
 	rootCmd.AddCommand(NewLoginCmd())
-	rootCmd.AddCommand(NewAnalyzeCmd())
-	rootCmd.AddCommand(NewLogsCmd())
-	rootCmd.AddCommand(NewOpenCmd())
+	rootCmd.AddCommand(NewAnalyzeCmd(globalFlags))
+	rootCmd.AddCommand(NewLogsCmd(globalFlags))
+	rootCmd.AddCommand(NewOpenCmd(globalFlags))
 	rootCmd.AddCommand(NewUICmd())
+	rootCmd.AddCommand(NewRunCmd(globalFlags))
+	rootCmd.AddCommand(NewAttachCmd(globalFlags))
 
 	cobra.OnInitialize(initConfig)
 }

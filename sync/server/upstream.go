@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -101,7 +100,7 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 				return err
 			}
 			if n != len(chunk.Content) {
-				return fmt.Errorf("Error writing data: bytes written %d != expected %d", n, len(chunk.Content))
+				return errors.Errorf("Error writing data: bytes written %d != expected %d", n, len(chunk.Content))
 			}
 		}
 

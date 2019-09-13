@@ -68,7 +68,7 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
 func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, target string) (string, error) {
-	if len(entrypoint) == 0 && len(cmd) == 0 {
+	if entrypoint == nil && cmd == nil {
 		return "", errors.New("Entrypoint & cmd are empty")
 	}
 
@@ -103,9 +103,13 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 	entrypointStr := ""
 	if len(entrypoint) > 0 {
 		entrypointStr += "\n\nENTRYPOINT [\"" + strings.Join(entrypoint, "\",\"") + "\"]\n"
+	} else if entrypoint != nil {
+		entrypointStr += "\n\nENTRYPOINT []\n"
 	}
 	if len(cmd) > 0 {
 		entrypointStr += "\n\nCMD [\"" + strings.Join(cmd, "\",\"") + "\"]\n"
+	} else if cmd != nil {
+		entrypointStr += "\n\nCMD []\n"
 	}
 
 	if target == "" {
@@ -120,9 +124,9 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 
 	matches := targetFinder.FindAllStringIndex(content, -1)
 	if len(matches) == 0 {
-		return "", fmt.Errorf("Coulnd't find target '%s' in dockerfile", target)
+		return "", errors.Errorf("Coulnd't find target '%s' in dockerfile", target)
 	} else if len(matches) > 1 {
-		return "", fmt.Errorf("Multiple matches for target '%s' in dockerfile", target)
+		return "", errors.Errorf("Multiple matches for target '%s' in dockerfile", target)
 	}
 
 	// Find the next FROM statement

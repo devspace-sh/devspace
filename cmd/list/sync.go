@@ -1,17 +1,20 @@
 package list
 
 import (
-	"context"
-
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-type syncCmd struct{}
+type syncCmd struct {
+	*flags.GlobalFlags
+}
 
-func newSyncCmd() *cobra.Command {
-	cmd := &syncCmd{}
+func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
 		Use:   "sync",
@@ -24,32 +27,34 @@ Lists the sync configuration
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListSync,
+		RunE: cmd.RunListSync,
 	}
 
 	return syncCmd
 }
 
 // RunListSync runs the list sync command logic
-func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
+func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig(context.Background(), "")
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
 		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
-		return
+		return nil
 	}
 
 	headerColumnNames := []string{
-		"Selector",
 		"Label Selector",
 		"Local Path",
 		"Container Path",
@@ -60,19 +65,14 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 
 	// Transform values into string arrays
 	for _, value := range config.Dev.Sync {
-		service := ""
 		selector := ""
 
-		if value.Selector != "" {
-			service = value.Selector
-		} else {
-			for k, v := range value.LabelSelector {
-				if len(selector) > 0 {
-					selector += ", "
-				}
-
-				selector += k + "=" + v
+		for k, v := range value.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
 			}
+
+			selector += k + "=" + v
 		}
 		excludedPaths := ""
 
@@ -87,7 +87,6 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 		}
 
 		syncPaths = append(syncPaths, []string{
-			service,
 			selector,
 			value.LocalSubPath,
 			value.ContainerPath,
@@ -96,4 +95,5 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) {
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, syncPaths)
+	return nil
 }

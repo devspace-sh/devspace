@@ -1,57 +1,34 @@
 package configure
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/pkg/errors"
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString, serviceName string) error {
-	config := configutil.GetBaseConfig(context.Background())
-
-	if config.Dev == nil {
-		config.Dev = &latest.DevConfig{}
+func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
+	if baseConfig.Dev == nil {
+		baseConfig.Dev = &latest.DevConfig{}
 	}
-	if config.Dev.Sync == nil {
-		config.Dev.Sync = []*latest.SyncConfig{}
+	if baseConfig.Dev.Sync == nil {
+		baseConfig.Dev.Sync = []*latest.SyncConfig{}
 	}
 
 	var labelSelectorMap map[string]string
 	var err error
 
-	if labelSelector != "" && serviceName != "" {
-		return fmt.Errorf("both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant")
-	}
-
 	if labelSelector == "" {
-		if config.Dev != nil && config.Dev.Selectors != nil && len(config.Dev.Selectors) > 0 {
-			services := config.Dev.Selectors
-
-			var service *latest.SelectorConfig
-			if serviceName != "" {
-				service = getServiceWithName(config.Dev.Selectors, serviceName)
-				if service == nil {
-					return fmt.Errorf("no service with name %v exists", serviceName)
-				}
-			} else {
-				service = services[0]
-			}
-			labelSelectorMap = service.LabelSelector
-		} else {
-			labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(config)
-		}
+		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
 	}
 
 	if labelSelectorMap == nil {
 		labelSelectorMap, err = parseSelectors(labelSelector)
 		if err != nil {
-			return fmt.Errorf("Error parsing selectors: %s", err.Error())
+			return errors.Errorf("Error parsing selectors: %s", err.Error())
 		}
 	}
 
@@ -67,7 +44,7 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 
 	workdir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Unable to determine current workdir: %s", err.Error())
+		return errors.Errorf("Unable to determine current workdir: %s", err.Error())
 	}
 
 	localPath = strings.TrimPrefix(localPath, workdir)
@@ -76,47 +53,40 @@ func AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPat
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
-	//We set labelSelectorMap to nil since labelSelectorMap is already specified in service. Avoid redundance.
-	if serviceName != "" {
-		labelSelectorMap = nil
-	}
-
-	Sync := append(config.Dev.Sync, &latest.SyncConfig{
+	Sync := append(baseConfig.Dev.Sync, &latest.SyncConfig{
 		LabelSelector: labelSelectorMap,
 		ContainerPath: containerPath,
 		LocalSubPath:  localPath,
 		ExcludePaths:  excludedPaths,
 		Namespace:     namespace,
-		Selector:      serviceName,
 	})
 
-	config.Dev.Sync = Sync
+	baseConfig.Dev.Sync = Sync
 
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
-		return fmt.Errorf("Couldn't save config file: %s", err.Error())
+		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return nil
 }
 
 // RemoveSyncPath removes a sync path from the config
-func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
-	config := configutil.GetBaseConfig(context.Background())
+func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, containerPath, labelSelector string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
-		return fmt.Errorf("Error parsing selectors: %v", err)
+		return errors.Errorf("Error parsing selectors: %v", err)
 	}
 
 	if len(labelSelectorMap) == 0 && removeAll == false && localPath == "" && containerPath == "" {
-		return fmt.Errorf("You have to specify at least one of the supported flags")
+		return errors.Errorf("You have to specify at least one of the supported flags")
 	}
 
-	if config.Dev.Sync != nil && len(config.Dev.Sync) > 0 {
-		newSyncPaths := make([]*latest.SyncConfig, 0, len(config.Dev.Sync)-1)
+	if baseConfig.Dev.Sync != nil && len(baseConfig.Dev.Sync) > 0 {
+		newSyncPaths := make([]*latest.SyncConfig, 0, len(baseConfig.Dev.Sync)-1)
 
-		for _, v := range config.Dev.Sync {
+		for _, v := range baseConfig.Dev.Sync {
 			if removeAll ||
 				localPath == v.LocalSubPath ||
 				containerPath == v.ContainerPath ||
@@ -127,11 +97,11 @@ func RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector stri
 			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		config.Dev.Sync = newSyncPaths
+		baseConfig.Dev.Sync = newSyncPaths
 
 		err = configutil.SaveLoadedConfig()
 		if err != nil {
-			return fmt.Errorf("Couldn't save config file: %v", err)
+			return errors.Errorf("Couldn't save config file: %v", err)
 		}
 	}
 
@@ -151,7 +121,7 @@ func parseSelectors(selectorString string) (map[string]string, error) {
 		keyValue := strings.Split(v, "=")
 
 		if len(keyValue) != 2 {
-			return nil, fmt.Errorf("Wrong selector format: %s", selectorString)
+			return nil, errors.Errorf("Wrong selector format: %s", selectorString)
 		}
 		labelSelector := strings.TrimSpace(keyValue[1])
 		selectorMap[strings.TrimSpace(keyValue[0])] = labelSelector

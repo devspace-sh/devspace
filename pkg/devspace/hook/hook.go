@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/command"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 
 	dockerterm "github.com/docker/docker/pkg/term"
 )
@@ -87,7 +88,7 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
 			err := cmd.Run(writer, writer, nil)
 			if err != nil {
-				return fmt.Errorf("Error executing hook: %v", err)
+				return errors.Errorf("Error executing hook: %v", err)
 			}
 		}
 	}

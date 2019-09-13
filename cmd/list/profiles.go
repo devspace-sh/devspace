@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -26,32 +27,32 @@ Lists all DevSpace configuartions for this project
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListProfiles,
+		RunE: cmd.RunListProfiles,
 	}
 
 	return profilesCmd
 }
 
 // RunListProfiles runs the list configs command logic
-func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) {
+func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	profiles, err := configutil.GetProfiles(".")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Load generated config
 	generatedConfig, err := generated.LoadConfig("")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Specify the table column names
@@ -70,4 +71,5 @@ func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, configRows)
+	return nil
 }

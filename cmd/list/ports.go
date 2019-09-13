@@ -1,18 +1,21 @@
 package list
 
 import (
-	"context"
 	"strconv"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-type portsCmd struct{}
+type portsCmd struct {
+	*flags.GlobalFlags
+}
 
-func newPortsCmd() *cobra.Command {
-	cmd := &portsCmd{}
+func newPortsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &portsCmd{GlobalFlags: globalFlags}
 
 	portsCmd := &cobra.Command{
 		Use:   "ports",
@@ -25,32 +28,34 @@ Lists the port forwarding configurations
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListPort,
+		RunE: cmd.RunListPort,
 	}
 
 	return portsCmd
 }
 
 // RunListPort runs the list port command logic
-func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
+func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config := configutil.GetConfig(context.Background(), "")
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	if config.Dev.Ports == nil || len(config.Dev.Ports) == 0 {
 		log.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
-		return
+		return nil
 	}
 
 	headerColumnNames := []string{
-		"Selector",
 		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
@@ -59,19 +64,14 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 
 	// Transform values into string arrays
 	for _, value := range config.Dev.Ports {
-		service := ""
 		selector := ""
 
-		if value.Selector != "" {
-			service = value.Selector
-		} else {
-			for k, v := range value.LabelSelector {
-				if len(selector) > 0 {
-					selector += ", "
-				}
-
-				selector += k + "=" + v
+		for k, v := range value.LabelSelector {
+			if len(selector) > 0 {
+				selector += ", "
 			}
+
+			selector += k + "=" + v
 		}
 
 		portMappings := ""
@@ -86,11 +86,11 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) {
 		}
 
 		portForwards = append(portForwards, []string{
-			service,
 			selector,
 			portMappings,
 		})
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, portForwards)
+	return nil
 }

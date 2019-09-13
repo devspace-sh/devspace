@@ -1,8 +1,6 @@
 package configutil
 
 import (
-	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	varspkg "github.com/devspace-cloud/devspace/pkg/util/vars"
 	"github.com/pkg/errors"
@@ -39,7 +38,7 @@ func GetProfiles(basePath string) ([]string, error) {
 	rawMap := map[interface{}]interface{}{}
 	err = yaml.Unmarshal(bytes, &rawMap)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing devspace.yaml: %v", err)
+		return nil, errors.Errorf("Error parsing devspace.yaml: %v", err)
 	}
 
 	profiles, ok := rawMap["profiles"].([]interface{})
@@ -66,7 +65,7 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseConfig fills the variables in the data and parses the config
-func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data map[interface{}]interface{}, profile string) (*latest.Config, error) {
+func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -101,7 +100,7 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 		}
 
 		if len(newVars) > 0 {
-			err = askQuestions(generatedConfig, newVars)
+			err = askQuestions(generatedConfig, newVars, log)
 			if err != nil {
 				return nil, err
 			}
@@ -109,13 +108,15 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	}
 
 	// Fill predefined vars
-	err = fillPredefinedVars(ctx)
+	err = fillPredefinedVars(kubeContext)
 	if err != nil {
 		return nil, err
 	}
 
 	// Walk over data and fill in variables
-	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) { return varReplaceFn(ctx, path, value, generatedConfig) })
+	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
+		return varReplaceFn(path, value, generatedConfig, kubeContext, log)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +130,24 @@ func ParseConfig(ctx context.Context, generatedConfig *generated.Config, data ma
 	return parsedConfig, nil
 }
 
-func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable) error {
+func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, log log.Logger) error {
 	for _, variable := range vars {
 		name := strings.TrimSpace(variable.Name)
 
 		isInEnv := os.Getenv(VarEnvPrefix+strings.ToUpper(name)) != "" || os.Getenv(name) != ""
+		// Check if variable is defined to be env var (source: env) but not defined
 		if variable.Source != nil && *variable.Source == latest.VariableSourceEnv && isInEnv == false {
-			return fmt.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
+			// Use default value for env variable if it is configured
+			if variable.Default != "" {
+				err := os.Setenv(name, variable.Default)
+				if err != nil {
+					return err
+				}
+
+				continue
+			}
+
+			return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
 		}
 
 		// Check if variable is in environment
@@ -151,22 +163,27 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable) er
 		}
 
 		// Ask question
-		generatedConfig.Vars[name] = askQuestion(variable)
+		var err error
+
+		generatedConfig.Vars[name], err = askQuestion(variable, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func varReplaceFn(ctx context.Context, path, value string, generatedConfig *generated.Config) (interface{}, error) {
+func varReplaceFn(path, value string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (interface{}, error) {
 	// Save old value
 	LoadedVars[path] = value
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(ctx, v, generatedConfig) })
+	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig, kubeContext, log) })
 }
 
-func resolveVar(ctx context.Context, varName string, generatedConfig *generated.Config) (string, error) {
+func resolveVar(varName string, generatedConfig *generated.Config, kubeContext string, log log.Logger) (string, error) {
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(ctx, varName)
+	found, value, err := getPredefinedVar(varName, kubeContext)
 	if err != nil {
 		return "", err
 	} else if found {
@@ -186,14 +203,17 @@ func resolveVar(ctx context.Context, varName string, generatedConfig *generated.
 	}
 
 	// Ask for variable
-	generatedConfig.Vars[varName] = askQuestion(&latest.Variable{
+	generatedConfig.Vars[varName], err = askQuestion(&latest.Variable{
 		Question: "Please enter a value for " + varName,
-	})
+	}, log)
+	if err != nil {
+		return "", err
+	}
 
 	return generatedConfig.Vars[varName], nil
 }
 
-func askQuestion(variable *latest.Variable) string {
+func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 	params := &survey.QuestionOptions{}
 
 	if variable == nil {
@@ -224,5 +244,10 @@ func askQuestion(variable *latest.Variable) string {
 		}
 	}
 
-	return survey.Question(params)
+	answer, err := survey.Question(params, log)
+	if err != nil {
+		return "", err
+	}
+
+	return answer, nil
 }

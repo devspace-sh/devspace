@@ -105,7 +105,7 @@ func TestRunRemoveContext(t *testing.T) {
 			},
 			all: true,
 			graphQLResponses: []interface{}{
-				fmt.Errorf("TestError from graphql server"),
+				errors.Errorf("TestError from graphql server"),
 			},
 			expectedPanic: "TestError from graphql server",
 		},

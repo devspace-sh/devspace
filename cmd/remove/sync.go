@@ -1,9 +1,10 @@
 package remove
 
 import (
+	"errors"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,7 @@ func newSyncCmd() *cobra.Command {
 	#######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunRemoveSync,
+		RunE: cmd.RunRemoveSync,
 	}
 
 	syncCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -46,18 +47,25 @@ func newSyncCmd() *cobra.Command {
 }
 
 // RunRemoveSync executes the remove sync command logic
-func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) {
+func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	err = configure.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
+	config, err := configutil.GetBaseConfig("")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	err = configure.RemoveSyncPath(config, cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

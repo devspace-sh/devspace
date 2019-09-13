@@ -3,8 +3,6 @@ package analytics
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -22,6 +20,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/google/uuid"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -127,7 +126,7 @@ func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]inter
 
 		insertID, err := randutil.GenerateRandomString(16)
 		if err != nil {
-			return fmt.Errorf("Couldn't generate random insert_id for analytics: %v", err)
+			return errors.Errorf("Couldn't generate random insert_id for analytics: %v", err)
 		}
 		eventData["$insert_id"] = insertID
 		eventData["token"] = token
@@ -195,7 +194,7 @@ func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
 
 func (a *analyticsConfig) ReportPanics() {
 	if r := recover(); r != nil {
-		err := fmt.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
+		err := errors.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
 		a.SendCommandEvent(err)
 	}
@@ -243,20 +242,20 @@ func (a *analyticsConfig) sendRequest(endpointPath string, data map[string]inter
 	if !a.Disabled {
 		jsonData, err := json.Marshal(data)
 		if err != nil {
-			return fmt.Errorf("Couldn't marshal analytics data to json: %v", err)
+			return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
 		}
 
 		requestURL := "https://api.mixpanel.com/" + endpointPath + "/?data=" + base64.StdEncoding.EncodeToString(jsonData)
 
 		response, err := http.Get(requestURL)
 		if err != nil {
-			return fmt.Errorf("Couldn't make request to analytics endpoint: %v", err)
+			return errors.Errorf("Couldn't make request to analytics endpoint: %v", err)
 		}
 		defer response.Body.Close()
 
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return fmt.Errorf("Couldn't get http response from analytics request: %v", err)
+			return errors.Errorf("Couldn't get http response from analytics request: %v", err)
 		}
 
 		if string(body) == "1" {
@@ -270,7 +269,7 @@ func (a *analyticsConfig) sendRequest(endpointPath string, data map[string]inter
 func (a *analyticsConfig) resetDistinctID() error {
 	DistinctID, err := uuid.NewRandom()
 	if err != nil {
-		return fmt.Errorf("Couldn't create UUID: %v", err)
+		return errors.Errorf("Couldn't create UUID: %v", err)
 	}
 	a.DistinctID = DistinctID.String()
 
@@ -280,12 +279,12 @@ func (a *analyticsConfig) resetDistinctID() error {
 func (a *analyticsConfig) save() error {
 	analyticsConfigFilePath, err := a.getAnalyticsConfigFilePath()
 	if err != nil {
-		return fmt.Errorf("Couldn't determine config file: %v", err)
+		return errors.Errorf("Couldn't determine config file: %v", err)
 	}
 
 	err = yamlutil.WriteYamlToFile(a, analyticsConfigFilePath)
 	if err != nil {
-		return fmt.Errorf("Couldn't save analytics config file %s: %v", analyticsConfigFilePath, err)
+		return errors.Errorf("Couldn't save analytics config file %s: %v", analyticsConfigFilePath, err)
 	}
 	return nil
 }
@@ -299,6 +298,7 @@ func (a *analyticsConfig) getAnalyticsConfigFilePath() (string, error) {
 	return filepath.Join(homedir, analyticsConfigFile), nil
 }
 
+// GetAnalytics retrieves the analytics client
 func GetAnalytics() (Analytics, error) {
 	var err error
 
@@ -307,14 +307,14 @@ func GetAnalytics() (Analytics, error) {
 
 		analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
 		if err != nil {
-			err = fmt.Errorf("Couldn't determine config file: %v", err)
+			err = errors.Errorf("Couldn't determine config file: %v", err)
 			return
 		}
 		_, err = os.Stat(analyticsConfigFilePath)
 		if err == nil {
 			err := yamlutil.ReadYamlFromFile(analyticsConfigFilePath, analyticsInstance)
 			if err != nil {
-				err = fmt.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
+				err = errors.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
 				return
 			}
 
@@ -323,13 +323,13 @@ func GetAnalytics() (Analytics, error) {
 		if analyticsInstance.DistinctID == "" {
 			err = analyticsInstance.resetDistinctID()
 			if err != nil {
-				err = fmt.Errorf("Couldn't reset analytics distinct id: %v", err)
+				err = errors.Errorf("Couldn't reset analytics distinct id: %v", err)
 				return
 			}
 
 			err = analyticsInstance.save()
 			if err != nil {
-				err = fmt.Errorf("Couldn't save analytics config: %v", err)
+				err = errors.Errorf("Couldn't save analytics config: %v", err)
 				return
 			}
 		}
@@ -350,6 +350,7 @@ func GetAnalytics() (Analytics, error) {
 	return analyticsInstance, err
 }
 
+// SetConfigPath sets the config patch
 func SetConfigPath(path string) {
 	analyticsConfigFile = path
 }

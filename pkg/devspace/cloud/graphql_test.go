@@ -69,7 +69,7 @@ func (fake *fakeGraphQLClient) GrapqhlRequest(p *Provider, request string, vars 
 	err := json.Unmarshal([]byte(fake.responsesAsJSON[0]), response)
 	fake.responsesAsJSON = fake.responsesAsJSON[1:]
 	if err != nil {
-		return fmt.Errorf("Error parsing given json: %v", err)
+		return errors.Errorf("Error parsing given json: %v", err)
 	}
 	return fake.errorReturn
 }

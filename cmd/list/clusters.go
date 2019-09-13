@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +33,7 @@ devspace list clusters
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		Run:  cmd.RunListClusters,
+		RunE: cmd.RunListClusters,
 	}
 
 	clustersCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
@@ -42,7 +43,7 @@ devspace list clusters
 }
 
 // RunListClusters executes the "devspace list clusters" functionality
-func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) {
+func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) error {
 	// Check if user has specified a certain provider
 	var cloudProvider *string
 	if cmd.Provider != "" {
@@ -52,13 +53,13 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	// Get provider
 	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
 	if err != nil {
-		log.Fatalf("Error getting cloud context: %v", err)
+		return errors.Wrap(err, "get provider")
 	}
 
 	log.StartWait("Retrieving clusters")
 	clusters, err := provider.GetClusters()
 	if err != nil {
-		log.Fatalf("Error retrieving clusters: %v", err)
+		return errors.Errorf("Error retrieving clusters: %v", err)
 	}
 	log.StopWait()
 
@@ -97,4 +98,6 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	} else {
 		log.Infof("No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b"))
 	}
+
+	return nil
 }

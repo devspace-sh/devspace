@@ -1,11 +1,11 @@
 package cloud
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -41,7 +41,7 @@ func (p *Provider) GetRegistries() ([]*latest.Registry, error) {
 func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error) {
 	clusterNameSplitted := strings.Split(clusterName, ":")
 	if len(clusterNameSplitted) > 2 {
-		return nil, fmt.Errorf("Error parsing cluster name %s: Expected : only once", clusterName)
+		return nil, errors.Errorf("Error parsing cluster name %s: Expected : only once", clusterName)
 	}
 
 	clusterName = clusterNameSplitted[0]
@@ -93,7 +93,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error)
 		return nil, err
 	}
 	if len(response.Clusters) != 1 {
-		return nil, fmt.Errorf("Couldn't find cluster for cluster name %s", clusterName)
+		return nil, errors.Errorf("Couldn't find cluster for cluster name %s", clusterName)
 	}
 
 	// Exchange cluster name
@@ -218,15 +218,15 @@ func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 		return nil, err
 	}
 	if len(response.ClusterUser) != 1 {
-		return nil, fmt.Errorf("Couldn't find cluster user for cluster %d", clusterID)
+		return nil, errors.Errorf("Couldn't find cluster user for cluster %d", clusterID)
 	}
 
 	return response.ClusterUser[0], nil
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (p *Provider) GetServiceAccount(space *latest.Space) (*latest.ServiceAccount, error) {
-	key, err := p.GetClusterKey(space.Cluster)
+func (p *Provider) GetServiceAccount(space *latest.Space, log log.Logger) (*latest.ServiceAccount, error) {
+	key, err := p.GetClusterKey(space.Cluster, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "get cluster key")
 	}
@@ -325,7 +325,7 @@ func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 	retSpaces := []*latest.Space{}
 	for _, spaceConfig := range response.Spaces {
 		if spaceConfig.KubeContext == nil {
-			return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+			return nil, errors.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 		}
 
 		newSpace := &latest.Space{
@@ -399,12 +399,12 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 
 	// Check result
 	if response.Space == nil {
-		return nil, fmt.Errorf("Space %d not found", spaceID)
+		return nil, errors.Errorf("Space %d not found", spaceID)
 	}
 
 	spaceConfig := response.Space
 	if spaceConfig.KubeContext == nil {
-		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+		return nil, errors.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 	}
 
 	retSpace := &latest.Space{
@@ -431,7 +431,7 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 	spaceNameSplitted := strings.Split(spaceName, ":")
 	if len(spaceNameSplitted) > 2 {
-		return nil, fmt.Errorf("Error parsing space name %s: Expected : only once", spaceName)
+		return nil, errors.Errorf("Error parsing space name %s: Expected : only once", spaceName)
 	}
 
 	spaceName = spaceNameSplitted[0]
@@ -501,15 +501,15 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 
 	// Check result
 	if response.Space == nil {
-		return nil, fmt.Errorf("Space %s not found", spaceName)
+		return nil, errors.Errorf("Space %s not found", spaceName)
 	}
 	if len(response.Space) == 0 {
-		return nil, fmt.Errorf("Space %s not found", spaceName)
+		return nil, errors.Errorf("Space %s not found", spaceName)
 	}
 
 	spaceConfig := response.Space[0]
 	if spaceConfig.KubeContext == nil {
-		return nil, fmt.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
+		return nil, errors.Errorf("KubeContext is nil for space %s", spaceConfig.Name)
 	}
 
 	retSpace := &latest.Space{

@@ -1,36 +1,34 @@
 package cmd
 
 import (
-	"context"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 )
 
 // PurgeCmd holds the required data for the purge cmd
 type PurgeCmd struct {
+	*flags.GlobalFlags
+
 	Deployments             string
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	PurgeDependencies       bool
-
-	Namespace   string
-	KubeContext string
-	Profile     string
 }
 
 // NewPurgeCmd creates a new purge command
-func NewPurgeCmd() *cobra.Command {
-	cmd := &PurgeCmd{}
+func NewPurgeCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &PurgeCmd{GlobalFlags: globalFlags}
 
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
@@ -46,12 +44,8 @@ devspace purge --dependencies
 devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
-		Run:  cmd.Run,
+		RunE: cmd.Run,
 	}
-
-	purgeCmd.Flags().StringVarP(&cmd.Namespace, "namespace", "n", "", "The namespace to purge the deployments from")
-	purgeCmd.Flags().StringVar(&cmd.KubeContext, "kube-context", "", "The kubernetes context to use")
-	purgeCmd.Flags().StringVarP(&cmd.Profile, "profile", "p", "", "The profile to use")
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -62,14 +56,14 @@ devspace purge -d my-deployment
 }
 
 // Run executes the purge command logic
-func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
+func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if !configExists {
-		log.Fatal("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
 	log.StartFileLogging()
@@ -77,30 +71,30 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	// Get config with adjusted cluster config
 	generatedConfig, err := generated.LoadConfig(cmd.Profile)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return errors.Wrap(err, "create kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-
-	// Add kube context to context
-	ctx := context.WithValue(context.Background(), constants.KubeContextKey, client.CurrentContext)
 
 	// Signal that we are working on the space if there is any
 	err = cloud.ResumeSpace(client, true, log.GetInstance())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get config with adjusted cluster config
-	config := configutil.GetConfig(ctx, cmd.Profile)
+	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	if err != nil {
+		return err
+	}
 
 	deployments := []string{}
 	if cmd.Deployments != "" {
@@ -125,4 +119,6 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
+
+	return nil
 }

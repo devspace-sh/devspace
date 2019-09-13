@@ -2,7 +2,7 @@ module github.com/devspace-cloud/devspace
 
 require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
-	github.com/Masterminds/semver v1.4.2 // indirect
+	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
@@ -69,7 +69,7 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
-	github.com/spf13/pflag v1.0.3 // indirect
+	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.0.2
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/theupdateframework/notary v0.6.1 // indirect
@@ -93,6 +93,7 @@ require (
 	k8s.io/helm v2.14.2+incompatible
 	k8s.io/klog v0.3.1
 	k8s.io/kubernetes v1.15.0
+	mvdan.cc/sh/v3 v3.0.0-alpha2
 	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
 )
 

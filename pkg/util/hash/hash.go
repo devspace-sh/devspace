@@ -14,6 +14,7 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/docker/pkg/longpath"
+	"github.com/pkg/errors"
 )
 
 // Password hashes the password with sha256 and returns the string
@@ -93,7 +94,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 	}
 
 	if !stat.IsDir() {
-		return "", fmt.Errorf("Path %s is not a directory", srcPath)
+		return "", errors.Errorf("Path %s is not a directory", srcPath)
 	}
 
 	include := "."
@@ -102,7 +103,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 	walkRoot := filepath.Join(srcPath, include)
 	err = filepath.Walk(walkRoot, func(filePath string, f os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("Hash: Can't stat file %s to hash: %s", srcPath, err)
+			return errors.Errorf("Hash: Can't stat file %s to hash: %s", srcPath, err)
 		}
 
 		relFilePath, err := filepath.Rel(srcPath, filePath)
@@ -126,7 +127,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 		if relFilePath != "." {
 			skip, err = pm.Matches(relFilePath)
 			if err != nil {
-				return fmt.Errorf("Error matching %s: %v", relFilePath, err)
+				return errors.Errorf("Error matching %s: %v", relFilePath, err)
 			}
 		}
 
@@ -188,7 +189,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Error hashing %s: %v", srcPath, err)
+		return "", errors.Errorf("Error hashing %s: %v", srcPath, err)
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil

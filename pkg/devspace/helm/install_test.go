@@ -112,12 +112,12 @@ func TestAnalyzeError(t *testing.T) {
 	testCases := []analyzeErrorTestCase{
 		analyzeErrorTestCase{
 			name:        "Test analyze no-timeout error",
-			inputErr:    fmt.Errorf("Some error"),
+			inputErr:    errors.Errorf("Some error"),
 			expectedErr: "Some error",
 		},
 		analyzeErrorTestCase{
 			name:      "Test analyze timeout error",
-			inputErr:  fmt.Errorf("timed out waiting"),
+			inputErr:  errors.Errorf("timed out waiting"),
 			namespace: "testNS",
 		},
 	}

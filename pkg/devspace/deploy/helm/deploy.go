@@ -31,7 +31,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		// Check if the chart directory has changed
 		hash, err = hashpkg.Directory(chartPath)
 		if err != nil {
-			return false, fmt.Errorf("Error hashing chart directory: %v", err)
+			return false, errors.Errorf("Error hashing chart directory: %v", err)
 		}
 	}
 
@@ -44,7 +44,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		for _, override := range d.DeploymentConfig.Helm.ValuesFiles {
 			hash, err := hashpkg.Directory(override)
 			if err != nil {
-				return false, fmt.Errorf("Error stating override file %s: %v", override, err)
+				return false, errors.Errorf("Error stating override file %s: %v", override, err)
 			}
 
 			helmOverridesHash += hash
@@ -63,7 +63,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	if d.Helm == nil {
 		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
 		if err != nil {
-			return false, fmt.Errorf("Error creating helm client: %v", err)
+			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
 	}
 
@@ -123,7 +123,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		if err == nil {
 			err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
 			if err != nil {
-				return false, fmt.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
+				return false, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 			}
 		}
 	}
@@ -133,7 +133,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath, err := filepath.Abs(overridePath)
 			if err != nil {
-				return false, fmt.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
+				return false, errors.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
 			}
 
 			overwriteValuesFromPath := map[interface{}]interface{}{}
@@ -171,7 +171,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return false, fmt.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return false, errors.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 
 	// Print revision

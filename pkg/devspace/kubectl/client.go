@@ -1,7 +1,6 @@
 package kubectl
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -51,7 +51,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 			err = kubeconfig.SaveConfig(&kubeConfig)
 			if err != nil {
-				return nil, fmt.Errorf("Error saving kube config: %v", err)
+				return nil, errors.Errorf("Error saving kube config: %v", err)
 			}
 		}
 	}
@@ -68,7 +68,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 
 	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 	if kubeConfig.Contexts[activeContext] == nil {
-		return nil, fmt.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+		return nil, errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
 	}
 
 	restConfig, err := clientConfig.ClientConfig()
@@ -92,7 +92,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 }
 
 // NewClientBySelect creates a new kubernetes client by user select
-func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
+func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*Client, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -108,11 +108,14 @@ func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 	}
 
 	for true {
-		kubeContext := survey.Question(&survey.QuestionOptions{
+		kubeContext, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      options,
-		})
+		}, log)
+		if err != nil {
+			return nil, err
+		}
 
 		// Check if cluster is in private network
 		if allowPrivate == false {
@@ -140,8 +143,8 @@ func NewClientBySelect(allowPrivate bool, switchContext bool) (*Client, error) {
 }
 
 // PrintWarning prints a warning if the last kube context is different than this one
-func (client *Client) PrintWarning(generatedConfig *generated.Config, updateGenerated bool, log log.Logger) error {
-	if generatedConfig != nil {
+func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning, updateGenerated bool, log log.Logger) error {
+	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
 			wait := false
@@ -181,18 +184,18 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, updateGene
 			time.Sleep(5 * time.Second)
 			log.StopWait()
 		}
+	}
 
-		// Update generated if we deploy the application
-		if updateGenerated {
-			generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
-				Context:   client.CurrentContext,
-				Namespace: client.Namespace,
-			}
+	// Update generated if we deploy the application
+	if generatedConfig != nil && updateGenerated {
+		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+			Context:   client.CurrentContext,
+			Namespace: client.Namespace,
+		}
 
-			err := generated.SaveConfig(generatedConfig)
-			if err != nil {
-				return errors.Wrap(err, "save generated")
-			}
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			return errors.Wrap(err, "save generated")
 		}
 	}
 

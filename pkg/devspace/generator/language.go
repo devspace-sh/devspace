@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 
 	enry "gopkg.in/src-d/enry.v1"
 )
@@ -33,7 +33,7 @@ type DockerfileGenerator struct {
 }
 
 // ContainerizeApplication will create a dockerfile at the given path based on the language detected
-func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string) error {
+func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string, log log.Logger) error {
 	// Check if the user already has a dockerfile
 	_, err := os.Stat(dockerfilePath)
 	if os.IsNotExist(err) == false {
@@ -73,11 +73,15 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 	log.StopWait()
 
 	// Let the user select the language
-	selectedLanguage := survey.Question(&survey.QuestionOptions{
+	selectedLanguage, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Select the programming language of this project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,
-	})
+	}, log)
+	if err != nil {
+		return err
+	}
+
 	log.WriteString("\n")
 
 	return dockerfileGenerator.CreateDockerfile(selectedLanguage)
@@ -131,7 +135,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
-		return nil, fmt.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
+		return nil, errors.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
 	}
 
 	if len(cg.supportedLanguages) == 0 {
@@ -161,7 +165,7 @@ func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
 	// Check if language is available
 	_, err = os.Stat(filepath.Join(cg.gitRepo.LocalPath, language))
 	if err != nil {
-		return fmt.Errorf("Template for language %s not found", language)
+		return errors.Errorf("Template for language %s not found", language)
 	}
 
 	// Copy dockerfile

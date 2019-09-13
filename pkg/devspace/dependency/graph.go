@@ -3,6 +3,8 @@ package dependency
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Graph is the dependency graph structure
@@ -47,7 +49,7 @@ func NewNode(id string, data interface{}) *Node {
 func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Node, error) {
 	parentNode, ok := g.Nodes[parentID]
 	if !ok {
-		return nil, fmt.Errorf("Parent %s does not exist", parentID)
+		return nil, errors.Errorf("Parent %s does not exist", parentID)
 	}
 	if existingNode, ok := g.Nodes[id]; ok {
 		err := g.AddEdge(parentNode.ID, existingNode.ID)
@@ -72,7 +74,7 @@ func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Nod
 func (g *Graph) RemoveNode(id string) error {
 	if node, ok := g.Nodes[id]; ok {
 		if len(node.childs) > 0 {
-			return fmt.Errorf("Cannot remove %s from graph because it has still children", id)
+			return errors.Errorf("Cannot remove %s from graph because it has still children", id)
 		}
 
 		// Remove child from parents
@@ -124,11 +126,11 @@ func (c *CyclicError) Error() string {
 func (g *Graph) AddEdge(fromID string, toID string) error {
 	from, ok := g.Nodes[fromID]
 	if !ok {
-		return fmt.Errorf("fromID %s does not exist", fromID)
+		return errors.Errorf("fromID %s does not exist", fromID)
 	}
 	to, ok := g.Nodes[toID]
 	if !ok {
-		return fmt.Errorf("toID %s does not exist", toID)
+		return errors.Errorf("toID %s does not exist", toID)
 	}
 
 	// Check if cyclic
