@@ -1,31 +1,30 @@
 ---
-title: Command - devspace list ports
-sidebar_label: ports
-id: version-v4.0.0-devspace_list_ports
-original_id: devspace_list_ports
+title: "Command - devspace list commands"
+sidebar_label: commands
 ---
 
 
-Lists port forwarding configurations
+Lists all custom DevSpace commands
 
 ## Synopsis
 
 
 ```
-devspace list ports [flags]
+devspace list commands [flags]
 ```
 
 ```
 #######################################################
-############### devspace list ports ###################
+############## devspace list commands #################
 #######################################################
-Lists the port forwarding configurations
+Lists all DevSpace custom commands defined in the 
+devspace.yaml
 #######################################################
 ```
 ## Options
 
 ```
-  -h, --help   help for ports
+  -h, --help   help for commands
 ```
 
 ### Options inherited from parent commands

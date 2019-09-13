@@ -1,5 +1,5 @@
 ---
-title: Shared Commandsd
+title: Shared Commands
 sidebar_label: Shared Commands
 id: version-v4.0.0-shared-commands
 original_id: shared-commands
@@ -48,7 +48,7 @@ devspace dev -i --profile=debug-backend
 
 ## Configuration
 
-### `commands[*].name`
+### `run[*].name`
 The `name` option expects a string with name that serves as an alias for the command provided in the `command` option.
 
 > The `name` option is mandatory and must be unique.
@@ -56,7 +56,7 @@ The `name` option expects a string with name that serves as an alias for the com
 See above for an [example configuration](#workflow).
 
 
-### `commands[*].command`
+### `run[*].command`
 The `command` option expects a string with an arbitrary terminal command. 
 
 While you can run any `devspace` command, you can also run other commands (if installed), set environment variables or use `bash` style expressions such as `&&`, `||` or `;`. To ensure that many of your team mates can run the command on any platform, it is highly recommended to keep your command expressions as simple as possible.
