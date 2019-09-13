@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"

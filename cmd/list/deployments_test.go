@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -177,7 +178,7 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&deploymentsCmd{}).RunDeploymentsStatus(nil, []string{})
+	newDeploymentsCmd(&flags.GlobalFlags{}).RunDeploymentsStatus(nil, []string{})
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
