@@ -513,7 +513,7 @@ profiles:               # Configure different profiles (e.g. dev, staging, prod,
         path: images.default.entrypoint
         value: [npm, run, debug]
 
-commands:               # Custom commands: define reusable commands and run them via `devspace run [command-name]`
+commands:               # Custom commands: define reusable commands and run them via: devspace run [command-name]
   - name: debug-backend # The best way to share your workflows with other team mates
     command: devspace dev -i --profile=debug-backend
 
