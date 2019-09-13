@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace use context"
+title: Command - devspace use context
 sidebar_label: context
 ---
 

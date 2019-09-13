@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace gen-docs"
+title: Command - devspace gen-docs
 sidebar_label: devspace gen-docs
 ---
 

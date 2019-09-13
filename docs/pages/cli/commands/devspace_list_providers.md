@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list providers"
+title: Command - devspace list providers
 sidebar_label: providers
 ---
 

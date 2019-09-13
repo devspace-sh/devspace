@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace use profile"
+title: Command - devspace use profile
 sidebar_label: profile
 ---
 

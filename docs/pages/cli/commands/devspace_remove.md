@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove"
+title: Command - devspace remove
 sidebar_label: devspace remove
 ---
 

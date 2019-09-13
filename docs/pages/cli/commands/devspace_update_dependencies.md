@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace update dependencies"
+title: Command - devspace update dependencies
 sidebar_label: dependencies
 ---
 

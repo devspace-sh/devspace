@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace add deployment"
+title: Command - devspace add deployment
 sidebar_label: deployment
 ---
 

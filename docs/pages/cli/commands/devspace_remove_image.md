@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove image"
+title: Command - devspace remove image
 sidebar_label: image
 ---
 

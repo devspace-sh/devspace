@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace use namespace"
+title: Command - devspace use namespace
 sidebar_label: namespace
 ---
 

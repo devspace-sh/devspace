@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list vars"
+title: Command - devspace list vars
 sidebar_label: vars
 ---
 

@@ -8,7 +8,7 @@
   box-shadow: 0 3px 8px 0 rgba(116, 129, 141, 0.3);
 }
 
-.separateOnPageNav .fixedHeaderContainer .headerWrapper.wrapper {
+.fixedHeaderContainer .headerWrapper.wrapper {
   max-width: 1600px;
   padding: 30px;
 }
@@ -23,9 +23,19 @@
 }
 
 .fixedHeaderContainer .headerWrapper header a {
-  width: 270px;
+  width: 175px;
   height: 40px;
   z-index: 0;
+}
+
+.fixedHeaderContainer .headerWrapper header .logo {
+  width: 170px;
+}
+
+.fixedHeaderContainer .headerWrapper header h3 {
+  margin-top: 5px;
+  color: #00bdff;
+  text-decoration: none;
 }
 
 .fixedHeaderContainer

@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace connect"
+title: Command - devspace connect
 sidebar_label: devspace connect
 ---
 

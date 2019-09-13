@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list spaces"
+title: Command - devspace list spaces
 sidebar_label: spaces
 ---
 

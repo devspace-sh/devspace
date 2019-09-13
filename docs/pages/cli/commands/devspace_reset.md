@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace reset"
+title: Command - devspace reset
 sidebar_label: devspace reset
 ---
 

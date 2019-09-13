@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list profiles"
+title: Command - devspace list profiles
 sidebar_label: profiles
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace add port"
+title: Command - devspace add port
 sidebar_label: port
 ---
 

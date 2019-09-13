@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove space"
+title: Command - devspace remove space
 sidebar_label: space
 ---
 

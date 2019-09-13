@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace add image"
+title: Command - devspace add image
 sidebar_label: image
 ---
 

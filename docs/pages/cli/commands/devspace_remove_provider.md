@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove provider"
+title: Command - devspace remove provider
 sidebar_label: provider
 ---
 

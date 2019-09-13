@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list deployments"
+title: Command - devspace list deployments
 sidebar_label: deployments
 ---
 

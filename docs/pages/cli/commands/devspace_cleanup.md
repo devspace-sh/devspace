@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace cleanup"
+title: Command - devspace cleanup
 sidebar_label: devspace cleanup
 ---
 

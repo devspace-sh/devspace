@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace connect cluster"
+title: Command - devspace connect cluster
 sidebar_label: cluster
 ---
 

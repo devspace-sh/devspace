@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace analyze"
+title: Command - devspace analyze
 sidebar_label: devspace analyze
 ---
 

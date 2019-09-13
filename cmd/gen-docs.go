@@ -62,7 +62,7 @@ func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			sidebarLabel = command[l-1]
 		}
 
-		return fmt.Sprintf(headerTemplate, "Command: "+title, sidebarLabel)
+		return fmt.Sprintf(headerTemplate, "Command - "+title, sidebarLabel)
 	}
 
 	linkHandler := func(name string) string {

@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace status sync"
+title: Command - devspace status sync
 sidebar_label: sync
 ---
 

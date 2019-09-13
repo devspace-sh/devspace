@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace update"
+title: Command - devspace update
 sidebar_label: devspace update
 ---
 

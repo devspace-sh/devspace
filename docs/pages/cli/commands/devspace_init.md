@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace init"
+title: Command - devspace init
 sidebar_label: devspace init
 ---
 

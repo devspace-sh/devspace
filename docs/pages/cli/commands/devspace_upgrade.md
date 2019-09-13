@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace upgrade"
+title: Command - devspace upgrade
 sidebar_label: devspace upgrade
 ---
 

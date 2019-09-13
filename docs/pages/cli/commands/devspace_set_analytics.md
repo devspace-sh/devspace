@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace set analytics"
+title: Command - devspace set analytics
 sidebar_label: analytics
 ---
 

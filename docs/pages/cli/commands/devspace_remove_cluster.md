@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove cluster"
+title: Command - devspace remove cluster
 sidebar_label: cluster
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Share Commands: devspace run [command-name]"
+title: "Shared Commands"
 sidebar_label: Shared Commands
 ---
 
@@ -8,7 +8,7 @@ sidebar_label: Shared Commands
 The idea of shared commands is that the more experienced developers on your team define a set of useful commands and store them in the `devspace.yaml`, commit and push this config to the code repository via git and then, let other team mates run them without having to remember all the details or having to read through endless pages of internal workflow documentation.
 
 ## Workflow
-The `run` section in the `devspace.yaml` allows you to define commands that can be shared with other team mates. After adding a command and giving it a name (serving as an alias for the command), developers can run the command using:
+The `commands` section in the `devspace.yaml` allows you to define commands that can be shared with other team mates. After adding a command and giving it a name (serving as an alias for the command), developers can run the command using:
 ```yaml
 devspace run [command-name]
 ```
@@ -19,7 +19,7 @@ An example configuration could look like this:
 images:
   default:
     image: john/backend
-run:
+commands:
 - name: debug-backend
   command: "devspace dev -i --profile=debug-backend"
 profiles:

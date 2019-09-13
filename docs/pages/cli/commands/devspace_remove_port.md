@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove port"
+title: Command - devspace remove port
 sidebar_label: port
 ---
 

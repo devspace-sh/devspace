@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace ui"
+title: Command - devspace ui
 sidebar_label: devspace ui
 ---
 

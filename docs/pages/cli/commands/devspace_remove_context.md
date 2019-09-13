@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove context"
+title: Command - devspace remove context
 sidebar_label: context
 ---
 

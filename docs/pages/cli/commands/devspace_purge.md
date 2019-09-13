@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace purge"
+title: Command - devspace purge
 sidebar_label: devspace purge
 ---
 

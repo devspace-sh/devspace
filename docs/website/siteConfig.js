@@ -9,7 +9,8 @@
 // site configuration options.
 
 const siteConfig = {
-  projectName: "devspace-docs",
+  organizationName: "devspace-cloud",
+  projectName: "devspace",
   title: "DevSpace Documentation", // Title for your website.
   tagline: "A website for testing",
   url: "https://devspace.cloud", // Your website URL
@@ -19,7 +20,7 @@ const siteConfig = {
   headerLinks: [
     { href: "https://devspace.cloud/pricing/", label: "" },
     { href: "https://devspace.cloud/about/", label: "About" },
-    { doc: "introduction", label: "Docs" },
+    { href: "/docs/introduction", label: "Docs" },
     { href: "https://devspace.cloud/help/", label: "Help" },
     { href: "https://app.devspace.cloud/", label: "Login" },
     { href: "#", label: "" },

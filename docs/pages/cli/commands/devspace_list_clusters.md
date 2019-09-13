@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list clusters"
+title: Command - devspace list clusters
 sidebar_label: clusters
 ---
 

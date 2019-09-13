@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace add sync"
+title: Command - devspace add sync
 sidebar_label: sync
 ---
 

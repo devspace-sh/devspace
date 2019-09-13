@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove sync"
+title: Command - devspace remove sync
 sidebar_label: sync
 ---
 

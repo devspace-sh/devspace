@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace logs"
+title: Command - devspace logs
 sidebar_label: devspace logs
 ---
 

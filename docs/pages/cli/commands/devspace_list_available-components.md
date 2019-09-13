@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace list available-components"
+title: Command - devspace list available-components
 sidebar_label: available-components
 ---
 

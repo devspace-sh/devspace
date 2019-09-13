@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace remove deployment"
+title: Command - devspace remove deployment
 sidebar_label: deployment
 ---
 

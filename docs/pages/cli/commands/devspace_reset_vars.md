@@ -1,5 +1,5 @@
 ---
-title: "Command: devspace reset vars"
+title: Command - devspace reset vars
 sidebar_label: vars
 ---
 
