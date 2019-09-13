@@ -24,7 +24,7 @@ type addImageTestCase struct {
 	imageTag            string
 	imageContextPath    string
 	imageDockerfilePath string
-	imageBuildEngine    string
+	imageBuildTool    string
 
 	expectedOutput   string
 	expectedPanic    string
@@ -118,7 +118,7 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 		Tag:            testCase.imageTag,
 		ContextPath:    testCase.imageContextPath,
 		DockerfilePath: testCase.imageDockerfilePath,
-		BuildEngine:    testCase.imageBuildEngine,
+		BuildTool:    testCase.imageBuildTool,
 	}).RunAddImage(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)

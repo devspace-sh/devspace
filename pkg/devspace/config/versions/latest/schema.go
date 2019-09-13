@@ -41,12 +41,6 @@ type Config struct {
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
 }
 
-// CommandConfig defines the command specification
-type CommandConfig struct {
-	Name    string `yaml:"name"`
-	Command string `yaml:"command"`
-}
-
 // ImageConfig defines the image specification
 type ImageConfig struct {
 	Image            string       `yaml:"image"`
@@ -386,6 +380,12 @@ type HookWhenConfig struct {
 type HookWhenAtConfig struct {
 	Images      string `yaml:"images,omitempty"`
 	Deployments string `yaml:"deployments,omitempty"`
+}
+
+// CommandConfig defines the command specification
+type CommandConfig struct {
+	Name    string `yaml:"name"`
+	Command string `yaml:"command"`
 }
 
 // Variable describes the var definition

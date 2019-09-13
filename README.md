@@ -6,15 +6,16 @@
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
-### DevSpace makes it easier and faster to build applications for Kubernetes
+### DevSpace makes it much faster to develop applications for Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
+- **Develop with hot reloading**: updates your running containers without rebuilding images or restarting containers
+- **Unify deployment workflows** within your team and across dev, staging and production
 - **Automate repetitive tasks** for image building and deployment
-- **Unify deployment workflows** among developers or across dev, staging and production
 
 <br>
 
 
-[![DevSpace Demo](docs/website/static/img/readme/devspace-cli-demo.gif)](https://youtu.be/G2l7VkQrkXo)
+[![DevSpace Demo](docs/website/static/img/devspace-cli-demo.gif)](https://youtu.be/G2l7VkQrkXo)
 
 <p align="center">
 <a href="https://youtu.be/G2l7VkQrkXo">Click here to watch the full-length video with explanations on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
@@ -24,9 +25,10 @@
 <br>
 
 ## Contents
+- [Why DevSpace?](#why-devspace)
 - [Features](#features)
-- [Architecture](#architecture)
-- [Quickstart](#quickstart)
+- [Architecture & Workflow](#architecture--workflow)
+- [Quickstart Guide](#quickstart)
 - [Config Examples](#configuration-examples)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -34,11 +36,87 @@
 
 <br>
 
+## Why DevSpace?
+Building modern, distributed and highly scalable microservices with Kubernetes is hard - and it is even harder for large teams of developers. DevSpace is the next-generation tool for fast cloud-native software development.
+
+<details>
+<summary><b>Standardize & Version Your Workflows</b></summary>
+<br>
+
+DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
+- **Codify workflow knowledge** about building images, deploying your project and its dependencies etc.
+- **Version your workflows together with your code** (i.e. you can get any old version up and running with just a single command) 
+- **Share your workflows** with your team mates
+
+<br>
+</details>
+
+<details>
+<summary><b>Let Everyone on Your Team Deploy to Kubernetes</b></summary>
+<br>
+
+DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
+- The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
+- If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
+- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/configuration/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
+
+> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
+
+<br>
+</details>
+
+<details>
+<summary><b>Speed Up Cloud-Native Development</b></summary>
+<br>
+
+Instead of rebuilding images and redeploying containers, DevSpace allows you to **hot reload running containers while you are coding**:
+- Simply edit your files with your IDE and see how your application reloads within the running container.
+- The **high performance, bi-directional file synchronization** detects code changes immediately and synchronizes files immediately between your local dev environment and the containers running in Kubernetes
+- Stream logs, connect debuggers or open a container terminal directly from your IDE with just a single command.
+
+<br>
+</details>
+
+<details>
+<summary><b>Automate Repetitive Tasks</b></summary>
+<br>
+
+Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repeatedly run commands like `kubectl get po` and copy pod ids back and forth. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
+- DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application (including its dependencies) with just a single command
+- Let DevSpace automatically start port-fowarding and log streaming, so you don't have to constantly copy and paste pod ids or run 10 commands to get everything started.
+
+<br>
+</details>
+
+<details>
+<summary><b>Works with Any Kubernetes Clusters</b></summary>
+<br>
+
+DevSpace is battle tested with many Kubernetes distributions including:
+- **local Kubernetes clusters** like minikube, k3s, MikroK8s, kind
+- **managed Kubernetes clusters** in GKE (Google Cloud), EKS (Amazon Web Service), AKS (Microsoft Azure), Digital Ocean
+- **self-managed Kubernetes clusters** created with Rancher
+
+> DevSpace also lets you switch seamlessly between clusters and namespaces. You can work with a local cluster as long as that is sufficient. If things get more advanced, you need cloud power like GPUs or you simply want to share a complex system such as Kafka with your team, simply tell DevSpace to use a remote cluster by switching your kube-context and continue working.
+
+<br>
+</details>
+
+<br>
+
+
+## Architecture & Workflow
+![DevSpace Workflow](docs/website/static/img/processes/workflow-devspace.png)
+
+DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kube-context, just like kubectl.
+
+<br>
+
 ## Features
 
 Stop wasting time for running the same build and deploy commands over and over again. Let DevSpace automate your workflow and build cloud-native applications directly inside Kubernetes.
 
-### Automatic Image Building 
+### Automatic Image Building with `devspace build`
   
 - **Customizable Build Process** supporting Docker, kaniko or even custom scripts
 - **Parallel Image Building** to save time when multiple Dockerfiles have to be built  
@@ -46,6 +124,8 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Automatic Push** to any public or private Docker registry (authorization via `docker login my-registry.tld`)  
 - **Automatic Configuration of Pull Secrets** within the Kubernetes cluster
 - **Smart Caching** that skips images which do not need to be rebuilt
+
+[![DevSpace Image Building Process](docs/website/static/img/processes/image-building-process-devspace.svg)](https://devspace.cloud/docs/cli/image-building/workflow-basics)
 
 ### Automatic Deployment with `devspace deploy`
 - **Automatig Image Building** for images required in the deployment process
@@ -55,18 +135,21 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Smart Caching** that skips deployments which do not need to be redeployed
 - **Easy Integration into CI/CD Tools** with non-interactive mode
 
+[![DevSpace Deployment Process](docs/website/static/img/processes/deployment-process-devspace.svg)](https://devspace.cloud/docs/cli/deployment/workflow-basics)
 
 ### Efficient In-Cluster Development with `devspace dev`
 - **Hot Reloading** that updates your running containers without restarting them (whenever you change a line of code)
 - **Fast + Reliable File Synchronization** to keep all files in sync between your local workspace and your containers
-- **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 - **Port Forwarding** that lets you access services and pods on localhost and allows you to attach debuggers with ease
+- **Multi-Container Log Streaming** that lets you stream the logs of multiple containers at once (+ color-coded prefix)
+- **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 
+[![DevSpace Development Process](docs/website/static/img/processes/development-process-devspace.svg)](https://devspace.cloud/docs/cli/development/workflow-basics)
 
 ### Faster Interaction with Kubernetes
 - **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.  
   &raquo; Shows a "dropdown selector" for pods directly in the CLI when running one of these commands:
-  - `devspace enter` to open a terminal session **Fast, Real-Time Log Streaming** for all containers you deploy
+  - `devspace enter` to open a **Interactive Terminal Session**
   - `devspace logs` / `devspace logs -f` for **Fast, Real-Time Logs** (optionally streaming new logs)
   - `devspace sync` for quickly starting a **Bi-Directional, Real-Time File Synchronization** on demand 
 - **Automatic Issue Analysis** via `devspace analyze` reporting crashed containers, missing endpoints, scheduling errors, ...
@@ -82,7 +165,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 
 ### Lightweight & Easy to Setup
-- **Client-Only Binary** (server-side DevSpace Cloud is optional for visual UI and team management, see [Architecture](#architecture))
+- **Client-Only Binary** (server-side [DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) is optional for visual UI and team management)
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
@@ -100,18 +183,9 @@ Stop wasting time for running the same build and deploy commands over and over a
 <br>
 
 
-## Architecture
-![DevSpace Architecture](docs/website/static/img/readme/devspace-architecture.png)
-
-DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kubectl context.
-
-You can, however, connect your Kubernetes cluster to DevSpace Cloud to manage cluster users, namespaces and permissions with a central management UI. DevSpace Cloud can either be used [as-a-Service on devspace.cloud](https://devspace.cloud) or installed as an on-premise version (see [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions).
-
-<br>
-
 ## Quickstart
 
-### 1. Install
+### 1. Install DevSpace
 
 <details>
 <summary>via NPM</summary>
@@ -221,6 +295,8 @@ works with any local Kubernetes cluster (minikube, kind, k3s, mikrok8s etc.)
 
 <br>
 
+If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
+
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
@@ -241,12 +317,14 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
 #### Option A: You want to use this cluster alone
+If you want to deploy to a remote Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
 devspace use namespace my-namespace
 ```
 
 #### Option B: You want to share this cluster with your team
+To share a cluster, connect it to [DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) and then create an isolated Kubernetes namespace.
 ```bash
 # Connect your cluster to DevSpace Cloud
 devspace connect cluster # requires login via GitHub or email
@@ -262,9 +340,11 @@ devspace create space my-namespace
 <details>
   <summary><b>What is DevSpace Cloud?</b></summary>
 
-DevSpace Cloud allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc.
+[DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) is the optional server-side component for DevSpace that allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network & pod security policies etc.
 
-> You can use DevSpace Cloud as SaaS platform or use the [on-premise edition](https://github.com/devspace-cloud/devspace-cloud) to run it yourself.
+> You can either
+> - use the fully managed **[SaaS edition of DevSpace Cloud](https://app.devspace.cloud)**
+> - or run it on your clusters using the <img width="20px" style="vertical-align: sub" src="/img/logos/github-logo.svg" alt="DevSpace Demo"> **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
 
 <br>
 </details>
@@ -345,7 +425,20 @@ devspace deploy
 
 <br>
 
-### 6. Develop
+### 6. Open In Your Browser
+You can now open your application in the browser using the following command:
+```bash
+devspace open
+```
+When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
+
+**Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
+
+<img width="300" src="https://i.gifer.com/ZIx.gif">
+
+<br>
+
+### 7. Develop
 After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
@@ -356,45 +449,26 @@ You can now:
 - Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
 - Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`
+Quickstart projects work out of the box in development mode because the `ENTRYPOINT` of the provided Dockerfiles start the projects in hot reloading mode. If you want to configure your own application to work well with `devspace dev`, it is highly recommended that you take a look at the documentation, to understand the [workflow and basics of the developing cloud-native software with DevSpace](https://devspace.cloud/docs/cli/development/workflow-basics).
+
+> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing or starting an application in hot reloading mode when the Dockerfile ENTRYPOINT generally starts a rather production-like version of the application.
 
 <br>
 
-### 7. Learn more
+### 8. Learn more
 
-<details>
-<summary>See useful commands for development
-</summary>
-
-<br>
+#### Useful Commands for Development
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags                                                                                      |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `devspace dev`<br> Starts the development mode                      | `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and opens terminal)` <br> `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`                                |
-| `devspace enter`<br> Opens a terminal session for a container       | `--pick • Pick a container instead of using the default one`                                             |
+| `devspace dev`<br> Starts the development mode                      | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`                                 |
+| `devspace enter`<br> Opens a terminal session for a container       |                                              |
+| `devspace open`<br> Opens your application after starting port-forwarding or generating an ingress    |                                                                                                      |
 | `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
-| `devspace logs` <br> Prints the logs of a container                 | `--pick • Pick a container instead of using the default one` <br> `-f • Stream new logs (follow/attach)` |
-| `devspace analyze` <br> Analyzes your deployments for issues        |                                                                                                      |
+| `devspace logs` <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
+| `devspace analyze` <br> Analyzes your namespace for issues        |                                                                                                      |
+| `devspace build` <br> Only build and push images (no deployment) |                                                                                                      |
 
-</details>
-
-<details>
-<summary>See how to use multiple Spaces and switch between them
-</summary>
-
-Whenever you run `devspace create space [space-name]` within a project, DevSpace will set this newly created Space as active Space which is used for `devspace deploy` and `devspace dev`.
-
-If you have multiple Spaces (e.g. to test different versions of your app or separate staging from production), you can use the following commands to list Spaces and switch between them:
-
-```bash
-devspace list spaces
-devspace use space [space-name]
-```
-
-</details>
-
-
-<br>
 <br>
 
 
@@ -410,22 +484,46 @@ images:                 # DevSpace will build these images in parallel and push 
   {image-b}: ...        # tells DevSpace how to build image-b
   ... 
 
-deployments:            # DevSpace will deploy these [Helm chart | manifest | ... ] after another
+deployments:            # DevSpace will deploy these [Helm charts | manifests | ... ] one after another
   - {deployment-1}      # could be a Helm chart
   - {deployment-2}      # could be a folder with kubectl manifests
   ...
 
 dev:                    # Special config options for `devspace dev`
-  overrideImages: ...   # Apply overrides to image building (e.g. different Dockerfile or different ENTRYPOINT)
-  terminal: ...         # Config options for opening a terminal or streaming logs
-  ports: ...            # Config options for port-forwarding
-  sync: ...             # Config options for file synchronization
+  ports: ...            # Configure port-forwarding
+  open: ...             # Configure auto-open for opening URLs after starting development mode
+  sync: ...             # Configure file synchronization
+  logs: ...             # Configure multi-container log streaming
   autoReload: ...       # Tells DevSpace when to redeploy (e.g. when a manifest file has been edited)
+  interactive: ...      # Customize Interactive Mode (devspace dev -i)
 
 dependencies:           # Tells DevSpace which related projects should be deployed before deploying this project
   - {dependency-1}      # Could be another git repository
   - {dependency-2}      # Could point to a path on the local filesystem
   ...
+
+env:                    # Make your config dynamic and easier to share (ask a custom question if env var is not defined)
+  - name: DOMAIN_NAME   # Will be used as ${DOMAIN_NAME} in config
+    question: Which hostname should we use for the ingress?
+
+profiles:               # Configure different profiles (e.g. dev, staging, prod, debug-backend)
+  - name: debug-backend
+    patches:            # Change the config with patches when this profile is active
+      - op: replace
+        path: images.default.entrypoint
+        value: [npm, run, debug]
+
+commands:               # Shared Commands: let your colleagues use them via `devspace run [command-name]`
+  - name: debug-backend
+    command: devspace dev -i --profile=debug-backend
+
+hooks:                  # Customize all workflows using hooks
+  - command: echo
+    args:
+      - "before image building"
+    when:
+      before:
+        images: all
 ```
 
 <details>
@@ -438,7 +536,7 @@ version: v1beta2
 images:
   default:                              # Key 'default' = Name of this image
     image: my-registry.tld/image1       # Registry and image name for pushing the image
-    createPullSecret: true              # Let DevSpace CLI automatically create pull secrets in your Kubernetes namespace
+    createPullSecret: true              # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
 deployments:
 - name: quickstart-nodejs               # Name of this deployment
@@ -454,14 +552,6 @@ deployments:
       - port: 3000                      # Exposes container port 3000 on service port 3000
 
 dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - npm
-    - run
-    - dev
-  terminal:
-    disabled: true
   ports:
     forward:
     - port: 3000
@@ -470,6 +560,8 @@ dev:
     labelSelector:
       app.kubernetes.io/component: default
       app.kubernetes.io/name: devspace-app
+  open:
+  - url: http://localhost:3000/login
   sync:
   - localSubPath: ./src
     containerPath: .
@@ -520,7 +612,7 @@ images:
     # The following line defines a custom tag schema for this image (default tag schema is: ${DEVSPACE_RANDOM})
     tag: ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
 ```
-Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/image-building/build-tools/docker).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#docker-default).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -544,7 +636,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/image-building/build-tools/kaniko). <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#kaniko). <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -570,7 +662,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/image-building/build-tools/custom-build-script).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#custom).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -594,11 +686,11 @@ deployments:
           cpu: "400m"
           memory: "500Mi"
 ```
-DevSpace allows you to [add predefined components](https://devspace.cloud/docs/deployment/components/add-predefined-components) using the `devspace add component [component-name]` command. 
+DevSpace allows you to [add predefined components](https://devspace.cloud/docs/cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis) using the `devspace add component [component-name]` command. 
 
 Learn more about:
-- [What are components?](https://devspace.cloud/docs/deployment/components/what-are-components)
-- [Configuration Specification for Components](https://devspace.cloud/docs/deployment/components/specification) 
+- [What are components?](https://devspace.cloud/docs/cli/deployment/components/what-are-components)
+- [Configuring Components](https://devspace.cloud/docs/cli/deployment/components/configuration/overview-specification) 
 
  <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -620,8 +712,8 @@ deployments:
       repo: https://kubernetes-charts.storage.googleapis.com
 ```
 Learn more about:
-- [What are Helm charts?](https://devspace.cloud/docs/deployment/helm-charts/what-are-helm-charts)
-- [Configure Helm chart deployments](https://devspace.cloud/docs/deployment/helm-charts/add-charts)
+- [What are Helm charts?](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
+- [Configure Helm chart deployments](https://devspace.cloud/docs/cli/deployment/helm-charts/configuration/overview-specification)
 
  <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -642,8 +734,8 @@ deployments:
     - some-other-manifest.yaml
 ```
 Learn more about:
-- [What are Kubernetes manifests?](https://devspace.cloud/docs/deployment/kubernetes-manifests/what-are-manifests)
-- [Configure manifest deployments](https://devspace.cloud/docs/deployment/kubernetes-manifests/configure-manifests)
+- [What are Kubernetes manifests?](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/what-are-manifests)
+- [Configure manifest deployments](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification)
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -664,7 +756,7 @@ deployments:
     - more-manifests/
     kustomize: true
 ```
-Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize). 
+Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/configuration/kustomize). 
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -693,7 +785,7 @@ deployments:
 
 DevSpace processes all deployments of a project according to their order in the `devspace.yaml`. You can combine deployments of different types (e.g. Helm charts and manifests).
 
-Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/workflow-basics/deployment).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/cli/deployment/workflow-basics).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -716,61 +808,12 @@ dependencies:
 
 Before deploying a project, DevSpace resolves all dependencies and builds a dependency tree which will then be deployed in a buttom-up fashion, i.e. the project which you call `devspace deploy` in will be deployed last.
 
-Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/workflow-basics/deployment/dependencies).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/cli/deployment/advanced/dependencies).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
 
 ### Configure Development Mode
-
-<details>
-<summary>
-Override Dockerfile entrypoint
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-images:
-  default:
-    image: dscr.io/my-username/my-image
-dev:
-  overrideImages:
-  - name: default
-    entrypoint:
-    - npm
-    - run
-    - develop
-```
-
-When running `devspace dev` instead of `devspace deploy`, DevSpace would override the ENTRYPOINT of the Dockerfile with `[npm, run, develop]` when building this image.
-
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides#configuring-a-different-dockerfile-during-devspace-dev).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
-
-<details>
-<summary>
-Use different Dockerfile for development
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-images:
-  default:
-    image: dscr.io/my-username/my-image
-dev:
-  overrideImages:
-  - name: default
-    dockerfile: ./development/Dockerfile.development
-    # use different context path = root path for Dockerfile commans like ADD or COPY (optional)
-    # context: ./development
-```
-
-When running `devspace dev` instead of `devspace deploy`, DevSpace would use the dev Dockerfile as configured in the example above.
-
-Take a look at the documentation to learn more about [how DevSpace applies dev overrides](https://devspace.cloud/docs/development/overrides).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
 
 <details>
 <summary>
@@ -804,28 +847,7 @@ The above example would configure the sync, so that:
 - local path `./src` will be synchronized to the container's working directory `.` (specified in the Dockerfile)
 - `./src/node_modules` would **not** be uploaded to the container
 
-Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/development/synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
-
-</details>
-
-<details>
-<summary>
-Stream logs instead of opening the container terminal
-</summary>
-
-```yaml
-# File: ./devspace.yaml
-dev:
-  terminal:
-    disabled: true
-    labelSelector:
-      app.kubernetes.io/component: default
-      app.kubernetes.io/name: devspace-app
-```
-
-Streams the logs of the selected container instead of opening an interactive terminal session.
-
-Take a look at the documentation to learn more about [configuring the terminal proxy for development](https://devspace.cloud/docs/development/terminal).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/cli/development/configuration/file-synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -845,7 +867,7 @@ dev:
 
 This configuration would tell DevSpace to redeploy your project when the Dockerfile changes or any file within `./manifests`.
 
-Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/development/auto-reloading).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/cli/development/configuration/auto-reloading).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -867,38 +889,49 @@ images:
 
 DevSpace allows you to use certain pre-defined variables to make the configuration more flexible and easier to share with others. Additionally, you can add your own custom variables.
 
-Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/configuration/variables).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/cli/configuration/variables).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
 <details>
 <summary>
-Define multiple configs
+Define config profiles and patches
 </summary>
 
 ```yaml
 # File: ./devspace-configs.yaml
-config1:
-  config:
-    path: ../devspace.yaml
-config2:
-  config:
-    path: ../devspace.yaml
-  overrides:
-  - data:
-      images:
-        database:
-          image: dscr.io/my-username/alternative-db-image
-config3:
-  config:
-    path: ../devspace-prod.yaml
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  component:
+    containers:
+    - image: john/devbackend
+    - image: john/debugger
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+  - op: remove
+    path: deployments[0].component.containers[1]
+  - op: add
+    path: deployments[0].component.containers
+    value:
+      image: john/cache
 ```
 
-If you have complex deployment scenarios which are not easily addressable by dev overrides, you can create a file named `devspace-configs.yaml` and configure multiple different configurations for DevSpace. They can all use the same underlying base configuration and simply apply certain overrides to sections of the configuration (e.g. config1 and config2) OR they can be entirely different configuration files (e.g. config1 and config3).
+DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging enviroment) or for different deployment targets (e.g. dev, staging production).
 
-You can tell DevSpace to use a specific config file using thit command: `devspace use config [config-name]`
+You can tell DevSpace to switch permenantly to another profile using this command: `devspace use profile [config-name]`
 
-Take a look at the documentation to learn more about [using multiple config files](https://devspace.cloud/docs/configuration/multiple-configs).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Alternatively, you can temporarily use a different profile for running a single command using the `-p / --profile [NAME]` flag.
+
+Take a look at the documentation to learn more about [using config profiles and patches](https://devspace.cloud/docs/cli/configuration/profiles-patches).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -920,7 +953,7 @@ hooks:
 
 The command defined in this hook would be executed before building the images defined in the config.
 
-Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks). <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/cli/configuration/hooks). <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -1070,7 +1103,7 @@ Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud an
 
 **Yes.** You have multiple options:
 
-1. Use DevSpace with your current kubectl context (not using DevSpace Cloud at all).
+1. Use DevSpace with your current kube-context (not using DevSpace Cloud at all).
 2. Using the SaaS version of DevSpace Cloud and connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to automatically manage cluster users and permissions. This lets you created isolated namespaces (Spaces) within your Kubernetes clusters.
 3. Run DevSpace Cloud on-premise and connect your Kubernetes cluster to it in the same way you would use the SaaS version of DevSpace Cloud.
 
@@ -1079,7 +1112,7 @@ Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud an
 <details>
 <summary>What is a Helm chart?</summary>
 
-[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts. [Learn more about Helm charts.](https://devspace.cloud/docs/deployment/helm-charts/what-are-helm-charts)
+[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts. [Learn more about Helm charts.](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
 
 </details>
 

@@ -4,7 +4,7 @@ title: What is a Space?
 
 Spaces allow teams to develop together in a single kubernetes cluster. In essence spaces are **isolated kubernetes namespaces** and developers can create them whenever they need them. 
 
-> DevSpace CLI automatically configures their kube context locally so they are able to access kubernetes directly with DevSpace CLI and all their other favourite tools like kubectl, helm and kustomize.  
+> DevSpace automatically configures their kube context locally so they are able to access kubernetes directly with DevSpace and all their other favourite tools like kubectl, helm and kustomize.  
 
 DevSpace Cloud automatically sets up RBAC, resource quotas, network policies, pod security policies etc. to isolate these namespaces and makes sure that developers stay within the borders of their Spaces. Administrators are able to [configure everything](/docs/cloud/spaces/resource-limits) from limits for computing resources to custom resource templates that will be deployed automatically during space creation.  
 

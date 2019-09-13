@@ -3,119 +3,22 @@
   border-right: 1px solid #e7edf1;
 }
 
-/* large title for DevSpace Cloud */
-.navGroups .navGroup:nth-child(10)::before {
-  display: block;
-  margin: 1.4em 0 0.5em;
-  padding: 0.5em 0 0.4em;
-  border-bottom: 1px solid #ddd;
-  font-size: 20px;
-  font-family: "Raleway", sans-serif;
-  content: "DevSpace Cloud";
+.toc .toggleNav .navGroup:last-of-type {
+  margin-bottom: 18px;
 }
 
-.navGroups .navGroup:nth-child(10)::before {
-  content: "DevSpace Cloud";
-}
-
-.navGroups .navGroup .navListItem::after {
-  content: " ";
-  display: block;
-  width: 13px;
-  height: 2px;
-  position: absolute;
-  top: 14px;
-  background: #e7edf1;
-}
-
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(3)::after,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::after,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(5)::after,
-.navGroups
-  .navGroup:nth-child(2)
-  .navListItem:nth-child(n + 7):nth-child(-n + 12)::after,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 7)::after,
-.navGroups .navGroup:nth-child(4) .navListItem::after {
-  display: none;
-}
-
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::after,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(9)::after,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::after,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::after,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::after {
-  display: block;
-  top: 18px;
-}
-
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7),
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(9),
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1),
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5),
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9) {
-  margin-top: -3px;
-  padding-top: 3px;
-}
-
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4)::before,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::before,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(9)::before,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::before,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::before,
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
-  display: block;
-  margin: 5px 0 0 23px;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(7)::before {
-  content: "Registry";
-}
-
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(9)::before {
-  content: "Build Tools";
-}
-
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(1)::before {
-  content: "Basics";
-}
-
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(5)::before {
-  content: "Configure components";
-}
-
-.navGroups .navGroup:nth-child(4) .navListItem:nth-child(9)::before {
-  content: "Configure containers";
-}
-
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(3) .navItem,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(4) .navItem,
-.navGroups .navGroup:nth-child(2) .navListItem:nth-child(5) .navItem,
-.navGroups
-  .navGroup:nth-child(2)
-  .navListItem:nth-child(n + 7):nth-child(-n + 12)
-  .navItem,
-.navGroups .navGroup:nth-child(3) .navListItem:nth-child(n + 7) .navItem,
-.navGroups .navGroup:nth-child(4) .navListItem .navItem {
-  padding-left: 36px;
-}
-
-.toc .toggleNav .navGroup {
-  position: relative;
-  margin-bottom: 14px;
-}
-
-.toc .toggleNav ul {
-  margin-bottom: 16px;
+.toc .toggleNav .navGroup > ul {
+  margin: 0;
   padding: 0;
+}
+
+.toc .toggleNav .navGroup:not(.subNavGroup) > ul {
+  margin-bottom: 16px;
   padding-left: 5px;
 }
 
-.navGroups .navGroup .navListItem {
+.navGroups .navGroup {
   position: relative;
-  border-left: 1px solid #e7edf1;
 }
 
 .navGroups .navGroup .navItem {
@@ -124,6 +27,7 @@
   padding-left: 23px;
 }
 
+/* active nav link */
 .toc .toggleNav ul .navListItemActive .navItem {
   color: #1c65f7 !important;
   background: #fff;
@@ -149,6 +53,7 @@
   opacity: 0.6;
 }
 
+/* set siye of nav arrows */
 .collapsible .arrow svg {
   width: 20px;
   height: 20px;
@@ -165,11 +70,55 @@
   color: #1c65f7;
 }
 
-/* OnPage Nav */
+/* left border for all links and navsubgroup titles */
+.navGroups .navGroup .navListItem,
+.navGroups .navGroup .navGroupSubcategoryTitle {
+  position: relative;
+  border-left: 1px solid #e7edf1;
+  color: #717171;
+  font-weight: 400;
+}
+
+/* add horizontal line for first-level links and subnavgroup titles */
+.navGroups .navGroup .navListItem::after,
+.navGroups .navGroup .subNavGroup::after {
+  content: " ";
+  display: block;
+  width: 13px;
+  height: 2px;
+  position: absolute;
+  top: 14px;
+  background: #e7edf1;
+}
+
+/* hide second-level subnavgroup titles (because we are making the first link to title) */
+.navGroups .navGroup .subNavGroup .navGroupSubcategoryTitle {
+  display: none;
+}
+
+/* make first link of second-level subnavgroup to subnavgroup title */
+.navGroups .navGroup .subNavGroup .navGroupSubcategoryTitle {
+  display: none;
+}
+
+/* indent and style second-level links (except first one which is used as title) */
+.navGroups .navGroup .subNavGroup .navListItem:nth-child(n+2) .navItem {
+  padding-left: 38px;
+  font-weight: 200;
+}
+
+/* remove horizontal line for second-level links in subgroups */
+.navGroups .navGroup .subNavGroup .navListItem:nth-child(n+2)::after {
+  display: none;
+}
+
+
+/* onpage nav */
 .separateOnPageNav .navPusher .onPageNav > .toc-headings {
   padding-top: 55px;
 }
 
+/* onpage nav title */
 .separateOnPageNav .navPusher .onPageNav > .toc-headings::before {
   content: "Contents";
   font-family: "Raleway", sans-serif;
@@ -182,6 +131,10 @@
 
 .separateOnPageNav .navPusher .onPageNav ul {
   margin: 0;
+}
+
+.separateOnPageNav .navPusher .onPageNav > ul > li > a {
+  font-weight: 600;
 }
 
 .separateOnPageNav .navPusher .onPageNav a.active {

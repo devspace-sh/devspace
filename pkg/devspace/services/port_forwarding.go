@@ -39,7 +39,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 				return nil, errors.Errorf("Error creating target selector: %v", err)
 			}
 
-			log.StartWait("Port-Forwarding: Waiting for pods...")
+			log.StartWait("Port-Forwarding: Waiting for containers to start...")
 			pod, err := selector.GetPod(log)
 			log.StopWait()
 			if err != nil {

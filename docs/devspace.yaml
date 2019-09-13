@@ -1,4 +1,4 @@
-version: v1beta2
+version: v1beta3
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
@@ -12,8 +12,8 @@ deployments:
       ports:
       - port: 3000
 dev:
-  terminal:
-    disabled: true
+  open:
+  - url: http://localhost:3000/docs/introduction
   ports:
   - labelSelector:
       app.kubernetes.io/component: docs

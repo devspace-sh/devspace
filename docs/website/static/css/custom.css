@@ -8,6 +8,16 @@ body a, body a:hover {
     color: #1c65f7;
 }
 
+
+body h1 a,
+body h2 a,
+body h3 a,
+body h4 a,
+body h5 a,
+body blockquote a {
+    color: #000000 !important;
+}
+
 body a:hover {
     text-decoration: underline;
 }
@@ -18,20 +28,23 @@ body h2 {
     margin-bottom: 0.5em;
 }
 
-body h3, 
+body h3 {
+    font-size: 1.28em;
+    margin-top: 2em;
+    margin-bottom: 0.5em;
+}
+
 body h4, 
 body h5, 
 body h6 {
+    font-size: 1em;
     margin-top: 1.2em;
     margin-bottom: 0.3em;
 }
 
-body h3 {
-    font-size: 1.2em;
-}
-
 body p {
     margin: 0.5em 0;
+    color: #505050;
 }
 
 body ul, 
@@ -79,8 +92,11 @@ body blockquote {
     margin-top: 1em;
     background-color: rgb(255, 230, 200);
     border-left-color: #f80;
-    color: #6e6e6e;
     border-radius: 2px;
+}
+
+body blockquote p {
+    color: #6e6e6e;
 }
 
 .docs-next {

@@ -34,7 +34,9 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 		return 0, err
 	}
 
+	log.WriteString("\n")
 	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	log.WriteString("\n")
 
 	if selectorParameter.CmdParameter.Interactive == true && len(container.Command) > 0 {
 		log.WriteString("\n")

@@ -59,8 +59,11 @@ jobs:
         - "8"
       before_install:
         - cd dist/npm
+      before_deploy:
+        - export NPM_TAG=$(node index.js get-tag)
       deploy:
         provider: npm
+        tag: ${NPM_TAG}
         email: "npm@devspace.cloud"
         api_key:
           secure: "Kd7IOVSD01t1kr02heF5hk3HfE4hWm0Sl6PI2jiCYK2tyrIE7OnS/qFs6k6LFQroXga0bXO7uk3a1XPzmQ4ASY7+2+g7BYUgvp5xcwerYEJNM/g9xc8yfxx2DRM4WGozNxfMao/2Bf0IiWPwpbZ9FX9g0k4ahjtg621juQbeSorFcEa5lZ5Ka5sz/FxqrP02IoX62sFVLI6V5Ua7I1tFYQX60Ml2FWhNUwzfIQROPmPpwv12inUoJWkiyidSgJvIk/i44Taqzn23emW++ajOeFrpNzLiB+8T9apeoG01oaYPY3rVe5irTP2jdhJZ23+pSdLoSHzdjhwh5C9dTSnglWXU4A5tHYqAnznqSrKQXOjUDFswnAQLKJocSW3V5ZrnXFnKa6FEjqaAiowaALpwy0QkqWNPJfBPignn7ZW9/GSSig7DvR+aYma6+FGotC6JAag7S4yzKiw5G1adCKOzG34vzufyvCcsV/WFLrC9TdjRVn8M3zUNuQpPy3F4m4o0WTi8ial4jyCPqRP2vRja5tErpfCjcnJFCFul2e3grZBUP22ZjGFFbZxKtveJ3sQVa5DGr6pNnU8HFa6BdKl7++Ek3sIcIDvS6ZwggzfPcxOir7QfkVybAbWNp4OTs4PFIGHrOIPBFTJ9Xai86s4oQUCW8+NzDqISRDZhaFfjx4I="

@@ -16,7 +16,7 @@ type imageCmd struct {
 	Tag            string
 	ContextPath    string
 	DockerfilePath string
-	BuildEngine    string
+	BuildTool      string
 }
 
 func newImageCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
@@ -36,8 +36,8 @@ devspace add image my-image --image=dockeruser/devspaceimage2
 devspace add image my-image --image=dockeruser/devspaceimage2 --tag=alpine
 devspace add image my-image --image=dockeruser/devspaceimage2 --context=./context
 devspace add image my-image --image=dockeruser/devspaceimage2 --dockerfile=./Dockerfile
-devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=docker
-devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=kaniko
+devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=docker
+devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -48,7 +48,7 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildengine=kani
 	addImageCmd.Flags().StringVar(&cmd.Tag, "tag", "", "The tag of the image")
 	addImageCmd.Flags().StringVar(&cmd.ContextPath, "context", "", "The path of the images' context")
 	addImageCmd.Flags().StringVar(&cmd.DockerfilePath, "dockerfile", "", "The path of the images' dockerfile")
-	addImageCmd.Flags().StringVar(&cmd.BuildEngine, "buildengine", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
+	addImageCmd.Flags().StringVar(&cmd.BuildTool, "buildtool", "", "Specify which engine should build the file. Should match this regex: docker|kaniko")
 
 	addImageCmd.MarkFlagRequired("image")
 	return addImageCmd
@@ -70,7 +70,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildEngine)
+	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
 	if err != nil {
 		return err
 	}

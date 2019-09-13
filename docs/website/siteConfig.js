@@ -9,7 +9,8 @@
 // site configuration options.
 
 const siteConfig = {
-  projectName: "devspace-docs",
+  organizationName: "devspace-cloud",
+  projectName: "devspace",
   title: "DevSpace Documentation", // Title for your website.
   tagline: "A website for testing",
   url: "https://devspace.cloud", // Your website URL
@@ -17,10 +18,10 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    { href: "http://devspace.cloud/pricing", label: "Pricing" },
-    { href: "http://devspace.cloud/about", label: "About" },
-    { doc: "getting-started/installation", label: "Docs" },
-    { href: "http://devspace.cloud/help", label: "Help" },
+    { href: "https://devspace.cloud/pricing/", label: "" },
+    { href: "https://devspace.cloud/about/", label: "About" },
+    { href: "/docs/introduction", label: "Docs" },
+    { href: "https://devspace.cloud/help/", label: "Help" },
     { href: "https://app.devspace.cloud/", label: "Login" },
     { href: "#", label: "" },
     { search: true }
@@ -75,7 +76,7 @@ const siteConfig = {
   ],
 
   stylesheets: [
-    "https://fonts.googleapis.com/css?family=Play|Raleway:400,500,600"
+    "https://fonts.googleapis.com/css?family=Play|Kanit:400"
   ],
 
   // On page navigation for the current documentation page.
