@@ -93,10 +93,12 @@ dev:
 
 ## `dev.interactive.terminal`
 The `terminal` option expects an objects having the following container selection properties:
-- `imageName` to select a container based on an image specified in `images` (precedence over `labelSelector`)
-- `labelSelector` to select a pod based a Kubernetes label selector
-- `containerName` to select a container based on its name
+- `imageName` to select a container based on an image specified in `images` (cannot be used in combiation with `labelSelector`)
+- `labelSelector` to select a pod based a Kubernetes label selector (cannot be used in combiation with `imageName`)
+- `containerName` to select a container based on its name (optional when `labelSelector` is used)
 - `namespace` to select a container from a namespace different than the default namespace of the current kube-context
+
+> You can set **either** `labelSelector` (optionally in combiantion with `containerName`) **or** `imageName`. Both options can be combined with the optional `namespace` option if needed.
 
 Additionally, the object expected in `terminal` has the following non-selection property:
 - `command` defines a command to run when starting the terminal session (default: `/bin/bash` with fallback `/bin/sh`)
