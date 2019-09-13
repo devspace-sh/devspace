@@ -232,7 +232,7 @@ func TestAddAndRemoveImage(t *testing.T) { //Create tempDir and go into it
 	}()
 
 	configutil.SetFakeConfig(&latest.Config{})
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
