@@ -513,7 +513,7 @@ profiles:               # Configure different profiles (e.g. dev, staging, prod,
         path: images.default.entrypoint
         value: [npm, run, debug]
 
-run:                    # Share your workflows and let your colleagues use them via `devspace run [command-name]`
+commands:               # Shared Commands: let your colleagues use them via `devspace run [command-name]`
   - name: debug-backend
     command: devspace dev -i --profile=debug-backend
 
