@@ -45,8 +45,10 @@ func TestListSyncs(t *testing.T) {
 						&latest.SyncConfig{
 							LocalSubPath:  "local",
 							ContainerPath: "container",
-							Selector:      "mySelector",
-							ExcludePaths:  []string{"path1", "path2"},
+							LabelSelector: map[string]string{
+								"app": "test",
+							},
+							ExcludePaths: []string{"path1", "path2"},
 						},
 						&latest.SyncConfig{
 							LocalSubPath:  "local2",

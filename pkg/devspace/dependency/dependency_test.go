@@ -142,7 +142,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, &testLogger{})
+		err = UpdateAll(testConfig, generatedConfig, testCase.allowCyclicParam, "", &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
@@ -259,9 +259,9 @@ Done Resolved 1 dependencies`,
 			},
 		}
 
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
+		}
 
 		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &testLogger{})
 
@@ -374,10 +374,10 @@ Done Resolved 1 dependencies`,
 				"default": testCase.activeConfig,
 			},
 		}
-		
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
+
+		kubeClient := &kubectl.Client{
+			Client: fake.NewSimpleClientset(),
+		}
 
 		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &testLogger{})
 

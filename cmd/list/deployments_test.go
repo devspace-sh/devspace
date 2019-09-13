@@ -178,7 +178,6 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	newDeploymentsCmd(&flags.GlobalFlags{}).RunDeploymentsStatus(nil, []string{})
-
+	(&deploymentsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunDeploymentsStatus(nil, []string{})
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

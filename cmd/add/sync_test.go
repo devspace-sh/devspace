@@ -1,11 +1,11 @@
 package add
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -26,7 +26,6 @@ type addSyncTestCase struct {
 	namespace     string
 	containerPath string
 	excludedPaths string
-	service       string
 
 	expectedOutput   string
 	expectedPanic    string
@@ -131,21 +130,24 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 	}()
 
 	(&syncCmd{
+		GlobalFlags: &flags.GlobalFlags{
+			Namespace: testCase.namespace,
+		},
 		LabelSelector: testCase.labelSelector,
 		LocalPath:     testCase.localPath,
 		ContainerPath: testCase.containerPath,
 		ExcludedPaths: testCase.excludedPaths,
-		Namespace:     testCase.namespace,
-		Service:       testCase.service,
 	}).RunAddSync(nil, testCase.args)
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
-	config := configutil.GetBaseConfig(context.Background())
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	assert.Equal(t, len(testCase.expectedSync), len(config.Dev.Sync), "Wrong number of selectors in testCase %s", testCase.name)
 	for index, sync := range config.Dev.Sync {
-		assert.Equal(t, testCase.expectedSync[index].Selector, sync.Selector, "Selector of sync unexpected in testCase %s", testCase.name)
 		assert.Equal(t, testCase.expectedSync[index].Namespace, sync.Namespace, "Namespace of sync unexpected in testCase %s", testCase.name)
 		assert.Equal(t, testCase.expectedSync[index].ContainerName, sync.ContainerName, "Container of sync unexpected in testCase %s", testCase.name)
 		assert.Equal(t, testCase.expectedSync[index].LocalSubPath, sync.LocalSubPath, "Local path of sync unexpected in testCase %s", testCase.name)

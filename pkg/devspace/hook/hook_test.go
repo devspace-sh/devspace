@@ -2,7 +2,7 @@ package hook
 
 import (
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -66,7 +66,7 @@ func TestHookWithoutExecution(t *testing.T) {
 
 }
 
-func TestHookWithExecution(t *testing.T){
+func TestHookWithExecution(t *testing.T) {
 	err := Execute(&latest.Config{
 		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
@@ -76,7 +76,7 @@ func TestHookWithExecution(t *testing.T){
 					},
 				},
 				Command: "echo",
-				Args: []string{"hello"},
+				Args:    []string{"hello"},
 			},
 		},
 	}, Before, StageDeployments, "theseDeployments", &log.DiscardLogger{})

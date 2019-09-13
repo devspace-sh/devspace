@@ -49,14 +49,14 @@ func TestConnectCluster(t *testing.T) {
 	options := &ConnectClusterOptions{
 		ClusterName: "#",
 	}
-	err := provider.ConnectCluster(options)
+	err := provider.ConnectCluster(options, log.GetInstance())
 	assert.Error(t, err, "Cluster name # can only contain letters, numbers and dashes (-)", "Wrong or no error when connecting cluster with wrong clustername")
 
 	options.ClusterName = ""
 	survey.SetNextAnswer("aaa")
 	options.KubeContext = "invalidContext"
 
-	err = provider.ConnectCluster(options)
+	err = provider.ConnectCluster(options, log.GetInstance())
 	assert.Error(t, err, "new kubectl client: Error loading kube config, context 'invalidContext' doesn't exist", "Wrong or no error when connecting cluster with invalid context")
 }
 
@@ -119,7 +119,7 @@ func TestDeleteClusterUnexported(t *testing.T) {
 func TestSpecifyDomain(t *testing.T) {
 	provider := &Provider{}
 	survey.SetNextAnswer("some.Domain")
-	err := provider.specifyDomain(0, &ConnectClusterOptions{})
+	err := provider.specifyDomain(0, &ConnectClusterOptions{}, log.GetInstance())
 	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 
@@ -201,7 +201,7 @@ func TestGetKey(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		returnedKey, err := getKey(provider, testCase.forceQuestionParam)
+		returnedKey, err := getKey(provider, testCase.forceQuestionParam, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)

@@ -76,7 +76,7 @@ func TestCreateReport(t *testing.T) {
 	_, err = kubeClient.Client.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
 		Status: k8sv1.PodStatus{
 			Reason:    "Running",
-			StartTime: &metav1.Time{time.Now().Add(-MinimumPodAge / 10 * 9)},
+			StartTime: &metav1.Time{Time: time.Now().Add(-MinimumPodAge / 10 * 9)},
 		},
 	})
 	assert.NilError(t, err, "Error fixing pod")

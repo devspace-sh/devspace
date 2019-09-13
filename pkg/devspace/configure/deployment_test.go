@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
@@ -39,7 +40,7 @@ func TestGetDockerfileComponentDeployment(t *testing.T) {
 			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename"},
 			expectedImage: "someRegistry.com/user/imagename",
 			expectedPort:  1234,
-			expectedErr: "get image config: Registry authentication failed for someRegistry.com/user/imagename.\n         Please login via `docker login someRegistry.com/user/imagename` and try again.",
+			expectedErr:   "get image config: Registry authentication failed for someRegistry.com/user/imagename.\n         Please login via `docker login someRegistry.com/user/imagename` and try again.",
 		},
 		GetDockerfileComponentDeploymentTestCase{
 			name:               "No answers, only 1 port in dockerfile",
@@ -64,7 +65,7 @@ EXPOSE 1012`,
 		},
 		GetDockerfileComponentDeploymentTestCase{
 			name:        "Invalid port",
-			imageName:  "someImage",
+			imageName:   "someImage",
 			answers:     []string{"hello"},
 			expectedErr: "parsing port: strconv.Atoi: parsing \"hello\": invalid syntax",
 		},
@@ -110,7 +111,7 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context)
+		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -151,8 +152,8 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			icdName:   "someDeployment",
 			imageName: "someImage:someTag",
 
-			expectedImage: "someImage",
-			expectedTag: "someTag",
+			expectedImage:          "someImage",
+			expectedTag:            "someTag",
 			expectedDeploymentName: "someDeployment",
 			expectedPort:           12345,
 		},
@@ -169,7 +170,7 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetImageComponentDeployment(testCase.icdName, testCase.imageName)
+		imageConfig, deploymentConfig, err := GetImageComponentDeployment(testCase.icdName, testCase.imageName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -220,7 +221,7 @@ func TestGetPredefinedComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		deploymentConfig, err := GetPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName)
+		deploymentConfig, err := GetPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -421,7 +422,12 @@ func TestRemoveDeployment(t *testing.T) {
 		}
 		configutil.SetFakeConfig(fakeConfig)
 
-		found, err := RemoveDeployment(testCase.allFlag, testCase.deploymentName)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		found, err := RemoveDeployment(config, testCase.allFlag, testCase.deploymentName)
 
 		assert.Equal(t, found, testCase.expectedFound, "Returned found-boolean unexpected in testCase %s", testCase.name)
 		assert.Equal(t, len(fakeConfig.Deployments), len(testCase.expectedRemainingDeployments), "Unexpected amount of remaining deployments in testCase %s", testCase.name)

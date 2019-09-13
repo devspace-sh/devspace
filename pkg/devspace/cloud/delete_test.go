@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -17,13 +18,13 @@ import (
 
 func TestDeleteCluster(t *testing.T) {
 	provider := &Provider{}
-	err := provider.DeleteCluster(&latest.Cluster{}, true, true)
+	err := provider.DeleteCluster(&latest.Cluster{}, true, true, log.GetInstance())
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a cluster without a token")
 }
 
 func TestDeleteSpace(t *testing.T) {
 	provider := &Provider{}
-	err := provider.DeleteSpace(&latest.Space{Cluster: &latest.Cluster{}})
+	err := provider.DeleteSpace(&latest.Space{Cluster: &latest.Cluster{}}, log.GetInstance())
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 

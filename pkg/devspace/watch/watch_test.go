@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )

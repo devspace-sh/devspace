@@ -12,7 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
-	
+
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -206,7 +206,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generating imageTag failed: %v", err)
 	}
-	
+
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}

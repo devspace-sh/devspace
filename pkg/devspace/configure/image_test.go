@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	gohomedir "github.com/mitchellh/go-homedir"
@@ -130,8 +130,7 @@ func TestGetImageConfigFromDockerfile(t *testing.T) {
 		}
 		fsutil.WriteToFile([]byte(testCase.providersYaml), filepath.Join(dir, "providers.yaml"))
 
-		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, "devspace")
-
+		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, "devspace", log.GetInstance())
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 			assert.Equal(t, imageConfig.Image, testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
@@ -233,32 +232,36 @@ func TestAddAndRemoveImage(t *testing.T) { //Create tempDir and go into it
 	}()
 
 	configutil.SetFakeConfig(&latest.Config{})
-	config := configutil.GetBaseConfig(context.Background())
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	config.Images = nil
 	fsutil.WriteToFile([]byte(""), "devspace.yaml")
-	AddImage("NewTestImage", "TestImageName", "vTest", "mycontext", "Dockerfile", "docker")
+	AddImage(config, "NewTestImage", "TestImageName", "vTest", "mycontext", "Dockerfile", "docker")
 	assert.Equal(t, 1, len(config.Images), "New image not added: Wrong number of images")
 	assert.Equal(t, "TestImageName", config.Images["NewTestImage"].Image, "New image not correctly added")
 	assert.Equal(t, "vTest", config.Images["NewTestImage"].Tag, "New image not correctly added")
 
-	AddImage("SecoundTestImage", "SecoundImageName", "v2", "mycontext", "Dockerfile", "kaniko")
+	AddImage(config, "SecoundTestImage", "SecoundImageName", "v2", "mycontext", "Dockerfile", "kaniko")
 	assert.Equal(t, 2, len(config.Images), "New image not added: Wrong number of images")
 	assert.Equal(t, "SecoundImageName", config.Images["SecoundTestImage"].Image, "New image not correctly added")
 	assert.Equal(t, "v2", config.Images["SecoundTestImage"].Tag, "New image not correctly added")
 
-	AddImage("ThirdTestImage", "ThirdImageName", "v3", "mycontext", "Dockerfile", "wrongBuildEngine")
+	AddImage(config, "ThirdTestImage", "ThirdImageName", "v3", "mycontext", "Dockerfile", "wrongBuildEngine")
 	assert.Equal(t, 3, len(config.Images), "New image not added: Wrong number of images")
 	assert.Equal(t, "ThirdImageName", config.Images["ThirdTestImage"].Image, "New image not correctly added")
 	assert.Equal(t, "v3", config.Images["ThirdTestImage"].Tag, "New image not correctly added")
 
-	err = RemoveImage(false, []string{})
+	err = RemoveImage(config, false, []string{})
 	assert.Error(t, err, "You have to specify at least one image")
 
-	err = RemoveImage(false, []string{"Doesn'tExist"})
+	err = RemoveImage(config, false, []string{"Doesn'tExist"})
 	assert.NilError(t, err, "Error removing non existent image: %v")
 	assert.Equal(t, 3, len(config.Images), "RemoveImage removed an image that wasn't specified")
 
-	err = RemoveImage(false, []string{"SecoundTestImage"})
+	err = RemoveImage(config, false, []string{"SecoundTestImage"})
 	assert.NilError(t, err, "Error removing existent image: %v")
 	assert.Equal(t, 2, len(config.Images), "RemoveImage doesn't remove a specified image")
 	assert.Equal(t, true, config.Images["SecoundTestImage"] == nil, "RemoveImage removed wrong image")

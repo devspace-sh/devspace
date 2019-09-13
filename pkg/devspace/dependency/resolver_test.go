@@ -1,7 +1,6 @@
 package dependency
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -184,8 +183,7 @@ func TestResolver(t *testing.T) {
 		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &testLogger{})
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
-		dependencies, err := testResolver.Resolve(context.Background(), testCase.dependencyTasks, testCase.updateParam)
-
+		dependencies, err := testResolver.Resolve(testCase.dependencyTasks, "", testCase.updateParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else {

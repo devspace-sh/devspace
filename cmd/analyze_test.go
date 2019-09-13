@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -231,7 +232,9 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	}()
 
 	(&AnalyzeCmd{
-		Namespace: testCase.namespaceFlag,
-		Wait:      testCase.waitFlag,
+		GlobalFlags: &flags.GlobalFlags{
+			Namespace: testCase.namespaceFlag,
+		},
+		Wait: testCase.waitFlag,
 	}).RunAnalyze(nil, []string{})
 }

@@ -46,7 +46,7 @@ func TestPods(t *testing.T) {
 					RestartCount: 1,
 					LastTerminationState: k8sv1.ContainerState{
 						Terminated: &k8sv1.ContainerStateTerminated{
-							FinishedAt: metav1.Time{timeNow},
+							FinishedAt: metav1.Time{Time: timeNow},
 							ExitCode:   1,
 							Message:    "This container terminated. Happy debugging!",
 							Reason:     "Stopped",

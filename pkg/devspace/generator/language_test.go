@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -44,7 +45,7 @@ func TestContainerizeApplicationWithExistingDockerfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error writing file: %v", err)
 	}
-	err = ContainerizeApplication("Dockerfile", "", "")
+	err = ContainerizeApplication("Dockerfile", "", "", log.GetInstance())
 	assert.Error(t, err, "Dockerfile at Dockerfile already exists", "Unexpected or no error when trying to containerize with existing Dockerfile")
 }
 
@@ -91,7 +92,7 @@ app.listen(3000, function () {
 	}
 
 	survey.SetNextAnswer("javascript")
-	err = ContainerizeApplication("", "", "")
+	err = ContainerizeApplication("", "", "", log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error containerizing application: %v", err)
 	}

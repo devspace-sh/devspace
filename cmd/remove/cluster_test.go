@@ -20,6 +20,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )

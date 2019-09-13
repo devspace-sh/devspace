@@ -7,6 +7,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
@@ -95,13 +96,13 @@ func TestComponentGenerator(t *testing.T) {
 	assert.Equal(t, "hello world", componentList[0].Description, "Wrong component returned from ListComponents")
 
 	//Test GetComponentTemplate with not existing component
-	_, err = componentGenerator.GetComponentTemplate("doesnotexist")
+	_, err = componentGenerator.GetComponentTemplate("doesnotexist", log.GetInstance())
 	if err == nil {
 		t.Fatalf("No Error getting template of not existing component")
 	}
 
 	//Test GetComponentTemplate with not existing template
-	_, err = componentGenerator.GetComponentTemplate("mycomponent")
+	_, err = componentGenerator.GetComponentTemplate("mycomponent", log.GetInstance())
 	if err == nil {
 		t.Fatalf("No Error getting template of not existing template")
 	}
@@ -111,7 +112,7 @@ func TestComponentGenerator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error writing file: %v", err)
 	}
-	_, err = componentGenerator.GetComponentTemplate("mycomponent")
+	_, err = componentGenerator.GetComponentTemplate("mycomponent", log.GetInstance())
 	if err == nil {
 		t.Fatalf("No Error getting template of template with invalid yaml")
 	}
@@ -121,7 +122,7 @@ func TestComponentGenerator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error writing file: %v", err)
 	}
-	template, err := componentGenerator.GetComponentTemplate("mycomponent")
+	template, err := componentGenerator.GetComponentTemplate("mycomponent", log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error getting template of template: %v", err)
 	}
@@ -151,20 +152,20 @@ func TestVarReplaceFn(t *testing.T) {
 
 	survey.SetNextAnswer("DoesNeedQuestion")
 
-	val, _ := comp.varReplaceFn("", "${hello}")
+	val, _ := comp.varReplaceFn("", "${hello}", log.GetInstance())
 	assert.Equal(t, "world", val, "Wrong value returned for hello")
 
-	val, _ = comp.varReplaceFn("", "${isThisATest}")
+	val, _ = comp.varReplaceFn("", "${isThisATest}", log.GetInstance())
 	assert.Equal(t, true, val, "Wrong value returned for isThisATest")
-	val, _ = comp.varReplaceFn("", "${OnePlusOne}")
+	val, _ = comp.varReplaceFn("", "${OnePlusOne}", log.GetInstance())
 	assert.Equal(t, 2, val, "Wrong value returned for OnePlusOne")
-	val, _ = comp.varReplaceFn("", "${NeedsQuestion}")
+	val, _ = comp.varReplaceFn("", "${NeedsQuestion}", log.GetInstance())
 	assert.Equal(t, "DoesNeedQuestion", val, "Wrong value returned for NeedsQuestion")
 
 	survey.SetNextAnswer("DoesNeedQuestionAsWell")
-	val, _ = comp.varReplaceFn("", "${AlsoNeedsQuestion}")
+	val, _ = comp.varReplaceFn("", "${AlsoNeedsQuestion}", log.GetInstance())
 	assert.Equal(t, "DoesNeedQuestionAsWell", val, "Wrong value returned for AlsoNeedsQuestion")
 
-	val, _ = comp.varReplaceFn("", "${Doesn'tMatchRegex")
+	val, _ = comp.varReplaceFn("", "${Doesn'tMatchRegex", log.GetInstance())
 	assert.Equal(t, "", val, "Wrong value returned for not matching input")
 }

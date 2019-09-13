@@ -2,7 +2,7 @@ package helm
 
 import (
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"k8s.io/client-go/kubernetes/fake"

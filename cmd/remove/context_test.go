@@ -22,6 +22,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 	restclient "k8s.io/client-go/rest"

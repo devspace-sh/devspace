@@ -9,6 +9,7 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -137,7 +138,7 @@ func TestGetClusterKey(t *testing.T) {
 			DefaultGraphqlClient = testCase.graphQLClient
 		}
 
-		key, err := provider.GetClusterKey(&latest.Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
+		key, err := provider.GetClusterKey(&latest.Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true}, log.GetInstance())
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
 			assert.Equal(t, testCase.expectedKey, key, "Wrong key returned in testCase %s", testCase.name)

@@ -95,7 +95,7 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext,
 			return nil, errors.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
-		return nil, errors.Errorf("Couldn't find '%s': %v", err)
+		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
 	}
 
 	fileContent, err := ioutil.ReadFile(configPath)

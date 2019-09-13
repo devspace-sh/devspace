@@ -68,6 +68,8 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 		tail = ptr.Int64(100)
 	}
 
+	defer cancelFunc()
+
 	// Make channel buffered
 	lines := make(chan *logLine, 100)
 	done := make(chan bool)
@@ -132,8 +134,6 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 			writer.Write([]byte(ansi.Color(fmt.Sprintf("[%s]", line.name), line.color) + " " + line.line + "\n"))
 		}
 	}
-
-	return nil
 }
 
 // Logs prints the container logs

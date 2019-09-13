@@ -1,7 +1,6 @@
 package add
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -123,7 +122,10 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
-	config := configutil.GetBaseConfig(context.Background())
+	config, err := configutil.GetBaseConfig("")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	assert.Equal(t, len(testCase.expectedImages), len(config.Images), "Wrong number of images in testCase %s", testCase.name)
 	for nameInConfig, image := range config.Images {

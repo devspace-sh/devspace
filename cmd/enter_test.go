@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -34,8 +35,6 @@ type enterTestCase struct {
 	graphQLResponses     []interface{}
 	providerList         []*cloudlatest.Provider
 
-	switchContextFlag bool
-	selectorFlag      string
 	containerFlag     string
 	labelSelectorFlag string
 	namespaceFlag     string
@@ -174,11 +173,11 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	}
 
 	(&EnterCmd{
-		SwitchContext: testCase.switchContextFlag,
-		Selector:      testCase.selectorFlag,
+		GlobalFlags: &flags.GlobalFlags{
+			Namespace: testCase.namespaceFlag,
+		},
 		Container:     testCase.containerFlag,
 		LabelSelector: testCase.labelSelectorFlag,
-		Namespace:     testCase.namespaceFlag,
 		Pod:           testCase.podFlag,
 		Pick:          testCase.pickFlag,
 	}).Run(nil, []string{})

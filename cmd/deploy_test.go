@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -35,14 +36,12 @@ type deployTestCase struct {
 
 	namespaceFlag               string
 	kubeContextFlag             string
-	dockerTargetFlag            string
 	forceBuildFlag              bool
 	skipBuildFlag               bool
 	buildSequentialFlag         bool
 	forceDeployFlag             bool
 	deploymentsFlag             string
 	forceDependenciesFlag       bool
-	switchContextFlag           bool
 	skipPushFlag                bool
 	allowCyclicDependenciesFlag bool
 
@@ -208,9 +207,10 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 	}
 
 	(&DeployCmd{
-		Namespace:    testCase.namespaceFlag,
-		KubeContext:  testCase.kubeContextFlag,
-		DockerTarget: testCase.dockerTargetFlag,
+		GlobalFlags: &flags.GlobalFlags{
+			Namespace:   testCase.namespaceFlag,
+			KubeContext: testCase.kubeContextFlag,
+		},
 
 		ForceBuild:        testCase.forceBuildFlag,
 		SkipBuild:         testCase.skipBuildFlag,
@@ -219,9 +219,7 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 		Deployments:       testCase.deploymentsFlag,
 		ForceDependencies: testCase.forceDependenciesFlag,
 
-		SwitchContext: testCase.switchContextFlag,
-		SkipPush:      testCase.skipPushFlag,
-
+		SkipPush:                testCase.skipPushFlag,
 		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
 	}).Run(nil, []string{})
 }

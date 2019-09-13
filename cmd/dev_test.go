@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -217,6 +218,10 @@ func testDev(t *testing.T, testCase devTestCase) {
 	}
 
 	(&DevCmd{
+		GlobalFlags: &flags.GlobalFlags{
+			Namespace: testCase.namespaceFlag,
+		},
+
 		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
 		SkipPush:                testCase.skipPushFlag,
 
@@ -231,12 +236,7 @@ func testDev(t *testing.T, testCase devTestCase) {
 		Terminal:        testCase.terminalFlag,
 		ExitAfterDeploy: testCase.exitAfterDeployFlag,
 		SkipPipeline:    testCase.skipPipelineFlag,
-		SwitchContext:   testCase.switchContextFlag,
 		Portforwarding:  testCase.portForwardingFlag,
 		VerboseSync:     testCase.verboseSyncFlag,
-		Selector:        testCase.selectorFlag,
-		Container:       testCase.containerFlag,
-		LabelSelector:   testCase.labelSelectorFlag,
-		Namespace:       testCase.namespaceFlag,
 	}).Run(nil, []string{})
 }

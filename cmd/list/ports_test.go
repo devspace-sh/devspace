@@ -44,7 +44,9 @@ func TestListPorts(t *testing.T) {
 				Dev: &latest.DevConfig{
 					Ports: []*latest.PortForwardingConfig{
 						&latest.PortForwardingConfig{
-							Selector: "mySelector",
+							LabelSelector: map[string]string{
+								"app": "test",
+							},
 							PortMappings: []*latest.PortMapping{
 								&latest.PortMapping{
 									LocalPort:  ptr.Int(1234),

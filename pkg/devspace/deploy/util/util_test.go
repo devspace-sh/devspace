@@ -1,21 +1,20 @@
-package deploy 
+package deploy
 
 import (
-	"testing"
-	"os"
 	"io/ioutil"
-	
+	"os"
+	"testing"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"k8s.io/client-go/kubernetes/fake"
 	//"gotest.tools/assert"
 )
 
@@ -128,7 +127,7 @@ func TestHelmDeployment(t *testing.T) {
 
 	testConfig.Deployments = []*latest.DeploymentConfig{
 		&latest.DeploymentConfig{
-			Name: "test-deployment",
+			Name:    "test-deployment",
 			Kubectl: &latest.KubectlConfig{},
 		},
 	}
@@ -148,7 +147,7 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 7. Delete test namespace
-	err =  kubeClient.Client.CoreV1().Namespaces().Delete(namespace, nil)
+	err = kubeClient.Client.CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}
@@ -246,16 +245,16 @@ func TestPurgeDeployments(t *testing.T) {
 	}
 	PurgeDeployments(testConfig, cache, kubeClient, []string{}, &log.DiscardLogger{})
 	testConfig.Deployments = []*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: "test-deployment",
-				Kubectl: &latest.KubectlConfig{
-					Manifests: []string{},
-				},
+		&latest.DeploymentConfig{
+			Name: "test-deployment",
+			Kubectl: &latest.KubectlConfig{
+				Manifests: []string{},
 			},
-			&latest.DeploymentConfig{
-				Name: "NotListed",
-			},
-		}
+		},
+		&latest.DeploymentConfig{
+			Name: "NotListed",
+		},
+	}
 	PurgeDeployments(testConfig, cache, kubeClient, []string{"test-deployment"}, &log.DiscardLogger{})
 
 }
@@ -431,7 +430,7 @@ description: A Kubernetes-Native Application`))
 	if err != nil {
 		return err
 	}
-	
+
 	err = os.Mkdir("chart/templates", fileInfo.Mode())
 	if err != nil {
 		return err

@@ -39,5 +39,4 @@ func TestParse(t *testing.T) {
 	assert.NilError(t, err, "Error parsing map with defined version v1alpha1: %v")
 	assert.Equal(t, latest.Version, config.Version, "Conversion to latest version not correct")
 	assert.Equal(t, "TestImg", config.Images["TestImg"].Image, "Conversion to latest version not correct")
-
 }

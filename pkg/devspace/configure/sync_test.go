@@ -7,6 +7,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
 )
@@ -20,7 +21,6 @@ type addSyncPathTestCase struct {
 	namespace                string
 	labelSelectorParam       string
 	excludedPathsStringParam string
-	serviceNameParam         string
 
 	expectedErr          string
 	expectedSyncInConfig []*latest.SyncConfig
@@ -28,24 +28,6 @@ type addSyncPathTestCase struct {
 
 func TestAddSyncPath(t *testing.T) {
 	testCases := []addSyncPathTestCase{
-		addSyncPathTestCase{
-			name:               "Add sync path with labelSelector and serviceName",
-			serviceNameParam:   "service",
-			labelSelectorParam: "hello=world",
-			expectedErr:        "both service and label-selector specified. This is illegal because the label-selector is already specified in the referenced service. Therefore defining both is redundant",
-		},
-		addSyncPathTestCase{
-			name: "Add sync path with unpresent service",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Selectors: []*latest.SelectorConfig{
-						&latest.SelectorConfig{Name: "OnlySelector"},
-					},
-				},
-			},
-			serviceNameParam: "doesn'tExist",
-			expectedErr:      "no service with name doesn'tExist exists",
-		},
 		addSyncPathTestCase{
 			name:               "Add sync path with unparsable labelSelector",
 			labelSelectorParam: "unparsable",
@@ -59,14 +41,7 @@ func TestAddSyncPath(t *testing.T) {
 		addSyncPathTestCase{
 			name: "Add sync path with success",
 			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Selectors: []*latest.SelectorConfig{
-						&latest.SelectorConfig{
-							Name:          "OnlySelector",
-							LabelSelector: map[string]string{"Hello": "World"},
-						},
-					},
-				},
+				Dev: &latest.DevConfig{},
 			},
 			containerPathParam:       "/containerPath",
 			excludedPathsStringParam: "./ExcludeThis",
@@ -77,7 +52,6 @@ func TestAddSyncPath(t *testing.T) {
 					LocalSubPath:  "",
 					ExcludePaths:  []string{"./ExcludeThis"},
 					Namespace:     "",
-					Selector:      "",
 				},
 			},
 		},
@@ -115,9 +89,12 @@ func TestAddSyncPath(t *testing.T) {
 			testCase.fakeConfig = &latest.Config{}
 		}
 		configutil.SetFakeConfig(testCase.fakeConfig)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err := AddSyncPath(testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam, testCase.serviceNameParam)
-
+		err = AddSyncPath(config, testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error adding sync path in testCase %s", testCase.name)
 		} else {
@@ -135,7 +112,6 @@ func TestAddSyncPath(t *testing.T) {
 				assert.Equal(t, excludePath, testCase.fakeConfig.Dev.Sync[index].ExcludePaths[excludePathIndex], "Wrong excluded path in added sync in testCase %s", testCase.name)
 			}
 			assert.Equal(t, testCase.expectedSyncInConfig[index].Namespace, testCase.fakeConfig.Dev.Sync[index].Namespace, "Wrong Namespace in added sync in testCase %s", testCase.name)
-			assert.Equal(t, testCase.expectedSyncInConfig[index].Selector, testCase.fakeConfig.Dev.Sync[index].Selector, "Wrong Selector in added sync in testCase %s", testCase.name)
 		}
 	}
 }
@@ -238,8 +214,12 @@ func TestRemoveSyncPath(t *testing.T) {
 			} //default config
 		}
 		configutil.SetFakeConfig(testCase.fakeConfig)
+		config, err := configutil.GetBaseConfig("")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err := RemoveSyncPath(testCase.removeAllParam, testCase.localPathParam, testCase.containerPathParam, testCase.labelSelectorParam)
+		err = RemoveSyncPath(config, testCase.removeAllParam, testCase.localPathParam, testCase.containerPathParam, testCase.labelSelectorParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error initializing namespace in testCase %s", testCase.name)
 		} else {
