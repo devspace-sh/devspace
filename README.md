@@ -58,7 +58,7 @@ DevSpace allows you to store all your workflows in one declarative config file: 
 DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
 - The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
-- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/deployment/advanced/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
+- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/configuration/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
 > Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
 
@@ -612,7 +612,7 @@ images:
     # The following line defines a custom tag schema for this image (default tag schema is: ${DEVSPACE_RANDOM})
     tag: ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
 ```
-Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/image-building/build-tools/docker).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#docker-default).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -636,7 +636,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/image-building/build-tools/kaniko). <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about [building images with kaniko](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#kaniko). <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -662,7 +662,7 @@ images:
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
 ```
-Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/image-building/build-tools/custom-build-script).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation for more information about using [custom build scripts](https://devspace.cloud/docs/cli/image-building/configuration/build-tools#custom).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -686,11 +686,11 @@ deployments:
           cpu: "400m"
           memory: "500Mi"
 ```
-DevSpace allows you to [add predefined components](https://devspace.cloud/docs/deployment/components/add-predefined-components) using the `devspace add component [component-name]` command. 
+DevSpace allows you to [add predefined components](https://devspace.cloud/docs/cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis) using the `devspace add component [component-name]` command. 
 
 Learn more about:
-- [What are components?](https://devspace.cloud/docs/deployment/components/what-are-components)
-- [Configuration Specification for Components](https://devspace.cloud/docs/deployment/components/specification) 
+- [What are components?](https://devspace.cloud/docs/cli/deployment/components/what-are-components)
+- [Configuring Components](https://devspace.cloud/docs/cli/deployment/components/configuration/overview-specification) 
 
  <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -712,8 +712,8 @@ deployments:
       repo: https://kubernetes-charts.storage.googleapis.com
 ```
 Learn more about:
-- [What are Helm charts?](https://devspace.cloud/docs/deployment/helm-charts/what-are-helm-charts)
-- [Configure Helm chart deployments](https://devspace.cloud/docs/deployment/helm-charts/add-charts)
+- [What are Helm charts?](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
+- [Configure Helm chart deployments](https://devspace.cloud/docs/cli/deployment/helm-charts/configuration/overview-specification)
 
  <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -734,8 +734,8 @@ deployments:
     - some-other-manifest.yaml
 ```
 Learn more about:
-- [What are Kubernetes manifests?](https://devspace.cloud/docs/deployment/kubernetes-manifests/what-are-manifests)
-- [Configure manifest deployments](https://devspace.cloud/docs/deployment/kubernetes-manifests/configure-manifests)
+- [What are Kubernetes manifests?](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/what-are-manifests)
+- [Configure manifest deployments](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification)
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -756,7 +756,7 @@ deployments:
     - more-manifests/
     kustomize: true
 ```
-Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/deployment/kubernetes-manifests/kustomize). 
+Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/configuration/kustomize). 
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
 
@@ -785,7 +785,7 @@ deployments:
 
 DevSpace processes all deployments of a project according to their order in the `devspace.yaml`. You can combine deployments of different types (e.g. Helm charts and manifests).
 
-Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/workflow-basics/deployment).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [how DevSpace deploys projects to Kubernetes](https://devspace.cloud/docs/cli/deployment/workflow-basics).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -808,7 +808,7 @@ dependencies:
 
 Before deploying a project, DevSpace resolves all dependencies and builds a dependency tree which will then be deployed in a buttom-up fashion, i.e. the project which you call `devspace deploy` in will be deployed last.
 
-Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/workflow-basics/deployment/dependencies).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [how DevSpace deploys dependencies of projects](https://devspace.cloud/docs/cli/deployment/advanced/dependencies).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -847,7 +847,7 @@ The above example would configure the sync, so that:
 - local path `./src` will be synchronized to the container's working directory `.` (specified in the Dockerfile)
 - `./src/node_modules` would **not** be uploaded to the container
 
-Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/development/synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [configuring file synchronization during development](https://devspace.cloud/docs/cli/development/configuration/file-synchronization).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -867,7 +867,7 @@ dev:
 
 This configuration would tell DevSpace to redeploy your project when the Dockerfile changes or any file within `./manifests`.
 
-Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/development/auto-reloading).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [configuring auto-reloading for development](https://devspace.cloud/docs/cli/development/configuration/auto-reloading).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -889,38 +889,49 @@ images:
 
 DevSpace allows you to use certain pre-defined variables to make the configuration more flexible and easier to share with others. Additionally, you can add your own custom variables.
 
-Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/configuration/variables).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [using variables for dynamic configuration](https://devspace.cloud/docs/cli/configuration/variables).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
 <details>
 <summary>
-Define multiple configs
+Define config profiles and patches
 </summary>
 
 ```yaml
 # File: ./devspace-configs.yaml
-config1:
-  config:
-    path: ../devspace.yaml
-config2:
-  config:
-    path: ../devspace.yaml
-  overrides:
-  - data:
-      images:
-        database:
-          image: dscr.io/my-username/alternative-db-image
-config3:
-  config:
-    path: ../devspace-prod.yaml
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  component:
+    containers:
+    - image: john/devbackend
+    - image: john/debugger
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+  - op: remove
+    path: deployments[0].component.containers[1]
+  - op: add
+    path: deployments[0].component.containers
+    value:
+      image: john/cache
 ```
 
-If you have complex deployment scenarios which are not easily addressable by dev overrides, you can create a file named `devspace-configs.yaml` and configure multiple different configurations for DevSpace. They can all use the same underlying base configuration and simply apply certain overrides to sections of the configuration (e.g. config1 and config2) OR they can be entirely different configuration files (e.g. config1 and config3).
+DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging enviroment) or for different deployment targets (e.g. dev, staging production).
 
-You can tell DevSpace to use a specific config file using thit command: `devspace use config [config-name]`
+You can tell DevSpace to switch permenantly to another profile using this command: `devspace use profile [config-name]`
 
-Take a look at the documentation to learn more about [using multiple config files](https://devspace.cloud/docs/configuration/multiple-configs).  <img src="docs/website/static/img/readme/line.svg" height="1">
+Alternatively, you can temporarily use a different profile for running a single command using the `-p / --profile [NAME]` flag.
+
+Take a look at the documentation to learn more about [using config profiles and patches](https://devspace.cloud/docs/cli/configuration/profiles-patches).  <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -942,7 +953,7 @@ hooks:
 
 The command defined in this hook would be executed before building the images defined in the config.
 
-Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/configuration/hooks). <img src="docs/website/static/img/readme/line.svg" height="1">
+Take a look at the documentation to learn more about [using hooks](https://devspace.cloud/docs/cli/configuration/hooks). <img src="docs/website/static/img/readme/line.svg" height="1">
 
 </details>
 
@@ -1101,7 +1112,7 @@ Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud an
 <details>
 <summary>What is a Helm chart?</summary>
 
-[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts. [Learn more about Helm charts.](https://devspace.cloud/docs/deployment/helm-charts/what-are-helm-charts)
+[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts. [Learn more about Helm charts.](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
 
 </details>
 
