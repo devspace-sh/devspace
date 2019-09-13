@@ -28,3 +28,6 @@ dev:
     excludePaths:
     - '*/node_modules'
     - '*.log'
+  autoReload:
+    paths:
+    - website/sidebars.json

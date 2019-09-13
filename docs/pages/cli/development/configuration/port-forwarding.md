@@ -113,7 +113,7 @@ dev:
       remotePort: 80
 ```
 **Explanation:**  
-- The `labelSelector` would select the pod created for the component deployment `app-backend`
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
 - Because containers in the same pod share the same network stack, we do not need to specify which container should be selected.
 
 ### `dev.ports[*].namespace`
@@ -155,6 +155,9 @@ bindAddress: "0.0.0.0" # listen on all network interfaces
 ```
 
 
+<br>
+
+---
 ## Useful Commands
 
 ### `devspace add port`
