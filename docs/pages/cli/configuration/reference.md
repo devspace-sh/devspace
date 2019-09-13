@@ -192,6 +192,7 @@ ingress: 	                          # struct   | Component service configuration
     tls: false                      # string   | Enable/Disable tls for this host OR provide a secret name (default: false)
     path: /                         # string   | Path for routing the traffic (default: /)
     servicePort: 8080               # int      | Service port to forward traffic to (default: first port of component.service)
+    serviceName: ""                 # string   | Name of the Kubernetes service to route the traffic to (default: service defined in component.service)
 ```
 
 ### `deployments[*].component.autoScaling`
