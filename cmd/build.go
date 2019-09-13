@@ -77,13 +77,14 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get the config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
 	}
 
 	// Dependencies
-	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.VerboseDependencies, cmd.KubeContext, log.GetInstance())
+	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.VerboseDependencies, configOptions, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "build dependencies")
 	}

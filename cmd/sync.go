@@ -95,7 +95,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	var config *latest.Config
 	if configutil.ConfigExists() {
-		config, err = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		config, err = configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 		if err != nil {
 			return err
 		}

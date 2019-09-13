@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
@@ -14,11 +15,13 @@ import (
 )
 
 type deploymentCmd struct {
+	*flags.GlobalFlags
+
 	RemoveAll bool
 }
 
-func newDeploymentCmd() *cobra.Command {
-	cmd := &deploymentCmd{}
+func newDeploymentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &deploymentCmd{GlobalFlags: globalFlags}
 
 	deploymentCmd := &cobra.Command{
 		Use:   "deployment [deployment-name]",
@@ -61,7 +64,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

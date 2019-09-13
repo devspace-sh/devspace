@@ -18,7 +18,7 @@ func NewUpdateCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	updateCmd.AddCommand(newConfigCmd())
+	updateCmd.AddCommand(newConfigCmd(globalFlags))
 	updateCmd.AddCommand(newDependenciesCmd(globalFlags))
 
 	return updateCmd

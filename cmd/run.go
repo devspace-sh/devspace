@@ -53,7 +53,7 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

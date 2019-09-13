@@ -3,6 +3,7 @@ package add
 import (
 	"strconv"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -13,7 +14,8 @@ import (
 )
 
 type deploymentCmd struct {
-	Namespace string
+	*flags.GlobalFlags
+
 	Manifests string
 
 	Chart        string
@@ -27,8 +29,8 @@ type deploymentCmd struct {
 	Context    string
 }
 
-func newDeploymentCmd() *cobra.Command {
-	cmd := &deploymentCmd{}
+func newDeploymentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &deploymentCmd{GlobalFlags: globalFlags}
 
 	addDeploymentCmd := &cobra.Command{
 		Use:   "deployment [deployment-name]",
@@ -61,8 +63,6 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 		RunE: cmd.RunAddDeployment,
 	}
 
-	addDeploymentCmd.Flags().StringVar(&cmd.Namespace, "namespace", "", "The namespace to use for deploying")
-
 	// Kubectl options
 	addDeploymentCmd.Flags().StringVar(&cmd.Manifests, "manifests", "", "The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)")
 
@@ -94,7 +94,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}
