@@ -42,7 +42,7 @@ func TestAdd(t *testing.T) {
 	addCmd := NewAddCmd(&flags.GlobalFlags{})
 	subcommands := addCmd.Commands()
 
-	expectedSubcommandNames := []string{"deployment", "image", "port", "provider", "selector", "sync"}
+	expectedSubcommandNames := []string{"deployment", "image", "port", "provider", "sync"}
 	for _, subcommand := range subcommands {
 		subCommandName := subcommand.Name()
 		index := pos(expectedSubcommandNames, subCommandName)

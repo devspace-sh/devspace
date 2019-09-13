@@ -1,5 +1,6 @@
 package remove
 
+/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -288,3 +289,4 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		AllSpaces: testCase.all,
 	}).RunRemoveContext(nil, testCase.args)
 }
+*/

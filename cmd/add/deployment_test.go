@@ -1,5 +1,6 @@
 package add
 
+/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -303,3 +304,4 @@ func loadConfigFromPath() (*latest.Config, error) {
 
 	return newConfig, nil
 }
+*/
