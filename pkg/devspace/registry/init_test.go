@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -67,7 +68,7 @@ func TestCreatePullSecrets(t *testing.T) {
 			imagesInConfig: map[string]*latest.ImageConfig{
 				"testimage": &latest.ImageConfig{
 					CreatePullSecret: ptr.Bool(true),
-					Image:            ptr.String("testimage"),
+					Image:            "testimage",
 				},
 			},
 			expectedLog: `
@@ -82,7 +83,7 @@ Error Couldn't find service account 'default' in namespace 'testNS': serviceacco
 			imagesInConfig: map[string]*latest.ImageConfig{
 				"testimage": &latest.ImageConfig{
 					CreatePullSecret: ptr.Bool(true),
-					Image:            ptr.String("testimage"),
+					Image:            "testimage",
 				},
 			},
 			expectedLog: `
@@ -92,17 +93,19 @@ StopWait`,
 	}
 
 	for _, testCase := range testCases {
-		pullSecretNames = []string{}
 		//Setting up kubeClient
-		kubeClient := fake.NewSimpleClientset()
-		_, err := kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+		kubeClient := &kubectl.Client{
+			Client:    fake.NewSimpleClientset(),
+			Namespace: testCase.namespace,
+		}
+		_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: testCase.namespace,
 			},
 		})
 		assert.NilError(t, err, "Error creating namespace in testCase %s", testCase.name)
 		for _, serviceAccount := range testCase.serviceAccounts {
-			_, err = kubeClient.CoreV1().ServiceAccounts(testCase.namespace).Create(&k8sv1.ServiceAccount{
+			_, err = kubeClient.Client.CoreV1().ServiceAccounts(testCase.namespace).Create(&k8sv1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: serviceAccount,
 				},
@@ -112,15 +115,14 @@ StopWait`,
 
 		// Create fake devspace config
 		testConfig := &latest.Config{
-			Images:      &testCase.imagesInConfig,
-			Deployments: &[]*latest.DeploymentConfig{},
-			Cluster:     &latest.Cluster{Namespace: &testCase.namespace},
+			Images:      testCase.imagesInConfig,
+			Deployments: []*latest.DeploymentConfig{},
 		}
 
 		logOutput = ""
 
 		//Unfortunately we can't fake dockerClients yet.
-		err = CreatePullSecrets(testConfig, nil, kubeClient, &testLogger{})
+		err = CreatePullSecrets(testConfig, kubeClient, nil, &testLogger{})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error creating pull secrets in testCase %s", testCase.name)

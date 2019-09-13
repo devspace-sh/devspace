@@ -3,6 +3,7 @@ package remove
 import (
 	"errors"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -10,12 +11,14 @@ import (
 )
 
 type portCmd struct {
+	*flags.GlobalFlags
+
 	LabelSelector string
 	RemoveAll     bool
 }
 
-func newPortCmd() *cobra.Command {
-	cmd := &portCmd{}
+func newPortCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &portCmd{GlobalFlags: globalFlags}
 
 	portCmd := &cobra.Command{
 		Use:   "port",
@@ -48,10 +51,10 @@ func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error 
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

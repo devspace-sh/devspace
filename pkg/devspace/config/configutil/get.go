@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -71,30 +73,67 @@ func InitConfig() *latest.Config {
 	return config
 }
 
+// ConfigOptions defines options to load the config
+type ConfigOptions struct {
+	Profile     string
+	KubeContext string
+
+	Vars []string
+}
+
+// Clone clones the config options
+func (co *ConfigOptions) Clone() (*ConfigOptions, error) {
+	out, err := yaml.Marshal(co)
+	if err != nil {
+		return nil, err
+	}
+
+	newCo := &ConfigOptions{}
+	err = yaml.Unmarshal(out, newCo)
+	if err != nil {
+		return nil, err
+	}
+
+	return newCo, nil
+}
+
+// FromFlags converts the globalFlags into config options
+func FromFlags(globalFlags *flags.GlobalFlags) *ConfigOptions {
+	return &ConfigOptions{
+		Profile:     globalFlags.Profile,
+		KubeContext: globalFlags.KubeContext,
+		Vars:        globalFlags.Vars,
+	}
+}
+
 // GetBaseConfig returns the config
-func GetBaseConfig(overrideKubeContext string) (*latest.Config, error) {
-	return loadConfigOnce(overrideKubeContext, "", false)
+func GetBaseConfig(options *ConfigOptions) (*latest.Config, error) {
+	return loadConfigOnce(options, false)
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig(overrideKubeContext, profile string) (*latest.Config, error) {
-	return loadConfigOnce(overrideKubeContext, profile, true)
+func GetConfig(options *ConfigOptions) (*latest.Config, error) {
+	return loadConfigOnce(options, true)
 }
 
 // GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext, profile string, log log.Logger) (*latest.Config, error) {
+func GetConfigFromPath(generatedConfig *generated.Config, basePath string, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
 	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
 
 	// Check devspace.yaml
 	_, err := os.Stat(configPath)
 	if err != nil {
 		// Check for legacy devspace-configs.yaml
-		_, err = os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
-		if err == nil {
+		_, configErr := os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
+		if configErr == nil {
 			return nil, errors.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
 		}
 
-		return nil, errors.Errorf("Couldn't find '%s': %v", err)
+		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
 	}
 
 	fileContent, err := ioutil.ReadFile(configPath)
@@ -108,7 +147,7 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext,
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(generatedConfig, rawMap, kubeContext, profile, log)
+	loadedConfig, err := ParseConfig(generatedConfig, rawMap, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -139,28 +178,32 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath, kubeContext,
 }
 
 // loadConfigOnce loads the config globally once
-func loadConfigOnce(kubeContext, profile string, allowProfile bool) (*latest.Config, error) {
+func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, error) {
 	getConfigOnceMutex.Lock()
 	defer getConfigOnceMutex.Unlock()
 
 	var retError error
 	getConfigOnce.Do(func() {
+		if options == nil {
+			options = &ConfigOptions{}
+		}
+
 		// Get generated config
-		generatedConfig, err := generated.LoadConfig(profile)
+		generatedConfig, err := generated.LoadConfig(options.Profile)
 		if err != nil {
 			retError = err
 			return
 		}
 
 		// Check if we should load a specific config
-		if allowProfile && generatedConfig.ActiveProfile != "" && profile == "" {
-			profile = generatedConfig.ActiveProfile
+		if allowProfile && generatedConfig.ActiveProfile != "" && options.Profile == "" {
+			options.Profile = generatedConfig.ActiveProfile
 		} else if !allowProfile {
-			profile = ""
+			options.Profile = ""
 		}
 
 		// Load base config
-		config, err = GetConfigFromPath(generatedConfig, ".", kubeContext, profile, log.GetInstance())
+		config, err = GetConfigFromPath(generatedConfig, ".", options, log.GetInstance())
 		if err != nil {
 			retError = err
 			return
@@ -233,6 +276,9 @@ func validate(config *latest.Config) error {
 			}
 			if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
 				return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
+			}
+			if imageConf.Image == "" {
+				return fmt.Errorf("images.%s.image is required", imageConfigName)
 			}
 		}
 	}

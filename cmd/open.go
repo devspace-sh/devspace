@@ -118,7 +118,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig, err = configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+		devspaceConfig, err = configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 		if err != nil {
 			return err
 		}

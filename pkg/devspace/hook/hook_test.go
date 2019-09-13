@@ -2,9 +2,8 @@ package hook
 
 import (
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -17,7 +16,7 @@ func TestHookWithoutExecution(t *testing.T) {
 
 	//Execute 1 hook with no when
 	err = Execute(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{},
 		},
 	}, 0, 0, "", nil)
@@ -27,7 +26,7 @@ func TestHookWithoutExecution(t *testing.T) {
 
 	//Execute 1 hook with no When.Before and no When.After
 	err = Execute(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
 				When: &latest.HookWhenConfig{},
 			},
@@ -39,7 +38,7 @@ func TestHookWithoutExecution(t *testing.T) {
 
 	//Execute 1 hook with empty When.Before
 	err = Execute(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
 				When: &latest.HookWhenConfig{
 					Before: &latest.HookWhenAtConfig{},
@@ -53,7 +52,7 @@ func TestHookWithoutExecution(t *testing.T) {
 
 	//Execute 1 hook with empty When.After
 	err = Execute(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
 				When: &latest.HookWhenConfig{
 					After: &latest.HookWhenAtConfig{},
@@ -67,17 +66,17 @@ func TestHookWithoutExecution(t *testing.T) {
 
 }
 
-func TestHookWithExecution(t *testing.T){
+func TestHookWithExecution(t *testing.T) {
 	err := Execute(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
 				When: &latest.HookWhenConfig{
 					Before: &latest.HookWhenAtConfig{
-						Deployments: ptr.String("theseDeployments"),
+						Deployments: "theseDeployments",
 					},
 				},
-				Command: ptr.String("echo"),
-				Args: &[]*string{ptr.String("hello")},
+				Command: "echo",
+				Args:    []string{"hello"},
 			},
 		},
 	}, Before, StageDeployments, "theseDeployments", &log.DiscardLogger{})

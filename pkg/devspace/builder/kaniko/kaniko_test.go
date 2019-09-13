@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -49,15 +50,15 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 
 	// 2. Create kubectl client
 	deployConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Component: &latest.ComponentConfig{
-			Containers: &[]*latest.ContainerConfig{
+			Containers: []*latest.ContainerConfig{
 				{
-					Image: ptr.String("nginx"),
+					Image: "nginx",
 				},
 			},
 			Service: &latest.ServiceConfig{
-				Ports: &[]*latest.ServicePortConfig{
+				Ports: []*latest.ServicePortConfig{
 					{
 						Port: ptr.Int(3000),
 					},
@@ -68,13 +69,13 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
@@ -82,8 +83,8 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -96,26 +97,26 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	generated.InitDevSpaceConfig(generatedConfig, "default")
 
 	namespace := "test-kaniko-build"
-	imageName := "testimage"
-	buildArgs := make(map[string]*string)
-	buildArgsNoPush := "true"
-	buildArgs["--no-push"] = &buildArgsNoPush
 	imageConfig := &latest.ImageConfig{
 		Build: &latest.BuildConfig{
 			Kaniko: &latest.KanikoConfig{
-				Namespace: &namespace,
+				Namespace: namespace,
 				Options: &latest.BuildOptions{
-					BuildArgs: &buildArgs,
+					BuildArgs: map[string]*string{
+						"--no-push": ptr.String("true"),
+					},
 				},
 			},
 		},
-		Image: &imageName,
+		Image: "testimage",
 	}
 
 	// Create the fake client.
-	kubeClient := fake.NewSimpleClientset()
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
 
-	dockerClient, err := docker.NewClient(testConfig, true, log.GetInstance())
+	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating docker client: %v", err)
 	}
@@ -126,7 +127,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	}
 
 	// 3. Create test namespace test-kaniko-build
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -137,10 +138,10 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	//pod := k8sv1.Pod{}
 	//kubeClient.CoreV1().Pods(namespace).Create(&pod)
 	go func() {
-		buildPod, err := kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
+		buildPod, err := kubeClient.Client.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
 		for err != nil {
 			time.Sleep(1 * time.Millisecond)
-			buildPod, err = kubeClient.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
+			buildPod, err = kubeClient.Client.CoreV1().Pods(namespace).Get("", metav1.GetOptions{})
 		}
 		buildPod.Status.InitContainerStatuses = make([]k8sv1.ContainerStatus, 1)
 		buildPod.Status.InitContainerStatuses[0] = k8sv1.ContainerStatus{
@@ -148,25 +149,19 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 				Running: &k8sv1.ContainerStateRunning{},
 			},
 		}
-		kubeClient.CoreV1().Pods(namespace).Update(buildPod)
+		kubeClient.Client.CoreV1().Pods(namespace).Update(buildPod)
 	}()
 
 	// 4. Build image with kaniko, but don't push it (In kaniko options use "--no-push" as flag)
-	entrypoint := make([]*string, 3)
+	entrypoint := []string{"go"}
 
-	entrypoint0 := "go"
-	entrypoint1 := "run"
-	entrypoint2 := "main.go"
-	entrypoint[0] = &entrypoint0
-	entrypoint[1] = &entrypoint1
-	entrypoint[2] = &entrypoint2
-	err = builder.BuildImage(".", "Dockerfile", &entrypoint, log.GetInstance())
+	err = builder.BuildImage(".", "Dockerfile", entrypoint, []string{"run", "main.go"}, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building image: %v", err)
 	}
 
 	// 5. Delete test namespace
-	err = kubeClient.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{})
+	err = kubeClient.Client.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}

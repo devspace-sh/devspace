@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	
+
 	"gotest.tools/assert"
 )
 
-func TestContainerizeApplicationWithExistingDockerfile(t *testing.T){
+func TestContainerizeApplicationWithExistingDockerfile(t *testing.T) {
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -44,13 +45,11 @@ func TestContainerizeApplicationWithExistingDockerfile(t *testing.T){
 	if err != nil {
 		t.Fatalf("Error writing file: %v", err)
 	}
-	err = ContainerizeApplication("Dockerfile", "", "")
-	if err != nil {
-		t.Fatalf("Error containerizing an application with an already existing Dockerfile: %v", err)
-	}
+	err = ContainerizeApplication("Dockerfile", "", "", log.GetInstance())
+	assert.Error(t, err, "Dockerfile at Dockerfile already exists", "Unexpected or no error when trying to containerize with existing Dockerfile")
 }
 
-func TestContainerizeApplication(t *testing.T){
+func TestContainerizeApplication(t *testing.T) {
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -93,14 +92,13 @@ app.listen(3000, function () {
 	}
 
 	survey.SetNextAnswer("javascript")
-	err = ContainerizeApplication("", "", "")
+	err = ContainerizeApplication("", "", "", log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error containerizing application: %v", err)
 	}
 }
 
-
-func TestDockerfileGenerator(t *testing.T){
+func TestDockerfileGenerator(t *testing.T) {
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -147,13 +145,13 @@ RUN npm install
 COPY . .
 
 CMD ["npm", "start"]
-`), dockerfileGenerator.gitRepo.LocalPath + "/javascript/Dockerfile")
+`), dockerfileGenerator.gitRepo.LocalPath+"/javascript/Dockerfile")
 	if err != nil {
 		t.Fatalf("Error writing to file: %v", err)
 	}
 	//err = fsutil.WriteToFile([]byte(`ref: refs/heads/master`), "gitLocal/javascript/.git/HEAD")
 	//if err != nil {
-		//t.Fatalf("Error writing to file: %v", err)
+	//t.Fatalf("Error writing to file: %v", err)
 	//}
 
 	//Test IsLanguageSupported with unsupported Language

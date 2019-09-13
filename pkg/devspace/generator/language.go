@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -37,8 +38,7 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 	// Check if the user already has a dockerfile
 	_, err := os.Stat(dockerfilePath)
 	if os.IsNotExist(err) == false {
-		log.Infof("Dockerfile at %s already exists", dockerfilePath)
-		return nil
+		return fmt.Errorf("Dockerfile at %s already exists", dockerfilePath)
 	}
 
 	var repoURL *string

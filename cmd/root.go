@@ -93,7 +93,7 @@ func init() {
 	rootCmd.AddCommand(connect.NewConnectCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(list.NewListCmd(globalFlags))
-	rootCmd.AddCommand(remove.NewRemoveCmd())
+	rootCmd.AddCommand(remove.NewRemoveCmd(globalFlags))
 	rootCmd.AddCommand(reset.NewResetCmd())
 	rootCmd.AddCommand(set.NewSetCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())

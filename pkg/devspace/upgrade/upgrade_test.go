@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
-	
+
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 
 	"gotest.tools/assert"
@@ -27,7 +27,7 @@ func TestEraseVersionPrefix(t *testing.T) {
 	assert.Equal(t, true, err != nil, "No error returned with invalid string")
 }
 
-func TestUpgrade(t *testing.T){
+func TestUpgrade(t *testing.T) {
 	t.Skip("Skip because of some API-limit")
 	//Create TmpFolder
 	dir, err := ioutil.TempDir("", "test")
@@ -71,7 +71,7 @@ func TestUpgrade(t *testing.T){
 
 	versionBackup := version
 	version = latest.Version.String()
-	defer func(){version = versionBackup}()
+	defer func() { version = versionBackup }()
 
 	//Newest version already reached
 	err = Upgrade()
@@ -84,12 +84,12 @@ func TestUpgrade(t *testing.T){
 	if err != nil {
 		t.Fatalf("Error reading temporary log file: %v", err)
 	}
-	assert.Equal(t, true, strings.Contains(string(logs), "Current binary is the latest version:  " + version))
+	assert.Equal(t, true, strings.Contains(string(logs), "Current binary is the latest version:  "+version))
 
 	//Invalid githubSlug causes search to return an error
 	githubSlugBackup := githubSlug
 	githubSlug = ""
-	defer func(){githubSlug = githubSlugBackup}()
+	defer func() { githubSlug = githubSlugBackup }()
 	err = Upgrade()
 	assert.Equal(t, true, err != nil, "No error returned if DetectLatest returns one.")
 }

@@ -1,24 +1,36 @@
 package dependency
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"gotest.tools/assert"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
-func TestResolver(t *testing.T) {
-	t.Skip("Skipped for now")
+type resolverTestCase struct {
+	name string
 
+	files           map[string]*latest.Config
+	dependencyTasks []*latest.DependencyConfig
+	updateParam     bool
+	allowCyclic     bool
+
+	expectedDependencies []Dependency
+	expectedErr          string
+	expectedLog          string
+}
+
+func TestResolver(t *testing.T) {
 	dir, err := ioutil.TempDir("", "testFolder")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -37,6 +49,8 @@ func TestResolver(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
+	DependencyFolderPath = filepath.Join(dir, "dependencyFolder")
+
 	// Delete temp folder
 	defer func() {
 		err = os.Chdir(wdBackup)
@@ -49,56 +63,156 @@ func TestResolver(t *testing.T) {
 		}
 	}()
 
-	err = fsutil.WriteToFile([]byte(""), "devspace.yaml")
-	if err != nil {
-		t.Fatalf("Error writing file: %v", err)
-	}
-	err = fsutil.WriteToFile([]byte(""), "someDir/devspace.yaml")
-	if err != nil {
-		t.Fatalf("Error writing file: %v", err)
-	}
-	gitPath := "https://github.com/devspace-cloud/quickstart-nodejs.git"
-	gitDepPath := filepath.Join(DependencyFolderPath, hash.String(gitPath))
-	err = fsutil.WriteToFile([]byte(""), filepath.Join(gitDepPath, "devspace.yaml"))
-	if err != nil {
-		t.Fatalf("Error writing file: %v", err)
-	}
-
-	testConfig := &latest.Config{}
-	generatedConfig := &generated.Config{}
-	testResolver, err := NewResolver(testConfig, generatedConfig, true, &log.DiscardLogger{})
-	if err != nil {
-		t.Fatalf("Error creating a test resolver: %v", err)
-	}
-
-	dependencyTasks := []*latest.DependencyConfig{
-		&latest.DependencyConfig{
-			Source: &latest.SourceConfig{},
-			Config: ptr.String("devspace.yaml"),
+	testCases := []resolverTestCase{
+		resolverTestCase{
+			name:        "No depependency tasks",
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 0 dependencies",
 		},
-		&latest.DependencyConfig{
-			Source: &latest.SourceConfig{
-				Path: ptr.String("someDir"),
+		resolverTestCase{
+			name: "Simple local dependency",
+			files: map[string]*latest.Config{
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+				},
 			},
-			Config: ptr.String("someDir/devspace.yaml"),
-		},
-		&latest.DependencyConfig{
-			Source: &latest.SourceConfig{
-				Git: ptr.String(gitPath),
+			dependencyTasks: []*latest.DependencyConfig{
+				&latest.DependencyConfig{
+					Source: &latest.SourceConfig{
+						Path: "dependency1",
+					},
+				},
 			},
-			Config: ptr.String("someDir/devspace.yaml"),
+			expectedDependencies: []Dependency{
+				Dependency{
+					ID:        filepath.Join(dir, "dependency1"),
+					LocalPath: filepath.Join(dir, "dependency1"),
+				},
+			},
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
+		},
+		resolverTestCase{
+			name: "Simple git dependency",
+			files: map[string]*latest.Config{
+				"dependency1/devspace.yaml": &latest.Config{},
+			},
+			dependencyTasks: []*latest.DependencyConfig{
+				&latest.DependencyConfig{
+					Source: &latest.SourceConfig{
+						Git:      "https://github.com/devspace-cloud/example-dependency.git",
+						Revision: "f8b2aa8cf8ac03238a28e8f78382b214d619893f",
+						SubPath:  "mysubpath",
+					},
+				},
+			},
+			expectedDependencies: []Dependency{
+				Dependency{
+					ID:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
+					LocalPath: filepath.Join(DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
+				},
+			},
+			expectedLog: "\nInfo Start resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath\nDone Resolved 1 dependencies",
+		},
+		resolverTestCase{
+			name: "Cyclic allowed dependency",
+			files: map[string]*latest.Config{
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "..",
+							},
+						},
+					},
+				},
+			},
+			dependencyTasks: []*latest.DependencyConfig{
+				&latest.DependencyConfig{
+					Source: &latest.SourceConfig{
+						Path: "dependency1",
+					},
+					Namespace: "someNamespace",
+				},
+			},
+			allowCyclic: true,
+			expectedDependencies: []Dependency{
+				Dependency{
+					ID:        filepath.Join(dir, "dependency1"),
+					LocalPath: filepath.Join(dir, "dependency1"),
+				},
+			},
+			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
+		},
+		resolverTestCase{
+			name: "Cyclic unallowed dependency",
+			files: map[string]*latest.Config{
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "..",
+							},
+						},
+					},
+				},
+			},
+			dependencyTasks: []*latest.DependencyConfig{
+				&latest.DependencyConfig{
+					Source: &latest.SourceConfig{
+						Path: "dependency1",
+					},
+				},
+			},
+			expectedErr: fmt.Sprintf("Cyclic dependency found: \n%s\n%s\n%s", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1")),
+			expectedLog: "\nInfo Start resolving dependencies",
 		},
 	}
 
-	dependencies, err := testResolver.Resolve(dependencyTasks, false)
-	if err != nil {
-		t.Fatalf("Error resolving dependencies: %v", err)
+	for _, testCase := range testCases {
+		for path, content := range testCase.files {
+			asYAML, err := yaml.Marshal(content)
+			assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
+			err = fsutil.WriteToFile(asYAML, path)
+			assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
+		}
+
+		logOutput = ""
+
+		testConfig := &latest.Config{}
+		generatedConfig := &generated.Config{}
+		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &testLogger{})
+		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
+
+		dependencies, err := testResolver.Resolve(testCase.dependencyTasks, &configutil.ConfigOptions{}, testCase.updateParam)
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from Resolve in testCase %s", testCase.name)
+		}
+
+		assert.Equal(t, len(testCase.expectedDependencies), len(dependencies), "Wrong dependency length in testCase %s", testCase.name)
+		for index, expected := range testCase.expectedDependencies {
+			assert.Equal(t, expected.ID, dependencies[index].ID, "Dependency has wrong id in testCase %s", testCase.name)
+			assert.Equal(t, expected.LocalPath, dependencies[index].LocalPath, "Dependency has wrong local path in testCase %s", testCase.name)
+		}
+
+		for path := range testCase.files {
+			err = os.Remove(path)
+			assert.NilError(t, err, "Error removing file in testCase %s", testCase.name)
+		}
+		os.RemoveAll(DependencyFolderPath) //No error catch because it doesn't need to exist
+
+		assert.Equal(t, logOutput, testCase.expectedLog, "Unexpected output in testCase %s", testCase.name)
+
 	}
-	assert.Equal(t, 3, len(dependencies), "Wrong dependency length")
-	assert.Equal(t, "", dependencies[0].ID, "First dependency has wrong id")
-	assert.Equal(t, "", dependencies[0].LocalPath, "First dependency has wrong local path")
-	assert.Equal(t, filepath.Join(dir, "someDir"), dependencies[1].ID, "Secound dependency has wrong id")
-	assert.Equal(t, "", dependencies[0].LocalPath, "Secound dependency has wrong local path")
-	assert.Equal(t, gitPath, dependencies[2].ID, "Third dependency has wrong id")
-	assert.Equal(t, gitDepPath, dependencies[2].LocalPath, "Third dependency has wrong local path")
+}
+
+func includes(arr []string, needle string) bool {
+	for _, suspect := range arr {
+		if suspect == needle {
+			return true
+		}
+	}
+	return false
 }

@@ -3,6 +3,7 @@ package remove
 import (
 	"errors"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -10,11 +11,13 @@ import (
 )
 
 type imageCmd struct {
+	*flags.GlobalFlags
+
 	RemoveAll bool
 }
 
-func newImageCmd() *cobra.Command {
-	cmd := &imageCmd{}
+func newImageCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &imageCmd{GlobalFlags: globalFlags}
 
 	imageCmd := &cobra.Command{
 		Use:   "image",
@@ -45,10 +48,10 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) erro
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find any devspace configuration. Please run `devspace init`")
+		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

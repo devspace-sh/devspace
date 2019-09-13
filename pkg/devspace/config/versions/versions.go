@@ -31,6 +31,14 @@ var versionLoader = map[string]*loader{
 	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Prepare: latest.Prepare},
 }
 
+// ConfigOptions defines options to load the config
+type ConfigOptions struct {
+	Profile     string
+	KubeContext string
+
+	Vars []string
+}
+
 // Prepare prepares the config for variable loading
 func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	version, ok := data["version"].(string)

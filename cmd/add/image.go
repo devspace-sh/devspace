@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -9,6 +10,8 @@ import (
 )
 
 type imageCmd struct {
+	*flags.GlobalFlags
+
 	Name           string
 	Tag            string
 	ContextPath    string
@@ -16,8 +19,8 @@ type imageCmd struct {
 	BuildEngine    string
 }
 
-func newImageCmd() *cobra.Command {
-	cmd := &imageCmd{}
+func newImageCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &imageCmd{GlobalFlags: globalFlags}
 
 	addImageCmd := &cobra.Command{
 		Use:   "image",
@@ -62,7 +65,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

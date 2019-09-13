@@ -50,7 +50,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Load config
-	config, err := configutil.GetConfig(cmd.KubeContext, cmd.Profile)
+	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,11 @@ deployments:
     component:
       containers:
         - image: dscr.io/${DEVSPACE_USERNAME}/service-2
+commands:
+  - name: dev-service1
+    command: "devspace dev --profile=dev-service1"
+  - name: dev-service2
+    command: "devspace dev --profile=dev-service2-only"
 profiles:
 # Use the profiles with 'devspace use profile dev-service1'
 - name: dev-service1

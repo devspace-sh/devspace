@@ -1,23 +1,26 @@
 package configutil
 
+/*
+@Florian Adjust test cases to new behaviour
+
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	
-	"k8s.io/client-go/tools/clientcmd/api"
 
+	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
@@ -70,20 +73,6 @@ func TestConfigExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error removing file: %v", err)
 	}
-	fsutil.WriteToFile([]byte(""), ".devspace/config.yaml")
-	assert.Equal(t, ConfigExists(), true, "Config doesn't exist despite being set in .devspace/config.yaml")
-
-	err = os.Remove(".devspace/config.yaml")
-	if err != nil {
-		t.Fatalf("Error removing file: %v", err)
-	}
-	fsutil.WriteToFile([]byte(""), ".devspace/configs.yaml")
-	assert.Equal(t, ConfigExists(), true, "Config doesn't exist despite being set in .devspace/configs.yaml")
-
-	err = os.Remove(".devspace/configs.yaml")
-	if err != nil {
-		t.Fatalf("Error removing file: %v", err)
-	}
 	assert.Equal(t, ConfigExists(), false, "Config exists despite being unset in every way")
 }
 
@@ -97,7 +86,7 @@ func TestInitConfig(t *testing.T) {
 	if config == nil {
 		t.Fatal("Config is nil after initializing")
 	}
-	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
+	assert.Equal(t, config.Version, latest.Version, "Initialized config has wrong version")
 }
 
 func TestGetBaseConfig(t *testing.T) {
@@ -167,23 +156,27 @@ dev:
 `), constants.DefaultConfigPath)
 
 	getConfigOnce = sync.Once{}
-	validateOnce = sync.Once{}
-	GetBaseConfig()
+	GetBaseConfig("")
 	if config == nil {
 		t.Fatal("Config is nil after initializing")
 	}
-	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
-	assert.Equal(t, *config.Cluster.KubeContext, "someKubeContext", "Initialized config has wrong kubeContext of cluster")
-	assert.Equal(t, *config.Cluster.Namespace, "someNS", "Initialized config has wrong namespace of cluster")
-	assert.Equal(t, len(*config.Images), 1, "Initialized config has wrong number of images")
-	assert.Equal(t, *(*config.Images)["default"].Image, "defaultImage", "Initialized config has wrong image")
+	assert.Equal(t, config.Version, latest.Version, "Initialized config has wrong version")
+	assert.Equal(t, len(config.Images), 1, "Initialized config has wrong number of images")
+	assert.Equal(t, config.Images["default"].Image, "defaultImage", "Initialized config has wrong image")
+}
+
+type getConfigTestCase struct {
+	name string
+
+	files   map[string]interface{}
+	profile string
+
+	expectedConfig latest.Config
+	expectedPanic  string
+	expectedOutput string
 }
 
 func TestGetConfig(t *testing.T) {
-	configBackup := config
-	defer func() { config = configBackup }()
-	config = nil
-
 	//Create tempDir and go into it
 	dir, err := ioutil.TempDir("", "testDir")
 	if err != nil {
@@ -211,137 +204,75 @@ func TestGetConfig(t *testing.T) {
 		}
 	}()
 
-	configString := `version: v1beta2
-cluster:
-  kubeContext: someKubeContext
-  namespace: someNS
-images:
-  default:
-    image: defaultImage
-deployments:
-- name: default
-  helm:
-    chart:
-      name: ./chart
-hooks:
-- command: echo
-dev:
-  selectors:
-  - name: someSelector
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
-  ports:
-  - labelSelector:
-      app.kubernetes.io/component: default
-    forward:
-    - port: 3000
-  sync:
-  - labelSelector:
-      app.kubernetes.io/component: default
-    excludePaths:
-    - node_modules
-`
+	_, err = os.Stat("NotThere")
+	notThereError := strings.ReplaceAll(err.Error(), "NotThere", "%s")
+	_, err = ioutil.ReadFile(dir)
+	isDirError := strings.ReplaceAll(err.Error(), dir, "%s")
 
-	fsutil.WriteToFile([]byte(configString), constants.DefaultConfigPath)
-
-	getConfigOnce = sync.Once{}
-	validateOnce = sync.Once{}
-	GetConfig()
-	if config == nil {
-		t.Fatal("Config is nil after initializing")
-	}
-	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
-	assert.Equal(t, *config.Cluster.KubeContext, "someKubeContext", "Initialized config has wrong kubeContext of cluster")
-	assert.Equal(t, *config.Cluster.Namespace, "someNS", "Initialized config has wrong namespace of cluster")
-	assert.Equal(t, len(*config.Images), 1, "Initialized config has wrong number of images")
-	assert.Equal(t, *(*config.Images)["default"].Image, "defaultImage", "Initialized config has wrong image")
-
-	SetFakeConfig(&latest.Config{})
-
-	configsContent := `default:
-  vars:
-    data:
-      - name: hello
-  config:
-    path: devspace.yaml
-  overrides:
-    - data:
-        dev:
-          overrideImages:
-            - name: service-image-1
-              entrypoint:
-                - sleep
-                - "9999999999"
-          terminal:
-            labelSelector:
-              app.kubernetes.io/component: service-1
-          ports:
-            - labelSelector:
-                app.kubernetes.io/component: service-1
-              forward:
-                - port: 8080
-          sync:
-            - labelSelector:
-                app.kubernetes.io/component: service-1
-              localSubPath: ./service1
-# Use the config with 'devspace use config dev-service1'
-dev-service1:
-  config:
-    path: devspace.yaml
-  # Overrides defined overridden fields in the original config
-  # You can specify multiple overrides which are applied in the order
-  # you specify them. Array types are completely overriden and maps will be merged
-  overrides:
-    - data:
-        dev:
-          overrideImages:
-            - name: service-image-1
-              entrypoint:
-                - sleep
-                - "9999999999"
-          terminal:
-            labelSelector:
-              app.kubernetes.io/component: service-1
-          ports:
-            - labelSelector:
-                app.kubernetes.io/component: service-1
-              forward:
-                - port: 8080
-          sync:
-            - labelSelector:
-                app.kubernetes.io/component: service-1
-              localSubPath: ./service1`
-	fsutil.WriteToFile([]byte(configsContent), constants.DefaultConfigsPath)
-
-	survey.SetNextAnswer("world")
-	getConfigOnce = sync.Once{}
-	validateOnce = sync.Once{}
-	GetConfig()
-	if config == nil {
-		t.Fatal("Config is nil after initializing")
+	testCases := []getConfigTestCase{
+		getConfigTestCase{
+			name:          "no files",
+			expectedPanic: fmt.Sprintf("Couldn't find 'devspace.yaml': "+notThereError, "devspace.yaml"),
+		},
+		getConfigTestCase{
+			name: "unparsable generated.yaml",
+			files: map[string]interface{}{
+				generated.ConfigPath: "unparsable",
+			},
+			expectedPanic: "Error loading .devspace/generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+		},
+		getConfigTestCase{
+			name: "deprecated devspace-configs.yaml exists",
+			files: map[string]interface{}{
+				constants.DefaultConfigsPath: "",
+			},
+			expectedPanic: "devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead",
+		},
+		getConfigTestCase{
+			name: "unparsable devspace.yaml",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: "unparsable",
+			},
+			expectedPanic: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
+		},
+		getConfigTestCase{
+			name: "devspace.yaml is a directory",
+			files: map[string]interface{}{
+				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
+			},
+			expectedPanic: fmt.Sprintf(isDirError, constants.DefaultConfigPath),
+		},
+		getConfigTestCase{
+			name: "invalid version",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: "ThisVersionDoesNotAndWillHopefullyNeverExistEver",
+				},
+			},
+			expectedPanic: "Unrecognized config version ThisVersionDoesNotAndWillHopefullyNeverExistEver. Please upgrade devspace with `devspace upgrade`",
+		},
+		getConfigTestCase{
+			name: "invalid config",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: latest.Version,
+					Dev: &latest.DevConfig{
+						Selectors: []*latest.SelectorConfig{
+							&latest.SelectorConfig{},
+						},
+					},
+				},
+			},
+			expectedPanic: "Error in config: Unnamed selector at index 0",
+		},
 	}
 
-	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
-	assert.Equal(t, *config.Cluster.KubeContext, "someKubeContext", "Initialized config has wrong kubeContext of cluster")
-	assert.Equal(t, *config.Cluster.Namespace, "someNS", "Initialized config has wrong namespace of cluster")
-	assert.Equal(t, len(*config.Images), 1, "Initialized config has wrong number of images")
-	assert.Equal(t, *(*config.Images)["default"].Image, "defaultImage", "Initialized config has wrong image")
-
-	generatedConfig, err := generated.LoadConfig()
-	if err != nil {
-		t.Fatalf("Error loading generated config: %v", err)
+	for _, testCase := range testCases {
+		testGetConfig(t, testCase)
 	}
-	assert.Equal(t, generatedConfig.GetActive().Vars["hello"], "world", "Vars not initialized")
 }
 
-func TestGetConfigFromPath(t *testing.T){
-	configBackup := config
-	defer func() { config = configBackup }()
-	config = nil
-
+func testGetConfig(t *testing.T, testCase getConfigTestCase) {
 	//Create tempDir and go into it
 	dir, err := ioutil.TempDir("", "testDir")
 	if err != nil {
@@ -359,6 +290,20 @@ func TestGetConfigFromPath(t *testing.T){
 
 	// Delete temp folder after test
 	defer func() {
+		rec := recover()
+		if testCase.expectedPanic == "" {
+			if rec != nil {
+				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
+			}
+		} else {
+			if rec == nil {
+				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
+			} else {
+				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
+			}
+		}
+		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
@@ -369,55 +314,25 @@ func TestGetConfigFromPath(t *testing.T){
 		}
 	}()
 
-	configString := `version: v1beta2
-cluster:
-  kubeContext: someKubeContext
-  namespace: someNS
-images:
-  default:
-    image: defaultImage
-deployments:
-- name: default
-  helm:
-    chart:
-      name: ./chart
-hooks:
-- command: echo
-dev:
-  selectors:
-  - name: someSelector
-  overrideImages:
-  - name: default
-    entrypoint:
-    - sleep
-    - "999999999999"
-  ports:
-  - labelSelector:
-      app.kubernetes.io/component: default
-    forward:
-    - port: 3000
-  sync:
-  - labelSelector:
-      app.kubernetes.io/component: default
-    excludePaths:
-    - node_modules
-`
-
-	fsutil.WriteToFile([]byte(configString), filepath.Join("SubDir", constants.DefaultConfigPath))
-
-	getConfigOnce = sync.Once{}
-	validateOnce = sync.Once{}
-	config, err = GetConfigFromPath("SubDir", "", true, &generated.Config{}, &log.DiscardLogger{})
-	assert.NilError(t, err, "Error from function GetConfigFromPath")
-	if config == nil {
-		t.Fatal("Config is nil after initializing")
+	for path, content := range testCase.files {
+		asYAML, err := yaml.Marshal(content)
+		assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
+		err = fsutil.WriteToFile(asYAML, path)
+		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
-	assert.Equal(t, *config.Version, latest.Version, "Initialized config has wrong version")
-	assert.Equal(t, *config.Cluster.KubeContext, "someKubeContext", "Initialized config has wrong kubeContext of cluster")
-	assert.Equal(t, *config.Cluster.Namespace, "someNS", "Initialized config has wrong namespace of cluster")
-	assert.Equal(t, len(*config.Images), 1, "Initialized config has wrong number of images")
-	assert.Equal(t, *(*config.Images)["default"].Image, "defaultImage", "Initialized config has wrong image")
-	
+
+	log.SetInstance(&testLogger{
+		log.DiscardLogger{
+			PanicOnExit: true,
+		},
+	})
+	getConfigOnce = sync.Once{}
+	generated.ResetConfig()
+
+	GetConfig(context.Background(), testCase.profile)
+
+	expected := testCase.expectedConfig
+	assert.Equal(t, config.Version, expected.Version, "Returned context has wrong version in testCase %s", testCase.name)
 }
 
 func TestSetDevspaceRoot(t *testing.T) {
@@ -503,7 +418,7 @@ func TestSetDevspaceRoot(t *testing.T) {
 
 }
 
-func TestSelector(t *testing.T){
+func TestSelector(t *testing.T) {
 	testConfig := &latest.Config{
 		Dev: &latest.DevConfig{},
 	}
@@ -517,14 +432,14 @@ func TestSelector(t *testing.T){
 		t.Fatal("Selector returned without a selector being found")
 	}
 
-	testConfig.Dev.Selectors = &[]*latest.SelectorConfig{
+	testConfig.Dev.Selectors = []*latest.SelectorConfig{
 		&latest.SelectorConfig{
-			Name: ptr.String("NotFound"),
-			Namespace: ptr.String("WrongNS"),
+			Name:      "NotFound",
+			Namespace: "WrongNS",
 		},
 		&latest.SelectorConfig{
-			Name: ptr.String("Found"),
-			Namespace: ptr.String("CorrectNS"),
+			Name:      "Found",
+			Namespace: "CorrectNS",
 		},
 	}
 	//Invalid: No selector
@@ -532,57 +447,7 @@ func TestSelector(t *testing.T){
 	if err != nil {
 		t.Fatalf("Error getting an existent selector: %v", err)
 	}
-	assert.Equal(t, "CorrectNS", *selector.Namespace, "Wrong selector returned")
-}
-
-func TestGetDefaultNamespace(t *testing.T){
-	namespace, err := GetDefaultNamespace(&latest.Config{
-		Cluster: &latest.Cluster{
-			Namespace: ptr.String("PresetNamespace"),
-		},
-	})
-	if err != nil{
-		t.Fatalf("Error getting default namespace from config directly, %v", err)
-	}
-	assert.Equal(t, namespace, "PresetNamespace", "Wrong preset namespace returned")	
-	
-	testConfig := &api.Config{
-		Contexts: map[string]*api.Context{
-			"contextFromConfig": &api.Context{
-				Namespace: "contextFromConfigNS",
-			},
-			"contextFromKubeConfig": &api.Context{
-				Namespace: "contextFromKubeConfigNS",
-			},
-			"nilNamespaceContext": &api.Context{},
-		},
-		CurrentContext: "contextFromKubeConfig",
-	}
-
-	err = kubeconfig.SaveConfig(testConfig)
-	if err != nil {
-		t.Fatalf("Error saving kubeConfig: %v", err)
-	}
-
-	namespace, err = GetDefaultNamespace(&latest.Config{
-		Cluster: &latest.Cluster{
-			KubeContext: ptr.String("contextFromConfig"),
-		},
-	})
-	if err != nil{
-		t.Fatalf("Error getting default namespace from config's context, %v", err)
-	}
-	assert.Equal(t, namespace, "contextFromConfigNS", "Wrong preset namespace returned")
-
-	namespace, err = GetDefaultNamespace(&latest.Config{
-		Cluster: &latest.Cluster{
-			KubeContext: ptr.String("nilNamespaceContext"),
-		},
-	})
-	if err != nil{
-		t.Fatalf("Error getting nil namespace from config's context, %v", err)
-	}
-	assert.Equal(t, namespace, "default", "Wrong preset namespace returned")	
+	assert.Equal(t, "CorrectNS", selector.Namespace, "Wrong selector returned")
 }
 
 func TestValidate(t *testing.T) {
@@ -593,7 +458,7 @@ func TestValidate(t *testing.T) {
 
 	err = validate(&latest.Config{
 		Dev: &latest.DevConfig{
-			Selectors: &[]*latest.SelectorConfig{
+			Selectors: []*latest.SelectorConfig{
 				&latest.SelectorConfig{},
 			},
 		},
@@ -604,7 +469,7 @@ func TestValidate(t *testing.T) {
 
 	err = validate(&latest.Config{
 		Dev: &latest.DevConfig{
-			Ports: &[]*latest.PortForwardingConfig{
+			Ports: []*latest.PortForwardingConfig{
 				&latest.PortForwardingConfig{},
 			},
 		},
@@ -615,9 +480,9 @@ func TestValidate(t *testing.T) {
 
 	err = validate(&latest.Config{
 		Dev: &latest.DevConfig{
-			Ports: &[]*latest.PortForwardingConfig{
+			Ports: []*latest.PortForwardingConfig{
 				&latest.PortForwardingConfig{
-					Selector: ptr.String(""),
+					Selector: "",
 				},
 			},
 		},
@@ -628,7 +493,7 @@ func TestValidate(t *testing.T) {
 
 	err = validate(&latest.Config{
 		Dev: &latest.DevConfig{
-			Sync: &[]*latest.SyncConfig{
+			Sync: []*latest.SyncConfig{
 				&latest.SyncConfig{},
 			},
 		},
@@ -638,18 +503,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Dev: &latest.DevConfig{
-			OverrideImages: &[]*latest.ImageOverrideConfig{
-				&latest.ImageOverrideConfig{},
-			},
-		},
-	})
-	if err == nil {
-		t.Fatalf("No error in config with invalid imageOverrideConfig: %v", err)
-	}
-
-	err = validate(&latest.Config{
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{},
 		},
 	})
@@ -658,7 +512,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"invalidImg": &latest.ImageConfig{
 				Build: &latest.BuildConfig{
 					Custom: &latest.CustomConfig{},
@@ -671,7 +525,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{},
 		},
 	})
@@ -680,9 +534,9 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("Invalid deployment"),
+				Name: "Invalid deployment",
 			},
 		},
 	})
@@ -691,9 +545,9 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("Invalid deployment"),
+				Name: "Invalid deployment",
 				Helm: &latest.HelmConfig{},
 			},
 		},
@@ -703,9 +557,9 @@ func TestValidate(t *testing.T) {
 	}
 
 	err = validate(&latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("Invalid deployment"),
+				Name:    "Invalid deployment",
 				Kubectl: &latest.KubectlConfig{},
 			},
 		},
@@ -716,45 +570,41 @@ func TestValidate(t *testing.T) {
 
 	err = validate(&latest.Config{
 		Dev: &latest.DevConfig{
-			Selectors: &[]*latest.SelectorConfig{
+			Selectors: []*latest.SelectorConfig{
 				&latest.SelectorConfig{
-					Name: ptr.String("Valid"),
+					Name: "Valid",
 				},
 			},
-			Ports: &[]*latest.PortForwardingConfig{
+			Ports: []*latest.PortForwardingConfig{
 				&latest.PortForwardingConfig{
-					Selector: ptr.String(""),
-					PortMappings: &[]*latest.PortMapping{},
+					Selector:     "mySelector",
+					PortMappings: []*latest.PortMapping{},
 				},
 			},
-			Sync: &[]*latest.SyncConfig{
+			Sync: []*latest.SyncConfig{
 				&latest.SyncConfig{
-					Selector: ptr.String(""),
-				},
-			},
-			OverrideImages: &[]*latest.ImageOverrideConfig{
-				&latest.ImageOverrideConfig{
-					Name: ptr.String("Valid"),
+					Selector: "mySelector",
 				},
 			},
 		},
-		Hooks: &[]*latest.HookConfig{
+		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
-				Command: ptr.String("echo"),
+				Command: "echo",
 			},
 		},
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"validImg": &latest.ImageConfig{
+				Image: "someImage",
 				Build: &latest.BuildConfig{
 					Custom: &latest.CustomConfig{
-						Command: ptr.String("echo"),
+						Command: "echo",
 					},
 				},
 			},
 		},
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
-				Name: ptr.String("Valid deployment"),
+				Name:      "Valid deployment",
 				Component: &latest.ComponentConfig{},
 			},
 		},
@@ -763,3 +613,4 @@ func TestValidate(t *testing.T) {
 		t.Fatalf("Error in valid config found: %v", err)
 	}
 }
+*/

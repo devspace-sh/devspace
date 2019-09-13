@@ -11,8 +11,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	otherhelmpackage "github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -28,31 +28,28 @@ const testNamespace = "test-helm-deploy"
 func TestHelmDeployment(t *testing.T) {
 	namespace := "testnamespace"
 	chartName := "chart"
-	valuesFiles := make([]*string, 1)
-	valuesFiles0 := "chart"
-	valuesFiles[0] = &valuesFiles0
 
 	// 1. Create fake config & generated config
 	deployConfig := &latest.DeploymentConfig{
-		Name: ptr.String("test-deployment"),
+		Name: "test-deployment",
 		Helm: &latest.HelmConfig{
-			TillerNamespace: &namespace,
+			TillerNamespace: namespace,
 			Chart: &latest.ChartConfig{
-				Name: &chartName,
+				Name: chartName,
 			},
-			ValuesFiles: &valuesFiles,
+			ValuesFiles: []string{"chart"},
 		},
 	}
 
 	// Create fake devspace config
 	testConfig := &latest.Config{
-		Deployments: &[]*latest.DeploymentConfig{
+		Deployments: []*latest.DeploymentConfig{
 			deployConfig,
 		},
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: &map[string]*latest.ImageConfig{
+		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: ptr.String("nginx"),
+				Image: "nginx",
 			},
 		},
 	}
@@ -60,8 +57,8 @@ func TestHelmDeployment(t *testing.T) {
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
-		ActiveConfig: "default",
-		Configs: map[string]*generated.CacheConfig{
+		ActiveProfile: "default",
+		Profiles: map[string]*generated.CacheConfig{
 			"default": &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
 					"default": &generated.ImageCache{
@@ -106,8 +103,10 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 3. Init kubectl & create test namespace
-	kubeClient := fake.NewSimpleClientset()
-	_, err = kubeClient.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+	kubeClient := &kubectl.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -121,8 +120,8 @@ func TestHelmDeployment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating helm client: %v", err)
 	}
-	helm.Helm = otherhelmpackage.NewFakeClient(kubeClient, namespace)
-	isDeployed, err := helm.Deploy(generatedConfig.Configs["default"], true, nil)
+	helm.Helm = otherhelmpackage.NewFakeClient(kubeClient.Client, namespace)
+	isDeployed, err := helm.Deploy(generatedConfig.Profiles["default"], true, nil)
 	if err != nil {
 		t.Fatalf("Error deploying chart: %v", err)
 	}
@@ -139,13 +138,13 @@ func TestHelmDeployment(t *testing.T) {
 	}
 
 	// 6. Delete test chart
-	err = helm.Delete(generatedConfig.Configs["default"])
+	err = helm.Delete(generatedConfig.Profiles["default"])
 	if err != nil {
 		t.Fatalf("Error deleting chart: %v", err)
 	}
 
 	// 7. Delete test namespace
-	err = kubeClient.CoreV1().Namespaces().Delete(namespace, nil)
+	err = kubeClient.Client.CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
 		t.Fatalf("Error deleting namespace: %v", err)
 	}

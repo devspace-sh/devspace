@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/sync/remote"
 	"github.com/devspace-cloud/devspace/sync/util"
+	"github.com/pkg/errors"
 )
 
 var pool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%(&)°=?!§ _:$%&/()"

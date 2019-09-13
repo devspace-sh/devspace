@@ -65,6 +65,11 @@ func Directory(path string) (string, error) {
 
 // DirectoryExcludes calculates a hash for a directory and excludes the submitted patterns
 func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (string, error) {
+	srcPath, err := filepath.Abs(srcPath)
+	if err != nil {
+		return "", err
+	}
+
 	hash := sha256.New()
 
 	// Fix the source path to work with long path names. This is a no-op

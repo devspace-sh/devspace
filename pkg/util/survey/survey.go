@@ -35,10 +35,6 @@ func SetNextAnswer(answer string) {
 
 // Question asks the user a question and returns the answer
 func Question(params *QuestionOptions, log log.Logger) (string, error) {
-	if log.GetLevel() < logrus.InfoLevel {
-		return "", errors.Errorf("Cannot ask question '%s' because logger level is too low", params.Question)
-	}
-
 	var prompt surveypkg.Prompt
 	compiledRegex := DefaultValidationRegexPattern
 	if params.ValidationRegexPattern != "" {
@@ -113,6 +109,11 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 		answer := nextAnswers[0]
 		nextAnswers = nextAnswers[1:]
 		return answer, nil
+	}
+
+	// Check if we can ask the question
+	if log.GetLevel() < logrus.InfoLevel {
+		return "", errors.Errorf("Cannot ask question '%s' because logger level is too low", params.Question)
 	}
 
 	err := surveypkg.Ask(question, &answers)

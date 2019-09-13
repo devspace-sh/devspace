@@ -2,18 +2,19 @@ package services
 
 import (
 	"testing"
-	
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	
+
 	"gotest.tools/assert"
 )
 
 func TestGetCommend(t *testing.T) {
 	config := &latest.Config{
 		Dev: &latest.DevConfig{
-			Terminal: &latest.Terminal{
-				Command: &[]*string{ptr.String("echo")},
+			Interactive: &latest.InteractiveConfig{
+				Terminal: &latest.TerminalConfig{
+					Command: []string{"echo"},
+				},
 			},
 		},
 	}
