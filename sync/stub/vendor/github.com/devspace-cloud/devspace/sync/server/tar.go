@@ -3,13 +3,11 @@ package server
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,7 +22,7 @@ type fileInformation struct {
 func untarAll(reader io.Reader, destPath, prefix string) error {
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
-		return fmt.Errorf("Error decompressing: %v", err)
+		return errors.Errorf("Error decompressing: %v", err)
 	}
 
 	defer gzr.Close()
@@ -95,9 +93,7 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 		_ = os.Chmod(outFileName, stat.Mode())
 
 		// Set old owner & group correctly
-		if _, ok := stat.Sys().(*syscall.Stat_t); ok {
-			_ = os.Chown(outFileName, int(stat.Sys().(*syscall.Stat_t).Uid), int(stat.Sys().(*syscall.Stat_t).Gid))
-		}
+		_ = Chown(outFileName, stat)
 	}
 
 	// Set mod time from tar header
