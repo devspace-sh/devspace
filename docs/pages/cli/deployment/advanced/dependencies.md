@@ -4,6 +4,24 @@ title: Dependencies
 
 DevSpace allows you to define dependencies between several software projects that have a `devspace.yaml`, e.g. across different git repositories. This makes DevSpace a great tool for building and deploying software that consists of several microservices.
 
+Dependencies for DevSpace projects are defined within the `dependencies` section of `devspace.yaml`.
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+    branch: stable
+- source:
+    git: https://github.com/my-auth-server
+    revision: c967392
+    profile: production
+- source:
+    git: https://github.com/my-database-server
+    tag: v3.0.1
+    subPath: /configuration
+- source:
+    path: ./different/subproject
+```
+
 ## Dependency Resolution
 When a DevSpace project has dependencies, DevSpace will:
 1. Resolve all dependencies in a resursive manner
