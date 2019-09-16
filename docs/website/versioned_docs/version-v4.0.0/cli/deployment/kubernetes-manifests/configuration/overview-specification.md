@@ -118,9 +118,9 @@ deployments:
     manifests:
     - backend/
     flags:
-    - --timeout
-    - 10s
-    - --grace-period
+    - "--timeout"
+    - "10s"
+    - "--grace-period"
     - "30"
 ```
 **Explanation:**  

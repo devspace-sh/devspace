@@ -1,6 +1,6 @@
 ---
 title: Best Practices for Image Building
-sidebar_label: Best Pracices
+sidebar_label: Best Practices
 id: version-v4.0.0-best-practices
 original_id: best-practices
 ---
