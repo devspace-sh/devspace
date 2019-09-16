@@ -23,6 +23,7 @@ deployments:
       name: php/chart
 dev:
   interactive:
+    defaultEnabled: true
     images:
     - name: node
   ports:

@@ -8,6 +8,10 @@ deployments:
   helm:
     chart:
       name: ./chart
+commands:
+# Optional command to force use the kube context minikube, start with `devspace run dev-minikube`
+ - name: dev-minikube
+   command: "devspace dev --kube-context=minikube"
 dev:
   ports:
   - imageName: default

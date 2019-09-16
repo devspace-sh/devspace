@@ -31,6 +31,7 @@ profiles:
   replace:
     dev:
       interactive:
+        defaultEnabled: true
         images:
         - name: service-image-1
       ports:
@@ -45,6 +46,7 @@ profiles:
   replace:
     dev:
       interactive:
+        defaultEnabled: true
         images:
         - name: service-image-2
       ports:
