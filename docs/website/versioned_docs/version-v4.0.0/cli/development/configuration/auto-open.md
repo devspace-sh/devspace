@@ -31,7 +31,7 @@ The `open` option expects an array of auto-open configurations with exactly one 
 open: []
 ```
 
-#### Example: Enabling Interactive Mode By Default
+#### Example: Open URL when Starting Dev Mode
 ```yaml
 dev:
   open:

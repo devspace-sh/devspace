@@ -102,7 +102,6 @@
         "label": "Advanced Topics",
         "ids": [
           "version-v4.0.0-cli/development/advanced/advanced-topics",
-          "version-v4.0.0-cli/development/advanced/shared-commands",
           "version-v4.0.0-cli/development/advanced/remote-debuggers"
         ]
       }
@@ -111,6 +110,7 @@
       "version-v4.0.0-cli/configuration/reference",
       "version-v4.0.0-cli/configuration/variables",
       "version-v4.0.0-cli/configuration/profiles-patches",
+      "version-v4.0.0-cli/configuration/custom-commands",
       "version-v4.0.0-cli/configuration/hooks"
     ],
     "CLI Reference": [
