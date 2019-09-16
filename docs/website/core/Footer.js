@@ -38,7 +38,13 @@ class Footer extends React.Component {
 
     return (
       <footer className="nav-footer" id="footer">
-        <script type="text/javascript" dangerouslySetInnerHTML={{__html: `document.querySelector("body").setAttribute("data-version", document.querySelector("head > meta[name='docsearch:version']").getAttribute("content"))`}}>
+        <script type="text/javascript" dangerouslySetInnerHTML={{__html: `
+        document.querySelector("body").setAttribute("data-version", document.querySelector("head > meta[name='docsearch:version']").getAttribute("content"));
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        `}}>
         </script>
 
         {chatAndAnalytics}
