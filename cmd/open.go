@@ -19,11 +19,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-
-	"crypto/sha1"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -215,10 +214,9 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "get service")
 		}
 
-		hash := sha1.New()
-		hash.Write([]byte(domain))
+		domainHash := hash.String(domain)
 
-		ingressName := "devspace-ingress-" + fmt.Sprintf("%x", hash.Sum(nil))
+		ingressName := "devspace-ingress-" + domainHash
 		_, err = client.Client.ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 			Spec: v1beta1.IngressSpec{

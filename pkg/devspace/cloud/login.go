@@ -185,7 +185,7 @@ func (p *Provider) Login(log log.Logger) error {
 			return errors.Wrap(err, "login")
 		}
 	} else {
-		log.Infof("If the browser does not open automatically please navigate to %s", url)
+		log.Infof("If the browser does not open automatically, please navigate to %s", url)
 		log.StartWait("Logging into cloud provider...")
 		defer log.StopWait()
 

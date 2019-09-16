@@ -162,7 +162,7 @@ func IsCloudSpace(context string) (bool, error) {
 	return authInfo.Exec != nil && authInfo.Exec.Command == AuthCommand, nil
 }
 
-// GetSpaceID returns the id of the Space that belongs to the context with this name
+// GetSpaceID returns the id of the Space and the cloud provider URL that belongs to the context with this name
 func GetSpaceID(context string) (int, string, error) {
 	kubeConfig, err := LoadRawConfig()
 	if err != nil {
