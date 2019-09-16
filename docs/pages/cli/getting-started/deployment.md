@@ -263,7 +263,7 @@ To use the second option, you either need to make sure the DNS of your domain po
 
 > **Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
 
-<img style="float: left; max-width: 500px; margin-right: 50px;" src="https://i.gifer.com/ZIx.gif">
+<img style="float: left; max-width: 500px; margin-right: 50px;" src="/img/congrats.gif">
 
 ## What's next?
 DevSpace ist not just a deployment tool, it is also a very powerful development tool. And that is actually the most powerful part of DevSpace. So, don't stop now.

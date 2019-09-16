@@ -1,10 +1,12 @@
 package analytics
 
 import (
-	"encoding/base64"
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/google/uuid"
@@ -25,6 +29,8 @@ import (
 )
 
 var token string
+var eventEndpoint string
+var userEndpoint string
 var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
 var loadAnalyticsOnce sync.Once
@@ -33,20 +39,23 @@ var loadAnalyticsOnce sync.Once
 type Analytics interface {
 	Disable() error
 	Enable() error
-	SendEvent(eventName string, eventData map[string]interface{}) error
+	SendEvent(eventName string, eventProperties map[string]interface{}, userProperties map[string]interface{}) error
 	SendCommandEvent(commandError error) error
 	ReportPanics()
 	Identify(identifier string) error
 	SetVersion(version string)
+	SetIdentifyProvider(getIdentity func() string)
 }
 
 type analyticsConfig struct {
-	DistinctID   string `yaml:"distinctId,omitempty"`
-	Identifier   string `yaml:"identifier,omitempty"`
-	Disabled     bool   `yaml:"disabled,omitempty"`
-	LatestUpdate int64  `yaml:"latestUpdate,omitempty"`
+	DistinctID    string `yaml:"distinctId,omitempty"`
+	Identifier    string `yaml:"identifier,omitempty"`
+	Disabled      bool   `yaml:"disabled,omitempty"`
+	LatestUpdate  int64  `yaml:"latestUpdate,omitempty"`
+	LatestSession int64  `yaml:"latestSession,omitempty"`
 
-	version string
+	version          string
+	identityProvider *func() string
 }
 
 func (a *analyticsConfig) Disable() error {
@@ -68,16 +77,24 @@ func (a *analyticsConfig) Enable() error {
 func (a *analyticsConfig) Identify(identifier string) error {
 	if identifier != a.Identifier {
 		if a.Identifier != "" {
-			// different user is logged in now => RESET DISTINCT ID
+			// user was logged in, now different user is logging in => RESET DISTINCT ID
 			_ = a.resetDistinctID()
 		}
+		a.Identifier = identifier
 
-		// Save a.Identifier as alias for a.DistinctID
-		err := a.createAlias(identifier)
-		if err != nil {
-			return err
+		requestData := map[string]interface{}{
+			"parameters": map[string]interface{}{
+				"api_key": token,
+				"identification": []interface{}{
+					map[string]interface{}{
+						"device_id": a.DistinctID,
+						"user_id":   a.Identifier,
+					},
+				},
+			},
 		}
-		return a.save()
+
+		return a.sendRequest(userEndpoint, requestData)
 	}
 	return nil
 }
@@ -90,19 +107,44 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
 	command = expr.ReplaceAllString(command, `devspace $1[REDACTED]$3`)
 
-	commandData := map[string]interface{}{
+	userPropertiesSet := map[string]interface{}{
+		"app_version": a.version,
+	}
+	userProperties := map[string]interface{}{
+		"$set": userPropertiesSet,
+	}
+	commandProperties := map[string]interface{}{
 		"command":      command,
-		"$os":          runtime.GOOS,
+		"runtime_os":   runtime.GOOS,
 		"runtime_arch": runtime.GOARCH,
 		"cli_version":  a.version,
 	}
 
 	if commandError != nil {
-		commandData["error"] = commandError.Error()
+		commandProperties["error"] = strings.Replace(commandError.Error(), "\n", "\\n", -1)
 	}
 
-	if a.Identifier != "" {
-		commandData["$user_id"] = a.Identifier
+	contextName, err := kubeconfig.GetCurrentContext()
+	if contextName != "" && err == nil {
+		spaceID, cloudProvider, _ := kubeconfig.GetSpaceID(contextName)
+
+		if spaceID != 0 {
+			commandProperties["space_id"] = spaceID
+			commandProperties["cloud_provider"] = cloudProvider
+			userPropertiesSet["has_spaces"] = true
+		}
+
+		kubeConfig, err := kubeconfig.LoadRawConfig()
+		if err == nil {
+			if context, ok := kubeConfig.Contexts[contextName]; ok {
+				if cluster, ok := kubeConfig.Clusters[context.Cluster]; ok {
+					commandProperties["kube_server"] = cluster.Server
+				}
+
+				commandProperties["kube_namespace"] = hash.String(context.Namespace)
+			}
+		}
+		commandProperties["kube_context"] = hash.String(contextName)
 	}
 
 	pid := os.Getpid()
@@ -110,86 +152,84 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	if err == nil {
 		procCreateTime, err := p.CreateTime()
 		if err == nil {
-			commandData["command_duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
+			commandProperties["duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
 		}
 	}
 
 	if regexp.MustCompile(`^.*\s+(use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
-		return a.SendEvent("context", commandData)
+		return a.SendEvent("kube-context", commandProperties, userProperties)
 	}
-	return a.SendEvent("command", commandData)
+	return a.SendEvent("command", commandProperties, userProperties)
 }
 
-func (a *analyticsConfig) SendEvent(eventName string, eventData map[string]interface{}) error {
+func (a *analyticsConfig) SendEvent(eventName string, eventProperties map[string]interface{}, userProperties map[string]interface{}) error {
 	if !a.Disabled && token != "" {
 		now := time.Now()
 
-		insertID, err := randutil.GenerateRandomString(16)
+		insertID, err := randutil.GenerateRandomString(9)
 		if err != nil {
 			return errors.Errorf("Couldn't generate random insert_id for analytics: %v", err)
 		}
-		eventData["$insert_id"] = insertID
-		eventData["token"] = token
+		eventData := map[string]interface{}{}
+		eventData["insert_id"] = insertID + strconv.FormatInt(now.Unix(), 16)
+		eventData["event_type"] = eventName
+		eventData["ip"] = "$remote"
+
+		if _, ok := eventData["app_version"]; !ok {
+			eventData["app_version"] = a.version
+		}
+
+		if _, ok := eventData["session_id"]; !ok {
+			sessionID, err := a.getSessionID()
+			if err != nil {
+				return err
+			}
+			eventData["session_id"] = sessionID
+		}
+
+		if a.identityProvider != nil {
+			getIdentity := *a.identityProvider
+			a.Identify(getIdentity())
+		}
 
 		if a.Identifier != "" {
-			eventData["distinct_id"] = a.Identifier
+			eventData["user_id"] = a.Identifier
+			eventData["user_properties"] = userProperties
 		} else {
-			eventData["distinct_id"] = a.DistinctID
+			eventData["device_id"] = a.DistinctID
 		}
 
-		if _, ok := eventData["time"]; !ok {
-			eventData["time"] = now
+		// save session and identity
+		err = a.save()
+		if err != nil {
+			// ignore if save fails
 		}
-		data := map[string]interface{}{}
 
-		data["event"] = eventName
-		data["properties"] = eventData
+		eventData["event_properties"] = eventProperties
 
-		if time.Unix(a.LatestUpdate, 0).Add(time.Minute * 5).Before(now) {
-			// ignore if user update fails
-			_ = a.UpdateUser(map[string]interface{}{})
+		requestBody := map[string]interface{}{}
+		requestBody["api_key"] = token
+		requestBody["events"] = []interface{}{
+			eventData,
 		}
-		return a.sendRequest("track", data)
+		requestData := map[string]interface{}{
+			"body": requestBody,
+		}
+
+		return a.sendRequest(eventEndpoint, requestData)
 	}
 	return nil
 }
 
-func (a *analyticsConfig) UpdateUser(userData map[string]interface{}) error {
-	if !a.Disabled && token != "" {
-		a.LatestUpdate = time.Now().Unix()
+func (a *analyticsConfig) getSessionID() (int64, error) {
+	now := time.Now()
+	sessionExpired := time.Unix(a.LatestUpdate*int64(time.Millisecond), 0).Add(time.Second * 30).Before(now)
+	a.LatestUpdate = now.UnixNano() / int64(time.Millisecond)
 
-		// ignore if config save fails
-		_ = a.save()
-
-		data := map[string]interface{}{}
-		data["$token"] = token
-
-		if a.Identifier != "" {
-			data["$distinct_id"] = a.Identifier
-		} else {
-			data["$distinct_id"] = a.DistinctID
-		}
-
-		if _, ok := userData["cli_version"]; !ok {
-			userData["cli_version"] = a.version
-		}
-
-		if _, ok := userData["runtime_os"]; !ok {
-			userData["runtime_os"] = runtime.GOOS
-		}
-
-		if _, ok := userData["runtime_arch"]; !ok {
-			userData["runtime_arch"] = runtime.GOARCH
-		}
-
-		if _, ok := userData["duplicate"]; !ok {
-			userData["duplicate"] = false
-		}
-		data["$set"] = userData
-
-		return a.sendRequest("engage", data)
+	if a.LatestSession == 0 || sessionExpired {
+		a.LatestSession = a.LatestUpdate
 	}
-	return nil
+	return a.LatestSession, nil
 }
 
 func (a *analyticsConfig) ReportPanics() {
@@ -201,67 +241,78 @@ func (a *analyticsConfig) ReportPanics() {
 }
 
 func (a *analyticsConfig) SetVersion(version string) {
+	if version == "" {
+		version = "dev"
+	}
 	a.version = version
 }
 
-func (a *analyticsConfig) createAlias(identifier string) error {
-	if !a.Disabled {
-		identifierSections := strings.Split(identifier, "/")
-
-		// mark current distinct_id as duplicate
-		// => future calls will reset this for the correct distinct_id
-		// ignore if user update fails
-		_ = a.UpdateUser(map[string]interface{}{
-			"provider":   identifierSections[0],
-			"account_id": identifierSections[1],
-			"duplicate":  true,
-		})
-
-		a.Identifier = identifier
-
-		// ignore if update user fails
-		_ = a.UpdateUser(map[string]interface{}{
-			"provider":   identifierSections[0],
-			"account_id": identifierSections[1],
-		})
-
-		data := map[string]interface{}{
-			"event": "$create_alias",
-			"properties": map[string]interface{}{
-				"distinct_id": a.DistinctID,
-				"alias":       a.Identifier,
-				"token":       token,
-			},
-		}
-		return a.sendRequest("track", data)
-	}
-	return nil
+func (a *analyticsConfig) SetIdentifyProvider(getIdentity func() string) {
+	a.identityProvider = &getIdentity
 }
 
-func (a *analyticsConfig) sendRequest(endpointPath string, data map[string]interface{}) error {
-	if !a.Disabled {
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
+func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interface{}) error {
+	if !a.Disabled && token != "" {
+		var err error
+		jsonData := []byte{}
+		requestURL, err := url.Parse(requestURL)
+
+		if requestBody, ok := data["body"]; ok {
+			jsonData, err = json.Marshal(requestBody)
+			if err != nil {
+				return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
+			}
 		}
 
-		requestURL := "https://api.mixpanel.com/" + endpointPath + "/?data=" + base64.StdEncoding.EncodeToString(jsonData)
+		if requestParams, ok := data["parameters"]; ok {
+			params := url.Values{}
+			paramsMap := requestParams.(map[string]interface{})
+			for key := range paramsMap {
+				paramValueMap, isMap := paramsMap[key].(map[string]interface{})
+				paramValueArray, isArray := paramsMap[key].([]interface{})
+				if isMap || isArray {
+					var paramValue interface{}
+					if isMap {
+						paramValue = paramValueMap
+					}
+					if isArray {
+						paramValue = paramValueArray
+					}
+					jsonParam, err := json.Marshal(paramValue)
+					if err != nil {
+						return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
+					}
+					params.Add(key, string(jsonParam))
+				} else {
+					params.Add(key, paramsMap[key].(string))
+				}
+			}
+			requestURL.RawQuery = params.Encode()
+		}
 
-		response, err := http.Get(requestURL)
+		headers := map[string][]string{
+			"Content-Type": []string{"application/json"},
+			"Accept":       []string{"*/*"},
+		}
+
+		request, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(jsonData))
 		if err != nil {
-			return errors.Errorf("Couldn't make request to analytics endpoint: %v", err)
+			return errors.Errorf("Error creating request to analytics endpoint: %v", err)
+		}
+		request.Header = headers
+		client := &http.Client{}
+
+		response, err := client.Do(request)
+		if err != nil {
+			return errors.Errorf("Error sending request to analytics endpoint: %v", err)
 		}
 		defer response.Body.Close()
+		body, _ := ioutil.ReadAll(response.Body)
 
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return errors.Errorf("Couldn't get http response from analytics request: %v", err)
+		if response.StatusCode != 200 {
+			return fmt.Errorf("Analytics returned HTTP code %d: %s", response.StatusCode, body)
 		}
-
-		if string(body) == "1" {
-			return nil
-		}
-		return errors.New("Received error from analytics request")
+		return nil
 	}
 	return nil
 }
@@ -340,7 +391,7 @@ func GetAnalytics() (Analytics, error) {
 		go func() {
 			<-c
 
-			analyticsInstance.SendCommandEvent(errors.New("Interrupted"))
+			analyticsInstance.SendCommandEvent(errors.New("interrupted"))
 			signal.Stop(c)
 
 			pid := os.Getpid()

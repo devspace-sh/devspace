@@ -34,29 +34,34 @@ func Start(version string) {
 	analytics, err := analytics.GetAnalytics()
 	if err == nil {
 		analytics.SetVersion(version)
+		analytics.SetIdentifyProvider(GetIdentity)
+	}
+}
 
-		providerConfig, err := config.ParseProviderConfig()
-		if err == nil {
-			providerName := config.DevSpaceCloudProviderName
+// GetIdentity return the cloud identifier
+func GetIdentity() string {
+	providerConfig, err := config.ParseProviderConfig()
+	if err == nil {
+		providerName := config.DevSpaceCloudProviderName
 
-			// Choose cloud provider
-			if providerConfig.Default != "" {
-				providerName = providerConfig.Default
-			}
+		// Choose cloud provider
+		if providerConfig.Default != "" {
+			providerName = providerConfig.Default
+		}
 
-			provider := config.GetProvider(providerConfig, providerName)
-			if provider != nil && provider.Host != "" && provider.Token != "" {
-				parsedURL, err := url.Parse(provider.Host)
+		provider := config.GetProvider(providerConfig, providerName)
+		if provider != nil && provider.Host != "" && provider.Token != "" {
+			parsedURL, err := url.Parse(provider.Host)
+			if err == nil {
+				identifier, err := token.GetAccountID(provider.Token)
 				if err == nil {
-					identifier, err := token.GetAccountID(provider.Token)
-					if err == nil {
-						stringIdentifier := strconv.Itoa(identifier)
+					stringIdentifier := strconv.Itoa(identifier)
 
-						// Ignore if identify fails
-						_ = analytics.Identify(parsedURL.Host + "/" + stringIdentifier)
-					}
+					// Ignore if identify fails
+					return parsedURL.Host + "/" + stringIdentifier
 				}
 			}
 		}
 	}
+	return ""
 }

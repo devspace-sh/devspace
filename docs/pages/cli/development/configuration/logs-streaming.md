@@ -78,7 +78,7 @@ The `showLast` option expects an integer which defines how many log lines DevSpa
 showLast: 50
 ```
 
-#### Example: Stream Only Containers Using Specified Images
+#### Example: Show Last 200 Log Lines
 ```yaml
 images:
   frontend:

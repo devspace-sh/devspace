@@ -191,6 +191,7 @@ type IngressRuleConfig struct {
 	TLS         string `yaml:"tls,omitempty"`
 	Path        string `yaml:"path,omitempty"`
 	ServicePort *int   `yaml:"servicePort,omitempty"`
+	ServiceName string `yaml:"serviceName,omitempty"`
 }
 
 // AutoScalingConfig holds the autoscaling config of a component

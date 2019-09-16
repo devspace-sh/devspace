@@ -1,6 +1,6 @@
 ---
 title: Best Practices for Image Building
-sidebar_label: Best Pracices
+sidebar_label: Best Practices
 ---
 
 Take a look at the following best practices to speed up image building and to setup DevSpace for an ideal workflow.

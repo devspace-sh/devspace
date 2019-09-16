@@ -129,6 +129,28 @@ deployments:
 ```
 
 
+### `rules[*].serviceName`
+The `serviceName` option expects a string stating the name of the Kubernetes service to which the traffic should be routed for the hostname stated in `host`.
+
+> By default, DevSpace will automatically route to the service defined in the `service` section within this component. Defining `serviceName` is generally unly useful if you want to create a simple ingress for another service that has not been created by a component, e.g. from using one of the Helm charts from the stable repository.
+
+> If `serviceName` is defined, `servicePort` must also be defined.
+
+#### Example: Custom Service Port
+```yaml
+deployments:
+- name: frontend
+  component:
+    ingress:
+      rules:
+      - host: my-static-host.tld
+        serviceName: my-custom-k8s-service
+        servicePort: 8000
+```
+**Explanation:**  
+This example configuration would only create an ingress for a service called `my-custom-k8s-service` and forward the traffic from `my-static-host.tld` to port `8000` of this service.
+
+
 ## Ingress Options
 
 ### `name`

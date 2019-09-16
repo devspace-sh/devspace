@@ -3,60 +3,115 @@ title: Dynamic Configuration using Config Variables
 sidebar_label: Config Variables
 ---
 
-DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  
+DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`.
 
-Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.
+> DevSpace allows you to use environment variables without explicitly defining them as varaiables. You can simply reference them via `${MY_ENV_VAR}` anywhere in your `devspace.yaml`.
 
-> To be able to define dynamic configs, you need to be familiar with the basics of [using multiple configs](/docs/configuration/multiple-configs).
+> DevSpace provides a set of [predefined variables](#predefined-variables) that are prefixed with `DEVSPACE_`.
 
-## Define config variables
-Config variables are placeholders with the format `${VAR_NAME}` and can be used for ANY value within the devspace config. They have to be defined in the `vars` section of the `devspace-configs.yaml`. You can then refer to these variables from within your configuration. You can use config variables within config files, within configs defined with `config.data` and within your overrides specified as `path` or `data`.
-```
-config1:
-  config:
-    path: ../devspace.yaml
-  overrides:
-  - data:
-      images:
-        database:
-          image: ${ImageName}
-  vars:
-  - name: ImageName
-    # source can be one of all|env|input
-    source: all 
-    question: Which database image do you want to use?
+While there is no need to explicitly define a config variable, it allows you to customize the behavior of DevSpace when working with the variable. Variables are defined within the `vars` section of `devspace.yaml`.
+```yaml
+vars:
+- name: IMAGE_NAME
+  question: Which database image do you want to use?
+- name: HOME
+  source: env
+- name: REGISTRY
+  question: Which registry do you want to push to?
+  source: input
+  options:
+  - hub.docker.com
+  - my.private-registry.tld
+  - dscr.io
 ```
 
-If a user runs `devspace deploy` for the first time after defining the config variable as shown above, the question `Which database image do you want to use?` will appear within the terminal and the user would be asked to enter a value for this config variable. Setting a value for the config variables would **not** alter the configuration in any way because values of config variables are stored separately from the configuration in the `.devspace/generated.yaml`. You can print all configured variables with `devspace list vars`.  
+## Define Config Variables
 
-> DevSpace only asks the user once to provide the values for environment variables 
+### `name`
+The `name` option expects a string stating the name of the config variable that will be used to reference it within the remainder of the configuration.
 
-> For a working example take a look at [dynamic-config](https://github.com/devspace-cloud/devspace/tree/master/examples/dynamic-config)
+> The `name` of a config variable must be unique and is mandatory when defining a config variable.
 
-Currently, there is no convenience command for deleting the values of config variables. You can, however, remove config values manually from `.devspace/generated.yaml` if necessary.
+> If the user will be asked to provide a value, the value will be cached in `.devspace/generated.yaml`.
 
-## Using environment variables as config variables
-The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Windows Powershell-->
-```powershell
-$env:IMAGE_NAME = "some-value"
+### `source`
+The `source` option expects either:
+- `all` means to check environment variables **first** and then check for cached values in `.devspace/generated.yaml` (**default**)
+- `env` means to check environment variables only
+- `input` means to check user-provided, cached values in `.devspace/generated.yaml`
+
+> If `source` is either `all` or `input` and the variable is not defined, the user will be asked to provide a value either using a generic question or the one provided via the [`question` option](#question). The user-provided value will be cached in `.devspace/generated.yaml`.
+
+> If the `source` is `env`, DevSpace will always prefer to use the value of the environment variable, even if there is a cached value for the variable in `.devspace/generated.yaml`.
+
+> Is the `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`defalut` value](#default) or terminate with a fatal error, if there is **no** [`defalut` value](#default) configured.
+
+#### Default Value For `source`
+```yaml
+source: all
 ```
 
-<!--Mac Terminal-->
+
+### `default`
+The `default` option expects a string defining the default value for the variable.
+
+> Is the [`source`](#source) is `env` and the environment variable is **not** defined, DevSpace will use the `defalut` value or terminate with a fatal error, if there is **no** `defalut` value configured.
+
+
+### `question`
+The `question` option expects a string with a question that will be asked when the variable is not defined. DevSpace tries to resolve the variable according to the [`source` of the variable](#source) and if it is not set via any of the accepted sources, DevSpace will prompt the user to define the value by entering a string.
+
+> Defining the `question` is optional but often helpful to provide a better usability for other team members using the project.
+
+> If [valid `options` for the variable value](#options) are configured, DevSpace will show a picker/selector instead of a regular input field/prompt.
+
+> If a [`defalut` value](#default) is configured for the variable, DevSpace will use this [`defalut` value](#default) as default answer for the question that can be easily selected by pressing enter.
+
+#### Default Value For `question`
+```yaml
+question: Please enter a value for [VAR_NAME] # using the variable name
+```
+
+
+### `options`
+The `options` option expects an array of strings with each string stating a allowed value for the variable.
+
+#### Example: Define Variable Options
+```yaml
+vars:
+- name: REGISTRY
+  question: Which registry do you want to push to?
+  source: input
+  options:
+  - hub.docker.com
+  - my.private-registry.tld
+  - dscr.io
+  default: my.private-registry.tld
+```
+**Explanation:**  
+If the variable REGISTRY is used for the first time during `devspace deploy`, DevSpace will ask the user to select which value to use by showing this question:
 ```bash
-export IMAGE_NAME="some-value"
+Which registry do you want to push to? (Default: my.private-registry.tld)
+Use the arrows UP/DOWN to select an option and ENTER to choose the selected option.
+  hub.docker.com
+> my.private-registry.tld
+  dscr.io
 ```
 
-<!--Linux Bash-->
-```bash
-export IMAGE_NAME="some-value"
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
+### `validationPattern`
+The `validationPattern` option expects a string stating a regular expression that validates if the value entered by the user is allowed as a value for this variable.
 
-Using environment variables to set dynamic configs can be particularly useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.
+> If the provided value does not match the regex in `validationPattern`, DevSpace will either show a generic error message or the message provided in [`validationMessage`](#validationmessage).
 
+
+### `validationMessage`
+The `validationMessage` option expects a string stating an error message that is shown to the user when providing a value for the variable that does not match the regex provided in [`validationPattern`](#validationpattern).
+
+
+<br>
+
+---
 ## Predefined Variables
 
 DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:
@@ -69,32 +124,17 @@ DevSpace provides some variables that are filled automatically and can be used w
 - **DEVSPACE_SPACE_DOMAIN1**, **DEVSPACE_SPACE_DOMAIN2**... : The connected domains of the [space](/docs/cloud/spaces/what-are-spaces). E.g. if a space has a domain connected with test.devspace.host, **DEVSPACE_SPACE_DOMAIN1** will hold test.devspace.host
 - **DEVSPACE_USERNAME**: The username currently logged into devspace cloud
 
-For example these predefined variables can be used to dynamically tag images during deployment:
-
+### Example: Using `${DEVSPACE_GIT_COMMIT}`
 ```yaml
 images:
   default:
     image: myrepo/devspace
     tag: ${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}
 ```
-
+**Explanation:**  
 This config will tag the image in the form of `myrepo/devspace:d9b4bcd-1559766514`. Many other combinations are possible with this method.
 
-## Variable Reference
-
-### config.vars[\*]
-```yaml
-vars:                               # struct   | Options for variables
-- name: ""                          # string   | The name of the variable (can be used within the config as ${name}) and can be defined via environment variable as DEVSPACE_VAR_NAME
-  question: "How do you ..."        # string   | Question that will be presented to the user for filling the value
-  source: all                       # string   | Can be one of all | env | input. Env is for environment variables only or input to force user input.
-  options: []                       # string[] | Array of possible answer options for the variable value
-  default: ""                       # string   | Default value of the variable if user skips question
-  validationPattern: "^.*$"         # string   | Regex pattern to verify the variable input
-  validationMessage: "Wrong ..."    # string   | The error message to print if the entered value does not match the pattern
-```
-
-
+<br>
 
 ---
 ## Useful Commands
@@ -114,3 +154,24 @@ devspace reset vars
 ```
 
 > DevSpace will fill the variables cache again, once you run the next build or deployment command.
+
+
+### `export VAR_NAME=value`
+The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Windows Powershell-->
+```powershell
+$env:IMAGE_NAME = "some-value"
+```
+
+<!--Mac Terminal-->
+```bash
+export IMAGE_NAME="some-value"
+```
+
+<!--Linux Bash-->
+```bash
+export IMAGE_NAME="some-value"
+```
+<!--END_DOCUSAURUS_CODE_TABS-->

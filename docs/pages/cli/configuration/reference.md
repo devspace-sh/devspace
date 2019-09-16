@@ -129,6 +129,8 @@ component:                          # struct   | Options for deploying a DevSpac
 containers:                         # struct   | Options for deploying a DevSpace component
 - name: my-container                # string   | Container name (optional)
   image: dscr.io/username/image     # string   | Image name (optionally with registry URL)
+  stdin: true                       # bool     | Enable stdin (Default: false)
+  tty: true                         # bool     | Enable tty (Default: false)
   command:                          # string[] | ENTRYPOINT override
   - sleep
   args:                             # string[] | ARGS override
@@ -190,6 +192,7 @@ ingress: 	                          # struct   | Component service configuration
     tls: false                      # string   | Enable/Disable tls for this host OR provide a secret name (default: false)
     path: /                         # string   | Path for routing the traffic (default: /)
     servicePort: 8080               # int      | Service port to forward traffic to (default: first port of component.service)
+    serviceName: ""                 # string   | Name of the Kubernetes service to route the traffic to (default: service defined in component.service)
 ```
 
 ### `deployments[*].component.autoScaling`
@@ -277,7 +280,6 @@ dev:                                # struct   | Options for "devspace dev"
 ports:                              # struct[] | Array of port forwarding settings for selected pods
 - imageName: someImage              # string   | Name of an image defined in `images` to select pods with
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
-  container: ""                     # string   | Container name to use after selecting a pod
   namespace: ""                     # string   | Kubernetes namespace to select pods in
   forward:                          # struct[] | Array of ports to be forwarded
   - port: 8080                      # int      | Forward this port on your local computer
@@ -298,7 +300,7 @@ open:                               # struct[] | Array of auto-open settings
 sync:                               # struct[] | Array of file sync settings for selected pods
 - imageName: someImage              # string   | Name of an image defined in `images` to select pods with
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
-  container: ""                     # string   | Container name to use after selecting a pod
+  containerName: ""                 # string   | Container name to use after selecting a pod
   namespace: ""                     # string   | Kubernetes namespace to select pods in
   localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
   containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
@@ -340,7 +342,7 @@ interactive:                        # struct   | Options for interactive mode
   terminal:                         # struct   | Options for the terminal proxy
     imageName: someImage            # string   | Name of an image defined in `images` to select pods with
     labelSelector: ...              # struct   | Key Value map of labels and values to select pods with
-    container: ""                   # string   | Container name to use after selecting a pod
+    containerName: ""               # string   | Container name to use after selecting a pod
     namespace: ""                   # string   | Kubernetes namespace to select pods in
     command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
@@ -366,7 +368,6 @@ dependencies:                       # struct[]  | Array of dependencies (other p
 > You **cannot** use `source.git` and `source.path` in combination. You **must** exactly use one of the two.
 
 
-
 ---
 ## `hooks`
 ```yaml
@@ -383,6 +384,14 @@ hooks:                              # struct[]  | Array of hooks to be executed
 ```
 
 
+---
+## `commands`
+```yaml
+commands:                           # struct[]  | Array of custom commands
+- name: "debug-backend"             # string    | Name of the command to run via `devspace run [name]`
+  command: "./scripts/my-hook"      # string    | Command to be executed when running `devspace run [name]`
+```
+
 
 ---
 ## `vars`
@@ -396,7 +405,6 @@ vars:                               # struct[]  | Array of config variables
   default: ""                       # string    | Default value for variable
   source: "all"                     # enum      | Source for variable (all [default], env, input)
 ```
-
 
 
 ---

@@ -13,7 +13,7 @@ deployments:
       - port: 3000
 dev:
   open:
-  - url: http://localhost:3000/docs/introduction
+  - url: http://localhost:3000/docs/next/introduction
   ports:
   - labelSelector:
       app.kubernetes.io/component: docs
@@ -28,3 +28,6 @@ dev:
     excludePaths:
     - '*/node_modules'
     - '*.log'
+  autoReload:
+    paths:
+    - website/sidebars.json

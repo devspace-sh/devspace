@@ -26,7 +26,7 @@ if [[ "$(pwd)" != "${DEVSPACE_ROOT}" ]]; then
 fi
 
 GO_BUILD_CMD="go build -a -installsuffix cgo"
-GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION} -X github.com/devspace-cloud/devspace/pkg/util/analytics.token=${ANALYTICS_TOKEN} -X main.flagImportDuringSolve=${IMPORT_DURING_SOLVE}"
+GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION} -X github.com/devspace-cloud/devspace/pkg/util/analytics.token=${ANALYTICS_TOKEN} github.com/devspace-cloud/devspace/pkg/util/analytics.eventEndpoint=${ANALYTICS_ENDPOINT_EVENT} github.com/devspace-cloud/devspace/pkg/util/analytics.userEndpoint=${ANALYTICS_ENDPOINT_USER} -X main.flagImportDuringSolve=${IMPORT_DURING_SOLVE}"
 
 if [[ -z "${DEVSPACE_BUILD_PLATFORMS}" ]]; then
     DEVSPACE_BUILD_PLATFORMS="linux windows darwin"

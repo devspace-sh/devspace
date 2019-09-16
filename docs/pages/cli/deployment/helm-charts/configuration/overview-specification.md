@@ -237,7 +237,7 @@ helm install --name database stable/mysql --timeout=300
 ```
 
 ### `deployments[*].helm.force`
-The `force` option expects a boolean that will be used for the [helm flag `--force`](https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback).
+The `force` option expects a boolean that will be used for the [helm flag `--force`](https://helm.sh/docs/helm/#helm-upgrade).
 
 #### Default Value for `force`
 ```yaml
