@@ -12,6 +12,7 @@ deployments:
         name: ./chart
 dev:
   interactive:
+    defaultEnabled: true
     images:
     - name: default
   ports:

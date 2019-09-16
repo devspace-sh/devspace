@@ -10,6 +10,7 @@ deployments:
     kustomize: true
 dev:
   interactive:
+    defaultEnabled: true
     images:
     - name: default
   ports:
