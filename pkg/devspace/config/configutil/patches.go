@@ -1,7 +1,6 @@
 package configutil
 
 import (
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -83,8 +82,6 @@ func findPath(path *yamlpatch.OpPath, c interface{}) (interface{}, error) {
 
 	foundContainer := c
 	for _, part := range parts {
-		log.Println(part)
-
 		// If map
 		iMap, ok := foundContainer.(map[interface{}]interface{})
 		if ok {
