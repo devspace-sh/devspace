@@ -9,8 +9,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 
+	v1beta1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -62,7 +62,7 @@ func createTestResources(client kubernetes.Interface) error {
 			UpdatedReplicas:    1,
 		},
 	}
-	_, err := client.ExtensionsV1beta1().Deployments(configutil.TestNamespace).Create(deploy)
+	_, err := client.AppsV1().Deployments(configutil.TestNamespace).Create(deploy)
 	if err != nil {
 		return errors.Wrap(err, "create deployment")
 	}
