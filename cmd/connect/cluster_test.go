@@ -1,6 +1,5 @@
 package connect
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -85,7 +83,7 @@ type connectClusterTestCase struct {
 	optionsFlag        *cloudpkg.ConnectClusterOptions
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunConnectCluster(t *testing.T) {
@@ -98,7 +96,7 @@ func TestRunConnectCluster(t *testing.T) {
 					Name: "SomeProvider",
 				},
 			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: SomeProvider ",
+			expectedErr: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: SomeProvider ",
 		},
 		connectClusterTestCase{
 			name:         "Invalid cluster name",
@@ -116,7 +114,7 @@ func TestRunConnectCluster(t *testing.T) {
 			optionsFlag: &cloudpkg.ConnectClusterOptions{
 				ClusterName: "!nva|id clu5ter_nam3",
 			},
-			expectedPanic: "Cluster name !nva|id clu5ter_nam3 can only contain letters, numbers and dashes (-)",
+			expectedErr: "Cluster name !nva|id clu5ter_nam3 can only contain letters, numbers and dashes (-)",
 		},
 	}
 
@@ -161,18 +159,6 @@ func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
@@ -186,10 +172,15 @@ func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
 
 	cobraCmd := newClusterCmd()
 	cobraCmd.Flag("use-hostnetwork").Changed = true
-	(&clusterCmd{
+	err = (&clusterCmd{
 		Provider:       testCase.providerFlag,
 		UseHostNetwork: testCase.useHostNetworkFlag,
 		Options:        testCase.optionsFlag,
 	}).RunConnectCluster(cobraCmd, nil)
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/
