@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +80,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Get config with adjusted cluster config
 	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
 	if err != nil {
-		log.Fatalf("Unable to create new kubectl client: %v", err)
+		return errors.Wrap(err, "new kube client")
 	}
 
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
