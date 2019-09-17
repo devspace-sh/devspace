@@ -117,11 +117,6 @@ func init() {
 	rootCmd.AddCommand(NewRunCmd(globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(globalFlags))
 
-	// Add docs generator command if in dev mode
-	if upgrade.GetVersion() == "" {
-		rootCmd.AddCommand(newGenDocsCmd())
-	}
-
 	cobra.OnInitialize(initConfig)
 }
 
@@ -148,4 +143,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Info("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+// GetRoot returns the root command
+func GetRoot() *cobra.Command {
+	return rootCmd
 }

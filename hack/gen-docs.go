@@ -1,42 +1,20 @@
-package cmd
+// +build ignore
+
+package main
 
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/spf13/cobra"
+	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/spf13/cobra/doc"
 )
-
-// GenDocsCmd is a struct that defines a command call for "enter"
-type GenDocsCmd struct{}
-
-// newGenDocsCmd creates a new gen-docs command
-func newGenDocsCmd() *cobra.Command {
-	cmd := &GenDocsCmd{}
-
-	genDocsCmd := &cobra.Command{
-		Use:   "gen-docs",
-		Short: "Generates docs pages for CLI commands",
-		Long: `
-#######################################################
-################# devspace gen-docs ###################
-#######################################################
-Run this command to generate the documentation for all
-CLI commands.
-
-This command is not available in production.
-#######################################################`,
-		RunE: cmd.Run,
-	}
-
-	return genDocsCmd
-}
 
 const cliDocsDir = "./docs/pages/cli/commands"
 const headerTemplate = `---
@@ -49,7 +27,7 @@ sidebar_label: %s
 var fixSynopsisRegexp = regexp.MustCompile("(?smi)(## devspace.*?\n)(.*?)#(## Synopsis\n*\\s*)(.*?)(\\s*\n\n)((```)(.*?))?#(## Options)(.*?)#(## SEE ALSO)(\\s*\\* \\[devspace\\][^\n]*)?")
 
 // Run executes the command logic
-func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func main() {
 	filePrepender := func(filename string) string {
 		name := filepath.Base(filename)
 		base := strings.TrimSuffix(name, path.Ext(name))
@@ -70,9 +48,11 @@ func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return "/docs/cli/commands/" + strings.ToLower(base)
 	}
 
+	rootCmd := cmd.GetRoot()
+
 	err := doc.GenMarkdownTreeCustom(rootCmd, cliDocsDir, filePrepender, linkHandler)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	err = filepath.Walk(cliDocsDir, func(path string, info os.FileInfo, err error) error {
@@ -95,6 +75,7 @@ func (cmd *GenDocsCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 		return nil
 	})
-
-	return err
+	if err != nil {
+		log.Fatal(err)
+	}
 }
