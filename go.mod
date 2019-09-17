@@ -1,5 +1,7 @@
 module github.com/devspace-cloud/devspace
 
+go 1.13
+
 require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
