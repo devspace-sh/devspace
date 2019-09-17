@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -125,17 +125,17 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 				return errors.New("Couldn't determine google cloud username. Make sure you are logged in to gcloud")
 			}
 
-			rolebinding := &v1beta1.ClusterRoleBinding{
+			rolebinding := &rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ClusterRoleBindingName,
 				},
-				Subjects: []v1beta1.Subject{
+				Subjects: []rbacv1.Subject{
 					{
 						Kind: "User",
 						Name: *username,
 					},
 				},
-				RoleRef: v1beta1.RoleRef{
+				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "ClusterRole",
 					Name:     "cluster-admin",

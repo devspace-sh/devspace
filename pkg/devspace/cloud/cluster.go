@@ -15,7 +15,7 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -711,18 +711,18 @@ func initializeNamespace(client kubernetes.Interface) error {
 	// Create cluster-admin clusterrole binding
 	_, err = client.RbacV1().ClusterRoleBindings().Get(DevSpaceClusterRoleBinding, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.RbacV1().ClusterRoleBindings().Create(&v1beta1.ClusterRoleBinding{
+		_, err = client.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceClusterRoleBinding,
 			},
-			Subjects: []v1beta1.Subject{
+			Subjects: []rbacv1.Subject{
 				{
-					Kind:      v1beta1.ServiceAccountKind,
+					Kind:      rbacv1.ServiceAccountKind,
 					Name:      DevSpaceServiceAccount,
 					Namespace: DevSpaceCloudNamespace,
 				},
 			},
-			RoleRef: v1beta1.RoleRef{
+			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
 				Name:     "cluster-admin",
