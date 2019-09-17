@@ -1,11 +1,11 @@
 package add
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -25,20 +25,12 @@ type addDeploymentTestCase struct {
 	fakeConfig    *latest.Config
 	fakeGenerated *generated.Config
 
-	args            []string
-	answers         []string
-	cmdManifests    string
-	cmdChart        string
-	cmdChartRepo    string
-	cmdChartVersion string
-	cmdDockerfile   string
-	cmdImage        string
-	cmdContext      string
-	cmdNamespace    string
-	componentFlag   string
+	args    []string
+	answers []string
+	cmd     *deploymentCmd
 
 	expectedOutput              string
-	expectedPanic               string
+	expectedErr                 string
 	expectConfigFile            bool
 	expectedDeploymentName      string
 	expectedDeploymentNamespace string
@@ -61,15 +53,15 @@ type addDeploymentTestCase struct {
 func TestRunAddDeployment(t *testing.T) {
 	testCases := []addDeploymentTestCase{
 		addDeploymentTestCase{
-			name:          "No devspace config",
-			args:          []string{""},
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "No devspace config",
+			args:        []string{""},
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		addDeploymentTestCase{
-			name:          "No params",
-			args:          []string{""},
-			fakeConfig:    &latest.Config{},
-			expectedPanic: "Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)",
+			name:        "No params",
+			args:        []string{""},
+			fakeConfig:  &latest.Config{},
+			expectedErr: "Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)",
 		},
 		addDeploymentTestCase{
 			name: "Add already existing deployment",
@@ -81,7 +73,7 @@ func TestRunAddDeployment(t *testing.T) {
 					},
 				},
 			},
-			expectedPanic: "Deployment exists already exists",
+			expectedErr: "Deployment exists already exists",
 		},
 		addDeploymentTestCase{
 			name: "Valid kubectl deployment",
@@ -90,8 +82,12 @@ func TestRunAddDeployment(t *testing.T) {
 				Version: "v1beta3",
 			},
 
-			cmdManifests: "these, are, manifests",
-			cmdNamespace: "kubectlNamespace",
+			cmd: &deploymentCmd{
+				Manifests: "these, are, manifests",
+				GlobalFlags: &flags.GlobalFlags{
+					Namespace: "kubectlNamespace",
+				},
+			},
 
 			expectedOutput:                     "\nDone Successfully added newKubectlDeployment as new deployment",
 			expectConfigFile:                   true,
@@ -107,9 +103,11 @@ func TestRunAddDeployment(t *testing.T) {
 				Version: "v1beta3",
 			},
 
-			cmdChart:        "myChart",
-			cmdChartRepo:    "myChartRepo",
-			cmdChartVersion: "myChartVersion",
+			cmd: &deploymentCmd{
+				Chart:        "myChart",
+				ChartRepo:    "myChartRepo",
+				ChartVersion: "myChartVersion",
+			},
 
 			expectedOutput:            "\nDone Successfully added newHelmDeployment as new deployment",
 			expectConfigFile:          true,
@@ -127,9 +125,11 @@ func TestRunAddDeployment(t *testing.T) {
 				Version: "v1beta3",
 			},
 
-			cmdDockerfile: "myDockerfile",
-			cmdImage:      "myImage",
-			cmdContext:    "myContext",
+			cmd: &deploymentCmd{
+				Dockerfile: "myDockerfile",
+				Image:      "myImage",
+				Context:    "myContext",
+			},
 
 			expectedOutput:            "\nDone Successfully added newDockerfileDeployment as new deployment",
 			expectConfigFile:          true,
@@ -155,8 +155,10 @@ func TestRunAddDeployment(t *testing.T) {
 				},
 			},
 
-			cmdImage:   "myImage",
-			cmdContext: "myContext",
+			cmd: &deploymentCmd{
+				Image:   "myImage",
+				Context: "myContext",
+			},
 
 			expectedOutput:            "\nDone Successfully added newImageDeployment as new deployment",
 			expectConfigFile:          true,
@@ -217,34 +219,22 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&deploymentCmd{
-		Manifests:    testCase.cmdManifests,
-		Chart:        testCase.cmdChart,
-		ChartRepo:    testCase.cmdChartRepo,
-		ChartVersion: testCase.cmdChartVersion,
-		Dockerfile:   testCase.cmdDockerfile,
-		Image:        testCase.cmdImage,
-		Context:      testCase.cmdContext,
-		Namespace:    testCase.cmdNamespace,
-		Component:    testCase.componentFlag,
-	}).RunAddDeployment(nil, testCase.args)
+	if testCase.cmd == nil {
+		testCase.cmd = &deploymentCmd{}
+	}
+	if testCase.cmd.GlobalFlags == nil {
+		testCase.cmd.GlobalFlags = &flags.GlobalFlags{}
+	}
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	err = (testCase.cmd).RunAddDeployment(nil, testCase.args)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 
 	if testCase.expectConfigFile {
 		config, err := loadConfigFromPath()
@@ -304,4 +294,3 @@ func loadConfigFromPath() (*latest.Config, error) {
 
 	return newConfig, nil
 }
-*/

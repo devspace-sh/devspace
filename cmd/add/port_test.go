@@ -1,6 +1,5 @@
 package add
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -19,14 +18,13 @@ import (
 type addPortTestCase struct {
 	name string
 
-	args          []string
-	answers       []string
-	fakeConfig    *latest.Config
-	labelSelector string
-	namespace     string
+	args       []string
+	answers    []string
+	fakeConfig *latest.Config
+	cmd        *portCmd
 
 	expectedOutput   string
-	expectedPanic    string
+	expectedErr      string
 	expectConfigFile bool
 	expectedPorts    []*latest.PortMapping
 }
@@ -34,15 +32,15 @@ type addPortTestCase struct {
 func TestRunAddPort(t *testing.T) {
 	testCases := []addPortTestCase{
 		addPortTestCase{
-			name:          "No devspace config",
-			args:          []string{""},
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "No devspace config",
+			args:        []string{""},
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		addPortTestCase{
-			name:          "Add empty port",
-			args:          []string{""},
-			fakeConfig:    &latest.Config{},
-			expectedPanic: "Error parsing port mappings: strconv.Atoi: parsing \"\": invalid syntax",
+			name:        "Add empty port",
+			args:        []string{""},
+			fakeConfig:  &latest.Config{},
+			expectedErr: "Error parsing port mappings: strconv.Atoi: parsing \"\": invalid syntax",
 		},
 		addPortTestCase{
 			name:             "Add valid port",
@@ -105,31 +103,26 @@ func testRunAddPort(t *testing.T, testCase addPortTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&portCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespace,
-		},
-		LabelSelector: testCase.labelSelector,
-	}).RunAddPort(nil, testCase.args)
+	if testCase.cmd == nil {
+		testCase.cmd = &portCmd{}
+	}
+	if testCase.cmd.GlobalFlags == nil {
+		testCase.cmd.GlobalFlags = &flags.GlobalFlags{}
+	}
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	err = (testCase.cmd).RunAddPort(nil, testCase.args)
 
-	config, err := configutil.GetBaseConfig("")
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+		return
+	}
+
+	config, err := configutil.GetBaseConfig(&configutil.ConfigOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,4 +135,3 @@ func testRunAddPort(t *testing.T, testCase addPortTestCase) {
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
 }
-*/

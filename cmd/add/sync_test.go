@@ -1,6 +1,5 @@
 package add
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -22,14 +21,10 @@ type addSyncTestCase struct {
 	answers    []string
 	fakeConfig *latest.Config
 
-	labelSelector string
-	localPath     string
-	namespace     string
-	containerPath string
-	excludedPaths string
+	cmd *syncCmd
 
 	expectedOutput   string
-	expectedPanic    string
+	expectedErr      string
 	expectConfigFile bool
 	expectedSync     []*latest.SyncConfig
 }
@@ -37,23 +32,27 @@ type addSyncTestCase struct {
 func TestRunAddSync(t *testing.T) {
 	testCases := []addSyncTestCase{
 		addSyncTestCase{
-			name:          "No devspace config",
-			args:          []string{""},
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "No devspace config",
+			args:        []string{""},
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		addSyncTestCase{
-			name:          "Invalid selector",
-			args:          []string{""},
-			fakeConfig:    &latest.Config{},
-			labelSelector: "a=b=c",
-			expectedPanic: "Error adding sync path: Error parsing selectors: Wrong selector format: a=b=c",
+			name:       "Invalid selector",
+			args:       []string{""},
+			fakeConfig: &latest.Config{},
+			cmd: &syncCmd{
+				LabelSelector: "a=b=c",
+			},
+			expectedErr: "add sync path: Error parsing selectors: Wrong selector format: a=b=c",
 		},
 		addSyncTestCase{
-			name:           "Add empty selector",
-			args:           []string{""},
-			fakeConfig:     &latest.Config{},
-			localPath:      "/",
-			containerPath:  "/",
+			name:       "Add empty selector",
+			args:       []string{""},
+			fakeConfig: &latest.Config{},
+			cmd: &syncCmd{
+				LocalPath:     "/",
+				ContainerPath: "/",
+			},
 			expectedOutput: "\nDone Successfully added sync between local path / and container path /",
 			expectedSync: []*latest.SyncConfig{
 				&latest.SyncConfig{
@@ -115,34 +114,28 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&syncCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespace,
-		},
-		LabelSelector: testCase.labelSelector,
-		LocalPath:     testCase.localPath,
-		ContainerPath: testCase.containerPath,
-		ExcludedPaths: testCase.excludedPaths,
-	}).RunAddSync(nil, testCase.args)
+	if testCase.cmd == nil {
+		testCase.cmd = &syncCmd{}
+	}
+	if testCase.cmd.GlobalFlags == nil {
+		testCase.cmd.GlobalFlags = &flags.GlobalFlags{}
+	}
+
+	err = (testCase.cmd).RunAddSync(nil, testCase.args)
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+		return
+	}
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
-	config, err := configutil.GetBaseConfig("")
+	config, err := configutil.GetBaseConfig(&configutil.ConfigOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -197,4 +190,3 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
 }
-*/
