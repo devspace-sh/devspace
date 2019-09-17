@@ -13,13 +13,13 @@ jobs:
     install:
     - npm install -g codeclimate-test-reporter
     os: osx
-    go: 1.13.0
+    go: 1.13
     script:
     - "./scripts/coverage.bash"
     after_success:
     - codeclimate-test-reporter < coverage.txt
   - stage: deploy
-    go: 1.13.0
+    go: 1.13
     os: osx
     go_import_path: github.com/devspace-cloud/devspace
     install: skip
