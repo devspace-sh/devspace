@@ -1,12 +1,11 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -25,21 +24,21 @@ type listVarsTestCase struct {
 	generatedYamlContent interface{}
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestListVars(t *testing.T) {
 	expectedHeader := ansi.Color(" Variable  ", "green+b") + ansi.Color(" Value  ", "green+b")
 	testCases := []listVarsTestCase{
 		listVarsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "no config exists",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listVarsTestCase{
 			name:                 "generated.yaml not parsable",
 			fakeConfig:           &latest.Config{},
 			generatedYamlContent: "unparsable",
-			expectedPanic:        "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectedErr:          "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		listVarsTestCase{
 			name:           "no vars",
@@ -109,22 +108,12 @@ func testListVars(t *testing.T, testCase listVarsTestCase) {
 		fsutil.WriteToFile(content, generated.ConfigPath)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&varsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListVars(nil, []string{})
 
-	(&varsCmd{}).RunListVars(nil, []string{})
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

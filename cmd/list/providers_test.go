@@ -1,13 +1,11 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -32,7 +30,7 @@ type listProvidersTestCase struct {
 	providerYamlContent interface{}
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestListProviders(t *testing.T) {
@@ -49,7 +47,7 @@ func TestListProviders(t *testing.T) {
 		listProvidersTestCase{
 			name:                "Provider can't be parsed",
 			providerYamlContent: "unparsable",
-			expectedPanic:       "Error loading provider config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
+			expectedErr:         "log into provider: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
 		},
 		listProvidersTestCase{
 			name: "One provider",
@@ -123,24 +121,12 @@ func testListProviders(t *testing.T, testCase listProvidersTestCase) {
 
 	cloudconfig.Reset()
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err := (&providersCmd{}).RunListProviders(nil, []string{})
 
-	(&providersCmd{}).RunListProviders(nil, []string{})
-
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

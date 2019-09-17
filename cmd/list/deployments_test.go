@@ -1,11 +1,9 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -17,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -62,15 +61,15 @@ type listDeploymentsTestCase struct {
 	providerList         []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestListDeployments(t *testing.T) {
-	//expectedHeader := ansi.Color(" NAME  ", "green+b") + ansi.Color(" TYPE  ", "green+b") + ansi.Color(" DEPLOY  ", "green+b") + ansi.Color(" STATUS  ", "green+b")
+	expectedHeader := ansi.Color(" NAME  ", "green+b") + ansi.Color(" TYPE  ", "green+b") + ansi.Color(" DEPLOY  ", "green+b") + ansi.Color(" STATUS  ", "green+b")
 	testCases := []listDeploymentsTestCase{
 		listDeploymentsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "no config exists",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listDeploymentsTestCase{
 			name:       "Kubectl client can't be created",
@@ -78,36 +77,68 @@ func TestListDeployments(t *testing.T) {
 			fakeKubeConfig: &customKubeConfig{
 				rawConfigError: fmt.Errorf("RawConfigError"),
 			},
-			expectedPanic: "RawConfigError",
+			expectedErr: "RawConfigError",
 		},
-		/*listDeploymentsTestCase{
+		listDeploymentsTestCase{
 			name:                 "Space can't be resumed",
 			fakeConfig:           &latest.Config{},
-			generatedYamlContent: generated.Config{
-				//CloudSpace: &generated.CloudSpaceConfig{},
-			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		listDeploymentsTestCase{
-			name:           "No deployments",
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\n" + expectedHeader + "\n No entries found\n\n",
-		},
-		listDeploymentsTestCase{
-			name: "Print deployments",
-			fakeConfig: &latest.Config{
-				Cluster: &latest.Cluster{Namespace: ptr.String("someNS")},
-				Deployments: &[]*latest.DeploymentConfig{
-					&latest.DeploymentConfig{
-						Name:    ptr.String("UndeployableKubectl"),
-						Kubectl: &latest.KubectlConfig{},
+			generatedYamlContent: generated.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
 					},
-					&latest.DeploymentConfig{
-						Name: ptr.String("NoDeploymentMethod"),
+					Clusters: map[string]*clientcmdapi.Cluster{
+						"": &clientcmdapi.Cluster{
+							LocationOfOrigin: "someLocation",
+							Server:           "someServer",
+						},
 					},
 				},
 			},
-			expectedOutput: "\nWarn Unable to create kubectl deploy config for UndeployableKubectl: No manifests defined for kubectl deploy\nWarn No deployment method defined for deployment NoDeploymentMethod" + "\n" + expectedHeader + "\n No entries found\n\n",
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find user information for context in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("default", "white+b")),
+		},
+		listDeploymentsTestCase{
+			name: "All deployments not listable",
+			fakeConfig: &latest.Config{
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name:    "UndeployableKubectl",
+						Kubectl: &latest.KubectlConfig{},
+					},
+					//Those slow down the test
+					/*&latest.DeploymentConfig{
+						Name: "ErrStatusHelm",
+						Helm: &latest.HelmConfig{},
+					},
+					&latest.DeploymentConfig{
+						Name:      "ErrStatusComponent",
+						Component: &latest.ComponentConfig{},
+					},*/
+					&latest.DeploymentConfig{
+						Name: "NoDeploymentMethod",
+					},
+				},
+			},
+			generatedYamlContent: generated.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					Clusters: map[string]*clientcmdapi.Cluster{
+						"": &clientcmdapi.Cluster{
+							LocationOfOrigin: "someLocation",
+							Server:           "someServer",
+						},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("default", "white+b")) + "\nWarn Unable to create kubectl deploy config for UndeployableKubectl: No manifests defined for kubectl deploy\nWarn No deployment method defined for deployment NoDeploymentMethod\n" + expectedHeader + "\n No entries found\n\n",
 		},
 	}
 
@@ -163,23 +194,12 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 		fsutil.WriteToFile(content, generated.ConfigPath)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&deploymentsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunDeploymentsStatus(nil, []string{})
 
-	(&deploymentsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunDeploymentsStatus(nil, []string{})
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

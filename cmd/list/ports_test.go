@@ -1,12 +1,11 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -22,15 +21,15 @@ type listPortsTestCase struct {
 	fakeConfig *latest.Config
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestListPorts(t *testing.T) {
-	expectedHeader := ansi.Color(" Selector  ", "green+b") + "  " + ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
+	expectedHeader := ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
 	testCases := []listPortsTestCase{
 		listPortsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "no config exists",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listPortsTestCase{
 			name: "no ports forwarded",
@@ -75,7 +74,7 @@ func TestListPorts(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n mySelector                   1234:4321, 5678:8765  \n              a=b=, a=b=      9012:2109             \n\n",
+			expectedOutput: "\n" + expectedHeader + "\n app=test        1234:4321, 5678:8765  \n a=b=, a=b=      9012:2109             \n\n",
 		},
 	}
 
@@ -119,24 +118,12 @@ func testListPorts(t *testing.T, testCase listPortsTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&portsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListPort(nil, []string{})
 
-	(&portsCmd{}).RunListPort(nil, []string{})
-
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

@@ -1,6 +1,5 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -36,7 +34,7 @@ type listSpacesTestCase struct {
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr  string
 }
 
 func TestListSpaces(t *testing.T) {
@@ -52,7 +50,7 @@ func TestListSpaces(t *testing.T) {
 		listSpacesTestCase{
 			name:          "Not existent provider",
 			providerFlag:  "Doesn'tExist",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
 		},
 		listSpacesTestCase{
 			name:         "Server responds with error",
@@ -66,7 +64,7 @@ func TestListSpaces(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Error response from server"),
 			},
-			expectedPanic: "Error retrieving spaces: Error response from server",
+			expectedErr: "Error retrieving spaces: Error response from server",
 		},
 	}
 
@@ -127,29 +125,17 @@ func testListSpaces(t *testing.T, testCase listSpacesTestCase) {
 		survey.SetNextAnswer(answer)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
-
-	(&spacesCmd{
+	err = (&spacesCmd{
 		All:      testCase.allFlag,
 		Provider: testCase.providerFlag,
 		Name:     testCase.nameFlag,
 		Cluster:  testCase.clusterFlag,
 	}).RunListSpaces(nil, []string{})
 
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

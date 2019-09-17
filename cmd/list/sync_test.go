@@ -1,12 +1,11 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -21,15 +20,15 @@ type listSyncsTestCase struct {
 	fakeConfig *latest.Config
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestListSyncs(t *testing.T) {
-	expectedHeader := ansi.Color(" Selector  ", "green+b") + "  " + ansi.Color(" Label Selector  ", "green+b") + ansi.Color(" Local Path  ", "green+b") + ansi.Color(" Container Path  ", "green+b") + ansi.Color(" Excluded Paths  ", "green+b")
+	expectedHeader := ansi.Color(" Label Selector  ", "green+b") + ansi.Color(" Local Path  ", "green+b") + ansi.Color(" Container Path  ", "green+b") + ansi.Color(" Excluded Paths  ", "green+b")
 	testCases := []listSyncsTestCase{
 		listSyncsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "no config exists",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		listSyncsTestCase{
 			name: "no sync paths exists",
@@ -63,7 +62,7 @@ func TestListSyncs(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n mySelector                    local        container        path1, path2    \n              a=b=, a=b=       local2       container2                       \n\n",
+			expectedOutput: "\n" + expectedHeader + "\n app=test         local        container        path1, path2    \n a=b=, a=b=       local2       container2                       \n\n",
 		},
 	}
 
@@ -107,24 +106,12 @@ func testListSyncs(t *testing.T, testCase listSyncsTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&syncCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListSync(nil, []string{})
 
-	(&syncCmd{}).RunListSync(nil, []string{})
-
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/
