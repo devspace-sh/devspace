@@ -1,6 +1,5 @@
 package cleanup
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
@@ -8,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -55,30 +55,27 @@ type RunCleanupImagesTestCase struct {
 	answers []string
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunCleanupImages(t *testing.T) {
 	testCases := []RunCleanupImagesTestCase{
 		RunCleanupImagesTestCase{
-			name:          "No devspace config",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "No devspace config",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		RunCleanupImagesTestCase{
 			name:           "No images to delete",
 			fakeConfig:     &latest.Config{},
 			expectedOutput: "\nDone No images found in config to delete",
 		},
-		/*RunCleanupImagesTestCase{
+		RunCleanupImagesTestCase{
 			name: "One image to delete",
 			fakeConfig: &latest.Config{
-				Images: &map[string]*latest.ImageConfig{
+				Images: map[string]*latest.ImageConfig{
 					"imageToDelete": &latest.ImageConfig{
-						Image: ptr.String("imageToDelete"),
+						Image: "imageToDelete",
 					},
-				},
-				Cluster: &latest.Cluster{
-					KubeContext: ptr.String("noMinikube"),
 				},
 			},
 			expectedOutput: "\nWait Deleting local image imageToDelete\nWait Deleting local dangling images\nDone Successfully cleaned up images",
@@ -133,18 +130,6 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
 		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s. Output until now: %s", testCase.name, logOutput)
 	}()
 
@@ -152,8 +137,11 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 		log.DiscardLogger{PanicOnExit: true},
 	})
 
-	(&imagesCmd{}).RunCleanupImages(nil, nil)
+	err = (&imagesCmd{GlobalFlags: &flags.GlobalFlags{}}).RunCleanupImages(nil, nil)
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/
