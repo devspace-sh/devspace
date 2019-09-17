@@ -130,7 +130,6 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s. Output until now: %s", testCase.name, logOutput)
 	}()
 
 	log.SetInstance(&testLogger{
@@ -144,4 +143,5 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
