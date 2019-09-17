@@ -82,7 +82,7 @@ func createTillerServiceAccount(client *kubectl.Client, tillerNamespace string) 
 }
 
 func addDeployAccessToTiller(client *kubectl.Client, tillerNamespace, namespace string) error {
-	_, err := client.Client.RbacV1beta1().Roles(namespace).Create(&k8sv1beta1.Role{
+	_, err := client.Client.RbacV1().Roles(namespace).Create(&k8sv1beta1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName,
 			Namespace: namespace,
@@ -103,7 +103,7 @@ func addDeployAccessToTiller(client *kubectl.Client, tillerNamespace, namespace 
 		return err
 	}
 
-	_, err = client.Client.RbacV1beta1().RoleBindings(namespace).Create(&k8sv1beta1.RoleBinding{
+	_, err = client.Client.RbacV1().RoleBindings(namespace).Create(&k8sv1beta1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName + "-binding",
 			Namespace: namespace,

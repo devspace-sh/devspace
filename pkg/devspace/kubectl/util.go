@@ -104,7 +104,7 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 		return nil
 	}
 
-	_, err := client.Client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
+	_, err := client.Client.RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
 		if client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
@@ -142,7 +142,7 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 				},
 			}
 
-			_, err = client.Client.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			_, err = client.Client.RbacV1().ClusterRoleBindings().Create(rolebinding)
 			if err != nil {
 				return err
 			}
@@ -339,7 +339,7 @@ func (client *Client) GetPodsFromDeployment(deployment, namespace string) (*k8sv
 		namespace = client.Namespace
 	}
 
-	deploy, err := client.Client.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
+	deploy, err := client.Client.AppsV1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
 	// Deployment not there
 	if err != nil {
 		return nil, err

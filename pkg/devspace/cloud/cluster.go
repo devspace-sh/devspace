@@ -709,9 +709,9 @@ func initializeNamespace(client kubernetes.Interface) error {
 	}
 
 	// Create cluster-admin clusterrole binding
-	_, err = client.RbacV1beta1().ClusterRoleBindings().Get(DevSpaceClusterRoleBinding, metav1.GetOptions{})
+	_, err = client.RbacV1().ClusterRoleBindings().Get(DevSpaceClusterRoleBinding, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.RbacV1beta1().ClusterRoleBindings().Create(&v1beta1.ClusterRoleBinding{
+		_, err = client.RbacV1().ClusterRoleBindings().Create(&v1beta1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceClusterRoleBinding,
 			},
