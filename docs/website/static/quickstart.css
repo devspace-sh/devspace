@@ -1,0 +1,36 @@
+body {
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    font-family: sans-serif;
+    line-height: 1.3em;
+    text-align: center;
+}
+
+img {
+    height: 30em;
+    max-height: 50vh;
+    padding: 30px;
+}
+
+div {
+    display: inline-block;
+    margin: auto;
+    padding: 2em;
+    background: #ffee88;
+    border-radius: 5px;
+}
+
+li {
+    margin-top: 5px;
+    text-align: left;
+}
+
+code {
+    display: inline;
+    padding: 0.3em 0.5em;
+    background: #282c34;
+    vertical-align: top;
+    color: #abb2bf;
+    border-radius: 3px;
+}
