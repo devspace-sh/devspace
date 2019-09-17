@@ -1,17 +1,19 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
+	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
@@ -23,30 +25,47 @@ type removeDeploymentTestCase struct {
 	args      []string
 	answers   []string
 	removeAll bool
+	files     map[string]interface{}
 
 	expectedOutput   string
-	expectedPanic    string
+	expectedErr      string
 	expectConfigFile bool
 }
 
 func TestRunRemoveDeployment(t *testing.T) {
 	testCases := []removeDeploymentTestCase{
 		removeDeploymentTestCase{
-			name:          "No devspace config",
-			args:          []string{""},
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "No devspace config",
+			args:        []string{""},
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		removeDeploymentTestCase{
-			name:          "Don't specify what to remove",
-			fakeConfig:    &latest.Config{},
-			answers:       []string{"no"},
-			expectedPanic: "You have to specify either a deployment name or the --all flag",
+			name: "Unparsable generated.yaml",
+			files: map[string]interface{}{
+				"devspace.yaml":            latest.Config{},
+				".devspace/generated.yaml": "unparsable",
+			},
+			args:             []string{""},
+			expectedErr:      "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectConfigFile: true,
+		},
+		removeDeploymentTestCase{
+			name:        "Question 1 fails",
+			fakeConfig:  &latest.Config{},
+			args:        []string{""},
+			expectedErr: "Cannot ask question 'Do you want to delete all deployment resources deployed?' because logger level is too low",
+		},
+		removeDeploymentTestCase{
+			name:        "Don't specify what to remove",
+			fakeConfig:  &latest.Config{},
+			answers:     []string{"no"},
+			expectedErr: "You have to specify either a deployment name or the --all flag",
 		},
 		/*removeDeploymentTestCase{
 			name:          "Wrong kubectl configuration",
 			fakeConfig:    &latest.Config{},
 			answers:       []string{"yes"},
-			expectedPanic: "Unable to create new kubectl client: invalid configuration: no configuration has been provided",
+			expectedErr: "Unable to create new kubectl client: invalid configuration: no configuration has been provided",
 		},
 		removeDeploymentTestCase{
 			name:             "Remove not existent deployment",
@@ -91,7 +110,7 @@ func TestRunRemoveDeployment(t *testing.T) {
 			answers:          []string{"no"},
 			expectedOutput:   "\nDone Successfully removed all deployments",
 			expectConfigFile: true,
-		},
+		},*/
 	}
 
 	log.SetInstance(&testLogger{
@@ -120,14 +139,21 @@ func testRunRemoveDeployment(t *testing.T, testCase removeDeploymentTestCase) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
+	for path, content := range testCase.files {
+		asYAML, err := yaml.Marshal(content)
+		assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
+		err = fsutil.WriteToFile(asYAML, path)
+		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
+	}
+
 	for _, answer := range testCase.answers {
 		survey.SetNextAnswer(answer)
 	}
 
-	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
-	configutil.SetFakeConfig(testCase.fakeConfig)
-	if isDeploymentsNil && testCase.fakeConfig != nil {
-		testCase.fakeConfig.Deployments = nil
+	if testCase.fakeConfig == nil {
+		configutil.ResetConfig()
+	} else {
+		configutil.SetFakeConfig(testCase.fakeConfig)
 	}
 
 	defer func() {
@@ -140,30 +166,21 @@ func testRunRemoveDeployment(t *testing.T, testCase removeDeploymentTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&deploymentCmd{
-		RemoveAll: testCase.removeAll,
+	err = (&deploymentCmd{
+		RemoveAll:   testCase.removeAll,
+		GlobalFlags: &flags.GlobalFlags{},
 	}).RunRemoveDeployment(nil, testCase.args)
 
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
 
 }
-*/

@@ -1,6 +1,5 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -72,7 +70,7 @@ type removeContextTestCase struct {
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunRemoveContext(t *testing.T) {
@@ -93,8 +91,8 @@ func TestRunRemoveContext(t *testing.T) {
 					Name: "myProvider",
 				},
 			},
-			all:           true,
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: myProvider ",
+			all:         true,
+			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: myProvider ",
 		},
 		removeContextTestCase{
 			name:     "Spaces not gettable",
@@ -109,7 +107,7 @@ func TestRunRemoveContext(t *testing.T) {
 			graphQLResponses: []interface{}{
 				errors.Errorf("TestError from graphql server"),
 			},
-			expectedPanic: "TestError from graphql server",
+			expectedErr: "TestError from graphql server",
 		},
 		removeContextTestCase{
 			name:     "Delete all one spaces",
@@ -268,25 +266,17 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&contextCmd{
+	err = (&contextCmd{
 		Provider:  testCase.provider,
 		AllSpaces: testCase.all,
 	}).RunRemoveContext(nil, testCase.args)
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

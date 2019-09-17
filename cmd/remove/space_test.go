@@ -1,6 +1,5 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -16,6 +15,7 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -39,7 +39,7 @@ type removeSpaceTestCase struct {
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunRemoveSpace(t *testing.T) {
@@ -53,8 +53,8 @@ func TestRunRemoveSpace(t *testing.T) {
 
 	testCases := []removeSpaceTestCase{
 		removeSpaceTestCase{
-			name:          "Cloud context not gettable",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+			name:        "Cloud context not gettable",
+			expectedErr: "get provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
 		},
 		removeSpaceTestCase{
 			name:     "Spaces not gettable",
@@ -69,7 +69,7 @@ func TestRunRemoveSpace(t *testing.T) {
 			graphQLResponses: []interface{}{
 				errors.Errorf("TestError from graphql server"),
 			},
-			expectedPanic: "TestError from graphql server",
+			expectedErr: "TestError from graphql server",
 		},
 		removeSpaceTestCase{
 			name:     "Fail at deleting first of all spaces",
@@ -97,7 +97,7 @@ func TestRunRemoveSpace(t *testing.T) {
 				},
 				errors.Errorf("TestError from graphql server"),
 			},
-			expectedPanic: "TestError from graphql server",
+			expectedErr: "TestError from graphql server",
 		},
 		removeSpaceTestCase{
 			name:     "Delete all one spaces",
@@ -141,7 +141,7 @@ func TestRunRemoveSpace(t *testing.T) {
 				},
 			},
 			spaceID:        "abc",
-			expectedPanic:  "Couldn't parse space id abc: strconv.Atoi: parsing \"abc\": invalid syntax",
+			expectedErr:    "parse space id: strconv.Atoi: parsing \"abc\": invalid syntax",
 			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
@@ -157,7 +157,7 @@ func TestRunRemoveSpace(t *testing.T) {
 			graphQLResponses: []interface{}{
 				errors.Errorf("TestError from graphql server"),
 			},
-			expectedPanic:  "Error retrieving space: TestError from graphql server",
+			expectedErr:    "get space: TestError from graphql server",
 			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
@@ -170,7 +170,7 @@ func TestRunRemoveSpace(t *testing.T) {
 				},
 			},
 			args:           []string{"a:b:c"},
-			expectedPanic:  "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
+			expectedErr:    "get space: Error parsing space name a:b:c: Expected : only once",
 			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
@@ -182,7 +182,7 @@ func TestRunRemoveSpace(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			expectedPanic:  "Please provide a space name or id for this command",
+			expectedErr:    "Please provide a space name or id for this command",
 			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
@@ -265,6 +265,8 @@ func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	generated.ResetConfig()
+
 	defer func() {
 		//Delete temp folder
 		err = os.Chdir(wdBackup)
@@ -277,26 +279,21 @@ func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 		}
 
 		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
+		if rec != nil {
+			t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
 		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&spaceCmd{
+	err = (&spaceCmd{
 		SpaceID:  testCase.spaceID,
 		Provider: testCase.provider,
 		All:      testCase.all,
 	}).RunRemoveCloudDevSpace(nil, testCase.args)
 
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

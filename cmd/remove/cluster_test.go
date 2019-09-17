@@ -1,6 +1,5 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/base64"
@@ -9,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -98,7 +96,7 @@ type removeClusterTestCase struct {
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunRemoveCluster(t *testing.T) {
@@ -112,8 +110,19 @@ func TestRunRemoveCluster(t *testing.T) {
 
 	testCases := []removeClusterTestCase{
 		removeClusterTestCase{
-			name:          "Cloud context not gettable",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+			name:        "Cloud context not gettable",
+			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
+		},
+		removeClusterTestCase{
+			name:     "Question 1 fails",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name: "myProvider",
+					Key:  "someKey",
+				},
+			},
+			expectedErr: "Cannot ask question 'Are you sure you want to delete cluster ? This action is irreversible' because logger level is too low",
 		},
 		removeClusterTestCase{
 			name:     "Don't delete",
@@ -135,9 +144,57 @@ func TestRunRemoveCluster(t *testing.T) {
 					Key:  "someKey",
 				},
 			},
-			answers:       []string{"Yes"},
-			args:          []string{"a:b:c"},
-			expectedPanic: "Error parsing cluster name a:b:c: Expected : only once",
+			answers:     []string{"Yes"},
+			args:        []string{"a:b:c"},
+			expectedErr: "Error parsing cluster name a:b:c: Expected : only once",
+		},
+		removeClusterTestCase{
+			name:     "Question 2 fails",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name:  "myProvider",
+					Key:   "someKey",
+					Token: "." + validEncodedClaim + ".",
+				},
+			},
+			graphQLResponses: []interface{}{
+				struct {
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
+				}{
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{},
+					},
+				},
+				errors.Errorf("Testerror from graphql server"),
+			},
+			answers:     []string{"Yes"},
+			args:        []string{"a:b"},
+			expectedErr: "Cannot ask question 'Do you want to delete all cluster spaces?' because logger level is too low",
+		},
+		removeClusterTestCase{
+			name:     "Question 3 fails",
+			provider: "myProvider",
+			providerList: []*cloudlatest.Provider{
+				&cloudlatest.Provider{
+					Name:  "myProvider",
+					Key:   "someKey",
+					Token: "." + validEncodedClaim + ".",
+				},
+			},
+			graphQLResponses: []interface{}{
+				struct {
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
+				}{
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{},
+					},
+				},
+				errors.Errorf("Testerror from graphql server"),
+			},
+			answers:     []string{"Yes", "no"},
+			args:        []string{"a:b"},
+			expectedErr: "Cannot ask question 'Do you want to delete all cluster services?' because logger level is too low",
 		},
 		removeClusterTestCase{
 			name:     "Cluster can't be deleted",
@@ -161,7 +218,7 @@ func TestRunRemoveCluster(t *testing.T) {
 				},
 				errors.Errorf("Testerror from graphql server"),
 			},
-			expectedPanic:  "Testerror from graphql server",
+			expectedErr:    "Testerror from graphql server",
 			expectedOutput: "\nWait Deleting cluster ",
 		},
 		removeClusterTestCase{
@@ -245,29 +302,19 @@ func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if len(testCase.args) == 0 {
 		testCase.args = []string{""}
 	}
-	(&clusterCmd{
+	err = (&clusterCmd{
 		Provider: testCase.provider,
 	}).RunRemoveCluster(nil, testCase.args)
 
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/
