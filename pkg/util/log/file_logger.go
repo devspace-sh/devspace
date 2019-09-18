@@ -14,7 +14,7 @@ var Logdir = "./.devspace/logs/"
 var logs = map[string]Logger{}
 var logsMutext sync.Mutex
 
-var runtimeErrorHandlersOverriden bool
+var overrideOnce sync.Once
 
 type fileLogger struct {
 	logger *logrus.Logger
@@ -50,17 +50,20 @@ func GetFileLogger(filename string) Logger {
 // OverrideRuntimeErrorHandler overrides the standard runtime error handler that logs to stdout
 // with a file logger that logs all runtime.HandleErrors to errors.log
 func OverrideRuntimeErrorHandler() {
-	// We also override the standard runtime error handler
-	if runtimeErrorHandlersOverriden == false {
-		runtimeErrorHandlersOverriden = true
+	overrideOnce.Do(func() {
 		errorLog := GetFileLogger("errors")
-
-		if len(runtime.ErrorHandlers) == 2 {
+		if len(runtime.ErrorHandlers) > 0 {
 			runtime.ErrorHandlers[0] = func(err error) {
 				errorLog.Errorf("Runtime error occurred: %s", err)
 			}
+		} else {
+			runtime.ErrorHandlers = []func(err error){
+				func(err error) {
+					errorLog.Errorf("Runtime error occurred: %s", err)
+				},
+			}
 		}
-	}
+	})
 }
 
 func (f *fileLogger) Debug(args ...interface{}) {

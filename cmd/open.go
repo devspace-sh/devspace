@@ -90,6 +90,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
+		log.StartFileLogging()
+
 		generatedConfig, err = generated.LoadConfig(cmd.Profile)
 		if err != nil {
 			return err

@@ -62,8 +62,9 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) err
 		}
 
 		context, err = survey.Question(&survey.QuestionOptions{
-			Question: "Which context do you want to use?",
-			Options:  contexts,
+			Question:     "Which context do you want to use?",
+			DefaultValue: kubeConfig.CurrentContext,
+			Options:      contexts,
 		}, log.GetInstance())
 		if err != nil {
 			return err
