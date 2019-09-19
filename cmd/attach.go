@@ -39,7 +39,6 @@ Attaches to a running container
 
 devspace attach
 devspace attach --pick # Select pod to enter
-devspace attach -s my-selector
 devspace attach -c my-container
 devspace attach -n my-namespace
 #######################################################`,

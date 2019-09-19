@@ -421,10 +421,10 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_deployAdmissionController"`
 		}{})
 		if err != nil {
-			return errors.Wrap(err, "deploy admission controller")
+			log.Warnf("Error deploying admission controller: %v", err)
+		} else {
+			log.Done("Deployed admission controller")
 		}
-
-		log.Done("Deployed admission controller")
 	}
 
 	// Cert manager
@@ -446,10 +446,10 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_deployCertManager"`
 		}{})
 		if err != nil {
-			return errors.Wrap(err, "deploy cert manager")
+			log.Warnf("Error deploying cert manager: %v", err)
+		} else {
+			log.Done("Deployed cert manager")
 		}
-
-		log.Done("Deployed cert manager")
 	}
 
 	return nil
