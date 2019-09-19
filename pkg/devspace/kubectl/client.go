@@ -176,7 +176,7 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Run '%s' to change to the previous context", ansi.Color("devspace use context "+generatedConfig.GetActive().LastContext.Context, "white+b"))
+				log.Infof("Use the '%s' flag to use the previous context and namespace", ansi.Color("-s", "white+b"))
 				wait = true
 			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
 				log.WriteString("\n")
@@ -185,7 +185,7 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Run '%s' to change to the previous namespace", ansi.Color("devspace use namespace "+generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+				log.Infof("Use the '%s' flag to use the previous context and namespace", ansi.Color("-s", "white+b"))
 				wait = true
 			}
 
