@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/Masterminds/semver"
 	"github.com/devspace-cloud/devspace/cmd/add"
 	"github.com/devspace-cloud/devspace/cmd/cleanup"
@@ -16,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
+	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
@@ -75,6 +78,12 @@ func Execute() {
 	err := rootCmd.Execute()
 	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
+		// Check if return code error
+		retCode, ok := err.(*exit.ReturnCodeError)
+		if ok {
+			os.Exit(retCode.ExitCode)
+		}
+
 		if globalFlags.Debug {
 			log.Fatalf("%+v", err)
 		} else {

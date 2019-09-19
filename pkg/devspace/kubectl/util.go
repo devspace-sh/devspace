@@ -401,5 +401,10 @@ func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses
 
 // IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
 func (client *Client) IsLocalKubernetes() bool {
-	return client.CurrentContext == minikubeContext || client.CurrentContext == dockerDesktopContext || client.CurrentContext == dockerForDesktopContext
+	return IsLocalKubernetes(client.CurrentContext)
+}
+
+// IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
+func IsLocalKubernetes(context string) bool {
+	return context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext
 }

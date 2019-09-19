@@ -76,8 +76,14 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Get kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
@@ -111,7 +117,9 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
-		exit.Exit(exitCode)
+		return &exit.ReturnCodeError{
+			ExitCode: exitCode,
+		}
 	}
 
 	return nil

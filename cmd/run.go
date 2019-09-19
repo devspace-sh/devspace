@@ -53,7 +53,7 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load config
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}
@@ -63,12 +63,16 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		shellExitError, ok := err.(interp.ShellExitStatus)
 		if ok {
-			exit.Exit(int(shellExitError))
+			return &exit.ReturnCodeError{
+				ExitCode: int(shellExitError),
+			}
 		}
 
 		exitError, ok := err.(interp.ExitStatus)
 		if ok {
-			exit.Exit(int(exitError))
+			return &exit.ReturnCodeError{
+				ExitCode: int(exitError),
+			}
 		}
 
 		return errors.Wrap(err, "execute command")

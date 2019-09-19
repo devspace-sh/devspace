@@ -19,12 +19,11 @@ This project and its contibutors are expected to uphold the [Go Community Code o
 
 ## Getting help
 
-Feel free to [open up an issue](https://github.com/AlecAivazis/survey/v2/issues/new) on GitHub when asking a question so others will be able to find it. Please remember to tag the issue with the `Question` label so the maintainers can get to your question as soon as possible. If the question is urgent, feel free to reach out to `@AlecAivazis` directly in the gophers slack channel.
+Feel free to [open up an issue](https://github.com/AlecAivazis/survey/issues/new) on GitHub when asking a question so others will be able to find it. Please remember to tag the issue with the `Question` label so the maintainers can get to your question as soon as possible. If the question is urgent, feel free to reach out to `@AlecAivazis` directly in the gophers slack channel.
 
 ## How to file a bug report
 
 Bugs are tracked using the Github Issue tracker. When filing a bug, please remember to label the issue as a `Bug` and answer/provide the following:
-
 1. What operating system and terminal are you using?
 1. An example that showcases the bug.
 1. What did you expect to see?
@@ -32,20 +31,20 @@ Bugs are tracked using the Github Issue tracker. When filing a bug, please remem
 
 ## Suggesting an API change
 
-If you have an idea, I'm more than happy to discuss it. Please open an issue and we can work through it. In order to maintain some sense of stability, additions to the top-level API are taken just as seriously as changes that break it. Adding stuff is much easier than removing it.
+If you have an idea, I'm more than happy to discuss it. Please open an issue labeled `Discussion` and we can work through it. In order to maintain some sense of stability, additions to the top-level API are taken just as seriously as changes that break it. Adding stuff is much easier than removing it.
 
 ## Submitting a contribution
 
-In order to maintain stability, most features get fully integrated in more than one PR. This allows for more opportunity to think through each API change without amassing large amounts of tech debt and API changes at once. If your feature can be broken into separate chunks, it will be able to be reviewed much quicker. For example, if the PR that implemented the `Validate` field was submitted in a PR separately from one that included `survey.Required`, it would be able to get merge without having to decide how many different `Validators` we want to provide as part of `survey`'s API.
+In order to maintain stability, most features get fully integrated in more than one PR. This allows for more opportunity to think through each API change without amassing large amounts of tech debt and API changes  at once. If your feature can be broken into separate chunks, it will be able to be reviewed much quicker. For example, if the PR that implemented the `Validate` field was submitted in a PR separately from one that included `survey.Required`, it would be able to get merge without having to decide how many different `Validators` we want to provide as part of `survey`'s API.
 
 When submitting a contribution,
+  *  Provide a description of the feature or change
+  *  Reference the ticket addressed by the PR if there is one
+  *  Following community standards, add comments for all exported members so that all necessary information is available on godocs
+  *  Remember to update the project README.md with changes to the high-level API
+  *  Include both positive and negative unit tests (when applicable)
+  *  Contributions with visual ramifications or interaction changes should be accompanied with the appropriate `go-expect` tests. For more information on writing these tests, see [Writing and Running Tests](#writing-and-running-tests)
 
-- Provide a description of the feature or change
-- Reference the ticket addressed by the PR if there is one
-- Following community standards, add comments for all exported members so that all necessary information is available on godocs
-- Remember to update the project README.md with changes to the high-level API
-- Include both positive and negative unit tests (when applicable)
-- Contributions with visual ramifications or interaction changes should be accompanied with the appropriate `go-expect` tests. For more information on writing these tests, see [Writing and Running Tests](#writing-and-running-tests)
 
 ## Writing and running tests
 
@@ -75,3 +74,5 @@ For example, you can extend the tests for Input by specifying the following test
 If you want to write your own `go-expect` test from scratch, you'll need to instantiate a virtual terminal,
 multiplex it into an `*expect.Console`, and hook up its tty with survey's optional stdio. Please see `go-expect`
 [documentation](https://godoc.org/github.com/Netflix/go-expect) for more detail.
+
+

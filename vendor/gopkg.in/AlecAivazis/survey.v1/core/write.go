@@ -6,35 +6,19 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // the tag used to denote the name of the question
 const tagName = "survey"
 
-// Settables allow for configuration when assigning answers
-type Settable interface {
+// add a few interfaces so users can configure how the prompt values are set
+type settable interface {
 	WriteAnswer(field string, value interface{}) error
-}
-
-// OptionAnswer is the return type of Selects/MultiSelects that lets the appropriate information
-// get copied to the user's struct
-type OptionAnswer struct {
-	Value string
-	Index int
-}
-
-func OptionAnswerList(incoming []string) []OptionAnswer {
-	list := []OptionAnswer{}
-	for i, opt := range incoming {
-		list = append(list, OptionAnswer{Value: opt, Index: i})
-	}
-	return list
 }
 
 func WriteAnswer(t interface{}, name string, v interface{}) (err error) {
 	// if the field is a custom type
-	if s, ok := t.(Settable); ok {
+	if s, ok := t.(settable); ok {
 		// use the interface method
 		return s.WriteAnswer(name, v)
 	}
@@ -55,13 +39,6 @@ func WriteAnswer(t interface{}, name string, v interface{}) (err error) {
 	switch elem.Kind() {
 	// if we are writing to a struct
 	case reflect.Struct:
-		// if we are writing to an option answer than we want to treat
-		// it like a single thing and not a place to deposit answers
-		if elem.Type().Name() == "OptionAnswer" {
-			// copy the value over to the normal struct
-			return copy(elem, value)
-		}
-
 		// get the name of the field that matches the string we  were given
 		fieldIndex, err := findFieldIndex(elem, name)
 		// if something went wrong
@@ -70,13 +47,13 @@ func WriteAnswer(t interface{}, name string, v interface{}) (err error) {
 			return err
 		}
 		field := elem.Field(fieldIndex)
-		// handle references to the Settable interface aswell
-		if s, ok := field.Interface().(Settable); ok {
+		// handle references to the settable interface aswell
+		if s, ok := field.Interface().(settable); ok {
 			// use the interface method
 			return s.WriteAnswer(name, v)
 		}
 		if field.CanAddr() {
-			if s, ok := field.Addr().Interface().(Settable); ok {
+			if s, ok := field.Addr().Interface().(settable); ok {
 				// use the interface method
 				return s.WriteAnswer(name, v)
 			}
@@ -188,11 +165,7 @@ func copy(t reflect.Value, v reflect.Value) (err error) {
 				castVal = int32(val64)
 			}
 		case reflect.Int64:
-			if t.Type() == reflect.TypeOf(time.Duration(0)) {
-				castVal, casterr = time.ParseDuration(vString)
-			} else {
-				castVal, casterr = strconv.ParseInt(vString, 10, 64)
-			}
+			castVal, casterr = strconv.ParseInt(vString, 10, 64)
 		case reflect.Uint:
 			var val64 uint64
 			val64, casterr = strconv.ParseUint(vString, 10, 8)
@@ -237,32 +210,6 @@ func copy(t reflect.Value, v reflect.Value) (err error) {
 
 		t.Set(reflect.ValueOf(castVal))
 		return
-	}
-
-	// if we are copying from an OptionAnswer to something
-	if v.Type().Name() == "OptionAnswer" {
-		// copying an option answer to a string
-		if t.Kind() == reflect.String {
-			// copies the Value field of the struct
-			t.Set(reflect.ValueOf(v.FieldByName("Value").Interface()))
-			return
-		}
-
-		// copying an option answer to an int
-		if t.Kind() == reflect.Int {
-			// copies the Index field of the struct
-			t.Set(reflect.ValueOf(v.FieldByName("Index").Interface()))
-			return
-		}
-
-		// copying an OptionAnswer to an OptionAnswer
-		if t.Type().Name() == "OptionAnswer" {
-			t.Set(v)
-			return
-		}
-
-		// we're copying an option answer to an incorrect type
-		return fmt.Errorf("Unable to convert from OptionAnswer to type %s", t.Kind())
 	}
 
 	// if we are copying from one slice or array to another

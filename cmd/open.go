@@ -98,8 +98,14 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Get kubernetes client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}
@@ -119,7 +125,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig, err = configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+		devspaceConfig, err = configutil.GetConfig(cmd.ToConfigOptions())
 		if err != nil {
 			return err
 		}

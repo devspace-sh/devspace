@@ -3,8 +3,8 @@ package survey
 import (
 	"fmt"
 
-	"github.com/AlecAivazis/survey/v2/core"
-	"github.com/AlecAivazis/survey/v2/terminal"
+	"gopkg.in/AlecAivazis/survey.v1/core"
+	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 /*
@@ -13,10 +13,10 @@ type is a string.
 
 	password := ""
 	prompt := &survey.Password{ Message: "Please type your password" }
-	survey.AskOne(prompt, &password)
+	survey.AskOne(prompt, &password, nil)
 */
 type Password struct {
-	Renderer
+	core.Renderer
 	Message string
 	Help    string
 }
@@ -24,24 +24,20 @@ type Password struct {
 type PasswordTemplateData struct {
 	Password
 	ShowHelp bool
-	Config   *PromptConfig
 }
 
-// PasswordQuestionTemplate is a template with color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
+// Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var PasswordQuestionTemplate = `
-{{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
-{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
-{{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}`
+{{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ HelpInputRune }} for help]{{color "reset"}} {{end}}`
 
-func (p *Password) Prompt(config *PromptConfig) (line interface{}, err error) {
+func (p *Password) Prompt() (line interface{}, err error) {
 	// render the question template
 	out, err := core.RunTemplate(
 		PasswordQuestionTemplate,
-		PasswordTemplateData{
-			Password: *p,
-			Config:   config,
-		},
+		PasswordTemplateData{Password: *p},
 	)
 	fmt.Fprint(terminal.NewAnsiStdout(p.Stdio().Out), out)
 	if err != nil {
@@ -67,17 +63,13 @@ func (p *Password) Prompt(config *PromptConfig) (line interface{}, err error) {
 			return string(line), err
 		}
 
-		if string(line) == config.HelpInput {
+		if string(line) == string(core.HelpInputRune) {
 			// terminal will echo the \n so we need to jump back up one row
 			cursor.PreviousLine(1)
 
 			err = p.Render(
 				PasswordQuestionTemplate,
-				PasswordTemplateData{
-					Password: *p,
-					ShowHelp: true,
-					Config:   config,
-				},
+				PasswordTemplateData{Password: *p, ShowHelp: true},
 			)
 			if err != nil {
 				return "", err
@@ -89,6 +81,6 @@ func (p *Password) Prompt(config *PromptConfig) (line interface{}, err error) {
 }
 
 // Cleanup hides the string with a fixed number of characters.
-func (prompt *Password) Cleanup(config *PromptConfig, val interface{}) error {
+func (prompt *Password) Cleanup(val interface{}) error {
 	return nil
 }

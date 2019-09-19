@@ -3,7 +3,6 @@ module github.com/devspace-cloud/devspace
 go 1.13
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.4
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
@@ -51,6 +50,8 @@ require (
 	github.com/lxn/win v0.0.0-20181015143721-a7f87360b10e // indirect
 	github.com/machinebox/graphql v0.2.2
 	github.com/magiconair/properties v1.8.0 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v0.0.0-20181204074848-79c216b7cb4d // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -81,6 +82,7 @@ require (
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.21.0
+	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.1 // indirect

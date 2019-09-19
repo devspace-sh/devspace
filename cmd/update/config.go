@@ -49,7 +49,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get config
-	configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
+	configutil.GetBaseConfig(cmd.ToConfigOptions())
 
 	// Save it
 	err = configutil.SaveLoadedConfig()

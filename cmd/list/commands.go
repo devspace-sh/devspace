@@ -46,7 +46,7 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Get config
-	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

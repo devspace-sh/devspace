@@ -1,13 +1,15 @@
 package survey
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
+	"gopkg.in/AlecAivazis/survey.v1/core"
+	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 type Multiline struct {
-	Renderer
+	core.Renderer
 	Message string
 	Default string
 	Help    string
@@ -19,13 +21,12 @@ type MultilineTemplateData struct {
 	Answer     string
 	ShowAnswer bool
 	ShowHelp   bool
-	Config     *PromptConfig
 }
 
 // Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var MultilineQuestionTemplate = `
-{{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
-{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .ShowAnswer}}
   {{- "\n"}}{{color "cyan"}}{{.Answer}}{{color "reset"}}
@@ -35,18 +36,16 @@ var MultilineQuestionTemplate = `
   {{- color "cyan"}}[Enter 2 empty lines to finish]{{color "reset"}}
 {{- end}}`
 
-func (i *Multiline) Prompt(config *PromptConfig) (interface{}, error) {
+func (i *Multiline) Prompt() (interface{}, error) {
 	// render the template
 	err := i.Render(
 		MultilineQuestionTemplate,
-		MultilineTemplateData{
-			Multiline: *i,
-			Config:    config,
-		},
+		MultilineTemplateData{Multiline: *i},
 	)
 	if err != nil {
 		return "", err
 	}
+	fmt.Println()
 
 	// start reading runes from the standard in
 	rr := i.NewRuneReader()
@@ -97,14 +96,9 @@ func (i *Multiline) Prompt(config *PromptConfig) (interface{}, error) {
 	return val, err
 }
 
-func (i *Multiline) Cleanup(config *PromptConfig, val interface{}) error {
+func (i *Multiline) Cleanup(val interface{}) error {
 	return i.Render(
 		MultilineQuestionTemplate,
-		MultilineTemplateData{
-			Multiline:  *i,
-			Answer:     val.(string),
-			ShowAnswer: true,
-			Config:     config,
-		},
+		MultilineTemplateData{Multiline: *i, Answer: val.(string), ShowAnswer: true},
 	)
 }

@@ -1,6 +1,8 @@
 package remove
 
 import (
+	"sort"
+
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -98,6 +100,8 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		for ctx := range kubeConfig.Contexts {
 			contexts = append(contexts, ctx)
 		}
+
+		sort.Strings(contexts)
 
 		contextName, err = survey.Question(&survey.QuestionOptions{
 			Question: "Which context do you want to remove?",

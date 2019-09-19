@@ -6,9 +6,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	surveypkg "github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
 // QuestionOptions defines a question and its options

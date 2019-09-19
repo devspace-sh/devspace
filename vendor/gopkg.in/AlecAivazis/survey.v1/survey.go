@@ -4,84 +4,21 @@ import (
 	"errors"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/AlecAivazis/survey/v2/core"
-	"github.com/AlecAivazis/survey/v2/terminal"
+	"gopkg.in/AlecAivazis/survey.v1/core"
+	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
+// PageSize is the default maximum number of items to show in select/multiselect prompts
+var PageSize = 7
+
 // DefaultAskOptions is the default options on ask, using the OS stdio.
-func defaultAskOptions() *AskOptions {
-	return &AskOptions{
-		Stdio: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stdout,
-			Err: os.Stderr,
-		},
-		PromptConfig: PromptConfig{
-			PageSize:  7,
-			HelpInput: "?",
-			Icons: IconSet{
-				Error: Icon{
-					Text:   "X",
-					Format: "red",
-				},
-				Help: Icon{
-					Text:   "?",
-					Format: "cyan",
-				},
-				Question: Icon{
-					Text:   "?",
-					Format: "green+hb",
-				},
-				MarkedOption: Icon{
-					Text:   "[x]",
-					Format: "green",
-				},
-				UnmarkedOption: Icon{
-					Text:   "[ ]",
-					Format: "default+hb",
-				},
-				SelectFocus: Icon{
-					Text:   ">",
-					Format: "cyan+b",
-				},
-			},
-			Filter: func(filter string, value string, index int) (include bool) {
-				filter = strings.ToLower(filter)
-
-				// include this option if it matches
-				return strings.Contains(strings.ToLower(value), filter)
-			},
-		},
-	}
-}
-func defaultPromptConfig() *PromptConfig {
-	return &defaultAskOptions().PromptConfig
-}
-
-func defaultIcons() *IconSet {
-	return &defaultPromptConfig().Icons
-}
-
-// OptionAnswer is an ergonomic alias for core.OptionAnswer
-type OptionAnswer = core.OptionAnswer
-
-// Icon holds the text and format to show for a particular icon
-type Icon struct {
-	Text   string
-	Format string
-}
-
-// IconSet holds the icons to use for various prompts
-type IconSet struct {
-	HelpInput      Icon
-	Error          Icon
-	Help           Icon
-	Question       Icon
-	MarkedOption   Icon
-	UnmarkedOption Icon
-	SelectFocus    Icon
+var DefaultAskOptions = AskOptions{
+	Stdio: terminal.Stdio{
+		In:  os.Stdin,
+		Out: os.Stdout,
+		Err: os.Stderr,
+	},
 }
 
 // Validator is a function passed to a Question after a user has provided a response.
@@ -104,25 +41,17 @@ type Question struct {
 	Transform Transformer
 }
 
-// PromptConfig holds the global configuration for a prompt
-type PromptConfig struct {
-	PageSize  int
-	Icons     IconSet
-	HelpInput string
-	Filter    func(filter string, option string, index int) bool
-}
-
 // Prompt is the primary interface for the objects that can take user input
 // and return a response.
 type Prompt interface {
-	Prompt(config *PromptConfig) (interface{}, error)
-	Cleanup(*PromptConfig, interface{}) error
-	Error(*PromptConfig, error) error
+	Prompt() (interface{}, error)
+	Cleanup(interface{}) error
+	Error(error) error
 }
 
 // PromptAgainer Interface for Prompts that support prompting again after invalid input
 type PromptAgainer interface {
-	PromptAgain(config *PromptConfig, invalid interface{}, err error) (interface{}, error)
+	PromptAgain(invalid interface{}, err error) (interface{}, error)
 }
 
 // AskOpt allows setting optional ask options.
@@ -130,9 +59,7 @@ type AskOpt func(options *AskOptions) error
 
 // AskOptions provides additional options on ask.
 type AskOptions struct {
-	Stdio        terminal.Stdio
-	Validators   []Validator
-	PromptConfig PromptConfig
+	Stdio terminal.Stdio
 }
 
 // WithStdio specifies the standard input, output and error files survey
@@ -146,62 +73,8 @@ func WithStdio(in terminal.FileReader, out terminal.FileWriter, err io.Writer) A
 	}
 }
 
-// WithFilter specifies the default filter to use when asking questions.
-func WithFilter(filter func(filter string, value string, index int) (include bool)) AskOpt {
-	return func(options *AskOptions) error {
-		// save the filter internally
-		options.PromptConfig.Filter = filter
-
-		return nil
-	}
-}
-
-// WithValidator specifies a validator to use while prompting the user
-func WithValidator(v Validator) AskOpt {
-	return func(options *AskOptions) error {
-		// add the provided validator to the list
-		options.Validators = append(options.Validators, v)
-
-		// nothing went wrong
-		return nil
-	}
-}
-
 type wantsStdio interface {
 	WithStdio(terminal.Stdio)
-}
-
-// WithPageSize sets the default page size used by prompts
-func WithPageSize(pageSize int) AskOpt {
-	return func(options *AskOptions) error {
-		// set the page size
-		options.PromptConfig.PageSize = pageSize
-
-		// nothing went wrong
-		return nil
-	}
-}
-
-// WithHelpInput changes the character that prompts look for to give the user helpful information.
-func WithHelpInput(r rune) AskOpt {
-	return func(options *AskOptions) error {
-		// set the input character
-		options.PromptConfig.HelpInput = string(r)
-
-		// nothing went wrong
-		return nil
-	}
-}
-
-// WithIcons sets the icons that will be used when prompting the user
-func WithIcons(setIcons func(*IconSet)) AskOpt {
-	return func(options *AskOptions) error {
-		// update the default icons with whatever the user says
-		setIcons(&options.PromptConfig.Icons)
-
-		// nothing went wrong
-		return nil
-	}
 }
 
 /*
@@ -214,11 +87,11 @@ in the documentation. For example:
 		Message: "name",
 	}
 
-	survey.AskOne(prompt, &name)
+	survey.AskOne(prompt, &name, nil)
 
 */
-func AskOne(p Prompt, response interface{}, opts ...AskOpt) error {
-	err := Ask([]*Question{{Prompt: p}}, response, opts...)
+func AskOne(p Prompt, response interface{}, v Validator, opts ...AskOpt) error {
+	err := Ask([]*Question{{Prompt: p, Validate: v}}, response, opts...)
 	if err != nil {
 		return err
 	}
@@ -250,13 +123,10 @@ matching name. For example:
 	err := survey.Ask(qs, &answers)
 */
 func Ask(qs []*Question, response interface{}, opts ...AskOpt) error {
-	// build up the configuration options
-	options := defaultAskOptions()
+
+	options := DefaultAskOptions
 	for _, opt := range opts {
-		if opt == nil {
-			continue
-		}
-		if err := opt(options); err != nil {
+		if err := opt(&options); err != nil {
 			return err
 		}
 	}
@@ -275,29 +145,17 @@ func Ask(qs []*Question, response interface{}, opts ...AskOpt) error {
 		}
 
 		// grab the user input and save it
-		ans, err := q.Prompt.Prompt(&options.PromptConfig)
+		ans, err := q.Prompt.Prompt()
 		// if there was a problem
 		if err != nil {
 			return err
 		}
 
-		// build up a list of validators that we have to apply to this question
-		validators := []Validator{}
-
-		// make sure to include the question specific one
+		// if there is a validate handler for this question
 		if q.Validate != nil {
-			validators = append(validators, q.Validate)
-		}
-		// add any "global" validators
-		for _, validator := range options.Validators {
-			validators = append(validators, validator)
-		}
-
-		// apply every validator to thte response
-		for _, validator := range validators {
 			// wait for a valid response
-			for invalid := validator(ans); invalid != nil; invalid = validator(ans) {
-				err := q.Prompt.Error(&options.PromptConfig, invalid)
+			for invalid := q.Validate(ans); invalid != nil; invalid = q.Validate(ans) {
+				err := q.Prompt.Error(invalid)
 				// if there was a problem
 				if err != nil {
 					return err
@@ -305,9 +163,9 @@ func Ask(qs []*Question, response interface{}, opts ...AskOpt) error {
 
 				// ask for more input
 				if promptAgainer, ok := q.Prompt.(PromptAgainer); ok {
-					ans, err = promptAgainer.PromptAgain(&options.PromptConfig, ans, invalid)
+					ans, err = promptAgainer.PromptAgain(ans, invalid)
 				} else {
-					ans, err = q.Prompt.Prompt(&options.PromptConfig)
+					ans, err = q.Prompt.Prompt()
 				}
 				// if there was a problem
 				if err != nil {
@@ -326,7 +184,7 @@ func Ask(qs []*Question, response interface{}, opts ...AskOpt) error {
 		}
 
 		// tell the prompt to cleanup with the validated value
-		q.Prompt.Cleanup(&options.PromptConfig, ans)
+		q.Prompt.Cleanup(ans)
 
 		// if something went wrong
 		if err != nil {
@@ -349,7 +207,19 @@ func Ask(qs []*Question, response interface{}, opts ...AskOpt) error {
 
 // paginate returns a single page of choices given the page size, the total list of
 // possible choices, and the current selected index in the total list.
-func paginate(pageSize int, choices []core.OptionAnswer, sel int) ([]core.OptionAnswer, int) {
+func paginate(page int, choices []string, sel int) ([]string, int) {
+	// the number of elements to show in a single page
+	var pageSize int
+	// if the select has a specific page size
+	if page != 0 {
+		// use the specified one
+		pageSize = page
+		// otherwise the select does not have a page size
+	} else {
+		// use the package default
+		pageSize = PageSize
+	}
+
 	var start, end, cursor int
 
 	if len(choices) < pageSize {

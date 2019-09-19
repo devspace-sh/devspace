@@ -77,7 +77,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get the config
-	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	configOptions := cmd.ToConfigOptions()
 	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err

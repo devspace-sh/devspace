@@ -98,8 +98,14 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
@@ -111,7 +117,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add current kube context to context
-	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	configOptions := cmd.ToConfigOptions()
 	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
@@ -189,10 +195,10 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Save Config
-	err = generated.SaveConfig(generatedConfig)
+	// Update last used kube context & save generated yaml
+	err = client.UpdateLastKubeContext(generatedConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "update last kube context")
 	}
 
 	log.Donef("Successfully deployed!")

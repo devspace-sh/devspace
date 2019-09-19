@@ -94,7 +94,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

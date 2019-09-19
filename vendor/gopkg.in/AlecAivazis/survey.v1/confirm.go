@@ -3,11 +3,13 @@ package survey
 import (
 	"fmt"
 	"regexp"
+
+	"gopkg.in/AlecAivazis/survey.v1/core"
 )
 
 // Confirm is a regular text input that accept yes/no answers. Response type is a bool.
 type Confirm struct {
-	Renderer
+	core.Renderer
 	Message string
 	Default bool
 	Help    string
@@ -18,18 +20,17 @@ type ConfirmTemplateData struct {
 	Confirm
 	Answer   string
 	ShowHelp bool
-	Config   *PromptConfig
 }
 
 // Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var ConfirmQuestionTemplate = `
-{{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
-{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .Answer}}
   {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
 {{- else }}
-  {{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}
+  {{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ HelpInputRune }} for help]{{color "reset"}} {{end}}
   {{- color "white"}}{{if .Default}}(Y/n) {{else}}(y/N) {{end}}{{color "reset"}}
 {{- end}}`
 
@@ -46,7 +47,7 @@ func yesNo(t bool) string {
 	return "No"
 }
 
-func (c *Confirm) getBool(showHelp bool, config *PromptConfig) (bool, error) {
+func (c *Confirm) getBool(showHelp bool) (bool, error) {
 	cursor := c.NewCursor()
 	rr := c.NewRuneReader()
 	rr.SetTermMode()
@@ -71,14 +72,10 @@ func (c *Confirm) getBool(showHelp bool, config *PromptConfig) (bool, error) {
 			answer = false
 		case val == "":
 			answer = c.Default
-		case val == config.HelpInput && c.Help != "":
+		case val == string(core.HelpInputRune) && c.Help != "":
 			err := c.Render(
 				ConfirmQuestionTemplate,
-				ConfirmTemplateData{
-					Confirm:  *c,
-					ShowHelp: true,
-					Config:   config,
-				},
+				ConfirmTemplateData{Confirm: *c, ShowHelp: true},
 			)
 			if err != nil {
 				// use the default value and bubble up
@@ -88,16 +85,12 @@ func (c *Confirm) getBool(showHelp bool, config *PromptConfig) (bool, error) {
 			continue
 		default:
 			// we didnt get a valid answer, so print error and prompt again
-			if err := c.Error(config, fmt.Errorf("%q is not a valid answer, please try again.", val)); err != nil {
+			if err := c.Error(fmt.Errorf("%q is not a valid answer, please try again.", val)); err != nil {
 				return c.Default, err
 			}
 			err := c.Render(
 				ConfirmQuestionTemplate,
-				ConfirmTemplateData{
-					Confirm:  *c,
-					ShowHelp: showHelp,
-					Config:   config,
-				},
+				ConfirmTemplateData{Confirm: *c, ShowHelp: showHelp},
 			)
 			if err != nil {
 				// use the default value and bubble up
@@ -117,37 +110,29 @@ by a carriage return.
 
 	likesPie := false
 	prompt := &survey.Confirm{ Message: "What is your name?" }
-	survey.AskOne(prompt, &likesPie)
+	survey.AskOne(prompt, &likesPie, nil)
 */
-func (c *Confirm) Prompt(config *PromptConfig) (interface{}, error) {
+func (c *Confirm) Prompt() (interface{}, error) {
 	// render the question template
 	err := c.Render(
 		ConfirmQuestionTemplate,
-		ConfirmTemplateData{
-			Confirm: *c,
-			Config:  config,
-		},
+		ConfirmTemplateData{Confirm: *c},
 	)
 	if err != nil {
 		return "", err
 	}
 
 	// get input and return
-	return c.getBool(false, config)
+	return c.getBool(false)
 }
 
 // Cleanup overwrite the line with the finalized formatted version
-func (c *Confirm) Cleanup(config *PromptConfig, val interface{}) error {
+func (c *Confirm) Cleanup(val interface{}) error {
 	// if the value was previously true
 	ans := yesNo(val.(bool))
-
 	// render the template
 	return c.Render(
 		ConfirmQuestionTemplate,
-		ConfirmTemplateData{
-			Confirm: *c,
-			Answer:  ans,
-			Config:  config,
-		},
+		ConfirmTemplateData{Confirm: *c, Answer: ans},
 	)
 }

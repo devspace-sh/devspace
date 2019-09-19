@@ -64,7 +64,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

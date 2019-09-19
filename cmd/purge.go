@@ -74,7 +74,13 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
@@ -91,7 +97,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get config with adjusted cluster config
-	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	configOptions := cmd.ToConfigOptions()
 	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err

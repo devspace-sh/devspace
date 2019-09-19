@@ -7,8 +7,9 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	shellquote "github.com/kballard/go-shellquote"
+	"gopkg.in/AlecAivazis/survey.v1/core"
+	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 /*
@@ -22,17 +23,16 @@ Response type is a string.
 
 	message := ""
 	prompt := &survey.Editor{ Message: "What is your commit message?" }
-	survey.AskOne(prompt, &message)
+	survey.AskOne(prompt, &message, nil)
 */
 type Editor struct {
-	Renderer
+	core.Renderer
 	Message       string
 	Default       string
 	Help          string
 	Editor        string
 	HideDefault   bool
 	AppendDefault bool
-	FileName      string
 }
 
 // data available to the templates when processing
@@ -41,18 +41,17 @@ type EditorTemplateData struct {
 	Answer     string
 	ShowAnswer bool
 	ShowHelp   bool
-	Config     *PromptConfig
 }
 
 // Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var EditorQuestionTemplate = `
-{{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
-{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .ShowAnswer}}
   {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
 {{- else }}
-  {{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}
+  {{- if and .Help (not .ShowHelp)}}{{color "cyan"}}[{{ HelpInputRune }} for help]{{color "reset"}} {{end}}
   {{- if and .Default (not .HideDefault)}}{{color "white"}}({{.Default}}) {{color "reset"}}{{end}}
   {{- color "cyan"}}[Enter to launch editor] {{color "reset"}}
 {{- end}}`
@@ -73,27 +72,24 @@ func init() {
 	}
 }
 
-func (e *Editor) PromptAgain(config *PromptConfig, invalid interface{}, err error) (interface{}, error) {
+func (e *Editor) PromptAgain(invalid interface{}, err error) (interface{}, error) {
 	initialValue := invalid.(string)
-	return e.prompt(initialValue, config)
+	return e.prompt(initialValue)
 }
 
-func (e *Editor) Prompt(config *PromptConfig) (interface{}, error) {
+func (e *Editor) Prompt() (interface{}, error) {
 	initialValue := ""
 	if e.Default != "" && e.AppendDefault {
 		initialValue = e.Default
 	}
-	return e.prompt(initialValue, config)
+	return e.prompt(initialValue)
 }
 
-func (e *Editor) prompt(initialValue string, config *PromptConfig) (interface{}, error) {
+func (e *Editor) prompt(initialValue string) (interface{}, error) {
 	// render the template
 	err := e.Render(
 		EditorQuestionTemplate,
-		EditorTemplateData{
-			Editor: *e,
-			Config: config,
-		},
+		EditorTemplateData{Editor: *e},
 	)
 	if err != nil {
 		return "", err
@@ -122,14 +118,10 @@ func (e *Editor) prompt(initialValue string, config *PromptConfig) (interface{},
 		if r == terminal.KeyEndTransmission {
 			break
 		}
-		if string(r) == config.HelpInput && e.Help != "" {
+		if r == core.HelpInputRune && e.Help != "" {
 			err = e.Render(
 				EditorQuestionTemplate,
-				EditorTemplateData{
-					Editor:   *e,
-					ShowHelp: true,
-					Config:   config,
-				},
+				EditorTemplateData{Editor: *e, ShowHelp: true},
 			)
 			if err != nil {
 				return "", err
@@ -139,11 +131,7 @@ func (e *Editor) prompt(initialValue string, config *PromptConfig) (interface{},
 	}
 
 	// prepare the temp file
-	pattern := e.FileName
-	if pattern == "" {
-		pattern = "survey*.txt"
-	}
-	f, err := ioutil.TempFile("", pattern)
+	f, err := ioutil.TempFile("", "survey")
 	if err != nil {
 		return "", err
 	}
@@ -209,14 +197,9 @@ func (e *Editor) prompt(initialValue string, config *PromptConfig) (interface{},
 	return text, nil
 }
 
-func (e *Editor) Cleanup(config *PromptConfig, val interface{}) error {
+func (e *Editor) Cleanup(val interface{}) error {
 	return e.Render(
 		EditorQuestionTemplate,
-		EditorTemplateData{
-			Editor:     *e,
-			Answer:     "<Received>",
-			ShowAnswer: true,
-			Config:     config,
-		},
+		EditorTemplateData{Editor: *e, Answer: "<Received>", ShowAnswer: true},
 	)
 }
