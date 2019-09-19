@@ -33,8 +33,8 @@ func Commands(data map[interface{}]interface{}) (map[interface{}]interface{}, er
 	}, nil
 }
 
-// Prepare prepares the given config for variable loading
-func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
+// Profile loads a certain profile with the base config
+func Profile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	loaded := map[interface{}]interface{}{}
 	err := util.Convert(data, &loaded)
 	if err != nil {

@@ -70,7 +70,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	}
 
 	// Prepare config for variable loading
-	preparedConfig, err := versions.Prepare(data, options.Profile)
+	preparedConfig, err := versions.ParseProfile(data, options.Profile)
 	if err != nil {
 		return nil, err
 	}

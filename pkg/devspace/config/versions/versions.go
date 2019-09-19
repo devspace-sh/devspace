@@ -19,7 +19,7 @@ type loader struct {
 	New       config.New
 	Variables config.Variables
 	Commands  config.Commands
-	Prepare   config.Prepare
+	Profile   config.Profile
 }
 
 var versionLoader = map[string]*loader{
@@ -29,7 +29,7 @@ var versionLoader = map[string]*loader{
 	v1alpha4.Version: &loader{New: v1alpha4.New},
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
-	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Prepare: latest.Prepare},
+	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Profile: latest.Profile},
 }
 
 // ConfigOptions defines options to load the config
@@ -40,8 +40,8 @@ type ConfigOptions struct {
 	Vars []string
 }
 
-// Prepare prepares the config for variable loading
-func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
+// ParseProfile loads the base config & a certain profile
+func ParseProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -52,7 +52,7 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
-	prepareFunc := loader.Prepare
+	prepareFunc := loader.Profile
 	if prepareFunc == nil {
 		cloned := map[interface{}]interface{}{}
 		err := util.Convert(data, &cloned)
