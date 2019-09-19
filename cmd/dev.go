@@ -435,6 +435,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 			log.Warnf("Couldn't print logs: %v", err)
 		}
+		log.WriteString("\n")
 		log.Warn("Log streaming services has been terminated")
 	}
 
