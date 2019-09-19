@@ -18,6 +18,7 @@ import (
 type loader struct {
 	New       config.New
 	Variables config.Variables
+	Commands  config.Commands
 	Prepare   config.Prepare
 }
 
@@ -28,7 +29,7 @@ var versionLoader = map[string]*loader{
 	v1alpha4.Version: &loader{New: v1alpha4.New},
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
-	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Prepare: latest.Prepare},
+	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Prepare: latest.Prepare},
 }
 
 // ConfigOptions defines options to load the config
@@ -43,9 +44,7 @@ type ConfigOptions struct {
 func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
-		// This is needed because overrides usually don't have versions
-		data["version"] = latest.Version
-		version = latest.Version
+		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
 	loader, ok := versionLoader[version]
@@ -65,6 +64,36 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 	}
 
 	return prepareFunc(data, profile)
+}
+
+// ParseCommands parses only the commands from the config
+func ParseCommands(data map[interface{}]interface{}) ([]*latest.CommandConfig, error) {
+	version, ok := data["version"].(string)
+	if ok == false {
+		return nil, errors.Errorf("Version is missing in devspace.yaml")
+	}
+
+	loader, ok := versionLoader[version]
+	if ok == false {
+		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
+	}
+
+	loadFunc := loader.Commands
+	if loadFunc == nil {
+		return nil, nil
+	}
+
+	strippedData, err := loadFunc(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "loading variables")
+	}
+
+	config, err := Parse(strippedData)
+	if err != nil {
+		return nil, errors.Wrap(err, "loading vars")
+	}
+
+	return config.Commands, nil
 }
 
 // ParseVariables parses only the variables from the config
@@ -103,9 +132,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
-		// This is needed because overrides usually don't have versions
-		data["version"] = latest.Version
-		version = latest.Version
+		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
 	loader, ok := versionLoader[version]

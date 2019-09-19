@@ -13,9 +13,9 @@ import (
 )
 
 // ExecuteCommand executes a command from the config
-func ExecuteCommand(config *latest.Config, name string, args []string) error {
+func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string) error {
 	shellCommand := ""
-	for _, command := range config.Commands {
+	for _, command := range commands {
 		if command.Name == name {
 			shellCommand = command.Command
 			break
