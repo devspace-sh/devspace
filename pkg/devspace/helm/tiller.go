@@ -46,7 +46,7 @@ func ensureTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	}
 
 	// Create tiller if necessary
-	_, err = client.Client.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	_, err = client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		// Create tiller server
 		err = createTiller(config, client, tillerNamespace, tillerOptions, log)
@@ -108,7 +108,7 @@ func waitUntilTillerIsStarted(client *kubectl.Client, tillerNamespace string, lo
 	defer log.StopWait()
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := client.Client.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -136,7 +136,7 @@ func upgradeTiller(client *kubectl.Client, tillerOptions *helminstaller.Options,
 
 // IsTillerDeployed determines if we could connect to a tiller server
 func IsTillerDeployed(config *latest.Config, client *kubectl.Client, tillerNamespace string) bool {
-	deployment, err := client.Client.ExtensionsV1beta1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	deployment, err := client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -161,7 +161,7 @@ func DeleteTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	propagationPolicy := metav1.DeletePropagationForeground
 
 	// Delete deployment
-	client.Client.ExtensionsV1beta1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
+	client.Client.AppsV1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 
@@ -182,11 +182,11 @@ func DeleteTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	}
 
 	for _, appNamespace := range appNamespaces {
-		client.Client.RbacV1beta1().Roles(appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		// client.Client.RbacV1beta1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1().Roles(appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		// client.Client.RbacV1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-		client.Client.RbacV1beta1().Roles(appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		client.Client.RbacV1beta1().RoleBindings(appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1().Roles(appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.Client.RbacV1().RoleBindings(appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}
 
 	return nil

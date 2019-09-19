@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # This script will build devspace and calculate hash for each
 # (DEVSPACE_BUILD_PLATFORMS, DEVSPACE_BUILD_ARCHS) pair.
-# DEVSPACE_BUILD_PLATFORMS="linux" DEVSPACE_BUILD_ARCHS="amd64" ./scripts/build-all.bash
+# DEVSPACE_BUILD_PLATFORMS="linux" DEVSPACE_BUILD_ARCHS="amd64" ./hack/build-all.bash
 # can be called to build only for linux-amd64
 
 set -e

@@ -1,6 +1,8 @@
 package use
 
 import (
+	"strings"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/pkg/errors"
 
@@ -47,7 +49,7 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error
 	} else {
 		providerNames := make([]string, 0, len(providerConfig.Providers))
 		for _, provider := range providerConfig.Providers {
-			providerNames = append(providerNames, provider.Name)
+			providerNames = append(providerNames, strings.TrimSpace(provider.Name))
 		}
 
 		providerName, err = survey.Question(&survey.QuestionOptions{

@@ -7,7 +7,6 @@ import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -164,32 +163,15 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if configExists {
-		client, err := kubectl.NewClientFromContext(kubeContext, "", false)
-		if err != nil {
-			return err
-		}
+	client, err := kubectl.NewClientFromContext(kubeContext, "", false)
+	if err != nil {
+		return err
+	}
 
-		// Signal that we are working on the space if there is any
-		err = cloud.ResumeSpace(client, false, log.GetInstance())
-		if err != nil {
-			return err
-		}
-
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig("")
-		if err != nil {
-			return err
-		}
-
-		// Reset namespace cache
-		generatedConfig.GetActive().LastContext = nil
-
-		// Save generated config
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return err
-		}
+	// Signal that we are working on the space if there is any
+	err = cloud.ResumeSpace(client, false, log.GetInstance())
+	if err != nil {
+		return err
 	}
 
 	log.Donef("Successfully configured DevSpace to use space %s", space.Name)

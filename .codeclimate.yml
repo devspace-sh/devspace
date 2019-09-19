@@ -29,6 +29,6 @@ plugins:
     enabled: true
 exclude_paths:
   - vendor/
-  - scripts/
+  - hack/
   - docs/
   - examples/

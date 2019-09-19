@@ -1,6 +1,12 @@
 package flags
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+
+	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -14,6 +20,37 @@ type GlobalFlags struct {
 	KubeContext string
 	Profile     string
 	Vars        []string
+
+	SwitchContext bool
+}
+
+// UseLastContext uses the last context
+func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log.Logger) error {
+	if gf.KubeContext != "" && gf.SwitchContext {
+		return errors.Errorf("Flag --kube-context cannot be used together with --switch-context")
+	} else if gf.Namespace != "" && gf.SwitchContext {
+		return errors.Errorf("Flag --namespace cannot be used together with --switch-context")
+	}
+
+	if gf.SwitchContext == true && generatedConfig != nil && generatedConfig.GetActive().LastContext != nil {
+		gf.KubeContext = generatedConfig.GetActive().LastContext.Context
+		gf.Namespace = generatedConfig.GetActive().LastContext.Namespace
+
+		log.Infof("Switching to context '%s' and namespace '%s'", ansi.Color(gf.KubeContext, "white+b"), ansi.Color(gf.Namespace, "white+b"))
+		return nil
+	}
+
+	gf.SwitchContext = false
+	return nil
+}
+
+// ToConfigOptions converts the globalFlags into config options
+func (gf *GlobalFlags) ToConfigOptions() *configutil.ConfigOptions {
+	return &configutil.ConfigOptions{
+		Profile:     gf.Profile,
+		KubeContext: gf.KubeContext,
+		Vars:        gf.Vars,
+	}
 }
 
 // SetGlobalFlags applies the global flags
@@ -29,6 +66,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVarP(&globalFlags.Profile, "profile", "p", "", "The devspace profile to use (if there is any)")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
+	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
 
 	return globalFlags

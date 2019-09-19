@@ -132,12 +132,19 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
+	// Show a warning if necessary
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
 	if err != nil {
 		return err
@@ -183,7 +190,9 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
-		exit.Exit(exitCode)
+		return &exit.ReturnCodeError{
+			ExitCode: exitCode,
+		}
 	}
 
 	return nil
@@ -192,7 +201,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, configutil.FromFlags(cmd.GlobalFlags), log.GetInstance())
+		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, cmd.ToConfigOptions(), log.GetInstance())
 		if err != nil {
 			return 0, errors.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -240,6 +249,12 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			if err != nil {
 				return 0, errors.Errorf("Error saving generated config: %v", err)
 			}
+		}
+
+		// Update last used kube context
+		err = client.UpdateLastKubeContext(generatedConfig)
+		if err != nil {
+			return 0, errors.Wrap(err, "update last kube context")
 		}
 	}
 
@@ -519,7 +534,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	configutil.ResetConfig()
 
 	// Load config
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return nil, err
 	}

@@ -60,7 +60,7 @@ func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error 
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetBaseConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

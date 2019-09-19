@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -33,8 +32,6 @@ Upgrades the DevSpace CLI to the newest version
 
 // Run executes the command logic
 func (cmd *UpgradeCmd) Run(cobraCmd *cobra.Command, args []string) error {
-	log.StartFileLogging()
-
 	err := upgrade.Upgrade()
 	if err != nil {
 		return errors.Errorf("Couldn't upgrade: %v", err)

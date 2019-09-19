@@ -3,6 +3,7 @@ package kubectl
 import (
 	"net"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -107,6 +108,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 		return nil, errors.New("No kubectl context found. Make sure kubectl is installed and you have a working kubernetes context configured")
 	}
 
+	sort.Strings(options)
 	for true {
 		kubeContext, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
@@ -142,8 +144,26 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 	return nil, errors.New("We should not reach this point")
 }
 
+// UpdateLastKubeContext updates the last kube context
+func (client *Client) UpdateLastKubeContext(generatedConfig *generated.Config) error {
+	// Update generated if we deploy the application
+	if generatedConfig != nil {
+		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+			Context:   client.CurrentContext,
+			Namespace: client.Namespace,
+		}
+
+		err := generated.SaveConfig(generatedConfig)
+		if err != nil {
+			return errors.Wrap(err, "save generated")
+		}
+	}
+
+	return nil
+}
+
 // PrintWarning prints a warning if the last kube context is different than this one
-func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning, updateGenerated bool, log log.Logger) error {
+func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
 	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
@@ -156,7 +176,8 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Run '%s' to change to the previous context", ansi.Color("devspace use context "+generatedConfig.GetActive().LastContext.Context, "white+b"))
+				log.Infof("Use the '%s' flag to automatically use the last context and namespace", ansi.Color("-s", "white+b"))
+				log.Infof("Or use the '%s' flag to ignore this warning", ansi.Color("--no-warn", "white+b"))
 				wait = true
 			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
 				log.WriteString("\n")
@@ -165,11 +186,12 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Run '%s' to change to the previous namespace", ansi.Color("devspace use namespace "+generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+				log.Infof("Use the '%s' flag to automatically use the last context and namespace", ansi.Color("-s", "white+b"))
+				log.Infof("Or use the '%s' flag to ignore this warning", ansi.Color("--no-warn", "white+b"))
 				wait = true
 			}
 
-			if wait && updateGenerated {
+			if wait && shouldWait {
 				log.StartWait("Will continue in 10 seconds...")
 				time.Sleep(10 * time.Second)
 				log.StopWait()
@@ -178,24 +200,11 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if updateGenerated && client.Namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
+		if shouldWait && client.Namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
 			log.StartWait("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
 			log.StopWait()
-		}
-	}
-
-	// Update generated if we deploy the application
-	if generatedConfig != nil && updateGenerated {
-		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
-			Context:   client.CurrentContext,
-			Namespace: client.Namespace,
-		}
-
-		err := generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return errors.Wrap(err, "save generated")
 		}
 	}
 

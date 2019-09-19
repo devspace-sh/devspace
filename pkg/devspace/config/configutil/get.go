@@ -13,7 +13,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -95,15 +94,6 @@ func (co *ConfigOptions) Clone() (*ConfigOptions, error) {
 	}
 
 	return newCo, nil
-}
-
-// FromFlags converts the globalFlags into config options
-func FromFlags(globalFlags *flags.GlobalFlags) *ConfigOptions {
-	return &ConfigOptions{
-		Profile:     globalFlags.Profile,
-		KubeContext: globalFlags.KubeContext,
-		Vars:        globalFlags.Vars,
-	}
 }
 
 // GetBaseConfig returns the config

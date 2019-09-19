@@ -2,7 +2,6 @@ version: v1beta3
 images:
   default:
     image: devspace
-    tag: latest
 deployments:
 - name: default
   helm:

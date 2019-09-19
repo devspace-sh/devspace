@@ -48,7 +48,7 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Fill variables config
-	_, err = configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	_, err = configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

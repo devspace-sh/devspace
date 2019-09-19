@@ -63,8 +63,14 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		return err
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Create new kube client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}
@@ -76,7 +82,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}

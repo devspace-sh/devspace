@@ -19,6 +19,20 @@ func Variables(data map[interface{}]interface{}) (map[interface{}]interface{}, e
 	}, nil
 }
 
+// Commands returns only the commands from the config
+func Commands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	retMap := map[interface{}]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[interface{}]interface{}{
+		"version":  Version,
+		"commands": retMap["commands"],
+	}, nil
+}
+
 // Prepare prepares the given config for variable loading
 func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	loaded := map[interface{}]interface{}{}
@@ -27,8 +41,9 @@ func Prepare(data map[interface{}]interface{}, profile string) (map[interface{}]
 		return nil, err
 	}
 
-	// Delete vars definition
+	// Delete commands & vars definition
 	delete(loaded, "vars")
+	delete(loaded, "commands")
 
 	if profile == "" {
 		delete(loaded, "profiles")

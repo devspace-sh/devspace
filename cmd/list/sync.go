@@ -44,7 +44,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}
