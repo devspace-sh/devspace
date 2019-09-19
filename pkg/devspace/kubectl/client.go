@@ -3,6 +3,7 @@ package kubectl
 import (
 	"net"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -107,6 +108,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 		return nil, errors.New("No kubectl context found. Make sure kubectl is installed and you have a working kubernetes context configured")
 	}
 
+	sort.Strings(options)
 	for true {
 		kubeContext, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
