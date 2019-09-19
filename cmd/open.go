@@ -237,12 +237,6 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 						},
 					},
 				},
-				TLS: []v1beta1.IngressTLS{
-					v1beta1.IngressTLS{
-						Hosts:      []string{domain},
-						SecretName: "tls-" + ingressName,
-					},
-				},
 			},
 		})
 		if err != nil {

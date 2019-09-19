@@ -28,5 +28,5 @@ Flags:
       --name string            The cluster name to create
       --provider string        The cloud provider to use
       --use-domain             Use an automatic domain for the cluster (default true)
-      --use-hostnetwork        Use the host netowkr for the ingress controller instead of a loadbalancer
+      --use-hostnetwork        Use the host network for the ingress controller instead of a loadbalancer
 ```

@@ -40,7 +40,7 @@ devspace connect cluster
 
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployAdmissionController, "admission-controller", true, "Deploy the admission controller")
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployIngressController, "ingress-controller", true, "Deploy an ingress controller")
-	clusterCmd.Flags().BoolVar(&cmd.UseHostNetwork, "use-hostnetwork", false, "Use the host netowkr for the ingress controller instead of a loadbalancer")
+	clusterCmd.Flags().BoolVar(&cmd.UseHostNetwork, "use-hostnetwork", false, "Use the host network for the ingress controller instead of a loadbalancer")
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployCertManager, "cert-manager", true, "Deploy a cert manager")
 	clusterCmd.Flags().StringVar(&cmd.Options.KubeContext, "context", "", "The kube context to use")
 	clusterCmd.Flags().StringVar(&cmd.Options.Key, "key", "", "The encryption key to use")

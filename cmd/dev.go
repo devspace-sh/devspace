@@ -435,9 +435,11 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 			log.Warnf("Couldn't print logs: %v", err)
 		}
+		log.WriteString("\n")
+		log.Warn("Log streaming services has been terminated")
 	}
 
-	log.Done("Services started (Press Ctrl+C to abort port-forwarding and sync)")
+	log.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	return 0, <-exitChan
 }
 

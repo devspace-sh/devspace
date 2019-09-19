@@ -38,7 +38,7 @@ devspace connect cluster
       --name string            The cluster name to create
       --provider string        The cloud provider to use
       --use-domain             Use an automatic domain for the cluster
-      --use-hostnetwork        Use the host netowkr for the ingress controller instead of a loadbalancer
+      --use-hostnetwork        Use the host network for the ingress controller instead of a loadbalancer
 ```
 
 ### Options inherited from parent commands
