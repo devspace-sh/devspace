@@ -1,6 +1,8 @@
 package use
 
 import (
+	"sort"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -60,6 +62,8 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) err
 		for ctx := range kubeConfig.Contexts {
 			contexts = append(contexts, ctx)
 		}
+
+		sort.Strings(contexts)
 
 		context, err = survey.Question(&survey.QuestionOptions{
 			Question:     "Which context do you want to use?",
