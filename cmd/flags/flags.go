@@ -5,6 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -34,6 +35,8 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 	if gf.SwitchContext == true && generatedConfig != nil && generatedConfig.GetActive().LastContext != nil {
 		gf.KubeContext = generatedConfig.GetActive().LastContext.Context
 		gf.Namespace = generatedConfig.GetActive().LastContext.Namespace
+
+		log.Infof("Switching to context '%s' and namespace '%s'", ansi.Color(gf.KubeContext, "white+b"), ansi.Color(gf.Namespace, "white+b"))
 		return nil
 	}
 
