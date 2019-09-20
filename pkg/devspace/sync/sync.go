@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/sync/remote"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
@@ -32,6 +32,8 @@ type Options struct {
 	UpstreamLimit   int64
 	DownstreamLimit int64
 	Verbose         bool
+
+	DownloadOnInitialSync bool
 
 	// These channels can be used to listen for certain sync events
 	DownstreamInitialSyncDone chan bool
@@ -284,9 +286,11 @@ func (s *Sync) initialSync() error {
 			})
 		}
 
-		err = s.downstream.applyChanges(remoteChanges)
-		if err != nil {
-			return errors.Wrap(err, "apply changes")
+		if s.Options.DownloadOnInitialSync {
+			err = s.downstream.applyChanges(remoteChanges)
+			if err != nil {
+				return errors.Wrap(err, "apply changes")
+			}
 		}
 	}
 
