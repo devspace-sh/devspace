@@ -26,8 +26,9 @@ func NewRunCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RunCmd{GlobalFlags: globalFlags}
 
 	runCmd := &cobra.Command{
-		Use:   "run",
-		Short: "Run executes a predefined command",
+		Use:                "run",
+		DisableFlagParsing: true,
+		Short:              "Run executes a predefined command",
 		Long: `
 #######################################################
 ##################### devspace run ####################
