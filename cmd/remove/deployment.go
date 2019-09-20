@@ -50,7 +50,7 @@ devspace remove deployment --all
 // RunRemoveDeployment executes the specified deployment
 func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

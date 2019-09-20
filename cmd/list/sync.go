@@ -36,7 +36,7 @@ Lists the sync configuration
 // RunListSync runs the list sync command logic
 func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

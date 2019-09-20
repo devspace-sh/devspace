@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ devspace run mycommand2 1 2 3
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.Discard)
 	if err != nil {
 		return err
 	}

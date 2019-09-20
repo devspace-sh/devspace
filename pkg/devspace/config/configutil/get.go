@@ -311,7 +311,7 @@ func validate(config *latest.Config) error {
 }
 
 // SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
-func SetDevSpaceRoot() (bool, error) {
+func SetDevSpaceRoot(log log.Logger) (bool, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return false, err

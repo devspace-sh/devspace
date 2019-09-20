@@ -109,7 +109,7 @@ Use Interactive Mode:
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

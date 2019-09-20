@@ -62,7 +62,7 @@ devspace logs --namespace=mynamespace
 // RunLogs executes the functionality devspace logs
 func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}
