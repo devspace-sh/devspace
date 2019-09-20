@@ -7,7 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -70,8 +70,20 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Load generated config
+	generatedConfig, err := generated.LoadConfig("")
+	if err != nil {
+		return err
+	}
+
 	// Parse commands
-	commands, err := versions.ParseCommands(rawMap)
+	commands, err := configutil.ParseCommands(generatedConfig, rawMap, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
+	// Save variables
+	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		return err
 	}

@@ -67,7 +67,7 @@ func ParseProfile(data map[interface{}]interface{}, profile string) (map[interfa
 }
 
 // ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}) ([]*latest.CommandConfig, error) {
+func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -93,7 +93,7 @@ func ParseCommands(data map[interface{}]interface{}) ([]*latest.CommandConfig, e
 		return nil, errors.Wrap(err, "loading vars")
 	}
 
-	return config.Commands, nil
+	return config, nil
 }
 
 // ParseVariables parses only the variables from the config

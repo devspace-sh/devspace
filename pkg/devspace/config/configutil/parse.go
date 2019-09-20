@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -61,6 +62,41 @@ func GetProfiles(basePath string) ([]string, error) {
 	return profileNames, nil
 }
 
+// ParseCommands fills the variables in the data and parses the commands
+func ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}, log log.Logger) ([]*latest.CommandConfig, error) {
+	// Load defined variables
+	vars, err := versions.ParseVariables(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse commands
+	config, err := versions.ParseCommands(data)
+	if err != nil {
+		return nil, err
+	}
+
+	preparedConfig := map[interface{}]interface{}{}
+	err = util.Convert(config, &preparedConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fill in variables
+	err = FillVariables(generatedConfig, preparedConfig, vars, &ConfigOptions{}, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now parse the whole config
+	parsedConfig, err := versions.Parse(preparedConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse config")
+	}
+
+	return parsedConfig.Commands, nil
+}
+
 // ParseConfig fills the variables in the data and parses the config
 func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
@@ -75,22 +111,41 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		return nil, err
 	}
 
-	// Find out what vars are really used
-	varsUsed := map[string]bool{}
-	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		return varspkg.ParseString(value, func(v string) (string, error) {
-			varsUsed[v] = true
-			return "${" + v + "}", nil
-		})
-	})
+	// Fill in variables
+	err = FillVariables(generatedConfig, preparedConfig, vars, options, log)
 	if err != nil {
 		return nil, err
+	}
+
+	// Now parse the whole config
+	parsedConfig, err := versions.Parse(preparedConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse config")
+	}
+
+	return parsedConfig, nil
+}
+
+// FillVariables fills in the given vars into the prepared config
+func FillVariables(generatedConfig *generated.Config, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions, log log.Logger) error {
+	// Find out what vars are really used
+	varsUsed := map[string]bool{}
+	err := walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
+		varspkg.ParseString(value, func(v string) (string, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+
+		return value, nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Parse cli --var's
 	cmdVars, err := parseVarsFromOptions(options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Fill used defined variables
@@ -105,7 +160,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		if len(newVars) > 0 {
 			err = askQuestions(generatedConfig, newVars, cmdVars, log)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
@@ -113,7 +168,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	// Fill predefined vars
 	err = fillPredefinedVars(options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Walk over data and fill in variables
@@ -121,16 +176,10 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		return varReplaceFn(path, value, generatedConfig, cmdVars, options, log)
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse config")
-	}
-
-	return parsedConfig, nil
+	return nil
 }
 
 func parseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
