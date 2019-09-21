@@ -5,6 +5,7 @@ const exec = require("child_process").exec;
 const request = require("request");
 const Spinner = require("cli-spinner").Spinner;
 const inquirer = require('inquirer');
+const findProcess = require('find-process');
 
 const downloadPathTemplate =
   "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
@@ -143,25 +144,51 @@ function rimraf(dir_path) {
 }
 
 if (action == "uninstall") {
-  inquirer
-    .prompt([
-      {
-        type: "list",
-        name: "removeGlobalFolder",
-        message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
-        choices: ["no", "yes"],
-      },
-    ])
-    .then(answers => {
-      if (answers.removeGlobalFolder == "yes") {
-        try {
-          let homedir = require('os').homedir();
-          rimraf(homedir + path.sep + ".devspace");
-        } catch (e) {
-          console.error(e)
+  let removeGlobalFolder = function() {
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "removeGlobalFolder",
+          message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
+          choices: ["no", "yes"],
+        },
+      ])
+      .then(answers => {
+        if (answers.removeGlobalFolder == "yes") {
+          try {
+            let homedir = require('os').homedir();
+            rimraf(homedir + path.sep + ".devspace");
+          } catch (e) {
+            console.error(e)
+          }
         }
-      }
-    });
+      });
+  };
+
+  if (process.ppid > 1) {
+    findProcess('pid', process.ppid)
+      .then(function (list) {
+        if (list.length == 1 && list[0].ppid > 1) {
+          findProcess('pid', list[0].ppid)
+            .then(function (list) {
+              if (list.length == 1 && /npm-cli.js("|')\s+up(date)?\s+(.+\s+)?devspace((\s)|$)/.test(list[0].cmd)) {
+                // Do not ask to remove global folder because user runs: npm upgrade
+              } else {
+                removeGlobalFolder();
+              }
+            }, function () {
+              removeGlobalFolder();
+            })
+        } else {
+          removeGlobalFolder();
+        }
+      }, function () {
+        removeGlobalFolder();
+      })
+  } else {
+    removeGlobalFolder();
+  }
 }
 
 let version = packageJson.version;
