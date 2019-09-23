@@ -85,7 +85,7 @@ The value of an environment variable can be either set:
 See [Volumes](/docs/cli/deployment/components/configuration/volumes#mount-volumes-into-containers) for details.
 
 
-## Resource Limits & Requests
+## Resource Limits &amp; Requests
 Components allow you to use Kubernetes capabilities to allocate and limit computing resources for containers. Generally, there are two types of resource settings:
 - **Resource limits** define the maximum amount of resources a container can use
 - **Resource requests** define an amount of resources that will be allocated/reserved for a container which cannot be used by any other container
