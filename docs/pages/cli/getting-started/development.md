@@ -33,7 +33,7 @@ After starting your application, you can access it via `localhost:[PORT]` becaus
 
 Learn more about how to [configure port forwarding](/docs/cli/development/configuration/port-forwarding).
 
-## Code & Reload Your Application
+## Code &amp; Reload Your Application
 While `devspace dev` is still running, your source code files will be synchronized between your local project and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. `nodemon`) to update the application without having to rebuild your images or redeploy your containers.
 
 > This step requires your application to start with a hot reloading tool, e.g. nodemon. To do this, you have two options:
