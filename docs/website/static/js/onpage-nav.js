@@ -14,7 +14,9 @@ const highlightDetailsOnActiveHash = function(activeHash, doNotOpen) {
         let el = headline;
 
         while (el) {
-            el.classList.add("active-section");
+            if (el.tagName != "BR" && el.tagName != "HR") {
+                el.classList.add("active-section");
+            }
             el = el.nextElementSibling;
             elRank = el.nodeName.substr(1)
 
