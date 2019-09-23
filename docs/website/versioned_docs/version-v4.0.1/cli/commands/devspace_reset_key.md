@@ -1,0 +1,52 @@
+---
+title: Command - devspace reset key
+sidebar_label: key
+id: version-v4.0.1-devspace_reset_key
+original_id: devspace_reset_key
+---
+
+
+Resets a cluster key
+
+## Synopsis
+
+
+```
+devspace reset key [flags]
+```
+
+```
+#######################################################
+############### devspace reset key ####################
+#######################################################
+Resets a key for a given cluster. Useful if the key 
+cannot be obtained anymore. Needs cluster access scope
+
+Examples:
+devspace reset key my-cluster
+#######################################################
+```
+## Options
+
+```
+  -h, --help              help for key
+      --provider string   The cloud provider to use
+```
+
+### Options inherited from parent commands
+
+```
+      --debug                 Prints the stack trace if an error occurs
+      --kube-context string   The kubernetes context to use
+  -n, --namespace string      The kubernetes namespace to use
+      --no-warn               If true does not show any warning when deploying into a different namespace or kube-context than before
+  -p, --profile string        The devspace profile to use (if there is any)
+      --silent                Run in silent mode and prevents any devspace log output except panics & fatals
+  -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
+      --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
+```
+
+## See Also
+
+* [devspace reset](/docs/cli/commands/devspace_reset)	 - Resets an cluster token
+
