@@ -64,7 +64,7 @@ type listAvailableComponentsTestCase struct {
 	name string
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr  string
 }
 
 func TestListAvailableComponents(t *testing.T) {
@@ -129,23 +129,13 @@ func TestListAvailableComponents(t *testing.T) {
 func testListAvailableComponents(t *testing.T, testCase listAvailableComponentsTestCase) {
 	logOutput = ""
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
-
 	(&availableComponentsCmd{}).RunListAvailableComponents(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

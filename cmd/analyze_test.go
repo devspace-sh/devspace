@@ -1,6 +1,5 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -133,19 +131,33 @@ type analyzeTestCase struct {
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
 	providerList         []*cloudlatest.Provider
-	namespaceFlag        string
 	waitFlag             bool
+	globalFlags flags.GlobalFlags
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr  string
 }
 
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
 		analyzeTestCase{
-			name:           "Invalid config",
+			name:           "Invalid generated config",
+			fakeConfig: &latest.Config{},
+			generatedYamlContent: "unparsable",
+			expectedErr:  "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+		},
+		analyzeTestCase{
+			name:           "Invalid global flags",
+			globalFlags: flags.GlobalFlags{
+				KubeContext: "a",
+				SwitchContext: true,
+			},
+			expectedErr:  "Flag --kube-context cannot be used together with --switch-context",
+		},
+		analyzeTestCase{
+			name:           "Invalid kube config",
 			fakeKubeConfig: &customKubeConfig{},
-			expectedPanic:  "Error loading kube config, context '' doesn't exist",
+			expectedErr:  "Error loading kube config, context '' doesn't exist",
 		},
 	}
 
@@ -216,27 +228,17 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
 
-	(&AnalyzeCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespaceFlag,
-		},
+	err = (&AnalyzeCmd{
+		GlobalFlags: &testCase.globalFlags,
 		Wait: testCase.waitFlag,
 	}).RunAnalyze(nil, []string{})
+
+	
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

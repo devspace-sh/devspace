@@ -1,12 +1,10 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -36,7 +34,7 @@ type loginTestCase struct {
 	providerFlag string
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestLogin(t *testing.T) {
@@ -77,8 +75,7 @@ func TestLogin(t *testing.T) {
 			files: map[string]interface{}{
 				"providerConfig": "unparsable",
 			},
-			expectedOutput: "",
-			expectedPanic:  "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
 		},
 		loginTestCase{
 			name:       "No key, default provider doesn't exist",
@@ -88,8 +85,7 @@ func TestLogin(t *testing.T) {
 					Default: "doesn'tExist",
 				},
 			},
-			expectedOutput: "",
-			expectedPanic:  "Error logging in: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: app.devspace.cloud ",
+			expectedErr: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: app.devspace.cloud ",
 		},
 		loginTestCase{
 			name:       "Can't login with key",
@@ -100,10 +96,9 @@ func TestLogin(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Custom server error"),
 			},
-			keyFlag:        "someKey",
-			providerFlag:   "app.devspace.cloud",
-			expectedOutput: "",
-			expectedPanic:  "Error logging in: Access denied for key someKey: Custom server error",
+			keyFlag:      "someKey",
+			providerFlag: "app.devspace.cloud",
+			expectedErr:  "Access denied for key someKey: Custom server error",
 		},
 		loginTestCase{
 			name:       "Successful relogin with key",
@@ -145,20 +140,6 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 	logOutput = ""
 
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -183,9 +164,15 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&LoginCmd{
+	err := (&LoginCmd{
 		Key:      testCase.keyFlag,
 		Provider: testCase.providerFlag,
 	}).RunLogin(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

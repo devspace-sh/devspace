@@ -1,12 +1,10 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -38,7 +36,7 @@ type initTestCase struct {
 	contextFlag     string
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestInit(t *testing.T) {
@@ -98,20 +96,6 @@ func testInit(t *testing.T, testCase initTestCase) {
 	logOutput = ""
 
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -139,10 +123,16 @@ func testInit(t *testing.T, testCase initTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&InitCmd{
+	err = (&InitCmd{
 		Reconfigure: testCase.reconfigureFlag,
 		Dockerfile:  testCase.dockerfileFlag,
 		Context:     testCase.contextFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

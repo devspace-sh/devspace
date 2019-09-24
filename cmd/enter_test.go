@@ -1,12 +1,10 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -43,7 +41,7 @@ type enterTestCase struct {
 	pickFlag          bool
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestEnter(t *testing.T) {
@@ -84,7 +82,7 @@ func TestEnter(t *testing.T) {
 			fakeKubeConfig: &customKubeConfig{
 				rawConfigError: fmt.Errorf("RawConfigError"),
 			},
-			expectedPanic: "Unable to create new kubectl client: RawConfigError",
+			expectedErr: "new kube client: RawConfigError",
 		},
 		/*enterTestCase{
 			name:       "Unparsable generated.yaml",
@@ -92,7 +90,7 @@ func TestEnter(t *testing.T) {
 			files: map[string]interface{}{
 				".devspace/generated.yaml": "unparsable",
 			},
-			expectedPanic: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		enterTestCase{
 			name: "cloud space can't be resumed",
@@ -109,8 +107,8 @@ func TestEnter(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Custom graphQL error"),
 			},
-			expectedPanic: "Error retrieving Spaces details: Custom graphQL error",
-		},
+			expectedErr: "Error retrieving Spaces details: Custom graphQL error",
+		},*/
 	}
 
 	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -131,20 +129,6 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	logOutput = ""
 
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -173,7 +157,7 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&EnterCmd{
+	err = (&EnterCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: testCase.namespaceFlag,
 		},
@@ -182,5 +166,11 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		Pod:           testCase.podFlag,
 		Pick:          testCase.pickFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

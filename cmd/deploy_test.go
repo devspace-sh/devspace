@@ -1,12 +1,10 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -35,8 +33,6 @@ type deployTestCase struct {
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
 
-	namespaceFlag               string
-	kubeContextFlag             string
 	forceBuildFlag              bool
 	skipBuildFlag               bool
 	buildSequentialFlag         bool
@@ -45,9 +41,10 @@ type deployTestCase struct {
 	forceDependenciesFlag       bool
 	skipPushFlag                bool
 	allowCyclicDependenciesFlag bool
+	globalFlags                 flags.GlobalFlags
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestDeploy(t *testing.T) {
@@ -86,15 +83,24 @@ func TestDeploy(t *testing.T) {
 
 	testCases := []deployTestCase{
 		deployTestCase{
-			name:          "config doesn't exist",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "config doesn't exist",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		deployTestCase{
 			name:           "Invalid flags",
 			fakeConfig:     &latest.Config{},
 			skipBuildFlag:  true,
 			forceBuildFlag: true,
-			expectedPanic:  "Flags --skip-build & --force-build cannot be used together",
+			expectedErr:    "Flags --skip-build & --force-build cannot be used together",
+		},
+		deployTestCase{
+			name:       "Invalid global flags",
+			fakeConfig: &latest.Config{},
+			globalFlags: flags.GlobalFlags{
+				KubeContext:   "a",
+				SwitchContext: true,
+			},
+			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
 		},
 		deployTestCase{
 			name:       "Unparsable generated.yaml",
@@ -102,7 +108,7 @@ func TestDeploy(t *testing.T) {
 			files: map[string]interface{}{
 				".devspace/generated.yaml": "unparsable",
 			},
-			expectedPanic: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectedErr: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		deployTestCase{
 			name:       "invalid kubeconfig",
@@ -110,12 +116,12 @@ func TestDeploy(t *testing.T) {
 			fakeKubeConfig: &customKubeConfig{
 				rawConfigError: fmt.Errorf("RawConfigError"),
 			},
-			expectedPanic: "Unable to create new kubectl client: RawConfigError",
+			expectedErr: "Unable to create new kubectl client: RawConfigError",
 		},
 		/*deployTestCase{
 			name:          "No devspace.yaml",
 			fakeConfig:    &latest.Config{},
-			expectedPanic: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
+			expectedErr: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
 		},
 		deployTestCase{
 			name: "generated.yaml is a dir",
@@ -125,7 +131,7 @@ func TestDeploy(t *testing.T) {
 			},
 			namespaceFlag:   "someNamespace",
 			kubeContextFlag: "someKubeContext",
-			expectedPanic:   fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
+			expectedErr:   fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
 			expectedOutput:  "\nInfo Loaded config from devspace.yaml\nInfo Using someNamespace namespace for deploying\nInfo Using someKubeContext kube context for deploying",
 		},
 		deployTestCase{
@@ -142,9 +148,9 @@ func TestDeploy(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Custom graphQL error"),
 			},
-			expectedPanic:  "Error retrieving Spaces details: Custom graphQL error",
+			expectedErr:  "Error retrieving Spaces details: Custom graphQL error",
 			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},
+		},*/
 	}
 
 	//The deploy-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -165,20 +171,6 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 	logOutput = ""
 
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -207,11 +199,8 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&DeployCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace:   testCase.namespaceFlag,
-			KubeContext: testCase.kubeContextFlag,
-		},
+	err = (&DeployCmd{
+		GlobalFlags: &testCase.globalFlags,
 
 		ForceBuild:        testCase.forceBuildFlag,
 		SkipBuild:         testCase.skipBuildFlag,
@@ -223,5 +212,11 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 		SkipPush:                testCase.skipPushFlag,
 		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/

@@ -1,15 +1,14 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -41,7 +40,7 @@ type buildTestCase struct {
 	forceDependenciesFlag       bool
 
 	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestBuild(t *testing.T) {
@@ -80,8 +79,8 @@ func TestBuild(t *testing.T) {
 
 	testCases := []buildTestCase{
 		buildTestCase{
-			name:          "config doesn't exist",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+			name:        "config doesn't exist",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		buildTestCase{
 			name:       "Unparsable generated.yaml",
@@ -89,7 +88,14 @@ func TestBuild(t *testing.T) {
 			files: map[string]interface{}{
 				".devspace/generated.yaml": "unparsable",
 			},
-			expectedPanic: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+		},
+		buildTestCase{
+			name: "Unparsable devspace.yaml",
+			files: map[string]interface{}{
+				"devspace.yaml": "unparsable",
+			},
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
 		},
 		buildTestCase{
 			name: "Circle dependency",
@@ -125,7 +131,7 @@ func TestBuild(t *testing.T) {
 					},
 				},
 			},
-			expectedPanic:  fmt.Sprintf("Error deploying dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
+			expectedErr:    fmt.Sprintf("build dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
 			expectedOutput: "\nInfo Start resolving dependencies",
 		},
 		buildTestCase{
@@ -144,7 +150,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			buildSequentialFlag: true,
-			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" \": executable file not found in %s", pathVarKey),
+			expectedErr:         fmt.Sprintf("build images: Error building image: exec: \" \": executable file not found in %s", pathVarKey),
 			expectedOutput:      "\nInfo Build someImage:someTag with custom command   someImage:someTag",
 		},
 		buildTestCase{
@@ -164,7 +170,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			buildSequentialFlag: true,
-			expectedPanic:       fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
+			expectedErr:         fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
 			expectedOutput:      "\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},
 		buildTestCase{
@@ -192,20 +198,6 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 	logOutput = ""
 
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -223,8 +215,12 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
+	if testCase.fakeConfig == nil {
+		configutil.ResetConfig()
+	} else {
+		configutil.SetFakeConfig(testCase.fakeConfig)
+	}
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -233,7 +229,8 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&BuildCmd{
+	err = (&BuildCmd{
+		GlobalFlags:             &flags.GlobalFlags{},
 		SkipPush:                testCase.skipPushFlag,
 		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
 
@@ -241,5 +238,11 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 		BuildSequential:   testCase.buildSequentialFlag,
 		ForceDependencies: testCase.forceBuildFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
+	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
-*/
