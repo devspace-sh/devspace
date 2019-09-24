@@ -59,6 +59,7 @@ var ConfigPath = ".devspace/generated.yaml"
 
 var loadedConfig *Config
 var loadedConfigOnce sync.Once
+var loadedConfigMutex sync.Mutex
 
 var testDontSaveConfig = false
 
@@ -69,14 +70,20 @@ func SetTestConfig(config *Config) {
 	testDontSaveConfig = true
 }
 
-//ResetConfig resets the config to nil and enables loading from configs.yaml
+// ResetConfig resets the config to nil and enables loading from configs.yaml
 func ResetConfig() {
+	loadedConfigMutex.Lock()
+	defer loadedConfigMutex.Unlock()
+
 	loadedConfigOnce = sync.Once{}
 	loadedConfig = nil
 }
 
 // LoadConfig loads the config from the filesystem
 func LoadConfig(profile string) (*Config, error) {
+	loadedConfigMutex.Lock()
+	defer loadedConfigMutex.Unlock()
+
 	var err error
 
 	loadedConfigOnce.Do(func() {
@@ -182,6 +189,9 @@ func InitDevSpaceConfig(config *Config, configName string) {
 
 // SaveConfig saves the config to the filesystem
 func SaveConfig(config *Config) error {
+	loadedConfigMutex.Lock()
+	defer loadedConfigMutex.Unlock()
+
 	if testDontSaveConfig {
 		return nil
 	}

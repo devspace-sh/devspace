@@ -22,7 +22,7 @@ The following flags are available for all commands that trigger the deployment p
 DevSpace loads the `deployments` configuration from `devspace.yaml` and builds one deployment after another in the order that they are specified in the `deployments` array. Additionally, DevSpace also deploys related projects speficied in `dependencies`.
 
 
-### 1. Build & Deploy Dependencies
+### 1. Build &amp; Deploy Dependencies
 DevSpace loads the `dependencies` section from the `devspace.yaml` and creates a dependency tree. The current project will represent the root of this tree. Based on this dependency tree, DevSpace will start from the leaves and run these steps for each dependency:
 - Build images of the dependency as configured in the `images` section of the dependency's `devspace.yaml` (unless `skipBuild: true`)
 - Deploy the dependency as configured in the `deployments` section of the dependency's `devspace.yaml`
@@ -32,7 +32,7 @@ DevSpace loads the `dependencies` section from the `devspace.yaml` and creates a
 > Dependencies allow you to deploy microservices, that the project you are currently deploying relies on. Dependencies can be located in a subpath of your project or they can be automatically loaded from a different git reporsitory.
 
 
-### 2. Build, Tag & Push Images
+### 2. Build, Tag &amp; Push Images
 DevSpace triggers the [image building process](/docs/cli/image-building/workflow-basics) for the images specified in the `images` section of the `devspace.yaml`.
 
 [Learn more about image building with DevSpace.](/docs/cli/image-building/workflow-basics)

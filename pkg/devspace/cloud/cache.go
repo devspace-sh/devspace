@@ -5,12 +5,29 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 )
 
 var cacheMutex sync.Mutex
+
+// PruneCache prunes the saved space information
+func (p *Provider) PruneCache() error {
+	rawConfig, err := kubeconfig.LoadConfig().RawConfig()
+	if err != nil {
+		return errors.Wrap(err, "load config")
+	}
+
+	for key, space := range p.Spaces {
+		if _, ok := rawConfig.Contexts[space.KubeContext]; !ok {
+			delete(p.Spaces, key)
+		}
+	}
+
+	return nil
+}
 
 // GetAndUpdateSpaceCache retrieves space information from the providers.yaml and updates the space if necessary
 func (p *Provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool, log log.Logger) (*latest.SpaceCache, bool, error) {
@@ -64,6 +81,11 @@ func (p *Provider) CacheSpace(space *latest.Space, serviceAccount *latest.Servic
 	}
 	if p.Spaces[space.SpaceID] != nil {
 		cachedSpace.LastResume = p.Spaces[space.SpaceID].LastResume
+	}
+
+	err := p.PruneCache()
+	if err != nil {
+		return errors.Wrap(err, "prune cache")
 	}
 
 	p.Spaces[space.SpaceID] = cachedSpace

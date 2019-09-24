@@ -8,7 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
-	k8sv1beta1 "k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -82,20 +82,20 @@ func createTillerServiceAccount(client *kubectl.Client, tillerNamespace string) 
 }
 
 func addDeployAccessToTiller(client *kubectl.Client, tillerNamespace, namespace string) error {
-	_, err := client.Client.RbacV1beta1().Roles(namespace).Create(&k8sv1beta1.Role{
+	_, err := client.Client.RbacV1().Roles(namespace).Create(&rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName,
 			Namespace: namespace,
 		},
-		Rules: []k8sv1beta1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{
-					k8sv1beta1.APIGroupAll,
+					rbacv1.APIGroupAll,
 					"extensions",
 					"apps",
 				},
-				Resources: []string{k8sv1beta1.ResourceAll},
-				Verbs:     []string{k8sv1beta1.ResourceAll},
+				Resources: []string{rbacv1.ResourceAll},
+				Verbs:     []string{rbacv1.ResourceAll},
 			},
 		},
 	})
@@ -103,19 +103,19 @@ func addDeployAccessToTiller(client *kubectl.Client, tillerNamespace, namespace 
 		return err
 	}
 
-	_, err = client.Client.RbacV1beta1().RoleBindings(namespace).Create(&k8sv1beta1.RoleBinding{
+	_, err = client.Client.RbacV1().RoleBindings(namespace).Create(&rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName + "-binding",
 			Namespace: namespace,
 		},
-		Subjects: []k8sv1beta1.Subject{
+		Subjects: []rbacv1.Subject{
 			{
-				Kind:      k8sv1beta1.ServiceAccountKind,
+				Kind:      rbacv1.ServiceAccountKind,
 				Name:      TillerServiceAccountName,
 				Namespace: tillerNamespace,
 			},
 		},
-		RoleRef: k8sv1beta1.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
 			Name:     TillerRoleName,

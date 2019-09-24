@@ -4,7 +4,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -134,23 +133,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	err = provider.CacheSpace(space, serviceAccount)
 	if err != nil {
 		return err
-	}
-
-	if configExists {
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig("")
-		if err != nil {
-			return err
-		}
-
-		// Reset namespace cache
-		generatedConfig.GetActive().LastContext = nil
-
-		// Save generated config
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return err
-		}
 	}
 
 	log.StopWait()

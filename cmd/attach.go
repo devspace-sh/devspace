@@ -39,7 +39,6 @@ Attaches to a running container
 
 devspace attach
 devspace attach --pick # Select pod to enter
-devspace attach -s my-selector
 devspace attach -c my-container
 devspace attach -n my-namespace
 #######################################################`,
@@ -72,8 +71,14 @@ func (cmd *AttachCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Use last context if specified
+	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
 	// Get kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, false)
+	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}

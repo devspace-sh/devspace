@@ -3,6 +3,28 @@ var firstCall = true;
 const highlightDetailsOnActiveHash = function(activeHash, doNotOpen) {
     const activeAnchors = document.querySelectorAll(".anchor[id='" + activeHash + "'");
     const detailsElements = document.querySelectorAll("details");
+    const activeSectionElements = document.querySelectorAll(".active-section");
+    for (let i = 0; i < activeSectionElements.length; i++) {
+        activeSectionElements[i].classList.remove("active-section")
+    }
+
+    for (let i = 0; i < activeAnchors.length; i++) {
+        const headline = activeAnchors[i].parentElement;
+        const headlineRank = activeAnchors[i].parentElement.nodeName.substr(1);
+        let el = headline;
+
+        while (el) {
+            if (el.tagName != "BR" && el.tagName != "HR") {
+                el.classList.add("active-section");
+            }
+            el = el.nextElementSibling;
+            elRank = el.nodeName.substr(1)
+
+            if (elRank > 0 && elRank <= headlineRank) {
+                break;
+            }
+        }
+    }
 
     for (let i = 0; i < detailsElements.length; i++) {
         let detailsElement = detailsElements[i];
@@ -44,17 +66,21 @@ const highlightActiveOnPageLink = function() {
     setTimeout(function() {
         if (!activeHash) {
             const anchors = document.querySelectorAll("h2 > .anchor, h3 > .anchor");
-    
-            if (document.scrollingElement.scrollTop < 100 && anchors.length > 0) {
-                activeHash = anchors[0].attributes.id.value;
-            } else {
-                for (let i = 0; i < anchors.length; i++) {
-                    const anchor = anchors[i];
-    
-                    if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.5) {
-                        activeHash = anchor.attributes.id.value;
-                    } else {
-                        break;
+            
+            if (anchors.length > 0) {
+                if (document.scrollingElement.scrollTop < 100) {
+                    activeHash = anchors[0].attributes.id.value;
+                } else if (document.scrollingElement.scrollTop == document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight) {
+                    activeHash = anchors[anchors.length - 1].attributes.id.value;
+                } else {
+                    for (let i = 0; i < anchors.length; i++) {
+                        const anchor = anchors[i];
+        
+                        if (anchor.parentElement.getBoundingClientRect().top < window.screen.availHeight*0.5) {
+                            activeHash = anchor.attributes.id.value;
+                        } else {
+                            break;
+                        }
                     }
                 }
             }

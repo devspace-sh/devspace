@@ -128,7 +128,7 @@ context: ./
 **See "[Example: Different Dockerfiles](#example-different-dockerfiles)"**
 
 
-## Overriding `ENTRYPOINT` & `CMD`
+## Overriding `ENTRYPOINT` &amp; `CMD`
 
 ### `images[*].entrypoint`
 The `entrypoint` option expects an array of strings which tells DevSpace to overrides the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.

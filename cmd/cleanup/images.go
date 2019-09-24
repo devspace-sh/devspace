@@ -50,7 +50,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Load config
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 
 	_, err = client.Ping(context.Background())
 	if err != nil {
-		log.Fatalf("Docker seems to be not running: %v", err)
+		return errors.Errorf("Docker seems to be not running: %v", err)
 	}
 
 	defer log.StopWait()

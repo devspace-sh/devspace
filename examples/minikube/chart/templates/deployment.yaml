@@ -14,3 +14,4 @@ spec:
       containers:
         - name: default
           image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent

@@ -1,13 +1,18 @@
 package cmd
 
 import (
+	"io/ioutil"
+
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v2"
 	"mvdan.cc/sh/v3/interp"
 )
 
@@ -52,23 +57,38 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	// Load config
-	config, err := configutil.GetConfig(configutil.FromFlags(cmd.GlobalFlags))
+	// Load commands
+	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+	if err != nil {
+		return err
+	}
+	rawMap := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(bytes, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	// Parse commands
+	commands, err := versions.ParseCommands(rawMap)
 	if err != nil {
 		return err
 	}
 
 	// Execute command
-	err = command.ExecuteCommand(config, args[0], args[1:])
+	err = command.ExecuteCommand(commands, args[0], args[1:])
 	if err != nil {
 		shellExitError, ok := err.(interp.ShellExitStatus)
 		if ok {
-			exit.Exit(int(shellExitError))
+			return &exit.ReturnCodeError{
+				ExitCode: int(shellExitError),
+			}
 		}
 
 		exitError, ok := err.(interp.ExitStatus)
 		if ok {
-			exit.Exit(int(exitError))
+			return &exit.ReturnCodeError{
+				ExitCode: int(exitError),
+			}
 		}
 
 		return errors.Wrap(err, "execute command")

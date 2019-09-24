@@ -32,7 +32,7 @@ deployments:
 [What are components?](/docs/cli/deployment/components/what-are-components)
 
 
-## Containers & Pods
+## Containers &amp; Pods
 
 ### `deployments[*].component.containers`
 See [Containers](/docs/cli/deployment/components/configuration/containers) for details.
@@ -96,12 +96,12 @@ deployments:
 ```
 
 
-## Volumes & Persistent Storage
+## Volumes &amp; Persistent Storage
 ### `deployments[*].component.volumes`
 See [Volumes](/docs/cli/deployment/components/configuration/volumes) for details.
 
 
-## Service & In-Cluster Networking
+## Service &amp; In-Cluster Networking
 ### `deployments[*].component.service`
 See [Service](/docs/cli/deployment/components/configuration/service) for details.
 
@@ -135,7 +135,7 @@ deployments:
 Instead of the default name `backend-headless`, the headless service for the ReplicaSet created by this component would be `custom-name-for-headless-service`.
 
 
-## Ingress & Domain
+## Ingress &amp; Domain
 ### `deployments[*].component.ingress`
 See [Ingress (Domain)](/docs/cli/deployment/components/configuration/ingress) for details.
 

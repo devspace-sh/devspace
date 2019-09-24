@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -104,7 +104,7 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 		return nil
 	}
 
-	_, err := client.Client.RbacV1beta1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
+	_, err := client.Client.RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
 		if client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
@@ -125,24 +125,24 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 				return errors.New("Couldn't determine google cloud username. Make sure you are logged in to gcloud")
 			}
 
-			rolebinding := &v1beta1.ClusterRoleBinding{
+			rolebinding := &rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ClusterRoleBindingName,
 				},
-				Subjects: []v1beta1.Subject{
+				Subjects: []rbacv1.Subject{
 					{
 						Kind: "User",
 						Name: *username,
 					},
 				},
-				RoleRef: v1beta1.RoleRef{
+				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "ClusterRole",
 					Name:     "cluster-admin",
 				},
 			}
 
-			_, err = client.Client.RbacV1beta1().ClusterRoleBindings().Create(rolebinding)
+			_, err = client.Client.RbacV1().ClusterRoleBindings().Create(rolebinding)
 			if err != nil {
 				return err
 			}
@@ -339,7 +339,7 @@ func (client *Client) GetPodsFromDeployment(deployment, namespace string) (*k8sv
 		namespace = client.Namespace
 	}
 
-	deploy, err := client.Client.ExtensionsV1beta1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
+	deploy, err := client.Client.AppsV1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
 	// Deployment not there
 	if err != nil {
 		return nil, err
@@ -401,5 +401,10 @@ func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses
 
 // IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
 func (client *Client) IsLocalKubernetes() bool {
-	return client.CurrentContext == minikubeContext || client.CurrentContext == dockerDesktopContext || client.CurrentContext == dockerForDesktopContext
+	return IsLocalKubernetes(client.CurrentContext)
+}
+
+// IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
+func IsLocalKubernetes(context string) bool {
+	return context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext
 }

@@ -117,7 +117,7 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 	}
 
 	// Find the target
-	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.]+)\\s+AS\\s+%s\\s*($|\n)", target))
+	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+%s\\s*($|\n)", target))
 	if err != nil {
 		return "", err
 	}

@@ -18,6 +18,7 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, true, config == nil, "Config from invalid version not nil")
 
 	config, err = Parse(map[interface{}]interface{}{
+		"version": latest.Version,
 		"images": &map[string]*latest.ImageConfig{
 			"TestImg": &latest.ImageConfig{
 				Image: "TestImg",

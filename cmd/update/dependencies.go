@@ -54,7 +54,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get the config
-	configOptions := configutil.FromFlags(cmd.GlobalFlags)
+	configOptions := cmd.ToConfigOptions()
 	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
