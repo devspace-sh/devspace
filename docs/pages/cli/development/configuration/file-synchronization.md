@@ -423,9 +423,10 @@ Other than that, no server-side component or special container privileges for co
 
 </summary>
 If synchronization is started, the sync initially compares the remote folder and the local folder and merges the contents with the following rules:
-- If a file or folder exists remote, but not locally, then download file / folder
 - If a file or folder exists locally, but not remote, then upload file / folder
 - If a file is newer locally than remote then upload the file (The opposite case is not true, older local files are not overriden by newer remote files)
+- If a file or folder exists on the remote filesystem, but not locally, then remove the remote file / folder (if `downloadOnInitialSync: false` which is the default configuration)
+- If a file or folder exists on the remote filesystem, but not locally, then download the remote file / folder (if `downloadOnInitialSync: true`)
 </details>
 
 <details>
