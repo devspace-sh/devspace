@@ -6,12 +6,10 @@
  */
 
 const React = require('react');
-
 const CompLibrary = require('../../core/CompLibrary');
-
 const Container = CompLibrary.Container;
-
 const CWD = process.cwd();
+const fs = require('fs')
 
 const versions = require(`${CWD}/versions.json`);
 
@@ -24,15 +22,43 @@ function Versions(props) {
   let firstPageOfVersion = {}
 
   for (let i in versions) {
-    let version = versions[i]
-    let sidebar = require(`${CWD}/versioned_sidebars/version-${version}-sidebars.json`);
+    let version = versions[i];
+    let versionSplit = version.split(".");
+    let major = versionSplit[0].substr(1);
+    let minor = versionSplit[1];
+    let revision = versionSplit[2];
 
-    for (let key in sidebar) {
-      for (let key2 in sidebar[key]) {
-        firstPageOfVersion[version] = sidebar[key][key2][0].replace(`version-${version}-`, '');
-        break;
+    loop1: 
+      while (true) {
+        let sidebarFile = `${CWD}/versioned_sidebars/version-v${major}.${minor}.${revision}-sidebars.json`;
+
+        try {
+          if (fs.existsSync(sidebarFile)) {
+            let sidebar = require(sidebarFile);
+
+            for (let key in sidebar) {
+              for (let key2 in sidebar[key]) {
+                firstPageOfVersion[version] = sidebar[key][key2][0].replace(`version-v${major}.${minor}.${revision}-`, '');
+                break loop1;
+              }
+            }
+          }
+        } catch(err) {}
+
+        if (revision > 0) {
+          revision--;
+        } else if (minor > 0) {
+          revision = 50;
+          minor--;
+        } else if (major > 0) {
+          revision = 50;
+          minor = 50;
+          major--;
+        } else {
+          firstPageOfVersion[version] = "introduction";
+          break;
+        }
       }
-    }
   }
   return (
     <div className="docMainWrapper wrapper">
