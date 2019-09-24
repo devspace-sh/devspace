@@ -10,10 +10,16 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
+	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var logOutput string
@@ -47,10 +53,40 @@ func (t testLogger) StartWait(message string) {
 	logOutput = logOutput + "\nWait " + message
 }
 
+type customKubeConfig struct {
+	rawconfig      clientcmdapi.Config
+	rawConfigError error
+
+	clientConfig      *restclient.Config
+	clientConfigError error
+
+	namespace     string
+	namespaceBool bool
+	namespaceErr  error
+
+	configAccess clientcmd.ConfigAccess
+}
+
+func (config *customKubeConfig) RawConfig() (clientcmdapi.Config, error) {
+	return config.rawconfig, config.rawConfigError
+}
+func (config *customKubeConfig) Namespace() (string, bool, error) {
+	return config.namespace, config.namespaceBool, config.namespaceErr
+}
+func (config *customKubeConfig) ClientConfig() (*restclient.Config, error) {
+	return config.clientConfig, config.clientConfigError
+}
+func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
+	return config.configAccess
+}
+
 type RunCleanupImagesTestCase struct {
 	name string
 
-	fakeConfig *latest.Config
+	fakeConfig     *latest.Config
+	fakeKubeConfig clientcmd.ClientConfig
+	files          map[string]interface{}
+	globalFlags    flags.GlobalFlags
 
 	answers []string
 
@@ -65,9 +101,30 @@ func TestRunCleanupImages(t *testing.T) {
 			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		RunCleanupImagesTestCase{
+			name: "Unparsable devspace.yaml",
+			files: map[string]interface{}{
+				"devspace.yaml": "unparsable",
+			},
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
+		},
+		RunCleanupImagesTestCase{
 			name:           "No images to delete",
 			fakeConfig:     &latest.Config{},
 			expectedOutput: "\nDone No images found in config to delete",
+		},
+		RunCleanupImagesTestCase{
+			name: "Error getting kube config",
+			fakeConfig: &latest.Config{
+				Images: map[string]*latest.ImageConfig{
+					"imageToDelete": &latest.ImageConfig{
+						Image: "imageToDelete",
+					},
+				},
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawConfigError: fmt.Errorf("RawConfigError"),
+			},
+			expectedErr: "RawConfigError",
 		},
 		/*RunCleanupImagesTestCase{
 			name: "One image to delete",
@@ -78,6 +135,10 @@ func TestRunCleanupImages(t *testing.T) {
 					},
 				},
 			},
+			globalFlags: flags.GlobalFlags{
+				KubeContext: "someKubeContext",
+			},
+			fakeKubeConfig: &customKubeConfig{},
 			expectedOutput: "\nWait Deleting local image imageToDelete\nWait Deleting local dangling images\nDone Successfully cleaned up images",
 		},*/
 	}
@@ -113,10 +174,22 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 		survey.SetNextAnswer(answer)
 	}
 
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
-	configutil.SetFakeConfig(testCase.fakeConfig)
-	if isDeploymentsNil && testCase.fakeConfig != nil {
-		testCase.fakeConfig.Deployments = nil
+	if testCase.fakeConfig == nil {
+		configutil.ResetConfig()
+	} else {
+		configutil.SetFakeConfig(testCase.fakeConfig)
+		if isDeploymentsNil && testCase.fakeConfig != nil {
+			testCase.fakeConfig.Deployments = nil
+		}
+	}
+
+	for path, content := range testCase.files {
+		asYAML, err := yaml.Marshal(content)
+		assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
+		err = fsutil.WriteToFile(asYAML, path)
+		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
 	defer func() {
@@ -136,7 +209,7 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 		log.DiscardLogger{PanicOnExit: true},
 	})
 
-	err = (&imagesCmd{GlobalFlags: &flags.GlobalFlags{}}).RunCleanupImages(nil, nil)
+	err = (&imagesCmd{GlobalFlags: &testCase.globalFlags}).RunCleanupImages(nil, nil)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)

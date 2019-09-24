@@ -440,8 +440,6 @@ func testRunCreateSpace(t *testing.T, testCase createSpaceTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
@@ -470,4 +468,6 @@ func testRunCreateSpace(t *testing.T, testCase createSpaceTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
+
+		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
