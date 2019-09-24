@@ -10,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type providerCmd struct{}
+type providerCmd struct {
+	Host string
+}
 
 func newProviderCmd() *cobra.Command {
 	cmd := &providerCmd{}
@@ -32,12 +34,20 @@ devspace add provider app.devspace.cloud
 		RunE: cmd.RunAddProvider,
 	}
 
+	addProviderCmd.Flags().StringVar(&cmd.Host, "host", "", "The URL DevSpace should use for this provider")
+
 	return addProviderCmd
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
 func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
+
+	// Get host name
+	host := "https://" + providerName
+	if cmd.Host != "" {
+		host = cmd.Host
+	}
 
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
@@ -52,10 +62,10 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	if provider == nil {
 		providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
 			Name: providerName,
-			Host: "https://" + providerName,
+			Host: host,
 		})
 	} else {
-		provider.Host = "https://" + providerName
+		provider.Host = host
 	}
 
 	// Ensure user is logged in
