@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
@@ -64,7 +63,7 @@ type listAvailableComponentsTestCase struct {
 	name string
 
 	expectedOutput string
-	expectedErr  string
+	expectedErr    string
 }
 
 func TestListAvailableComponents(t *testing.T) {
@@ -129,7 +128,7 @@ func TestListAvailableComponents(t *testing.T) {
 func testListAvailableComponents(t *testing.T, testCase listAvailableComponentsTestCase) {
 	logOutput = ""
 
-	(&availableComponentsCmd{}).RunListAvailableComponents(nil, []string{})
+	err := (&availableComponentsCmd{}).RunListAvailableComponents(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
