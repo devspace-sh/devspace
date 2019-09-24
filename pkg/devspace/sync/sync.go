@@ -267,13 +267,27 @@ func (s *Sync) initialSync() error {
 
 	// Upstream initial sync
 	go func() {
-		s.sendChangesToUpstream(localChanges)
+		// Remove remote files that are not there locally
+		if s.Options.DownloadOnInitialSync == false && len(fileMapClone) > 0 {
+			remoteChanges := make([]*FileInformation, 0, len(fileMapClone))
+			for _, element := range fileMapClone {
+				remoteChanges = append(remoteChanges, &FileInformation{
+					Name:        element.Name,
+					IsDirectory: element.IsDirectory,
+				})
+			}
+
+			s.sendChangesToUpstream(remoteChanges, true)
+		}
+
+		s.sendChangesToUpstream(localChanges, false)
 		if s.Options.UpstreamInitialSyncDone != nil {
 			close(s.Options.UpstreamInitialSyncDone)
 		}
 	}()
 
-	if len(fileMapClone) > 0 {
+	// Download changes if enabled
+	if s.Options.DownloadOnInitialSync && len(fileMapClone) > 0 {
 		remoteChanges := make([]*remote.Change, 0, len(fileMapClone))
 		for _, element := range fileMapClone {
 			remoteChanges = append(remoteChanges, &remote.Change{
@@ -286,11 +300,9 @@ func (s *Sync) initialSync() error {
 			})
 		}
 
-		if s.Options.DownloadOnInitialSync {
-			err = s.downstream.applyChanges(remoteChanges)
-			if err != nil {
-				return errors.Wrap(err, "apply changes")
-			}
+		err = s.downstream.applyChanges(remoteChanges)
+		if err != nil {
+			return errors.Wrap(err, "apply changes")
 		}
 	}
 
@@ -407,11 +419,11 @@ func (s *Sync) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*FileIn
 	return nil
 }
 
-func (s *Sync) sendChangesToUpstream(changes []*FileInformation) {
+func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 	for j := 0; j < len(changes); j += initialUpstreamBatchSize {
 		// Wait till upstream channel is empty
 		for len(s.upstream.events) > 0 {
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 500)
 		}
 
 		// Now we send them to upstream
@@ -419,7 +431,9 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation) {
 		s.fileIndex.fileMapMutex.Lock()
 
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
-			if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
+			if remove {
+				sendBatch = append(sendBatch, changes[i])
+			} else if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
 				sendBatch = append(sendBatch, changes[i])
 			}
 		}

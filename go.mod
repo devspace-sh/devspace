@@ -14,6 +14,7 @@ require (
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
+	github.com/davidrjenni/reftools v0.0.0-20190827201643-0605d60846fb // indirect
 	github.com/devspace-cloud/penv v0.0.1 // indirect
 	github.com/docker/cli v0.0.0-20181026145426-51668a30f262
 	github.com/docker/distribution v0.0.0-20180327202408-83389a148052
@@ -37,14 +38,17 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/go-version v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/haya14busa/goplay v1.0.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
+	github.com/josharian/impl v0.0.0-20190715203526-f0d59e96e372 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/juju/errors v0.0.0-20180806074554-22422dad46e1
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
+	github.com/keegancsmith/rpc v1.1.0 // indirect
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/lxn/win v0.0.0-20181015143721-a7f87360b10e // indirect
@@ -64,6 +68,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
+	github.com/rogpeppe/godef v1.1.1 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20190327083759-54bad0a9b051 // indirect
 	github.com/russross/blackfriday v1.5.1 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
@@ -75,11 +80,14 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.0.2
+	github.com/stamblerre/gocode v0.0.0-20190327203809-810592086997 // indirect
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
 	github.com/ulikunitz/xz v0.5.5 // indirect
+	golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
+	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72 // indirect
 	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 // indirect
 	google.golang.org/grpc v1.21.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
