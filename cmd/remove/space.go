@@ -52,7 +52,7 @@ devspace remove space --all
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
 func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

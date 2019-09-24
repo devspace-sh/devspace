@@ -287,17 +287,18 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	ImageName            string            `yaml:"imageName,omitempty"`
-	LabelSelector        map[string]string `yaml:"labelSelector,omitempty"`
-	ContainerName        string            `yaml:"containerName,omitempty"`
-	Namespace            string            `yaml:"namespace,omitempty"`
-	LocalSubPath         string            `yaml:"localSubPath,omitempty"`
-	ContainerPath        string            `yaml:"containerPath,omitempty"`
-	ExcludePaths         []string          `yaml:"excludePaths,omitempty"`
-	DownloadExcludePaths []string          `yaml:"downloadExcludePaths,omitempty"`
-	UploadExcludePaths   []string          `yaml:"uploadExcludePaths,omitempty"`
-	WaitInitialSync      *bool             `yaml:"waitInitialSync,omitempty"`
-	BandwidthLimits      *BandwidthLimits  `yaml:"bandwidthLimits,omitempty"`
+	ImageName             string            `yaml:"imageName,omitempty"`
+	LabelSelector         map[string]string `yaml:"labelSelector,omitempty"`
+	ContainerName         string            `yaml:"containerName,omitempty"`
+	Namespace             string            `yaml:"namespace,omitempty"`
+	LocalSubPath          string            `yaml:"localSubPath,omitempty"`
+	ContainerPath         string            `yaml:"containerPath,omitempty"`
+	ExcludePaths          []string          `yaml:"excludePaths,omitempty"`
+	DownloadExcludePaths  []string          `yaml:"downloadExcludePaths,omitempty"`
+	UploadExcludePaths    []string          `yaml:"uploadExcludePaths,omitempty"`
+	DownloadOnInitialSync *bool             `yaml:"downloadOnInitialSync,omitempty"`
+	WaitInitialSync       *bool             `yaml:"waitInitialSync,omitempty"`
+	BandwidthLimits       *BandwidthLimits  `yaml:"bandwidthLimits,omitempty"`
 }
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits

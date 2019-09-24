@@ -45,7 +45,7 @@ in the devspace.yaml
 // RunDependencies executes the functionality "devspace update dependencies"
 func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

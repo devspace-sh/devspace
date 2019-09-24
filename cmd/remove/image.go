@@ -43,7 +43,7 @@ devspace remove image --all
 // RunRemoveImage executes the remove image command logic
 func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

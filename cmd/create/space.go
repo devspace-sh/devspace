@@ -51,7 +51,7 @@ devspace create space myspace
 // RunCreateSpace executes the "devspace create space" command logic
 func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

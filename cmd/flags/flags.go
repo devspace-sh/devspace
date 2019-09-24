@@ -32,7 +32,11 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 		return errors.Errorf("Flag --namespace cannot be used together with --switch-context")
 	}
 
-	if gf.SwitchContext == true && generatedConfig != nil && generatedConfig.GetActive().LastContext != nil {
+	if gf.SwitchContext == true {
+		if generatedConfig == nil || generatedConfig.GetActive().LastContext == nil {
+			return errors.Errorf("There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before")
+		}
+
 		gf.KubeContext = generatedConfig.GetActive().LastContext.Context
 		gf.Namespace = generatedConfig.GetActive().LastContext.Namespace
 

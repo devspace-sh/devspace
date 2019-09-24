@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +53,7 @@ func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 // RunRemoveSync executes the remove sync command logic
 func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

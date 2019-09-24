@@ -40,7 +40,7 @@ Note: This does not upgrade the overwrite configs
 // RunConfig executes the functionality "devspace update config"
 func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

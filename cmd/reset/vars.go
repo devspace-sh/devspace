@@ -37,7 +37,7 @@ devspace reset vars
 // RunResetVars executes the reset vars command logic
 func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

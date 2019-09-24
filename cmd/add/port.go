@@ -42,7 +42,7 @@ devspace add port 8080:80,3000
 // RunAddPort executes the add port command logic
 func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

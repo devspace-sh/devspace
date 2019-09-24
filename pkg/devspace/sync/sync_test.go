@@ -249,10 +249,11 @@ func TestNormalSync(t *testing.T) {
 
 func getSyncOptions(testCases testCaseList) *Options {
 	options := &Options{
-		ExcludePaths:         []string{},
-		DownloadExcludePaths: []string{},
-		UploadExcludePaths:   []string{},
-		Verbose:              true,
+		ExcludePaths:          []string{},
+		DownloadExcludePaths:  []string{},
+		UploadExcludePaths:    []string{},
+		DownloadOnInitialSync: true,
+		Verbose:               true,
 	}
 
 	for _, testCase := range testCases {
