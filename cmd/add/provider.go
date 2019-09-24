@@ -1,6 +1,8 @@
 package add
 
 import (
+	"strings"
+
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -44,9 +46,9 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	providerName := args[0]
 
 	// Get host name
-	host := "https://" + providerName
+	host := "https://" + strings.TrimRight(providerName, "/")
 	if cmd.Host != "" {
-		host = cmd.Host
+		host = strings.TrimRight(cmd.Host, "/")
 	}
 
 	// Get provider configuration
