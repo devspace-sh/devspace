@@ -1,6 +1,8 @@
 ---
-title: "Command - devspace add provider"
+title: Command - devspace add provider
 sidebar_label: provider
+id: version-v4.0.2-devspace_add_provider
+original_id: devspace_add_provider
 ---
 
 

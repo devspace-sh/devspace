@@ -1,6 +1,8 @@
 ---
 title: Dynamic Configuration using Config Variables
 sidebar_label: Config Variables
+id: version-v4.0.2-variables
+original_id: variables
 ---
 
 DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`.

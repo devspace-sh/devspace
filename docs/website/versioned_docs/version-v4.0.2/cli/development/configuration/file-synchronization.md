@@ -1,6 +1,8 @@
 ---
 title: Configuring File Synchronization
 sidebar_label: File Sync
+id: version-v4.0.2-file-synchronization
+original_id: file-synchronization
 ---
 
 The code synchronization feature of DevSpace allows you to use hot reloading during development. Especially when using programming languages and frameworks that support hot reloading with tools like nodemon, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding or restarting the container.
