@@ -304,6 +304,10 @@ func askQuestion(variable *latest.Variable, log log.Logger) (string, error) {
 			params.Question = variable.Question
 		}
 
+		if variable.Password {
+			params.IsPassword = true
+		}
+
 		if variable.Default != "" {
 			params.DefaultValue = variable.Default
 		}
