@@ -395,6 +395,7 @@ type Variable struct {
 	Name              string          `yaml:"name"`
 	Question          string          `yaml:"question,omitempty"`
 	Options           []string        `yaml:"options,omitempty"`
+	Password          bool            `yaml:"password,omitempty"`
 	ValidationPattern string          `yaml:"validationPattern,omitempty"`
 	ValidationMessage string          `yaml:"validationMessage,omitempty"`
 	Default           string          `yaml:"default,omitempty"`
