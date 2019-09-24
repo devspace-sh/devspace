@@ -26,7 +26,8 @@ devspace add provider app.devspace.cloud
 ## Options
 
 ```
-  -h, --help   help for provider
+  -h, --help          help for provider
+      --host string   The URL DevSpace should use for this provider
 ```
 
 ### Options inherited from parent commands
