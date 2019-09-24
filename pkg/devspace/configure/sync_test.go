@@ -1,6 +1,5 @@
 package configure
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
@@ -40,12 +39,11 @@ func TestAddSyncPath(t *testing.T) {
 			expectedErr:        "ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash",
 		},
 		addSyncPathTestCase{
-			name: "Add sync path with success",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{},
-			},
+			name:                     "Add sync path with success",
+			fakeConfig:               &latest.Config{},
 			containerPathParam:       "/containerPath",
 			excludedPathsStringParam: "./ExcludeThis",
+			labelSelectorParam:       "Hello=World",
 			expectedSyncInConfig: []*latest.SyncConfig{
 				&latest.SyncConfig{
 					LabelSelector: map[string]string{"Hello": "World"},
@@ -55,6 +53,21 @@ func TestAddSyncPath(t *testing.T) {
 					Namespace:     "",
 				},
 			},
+		},
+		addSyncPathTestCase{
+			name: "Config can't be saved",
+			fakeConfig: &latest.Config{
+				Profiles: []*latest.ProfileConfig{
+					&latest.ProfileConfig{},
+				},
+			},
+			containerPathParam: "/containerPath2",
+			expectedSyncInConfig: []*latest.SyncConfig{
+				&latest.SyncConfig{
+					ContainerPath: "/containerPath2",
+				},
+			},
+			expectedErr: "Couldn't save config file: Cannot save when a profile is applied",
 		},
 	}
 
@@ -88,14 +101,11 @@ func TestAddSyncPath(t *testing.T) {
 	for _, testCase := range testCases {
 		if testCase.fakeConfig == nil {
 			testCase.fakeConfig = &latest.Config{}
-		}
-		configutil.SetFakeConfig(testCase.fakeConfig)
-		config, err := configutil.GetBaseConfig("")
-		if err != nil {
-			log.Fatal(err)
+		} else {
+			configutil.SetFakeConfig(testCase.fakeConfig)
 		}
 
-		err = AddSyncPath(config, testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam)
+		err = AddSyncPath(testCase.fakeConfig, testCase.localPathParam, testCase.containerPathParam, testCase.namespace, testCase.labelSelectorParam, testCase.excludedPathsStringParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error adding sync path in testCase %s", testCase.name)
 		} else {
@@ -149,6 +159,19 @@ func TestRemoveSyncPath(t *testing.T) {
 			name:           "Remove all",
 			fakeConfig:     nil, //default config has two syncPaths
 			removeAllParam: true,
+		},
+		removeSyncPathTestCase{
+			name: "Can't save",
+			fakeConfig: &latest.Config{
+				Dev: &latest.DevConfig{
+					Sync: []*latest.SyncConfig{
+						&latest.SyncConfig{},
+					},
+				},
+				Profiles: []*latest.ProfileConfig{&latest.ProfileConfig{}},
+			},
+			removeAllParam: true,
+			expectedErr: "Couldn't save config file: Cannot save when a profile is applied",
 		},
 		removeSyncPathTestCase{
 			name:                       "Remove one by local file",
@@ -215,7 +238,7 @@ func TestRemoveSyncPath(t *testing.T) {
 			} //default config
 		}
 		configutil.SetFakeConfig(testCase.fakeConfig)
-		config, err := configutil.GetBaseConfig("")
+		config, err := configutil.GetBaseConfig(&configutil.ConfigOptions{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -239,4 +262,3 @@ func TestRemoveSyncPath(t *testing.T) {
 		}
 	}
 }
-*/
