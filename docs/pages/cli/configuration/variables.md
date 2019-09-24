@@ -90,7 +90,7 @@ vars:
   default: my.private-registry.tld
 ```
 **Explanation:**  
-If the variable REGISTRY is used for the first time during `devspace deploy`, DevSpace will ask the user to select which value to use by showing this question:
+If the variable `REGISTRY` is used for the first time during `devspace deploy`, DevSpace will ask the user to select which value to use by showing this question:
 ```bash
 Which registry do you want to push to? (Default: my.private-registry.tld)
 Use the arrows UP/DOWN to select an option and ENTER to choose the selected option.
@@ -98,6 +98,31 @@ Use the arrows UP/DOWN to select an option and ENTER to choose the selected opti
 > my.private-registry.tld
   dscr.io
 ```
+
+
+### `password`
+The `password` option expects a boolean that defines if DevSpace should hide the user input when the user provides the value for this variable by entering a response to the question asked in the command line.
+
+#### Default Value For `password`
+```yaml
+password: false
+```
+
+#### Example: Hide User Response
+```yaml
+vars:
+- name: REGISTRY_TOKEN
+  question: "Please enter your registry token:"
+  source: input
+  password: true
+```
+**Explanation:**  
+If the variable `REGISTRY_TOKEN` is used for the first time during `devspace deploy`, DevSpace will ask the user to provide a value by showing this question:
+```bash
+? Please enter your registry token: *******
+```
+The response the user enters will be hidden as `*******` to protect others from seeing the input while the user is typing.
+
 
 ### `validationPattern`
 The `validationPattern` option expects a string stating a regular expression that validates if the value entered by the user is allowed as a value for this variable.
