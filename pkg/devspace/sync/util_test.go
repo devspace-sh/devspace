@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	editInRemote = 0
-	editInLocal  = 1
-	editOutside  = 2
+	editInRemote   = 0
+	editInLocal    = 1
+	editOutside    = 2
+	editSymLinkDir = 3
 )
 
 func getParentDir(localDir string, remoteDir string, outsideDir string, editLocation int) (string, error) {
@@ -24,6 +25,8 @@ func getParentDir(localDir string, remoteDir string, outsideDir string, editLoca
 		return remoteDir, nil
 	} else if editLocation == editOutside {
 		return outsideDir, nil
+	} else if editLocation == editSymLinkDir {
+		return filepath.Join(outsideDir, "symlinkTargets"), nil
 	}
 
 	return "", errors.New("CreateLocation " + string(editLocation) + " unknown")
@@ -34,6 +37,7 @@ type checkedFileOrFolder struct {
 	shouldExistInRemote bool
 	shouldExistInLocal  bool
 	editLocation        int
+	isSymLink           bool
 }
 
 type testCaseList []checkedFileOrFolder
