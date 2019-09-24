@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -73,8 +74,13 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 
 	// Check what kube context to use
 	if options.KubeContext == "" {
+		allowLocalClusters := true
+		if p.Name == config.DevSpaceCloudProviderName {
+			allowLocalClusters = false
+		}
+
 		// Get kube context to use
-		client, err = kubectl.NewClientBySelect(false, true, log)
+		client, err = kubectl.NewClientBySelect(allowLocalClusters, true, log)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}

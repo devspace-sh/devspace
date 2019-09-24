@@ -7,8 +7,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -26,8 +27,9 @@ func NewRunCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RunCmd{GlobalFlags: globalFlags}
 
 	runCmd := &cobra.Command{
-		Use:   "run",
-		Short: "Run executes a predefined command",
+		Use:                "run",
+		DisableFlagParsing: true,
+		Short:              "Run executes a predefined command",
 		Long: `
 #######################################################
 ##################### devspace run ####################
@@ -49,7 +51,7 @@ devspace run mycommand2 1 2 3
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.Discard)
 	if err != nil {
 		return err
 	}
@@ -68,8 +70,20 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Load generated config
+	generatedConfig, err := generated.LoadConfig("")
+	if err != nil {
+		return err
+	}
+
 	// Parse commands
-	commands, err := versions.ParseCommands(rawMap)
+	commands, err := configutil.ParseCommands(generatedConfig, rawMap, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
+	// Save variables
+	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		return err
 	}

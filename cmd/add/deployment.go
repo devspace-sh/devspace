@@ -83,7 +83,7 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 // RunAddDeployment executes the add deployment command logic
 func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

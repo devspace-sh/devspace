@@ -170,10 +170,16 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 		containerPath = syncConfig.ContainerPath
 	}
 
+	downloadOnInitialSync := false
+	if syncConfig.DownloadOnInitialSync != nil {
+		downloadOnInitialSync = *syncConfig.DownloadOnInitialSync
+	}
+
 	options := &sync.Options{
-		Verbose:  verbose,
-		SyncDone: syncDone,
-		Log:      customLog,
+		Verbose:               verbose,
+		SyncDone:              syncDone,
+		DownloadOnInitialSync: downloadOnInitialSync,
+		Log:                   customLog,
 	}
 
 	if len(syncConfig.ExcludePaths) > 0 {

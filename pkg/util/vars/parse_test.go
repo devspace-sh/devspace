@@ -21,6 +21,11 @@ func TestParse(t *testing.T) {
 			replace: func(value string) (string, error) { return "test", nil },
 			output:  " test abc test ",
 		},
+		"Single Escape": &testCase{
+			input:   " test abc $${Test} ",
+			replace: func(value string) (string, error) { return "", errors.New("Shouldn't match at all") },
+			output:  " test abc ${Test} ",
+		},
 		"Multiple Replace": &testCase{
 			input:   " test ${ABC}${Test} abc $${Test}${Test} ",
 			replace: func(value string) (string, error) { return "test", nil },

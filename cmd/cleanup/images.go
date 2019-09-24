@@ -41,7 +41,7 @@ Deletes all locally created docker images from docker
 // RunCleanupImages executes the cleanup images command logic
 func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

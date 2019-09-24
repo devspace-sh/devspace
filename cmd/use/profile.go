@@ -44,7 +44,7 @@ devspace use profile --reset
 // RunUseProfile executes the "devspace use config command" logic
 func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

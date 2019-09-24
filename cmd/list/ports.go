@@ -37,7 +37,7 @@ Lists the port forwarding configurations
 // RunListPort runs the list port command logic
 func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}

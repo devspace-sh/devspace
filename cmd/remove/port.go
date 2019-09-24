@@ -46,7 +46,7 @@ devspace remove port --all
 // RunRemovePort executes the remove port command logic
 func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot()
+	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}
