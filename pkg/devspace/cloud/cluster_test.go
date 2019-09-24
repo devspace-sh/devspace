@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"testing"
-	"time"
+	//"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -61,9 +61,6 @@ func TestConnectCluster(t *testing.T) {
 }
 
 func TestDefaultClusterSpaceDomain(t *testing.T) {
-	// @Florian make test faster (currently around 10 seconds)
-	t.Skip("Takes too long")
-
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}
@@ -72,7 +69,7 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 
 	kubeClient.Client.CoreV1().Nodes().Create(&k8sv1.Node{})
 	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
-	assert.Error(t, err, "Couldn't find a node with a valid external ip in cluster, make sure your nodes are accessable from the outside", "Wrong or no error when trying to get the spacedomain of the default cluster without any ip")
+	assert.Error(t, err, "Couldn't find a node with a valid external IP address in cluster, make sure your nodes are accessable from the outside", "Wrong or no error when trying to get the spacedomain of the default cluster without any ip")
 
 	kubeClient.Client.CoreV1().Nodes().Update(&k8sv1.Node{
 		Status: k8sv1.NodeStatus{
@@ -87,9 +84,9 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get the spacedomain of the default cluster without a token")
 
-	waitTimeout = time.Second * 8
+	/*waitTimeout = time.Second * 8
 	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, false, 0, "")
-	assert.Error(t, err, "Loadbalancer didn't receive a valid ip in time. Skipping configuration of default cluster space url", "Wrong or no error when trying to get the spacedomain of the default cluster without services")
+	assert.Error(t, err, "Loadbalancer didn't receive a valid IP address in time. Skipping configuration of default domain for space subdomains", "Wrong or no error when trying to get the spacedomain of the default cluster without services")*/
 
 	kubeClient.Client.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&k8sv1.Service{
 		Spec: k8sv1.ServiceSpec{
