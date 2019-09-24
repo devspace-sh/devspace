@@ -118,8 +118,8 @@ component:                          # struct   | Options for deploying a DevSpac
   replicas: 1                       # int      | Number of replicas (Default: 1)
   autoScaling: ...                  # struct   | AutoScaling configuration
   rollingUpdate: ...                # struct   | RollingUpdate configuration
-  podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   pullSecrets: ...                  # string[] | Array of PullSecret names
+  podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   options: ...                      # struct   | Options for deploying this component with helm
 ```
 [Learn more about configuring component deployments.](/docs/deployment/components/what-are-components)
@@ -129,19 +129,19 @@ component:                          # struct   | Options for deploying a DevSpac
 containers:                         # struct   | Options for deploying a DevSpace component
 - name: my-container                # string   | Container name (optional)
   image: dscr.io/username/image     # string   | Image name (optionally with registry URL)
-  stdin: true                       # bool     | Enable stdin (Default: false)
-  tty: true                         # bool     | Enable tty (Default: false)
   command:                          # string[] | ENTRYPOINT override
   - sleep
   args:                             # string[] | ARGS override
   - 99999
+  stdin: true                       # bool     | Enable stdin (Default: false)
+  tty: true                         # bool     | Enable tty (Default: false)
   env:                              # map[interface]interface | Kubernetes env definition for containers
   - name: MY_ENV_VAR
     value: "my-value"
   volumeMounts: ...                 # struct   | VolumeMount Configuration
   resources: ...                    # struct   | Kubernestes resource limits and requests
   livenessProbe: ...                # struct   | Kubernestes livenessProbe
-  redinessProbe: ...                # struct   | Kubernestes redinessProbe
+  readinessProbe: ...               # struct   | Kubernestes readinessProbe
 ```
 
 ### `deployments[*].component.containers[*].volumeMounts`
@@ -307,6 +307,7 @@ sync:                               # struct[] | Array of file sync settings for
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
+  downloadOnInitialSync: false      # bool     | Download files that exist inside the container but not on the local filesystem during initial sync (Default: false)
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
@@ -387,9 +388,9 @@ hooks:                              # struct[]  | Array of hooks to be executed
 ---
 ## `commands`
 ```yaml
-commands:                           # struct[]  | Array of custom commands
-- name: "debug-backend"             # string    | Name of the command to run via `devspace run [name]`
-  command: "./scripts/my-hook"      # string    | Command to be executed when running `devspace run [name]`
+commands:                             # struct[]  | Array of custom commands
+- name: "debug-backend"               # string    | Name of the command to run via `devspace run debug-backend`
+  command: "devspace dev -i backend"  # string    | Command to be executed when running `devspace run [name]`
 ```
 
 
@@ -400,10 +401,11 @@ vars:                               # struct[]  | Array of config variables
 - name: CONFIG_VAR                  # string    | Name of the config variable
   question: "What is CONFIG_VAR?"   # string    | Question to ask the user if no value is found for variable
   options: []                       # string[]  | Options for picker (selector) to show to user (to choose a value for variable)
+  password: false                   # bool      | Hide user input when providing value via command-line, i.e. replaces input with `*****` (Default: false)
   validationPattern: ""             # string    | Regexp to validate user input
   validationMessage: ""             # string    | Message to show to user for input validation
   default: ""                       # string    | Default value for variable
-  source: "all"                     # enum      | Source for variable (all [default], env, input)
+  source: "all"                     # enum      | Source for variable (all = default, env, input)
 ```
 
 
@@ -416,6 +418,7 @@ profiles:                           # struct[]  | Array of config profiles
   - op: "replace"                   # enum      | Patch operation (replace, add, remove)
     path: "images.backend.cmd"      # string    | Jsonpath or xpath to config option that should be patched
     value: ""                       # arbitrary | Value to use for patch operation
+    from: ""                        # string    | Jsonpath or xpath to config option which should be used as value for operation
   replace:                          # struct    | Array of replacements for entire config sections
     images: {}                      # struct    | Replacement for entire `images` section
     deployments: {}                 # struct    | Replacement for entire `deployments` section
