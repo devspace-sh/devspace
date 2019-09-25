@@ -114,7 +114,7 @@ images:
 - Switching the `context` for image `frontend` would assure that a statement like `ADD file.txt` or  `COPY file.txt .` in `./frontend/Dockerfile` would use the local file `./frontend/file.txt` instead of `./file.txt`.
 - In this example, it would probably be useful to have a `./.dockerignore` file which ignores the `frontend/` folder when building the first image called `backend`.
 
-> See **[Best Practices for Image Building](/docs/cli/image-building/advanced-topics/best-practices)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
+> See **[Best Practices for Image Building](/docs/cli/image-building/advanced/best-practices)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
 
 ### `images[*].context`
 The `context` option expects a string with a path to the folder used as context path when building the image. The context path serves as root directory for Dockerfile statements like ADD or COPY.a
@@ -227,7 +227,7 @@ images:
 ## **Build Tools**
 The `build` section defines which build tool DevSpace uses to build the image. The following build tools are currently supported:
 - [`docker`](/docs/cli/image-building/configuration/build-tools#docker) for building images using a Docker daemon (**default build tool**, [prefers Docker daemon of local Kubernetes clusters](/docs/cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters))
-- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
+- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/cli/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
 - [`custom`](/docs/cli/image-building/configuration/build-tools#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
 - [`disabled`](/docs/cli/image-building/configuration/build-tools#disabled) for disabling image building for this image
 

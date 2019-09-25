@@ -83,7 +83,6 @@
     ],
     "Development": [
       "version-v4.0.0-cli/development/workflow-basics",
-      "version-v4.0.0-cli/development/commands",
       {
         "type": "subcategory",
         "label": "Configuration",
