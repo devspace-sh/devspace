@@ -68,5 +68,4 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 
 ## See Also
 
-* [devspace add](/docs/cli/commands/devspace_add)	 - Change the DevSpace configuration
-
+* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration

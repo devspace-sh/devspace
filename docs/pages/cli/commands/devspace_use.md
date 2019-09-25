@@ -34,9 +34,8 @@ Use specific config
 ```
 
 ## See Also
-* [devspace use context](/docs/cli/commands/devspace_use_context)	 - Tells DevSpace which kube context to use
-* [devspace use namespace](/docs/cli/commands/devspace_use_namespace)	 - Tells DevSpace which namespace to use
-* [devspace use profile](/docs/cli/commands/devspace_use_profile)	 - Use a specific DevSpace profile
-* [devspace use provider](/docs/cli/commands/devspace_use_provider)	 - Change the default provider
-* [devspace use space](/docs/cli/commands/devspace_use_space)	 - Use an existing space for the current configuration
-
+* [devspace use context](../../cli/commands/devspace_use_context)	 - Tells DevSpace which kube context to use
+* [devspace use namespace](../../cli/commands/devspace_use_namespace)	 - Tells DevSpace which namespace to use
+* [devspace use profile](../../cli/commands/devspace_use_profile)	 - Use a specific DevSpace profile
+* [devspace use provider](../../cli/commands/devspace_use_provider)	 - Change the default provider
+* [devspace use space](../../cli/commands/devspace_use_space)	 - Use an existing space for the current configuration

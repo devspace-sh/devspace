@@ -36,6 +36,5 @@ Updates the current config
 ```
 
 ## See Also
-* [devspace update config](/docs/cli/commands/devspace_update_config)	 - Converts the active config to the current config version
-* [devspace update dependencies](/docs/cli/commands/devspace_update_dependencies)	 - Updates the git repositories of the dependencies defined in the devspace.yaml
-
+* [devspace update config](../../cli/commands/devspace_update_config)	 - Converts the active config to the current config version
+* [devspace update dependencies](../../cli/commands/devspace_update_dependencies)	 - Updates the git repositories of the dependencies defined in the devspace.yaml

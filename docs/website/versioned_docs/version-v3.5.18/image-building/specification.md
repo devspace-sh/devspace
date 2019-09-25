@@ -9,14 +9,14 @@ original_id: specification
 images:                             # map[string]struct | Images to be built and pushed
   image1:                           # string   | Name of the image
     image: dscr.io/username/image   # string   | Image repository and name 
-    tag: v0.0.1                     # string   | The Image tag to use for this image. See [tagging](/docs/image-building/tagging) for more information about dynamic image tags
+    tag: v0.0.1                     # string   | The Image tag to use for this image. See [tagging](../image-building/tagging) for more information about dynamic image tags
     dockerfile: ./Dockerfile        # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
     context: ./                     # string   | Relative path to the context used for building (Default: ./)
     createPullSecret: true          # bool     | Create a pull secret containing your Docker credentials (Default: false)
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](/docs/image-building/overview)
+[Learn more about building images with DevSpace.](../image-building/overview)
 
 ### images[\*].build
 ```yaml

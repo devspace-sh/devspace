@@ -45,5 +45,4 @@ devspace use namespace my-namespace
 
 ## See Also
 
-* [devspace use](/docs/cli/commands/devspace_use)	 - Use specific config
-
+* [devspace use](../../cli/commands/devspace_use)	 - Use specific config

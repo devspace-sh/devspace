@@ -87,7 +87,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 ## How does it work?
 DevSpace reads the configuration file `devspace.yaml` which you can simply generate for any of your project via `devspace init`. This config file allows you to define:
-- [which Dockerfiles should be built](/docs/cli/image-building/configuration) (either with Docker, kaniko or with a custom build command), how to tag your images and where to store them (e.g. push to Docker Hub or to any private registry)
+- [which Dockerfiles should be built](/docs/cli/image-building/configuration/overview-specification) (either with Docker, kaniko or with a custom build command), how to tag your images and where to store them (e.g. push to Docker Hub or to any private registry)
 - [how your application should be deployed](/docs/cli/deployment/deployment-types) and with which tools (using [helm](/docs/cli/deployment/helm-charts/configuration/overview-specification), [kubectl](/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification), [kustomize](/docs/cli/deployment/kubernetes-manifests/configuration/kustomize) or [components](/docs/cli/deployment/components/configuration/overview-specification))
 - which [dependencies (related projects)](/docs/cli/deployment/advanced/dependencies) need to be deployed (e.g. a microservices from another git repository)
 - [how your application should be developed within Kubernetes](/docs/cli/development/configuration/overview-specification) (e.g. configuring log streaming, terminal access, port fowarding, real-time file synchronization or remote debugging)

@@ -68,7 +68,7 @@ dependencies:
 > Using `ignoreDependencies` can be useful to prevent problematic [circular dependencies](#circular-dependencies).
 
 ## Use Dependencies with Multiple Configs
-If you define a dependency that has [multiple configs using a `devspace-configs.yaml`](/docs/configuration/multiple-configs), you can use the `config` option to define which config should be used to build and deploy this dependency.
+If you define a dependency that has [multiple configs using a `devspace-configs.yaml`](../../configuration/multiple-configs), you can use the `config` option to define which config should be used to build and deploy this dependency.
 ```yaml
 dependencies:
 - source:

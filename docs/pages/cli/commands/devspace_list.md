@@ -34,14 +34,13 @@ Lists configuration
 ```
 
 ## See Also
-* [devspace list available-components](/docs/cli/commands/devspace_list_available-components)	 - Lists all available components
-* [devspace list clusters](/docs/cli/commands/devspace_list_clusters)	 - Lists all connected clusters
-* [devspace list commands](/docs/cli/commands/devspace_list_commands)	 - Lists all custom DevSpace commands
-* [devspace list deployments](/docs/cli/commands/devspace_list_deployments)	 - Lists and shows the status of all deployments
-* [devspace list ports](/docs/cli/commands/devspace_list_ports)	 - Lists port forwarding configurations
-* [devspace list profiles](/docs/cli/commands/devspace_list_profiles)	 - Lists all DevSpace profiles
-* [devspace list providers](/docs/cli/commands/devspace_list_providers)	 - Lists all providers
-* [devspace list spaces](/docs/cli/commands/devspace_list_spaces)	 - Lists all user spaces
-* [devspace list sync](/docs/cli/commands/devspace_list_sync)	 - Lists sync configuration
-* [devspace list vars](/docs/cli/commands/devspace_list_vars)	 - Lists the vars in the active config
-
+* [devspace list available-components](../../cli/commands/devspace_list_available-components)	 - Lists all available components
+* [devspace list clusters](../../cli/commands/devspace_list_clusters)	 - Lists all connected clusters
+* [devspace list commands](../../cli/commands/devspace_list_commands)	 - Lists all custom DevSpace commands
+* [devspace list deployments](../../cli/commands/devspace_list_deployments)	 - Lists and shows the status of all deployments
+* [devspace list ports](../../cli/commands/devspace_list_ports)	 - Lists port forwarding configurations
+* [devspace list profiles](../../cli/commands/devspace_list_profiles)	 - Lists all DevSpace profiles
+* [devspace list providers](../../cli/commands/devspace_list_providers)	 - Lists all providers
+* [devspace list spaces](../../cli/commands/devspace_list_spaces)	 - Lists all user spaces
+* [devspace list sync](../../cli/commands/devspace_list_sync)	 - Lists sync configuration
+* [devspace list vars](../../cli/commands/devspace_list_vars)	 - Lists the vars in the active config

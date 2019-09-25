@@ -36,6 +36,5 @@ Resets an cluster token
 ```
 
 ## See Also
-* [devspace reset key](/docs/cli/commands/devspace_reset_key)	 - Resets a cluster key
-* [devspace reset vars](/docs/cli/commands/devspace_reset_vars)	 - Resets the current config vars
-
+* [devspace reset key](../../cli/commands/devspace_reset_key)	 - Resets a cluster key
+* [devspace reset vars](../../cli/commands/devspace_reset_vars)	 - Resets the current config vars

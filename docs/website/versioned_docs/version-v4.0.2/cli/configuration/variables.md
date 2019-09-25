@@ -146,9 +146,9 @@ DevSpace provides some variables that are filled automatically and can be used w
 - **DEVSPACE_RANDOM**: A random 6 character long string
 - **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
 - **DEVSPACE_GIT_COMMIT**: A short hash of the local repos current git commit
-- **DEVSPACE_SPACE**: The name of the [space](/docs/cloud/spaces/what-are-spaces) that is currently used
-- **DEVSPACE_SPACE_NAMESPACE**: The kubernetes namespace of the [space](/docs/cloud/spaces/what-are-spaces) in the cluster
-- **DEVSPACE_SPACE_DOMAIN1**, **DEVSPACE_SPACE_DOMAIN2**... : The connected domains of the [space](/docs/cloud/spaces/what-are-spaces). E.g. if a space has a domain connected with test.devspace.host, **DEVSPACE_SPACE_DOMAIN1** will hold test.devspace.host
+- **DEVSPACE_SPACE**: The name of the [space](../../cloud/spaces/what-are-spaces) that is currently used
+- **DEVSPACE_SPACE_NAMESPACE**: The kubernetes namespace of the [space](../../cloud/spaces/what-are-spaces) in the cluster
+- **DEVSPACE_SPACE_DOMAIN1**, **DEVSPACE_SPACE_DOMAIN2**... : The connected domains of the [space](../../cloud/spaces/what-are-spaces). E.g. if a space has a domain connected with test.devspace.host, **DEVSPACE_SPACE_DOMAIN1** will hold test.devspace.host
 - **DEVSPACE_USERNAME**: The username currently logged into devspace cloud
 
 ### Example: Using `${DEVSPACE_GIT_COMMIT}`

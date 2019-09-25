@@ -2,7 +2,7 @@
 title: Create Spaces
 ---
 
-There are two ways how a [Space](/docs/cloud/spaces/what-are-spaces) can be created:
+There are two ways how a [Space](../../cloud/spaces/what-are-spaces) can be created:
 1. By the cli via `devspace create space` or the UI
 2. By the cluster admin via `Clusters -> Click On Cluser -> Spaces -> Create Space`
 

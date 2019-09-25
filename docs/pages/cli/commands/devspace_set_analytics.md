@@ -42,5 +42,4 @@ devspace set analytics disabled true
 
 ## See Also
 
-* [devspace set](/docs/cli/commands/devspace_set)	 - Make global configuration changes
-
+* [devspace set](../../cli/commands/devspace_set)	 - Make global configuration changes

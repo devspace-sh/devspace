@@ -48,5 +48,4 @@ devspace add sync --local=app --container=/app
 
 ## See Also
 
-* [devspace add](/docs/cli/commands/devspace_add)	 - Change the DevSpace configuration
-
+* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
