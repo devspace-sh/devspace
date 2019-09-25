@@ -37,4 +37,4 @@ Flags:
       --verbose                 Shows every file that is synced
 ```
 
-You can also tell DevSpace CLI to start automatically synchronizing files on `devspace dev`. Take a look at [synchronizing files](/docs/development/synchronization) for more information.
+You can also tell DevSpace CLI to start automatically synchronizing files on `devspace dev`. Take a look at [synchronizing files](../../development/synchronization) for more information.

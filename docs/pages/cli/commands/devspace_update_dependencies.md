@@ -43,5 +43,4 @@ in the devspace.yaml
 
 ## See Also
 
-* [devspace update](/docs/cli/commands/devspace_update)	 - Updates the current config
-
+* [devspace update](../../cli/commands/devspace_update)	 - Updates the current config

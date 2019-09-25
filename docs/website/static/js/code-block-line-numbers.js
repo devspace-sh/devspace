@@ -10,7 +10,7 @@ window.addEventListener("load", function() {
       lineId = "block-" + i + "-line-" + lineNumber;
       return (
         arguments[1] +
-        '<a class="line" href="#' +
+        '<a class="line" rel="nofollow" href="#' +
         lineId +
         '" id="' +
         lineId +

@@ -18,11 +18,11 @@ deployments:
 
 ## Types of components
 There are two types of components:
-- [Predefined components](/docs/deployment/components/add-predefined-components)
-- [Custom components](/docs/deployment/components/add-custom-components)
+- [Predefined components](../../../deployment/components/add-predefined-components)
+- [Custom components](../../../deployment/components/add-custom-components)
 
 ### Predefined components
-Predefined components allow you to add popular application components such as databases (e.g. mysql, mongodb) without having to manually define everything from scratch. DevSpace will ask you a couple of questions when [adding a predefined component](/docs/deployment/components/add-predefined-components) and automatically configure everything for you. 
+Predefined components allow you to add popular application components such as databases (e.g. mysql, mongodb) without having to manually define everything from scratch. DevSpace will ask you a couple of questions when [adding a predefined component](../../../deployment/components/add-predefined-components) and automatically configure everything for you. 
 
 ### Custom components
 Custom components allow you to define components for your own application components or for additional applications which are not available as predefined component, yet.

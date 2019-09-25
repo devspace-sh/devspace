@@ -36,5 +36,4 @@ Create spaces in the cloud
 ```
 
 ## See Also
-* [devspace create space](/docs/cli/commands/devspace_create_space)	 - Create a new cloud space
-
+* [devspace create space](../../cli/commands/devspace_create_space)	 - Create a new cloud space

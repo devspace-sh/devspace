@@ -47,5 +47,4 @@ devspace use provider my.domain.com
 
 ## See Also
 
-* [devspace use](/docs/cli/commands/devspace_use)	 - Use specific config
-
+* [devspace use](../../cli/commands/devspace_use)	 - Use specific config

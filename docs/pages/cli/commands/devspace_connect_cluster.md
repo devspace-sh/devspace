@@ -54,5 +54,4 @@ devspace connect cluster
 
 ## See Also
 
-* [devspace connect](/docs/cli/commands/devspace_connect)	 - Connect an external cluster to devspace cloud
-
+* [devspace connect](../../cli/commands/devspace_connect)	 - Connect an external cluster to devspace cloud

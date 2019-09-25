@@ -16,7 +16,7 @@ npm run [start|dev|watch]
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](/docs/development/overrides#configuring-entrypoint-overrides)
+By default, `devspace dev` will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a `sleep` command. You can also define custom commands for overriding entrypoints. [Learn more about entrypoint overriding.](../development/overrides#configuring-entrypoint-overrides)
 
 ## Print logs instead of opening a terminal 
 
@@ -61,7 +61,7 @@ devspace enter -c my-container      # --container | Select container "my-contain
 devspace enter -s mysql             # --selector | Use the selector with name "mysql" to start the terminal proxy
 devspace enter -l "release=test"    # --label-sector | Use the label selector "release=test" to start the terminal proxy
 ```
-[See the full specification for `devspace enter`.](/docs/cli-commands/enter)
+[See the full specification for `devspace enter`.](../cli-commands/enter)
 
 ## Configure the terminal proxy
 The configuration for the terminal proxy can be set within the `dev.terminal` section of `devspace.yaml`.

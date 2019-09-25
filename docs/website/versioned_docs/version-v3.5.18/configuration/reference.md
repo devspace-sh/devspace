@@ -34,7 +34,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](/docs/image-building/overview)
+[Learn more about building images with DevSpace.](../image-building/overview)
 
 ### images[\*].build
 ```yaml
@@ -117,7 +117,7 @@ component:                          # struct   | Options for deploying a DevSpac
   pullSecrets: ...                  # string[] | Array of PullSecret names
   options: ...                      # struct   | Options for deploying this component with helm
 ```
-[Learn more about configuring component deployments.](/docs/deployment/components/what-are-components)
+[Learn more about configuring component deployments.](../deployment/components/what-are-components)
 
 ### deployments[\*].component.containers
 ```yaml
@@ -211,7 +211,7 @@ helm:                               # struct   | Options for deploying with Helm
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
   values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
 ```
-[Learn more about configuring deployments with Helm.](/docs/deployment/helm-charts/what-are-helm-charts)
+[Learn more about configuring deployments with Helm.](../deployment/helm-charts/what-are-helm-charts)
 
 ### deployments[\*].helm.chart
 ```yaml
@@ -231,7 +231,7 @@ kubectl:                            # struct   | Options for deploying with "kub
   kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
   flags: []                         # string[] | Array of flags for the "kubectl apply" command
 ```
-[Learn more about configuring deployments with Kubectl.](/docs/deployment/kubernetes-manifests/what-are-manifests)
+[Learn more about configuring deployments with Kubectl.](../deployment/kubernetes-manifests/what-are-manifests)
 
 
 ---
@@ -245,7 +245,7 @@ dev:                                # struct   | Options for "devspace dev"
   autoReload: ...                   # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
   selectors: []                     # struct[] | Array of selectors used to select Kubernetes pods (used within terminal, ports and sync)
 ```
-[Learn more about development with DevSpace.](/docs/development/workflow)
+[Learn more about development with DevSpace.](../development/workflow)
 
 ### dev.overrideImages
 ```yaml
@@ -255,31 +255,31 @@ overrideImages:                     # struct[] | Array of override settings for 
   dockerfile: default               # string   | Relative path of the Dockerfile that should be used instead of the one originally defined
   context: default                  # string   | Relative path of the context directory that should be used instead of the one originally defined
 ```
-[Learn more about image overriding.](/docs/development/overrides)
+[Learn more about image overriding.](../development/overrides)
 
 ### dev.terminal
 ```yaml
 terminal:                           # struct   | Options for the terminal proxy
   disabled: false                   # bool     | Disable terminal proxy / only start port-forwarding and code sync if defined (Default: false)
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
-  container: ""                     # string   | Container name to use
+  containerName: ""                 # string   | Container name to use
   selector:                         # TODO
   command: []                       # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about configuring the terminal proxy.](/docs/development/terminal)
+[Learn more about configuring the terminal proxy.](../development/terminal)
 
 ### dev.ports
 ```yaml
 ports:                              # struct[] | Array of port forwarding settings for selected pods
 - selector:                         # TODO
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
-  container: ""                     # string   | Container name to use
+  containerName: ""                 # string   | Container name to use
   forward:                          # struct[] | Array of ports to be forwarded
   - port: 8080                      # int      | Forward this port on your local computer
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod selected by "selector" (TODO)
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
-[Learn more about port forwarding.](/docs/development/port-forwarding)
+[Learn more about port forwarding.](../development/port-forwarding)
 
 ### dev.sync
 ```yaml
@@ -288,7 +288,7 @@ sync:                               # struct[] | Array of file sync settings for
   localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
   containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods from
-  container: ""                     # string   | Container name to use
+  containerName: ""                 # string   | Container name to use
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
@@ -297,7 +297,7 @@ sync:                               # struct[] | Array of file sync settings for
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](/docs/development/synchronization)
+[Learn more about confguring the code synchronization.](../development/synchronization)
 
 
 ### dev.autoReload
@@ -314,7 +314,7 @@ selectors:                          # struct[] | Array of selectors used to sele
 - name: default                     # string   | Name of this pod selector (used to reference this selector within terminal, ports and sync)
   namespace: ""                     # string   | Namespace to select pods in (Default: "" = namespace of the active Space)
   labelSelector: {}                 # map[string]string | Key-value map of Kubernetes labels used to select pods
-  ContainerName: ""                 # string   | Name of the container within the selected pod (Default: "" = first container in the pod)
+  containerName: ""                 # string   | Name of the container within the selected pod (Default: "" = first container in the pod)
 ```
 
 

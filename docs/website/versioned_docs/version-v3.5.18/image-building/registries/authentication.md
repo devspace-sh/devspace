@@ -20,4 +20,4 @@ docker login [registry.tld]
 ```
 Afterwards, you can use images of this format: `[registry.tld]/[USERNAME]/[IMAGE]:[TAG]`
 
-> If you are using DevSpace Container Registry, you can simply login with `devspace login`. Learn more about [DevSpace Container Registry (dscr.io)](/docs/cloud/images/dscr-io).
+> If you are using DevSpace Container Registry, you can simply login with `devspace login`. Learn more about [DevSpace Container Registry (dscr.io)](../../cloud/images/dscr-io).

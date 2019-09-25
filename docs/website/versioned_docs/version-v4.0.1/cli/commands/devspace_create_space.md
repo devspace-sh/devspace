@@ -49,5 +49,4 @@ devspace create space myspace
 
 ## See Also
 
-* [devspace create](/docs/cli/commands/devspace_create)	 - Create spaces in the cloud
-
+* [devspace create](../../cli/commands/devspace_create)	 - Create spaces in the cloud

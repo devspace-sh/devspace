@@ -36,5 +36,4 @@ Make global configuration changes
 ```
 
 ## See Also
-* [devspace set analytics](/docs/cli/commands/devspace_set_analytics)	 - Update analytics settings
-
+* [devspace set analytics](../../cli/commands/devspace_set_analytics)	 - Update analytics settings

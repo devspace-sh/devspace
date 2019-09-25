@@ -43,5 +43,4 @@ Deletes all locally created docker images from docker
 
 ## See Also
 
-* [devspace cleanup](/docs/cli/commands/devspace_cleanup)	 - Cleans up resources
-
+* [devspace cleanup](../../cli/commands/devspace_cleanup)	 - Cleans up resources

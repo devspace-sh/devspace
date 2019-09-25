@@ -40,7 +40,6 @@
       "version-v3.5.18-deployment/components/configuration/volumes",
       "version-v3.5.18-deployment/components/configuration/service",
       "version-v3.5.18-deployment/components/configuration/scaling",
-      "version-v3.5.18-deployment/components/configuration/specification",
       "version-v3.5.18-deployment/components/containers/image",
       "version-v3.5.18-deployment/components/containers/environment-variables",
       "version-v3.5.18-deployment/components/containers/resource-limits",

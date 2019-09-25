@@ -4,7 +4,7 @@ id: version-v3.5.18-kaniko
 original_id: kaniko
 ---
 
-If you wish to build images directly inside containers within your Kubernetes cluster, you can use a build tool called [kaniko](https://github.com/GoogleContainerTools/kaniko). Building Docker images with kaniko is about as fast as building images with a Docker daemon. The advantage, however, is that you do not need to install Docker which is especially useful in CI/CD environments. For a list of all configuration options, refer to the [Full Config Reference](/docs/configuration/reference#images-buildkaniko)
+If you wish to build images directly inside containers within your Kubernetes cluster, you can use a build tool called [kaniko](https://github.com/GoogleContainerTools/kaniko). Building Docker images with kaniko is about as fast as building images with a Docker daemon. The advantage, however, is that you do not need to install Docker which is especially useful in CI/CD environments. For a list of all configuration options, refer to the [Full Config Reference](../../configuration/reference#images-buildkaniko)
 
 ```yaml
 images:

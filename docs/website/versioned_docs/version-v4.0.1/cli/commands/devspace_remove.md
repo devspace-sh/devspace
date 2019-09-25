@@ -36,12 +36,11 @@ Changes devspace configuration
 ```
 
 ## See Also
-* [devspace remove cluster](/docs/cli/commands/devspace_remove_cluster)	 - Removes a connected cluster
-* [devspace remove context](/docs/cli/commands/devspace_remove_context)	 - Removes a kubectl-context
-* [devspace remove deployment](/docs/cli/commands/devspace_remove_deployment)	 - Removes one or all deployments from devspace configuration
-* [devspace remove image](/docs/cli/commands/devspace_remove_image)	 - Removes one or all images from the devspace
-* [devspace remove port](/docs/cli/commands/devspace_remove_port)	 - Removes forwarded ports from a devspace
-* [devspace remove provider](/docs/cli/commands/devspace_remove_provider)	 - Removes a cloud provider from the configuration
-* [devspace remove space](/docs/cli/commands/devspace_remove_space)	 - Removes a cloud space
-* [devspace remove sync](/docs/cli/commands/devspace_remove_sync)	 - Remove sync paths from the devspace
-
+* [devspace remove cluster](../../cli/commands/devspace_remove_cluster)	 - Removes a connected cluster
+* [devspace remove context](../../cli/commands/devspace_remove_context)	 - Removes a kubectl-context
+* [devspace remove deployment](../../cli/commands/devspace_remove_deployment)	 - Removes one or all deployments from devspace configuration
+* [devspace remove image](../../cli/commands/devspace_remove_image)	 - Removes one or all images from the devspace
+* [devspace remove port](../../cli/commands/devspace_remove_port)	 - Removes forwarded ports from a devspace
+* [devspace remove provider](../../cli/commands/devspace_remove_provider)	 - Removes a cloud provider from the configuration
+* [devspace remove space](../../cli/commands/devspace_remove_space)	 - Removes a cloud space
+* [devspace remove sync](../../cli/commands/devspace_remove_sync)	 - Remove sync paths from the devspace

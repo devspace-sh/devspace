@@ -46,5 +46,4 @@ devspace remove cluster my-cluster
 
 ## See Also
 
-* [devspace remove](/docs/cli/commands/devspace_remove)	 - Changes devspace configuration
-
+* [devspace remove](../../cli/commands/devspace_remove)	 - Changes devspace configuration

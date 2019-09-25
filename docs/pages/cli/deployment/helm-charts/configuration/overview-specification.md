@@ -21,7 +21,7 @@ deployments:
       repository: https://my-repo.tld/
 ```
 
-[What are Helm charts?](/docs/cli/deployment/helm-charts/what-are-helm-charts)
+[What are Helm charts?](../../../../cli/deployment/helm-charts/what-are-helm-charts)
 
 ## Chart
 
@@ -105,7 +105,7 @@ The `values` option expects an object with values that should be overriding the 
 
 Compared to the `valuesFiles` option, using `values` has the following advantages:
 - It is easier to comprehend and faster to find (no references)
-- It allows you to use [dynamic config variables](/docs/cli/configuration/variables)
+- It allows you to use [dynamic config variables](../../../../cli/configuration/variables)
 
 > Because both, `values` and `valuesFiles`, have advantages and disadvantages, it if often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
 
@@ -165,9 +165,9 @@ helm install --name database stable/mysql -f mysql/values.yaml -f mysql/values.p
 
 
 ### `deployments[*].helm.replaceImageTags`
-The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](/docs/cli/deployment/workflow-basics#3-tag-replacement).
+The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../../../../cli/deployment/workflow-basics#3-tag-replacement).
 
-By default, DevSpace searches all your values (specified via `values` or `valuesFiles`) for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the [image building process](/docs/cli/image-building/workflow-basics). Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+By default, DevSpace searches all your values (specified via `values` or `valuesFiles`) for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the [image building process](../../../../cli/image-building/workflow-basics). Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
 
 > Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
 

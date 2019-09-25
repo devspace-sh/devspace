@@ -4,7 +4,7 @@ id: version-v3.5.18-add-custom-components
 original_id: add-custom-components
 ---
 
-If you have understood the basic structure of a [component](/docs/deployment/components/what-are-components), adding another component is quite easy. After initializing your project, your `devspace.yaml` should look like this: 
+If you have understood the basic structure of a [component](../../deployment/components/what-are-components), adding another component is quite easy. After initializing your project, your `devspace.yaml` should look like this: 
 
 ```yaml
 deployments:
@@ -27,7 +27,7 @@ deployments:
 ...
 ```
 
-Let's say you want to add a mysql component manually instead of using one of the [predefined components](/docs/deployment/components/add-predefined-components). You could simply add a new deployment with a similar definition as the default component:
+Let's say you want to add a mysql component manually instead of using one of the [predefined components](../../deployment/components/add-predefined-components). You could simply add a new deployment with a similar definition as the default component:
 
 ```yaml
 deployments:

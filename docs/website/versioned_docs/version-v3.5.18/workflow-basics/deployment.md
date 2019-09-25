@@ -8,17 +8,17 @@ DevSpace CLI lets you deploy one or even multiple applications. In DevSpace a **
 
 ## Deployment process
 Running `devspace deploy` or `devspace dev` will do the following:
-1. Build all Docker [`images` that you specified in `devspace.yaml`](/docs/image-building/configuration)
-2. Push the Docker images to any [Docker registry](/docs/image-building/registries/authentication)
-3. Create [image pull secrets](/docs/image-building/registries/pull-secrets) if specified
+1. Build all Docker [`images` that you specified in `devspace.yaml`](../image-building/overview)
+2. Push the Docker images to any [Docker registry](../image-building/registries/authentication)
+3. Create [image pull secrets](../image-building/registries/pull-secrets) if specified
 4. Deploy all deployments defined in the `devspace.yaml` in the specified order with the built images
 
 ## Types of deployments
 DevSpace CLI lets you define the following types of deployments:
-- [Components (Easy way to deploy common kubernetes resources)](/docs/deployment/components/what-are-components)
-- [Helm charts](/docs/deployment/helm-charts/what-are-helm-charts)
-- [Kubernetes manifests](/docs/deployment/kubernetes-manifests/what-are-manifests)
-- [Kustomize manifests](/docs/deployment/kubernetes-manifests/kustomize)
+- [Components (Easy way to deploy common kubernetes resources)](../deployment/components/what-are-components)
+- [Helm charts](../deployment/helm-charts/what-are-helm-charts)
+- [Kubernetes manifests](../deployment/kubernetes-manifests/what-are-manifests)
+- [Kustomize manifests](../deployment/kubernetes-manifests/kustomize)
 
 > Take a look at the [examples](https://github.com/devspace-cloud/devspace/tree/master/examples) if you want to see example configurations for a certain deployment method.
 
@@ -38,7 +38,7 @@ deployments:
       ports:                            # Array of container ports to expose through the service
       - port: 3000                      # Exposes container port 3000 on service port 3000
 ```
-This deployment is configured to deploy the [Helm chart for DevSpace Components](/docs/deployment/components/what-are-components) using the values specified in the `component` section.
+This deployment is configured to deploy the [Helm chart for DevSpace Components](../deployment/components/what-are-components) using the values specified in the `component` section.
 
 Unlike `images` in the `devspace.yaml`, the `deployments` section is an array and not a key-value map because DevSpace CLI will iterate over the deployment one after another in the specified order and deploy it. This is useful because the order in which your deployments are starting might be relevant depending on your application.
 
@@ -74,9 +74,9 @@ Run one of the following commands to add a custom component to your deployments 
 devspace add deployment [deployment-name] --dockerfile=""
 devspace add deployment [deployment-name] --dockerfile="" --image="my-registry.tld/[username]/[image]"
 ```
-The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace CLI would assume that you want to use the [DevSpace Container Registry](/docs/cloud/images/dscr-io) provided by DevSpace Cloud.
+The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. In the first command, DevSpace CLI would assume that you want to use the [DevSpace Container Registry](../cloud/images/dscr-io) provided by DevSpace Cloud.
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](../image-building/registries/authentication).
 
 </details>
 
@@ -90,7 +90,7 @@ devspace add deployment [deployment-name] --image="my-registry.tld/my-username/i
 ```
 Example using Docker Hub: `devspace add deployment database --image="mysql"`
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/image-building/registries/authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](../image-building/registries/authentication).
 
 </details>
 
