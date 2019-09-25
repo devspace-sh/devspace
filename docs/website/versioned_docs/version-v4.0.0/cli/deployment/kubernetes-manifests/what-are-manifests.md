@@ -7,6 +7,6 @@ original_id: what-are-manifests
 
 Kubernetes manifests are used to create, modify and delete Kubernetes resources such as pods, deployments, services or ingresses. It is very common to define manifests in form of `.yaml` files and send them to the Kubernetes API Server via commands such as `kubectl apply -f my-file.yaml` or `kubectl delete -f my-file.yaml`.
 
-Learn more about how to [configure kubectl deployments](/docs/next/cli/deployment/kubernetes-manifests/configuration/overview-specification). 
+Learn more about how to [configure kubectl deployments](../../../next/cli/deployment/kubernetes-manifests/configuration/overview-specification). 
 
 > In order to deploy kubernets manifests with DevSpace make sure you have `kubectl` installed and the manifests can be deployed via `kubectl apply -f my-file.yaml`.

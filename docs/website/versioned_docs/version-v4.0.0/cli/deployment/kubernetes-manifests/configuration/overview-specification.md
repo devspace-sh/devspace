@@ -28,7 +28,7 @@ kubectl apply -f frontend/manifest.yaml
 
 > Deployments with `kubectl` require `kubectl` to be installed. The `kubectl` binary either needs to be found through your `PATH` variable or by specifying the [`cmdPath` option](#cmdpath).
 
-[What are Kubernetes manifests?](/docs/cli/deployment/kubernetes-manifests/what-are-manifests)
+[What are Kubernetes manifests?](../../../../cli/deployment/kubernetes-manifests/what-are-manifests)
 
 
 ## Manifests
@@ -76,9 +76,9 @@ deployments:
 
 
 ### `deployments[*].kubectl.replaceImageTags`
-The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](/docs/cli/deployment/workflow-basics#3-tag-replacement).
+The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../../../../cli/deployment/workflow-basics#3-tag-replacement).
 
-By default, DevSpace searches all your manifests for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the [image building process](/docs/cli/image-building/workflow-basics). Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+By default, DevSpace searches all your manifests for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the [image building process](../../../../cli/image-building/workflow-basics). Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
 
 > Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
 

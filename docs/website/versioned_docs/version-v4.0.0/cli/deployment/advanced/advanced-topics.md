@@ -6,7 +6,7 @@ original_id: advanced-topics
 ---
 
 Take a look at these pages for advanced topics related to deployment:
-- [Deploying Dependencies](/docs/cli/deployment/advanced/dependencies)
-- [Configuring Custom Commands](/docs/cli/configuration/custom-commands)
-- [Configuring Config Profiles & Patches](/docs/cli/configuration/profiles-patches)
-- [Configuring Hooks](/docs/cli/configuration/hooks)
+- [Deploying Dependencies](../../../cli/deployment/advanced/dependencies)
+- [Configuring Custom Commands](../../../cli/configuration/custom-commands)
+- [Configuring Config Profiles & Patches](../../../cli/configuration/profiles-patches)
+- [Configuring Hooks](../../../cli/configuration/hooks)

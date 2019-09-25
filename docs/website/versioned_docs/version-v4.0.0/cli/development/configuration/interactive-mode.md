@@ -50,7 +50,7 @@ The `images` option expects an array of objects having the following properties:
 - `entrypoint` defining an [`ENTRYPOINT` override](http://localhost:3000/docs/cli/image-building/configuration/overview-specification#images-entrypoint) that will be applied only in interactive mode (optional)
 - `cmd` defining a [`CMD` override](http://localhost:3000/docs/cli/image-building/configuration/overview-specification#images-cmd) that will be applied only in interactive mode (optional)
 
-> `ENTRYPOINT` and `CMD` overrides for interactive mode work the same way as regular [overrides for image building](/docs/cli/image-building/configuration/overview-specification#overriding-entrypoint-cmd). However, they take precedence over regular overrides and are only used during interactive mode.
+> `ENTRYPOINT` and `CMD` overrides for interactive mode work the same way as regular [overrides for image building](../../../cli/image-building/configuration/overview-specification#overriding-entrypoint-cmd). However, they take precedence over regular overrides and are only used during interactive mode.
 
 > By default, DevSpace asks which image to override when starting interactive mode (or skips the question if only one image is defined). This image will then be built using the `ENTRYPOINT [sleep, 999999]` override if not configured differently via `dev.interactive.images`.
 
