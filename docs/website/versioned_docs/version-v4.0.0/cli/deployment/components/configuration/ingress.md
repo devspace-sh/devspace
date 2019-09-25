@@ -24,7 +24,7 @@ deployments:
 
 > You need to define a `service` with at least one `port` to be able to use the `ingress` option.
 
-[What are components?](/docs/cli/deployment/components/what-are-components)
+[What are components?](../../../../cli/deployment/components/what-are-components)
 
 
 ## Ingress Rules

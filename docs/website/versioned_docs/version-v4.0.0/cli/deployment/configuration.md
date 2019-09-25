@@ -25,9 +25,9 @@ deployments:
 ## Config Options
 The following config options exist for every deployment:
 - `name` stating the name of the deployment (required)
-- `component` for [**Configuring Component Deployments**](/docs/cli/deployment/components/configuration/overview-specification)
-- `kubectl` for [**Configuring Manifest Deployments**](/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification)
-- `helm` for [**Configuring Helm Chart Deployments**](/docs/cli/deployment/helm-charts/configuration/overview-specification)
+- `component` for [**Configuring Component Deployments**](../../cli/deployment/components/configuration/overview-specification)
+- `kubectl` for [**Configuring Manifest Deployments**](../../cli/deployment/kubernetes-manifests/configuration/overview-specification)
+- `helm` for [**Configuring Helm Chart Deployments**](../../cli/deployment/helm-charts/configuration/overview-specification)
 - `namespace` stating a namespace to deploy to (optional, see note below)
 
 > **Note:** Use `namespace` **only** if you want to run a deployment in another namespace than the remaining deployments. Generally, DevSpace uses the default namespace of the current kube-context and runs all deployments in the same namespace.

@@ -6,7 +6,7 @@ original_id: build-tools
 ---
 
 The `build` option of each image (under `images`) defines which build tool DevSpace uses to build the image. The following build tools are currently supported:
-- [`docker`](#docker) for building images using a Docker daemon (**default build tool**, [prefers Docker daemon of local Kubernetes clusters](/docs/cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters))
+- [`docker`](#docker) for building images using a Docker daemon (**default build tool**, [prefers Docker daemon of local Kubernetes clusters](../../../cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters))
 - [`kaniko`](#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](#dockerdisablefallback-kaniko-as-fallback-for-docker))
 - [`custom`](#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
 - [`disabled`](#disabled) for disabling image building for this image
@@ -83,11 +83,11 @@ skipPush: false
 
 ### `docker.options`
 The build tool `docker` allow you to define an `options` section for the following settings:
-- [`target`](/docs/cli/image-building/configuration/build-options#target) defining the build target for multi-stage builds
-- [`network`](/docs/cli/image-building/configuration/build-options#network) to define which network to use during building (e.g. `docker build --network=host`)
-- [`buildArgs`](/docs/cli/image-building/configuration/build-options#buildargs) to pass arguments to the Dockerfile during the build process
+- [`target`](../../../cli/image-building/configuration/build-options#target) defining the build target for multi-stage builds
+- [`network`](../../../cli/image-building/configuration/build-options#network) to define which network to use during building (e.g. `docker build --network=host`)
+- [`buildArgs`](../../../cli/image-building/configuration/build-options#buildargs) to pass arguments to the Dockerfile during the build process
 
-See [Build Options](/docs/cli/image-building/configuration/build-options) for details.
+See [Build Options](../../../cli/image-building/configuration/build-options) for details.
 
 
 
@@ -259,11 +259,11 @@ The image `backend` would be built using kaniko and kaniko would use the Kuberne
 
 ### `kaniko.options`
 The build tool `kaniko` allow you to define an `options` section for the following settings:
-- [`target`](/docs/cli/image-building/configuration/build-options#target) defining the build target for multi-stage builds
-- [`network`](/docs/cli/image-building/configuration/build-options#network) to define which network to use during building (similar to `docker build --network=host`)
-- [`buildArgs`](/docs/cli/image-building/configuration/build-options#buildargs) to pass arguments to the Dockerfile during the build process
+- [`target`](../../../cli/image-building/configuration/build-options#target) defining the build target for multi-stage builds
+- [`network`](../../../cli/image-building/configuration/build-options#network) to define which network to use during building (similar to `docker build --network=host`)
+- [`buildArgs`](../../../cli/image-building/configuration/build-options#buildargs) to pass arguments to the Dockerfile during the build process
 
-See [Build Options](/docs/cli/image-building/configuration/build-options) for details.
+See [Build Options](../../../cli/image-building/configuration/build-options) for details.
 
 
 
@@ -292,7 +292,7 @@ images:
         - "arg-value-2"
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --arg1=arg-value-1 --arg2=arg-value-2 "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](/docs/cli/image-building/configuration/overview-specification#images-tag-tagging-schema).
+The image `backend` would be built using the command `./build --arg1=arg-value-1 --arg2=arg-value-2 "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../../cli/image-building/configuration/overview-specification#images-tag-tagging-schema).
 
 
 ### `custom.args`
@@ -331,7 +331,7 @@ images:
         - "arg-value-2"
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --arg1=arg-value-1 --arg2=arg-value-2 --image="[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](/docs/cli/image-building/configuration/overview-specification#images-tag-tagging-schema).
+The image `backend` would be built using the command `./build --arg1=arg-value-1 --arg2=arg-value-2 --image="[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../../cli/image-building/configuration/overview-specification#images-tag-tagging-schema).
 
 
 ### `custom.onChange`
@@ -365,7 +365,7 @@ The image `backend` would be built using the command `./build --image="[IMAGE]:[
 ## `disabled`
 The `disabled` option expects a boolean and allows you to disable image building for an image.
 
-This config option may be useful when developing an application that takes long to build and does not need to be rebuild very frequently because the [file synchronization](/docs/cli/development/configuration/file-synchronization) in development mode is much quicker to update the development container than rebuilding the image. In this case, you could set `disabled: true` and manually rebuild if needed using `devspace build`.
+This config option may be useful when developing an application that takes long to build and does not need to be rebuild very frequently because the [file synchronization](../../../cli/development/configuration/file-synchronization) in development mode is much quicker to update the development container than rebuilding the image. In this case, you could set `disabled: true` and manually rebuild if needed using `devspace build`.
 
 #### Default Value For `disabled`
 ```yaml

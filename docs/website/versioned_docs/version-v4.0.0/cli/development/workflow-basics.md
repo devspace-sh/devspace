@@ -36,31 +36,31 @@ devspace dev
 The following flags are available for all commands that trigger image building:
 - `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
 - `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
-- `-i / --interactive` starts the [interactive mode](/docs/cli/development/configuration/interactive-mode)
+- `-i / --interactive` starts the [interactive mode](../../cli/development/configuration/interactive-mode)
 
 
 
 ## Development Process
-The development process first runs the [deployment process](/docs/cli/deployment/workflow-basics) (1. - 4.) and then continues with starting the development-specific features.
+The development process first runs the [deployment process](../../cli/deployment/workflow-basics) (1. - 4.) and then continues with starting the development-specific features.
 
 ### 1. Build & Deploy Dependencies
 DevSpace loads the `dependencies` section from the `devspace.yaml` and creates a dependency tree. The current project will represent the root of this tree. Based on this dependency tree, DevSpace will start from the leaves and run these steps for each dependency:
 - Build images of the dependency as configured in the `images` section of the dependency's `devspace.yaml` (unless `skipBuild: true`)
 - Deploy the dependency as configured in the `deployments` section of the dependency's `devspace.yaml`
 
-[Learn more about deploying dependencies with DevSpace.](/docs/cli/deployment/advanced/dependencies)
+[Learn more about deploying dependencies with DevSpace.](../../cli/deployment/advanced/dependencies)
 
 > Dependencies allow you to deploy microservices, that the project you are currently deploying relies on. Dependencies can be located in a subpath of your project or they can be automatically loaded from a different git reporsitory.
 
 
 ### 2. Build, Tag & Push Images
-DevSpace triggers the [image building process](/docs/cli/image-building/workflow-basics) for the images specified in the `images` section of the `devspace.yaml`.
+DevSpace triggers the [image building process](../../cli/image-building/workflow-basics) for the images specified in the `images` section of the `devspace.yaml`.
 
-[Learn more about image building with DevSpace.](/docs/cli/image-building/workflow-basics)
+[Learn more about image building with DevSpace.](../../cli/image-building/workflow-basics)
 
 
 ### 3. Tag Replacement
-After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](/docs/cli/image-building/workflow-basics#6-tag-image) during the image building process.
+After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](../../cli/image-building/workflow-basics#6-tag-image) during the image building process.
 
 > To use automated tag replacement, make sure you do **not** specify image tags in the deployment configuration.
 
@@ -116,9 +116,9 @@ DevSpace provides two options to develop applications in Kubernetes:
 - using an interactive terminal session (run `devspace dev -i`)
 
 #### Multi-Container Log Streaming (Option A, default)
-The first option starts your application as defined in your Dockerfile or in your Kubernetes pod definition. After the pods are started, DevSpace streams the logs of all containers that are started with an image that was built during the [image building process](/docs/cli/image-building/workflow-basics). Each log line is prefixed with the image name or alternatively with the pod name of the container. Before starting the actual log streaming, DevSpace prints the last 50 log lines of each container by default.
+The first option starts your application as defined in your Dockerfile or in your Kubernetes pod definition. After the pods are started, DevSpace streams the logs of all containers that are started with an image that was built during the [image building process](../../cli/image-building/workflow-basics). Each log line is prefixed with the image name or alternatively with the pod name of the container. Before starting the actual log streaming, DevSpace prints the last 50 log lines of each container by default.
 
-Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](/docs/cli/development/configuration/logs-streaming).
+Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](../../cli/development/configuration/logs-streaming).
 
 #### Interactive Terminal Session (Option B)
 To start interactive mode, run:
@@ -127,7 +127,7 @@ devspace dev -i
 ```
 Instead of starting the multi-container log streaming, you can also start development mode using an interactive terminal session. This interactive mode builds your images (by default) using an `ENTRYPOINT = [sleep, 999999]` override for the image you want to work on and starts an interactive terminal session for the container that is being started with this image. This means that your container starts but without starting your application which allows you to run a command through the terminal session to manually start the application. This is often useful for debugging container start issues or for quickly testing different commands that could be used as an `ENTRYPOINT`.
 
-Interactive mode works out of the box but is also [customizable using the `dev.interactive` configuration section](/docs/cli/development/configuration/interactive-mode).
+Interactive mode works out of the box but is also [customizable using the `dev.interactive` configuration section](../../cli/development/configuration/interactive-mode).
 
 ### 8. Open The Browser (optional)
 DevSpace iterates over every item in the `dev.open` array defined in the `devspace.yaml` and tries to open the URL you provide for each item using the following method:
@@ -136,7 +136,7 @@ DevSpace iterates over every item in the `dev.open` array defined in the `devspa
 2. As soon as the first HTTP response has a status code which is neither 502 (Bad Gateway) nor 503 (Service Unavailable), DevSpace assumes that the application is now started, stops sending any further requests and opens the provided URL in the browser.
 3. If the URL is still returning status code 502 or 503 after 4min, DevSpace will stop trying to open it. To not disturb the log streaming or the interactive terminal session, DevSpace will not show an error when hitting the 4min timeout.
 
-Learn more about [configuring auto-open](/docs/cli/development/configuration/auto-open).
+Learn more about [configuring auto-open](../../cli/development/configuration/auto-open).
 
 
 ## Useful Commands
@@ -197,7 +197,7 @@ When DevSpace asks you how to open your application, you have two options as sho
 > via localhost (provides private access only on your computer via port-forwarding)
   via domain (makes your application publicly available via ingress)
 ```
-To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](/docs/cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](../../cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
 
 > If your application does not open as exepected, run [`devspace analyze` and DevSpace will try to identify the issue](#devspace-analyze).
 
@@ -213,7 +213,7 @@ DevSpace allows you to share commands for common development tasks which can be 
 ```bash
 devspace list commands
 ```
-Learn how to [configure shared commands for `devspace run`](/docs/cli/configuration/custom-commands).
+Learn how to [configure shared commands for `devspace run`](../../cli/configuration/custom-commands).
 
 ### `devspace list deployments`
 To get a list of all deployments as well as their status and other information, run the following command:
