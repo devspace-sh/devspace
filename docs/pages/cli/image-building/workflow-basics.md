@@ -29,7 +29,7 @@ DevSpace loads the contents of the Dockerfile specified in `dockerfile` (default
 ### 2. Apply Entrypoint Override (if configured) 
 DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `entrypoint` option should be defined as an array. 
 
-> Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](/docs/cli/configuration/profiles) in your `devspace.yaml`.
+> Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](/docs/cli/configuration/profiles-patches) in your `devspace.yaml`.
 
 ### 3. Load Build Context
 DevSpace loads the the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
@@ -50,7 +50,7 @@ Next time you trigger the image building process, DevSpace will generate these h
 ### 5. Build Image
 DevSpace uses one of the following [build tools](/docs/cli/image-building/configuration/build-tools) to create an image based on your Dockerfile and the provided context:
 - [`docker`](/docs/cli/image-building/configuration/build-tools#docker) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
-- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
+- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/cli/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
 - [`custom`](/docs/cli/image-building/configuration/build-tools#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
 
 ### 6. Tag Image

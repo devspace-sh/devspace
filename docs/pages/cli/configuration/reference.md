@@ -293,7 +293,7 @@ ports:                              # struct[] | Array of port forwarding settin
 open:                               # struct[] | Array of auto-open settings
 - url: "https://localhost:3000/"    # string   | URL to open after application has started
 ```
-[Learn more about configuring auto-opening.](/docs/development/auto-open)
+[Learn more about configuring auto-opening.](/docs/cli/development/configuration/auto-open)
 
 ### `dev.sync`
 ```yaml
