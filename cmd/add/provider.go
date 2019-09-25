@@ -60,15 +60,17 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 		providerConfig.Providers = []*latest.Provider{}
 	}
 
+	// Check if provider already exists
 	provider := config.GetProvider(providerConfig, providerName)
-	if provider == nil {
-		providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
-			Name: providerName,
-			Host: host,
-		})
-	} else {
-		provider.Host = host
+	if provider != nil {
+		return errors.Errorf("Provider %s does already exist", providerName)
 	}
+
+	// Add provider
+	providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
+		Name: providerName,
+		Host: host,
+	})
 
 	// Ensure user is logged in
 	err = cloudpkg.EnsureLoggedIn(providerConfig, providerName, log.GetInstance())
