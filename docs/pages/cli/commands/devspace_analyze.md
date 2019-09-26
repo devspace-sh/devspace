@@ -46,4 +46,3 @@ devspace analyze --namespace=mynamespace
 ```
 
 ## See Also
-

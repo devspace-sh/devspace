@@ -40,4 +40,3 @@ Upgrades the DevSpace CLI to the newest version
 ```
 
 ## See Also
-

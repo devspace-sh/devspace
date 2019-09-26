@@ -46,6 +46,7 @@ devspace connect cluster
 	clusterCmd.Flags().StringVar(&cmd.Options.Key, "key", "", "The encryption key to use")
 	clusterCmd.Flags().StringVar(&cmd.Options.ClusterName, "name", "", "The cluster name to create")
 
+	clusterCmd.Flags().BoolVar(&cmd.Options.OpenUI, "open-ui", false, "Opens the UI and displays the cluster overview")
 	clusterCmd.Flags().BoolVar(&cmd.Options.UseDomain, "use-domain", false, "Use an automatic domain for the cluster")
 	clusterCmd.Flags().StringVar(&cmd.Options.Domain, "domain", "", "The domain to use")
 

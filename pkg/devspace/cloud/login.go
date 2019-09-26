@@ -43,6 +43,10 @@ func (p *Provider) GetToken() (string, error) {
 		return "", errors.Wrap(err, "read request body")
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Errorf("Error retrieving token: Code %v => %s. Try to relogin with 'devspace login'", resp.StatusCode, string(body))
+	}
+
 	p.Token = string(body)
 	if token.IsTokenValid(p.Token) == false {
 		return "", errors.New("Received invalid token from provider")
