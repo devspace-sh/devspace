@@ -34,6 +34,7 @@ devspace connect cluster
       --ingress-controller     Deploy an ingress controller (default true)
       --key string             The encryption key to use
       --name string            The cluster name to create
+      --open-ui                Opens the UI and displays the cluster overview
       --provider string        The cloud provider to use
       --use-domain             Use an automatic domain for the cluster
       --use-hostnetwork        Use the host network for the ingress controller instead of a loadbalancer
