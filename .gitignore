@@ -15,8 +15,10 @@
 .history/
 
 /devspace
-/debug
+/debug*
+/__debug*
 .DS_STORE
 .idea
 
+# VS Code
 .vscode/ipch

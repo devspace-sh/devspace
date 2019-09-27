@@ -155,7 +155,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	log.WriteString("\n")
 
 	if selectedOption == createDockerfileOption {
 		// Containerize application if necessary

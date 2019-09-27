@@ -156,7 +156,6 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
 	}
 
-	log.WriteString("\n")
 	openingMode, err := survey.Question(&survey.QuestionOptions{
 		Question:     "How do you want to open your application?",
 		DefaultValue: openLocalHostOption,
