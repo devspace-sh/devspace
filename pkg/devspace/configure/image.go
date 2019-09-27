@@ -247,8 +247,6 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+registryURL)
 	}
 
-	log.WriteString("\n")
-
 	log.StartWait("Checking registry authentication")
 	authConfig, err = docker.Login(dockerClient, registryURL, "", "", true, false, false)
 	log.StopWait()
