@@ -428,9 +428,14 @@ func getService(config *latest.Config, client *kubectl.Client, namespace, host s
 		serviceName = splitted[0]
 		servicePort = splitted[1]
 	} else {
+		servicePickerQuestion := "Select the service you want to open:"
+		if host != "" {
+			servicePickerQuestion = fmt.Sprintf("Select the service you want to make available on '%s':", ansi.Color(host, "white+b"))
+		}
+
 		// Ask user which service
 		service, err := survey.Question(&survey.QuestionOptions{
-			Question: fmt.Sprintf("Please specify the service you want to make available on '%s'", ansi.Color(host, "white+b")),
+			Question: servicePickerQuestion,
 			Options:  serviceNameList,
 		}, log.GetInstance())
 		if err != nil {
