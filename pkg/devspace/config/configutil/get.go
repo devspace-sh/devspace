@@ -59,6 +59,7 @@ func ResetConfig() {
 	defer getConfigOnceMutex.Unlock()
 
 	getConfigOnce = sync.Once{}
+	getConfigOnceErr = nil
 }
 
 // InitConfig initializes the config objects
