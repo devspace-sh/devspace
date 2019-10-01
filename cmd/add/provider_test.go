@@ -82,17 +82,13 @@ func TestRunAddProvider(t *testing.T) {
 					},
 				},
 			},
-			args:           []string{"someProvider"},
-			expectedOutput: "\nDone Successfully added cloud provider someProvider",
+			args:        []string{"someProvider"},
+			expectedErr: "Provider someProvider does already exist",
 			expectedProviders: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
 					Name: "someProvider",
 					Host: "https://someProvider",
 					Key:  "someKey",
-				},
-				&cloudlatest.Provider{
-					Name: "app.devspace.cloud",
-					Host: "https://app.devspace.cloud",
 				},
 			},
 		},
