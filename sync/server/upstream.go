@@ -2,27 +2,36 @@ package server
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/sync/remote"
 	"github.com/devspace-cloud/devspace/sync/util"
 	"github.com/pkg/errors"
+	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 // StartUpstreamServer starts a new upstream server with the given reader and writer
-func StartUpstreamServer(uploadPath string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
+func StartUpstreamServer(uploadPath string, excludePaths []string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
 	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
+
+	// Compile ignore paths
+	ignoreMatcher, err := compilePaths(excludePaths)
+	if err != nil {
+		return errors.Wrap(err, "compile paths")
+	}
 
 	go func() {
 		s := grpc.NewServer()
 
 		remote.RegisterUpstreamServer(s, &Upstream{
-			UploadPath: uploadPath,
+			UploadPath:    uploadPath,
+			ignoreMatcher: ignoreMatcher,
 		})
 		reflection.Register(s)
 
@@ -36,6 +45,9 @@ func StartUpstreamServer(uploadPath string, reader io.Reader, writer io.Writer, 
 // Upstream is the implementation for the upstream server
 type Upstream struct {
 	UploadPath string
+
+	// ignore matcher is the ignore matcher which matches against excluded files and paths
+	ignoreMatcher gitignore.IgnoreParser
 }
 
 // Remove implements the server
@@ -46,7 +58,19 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 		if paths != nil {
 			for _, path := range paths.Paths {
 				// Just remove everything inside and ignore any errors
-				os.RemoveAll(filepath.Join(u.UploadPath, path))
+				absolutePath := filepath.Join(u.UploadPath, path)
+
+				// Stat the path
+				stat, err := os.Stat(absolutePath)
+				if err != nil {
+					continue
+				}
+
+				if stat.IsDir() {
+					u.removeRecursive(absolutePath)
+				} else {
+					os.Remove(absolutePath)
+				}
 			}
 		}
 
@@ -57,6 +81,34 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 			return err
 		}
 	}
+}
+
+func (u *Upstream) removeRecursive(absolutePath string) error {
+	files, err := ioutil.ReadDir(absolutePath)
+	if err != nil {
+		return err
+	}
+
+	// Loop over directory contents and check if we should delete the contents
+	for _, f := range files {
+		absoluteChildPath := filepath.Join(absolutePath, f.Name())
+
+		// Check if ignored
+		if u.ignoreMatcher != nil && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.UploadPath):], f.IsDir()) {
+			continue
+		}
+
+		// Remove recursive
+		if f.IsDir() {
+			// Ignore the errors here
+			_ = u.removeRecursive(absoluteChildPath)
+		} else {
+			os.Remove(absoluteChildPath)
+		}
+	}
+
+	// This will not remove the directory if there is still a file or directory in it
+	return os.Remove(absolutePath)
 }
 
 // Upload implements the server upload interface and writes all the data received to a

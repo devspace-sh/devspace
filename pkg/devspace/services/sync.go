@@ -215,6 +215,15 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 	}
 
 	// Start upstream
+	upstreamArgs := []string{SyncHelperContainerPath, "--upstream"}
+	for _, exclude := range options.ExcludePaths {
+		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
+	}
+	for _, exclude := range options.DownloadExcludePaths {
+		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
+	}
+	upstreamArgs = append(upstreamArgs, containerPath)
+
 	upStdinReader, upStdinWriter, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "create pipe")
@@ -224,7 +233,7 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(syncClient, kubeClient, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
+	go startStream(syncClient, kubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {
