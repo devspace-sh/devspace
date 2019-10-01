@@ -11,7 +11,7 @@ import (
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string, log log.Logger) (*v1.Pod, error) {
+func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string, onlyRunning bool, log log.Logger) (*v1.Pod, error) {
 	if question == nil {
 		question = ptr.String(DefaultPodQuestion)
 	}
@@ -26,7 +26,7 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 
 		if podList.Items != nil && len(podList.Items) == 1 {
 			podStatus := kubectl.GetPodStatus(&podList.Items[0])
-			if podStatus != "Running" {
+			if onlyRunning && podStatus != "Running" {
 				return nil, nil
 			}
 
@@ -35,7 +35,7 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 			options := []string{}
 			for _, pod := range podList.Items {
 				podStatus := kubectl.GetPodStatus(&pod)
-				if podStatus != "Running" {
+				if onlyRunning && podStatus != "Running" {
 					continue
 				}
 
@@ -72,7 +72,7 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 
 	if podList.Items != nil && len(podList.Items) == 1 {
 		podStatus := kubectl.GetPodStatus(&podList.Items[0])
-		if podStatus != "Running" {
+		if onlyRunning && podStatus != "Running" {
 			return nil, nil
 		}
 
@@ -81,7 +81,7 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 		options := []string{}
 		for _, pod := range podList.Items {
 			podStatus := kubectl.GetPodStatus(&pod)
-			if podStatus != "Running" {
+			if onlyRunning && podStatus != "Running" {
 				continue
 			}
 

@@ -58,6 +58,7 @@ type DeploymentCache struct {
 var ConfigPath = ".devspace/generated.yaml"
 
 var loadedConfig *Config
+var loadedConfigErr error
 var loadedConfigOnce sync.Once
 var loadedConfigMutex sync.Mutex
 
@@ -76,6 +77,7 @@ func ResetConfig() {
 	defer loadedConfigMutex.Unlock()
 
 	loadedConfigOnce = sync.Once{}
+	loadedConfigErr = nil
 	loadedConfig = nil
 }
 
@@ -84,13 +86,11 @@ func LoadConfig(profile string) (*Config, error) {
 	loadedConfigMutex.Lock()
 	defer loadedConfigMutex.Unlock()
 
-	var err error
-
 	loadedConfigOnce.Do(func() {
-		loadedConfig, err = LoadConfigFromPath(ConfigPath, profile)
+		loadedConfig, loadedConfigErr = LoadConfigFromPath(ConfigPath, profile)
 	})
 
-	return loadedConfig, err
+	return loadedConfig, loadedConfigErr
 }
 
 // LoadConfigFromPath loads the generated config from a given path

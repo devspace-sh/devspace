@@ -28,7 +28,10 @@ func StartLogsWithWriter(config *latest.Config, client *kubectl.Client, cmdParam
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer(log)
+	// Allow picking non running pods
+	targetSelector.AllowNonRunning = true
+
+	pod, container, err := targetSelector.GetContainer(true, log)
 	if err != nil {
 		return err
 	}

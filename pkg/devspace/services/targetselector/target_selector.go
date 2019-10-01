@@ -26,6 +26,8 @@ type TargetSelector struct {
 	PodQuestion       *string
 	ContainerQuestion *string
 
+	AllowNonRunning bool
+
 	namespace string
 	pick      bool
 
@@ -137,7 +139,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	}
 
 	// Ask for pod
-	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion, log)
+	pod, err := SelectPod(t.kubeClient, t.namespace, nil, t.PodQuestion, !t.AllowNonRunning, log)
 	if err != nil {
 		return nil, err
 	}
@@ -145,14 +147,76 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	return pod, nil
 }
 
+const initContainerOptionPrefix = "Init: "
+
 // GetContainer retrieves a container and pod
-func (t *TargetSelector) GetContainer(log log.Logger) (*v1.Pod, *v1.Container, error) {
+func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (*v1.Pod, *v1.Container, error) {
 	pod, err := t.GetPod(log)
 	if err != nil {
 		return nil, nil, err
-	}
-	if pod == nil {
+	} else if pod == nil {
 		return nil, nil, errors.Errorf("Couldn't find a running pod in namespace %s", t.namespace)
+	}
+
+	// Check if we allow selecting also init containers
+	if allowInitContainer && len(pod.Spec.InitContainers) > 0 {
+		if len(pod.Spec.Containers) == 0 && len(pod.Spec.InitContainers) == 1 {
+			return pod, &pod.Spec.InitContainers[0], nil
+		}
+
+		if t.pick == false && t.containerName != "" {
+			// Find init container
+			for _, container := range pod.Spec.InitContainers {
+				if container.Name == t.containerName {
+					return pod, &container, nil
+				}
+			}
+			for _, container := range pod.Spec.Containers {
+				if container.Name == t.containerName {
+					return pod, &container, nil
+				}
+			}
+
+			return nil, nil, errors.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
+		}
+
+		// Don't allow pick
+		if t.allowPick == false {
+			return nil, nil, errors.Errorf("Couldn't select a container in pod %s, because no container name was specified", pod.Name)
+		}
+
+		options := []string{}
+		for _, container := range pod.Spec.InitContainers {
+			options = append(options, initContainerOptionPrefix+container.Name)
+		}
+		for _, container := range pod.Spec.Containers {
+			options = append(options, container.Name)
+		}
+
+		if t.ContainerQuestion == nil {
+			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
+		}
+
+		containerName, err := survey.Question(&survey.QuestionOptions{
+			Question: *t.ContainerQuestion,
+			Options:  options,
+		}, log)
+		if err != nil {
+			return nil, nil, err
+		} else if strings.HasPrefix(containerName, initContainerOptionPrefix) {
+			containerName = containerName[len(initContainerOptionPrefix):]
+		}
+
+		for _, container := range pod.Spec.InitContainers {
+			if container.Name == containerName {
+				return pod, &container, nil
+			}
+		}
+		for _, container := range pod.Spec.Containers {
+			if container.Name == containerName {
+				return pod, &container, nil
+			}
+		}
 	}
 
 	// Select container if necessary

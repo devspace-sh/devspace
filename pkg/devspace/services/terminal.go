@@ -22,9 +22,11 @@ func StartTerminal(config *latest.Config, client *kubectl.Client, selectorParame
 		return 0, err
 	}
 
+	// Allow picking non running pods
+	targetSelector.AllowNonRunning = true
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
 
-	pod, container, err := targetSelector.GetContainer(log)
+	pod, container, err := targetSelector.GetContainer(true, log)
 	if err != nil {
 		return 0, err
 	}
