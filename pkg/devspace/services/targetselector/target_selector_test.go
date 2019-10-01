@@ -70,7 +70,7 @@ func TestTargetSelector(t *testing.T) {
 	}
 
 	//First test
-	returnedPod, returnedContainer, err := targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err := targetSelector.GetContainer(false, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error getting Container: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestTargetSelector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating pod: %v", err)
 	}
-	returnedPod, returnedContainer, err = targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
 	assert.Equal(t, fmt.Sprintf("Couldn't get pod %s, because pod has status: %s which is not Running", selectedPodName, "Stopped"), err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
@@ -126,7 +126,7 @@ func TestTargetSelector(t *testing.T) {
 			},
 		},
 	})
-	returnedPod, returnedContainer, err = targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error getting Container: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestTargetSelector(t *testing.T) {
 
 	//Still multiple containers but given Containername doesn't exist
 	targetSelector.containerName = "DoesntExist"
-	returnedPod, returnedContainer, err = targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
 	assert.Equal(t, fmt.Sprintf("Couldn't find container %s in pod %s", "DoesntExist", selectedPodName), err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
@@ -157,7 +157,7 @@ func TestTargetSelector(t *testing.T) {
 			Containers: []k8sv1.Container{},
 		},
 	})
-	returnedPod, returnedContainer, err = targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error getting Container: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestTargetSelector(t *testing.T) {
 
 	//The pod name doesn't exist
 	targetSelector.podName = "DoesntExist"
-	returnedPod, returnedContainer, err = targetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
 	assert.Equal(t, fmt.Sprintf("pods \"%s\" not found", "DoesntExist"), err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
@@ -187,7 +187,7 @@ func TestTargetSelector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating TargetSelector: %v", err)
 	}
-	returnedPod, returnedContainer, err = emptyNamespaceTargetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = emptyNamespaceTargetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
 	assert.Equal(t, "Couldn't find a running pod in namespace "+emptyNamespace, err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
@@ -217,7 +217,7 @@ func TestTargetSelector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating TargetSelector: %v", err)
 	}
-	returnedPod, returnedContainer, err = noPickTargetSelector.GetContainer(log.GetInstance())
+	returnedPod, returnedContainer, err = noPickTargetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from getting one of multiple containers withou picking")
 	assert.Equal(t, "Couldn't find a running pod, because no labelselector or pod name was specified", err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")

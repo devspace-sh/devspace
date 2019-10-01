@@ -74,7 +74,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else if *isUpstream {
-		err := server.StartUpstreamServer(absolutePath, os.Stdin, os.Stdout, true)
+		err := server.StartUpstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)

@@ -1,6 +1,6 @@
 # github.com/devspace-cloud/devspace v0.0.0-00010101000000-000000000000 => ../..
-github.com/devspace-cloud/devspace/sync/server
 github.com/devspace-cloud/devspace/sync/remote
+github.com/devspace-cloud/devspace/sync/server
 github.com/devspace-cloud/devspace/sync/util
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
@@ -13,31 +13,33 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/pkg/errors
 # github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 github.com/sabhiram/go-gitignore
-# golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
-golang.org/x/net/trace
-golang.org/x/net/internal/timeseries
-golang.org/x/net/http2
-golang.org/x/net/http2/hpack
+# golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
+golang.org/x/net/http2
+golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-# golang.org/x/sys v0.0.0-20190422165155-953cdadca894
+golang.org/x/net/internal/timeseries
+golang.org/x/net/trace
+# golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db
 golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-golang.org/x/text/transform
 # google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.21.0
 google.golang.org/grpc
-google.golang.org/grpc/reflection
 google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
 google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -49,19 +51,17 @@ google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
+google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
 google.golang.org/grpc/keepalive
 google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
+google.golang.org/grpc/reflection
+google.golang.org/grpc/reflection/grpc_reflection_v1alpha
 google.golang.org/grpc/resolver
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-google.golang.org/grpc/reflection/grpc_reflection_v1alpha
-google.golang.org/grpc/balancer/base
-google.golang.org/grpc/credentials/internal
-google.golang.org/grpc/binarylog/grpc_binarylog_v1
-google.golang.org/grpc/internal/syscall

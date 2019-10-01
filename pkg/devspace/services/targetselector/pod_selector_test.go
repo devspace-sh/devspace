@@ -57,7 +57,7 @@ func TestPodSelectionOneNotRunningPodLabelMatches(t *testing.T) {
 
 	//Test SelectPod with labelSelector that matches with one pod
 	labelSelector := "DoesItMatch=Yes"
-	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestPodSelectionTwoNotRunningPodsLabelMatches(t *testing.T) {
 
 	//Test SelectPod with labelSelector that matches with one pod
 	labelSelector := "DoesItMatch=Yes"
-	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsLabelMatches(t *testing.T) {
 
 	//Test SelectPod with labelSelector that matches with one pod
 	labelSelector := "DoesItMatch=Yes"
-	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, &labelSelector, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestPodSelectionOneNotRunningPodNoLabel(t *testing.T) {
 	}
 
 	//Test SelectPod
-	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestPodSelectionTwoNotRunningPodsNoLabel(t *testing.T) {
 	}
 
 	//Test SelectPod
-	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}
@@ -304,7 +304,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	}
 
 	//Test SelectPod
-	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, log.GetInstance())
+	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error selecting pod: %v", err)
 	}

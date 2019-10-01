@@ -124,7 +124,7 @@ func TestInitialSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter, false)
+		err := server.StartUpstreamServer(remote, []string{}, upServerReader, upClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -205,7 +205,7 @@ func TestNormalSync(t *testing.T) {
 	defer upServerWriter.Close()
 
 	go func() {
-		err := server.StartUpstreamServer(remote, upServerReader, upClientWriter, false)
+		err := server.StartUpstreamServer(remote, []string{}, upServerReader, upClientWriter, false)
 		if err != nil {
 			t.Fatal(err)
 		}

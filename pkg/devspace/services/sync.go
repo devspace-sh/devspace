@@ -47,7 +47,7 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer(log)
+	pod, container, err := targetSelector.GetContainer(false, log)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 		}
 
 		log.StartWait("Sync: Waiting for pods...")
-		pod, container, err := selector.GetContainer(log)
+		pod, container, err := selector.GetContainer(false, log)
 		log.StopWait()
 		if err != nil {
 			return nil, errors.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
@@ -215,6 +215,15 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 	}
 
 	// Start upstream
+	upstreamArgs := []string{SyncHelperContainerPath, "--upstream"}
+	for _, exclude := range options.ExcludePaths {
+		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
+	}
+	for _, exclude := range options.DownloadExcludePaths {
+		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
+	}
+	upstreamArgs = append(upstreamArgs, containerPath)
+
 	upStdinReader, upStdinWriter, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "create pipe")
@@ -224,7 +233,7 @@ func startSync(kubeClient *kubectl.Client, pod *v1.Pod, container string, syncCo
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go startStream(syncClient, kubeClient, pod, container, []string{SyncHelperContainerPath, "--upstream", containerPath}, upStdinReader, upStdoutWriter)
+	go startStream(syncClient, kubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {

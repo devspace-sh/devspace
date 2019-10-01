@@ -44,27 +44,42 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 	}
 
 	// If we should use a certain kube context use that
-	activeContext := kubeConfig.CurrentContext
+	var (
+		activeContext   = kubeConfig.CurrentContext
+		activeNamespace = metav1.NamespaceDefault
+		saveConfig      = false
+	)
+
+	// Set active context
 	if context != "" && activeContext != context {
 		activeContext = context
 		if switchContext {
 			kubeConfig.CurrentContext = activeContext
+			saveConfig = true
+		}
+	}
 
-			err = kubeconfig.SaveConfig(&kubeConfig)
-			if err != nil {
-				return nil, errors.Errorf("Error saving kube config: %v", err)
+	// Set active namespace
+	if kubeConfig.Contexts[activeContext] != nil {
+		if kubeConfig.Contexts[activeContext].Namespace != "" {
+			activeNamespace = kubeConfig.Contexts[activeContext].Namespace
+		}
+
+		if namespace != "" && activeNamespace != namespace {
+			activeNamespace = namespace
+			kubeConfig.Contexts[activeContext].Namespace = activeNamespace
+			if switchContext {
+				saveConfig = true
 			}
 		}
 	}
 
-	// Change context namespace
-	activeNamespace := metav1.NamespaceDefault
-	if kubeConfig.Contexts[activeContext] != nil && kubeConfig.Contexts[activeContext].Namespace != "" {
-		activeNamespace = kubeConfig.Contexts[activeContext].Namespace
-	}
-	if kubeConfig.Contexts[activeContext] != nil && namespace != "" && activeNamespace != namespace {
-		activeNamespace = namespace
-		kubeConfig.Contexts[activeContext].Namespace = namespace
+	// Should we save the kube config?
+	if saveConfig {
+		err = kubeconfig.SaveConfig(&kubeConfig)
+		if err != nil {
+			return nil, errors.Errorf("Error saving kube config: %v", err)
+		}
 	}
 
 	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())

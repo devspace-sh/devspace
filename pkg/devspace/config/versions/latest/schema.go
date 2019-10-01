@@ -106,6 +106,7 @@ type DeploymentConfig struct {
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
+	InitContainers      []*ContainerConfig      `yaml:"initContainers,omitempty"`
 	Containers          []*ContainerConfig      `yaml:"containers,omitempty"`
 	Labels              map[string]string       `yaml:"labels,omitempty"`
 	Annotations         map[string]string       `yaml:"annotations,omitempty"`

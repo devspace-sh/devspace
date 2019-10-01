@@ -23,6 +23,7 @@ var config *latest.Config // merged config
 
 // Thread-safety helper
 var getConfigOnce sync.Once
+var getConfigOnceErr error
 var getConfigOnceMutex sync.Mutex
 
 // ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
@@ -172,7 +173,6 @@ func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, 
 	getConfigOnceMutex.Lock()
 	defer getConfigOnceMutex.Unlock()
 
-	var retError error
 	getConfigOnce.Do(func() {
 		if options == nil {
 			options = &ConfigOptions{}
@@ -181,7 +181,7 @@ func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, 
 		// Get generated config
 		generatedConfig, err := generated.LoadConfig(options.Profile)
 		if err != nil {
-			retError = err
+			getConfigOnceErr = err
 			return
 		}
 
@@ -195,19 +195,19 @@ func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, 
 		// Load base config
 		config, err = GetConfigFromPath(generatedConfig, ".", options, log.GetInstance())
 		if err != nil {
-			retError = err
+			getConfigOnceErr = err
 			return
 		}
 
 		// Save generated config
 		err = generated.SaveConfig(generatedConfig)
 		if err != nil {
-			retError = err
+			getConfigOnceErr = err
 			return
 		}
 	})
 
-	return config, retError
+	return config, getConfigOnceErr
 }
 
 func validate(config *latest.Config) error {
