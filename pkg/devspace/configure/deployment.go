@@ -9,10 +9,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 )
 
@@ -33,14 +35,10 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		imageConfig = GetImageConfigFromImageName(imageName, dockerfile, context)
 	}
 
-	// Prepare return deployment config
-	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: name,
-		Component: &latest.ComponentConfig{
-			Containers: []*latest.ContainerConfig{
-				{
-					Image: imageName,
-				},
+	componentConfig := &latest.ComponentConfig{
+		Containers: []*latest.ContainerConfig{
+			{
+				Image: imageName,
 			},
 		},
 	}
@@ -79,7 +77,7 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 			return nil, nil, errors.Wrap(err, "parsing port")
 		}
 
-		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
+		componentConfig.Service = &latest.ServiceConfig{
 			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
@@ -88,18 +86,20 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		}
 	}
 
+	retDeploymentConfig, err := generateComponentDeployment(name, componentConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return imageConfig, retDeploymentConfig, nil
 }
 
 // GetImageComponentDeployment returns a new deployment that deploys an image via a component
 func GetImageComponentDeployment(name, imageName string, log log.Logger) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
-	retDeploymentConfig := &latest.DeploymentConfig{
-		Name: name,
-		Component: &latest.ComponentConfig{
-			Containers: []*latest.ContainerConfig{
-				{
-					Image: imageName,
-				},
+	componentConfig := &latest.ComponentConfig{
+		Containers: []*latest.ContainerConfig{
+			{
+				Image: imageName,
 			},
 		},
 	}
@@ -117,13 +117,18 @@ func GetImageComponentDeployment(name, imageName string, log log.Logger) (*lates
 			return nil, nil, errors.Wrap(err, "parsing port")
 		}
 
-		retDeploymentConfig.Component.Service = &latest.ServiceConfig{
+		componentConfig.Service = &latest.ServiceConfig{
 			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &port,
 				},
 			},
 		}
+	}
+
+	retDeploymentConfig, err := generateComponentDeployment(name, componentConfig)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Check if we should create pull secret
@@ -140,15 +145,29 @@ func GetPredefinedComponentDeployment(name, component string, log log.Logger) (*
 	}
 
 	// Get component template
-	template, err := componentGenerator.GetComponentTemplate(component, log)
+	componentTemplate, err := componentGenerator.GetComponentTemplate(component, log)
 	if err != nil {
 		return nil, errors.Errorf("Error retrieving template: %v", err)
 	}
 
-	return &latest.DeploymentConfig{
-		Name:      name,
-		Component: template,
-	}, nil
+	return generateComponentDeployment(name, componentTemplate)
+}
+
+func generateComponentDeployment(name string, componentConfig *latest.ComponentConfig) (*latest.DeploymentConfig, error) {
+	chartValues, err := yamlutil.ToInterfaceMap(componentConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare return deployment config
+	retDeploymentConfig := &latest.DeploymentConfig{
+		Name: name,
+		Helm: &latest.HelmConfig{
+			Chart:  component.DevSpaceChartConfig,
+			Values: chartValues,
+		},
+	}
+	return retDeploymentConfig, nil
 }
 
 // GetKubectlDeployment retruns a new kubectl deployment
