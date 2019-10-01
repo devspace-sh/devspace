@@ -50,6 +50,15 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 		if switchContext {
 			kubeConfig.CurrentContext = activeContext
 
+			// Switch namespace as well
+			if kubeConfig.Contexts[activeContext] != nil && namespace != "" {
+				if namespace == metav1.NamespaceDefault {
+					kubeConfig.Contexts[activeContext].Namespace = ""
+				} else {
+					kubeConfig.Contexts[activeContext].Namespace = namespace
+				}
+			}
+
 			err = kubeconfig.SaveConfig(&kubeConfig)
 			if err != nil {
 				return nil, errors.Errorf("Error saving kube config: %v", err)
