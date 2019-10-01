@@ -160,7 +160,7 @@ func evaluateChange(s *Sync, fileMap map[string]*FileInformation, relativePath, 
 	if err == nil {
 		// Exclude changes on the upload exclude list
 		if s.uploadIgnoreMatcher != nil {
-			if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+			if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
 				// Add to file map and prevent download if local file is newer than the remote one
 				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
 					// Add it to the fileMap
@@ -249,7 +249,7 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 
 	// Check if symlink is ignored
 	if u.sync.ignoreMatcher != nil {
-		if u.sync.ignoreMatcher.MatchesPath(relativePath) {
+		if util.MatchesPath(u.sync.ignoreMatcher, relativePath, stat.IsDir()) {
 			return nil, nil
 		}
 	}

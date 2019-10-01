@@ -21,7 +21,7 @@ func StartAttach(config *latest.Config, client *kubectl.Client, selectorParamete
 
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to attach to?")
 
-	pod, container, err := targetSelector.GetContainer(log)
+	pod, container, err := targetSelector.GetContainer(true, log)
 	if err != nil {
 		return err
 	}

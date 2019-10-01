@@ -264,16 +264,18 @@ func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser,
 
 	for _, f := range files {
 		absolutePath := filepath.Join(path, f.Name())
-		if ignoreMatcher != nil && ignoreMatcher.MatchesPath(absolutePath[len(basePath):]) {
-			continue
-		}
 
 		// Stat is necessary here, because readdir does not follow symlinks and
 		// IsDir() returns false for symlinked folders
 		stat, err := os.Stat(absolutePath)
 		if err != nil {
 			// Woops file is not here anymore -> ignore error
-			return
+			continue
+		}
+
+		// Check if ignored
+		if ignoreMatcher != nil && util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], stat.IsDir()) {
+			continue
 		}
 
 		// Check if directory

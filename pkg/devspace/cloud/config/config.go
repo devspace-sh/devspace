@@ -31,6 +31,7 @@ var DevSpaceCloudProviderConfig = &latest.Provider{
 }
 
 var loadedConfig *latest.Config
+var loadedConfigErr error
 var loadConfigOnce sync.Once
 
 // GetProvider returns a provider from the loaded config
@@ -47,6 +48,7 @@ func GetProvider(config *latest.Config, provider string) *latest.Provider {
 //Reset resets the loaded config and enables another loading processa
 func Reset() {
 	loadedConfig = nil
+	loadedConfigErr = nil
 	loadConfigOnce = sync.Once{}
 }
 
@@ -73,12 +75,11 @@ func SaveProviderConfig(config *latest.Config) error {
 
 // ParseProviderConfig reads the provider config and parses it
 func ParseProviderConfig() (*latest.Config, error) {
-	var err error
 	loadConfigOnce.Do(func() {
-		loadedConfig, err = loadProviderConfig()
+		loadedConfig, loadedConfigErr = loadProviderConfig()
 	})
 
-	return loadedConfig, err
+	return loadedConfig, loadedConfigErr
 }
 
 func loadProviderConfig() (*latest.Config, error) {

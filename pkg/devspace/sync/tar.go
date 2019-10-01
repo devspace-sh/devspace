@@ -9,6 +9,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/devspace-cloud/devspace/sync/util"
+
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 )
@@ -146,15 +148,15 @@ func RecursiveTar(basePath, relativePath string, writtenFiles map[string]*FileIn
 		return nil
 	}
 
-	// Exclude files on the exclude list
-	if ignoreMatcher != nil && ignoreMatcher.MatchesPath(relativePath) {
-		return nil
-	}
-
 	// We skip files that are suddenly not there anymore
 	stat, err := os.Stat(absFilepath)
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
+		return nil
+	}
+
+	// Exclude files on the exclude list
+	if ignoreMatcher != nil && util.MatchesPath(ignoreMatcher, relativePath, stat.IsDir()) {
 		return nil
 	}
 

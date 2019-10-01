@@ -393,7 +393,6 @@ func GetAnalytics() (Analytics, error) {
 				err = errors.Errorf("Couldn't read analytics config file %s: %v", analyticsConfigFilePath, err)
 				return
 			}
-
 		}
 
 		if analyticsInstance.DistinctID == "" {
