@@ -248,7 +248,10 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add the development configuration
-	cmd.addDevConfig()
+	err = cmd.addDevConfig()
+	if err != nil {
+		return err
+	}
 
 	// Save config
 	err = configutil.SaveLoadedConfig()
