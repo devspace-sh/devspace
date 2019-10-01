@@ -123,7 +123,7 @@ func TestDev(t *testing.T) {
 			expectedErr: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		devTestCase{
-			name:       "Unparsable generated.yaml",
+			name:       "Invalid kube config",
 			fakeConfig: &latest.Config{},
 			fakeKubeConfig: &customKubeConfig{
 				rawConfigError: fmt.Errorf("RawConfigError"),

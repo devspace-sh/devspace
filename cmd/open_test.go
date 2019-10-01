@@ -18,33 +18,31 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type openTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
-	labelSelectorFlag string
-	podFlag           string
-	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	providerFlag string
+	globalFlags  flags.GlobalFlags
 
 	expectedOutput string
 	expectedErr    string
 }
 
-func TestEnter(t *testing.T) {
+func TestOpen(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -75,8 +73,8 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
+	testCases := []openTestCase{
+		openTestCase{
 			name:       "Unparsable generated.yaml",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{
@@ -84,7 +82,7 @@ func TestEnter(t *testing.T) {
 			},
 			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
-		enterTestCase{
+		openTestCase{
 			name:       "Invalid global flags",
 			fakeConfig: &latest.Config{},
 			globalFlags: flags.GlobalFlags{
@@ -93,48 +91,26 @@ func TestEnter(t *testing.T) {
 			},
 			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
 		},
-		enterTestCase{
-			name:       "Invalid kube config",
+		openTestCase{
+			name:       "invalid kubeconfig",
 			fakeConfig: &latest.Config{},
 			fakeKubeConfig: &customKubeConfig{
 				rawConfigError: fmt.Errorf("RawConfigError"),
 			},
-			expectedErr: "new kube client: RawConfigError",
+			expectedErr: "RawConfigError",
 		},
-		/*enterTestCase{
-			name: "cloud space can't be resumed",
-			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
-				},
-			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedErr: "Error retrieving Spaces details: Custom graphQL error",
-		},*/
 	}
-
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
 
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},
 	})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testOpen(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testOpen(t *testing.T, testCase openTestCase) {
 	logOutput = ""
 
 	defer func() {
@@ -151,11 +127,16 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
+	}
+
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
@@ -166,16 +147,14 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
-		LabelSelector: testCase.labelSelectorFlag,
-		Pod:           testCase.podFlag,
-		Pick:          testCase.pickFlag,
-	}).Run(nil, []string{})
+	err = (&OpenCmd{
+		Provider:    testCase.providerFlag,
+		GlobalFlags: &testCase.globalFlags,
+	}).RunOpen(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

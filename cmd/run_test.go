@@ -13,38 +13,36 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type runTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
-	labelSelectorFlag string
-	podFlag           string
-	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	globalFlags flags.GlobalFlags
 
 	expectedOutput string
 	expectedErr    string
 }
 
-func TestEnter(t *testing.T) {
+func TestRun(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -75,66 +73,67 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
+	_, err = os.Open("doesn'tExist")
+	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+
+	testCases := []runTestCase{
+		runTestCase{
+			name:        "No devspace.yaml",
+			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
+		},
+		runTestCase{
+			name: "Only configs.yaml exists",
 			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
+				constants.DefaultConfigsPath: "",
+			},
+			expectedErr: "open devspace.yaml: " + noFileFoundError,
+		},
+		runTestCase{
+			name: "Unparsable devspace.yaml",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: "unparsable",
+			},
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
+		},
+		runTestCase{
+			name: "Unparsable generated.yaml",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: map[interface{}]interface{}{},
+				generated.ConfigPath:        "unparsable",
 			},
 			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
-		enterTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		enterTestCase{
-			name:       "Invalid kube config",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "new kube client: RawConfigError",
-		},
-		/*enterTestCase{
-			name: "cloud space can't be resumed",
+		runTestCase{
+			name: "Invalid version",
 			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: "invalid",
 				},
 			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
+			expectedErr: "Unrecognized config version invalid. Please upgrade devspace with `devspace upgrade`",
+		},
+		runTestCase{
+			name: "generated.yaml can't be saved",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
 				},
+				".devspace": "",
 			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedErr: "Error retrieving Spaces details: Custom graphQL error",
-		},*/
+			expectedErr: fmt.Sprintf("mkdir %s: The system cannot find the path specified.", filepath.Join(dir, ".devspace")),
+		},
 	}
-
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
 
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},
 	})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testRun(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testRun(t *testing.T, testCase runTestCase) {
 	logOutput = ""
 
 	defer func() {
@@ -151,11 +150,16 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
+	}
+
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
@@ -166,16 +170,13 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
-		LabelSelector: testCase.labelSelectorFlag,
-		Pod:           testCase.podFlag,
-		Pick:          testCase.pickFlag,
-	}).Run(nil, []string{})
+	err = (&RunCmd{
+		GlobalFlags: &testCase.globalFlags,
+	}).RunRun(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

@@ -13,12 +13,16 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -28,6 +32,7 @@ type buildTestCase struct {
 	name string
 
 	fakeConfig           *latest.Config
+	fakeKubeConfig       clientcmd.ClientConfig
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -79,7 +84,7 @@ func TestBuild(t *testing.T) {
 
 	testCases := []buildTestCase{
 		buildTestCase{
-			name:        "config doesn't exist",
+			name:        "Config doesn't exist",
 			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		buildTestCase{
@@ -109,6 +114,9 @@ func TestBuild(t *testing.T) {
 					},
 				},
 			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{},
+			},
 			files: map[string]interface{}{
 				"devspace.yaml": &latest.Config{
 					Version: "v1beta3",
@@ -136,14 +144,17 @@ func TestBuild(t *testing.T) {
 		},
 		buildTestCase{
 			name: "1 undeployable image",
-			fakeConfig: &latest.Config{
-				Images: map[string]*latest.ImageConfig{
-					"buildThis": &latest.ImageConfig{
-						Image: "someImage",
-						Tag:   "someTag",
-						Build: &latest.BuildConfig{
-							Custom: &latest.CustomConfig{
-								Command: " ",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: latest.Version,
+					Images: map[string]*latest.ImageConfig{
+						"buildThis": &latest.ImageConfig{
+							Image: "someImage",
+							Tag:   "someTag",
+							Build: &latest.BuildConfig{
+								Custom: &latest.CustomConfig{
+									Command: " ",
+								},
 							},
 						},
 					},
@@ -155,15 +166,17 @@ func TestBuild(t *testing.T) {
 		},
 		buildTestCase{
 			name: "Deploy 1 image that is too big (Or manipulate the error message to pretend to)",
-			fakeConfig: &latest.Config{
-				Version: "v1beta3",
-				Images: map[string]*latest.ImageConfig{
-					"buildThis": &latest.ImageConfig{
-						Image: "someImage",
-						Tag:   "someTag",
-						Build: &latest.BuildConfig{
-							Custom: &latest.CustomConfig{
-								Command: " no space left on device ", //It's a bit dirty. Force specific kind of error
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: latest.Version,
+					Images: map[string]*latest.ImageConfig{
+						"buildThis": &latest.ImageConfig{
+							Image: "someImage",
+							Tag:   "someTag",
+							Build: &latest.BuildConfig{
+								Custom: &latest.CustomConfig{
+									Command: " no space left on device ", //It's a bit dirty. Force specific kind of error
+								},
 							},
 						},
 					},
@@ -174,8 +187,12 @@ func TestBuild(t *testing.T) {
 			expectedOutput:      "\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},
 		buildTestCase{
-			name:           "Nothing to build",
-			fakeConfig:     &latest.Config{},
+			name: "Nothing to build",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: latest.Version,
+				},
+			},
 			expectedOutput: "\nInfo No images to rebuild. Run with -b to force rebuilding",
 		},
 	}
@@ -216,11 +233,9 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 	providerConfig.Providers = testCase.providerList
 
 	generated.ResetConfig()
-	if testCase.fakeConfig == nil {
-		configutil.ResetConfig()
-	} else {
-		configutil.SetFakeConfig(testCase.fakeConfig)
-	}
+	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -245,4 +260,10 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+
+	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
+		os.RemoveAll(path)
+		return nil
+	})
+	assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)
 }
