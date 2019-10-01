@@ -22,13 +22,13 @@ The biggest advantages of developing directly inside Kubernetes is that your dev
 
 ## Development process
 Running `devspace dev` will do the following:
-1. Read your application's Dockerfiles and apply in-memory [entrypoint overrides](/docs/development/overrides#configuring-entrypoint-overrides) (optional)
+1. Read your application's Dockerfiles and apply in-memory [entrypoint overrides](../development/overrides#configuring-entrypoint-overrides) (optional)
 2. Build your application's Dockerfiles as specified in your `devspace.yaml`
 3. Push the resulting Docker images to the registries specified in your `devspace.yaml`
 4. Deploy your application similar to using `devspace deploy`
-5. Start [port forwarding](/docs/development/port-forwarding)
-6. Start [real-time code synchronization](/docs/development/synchronization)
-7. Start [terminal proxy](/docs/development/terminal) (optional, [see how to configure log streaming instead](/docs/development/terminal#print-logs-instead-of-opening-a-terminal))
+5. Start [port forwarding](../development/port-forwarding)
+6. Start [real-time code synchronization](../development/synchronization)
+7. Start [terminal proxy](../development/terminal) (optional, [see how to configure log streaming instead](../development/terminal#print-logs-instead-of-opening-a-terminal))
 
 ## Useful commands
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags |
@@ -41,7 +41,7 @@ Running `devspace dev` will do the following:
 
 ## Configuration options
 DevSpace CLI lets you define the following types of deployments:
-- [dev.overrideImages](/docs/development/overrides)
-- [dev.ports](/docs/development/port-forwarding)
-- [dev.sync](/docs/development/synchronization)
-- [dev.terminal](/docs/development/terminal)
+- [dev.overrideImages](../development/overrides)
+- [dev.ports](../development/port-forwarding)
+- [dev.sync](../development/synchronization)
+- [dev.terminal](../development/terminal)

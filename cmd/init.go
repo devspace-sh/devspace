@@ -155,7 +155,6 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	log.WriteString("\n")
 
 	if selectedOption == createDockerfileOption {
 		// Containerize application if necessary
@@ -325,7 +324,7 @@ func (cmd *InitCmd) addDevConfig() error {
 
 			if *localPortPtr < 1024 {
 				log.WriteString("\n")
-				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.\n")
+				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
 				portString, err := survey.Question(&survey.QuestionOptions{
 					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",

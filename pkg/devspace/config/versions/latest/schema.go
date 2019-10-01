@@ -248,9 +248,9 @@ type ChartConfig struct {
 
 // KubectlConfig defines the specific kubectl options used during deployment
 type KubectlConfig struct {
-	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
 	Manifests        []string `yaml:"manifests,omitempty"`
 	Kustomize        *bool    `yaml:"kustomize,omitempty"`
+	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
 	Flags            []string `yaml:"flags,omitempty"`
 	CmdPath          string   `yaml:"cmdPath,omitempty"`
 }
@@ -338,8 +338,8 @@ type InteractiveImageConfig struct {
 // TerminalConfig describes the terminal options
 type TerminalConfig struct {
 	ImageName     string            `yaml:"imageName,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty"`
 	Command       []string          `yaml:"command,omitempty"`
 }
@@ -395,6 +395,7 @@ type Variable struct {
 	Name              string          `yaml:"name"`
 	Question          string          `yaml:"question,omitempty"`
 	Options           []string        `yaml:"options,omitempty"`
+	Password          bool            `yaml:"password,omitempty"`
 	ValidationPattern string          `yaml:"validationPattern,omitempty"`
 	ValidationMessage string          `yaml:"validationMessage,omitempty"`
 	Default           string          `yaml:"default,omitempty"`

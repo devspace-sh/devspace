@@ -236,6 +236,49 @@ uploadExcludePaths: [] # Do not exclude anything from file synchronization
 
 ## Initial Sync
 
+### `dev.sync[*].downloadOnInitialSync`
+The `downloadOnInitialSync` option expects a boolean which defines if DevSpace should (during the initial sync procedure) download files which only exist in the container filesystem but do **not** exist on the local filesystem.
+
+> Files listed under `excludePaths` or `downloadExcludePaths` will not be synchronized.
+
+> By default, DevSpace removes files which do not exist on the local filesystem but are present within the container. This does not apply to files listed under `excludePaths` or `uploadExcludePaths`.
+
+#### Default Value For `downloadOnInitialSync`
+```yaml
+downloadOnInitialSync: false # Do not download any files during initial sync
+```
+
+#### Example: Download Files During Initial Sync
+```yaml
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  component:
+    containers:
+    - image: john/devbackend
+    - image: john/debugger
+dev:
+  sync:
+  - imageName: backend
+    excludePaths:
+    - node_modules/*
+  - imageName: backend
+    localSubPath: ./node_modules/
+    containerPath: /app/node_modules/
+    downloadOnInitialSync: true
+```
+**Explanation:**  
+With the configuration `devspace dev` would do the following:
+- DevSpace would start port-forwarding and file synchronzation.
+- Initial sync would be started automatically.
+- The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
+- The second sync config section would only synchronize files within `node_modules/` and with defining `downloadOnInitialSync: true`, DevSpace would also download all remote files which are not present on the local filesystem rather than removing them.
+
+
 ### `dev.sync[*].waitInitialSync`
 The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
 
@@ -244,7 +287,7 @@ The `waitInitialSync` option expects a boolean which defines if DevSpace should 
 waitInitialSync: false # Start container terminal or log streaming before initil sync is completed
 ```
 
-#### Example: Exclude Paths from Synchronization
+#### Example: Wait For Initial Sync To Complete
 ```yaml
 images:
   backend:
@@ -380,9 +423,10 @@ Other than that, no server-side component or special container privileges for co
 
 </summary>
 If synchronization is started, the sync initially compares the remote folder and the local folder and merges the contents with the following rules:
-- If a file or folder exists remote, but not locally, then download file / folder
 - If a file or folder exists locally, but not remote, then upload file / folder
 - If a file is newer locally than remote then upload the file (The opposite case is not true, older local files are not overriden by newer remote files)
+- If a file or folder exists on the remote filesystem, but not locally, then remove the remote file / folder (if `downloadOnInitialSync: false` which is the default configuration)
+- If a file or folder exists on the remote filesystem, but not locally, then download the remote file / folder (if `downloadOnInitialSync: true`)
 </details>
 
 <details>

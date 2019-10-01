@@ -214,7 +214,11 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryDefaultOption = useDevSpaceRegistry
 	}
 
-	registryOptions := []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
+	registryOptions := []string{useDockerHub, useOtherRegistry}
+	if cloudRegistryHostname != "" {
+		registryOptions = []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
+	}
+
 	selectedRegistry, err := survey.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
 		DefaultValue: registryDefaultOption,
@@ -242,8 +246,6 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryURL = strings.Trim(registryURL, "/ ")
 		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+registryURL)
 	}
-
-	log.WriteString("\n")
 
 	log.StartWait("Checking registry authentication")
 	authConfig, err = docker.Login(dockerClient, registryURL, "", "", true, false, false)
@@ -312,8 +314,6 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 		}
 		if len(registries) > 0 {
 			registryURL = registries[0].URL
-		} else {
-			registryURL = "hub.docker.com"
 		}
 	}
 

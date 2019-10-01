@@ -81,16 +81,16 @@ DevSpace is battle tested with many Kubernetes distributions including:
 
 ## Features
 Stop wasting time for running the same build and deploy commands over and over again. Let DevSpace automate your workflow with:
-- [Automated Image Building](/docs/cli/image-building/workflow-basics) via `devspace build`
-- [Automated Deployment](/docs/cli/deployment/workflow-basics) via `devspace deploy`
-- [Efficient In-Cluster Development](/docs/cli/development/workflow-basics) via `devspace dev`
+- [Automated Image Building](../cli/image-building/workflow-basics) via `devspace build`
+- [Automated Deployment](../cli/deployment/workflow-basics) via `devspace deploy`
+- [Efficient In-Cluster Development](../cli/development/workflow-basics) via `devspace dev`
 
 ## How does it work?
 DevSpace reads the configuration file `devspace.yaml` which you can simply generate for any of your project via `devspace init`. This config file allows you to define:
-- [which Dockerfiles should be built](/docs/cli/image-building/configuration) (either with Docker, kaniko or with a custom build command), how to tag your images and where to store them (e.g. push to Docker Hub or to any private registry)
-- [how your application should be deployed](/docs/cli/deployment/deployment-types) and with which tools (using [helm](/docs/cli/deployment/helm-charts/configuration/overview-specification), [kubectl](/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification), [kustomize](/docs/cli/deployment/kubernetes-manifests/configuration/kustomize) or [components](/docs/cli/deployment/components/configuration/overview-specification))
-- which [dependencies (related projects)](/docs/cli/deployment/advanced/dependencies) need to be deployed (e.g. a microservices from another git repository)
-- [how your application should be developed within Kubernetes](/docs/cli/development/configuration/overview-specification) (e.g. configuring log streaming, terminal access, port fowarding, real-time file synchronization or remote debugging)
+- [which Dockerfiles should be built](../cli/image-building/configuration/overview-specification) (either with Docker, kaniko or with a custom build command), how to tag your images and where to store them (e.g. push to Docker Hub or to any private registry)
+- [how your application should be deployed](../cli/deployment/deployment-types) and with which tools (using [helm](../cli/deployment/helm-charts/configuration/overview-specification), [kubectl](../cli/deployment/kubernetes-manifests/configuration/overview-specification), [kustomize](../cli/deployment/kubernetes-manifests/configuration/kustomize) or [components](../cli/deployment/components/configuration/overview-specification))
+- which [dependencies (related projects)](../cli/deployment/advanced/dependencies) need to be deployed (e.g. a microservices from another git repository)
+- [how your application should be developed within Kubernetes](../cli/development/configuration/overview-specification) (e.g. configuring log streaming, terminal access, port fowarding, real-time file synchronization or remote debugging)
 
 > **DevSpace is designed for teams** and its configuration is highly paramterizable, so that you can use dynamic [config variables](https://devspace.cloud/docs/cli/deployment/advanced/variables) within your `devspace.yaml`, commit the config via git together with the rest of your code and share your build, deployment and development workflows with your team mates.
 

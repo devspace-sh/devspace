@@ -34,5 +34,4 @@ Show the current status
 ```
 
 ## See Also
-* [devspace status sync](/docs/cli/commands/devspace_status_sync)	 - Shows the sync status
-
+* [devspace status sync](../../cli/commands/devspace_status_sync)	 - Shows the sync status

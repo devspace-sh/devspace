@@ -46,5 +46,4 @@ devspace list clusters
 
 ## See Also
 
-* [devspace list](/docs/cli/commands/devspace_list)	 - Lists configuration
-
+* [devspace list](../../cli/commands/devspace_list)	 - Lists configuration

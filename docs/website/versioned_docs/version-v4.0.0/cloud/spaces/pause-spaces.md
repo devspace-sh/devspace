@@ -14,4 +14,4 @@ In the UI navigate to the Spaces view and click on the 'Pause' button. After a s
 
 DevSpace can automatically pause spaces based on the last activity in that space. The last activity of a space is determined by calculating the last time a space was used with the DevSpace. Commands like `devspace dev`, `devspace deploy`, `devspace logs` and `devspace enter` automatically signal DevSpace Cloud that the space is still being used. These commands also automatically resume a space if it was paused previously.  
 
-To configure if a space should be paused automatically and the timeout after which a space should be paused, navigate to the [Limits](/docs/cloud/spaces/resource-limits) view. There will be a section called **Sleep Mode** which allows you to configure these settings for individual spaces, users and clusters.  
+To configure if a space should be paused automatically and the timeout after which a space should be paused, navigate to the [Limits](../../cloud/spaces/resource-limits) view. There will be a section called **Sleep Mode** which allows you to configure these settings for individual spaces, users and clusters.  

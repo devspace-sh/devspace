@@ -29,7 +29,7 @@ DevSpace loads the contents of the Dockerfile specified in `dockerfile` (default
 ### 2. Apply Entrypoint Override (if configured) 
 DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `entrypoint` option should be defined as an array. 
 
-> Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](/docs/cli/configuration/profiles) in your `devspace.yaml`.
+> Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](../../cli/configuration/profiles-patches) in your `devspace.yaml`.
 
 ### 3. Load Build Context
 DevSpace loads the the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
@@ -48,17 +48,17 @@ Next time you trigger the image building process, DevSpace will generate these h
 > You can use the `-b / --force-build` flag to tell DevSpace to build all images even if nothing has changed.
 
 ### 5. Build Image
-DevSpace uses one of the following [build tools](/docs/cli/image-building/configuration/build-tools) to create an image based on your Dockerfile and the provided context:
-- [`docker`](/docs/cli/image-building/configuration/build-tools#docker) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
-- [`kaniko`](/docs/cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](/docs/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
-- [`custom`](/docs/cli/image-building/configuration/build-tools#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
+DevSpace uses one of the following [build tools](../../cli/image-building/configuration/build-tools) to create an image based on your Dockerfile and the provided context:
+- [`docker`](../../cli/image-building/configuration/build-tools#docker) for building images using a Docker daemon (default, [prefers Docker daemon of local Kubernetes clusters](#docker-daemon-of-local-kubernetes-clusters))
+- [`kaniko`](../../cli/image-building/configuration/build-tools#kaniko) for building images directly inside Kubernetes ([fallback for `docker`](../../cli/image-building/configuration/build-tools#dockerdisablefallback-kaniko-as-fallback-for-docker))
+- [`custom`](../../cli/image-building/configuration/build-tools#custom) for building images with a custom build command (e.g. for using Google Cloud Build)
 
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
 
-[Learn more about defining a custom tagging schema](/docs/cli/image-building/configuration/overview-specification#images-tag-tagging-schema)
+[Learn more about defining a custom tagging schema](../../cli/image-building/configuration/overview-specification#images-tag-tagging-schema)
 
-> Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](/docs/cli/deployment/helm-charts/configuration/overview-specification) and [components](/docs/cli/deployment/components/configuration/overview-specification), so they will be deployed using the most recently built images.
+> Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../cli/deployment/helm-charts/configuration/overview-specification) and [components](../../cli/deployment/components/configuration/overview-specification), so they will be deployed using the most recently built images.
 
 ### 7. Push Image *+ Registry Authentication*
 DevSpace automatically pushes your images to the respective registry that should be specified as part of the `image` option. Just as with regular Docker images, DevSpace uses Docker Hub if no registry hostname is provided within `image`.

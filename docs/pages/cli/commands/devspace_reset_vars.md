@@ -44,5 +44,4 @@ devspace reset vars
 
 ## See Also
 
-* [devspace reset](/docs/cli/commands/devspace_reset)	 - Resets an cluster token
-
+* [devspace reset](../../cli/commands/devspace_reset)	 - Resets an cluster token

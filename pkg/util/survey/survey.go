@@ -116,6 +116,8 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 		return "", errors.Errorf("Cannot ask question '%s' because logger level is too low", params.Question)
 	}
 
+	log.WriteString("\n")
+
 	err := surveypkg.Ask(question, &answers)
 	if err != nil {
 		// Keyboard interrupt

@@ -176,7 +176,7 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Use the '%s' flag to automatically use the last context and namespace", ansi.Color("-s", "white+b"))
+				log.Infof("Use the '%s' flag to switch to the context and namespace previously used to deploy this project", ansi.Color("-s / --switch-context", "white+b"))
 				log.Infof("Or use the '%s' flag to ignore this warning", ansi.Color("--no-warn", "white+b"))
 				wait = true
 			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
@@ -186,7 +186,7 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
 				log.WriteString("\n")
 
-				log.Infof("Use the '%s' flag to automatically use the last context and namespace", ansi.Color("-s", "white+b"))
+				log.Infof("Use the '%s' flag to switch to the context and namespace previously used to deploy this project", ansi.Color("-s / --switch-context", "white+b"))
 				log.Infof("Or use the '%s' flag to ignore this warning", ansi.Color("--no-warn", "white+b"))
 				wait = true
 			}

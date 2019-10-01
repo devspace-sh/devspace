@@ -20,7 +20,7 @@ const siteConfig = {
   headerLinks: [
     { href: "/docs/introduction", label: "Docs" },
     { href: "https://github.com/devspace-cloud/devspace", label: "GitHub" },
-    { href: "https://devspace.cloud/about/", label: "" },
+    { href: "https://devspace.cloud/blog", label: "Blog" },
     { href: "https://devspace.cloud/help/", label: "" },
     { href: "https://app.devspace.cloud/", label: "Login" },
     { href: "#", label: "" },

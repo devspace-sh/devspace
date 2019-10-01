@@ -1,6 +1,8 @@
 package add
 
 import (
+	"strings"
+
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -10,7 +12,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type providerCmd struct{}
+type providerCmd struct {
+	Host string
+}
 
 func newProviderCmd() *cobra.Command {
 	cmd := &providerCmd{}
@@ -32,12 +36,20 @@ devspace add provider app.devspace.cloud
 		RunE: cmd.RunAddProvider,
 	}
 
+	addProviderCmd.Flags().StringVar(&cmd.Host, "host", "", "The URL DevSpace should use for this provider")
+
 	return addProviderCmd
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
 func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
+
+	// Get host name
+	host := "https://" + strings.TrimRight(providerName, "/")
+	if cmd.Host != "" {
+		host = strings.TrimRight(cmd.Host, "/")
+	}
 
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
@@ -48,15 +60,17 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 		providerConfig.Providers = []*latest.Provider{}
 	}
 
+	// Check if provider already exists
 	provider := config.GetProvider(providerConfig, providerName)
-	if provider == nil {
-		providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
-			Name: providerName,
-			Host: "https://" + providerName,
-		})
-	} else {
-		provider.Host = "https://" + providerName
+	if provider != nil {
+		return errors.Errorf("Provider %s does already exist", providerName)
 	}
+
+	// Add provider
+	providerConfig.Providers = append(providerConfig.Providers, &latest.Provider{
+		Name: providerName,
+		Host: host,
+	})
 
 	// Ensure user is logged in
 	err = cloudpkg.EnsureLoggedIn(providerConfig, providerName, log.GetInstance())

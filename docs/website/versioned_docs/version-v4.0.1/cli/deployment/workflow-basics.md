@@ -29,19 +29,19 @@ DevSpace loads the `dependencies` section from the `devspace.yaml` and creates a
 - Build images of the dependency as configured in the `images` section of the dependency's `devspace.yaml` (unless `skipBuild: true`)
 - Deploy the dependency as configured in the `deployments` section of the dependency's `devspace.yaml`
 
-[Learn more about deploying dependencies with DevSpace.](/docs/cli/deployment/advanced/dependencies)
+[Learn more about deploying dependencies with DevSpace.](../../cli/deployment/advanced/dependencies)
 
 > Dependencies allow you to deploy microservices, that the project you are currently deploying relies on. Dependencies can be located in a subpath of your project or they can be automatically loaded from a different git reporsitory.
 
 
 ### 2. Build, Tag &amp; Push Images
-DevSpace triggers the [image building process](/docs/cli/image-building/workflow-basics) for the images specified in the `images` section of the `devspace.yaml`.
+DevSpace triggers the [image building process](../../cli/image-building/workflow-basics) for the images specified in the `images` section of the `devspace.yaml`.
 
-[Learn more about image building with DevSpace.](/docs/cli/image-building/workflow-basics)
+[Learn more about image building with DevSpace.](../../cli/image-building/workflow-basics)
 
 
 ### 3. Tag Replacement
-After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](/docs/cli/image-building/workflow-basics#6-tag-image) during the image building process.
+After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](../../cli/image-building/workflow-basics#6-tag-image) during the image building process.
 
 > To use automated tag replacement, make sure you do **not** specify image tags in the deployment configuration.
 
@@ -75,7 +75,7 @@ When DevSpace asks you how to open your application, you have two options as sho
 > via localhost (provides private access only on your computer via port-forwarding)
   via domain (makes your application publicly available via ingress)
 ```
-To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](/docs/cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](../../cloud/what-is-devspace-cloud), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
 
 > If your application does not open as exepected, run [`devspace analyze` and DevSpace will try to identify the issue](#devspace-analyze).
 

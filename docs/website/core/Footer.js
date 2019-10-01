@@ -40,9 +40,34 @@ class Footer extends React.Component {
       <footer className="nav-footer" id="footer">
         <script type="text/javascript" dangerouslySetInnerHTML={{__html: `
         var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = ["v3.5.18", "v4.0.0"];
 
         if (versionMeta) {
-          document.querySelector("body").setAttribute("data-version", versionMeta.getAttribute("content"));
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersion = sidebarVersions[sidebarVersions.length - 1];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let i in sidebarVersions) {
+              let sidebarVersionSplit = sidebarVersions[i].split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[i];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
         }
 
         if (location.hostname == "devspace.cloud") {

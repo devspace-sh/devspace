@@ -36,7 +36,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](/docs/image-building/overview)
+[Learn more about building images with DevSpace.](../../image-building/overview)
 
 ### `images[*].build`
 ```yaml
@@ -118,30 +118,30 @@ component:                          # struct   | Options for deploying a DevSpac
   replicas: 1                       # int      | Number of replicas (Default: 1)
   autoScaling: ...                  # struct   | AutoScaling configuration
   rollingUpdate: ...                # struct   | RollingUpdate configuration
-  podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   pullSecrets: ...                  # string[] | Array of PullSecret names
+  podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   options: ...                      # struct   | Options for deploying this component with helm
 ```
-[Learn more about configuring component deployments.](/docs/deployment/components/what-are-components)
+[Learn more about configuring component deployments.](../../deployment/components/what-are-components)
 
 ### `deployments[*].component.containers`
 ```yaml
 containers:                         # struct   | Options for deploying a DevSpace component
 - name: my-container                # string   | Container name (optional)
   image: dscr.io/username/image     # string   | Image name (optionally with registry URL)
-  stdin: true                       # bool     | Enable stdin (Default: false)
-  tty: true                         # bool     | Enable tty (Default: false)
   command:                          # string[] | ENTRYPOINT override
   - sleep
   args:                             # string[] | ARGS override
   - 99999
+  stdin: true                       # bool     | Enable stdin (Default: false)
+  tty: true                         # bool     | Enable tty (Default: false)
   env:                              # map[interface]interface | Kubernetes env definition for containers
   - name: MY_ENV_VAR
     value: "my-value"
   volumeMounts: ...                 # struct   | VolumeMount Configuration
   resources: ...                    # struct   | Kubernestes resource limits and requests
   livenessProbe: ...                # struct   | Kubernestes livenessProbe
-  redinessProbe: ...                # struct   | Kubernestes redinessProbe
+  readinessProbe: ...               # struct   | Kubernestes readinessProbe
 ```
 
 ### `deployments[*].component.containers[*].volumeMounts`
@@ -238,7 +238,7 @@ helm:                               # struct   | Options for deploying with Helm
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
 ```
-[Learn more about configuring deployments with Helm.](/docs/deployment/helm-charts/what-are-helm-charts)
+[Learn more about configuring deployments with Helm.](../../deployment/helm-charts/what-are-helm-charts)
 
 ### `deployments[*].helm.chart`
 ```yaml
@@ -259,7 +259,7 @@ kubectl:                            # struct   | Options for deploying with "kub
   flags: []                         # string[] | Array of flags for the "kubectl apply" command
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
 ```
-[Learn more about configuring deployments with Kubectl.](/docs/deployment/kubernetes-manifests/what-are-manifests)
+[Learn more about configuring deployments with Kubectl.](../../deployment/kubernetes-manifests/what-are-manifests)
 
 
 ---
@@ -273,7 +273,7 @@ dev:                                # struct   | Options for "devspace dev"
   autoReload: ...                   # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
   interactive: ...                  # struct   | Options for configuring the interactive mode
 ```
-[Learn more about development with DevSpace.](/docs/development/workflow)
+[Learn more about development with DevSpace.](../../development/workflow)
 
 ### `dev.ports`
 ```yaml
@@ -286,14 +286,14 @@ ports:                              # struct[] | Array of port forwarding settin
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod/container selected
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
-[Learn more about port forwarding.](/docs/development/port-forwarding)
+[Learn more about port forwarding.](../../development/port-forwarding)
 
 ### `dev.open`
 ```yaml
 open:                               # struct[] | Array of auto-open settings
 - url: "https://localhost:3000/"    # string   | URL to open after application has started
 ```
-[Learn more about configuring auto-opening.](/docs/development/auto-open)
+[Learn more about configuring auto-opening.](../../cli/development/configuration/auto-open)
 
 ### `dev.sync`
 ```yaml
@@ -307,12 +307,13 @@ sync:                               # struct[] | Array of file sync settings for
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
+  downloadOnInitialSync: false      # bool     | Download files that exist inside the container but not on the local filesystem during initial sync (Default: false)
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](/docs/development/synchronization)
+[Learn more about confguring the code synchronization.](../../development/synchronization)
 
 ### `dev.logs`
 ```yaml
@@ -321,7 +322,7 @@ logs:                               # struct   | Options for multi-container log
   showLast: 200                     # int      | Number of last log lines to show before starting stream (Default: 50)
   images: []                        # string[] | Array of image names referencing images defined in `images` for selecting containers for log streaming
 ```
-[Learn more about configuring the terminal proxy.](/docs/development/terminal)
+[Learn more about configuring the terminal proxy.](../../development/terminal)
 
 ### `dev.autoReload`
 ```yaml
@@ -346,7 +347,7 @@ interactive:                        # struct   | Options for interactive mode
     namespace: ""                   # string   | Kubernetes namespace to select pods in
     command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about image overriding.](/docs/development/overrides)
+[Learn more about image overriding.](../../development/overrides)
 
 
 ---
@@ -387,9 +388,9 @@ hooks:                              # struct[]  | Array of hooks to be executed
 ---
 ## `commands`
 ```yaml
-commands:                           # struct[]  | Array of custom commands
-- name: "debug-backend"             # string    | Name of the command to run via `devspace run [name]`
-  command: "./scripts/my-hook"      # string    | Command to be executed when running `devspace run [name]`
+commands:                             # struct[]  | Array of custom commands
+- name: "debug-backend"               # string    | Name of the command to run via `devspace run debug-backend`
+  command: "devspace dev -i backend"  # string    | Command to be executed when running `devspace run [name]`
 ```
 
 
@@ -400,10 +401,11 @@ vars:                               # struct[]  | Array of config variables
 - name: CONFIG_VAR                  # string    | Name of the config variable
   question: "What is CONFIG_VAR?"   # string    | Question to ask the user if no value is found for variable
   options: []                       # string[]  | Options for picker (selector) to show to user (to choose a value for variable)
+  password: false                   # bool      | Hide user input when providing value via command-line, i.e. replaces input with `*****` (Default: false)
   validationPattern: ""             # string    | Regexp to validate user input
   validationMessage: ""             # string    | Message to show to user for input validation
   default: ""                       # string    | Default value for variable
-  source: "all"                     # enum      | Source for variable (all [default], env, input)
+  source: "all"                     # enum      | Source for variable (all = default, env, input)
 ```
 
 
@@ -416,6 +418,7 @@ profiles:                           # struct[]  | Array of config profiles
   - op: "replace"                   # enum      | Patch operation (replace, add, remove)
     path: "images.backend.cmd"      # string    | Jsonpath or xpath to config option that should be patched
     value: ""                       # arbitrary | Value to use for patch operation
+    from: ""                        # string    | Jsonpath or xpath to config option which should be used as value for operation
   replace:                          # struct    | Array of replacements for entire config sections
     images: {}                      # struct    | Replacement for entire `images` section
     deployments: {}                 # struct    | Replacement for entire `deployments` section

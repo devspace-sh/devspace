@@ -17,7 +17,7 @@ If you want to make a deployment available on a domain, you need to:
 Services in Kubernetes provide a stable IP address (and/or cluster-internal DNS name) for your deployments although the deployed pods and containers might be deleted and re-created (e.g. when you update or scale deployments).
 
 How to configure a service for one of your deployments, depends on the kind of deployment:
-- `component` - [configure the service in your devspace.yaml](/docs/deployment/components/configuration/service)
+- `component` - [configure the service in your devspace.yaml](../../deployment/components/configuration/service)
 - `kubectl` - [create a service manifest](#create-a-service-manifest) and add it to your `manifests`
 - `helm` 
   - **local chart**: [create a service manifest](#create-a-service-manifest) and add it to the `templates/` folder of the chart

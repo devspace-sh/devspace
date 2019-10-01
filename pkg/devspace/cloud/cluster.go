@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"encoding/base64"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +51,8 @@ type ConnectClusterOptions struct {
 	ClusterName string
 	KubeContext string
 	Key         string
+
+	OpenUI bool
 
 	UseDomain bool
 	Domain    string
@@ -176,6 +180,15 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 		err = defaultClusterSpaceDomain(p, client, *options.UseHostNetwork, clusterID, options.Key)
 		if err != nil {
 			log.Warnf("Couldn't configure default cluster space domain: %v", err)
+		}
+	}
+
+	// Open ui
+	if options.OpenUI {
+		url := fmt.Sprintf("%s/clusters/%d/overview", p.Host, clusterID)
+		err = open.Start(url)
+		if err != nil {
+			log.Warnf("Couldn't open the url '%s': %v", url, err)
 		}
 	}
 

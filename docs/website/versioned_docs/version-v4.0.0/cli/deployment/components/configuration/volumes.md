@@ -157,7 +157,7 @@ kubectl delete persistentvolumeclaim [VOLUME_NAME]
 </summary>
 Generally: **No.**
 
-The [DevSpace Component Chart](/docs/deployment/components/what-are-components#devspace-component-helm-chart) used to deploy DevSpace components will automatically deploy containers as part of a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
+The [DevSpace Component Chart](../../../../deployment/components/what-are-components#devspace-component-helm-chart) used to deploy DevSpace components will automatically deploy containers as part of a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
 </details>
 
 <details>

@@ -31,13 +31,13 @@ deployments:
       size: "5Gi"
 ```
 
-[What are components?](/docs/cli/deployment/components/what-are-components)
+[What are components?](../../../../cli/deployment/components/what-are-components)
 
 
 ## Containers & Pods
 
 ### `deployments[*].component.containers`
-See [Containers](/docs/cli/deployment/components/configuration/containers) for details.
+See [Containers](../../../../cli/deployment/components/configuration/containers) for details.
 
 
 ### `deployments[*].component.labels`
@@ -100,12 +100,12 @@ deployments:
 
 ## Volumes & Persistent Storage
 ### `deployments[*].component.volumes`
-See [Volumes](/docs/cli/deployment/components/configuration/volumes) for details.
+See [Volumes](../../../../cli/deployment/components/configuration/volumes) for details.
 
 
 ## Service & In-Cluster Networking
 ### `deployments[*].component.service`
-See [Service](/docs/cli/deployment/components/configuration/service) for details.
+See [Service](../../../../cli/deployment/components/configuration/service) for details.
 
 ### `deployments[*].component.serviceName`
 The `serviceName` option expects a string that will be used as a name for the headless service if the component will be deployed as a StatefulSet instead of a Deployment. This happens automatically when one of the containers mounts a persistent volume.
@@ -139,15 +139,15 @@ Instead of the default name `backend-headless`, the headless service for the Rep
 
 ## Ingress & Domain
 ### `deployments[*].component.ingress`
-See [Ingress (Domain)](/docs/cli/deployment/components/configuration/ingress) for details.
+See [Ingress (Domain)](../../../../cli/deployment/components/configuration/ingress) for details.
 
 
 ## Scaling
 ### `deployments[*].component.replicas`
-See [Scaling](/docs/cli/deployment/components/configuration/containers) for details.
+See [Scaling](../../../../cli/deployment/components/configuration/containers) for details.
 
 ### `deployments[*].component.autoScaling`
-See [Scaling](/docs/cli/deployment/components/configuration/containers) for details.
+See [Scaling](../../../../cli/deployment/components/configuration/containers) for details.
 
 
 ## Advanced
@@ -191,7 +191,7 @@ The `pullSecrets` option expects an array of strings with names of Kubernetes se
 
 Adding a secret name to `pullSecrets` will tell DevSpace to add the secret name as pullSecret to the Deployment or StatefulSet that will be created for this component.
 
-> DevSpace is also able to [create pull secrets for registries automatically](/docs/cli/image-building/workflow-basics#8-create-image-pull-secret). These pull secrets do **not** need to be added to `pullSecrets` as they will be added to the service account instead which makes them available to Kubernetes without adding them to each Deployment or StatefulSet.
+> DevSpace is also able to [create pull secrets for registries automatically](../../../../cli/image-building/workflow-basics#8-create-image-pull-secret). These pull secrets do **not** need to be added to `pullSecrets` as they will be added to the service account instead which makes them available to Kubernetes without adding them to each Deployment or StatefulSet.
 
 #### Default Value For `pullSecrets`
 ```yaml
@@ -234,14 +234,14 @@ deployments:
 The `options` option provides a way to set several config options that are generally available for Helm deployments because a component is a highly flexible Helm chart where you only provide the `values` such as `containers`.
 
 Available options are:
-- [`replaceImageTags`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmreplaceimagetags)
-- [`wait`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmwait)
-- [`timeout`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtimeout)
-- [`rollback`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmrollback)
-- [`force`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmforce)
-- [`tillerNamespace`](/docs/cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtillernamespace)
+- [`replaceImageTags`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmreplaceimagetags)
+- [`wait`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmwait)
+- [`timeout`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtimeout)
+- [`rollback`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmrollback)
+- [`force`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmforce)
+- [`tillerNamespace`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtillernamespace)
 
-All options listed above can be configured for components in the same way as for regular Helm charts. Please refer to the [Helm Chart Configuration page](/docs/cli/deployment/helm-charts/configuration/overview-specification) for default values and configuration details.
+All options listed above can be configured for components in the same way as for regular Helm charts. Please refer to the [Helm Chart Configuration page](../../../../cli/deployment/helm-charts/configuration/overview-specification) for default values and configuration details.
 
 
 <br>
@@ -283,9 +283,9 @@ devspace add deployment [deployment-name] --dockerfile="./path/to/Dockerfile" --
 ```
 Both commands would add a component deployment to the `deployments` and a image to the `images` section defining how the image would be built, tagged and pushed using the Dockerfile you provided.
 
-The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. Using the first command, DevSpace would assume that you want to use a private repository at [dscr.io](/docs/cloud/images/dscr-io), the free image registry sponsored by DevSpace Cloud.
+The difference between the first command and the second one is that the second one specifically defines where the Docker image should be pushed to after building the Dockerfile. Using the first command, DevSpace would assume that you want to use a private repository at [dscr.io](../../../../cloud/images/dscr-io), the free image registry sponsored by DevSpace Cloud.
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/cli/image-building/workflow-basics#registry-authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](../../../../cli/image-building/workflow-basics#registry-authentication).
 
 > Running `devspace add deployment` only adds a deployment to `devspace.yaml` but does not actually deploy anything. To deploy the newly added deployment, run `devspace deploy` or `devspace dev`.
 
@@ -297,7 +297,7 @@ devspace add deployment [deployment-name] --image="my-registry.tld/[username]/[i
 ```
 This command would add a component deployment to the `deployments` section in `devspace.yaml`.
 
-> If you are using a private Docker registry, make sure to [login to this registry](/docs/cli/image-building/workflow-basics#registry-authentication).
+> If you are using a private Docker registry, make sure to [login to this registry](../../../../cli/image-building/workflow-basics#registry-authentication).
 
 > Running `devspace add deployment` only adds a deployment to `devspace.yaml` but does not actually deploy anything. To deploy the newly added deployment, run `devspace deploy` or `devspace dev`.
 

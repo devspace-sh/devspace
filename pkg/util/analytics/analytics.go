@@ -60,6 +60,32 @@ type analyticsConfig struct {
 
 func (a *analyticsConfig) Disable() error {
 	if !a.Disabled {
+		identValue := map[string]interface{}{
+			"device_id": a.DistinctID,
+
+			"user_properties": map[string]interface{}{
+				"enabled": false,
+			},
+		}
+
+		if a.Identifier != "" {
+			identValue["user_id"] = a.Identifier
+		}
+
+		requestData := map[string]interface{}{
+			"parameters": map[string]interface{}{
+				"api_key": token,
+				"identification": []interface{}{
+					identValue,
+				},
+			},
+		}
+
+		err := a.sendRequest(userEndpoint, requestData)
+		if err != nil {
+			// ignore if request fails
+		}
+
 		a.Disabled = true
 		return a.save()
 	}
@@ -107,11 +133,8 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
 	command = expr.ReplaceAllString(command, `devspace $1[REDACTED]$3`)
 
-	userPropertiesSet := map[string]interface{}{
-		"app_version": a.version,
-	}
 	userProperties := map[string]interface{}{
-		"$set": userPropertiesSet,
+		"app_version": a.version,
 	}
 	commandProperties := map[string]interface{}{
 		"command":      command,
@@ -131,7 +154,7 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 		if spaceID != 0 {
 			commandProperties["space_id"] = spaceID
 			commandProperties["cloud_provider"] = cloudProvider
-			userPropertiesSet["has_spaces"] = true
+			userProperties["has_spaces"] = true
 		}
 
 		kubeConfig, err := kubeconfig.LoadRawConfig()
@@ -191,6 +214,8 @@ func (a *analyticsConfig) SendEvent(eventName string, eventProperties map[string
 			getIdentity := *a.identityProvider
 			a.Identify(getIdentity())
 		}
+
+		userProperties["enabled"] = true
 
 		if a.Identifier != "" {
 			eventData["user_id"] = a.Identifier

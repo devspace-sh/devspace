@@ -88,7 +88,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 
 		deployments := []string{}
 		if cmd.RemoveAll == false {
-			deployments = []string{args[0]}
+			deployments = []string{name}
 		}
 
 		generatedConfig, err := generated.LoadConfig("")
@@ -114,13 +114,13 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		if cmd.RemoveAll {
 			log.Donef("Successfully removed all deployments")
 		} else {
-			log.Donef("Successfully removed deployment %s", args[0])
+			log.Donef("Successfully removed deployment %s", name)
 		}
 	} else {
 		if cmd.RemoveAll {
 			log.Warnf("Couldn't find any deployment")
 		} else {
-			log.Warnf("Couldn't find deployment %s", args[0])
+			log.Warnf("Couldn't find deployment %s", name)
 		}
 	}
 

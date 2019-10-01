@@ -17,9 +17,9 @@ dev:
 ```
 
 Take a look at the following pages for details on how to configure each section of the `dev` config:
-- **[`ports` Port-Forwarding](/docs/cli/development/configuration/port-forwarding)**
-- **[`open` Auto-Open](/docs/cli/development/configuration/auto-open)**
-- **[`sync` File Synchronization](/docs/cli/development/configuration/file-synchronization)**
-- **[`logs` Multi-Container Log Streaming](/docs/cli/development/configuration/logs-streaming)**
-- **[`autoReload` Auto-Reload / Redeploy](/docs/cli/development/configuration/auto-reloading)**
-- **[`interactive` Interactive Mode](/docs/cli/development/configuration/interactive-mode)**
+- **[`ports` Port-Forwarding](../../../cli/development/configuration/port-forwarding)**
+- **[`open` Auto-Open](../../../cli/development/configuration/auto-open)**
+- **[`sync` File Synchronization](../../../cli/development/configuration/file-synchronization)**
+- **[`logs` Multi-Container Log Streaming](../../../cli/development/configuration/logs-streaming)**
+- **[`autoReload` Auto-Reload / Redeploy](../../../cli/development/configuration/auto-reloading)**
+- **[`interactive` Interactive Mode](../../../cli/development/configuration/interactive-mode)**

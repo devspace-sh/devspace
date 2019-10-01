@@ -83,7 +83,6 @@
     ],
     "Development": [
       "cli/development/workflow-basics",
-      "cli/development/commands",
       {
         "type": "subcategory",
         "label": "Configuration",

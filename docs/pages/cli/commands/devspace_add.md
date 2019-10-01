@@ -34,9 +34,8 @@ Change the DevSpace configuration
 ```
 
 ## See Also
-* [devspace add deployment](/docs/cli/commands/devspace_add_deployment)	 - Add a deployment
-* [devspace add image](/docs/cli/commands/devspace_add_image)	 - Add an image
-* [devspace add port](/docs/cli/commands/devspace_add_port)	 - Add a new port forward configuration
-* [devspace add provider](/docs/cli/commands/devspace_add_provider)	 - Adds a new cloud provider to the configuration
-* [devspace add sync](/docs/cli/commands/devspace_add_sync)	 - Add a sync path
-
+* [devspace add deployment](../../cli/commands/devspace_add_deployment)	 - Add a deployment
+* [devspace add image](../../cli/commands/devspace_add_image)	 - Add an image
+* [devspace add port](../../cli/commands/devspace_add_port)	 - Add a new port forward configuration
+* [devspace add provider](../../cli/commands/devspace_add_provider)	 - Adds a new cloud provider to the configuration
+* [devspace add sync](../../cli/commands/devspace_add_sync)	 - Add a sync path

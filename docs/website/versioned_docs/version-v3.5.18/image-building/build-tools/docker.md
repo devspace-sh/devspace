@@ -4,7 +4,7 @@ id: version-v3.5.18-docker
 original_id: docker
 ---
 
-By default, DevSpace CLI builds your images with a local Docker daemon if Docker is installed and running. The DevSpace configuration provides a lot of options for customizing image building with Docker. The following config snippet shows some of the available options. For details, refer to the [Full Config Reference](/docs/configuration/reference#images-builddocker)
+By default, DevSpace CLI builds your images with a local Docker daemon if Docker is installed and running. The DevSpace configuration provides a lot of options for customizing image building with Docker. The following config snippet shows some of the available options. For details, refer to the [Full Config Reference](../../configuration/reference#images-builddocker)
 
 ```yaml
 images:
