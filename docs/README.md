@@ -16,3 +16,12 @@ Docusaurus allows you to use hot reloading when editing the docs pages, so you c
 
 ## [Contribution Guidelines](../CONTRIBUTING.md)
 For general information regarding contributions see: [Contribution Guidelines](../CONTRIBUTING.md)
+
+
+## Creating New Versions
+```bash
+cd website
+npm run version v4.0.3
+```
+
+**If there is a new sidebar file in `website/versioned-sidebars/` that means the sidebar has changed and you need to append the version to the `sidebarVersions` array inside `website/core/Footer.js`.**

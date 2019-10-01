@@ -134,6 +134,13 @@
       },
       {
         "type": "subcategory",
+        "label": "devspace attach",
+        "ids": [
+          "cli/commands/devspcae_attach"
+        ]
+      },
+      {
+        "type": "subcategory",
         "label": "devspace build",
         "ids": [
           "cli/commands/devspace_build"
@@ -198,7 +205,10 @@
           "cli/commands/devspace_list",
           "cli/commands/devspace_list_available-components",
           "cli/commands/devspace_list_clusters",
+          "cli/commands/devspace_list_commands",
+          "cli/commands/devspace_list_contexts",
           "cli/commands/devspace_list_deployments",
+          "cli/commands/devspace_list_namespaces",
           "cli/commands/devspace_list_ports",
           "cli/commands/devspace_list_profiles",
           "cli/commands/devspace_list_providers",

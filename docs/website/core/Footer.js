@@ -40,7 +40,7 @@ class Footer extends React.Component {
       <footer className="nav-footer" id="footer">
         <script type="text/javascript" dangerouslySetInnerHTML={{__html: `
         var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
-        var sidebarVersions = ["v3.5.18", "v4.0.0"];
+        var sidebarVersions = ["v3.5.18", "v4.0.0", "v4.0.3"];
 
         if (versionMeta) {
           let version = versionMeta.getAttribute("content");

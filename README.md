@@ -534,22 +534,27 @@ hooks:                  # Customize all workflows using hooks
 version: v1beta2
 
 images:
-  default:                              # Key 'default' = Name of this image
+  backend:                              # Key 'backend' = Name of this image
     image: my-registry.tld/image1       # Registry and image name for pushing the image
     createPullSecret: true              # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
 deployments:
 - name: quickstart-nodejs               # Name of this deployment
-  component:                            # Deploy a component (alternatives: helm, kubectl)
-    containers:                         # Defines an array of containers that run in the same pods started by this component
-    - image: my-registry.tld/image1     # Image of this container
-      resources:
-        limits:
-          cpu: "400m"                   # CPU limit for this container
-          memory: "500Mi"               # Memory/RAM limit for this container
-    service:                            # Expose this component with a Kubernetes service
-      ports:                            # Array of container ports to expose through the service
-      - port: 3000                      # Exposes container port 3000 on service port 3000
+  helm:                                 # Deploy using Helm
+    chart:                              # Helm chart to be deployed
+      name: component-chart             # DevSpace component chart is a general-purpose Helm chart
+      version: v0.0.6
+      repo: https://charts.devspace.cloud
+    values:                             # Override Values for chart (van also be set using valuesFiles option)
+      containers:                       # Deploy these containers with this general-purpose Helm chart
+      - image: my-registry.tld/image1   # Image of this container
+        resources:
+          limits:
+            cpu: "400m"                 # CPU limit for this container
+            memory: "500Mi"             # Memory/RAM limit for this container
+      service:                          # Expose this component with a Kubernetes service
+        ports:                          # Array of container ports to expose through the service
+        - port: 3000                    # Exposes container port 3000 on service port 3000
 
 dev:
   ports:
@@ -557,17 +562,13 @@ dev:
     - port: 3000
     - port: 8080
       remotePort: 80
-    labelSelector:
-      app.kubernetes.io/component: default
-      app.kubernetes.io/name: devspace-app
+    image: backend
   open:
   - url: http://localhost:3000/login
   sync:
   - localSubPath: ./src
     containerPath: .
-    labelSelector:
-      app.kubernetes.io/component: default
-      app.kubernetes.io/name: devspace-app
+    image: backend
   autoReload:
     paths:
     - ./manifests/**
