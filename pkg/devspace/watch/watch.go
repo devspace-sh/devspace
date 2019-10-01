@@ -8,6 +8,7 @@ import (
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/sync/util"
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 )
@@ -103,12 +104,12 @@ func (w *Watcher) Update() ([]string, []string, error) {
 		}
 
 		for _, file := range files {
-			if w.Exclude != nil && w.Exclude.MatchesPath(file) {
+			stat, err := os.Stat(file)
+			if err != nil {
 				continue
 			}
 
-			stat, err := os.Stat(file)
-			if err != nil {
+			if w.Exclude != nil && util.MatchesPath(w.Exclude, file, stat.IsDir()) {
 				continue
 			}
 

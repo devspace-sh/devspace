@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/sync/remote"
+	"github.com/devspace-cloud/devspace/sync/util"
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
@@ -326,7 +327,7 @@ func (s *Sync) diffServerClient(absPath string, sendChanges *[]*FileInformation,
 
 	// Exclude changes on the upload exclude list
 	if s.uploadIgnoreMatcher != nil {
-		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
+		if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
 			s.fileIndex.fileMapMutex.Lock()
 			// Add to file map and prevent download if local file is newer than the remote one
 			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {

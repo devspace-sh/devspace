@@ -4,24 +4,11 @@ import (
 	"os"
 
 	"github.com/devspace-cloud/devspace/sync/remote"
+	"github.com/devspace-cloud/devspace/sync/util"
 )
 
 // s.fileIndex needs to be locked before this function is called
 func shouldRemoveRemote(relativePath string, s *Sync) bool {
-	// Exclude changes on the exclude list
-	if s.ignoreMatcher != nil {
-		if s.ignoreMatcher.MatchesPath(relativePath) {
-			return false
-		}
-	}
-
-	// Exclude changes on the upload exclude list
-	if s.uploadIgnoreMatcher != nil {
-		if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
-			return false
-		}
-	}
-
 	// File / Folder was already deleted from map so event was already processed or should not be processed
 	if s.fileIndex.fileMap[relativePath] == nil {
 		return false
@@ -30,6 +17,20 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 	// Exclude symbolic links
 	if s.fileIndex.fileMap[relativePath].IsSymbolicLink {
 		return false
+	}
+
+	// Exclude changes on the exclude list
+	if s.ignoreMatcher != nil {
+		if util.MatchesPath(s.ignoreMatcher, relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
+			return false
+		}
+	}
+
+	// Exclude changes on the upload exclude list
+	if s.uploadIgnoreMatcher != nil {
+		if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
+			return false
+		}
 	}
 
 	return true
@@ -42,23 +43,20 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *Sync, isInitial bool
 		return false
 	}
 
-	// Exclude changes on the exclude list
-	if s.ignoreMatcher != nil {
-		if s.ignoreMatcher.MatchesPath(relativePath) {
-			return false
-		}
-	}
-
 	// Exclude changes on the upload exclude list
-	// if s.uploadIgnoreMatcher != nil {
-	//	if s.uploadIgnoreMatcher.MatchesPath(relativePath) {
-	//		return false
-	//	}
-	// }
+	// is not necessary here anymore because it was already
+	// checked
 
 	// Exclude local symlinks
 	if stat.Mode()&os.ModeSymlink != 0 {
 		return false
+	}
+
+	// Exclude changes on the exclude list
+	if s.ignoreMatcher != nil {
+		if util.MatchesPath(s.ignoreMatcher, relativePath, stat.IsDir()) {
+			return false
+		}
 	}
 
 	// Check if we already tracked the path
@@ -128,14 +126,6 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 	// We don't need to check s.ignoreMatcher, because if a path is ignored it will never be added to the fileMap, because shouldDownload
 	// and shouldUpload are always false, and hence it never appears in the fileMap and is not copied to the remove fileMap clone
 	// in the beginning of the downstream mainLoop
-
-	// Exclude files on the exclude list
-	//if s.downloadIgnoreMatcher != nil {
-	//	if s.downloadIgnoreMatcher.MatchesPath(fileInformation.Name) {
-	// s.Logf("Skip %s because downloadIgnoreMatcher matched", absFilepath)
-	//		return false
-	//	}
-	//}
 
 	// Only delete if mtime and size did not change
 	stat, err := os.Stat(absFilepath)
