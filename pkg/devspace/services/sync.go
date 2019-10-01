@@ -47,7 +47,7 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 		return err
 	}
 
-	pod, container, err := targetSelector.GetContainer(log)
+	pod, container, err := targetSelector.GetContainer(false, log)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 		}
 
 		log.StartWait("Sync: Waiting for pods...")
-		pod, container, err := selector.GetContainer(log)
+		pod, container, err := selector.GetContainer(false, log)
 		log.StopWait()
 		if err != nil {
 			return nil, errors.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
