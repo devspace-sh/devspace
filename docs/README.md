@@ -24,4 +24,6 @@ cd website
 npm run version v4.0.3
 ```
 
-**If there is a new sidebar file in `website/versioned-sidebars/` that means the sidebar has changed and you need to append the version to the `sidebarVersions` array inside `website/core/Footer.js`.**
+**If there is a new sidebar file in `website/versioned-sidebars/` that means the sidebar has changed and you need to:** 
+- (if needed:) create a new CSS style for the sidebar in `website/static/css/versions/SIDEBAR_VERSION/style.css`
+- APPEND the DevSpace version as key to the `sidebarVersions` objects inside `website/core/Footer.js` and define which sidebar version (value) should be used
