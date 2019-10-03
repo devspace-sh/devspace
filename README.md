@@ -221,8 +221,12 @@ sudo mv devspace /usr/local/bin;
 
 ```
 md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe; & "$Env:APPDATA\devspace\devspace.exe" "install"; $env:Path = (Get-ItemProperty -Path HKCU:\Environment -Name Path).Path
+wget -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+$env:Path += ";" + $Env:APPDATA + "\devspace";
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
+
+> If you get the error that Windows cannot find DevSpace after installing it, you will need to restart your computer, so that the changes to the `PATH` variable will be applied.
 
 </details>
 
@@ -965,17 +969,21 @@ Take a look at the documentation to learn more about [using hooks](https://devsp
 ## Troubleshooting
 
 <details>
-<summary>My application is not working</code></summary>
+<summary>My application is not working</summary>
 
-This problem can be caused by many different things. Here are some steps to troubleshoot this:
+#### Problem
+This problem can be caused by many different things.
 
-#### 1. Let DevSpace analyze your deployment
+#### Solution
+There is no single solution for this but here are some steps to troubleshoot this problem:
+
+##### 1. Let DevSpace analyze your deployment
 Run this command within your project:
 ```
 devspace analyze
 ```
 
-#### 2. Check your Dockerfile
+##### 2. Check your Dockerfile
 Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using). 
 
 If your pods are crashing, you might have the wrong `ENTRYPOINT` or something is missing within your containers. A great way to debug this is to start the interactive development mode using:
@@ -984,11 +992,11 @@ devspace dev -i
 ```
 With the interactive mode, DevSpace will override the `ENTRYPOINT` in our Dockerfile with `[sleep, 999999]` and open a terminal proxy. That means your containers will definitively start but only in sleep mode. After the terminal opens you can run the start command for your application yourself, e.g. `npm start`.
 
-#### 3. Debug your application with kubectl
+##### 3. Debug your application with kubectl
 Run the following commands to find issues:
 ```bash
 # Failing Pods
-kubectl get po                  # Look for crashed or pending pods
+kubectl get po                  # Look for terminated, crashed or pending pods (restart > 1 is usually not good)
 kubectl describe po [POD_NAME]  # Look at the crash reports Kubernetes provides
 
 # Network issues
@@ -1020,6 +1028,36 @@ Generate an access key and login with the non-interactive login method. Follow t
    7. Try the command again that you originally wanted to execute.
 
 <img src="docs/website/static/img/readme/line.svg" height="1">
+</details>
+
+<details>
+<summary>Cloud Authentication: <code>get token: Received invalid token from provider</code></summary>
+
+#### Problem
+This might happen when you are using an on-premise install of DevSpace Cloud and the VM of your Kubernetes cluster (e.g. Docker VM for Kubernetes in Docker Desktop) has the wrong date/time.
+
+#### Solution
+Make sure the VM of your local Kubernetes cluster has the correct date/time. For local clusters created with Docker Desktop, you can run the following script to fix the issue:
+```bash
+HOST_TIME=$(date -u +"%Y.%m.%d-%H:%M:%S");
+docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccomp=unconfined --privileged --rm -v /:/docker-vm alpine /bin/sh -c "date -s $HOST_TIME"
+```
+
+</details>
+
+<details>
+<summary>Docker: <code>Error response from daemon: Get https://[registry]/v2/: x509: certificate has expired or is not yet valid</code></summary>
+
+#### Problem
+This might happen when you the VM of your Docker daemon has the wrong date/time.
+
+#### Solution
+Make sure the VM of your Docker daemon has the correct date/time. For Docker Desktop, you can run the following script to fix the issue:
+```bash
+HOST_TIME=$(date -u +"%Y.%m.%d-%H:%M:%S");
+docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccomp=unconfined --privileged --rm -v /:/docker-vm alpine /bin/sh -c "date -s $HOST_TIME"
+```
+
 </details>
 
 
