@@ -18,7 +18,7 @@ The example above would create a pod with two containers:
 1. The first container would be create from the image `dscr.io/username/my-backend-image`
 2. The second container would be created from the `nginx` image on [Docker Hub](https://hub.docker.com) which is tagged as version `1.15`
 
-> If you are using a private Docker registry, make sure to [logged into this registry](../../../../image-building/registries/authentication).
+> If you are using a private Docker registry, make sure to [logged into this registry](../../../../cli/image-building/registries/authentication).
 
 
 ## Entrypoint (cmd, args)
@@ -154,7 +154,7 @@ The above example would define that this container can use a maximum of:
 </summary>
 Ephemeral storage is the non-persistent storage of a container, i.e. the storage used within the root partition `/` of a container. 
 
-If you save a file in a [(persistent) volume](../../../../deployment/components/configuration/volumes), it will not add to the epemeral storage but if you add it to a folder which does not belong to a volume, it will be count as ephemeral storage.
+If you save a file in a [(persistent) volume](../../../../cli/deployment/components/configuration/volumes), it will not add to the epemeral storage but if you add it to a folder which does not belong to a volume, it will be count as ephemeral storage.
 </details>
 
 

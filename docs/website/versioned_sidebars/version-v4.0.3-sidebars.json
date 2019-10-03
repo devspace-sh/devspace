@@ -129,7 +129,7 @@
         "type": "subcategory",
         "label": "devspace analyze",
         "ids": [
-          "version-v4.0.3-cli/commands/devspcae_analyze"
+          "version-v4.0.3-cli/commands/devspace_analyze"
         ]
       },
       {
@@ -337,7 +337,6 @@
     ],
     "DevSpace Cloud": [
       "version-v4.0.3-cloud/what-is-devspace-cloud",
-      "version-v4.0.3-cloud/saas-vs-on-premise"
     ],
     "Spaces": [
       "version-v4.0.3-cloud/spaces/what-are-spaces",
