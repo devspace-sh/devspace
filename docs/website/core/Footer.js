@@ -49,7 +49,7 @@ class Footer extends React.Component {
         if (versionMeta) {
           let version = versionMeta.getAttribute("content");
           let sidebarVersionsArray = Object.keys(sidebarVersions);
-          let sidebarVersion = sidebarVersionsArray[sidebarVersionsArray.length - 1];
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
           
           if (version != "next") {
             let versionSplit = version.split(".");
