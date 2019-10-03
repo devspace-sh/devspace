@@ -1,5 +1,7 @@
 ---
 title: 2. Deploy to Kubernetes
+id: version-v4.0.3-deployment
+original_id: deployment
 ---
 
 After installing DevSpace, you are ready to deploy your first project.
