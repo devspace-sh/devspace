@@ -5,7 +5,7 @@ title: Service
 In short, there is three things you need to know:
 1. Containers in the same component will be started within a [Kubernetes pod](#what-are-pods) which allows the containers of same component to communicate via `localhost`.
 2. If you want containers to communicate across components, you need to [define services for these components](#define-services-for-your-components).
-3. If you want to connect a domain to a service, you need to [configure an ingress for this service](../../../../workflow-basics/deployment/domains#configure-ingresses).
+3. If you want to connect a domain to a service, you need to [configure an ingress for this service](../../../../cli/workflow-basics/deployment/domains#configure-ingresses).
 
 ## Define services for your components
 You can define a service for a component by configuring the `service` section of this component within your `devspace.yaml`.

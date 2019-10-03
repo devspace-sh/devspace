@@ -7,7 +7,7 @@ original_id: what-are-helm-charts
 
 [Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts.
 
-> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](../../../deployment/kubernetes-manifests/add-manifests)
+> If you just want to add a kubernetes yaml to the chart take a look at [add custom kubernetes files](../../../cli/deployment/kubernetes-manifests/configuration/overview-specification#devspace-add-deployment-name-manifests-my-manifests)
 
 ## Structure of an Helm chart
 The following structure shows the most important parts of an Helm chart:
@@ -88,7 +88,7 @@ dependencies:
 ```
 DevSpace provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
 
-[Learn more about adding predefined components.](../../../deployment/components/add-predefined-components)
+[Learn more about adding predefined components.](../../../deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis)
 
 ---
 ## FAQ
@@ -151,5 +151,5 @@ kubectl get po -l name=tiller
 <summary>
 ### Can I use DevSpace without Helm?
 </summary>
-**Yes**. You can simply [add plain Kubernetes manifests as deployments](../../../deployment/kubernetes-manifests/add-manifests) and DevSpace will run `kubectl apply -f [FILE]` instead of using Helm.
+**Yes**. You can simply [add plain Kubernetes manifests as deployments](../../../cli/deployment/kubernetes-manifests/configuration/overview-specification#devspace-add-deployment-name-manifests-my-manifests) and DevSpace will run `kubectl apply -f [FILE]` instead of using Helm.
 </details>

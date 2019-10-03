@@ -36,7 +36,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](../../image-building/overview)
+[Learn more about building images with DevSpace.](../../cli/image-building/overview)
 
 ### `images[*].build`
 ```yaml
@@ -122,7 +122,7 @@ component:                          # struct   | Options for deploying a DevSpac
   podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   options: ...                      # struct   | Options for deploying this component with helm
 ```
-[Learn more about configuring component deployments.](../../deployment/components/what-are-components)
+[Learn more about configuring component deployments.](../../cli/deployment/components/what-are-components)
 
 ### `deployments[*].component.containers`
 ```yaml
@@ -238,7 +238,7 @@ helm:                               # struct   | Options for deploying with Helm
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
 ```
-[Learn more about configuring deployments with Helm.](../../deployment/helm-charts/what-are-helm-charts)
+[Learn more about configuring deployments with Helm.](../../cli/deployment/helm-charts/what-are-helm-charts)
 
 ### `deployments[*].helm.chart`
 ```yaml
@@ -259,7 +259,7 @@ kubectl:                            # struct   | Options for deploying with "kub
   flags: []                         # string[] | Array of flags for the "kubectl apply" command
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
 ```
-[Learn more about configuring deployments with Kubectl.](../../deployment/kubernetes-manifests/what-are-manifests)
+[Learn more about configuring deployments with Kubectl.](../../cli/deployment/kubernetes-manifests/what-are-manifests)
 
 
 ---
@@ -273,7 +273,7 @@ dev:                                # struct   | Options for "devspace dev"
   autoReload: ...                   # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
   interactive: ...                  # struct   | Options for configuring the interactive mode
 ```
-[Learn more about development with DevSpace.](../../development/workflow)
+[Learn more about development with DevSpace.](../../cli/development/workflow)
 
 ### `dev.ports`
 ```yaml
@@ -286,7 +286,7 @@ ports:                              # struct[] | Array of port forwarding settin
     remotePort: 3000                # int      | Forward traffic to this port exposed by the pod/container selected
     bindAddress: ""                 # string   | Address used for binding / use 0.0.0.0 to bind on all interfaces (Default: "localhost" = 127.0.0.1)
 ```
-[Learn more about port forwarding.](../../development/port-forwarding)
+[Learn more about port forwarding.](../../cli/development/configuration/port-forwarding)
 
 ### `dev.open`
 ```yaml
@@ -313,7 +313,7 @@ sync:                               # struct[] | Array of file sync settings for
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](../../development/synchronization)
+[Learn more about confguring the code synchronization.](../../cli/development/synchronization)
 
 ### `dev.logs`
 ```yaml
@@ -322,7 +322,7 @@ logs:                               # struct   | Options for multi-container log
   showLast: 200                     # int      | Number of last log lines to show before starting stream (Default: 50)
   images: []                        # string[] | Array of image names referencing images defined in `images` for selecting containers for log streaming
 ```
-[Learn more about configuring the terminal proxy.](../../development/terminal)
+[Learn more about configuring the terminal proxy.](../../cli/development/terminal)
 
 ### `dev.autoReload`
 ```yaml
@@ -347,7 +347,7 @@ interactive:                        # struct   | Options for interactive mode
     namespace: ""                   # string   | Kubernetes namespace to select pods in
     command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about image overriding.](../../development/overrides)
+[Learn more about image overriding.](../../cli/development/overrides)
 
 
 ---
