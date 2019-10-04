@@ -3,10 +3,16 @@ package list
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
+	"io/ioutil"
+
 	"github.com/spf13/cobra"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 type commandsCmd struct {
@@ -45,8 +51,31 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	// Get config
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	// Load commands
+	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+	if err != nil {
+		return err
+	}
+	rawMap := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(bytes, &rawMap)
+	if err != nil {
+		return err
+	}
+
+	// Load generated config
+	generatedConfig, err := generated.LoadConfig("")
+	if err != nil {
+		return err
+	}
+
+	// Parse commands
+	commands, err := configutil.ParseCommands(generatedConfig, rawMap, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
+	// Save variables
+	err = generated.SaveConfig(generatedConfig)
 	if err != nil {
 		return err
 	}
@@ -58,7 +87,7 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	rows := [][]string{}
-	for _, command := range config.Commands {
+	for _, command := range commands {
 		rows = append(rows, []string{
 			command.Name,
 			command.Command,
