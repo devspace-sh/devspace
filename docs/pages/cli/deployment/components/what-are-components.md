@@ -18,11 +18,11 @@ deployments:
 
 ## Types of components
 There are two types of components:
-- [Predefined components](../../../deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis)
-- [Custom components](../../../deployment/components/configuration/overview-specification#devspace-add-deployment-name-dockerfile-path)
+- [Predefined components](../../../cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis)
+- [Custom components](../../../cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-dockerfile-path)
 
 ### Predefined components
-Predefined components allow you to add popular application components such as databases (e.g. mysql, mongodb) without having to manually define everything from scratch. DevSpace will ask you a couple of questions when [adding a predefined component](../../../deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis) and automatically configure everything for you. 
+Predefined components allow you to add popular application components such as databases (e.g. mysql, mongodb) without having to manually define everything from scratch. DevSpace will ask you a couple of questions when [adding a predefined component](../../../cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis) and automatically configure everything for you. 
 
 ### Custom components
 Custom components allow you to define components for your own application components or for additional applications which are not available as predefined component, yet.

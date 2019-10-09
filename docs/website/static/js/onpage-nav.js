@@ -18,10 +18,13 @@ const highlightDetailsOnActiveHash = function(activeHash, doNotOpen) {
                 el.classList.add("active-section");
             }
             el = el.nextElementSibling;
-            elRank = el.nodeName.substr(1)
 
-            if (elRank > 0 && elRank <= headlineRank) {
-                break;
+            if (el) {
+                elRank = el.nodeName.substr(1)
+
+                if (elRank > 0 && elRank <= headlineRank) {
+                    break;
+                }
             }
         }
     }

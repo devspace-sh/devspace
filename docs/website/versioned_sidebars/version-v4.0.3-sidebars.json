@@ -136,7 +136,7 @@
         "type": "subcategory",
         "label": "devspace attach",
         "ids": [
-          "version-v4.0.3-cli/commands/devspcae_attach"
+          "version-v4.0.3-cli/commands/devspace_attach"
         ]
       },
       {
