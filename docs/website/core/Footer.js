@@ -38,6 +38,12 @@ class Footer extends React.Component {
 
     return (
       <footer className="nav-footer" id="footer">
+
+        <div className="star-button">
+          <script async defer src="https://buttons.github.io/buttons.js"></script>
+          <a className="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a>
+        </div>
+        
         <script type="text/javascript" dangerouslySetInnerHTML={{__html: `
         var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
         var sidebarVersions = {
