@@ -161,3 +161,22 @@
   a.active::before {
   left: -35px;
 }
+
+/* make onpage nav sublinks collapse if longer than page */
+.onPageNav.collapsible .toc-headings .toc-headings {
+  overflow: hidden;
+  max-height: 1000px;
+  transition: 0.7s;
+  margin-left: -20px !important;
+  padding-left: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.onPageNav.collapsible .toc-headings .toc-headings li:first-child {
+  margin-top: 10px;
+}
+
+.onPageNav.collapsible .toc-headings li:not(:hover) a:not(.active) + .toc-headings:not(.active) {
+  max-height: 0;
+}

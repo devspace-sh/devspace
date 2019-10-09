@@ -102,6 +102,10 @@ const highlightActiveOnPageLink = function() {
         for (let i = 0; i < allLinks.length; i++) {
             const link = allLinks[i];
             link.classList.remove("active");
+           
+            if (link.parentElement && link.parentElement.parentElement && link.parentElement.parentElement.tagName == "UL") {
+                link.parentElement.parentElement.classList.remove("active")
+            }
         }
     
         const activeLinks = document.querySelectorAll("a[href='#" + activeHash + "'");
@@ -109,6 +113,10 @@ const highlightActiveOnPageLink = function() {
         for (let i = 0; i < activeLinks.length; i++) {
             const link = activeLinks[i];
             link.classList.add("active");
+           
+            if (link.parentElement && link.parentElement.parentElement && link.parentElement.parentElement.tagName == "UL") {
+                link.parentElement.parentElement.classList.add("active")
+            }
         }
     }, 100)
 };
@@ -130,8 +138,18 @@ const allowHashLinkClick = function() {
     }
 };
 
+const makeNavCollapsible = function() {
+    var onPageNav = document.querySelector(".onPageNav");
+    var onPageNavContent = document.querySelector(".onPageNav > .toc-headings");
+
+    if (onPageNavContent.offsetHeight > onPageNav.offsetHeight) {
+        onPageNav.classList.add("collapsible")
+    }
+};
+
 window.addEventListener('DOMContentLoaded', allowHashLinkClick);
 window.addEventListener('DOMContentLoaded', highlightActiveOnPageLink);
+window.addEventListener('DOMContentLoaded', makeNavCollapsible);
 window.addEventListener('popstate', function (event) {
     highlightDetailsOnActiveHash(location.hash.substr(1));
 }, false);
