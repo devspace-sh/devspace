@@ -38,7 +38,7 @@ images:                             # map[string]struct | Images to be built and
     build: ...                      # struct   | Build options for this image
   image2: ...
 ```
-[Learn more about building images with DevSpace.](../../cli/image-building/overview)
+[Learn more about building images with DevSpace.](../../cli/image-building/workflow-basics)
 
 ### `images[*].build`
 ```yaml
@@ -275,7 +275,7 @@ dev:                                # struct   | Options for "devspace dev"
   autoReload: ...                   # struct   | Options for auto-reloading (i.e. re-deploying deployments and re-building images)
   interactive: ...                  # struct   | Options for configuring the interactive mode
 ```
-[Learn more about development with DevSpace.](../../cli/development/workflow)
+[Learn more about development with DevSpace.](../../cli/development/workflow-basics)
 
 ### `dev.ports`
 ```yaml
@@ -315,7 +315,7 @@ sync:                               # struct[] | Array of file sync settings for
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
 ```
-[Learn more about confguring the code synchronization.](../../cli/development/synchronization)
+[Learn more about confguring the code synchronization.](../../cli/development/configuration/file-synchronization)
 
 ### `dev.logs`
 ```yaml
@@ -324,7 +324,7 @@ logs:                               # struct   | Options for multi-container log
   showLast: 200                     # int      | Number of last log lines to show before starting stream (Default: 50)
   images: []                        # string[] | Array of image names referencing images defined in `images` for selecting containers for log streaming
 ```
-[Learn more about configuring the terminal proxy.](../../cli/development/terminal)
+[Learn more about configuring multi-container log streaming.](../../cli/development/configuration/logs-streaming)
 
 ### `dev.autoReload`
 ```yaml
@@ -349,7 +349,7 @@ interactive:                        # struct   | Options for interactive mode
     namespace: ""                   # string   | Kubernetes namespace to select pods in
     command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
 ```
-[Learn more about image overriding.](../../cli/development/overrides)
+[Learn more about interactive mode.](../../cli/development/configuration/interactive-mode)
 
 
 ---

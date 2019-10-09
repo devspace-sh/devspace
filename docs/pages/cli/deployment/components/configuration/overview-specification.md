@@ -38,6 +38,10 @@ deployments:
 See [Containers](../../../../cli/deployment/components/configuration/containers) for details.
 
 
+### `deployments[*].component.initContainers`
+The `initContainers` section allows the exact same configuration options as the `containers` section. See [Containers](../../../../cli/deployment/components/configuration/containers) for details.
+
+
 ### `deployments[*].component.labels`
 The `labels` option expects a map with Kubernetes labels. 
 

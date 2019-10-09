@@ -86,7 +86,7 @@ dependencies:
 ```
 DevSpace provides the convenience command `devspace add package [chart-name]` to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your `values.yaml` and show you the `README` of the newly added chart, so you can easily customize the dependency.
 
-[Learn more about adding predefined components.](../../../deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis)
+[Learn more about adding predefined components.](../../../cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis)
 
 ---
 ## FAQ
