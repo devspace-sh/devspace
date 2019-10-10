@@ -155,6 +155,20 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+
+	// Check if we really should skip context path changes, this is only the case if we find a sync config for the given image name
+	if ignoreContextPathChanges {
+		ignoreContextPathChanges = false
+		if b.Config.Dev != nil && imageCache.ImageName != "" {
+			for _, syncConfig := range b.Config.Dev.Sync {
+				if syncConfig.ImageName == imageCache.ImageName {
+					ignoreContextPathChanges = true
+					break
+				}
+			}
+		}
+	}
+
 	if ignoreContextPathChanges == false {
 		// Hash context path
 		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
