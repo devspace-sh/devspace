@@ -59,6 +59,13 @@ func (t testLogger) Failf(format string, args ...interface{}) {
 	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
 }
 
+func (t testLogger) Error(args ...interface{}) {
+	logOutput = logOutput + "\nError " + fmt.Sprint(args...)
+}
+func (t testLogger) Errorf(format string, args ...interface{}) {
+	logOutput = logOutput + "\nError " + fmt.Sprintf(format, args...)
+}
+
 func (t testLogger) Warn(args ...interface{}) {
 	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
 }

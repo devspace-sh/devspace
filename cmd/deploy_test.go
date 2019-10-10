@@ -129,8 +129,12 @@ func TestDeploy(t *testing.T) {
 			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
-			name:       "Successfully deployed nothing",
-			fakeConfig: &latest.Config{},
+			name: "Error in pull secret creation",
+			fakeConfig: &latest.Config{
+				Images: map[string]*latest.ImageConfig{
+					"": &latest.ImageConfig{},
+				},
+			},
 			fakeKubeClient: &kubectl.Client{
 				Client:         fake.NewSimpleClientset(),
 				CurrentContext: "minikube",
@@ -145,7 +149,59 @@ func TestDeploy(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nDone Successfully deployed!\nInfo \r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b")),
+			expectedErr:    "invalid reference format",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: ", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
+		},
+		deployTestCase{
+			name: "Cyclic dependency",
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+				Dependencies: []*latest.DependencyConfig{
+					&latest.DependencyConfig{
+						Source: &latest.SourceConfig{
+							Path: "dependency1",
+						},
+					},
+				},
+			},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			files: map[string]interface{}{
+				"devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "dependency1",
+							},
+						},
+					},
+				},
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "..",
+							},
+						},
+					},
+				},
+			},
+			expectedErr:    fmt.Sprintf("deploy dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nInfo Start resolving dependencies", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
 			name:       "generated.yaml is a dir",
@@ -174,6 +230,26 @@ func TestDeploy(t *testing.T) {
 			},
 			expectedErr:    fmt.Sprintf("update last kube context: save generated: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
 			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: ", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
+		},
+		deployTestCase{
+			name:       "Successfully deployed nothing",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			deploymentsFlag: " ",
+			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nDone Successfully deployed!\nInfo \r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b")),
 		},
 	}
 

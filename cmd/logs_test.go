@@ -15,11 +15,15 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -30,6 +34,7 @@ type logsTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -104,6 +109,34 @@ func TestLogs(t *testing.T) {
 			},
 			expectedErr: "create kube client: RawConfigError",
 		},
+		logsTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		logsTestCase{
+			name:       "No resources",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			pickFlag:       true,
+			expectedErr:    "Couldn't find a running pod in namespace ",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
 	}
 
 	log.SetInstance(&testLogger{
@@ -144,6 +177,7 @@ func testLogs(t *testing.T, testCase logsTestCase) {
 	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)

@@ -15,10 +15,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -29,6 +33,7 @@ type enterTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
+	fakeKubeClient       *kubectl.Client
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -101,23 +106,34 @@ func TestEnter(t *testing.T) {
 			},
 			expectedErr: "new kube client: RawConfigError",
 		},
-		/*enterTestCase{
-			name: "cloud space can't be resumed",
-			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
+		enterTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		enterTestCase{
+			name:       "No resources",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
 				},
 			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedErr: "Error retrieving Spaces details: Custom graphQL error",
-		},*/
+			pickFlag:       true,
+			expectedErr:    "Couldn't find a running pod in namespace ",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
 	}
 
 	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -158,6 +174,7 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)

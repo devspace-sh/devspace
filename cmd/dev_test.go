@@ -13,12 +13,14 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
@@ -55,6 +57,7 @@ type devTestCase struct {
 	selectorFlag        string
 	containerFlag       string
 	labelSelectorFlag   string
+	interactiveFlag     bool
 	globalFlags         flags.GlobalFlags
 
 	expectedOutput string
@@ -80,8 +83,8 @@ func TestDev(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	//_, err = os.Open("doesn'tExist")
-	//noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+	_, err = os.Open("doesn'tExist")
+	fileNotFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 
 	defer func() {
 		//Delete temp folder
@@ -132,39 +135,62 @@ func TestDev(t *testing.T) {
 			},
 			expectedErr: "Unable to create new kubectl client: RawConfigError",
 		},
-		/*devTestCase{
-			name:          "No devspace.yaml",
-			fakeConfig:    &latest.Config{},
-			expectedErr: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
+		devTestCase{
+			name:           "No devspace.yaml",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			expectedErr:    fmt.Sprintf("Couldn't find 'devspace.yaml': CreateFile devspace.yaml: %s", fileNotFoundError),
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
-			name: "generated.yaml is a dir",
+			name:           "interactive without images",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
 			files: map[string]interface{}{
-				"devspace.yaml":                     &latest.Config{},
-				".devspace/generated.yaml/someFile": "",
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+				},
 			},
-			namespaceFlag:  "someNamespace",
-			expectedErr:  fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml\nInfo Using someNamespace namespace",
+			interactiveFlag: true,
+			expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
+			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
-			name: "cloud space can't be resumed",
+			name:           "image-question fails",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
 			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Images: map[string]*latest.ImageConfig{
+						"1": &latest.ImageConfig{
+							Image: "1",
+						},
+						"2": &latest.ImageConfig{
+							Image: "2",
+						},
+					},
 				},
 			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
+			interactiveFlag: true,
+			expectedErr:     "Cannot ask question 'Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?' because logger level is too low",
+			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		devTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Dev: &latest.DevConfig{
+						Interactive: &latest.InteractiveConfig{},
+					},
 				},
 			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedErr:  "Error retrieving Spaces details: Custom graphQL error",
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},*/
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
 	}
 
 	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -203,6 +229,7 @@ func testDev(t *testing.T, testCase devTestCase) {
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	kubectl.SetFakeClient(testCase.fakeKubeClient)
@@ -233,6 +260,7 @@ func testDev(t *testing.T, testCase devTestCase) {
 		SkipPipeline:    testCase.skipPipelineFlag,
 		Portforwarding:  testCase.portForwardingFlag,
 		VerboseSync:     testCase.verboseSyncFlag,
+		Interactive:     testCase.interactiveFlag,
 	}).Run(nil, []string{})
 
 	if testCase.expectedErr == "" {
