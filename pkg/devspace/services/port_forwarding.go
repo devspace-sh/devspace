@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 )
 
@@ -57,6 +58,11 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 					remotePort := localPort
 					if value.RemotePort != nil {
 						remotePort = strconv.Itoa(*value.RemotePort)
+					}
+
+					open, _ := port.Check(*value.LocalPort)
+					if open == false {
+						log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
 					}
 
 					ports[index] = localPort + ":" + remotePort
