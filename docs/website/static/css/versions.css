@@ -18,13 +18,30 @@
 }
 
 .fixedHeaderContainer .headerWrapper header h3 {
+  position: relative;
   font-size: 0.8em;
 }
 
+.fixedHeaderContainer .headerWrapper header h3::before,
 .fixedHeaderContainer .headerWrapper header h3::after {
-  content: "🢐 🢒";
-  font-size: 1.1em;
-  margin-left: 2px;
+  content: " ";
   display: inline-block;
-  transform: rotateZ(90deg);
+  width: 0; 
+  height: 0; 
+  margin-left: 3px;
+}
+
+.fixedHeaderContainer .headerWrapper header h3::before {
+  position: absolute;
+  right: 0;
+  top: 5px;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 3px solid #00bdff;
+}
+
+.fixedHeaderContainer .headerWrapper header h3::after {
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 3px solid #00bdff;
 }
