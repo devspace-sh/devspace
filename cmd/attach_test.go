@@ -15,11 +15,15 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -30,6 +34,7 @@ type attachTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -39,7 +44,7 @@ type attachTestCase struct {
 	containerFlag     string
 	podFlag           string
 	pickFlag          bool
-	globalFlags flags.GlobalFlags
+	globalFlags       flags.GlobalFlags
 
 	expectedOutput string
 	expectedErr    string
@@ -102,6 +107,35 @@ func TestAttach(t *testing.T) {
 			},
 			expectedErr: "new kube client: RawConfigError",
 		},
+		attachTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		attachTestCase{
+			name: "No resources",
+			globalFlags: flags.GlobalFlags{
+				Namespace: "someNamespace",
+			},
+			pickFlag: true,
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedErr:    "Couldn't find a running pod in namespace someNamespace",
+		},
 	}
 
 	log.SetInstance(&testLogger{
@@ -142,6 +176,7 @@ func testAttach(t *testing.T, testCase attachTestCase) {
 	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -160,7 +195,6 @@ func testAttach(t *testing.T, testCase attachTestCase) {
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
-
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

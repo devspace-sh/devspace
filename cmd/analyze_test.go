@@ -17,13 +17,16 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -128,36 +131,64 @@ type analyzeTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
+	fakeKubeClient       *kubectl.Client
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
 	providerList         []*cloudlatest.Provider
 	waitFlag             bool
-	globalFlags flags.GlobalFlags
+	globalFlags          flags.GlobalFlags
 
 	expectedOutput string
-	expectedErr  string
+	expectedErr    string
 }
 
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
 		analyzeTestCase{
-			name:           "Invalid generated config",
-			fakeConfig: &latest.Config{},
+			name:                 "Invalid generated config",
+			fakeConfig:           &latest.Config{},
 			generatedYamlContent: "unparsable",
-			expectedErr:  "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+			expectedErr:          "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
 		},
 		analyzeTestCase{
-			name:           "Invalid global flags",
+			name: "Invalid global flags",
 			globalFlags: flags.GlobalFlags{
-				KubeContext: "a",
+				KubeContext:   "a",
 				SwitchContext: true,
 			},
-			expectedErr:  "Flag --kube-context cannot be used together with --switch-context",
+			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
 		},
 		analyzeTestCase{
 			name:           "Invalid kube config",
 			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:  "Error loading kube config, context '' doesn't exist",
+			expectedErr:    "Error loading kube config, context '' doesn't exist",
+		},
+		analyzeTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		analyzeTestCase{
+			name: "Successful analysis with zero errors",
+			globalFlags: flags.GlobalFlags{
+				Namespace: "someNamespace",
+			},
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nWait Analyzing pods\nWait Analyzing replica sets\nWait Analyzing stateful sets", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 	}
 
@@ -217,6 +248,7 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	generated.ResetConfig()
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	if testCase.generatedYamlContent != nil {
 		content, err := yaml.Marshal(testCase.generatedYamlContent)
@@ -228,13 +260,11 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-
 	err = (&AnalyzeCmd{
 		GlobalFlags: &testCase.globalFlags,
-		Wait: testCase.waitFlag,
+		Wait:        testCase.waitFlag,
 	}).RunAnalyze(nil, []string{})
 
-	
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
 	} else {

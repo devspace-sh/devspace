@@ -15,10 +15,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -29,6 +33,7 @@ type deployTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -78,9 +83,6 @@ func TestDeploy(t *testing.T) {
 		}
 	}()
 
-	//_, err = os.Open("doesn'tExist")
-	//noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
-
 	testCases := []deployTestCase{
 		deployTestCase{
 			name:        "config doesn't exist",
@@ -118,39 +120,61 @@ func TestDeploy(t *testing.T) {
 			},
 			expectedErr: "Unable to create new kubectl client: RawConfigError",
 		},
-		/*deployTestCase{
-			name:          "No devspace.yaml",
-			fakeConfig:    &latest.Config{},
-			expectedErr: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
+		deployTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
-			name: "generated.yaml is a dir",
+			name:       "Successfully deployed nothing",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nDone Successfully deployed!\nInfo \r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b")),
+		},
+		deployTestCase{
+			name:       "generated.yaml is a dir",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
 			files: map[string]interface{}{
 				"devspace.yaml":                     &latest.Config{},
 				".devspace/generated.yaml/someFile": "",
 			},
-			namespaceFlag:   "someNamespace",
-			kubeContextFlag: "someKubeContext",
-			expectedErr:   fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
-			expectedOutput:  "\nInfo Loaded config from devspace.yaml\nInfo Using someNamespace namespace for deploying\nInfo Using someKubeContext kube context for deploying",
+			globalFlags: flags.GlobalFlags{
+				Namespace:   "someNamespace",
+				KubeContext: "someKubeContext",
+			},
+			expectedErr:    fmt.Sprintf("update last kube context: save generated: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: ", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
-		deployTestCase{
-			name: "cloud space can't be resumed",
-			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{},
-			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedErr:  "Error retrieving Spaces details: Custom graphQL error",
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},*/
 	}
 
 	//The deploy-command wants to overwrite error logging with file logging. This workaround prevents that.
@@ -191,6 +215,7 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -219,4 +244,10 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+
+	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
+		os.RemoveAll(path)
+		return nil
+	})
+	assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)
 }
