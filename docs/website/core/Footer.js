@@ -38,13 +38,24 @@ class Footer extends React.Component {
 
     return (
       <footer className="nav-footer" id="footer">
+
+        <div className="star-button">
+          <script async defer src="https://buttons.github.io/buttons.js"></script>
+          <a className="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a>
+        </div>
+        
         <script type="text/javascript" dangerouslySetInnerHTML={{__html: `
         var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
-        var sidebarVersions = ["v3.5.18", "v4.0.0"];
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+        };
 
         if (versionMeta) {
           let version = versionMeta.getAttribute("content");
-          let sidebarVersion = sidebarVersions[sidebarVersions.length - 1];
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
           
           if (version != "next") {
             let versionSplit = version.split(".");
@@ -52,14 +63,14 @@ class Footer extends React.Component {
             let minor = versionSplit[1];
             let revision = versionSplit[2];
 
-            for (let i in sidebarVersions) {
-              let sidebarVersionSplit = sidebarVersions[i].split(".");
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
               let sidebarMajor = sidebarVersionSplit[0].substr(1);
               let sidebarMinor = sidebarVersionSplit[1];
               let sidebarRevision = sidebarVersionSplit[2];
 
               if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
-                sidebarVersion = sidebarVersions[i];
+                sidebarVersion = sidebarVersions[versionKey];
               } else {
                 break;
               }

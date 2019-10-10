@@ -129,7 +129,14 @@
         "type": "subcategory",
         "label": "devspace analyze",
         "ids": [
-          "cli/commands/devspcae_analyze"
+          "cli/commands/devspace_analyze"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace attach",
+        "ids": [
+          "cli/commands/devspace_attach"
         ]
       },
       {
@@ -198,7 +205,10 @@
           "cli/commands/devspace_list",
           "cli/commands/devspace_list_available-components",
           "cli/commands/devspace_list_clusters",
+          "cli/commands/devspace_list_commands",
+          "cli/commands/devspace_list_contexts",
           "cli/commands/devspace_list_deployments",
+          "cli/commands/devspace_list_namespaces",
           "cli/commands/devspace_list_ports",
           "cli/commands/devspace_list_profiles",
           "cli/commands/devspace_list_providers",
@@ -326,8 +336,7 @@
       }
     ],
     "DevSpace Cloud": [
-      "cloud/what-is-devspace-cloud",
-      "cloud/saas-vs-on-premise"
+      "cloud/what-is-devspace-cloud"
     ],
     "Spaces": [
       "cloud/spaces/what-are-spaces",

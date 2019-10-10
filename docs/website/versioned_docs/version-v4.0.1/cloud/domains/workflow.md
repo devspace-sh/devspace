@@ -4,7 +4,7 @@ id: version-v4.0.1-workflow
 original_id: workflow
 ---
 
-In a [Space](../../cloud/spaces/what-are-spaces), applications can be accessed through [port-forwarding](../../development/port-forwarding) on localhost or with [ingresses](../../workflow-basics/deployment/domains) on a certain domain. On this page we cover how you can access a space through ingresses.  
+In a [Space](../../cloud/spaces/what-are-spaces), applications can be accessed through [port-forwarding](../../development/configuration/port-forwarding) on localhost or with [ingresses](../../workflow-basics/deployment/domains) on a certain domain. On this page we cover how you can access a space through ingresses.  
 
 ## The concept of Domains
 
