@@ -76,6 +76,10 @@ func TestRun(t *testing.T) {
 	_, err = os.Open("doesn'tExist")
 	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
 
+	fsutil.WriteToFile([]byte(""), "someFakeDir")
+	err = fsutil.WriteToFile([]byte(""), "someFakeDir/someFile")
+	parentDirIsFileErr := strings.TrimPrefix(err.Error(), "mkdir someFakeDir: ")
+
 	testCases := []runTestCase{
 		runTestCase{
 			name:        "No devspace.yaml",
@@ -120,7 +124,7 @@ func TestRun(t *testing.T) {
 				},
 				".devspace": "",
 			},
-			expectedErr: fmt.Sprintf("mkdir %s: The system cannot find the path specified.", filepath.Join(dir, ".devspace")),
+			expectedErr: fmt.Sprintf("mkdir %s: %s", filepath.Join(dir, ".devspace"), parentDirIsFileErr),
 		},
 	}
 

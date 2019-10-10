@@ -73,6 +73,9 @@ func TestCommands(t *testing.T) {
 		}
 	}()
 
+	_, err = os.Open("doesn'tExist")
+	fileNotFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+
 	expectedHeader := ansi.Color(" Name  ", "green+b") + ansi.Color(" Command  ", "green+b")
 	testCases := []commandsTestCase{
 		commandsTestCase{
@@ -80,12 +83,35 @@ func TestCommands(t *testing.T) {
 			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
 		},
 		commandsTestCase{
+			name:        "No devspace.yaml",
+			fakeConfig:  &latest.Config{},
+			expectedErr: "open devspace.yaml: " + fileNotFoundError,
+		},
+		commandsTestCase{
+			name:       "Unparsable devspace.yaml",
+			fakeConfig: &latest.Config{},
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: "unparsable",
+			},
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
+		},
+		commandsTestCase{
 			name:       "Unparsable generated.yaml",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
+				constants.DefaultConfigPath: &latest.Config{},
+				".devspace/generated.yaml":  "unparsable",
 			},
 			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+		},
+		commandsTestCase{
+			name: "Invalid version",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: latest.Config{
+					Version: "invalid",
+				},
+			},
+			expectedErr: "Unrecognized config version invalid. Please upgrade devspace with `devspace upgrade`",
 		},
 		commandsTestCase{
 			name: "Print commands",
