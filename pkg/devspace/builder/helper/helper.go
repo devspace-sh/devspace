@@ -161,7 +161,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 		ignoreContextPathChanges = false
 		if b.Config.Dev != nil && imageCache.ImageName != "" {
 			for _, syncConfig := range b.Config.Dev.Sync {
-				if syncConfig.ImageName == imageCache.ImageName {
+				if syncConfig.ImageName == b.ImageConfigName {
 					ignoreContextPathChanges = true
 					break
 				}
