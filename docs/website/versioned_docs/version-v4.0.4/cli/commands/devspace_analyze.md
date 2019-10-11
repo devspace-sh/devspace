@@ -1,37 +1,37 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace analyze
+sidebar_label: devspace analyze
+id: version-v4.0.4-devspace_analyze
+original_id: devspace_analyze
 ---
 
 
-Delete deployed resources
+Analyzes a kubernetes namespace and checks for potential problems
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace analyze [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################## devspace analyze ###################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Analyze checks a namespaces events, replicasets, services
+and pods for potential problems
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Example:
+devspace analyze
+devspace analyze --namespace=mynamespace
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for analyze
+      --wait   Wait for pods to get ready if they are just starting (default true)
 ```
 
 ### Options inherited from parent commands

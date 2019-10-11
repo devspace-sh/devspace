@@ -1,37 +1,35 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace open
+sidebar_label: devspace open
+id: version-v4.0.4-devspace_open
+original_id: devspace_open
 ---
 
 
-Delete deployed resources
+Opens the space in the browser
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace open [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+#################### devspace open ####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Opens the space domain in the browser
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Example:
+devspace open
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help              help for open
+      --provider string   The cloud provider to use
 ```
 
 ### Options inherited from parent commands

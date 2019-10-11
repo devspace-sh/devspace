@@ -1,6 +1,8 @@
 ---
-title: "Command - devspace sync"
+title: Command - devspace sync
 sidebar_label: devspace sync
+id: version-v4.0.4-devspace_sync
+original_id: devspace_sync
 ---
 
 

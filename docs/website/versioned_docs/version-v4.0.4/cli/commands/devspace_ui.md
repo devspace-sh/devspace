@@ -1,37 +1,31 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace ui
+sidebar_label: devspace ui
+id: version-v4.0.4-devspace_ui
+original_id: devspace_ui
 ---
 
 
-Delete deployed resources
+Opens the management ui in the browser
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace ui [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+##################### devspace ui #####################
 #######################################################
-Deletes the deployed kuberenetes resources:
-
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Opens the management ui in the browser
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for ui
 ```
 
 ### Options inherited from parent commands

@@ -1,23 +1,30 @@
 ---
-title: "Command - devspace build"
-sidebar_label: devspace build
+title: Command - devspace deploy
+sidebar_label: devspace deploy
+id: version-v4.0.4-devspace_deploy
+original_id: devspace_deploy
 ---
 
 
-Builds all defined images and pushes them
+Deploy the project
 
 ## Synopsis
 
 
 ```
-devspace build [flags]
+devspace deploy [flags]
 ```
 
 ```
 #######################################################
-################## devspace build #####################
+################## devspace deploy ####################
 #######################################################
-Builds all defined images and pushes them
+Deploys the current project to a Space or namespace:
+
+devspace deploy
+devspace deploy --namespace=deploy
+devspace deploy --namespace=deploy
+devspace deploy --kube-context=deploy-context
 #######################################################
 ```
 ## Options
@@ -25,11 +32,14 @@ Builds all defined images and pushes them
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
-  -b, --force-build            Forces to build every image
+      --deployments string     Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+  -b, --force-build            Forces to (re-)build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
-  -h, --help                   help for build
+  -d, --force-deploy           Forces to (re-)deploy every deployment
+  -h, --help                   help for deploy
+      --skip-build             Skips building of images
       --skip-push              Skips image pushing, useful for minikube deployment
-      --verbose-dependencies   Builds the dependencies verbosely
+      --verbose-dependencies   Deploys the dependencies verbosely
 ```
 
 ### Options inherited from parent commands

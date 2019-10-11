@@ -1,37 +1,35 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace run
+sidebar_label: devspace run
+id: version-v4.0.4-devspace_run
+original_id: devspace_run
 ---
 
 
-Delete deployed resources
+Run executes a predefined command
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace run [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+##################### devspace run ####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Run executes a predefined command from the devspace.yaml
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Examples:
+devspace run mycommand --myarg 123
+devspace run mycommand2 1 2 3
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for run
 ```
 
 ### Options inherited from parent commands

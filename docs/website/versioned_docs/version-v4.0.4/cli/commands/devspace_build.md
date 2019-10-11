@@ -1,36 +1,36 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace build
+sidebar_label: devspace build
+id: version-v4.0.4-devspace_build
+original_id: devspace_build
 ---
 
 
-Delete deployed resources
+Builds all defined images and pushes them
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace build [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################## devspace build #####################
 #######################################################
-Deletes the deployed kuberenetes resources:
-
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Builds all defined images and pushes them
 #######################################################
 ```
 ## Options
 
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
+      --build-sequential       Builds the images one after another instead of in parallel
+  -b, --force-build            Forces to build every image
+      --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
+  -h, --help                   help for build
+      --skip-push              Skips image pushing, useful for minikube deployment
       --verbose-dependencies   Builds the dependencies verbosely
 ```
 

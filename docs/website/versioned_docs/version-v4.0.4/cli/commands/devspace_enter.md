@@ -1,37 +1,44 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace enter
+sidebar_label: devspace enter
+id: version-v4.0.4-devspace_enter
+original_id: devspace_enter
 ---
 
 
-Delete deployed resources
+Open a shell to a container
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace enter [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################## devspace enter #####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Execute a command or start a new terminal in your 
+devspace:
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+devspace enter
+devspace enter --pick # Select pod to enter
+devspace enter bash
+devspace enter -s my-selector
+devspace enter -c my-container
+devspace enter bash -n my-namespace
+devspace enter bash -l release=test
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -c, --container string        Container name within pod where to execute command
+  -h, --help                    help for enter
+  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
+      --pick                    Select a pod
+      --pod string              Pod to open a shell to
 ```
 
 ### Options inherited from parent commands
