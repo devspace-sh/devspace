@@ -1,37 +1,42 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace logs
+sidebar_label: devspace logs
+id: version-v4.0.4-devspace_logs
+original_id: devspace_logs
 ---
 
 
-Delete deployed resources
+Prints the logs of a pod and attaches to it
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace logs [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+#################### devspace logs ####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Logs prints the last log of a pod container and attachs 
+to it
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Example:
+devspace logs
+devspace logs --namespace=mynamespace
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -c, --container string        Container name within pod where to execute command
+  -f, --follow                  Attach to logs afterwards
+  -h, --help                    help for logs
+  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
+      --lines int               Max amount of lines to print from the last log (default 200)
+      --pick                    Select a pod
+      --pod string              Pod to print the logs of
 ```
 
 ### Options inherited from parent commands

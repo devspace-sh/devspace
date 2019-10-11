@@ -1,37 +1,31 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace upgrade
+sidebar_label: devspace upgrade
+id: version-v4.0.4-devspace_upgrade
+original_id: devspace_upgrade
 ---
 
 
-Delete deployed resources
+Upgrade the DevSpace CLI to the newest version
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace upgrade [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################## devspace upgrade ###################
 #######################################################
-Deletes the deployed kuberenetes resources:
-
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Upgrades the DevSpace CLI to the newest version
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for upgrade
 ```
 
 ### Options inherited from parent commands

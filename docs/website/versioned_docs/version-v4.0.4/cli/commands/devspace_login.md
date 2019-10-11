@@ -1,37 +1,38 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace login
+sidebar_label: devspace login
+id: version-v4.0.4-devspace_login
+original_id: devspace_login
 ---
 
 
-Delete deployed resources
+Log into DevSpace Cloud
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace login [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################### devspace login ####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+If no --key is supplied the browser will be opened 
+and the login page is shown
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Example:
+devspace login
+devspace login --key myaccesskey
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help              help for login
+      --key string        Access key to use
+      --provider string   Provider to use
 ```
 
 ### Options inherited from parent commands

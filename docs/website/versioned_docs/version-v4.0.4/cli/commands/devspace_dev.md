@@ -1,23 +1,33 @@
 ---
-title: "Command - devspace build"
-sidebar_label: devspace build
+title: Command - devspace dev
+sidebar_label: devspace dev
+id: version-v4.0.4-devspace_dev
+original_id: devspace_dev
 ---
 
 
-Builds all defined images and pushes them
+Starts the development mode
 
 ## Synopsis
 
 
 ```
-devspace build [flags]
+devspace dev [flags]
 ```
 
 ```
 #######################################################
-################## devspace build #####################
+################### devspace dev ######################
 #######################################################
-Builds all defined images and pushes them
+Starts your project in development mode:
+1. Builds your Docker images and override entrypoints if specified
+2. Deploys the deployments via helm or kubectl
+3. Forwards container ports to the local computer
+4. Starts the sync client
+5. Streams the logs of deployed containers
+
+Use Interactive Mode:
+- Use "devspace dev -i" for interactive mode (terminal)
 #######################################################
 ```
 ## Options
@@ -25,11 +35,20 @@ Builds all defined images and pushes them
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
+      --deployments string     Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --exit-after-deploy      Exits the command after building the images and deploying the project
   -b, --force-build            Forces to build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
-  -h, --help                   help for build
+  -d, --force-deploy           Forces to deploy every deployment
+  -h, --help                   help for dev
+  -i, --interactive            Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy
+      --portforwarding         Enable port forwarding (default true)
+      --skip-build             Skips building of images
+  -x, --skip-pipeline          Skips build & deployment and only starts sync, portforwarding & terminal
       --skip-push              Skips image pushing, useful for minikube deployment
-      --verbose-dependencies   Builds the dependencies verbosely
+      --sync                   Enable code synchronization (default true)
+      --verbose-dependencies   Deploys the dependencies verbosely
+      --verbose-sync           When enabled the sync will log every file change
 ```
 
 ### Options inherited from parent commands

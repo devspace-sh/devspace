@@ -1,37 +1,36 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace init
+sidebar_label: devspace init
+id: version-v4.0.4-devspace_init
+original_id: devspace_init
 ---
 
 
-Delete deployed resources
+Initializes DevSpace in the current folder
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace init [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+#################### devspace init ####################
 #######################################################
-Deletes the deployed kuberenetes resources:
-
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+Initializes a new devspace project within the current
+folder. Creates a devspace.yaml with all configuration.
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+      --context string      Context path to use for intialization
+      --dockerfile string   Dockerfile to use for initialization (default "./Dockerfile")
+  -h, --help                help for init
+      --provider string     The cloud provider to use
+  -r, --reconfigure         Change existing configuration
 ```
 
 ### Options inherited from parent commands

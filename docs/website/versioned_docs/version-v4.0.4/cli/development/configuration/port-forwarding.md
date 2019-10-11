@@ -1,6 +1,8 @@
 ---
 title: Configuring Port Forwarding
 sidebar_label: Port Forwarding
+id: version-v4.0.4-port-forwarding
+original_id: port-forwarding
 ---
 
 Port-forwarding allows you to access your application on `localhost:[PORT]` by forwarding the network traffic from a localhost port to a specified port of a container.

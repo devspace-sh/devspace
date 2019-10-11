@@ -1,6 +1,8 @@
 ---
-title: "Command - devspace purge"
+title: Command - devspace purge
 sidebar_label: devspace purge
+id: version-v4.0.4-devspace_purge
+original_id: devspace_purge
 ---
 
 

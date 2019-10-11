@@ -1,6 +1,8 @@
 ---
 title: Configuring Interactive Mode
 sidebar_label: Interactive Mode
+id: version-v4.0.4-interactive-mode
+original_id: interactive-mode
 ---
 
 The development mode of DevSpace can be started using the `-i / --interactive` flag which overrides the `ENTRYPOINT` of an image with `[sleep, 999999]` and opens an interactive terminal session for one of the containers that use the 'sleeping' image. Due to the `ENTRYPOINT` override, the application has not been started within the container and the user can start the application manually through the interactive terminal session.

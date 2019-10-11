@@ -1,37 +1,40 @@
 ---
-title: "Command - devspace purge"
-sidebar_label: devspace purge
+title: Command - devspace attach
+sidebar_label: devspace attach
+id: version-v4.0.4-devspace_attach
+original_id: devspace_attach
 ---
 
 
-Delete deployed resources
+Attaches to a container
 
 ## Synopsis
 
 
 ```
-devspace purge [flags]
+devspace attach [flags]
 ```
 
 ```
 #######################################################
-################### devspace purge ####################
+################# devspace attach #####################
 #######################################################
-Deletes the deployed kuberenetes resources:
+Attaches to a running container
 
-devspace purge
-devspace purge --dependencies
-devspace purge -d my-deployment
+devspace attach
+devspace attach --pick # Select pod to enter
+devspace attach -c my-container
+devspace attach -n my-namespace
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
-  -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
-  -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+  -c, --container string        Container name within pod where to execute command
+  -h, --help                    help for attach
+  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
+      --pick                    Select a pod
+      --pod string              Pod to open a shell to
 ```
 
 ### Options inherited from parent commands
