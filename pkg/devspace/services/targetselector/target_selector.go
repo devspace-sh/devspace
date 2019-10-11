@@ -85,6 +85,13 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 			}
 
 			return pod, nil
+		} else if t.labelSelector != "" {
+			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.imageSelector, t.namespace, time.Second*120)
+			if err != nil {
+				return nil, err
+			}
+
+			return pod, nil
 		} else if len(t.imageSelector) > 0 {
 			// Retrieve pods running with that image
 			pods, err := t.kubeClient.GetRunningPodsWithImage(t.imageSelector, t.namespace, time.Second*120)
@@ -123,13 +130,6 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
 			return pods[0], nil
-		} else if t.labelSelector != "" {
-			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.namespace, time.Second*120)
-			if err != nil {
-				return nil, err
-			}
-
-			return pod, nil
 		}
 	}
 
@@ -178,6 +178,22 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 			}
 
 			return nil, nil, errors.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
+		} else if len(t.imageSelector) > 0 {
+			// TODO: What happens if there are 2 containers with the same image?
+			for _, container := range pod.Spec.InitContainers {
+				for _, imageName := range t.imageSelector {
+					if imageName == container.Image {
+						return pod, &container, nil
+					}
+				}
+			}
+			for _, container := range pod.Spec.Containers {
+				for _, imageName := range t.imageSelector {
+					if imageName == container.Image {
+						return pod, &container, nil
+					}
+				}
+			}
 		}
 
 		// Don't allow pick
@@ -232,6 +248,15 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 			}
 
 			return nil, nil, errors.Errorf("Couldn't find container %s in pod %s", t.containerName, pod.Name)
+		} else if len(t.imageSelector) > 0 {
+			// TODO: What happens if there are 2 containers with the same image?
+			for _, container := range pod.Spec.Containers {
+				for _, imageName := range t.imageSelector {
+					if imageName == container.Image {
+						return pod, &container, nil
+					}
+				}
+			}
 		}
 
 		// Don't allow pick

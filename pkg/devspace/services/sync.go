@@ -39,7 +39,7 @@ var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/rel
 const SyncHelperContainerPath = "/tmp/sync"
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose bool, log log.Logger) error {
+func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose, downloadOnInitialSync bool, log log.Logger) error {
 	targetSelector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}, true, nil)
@@ -61,8 +61,9 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 
 	syncDone := make(chan bool)
 	syncConfig := &latest.SyncConfig{
-		LocalSubPath:  localPath,
-		ContainerPath: containerPath,
+		LocalSubPath:          localPath,
+		ContainerPath:         containerPath,
+		DownloadOnInitialSync: &downloadOnInitialSync,
 	}
 	if len(exclude) > 0 {
 		syncConfig.ExcludePaths = exclude

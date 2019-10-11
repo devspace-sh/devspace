@@ -213,7 +213,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func (client *Client) GetNewestRunningPod(labelSelector, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	if namespace == "" {
 		namespace = client.Namespace
 	}
@@ -237,13 +237,25 @@ func (client *Client) GetNewestRunningPod(labelSelector, namespace string, maxWa
 				currentPod := pod
 
 				if selectedPod == nil || currentPod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
-					selectedPod = &currentPod
+					// Check if image selector is defined
+					if len(imageSelector) > 0 {
+					Outer:
+						for _, container := range currentPod.Spec.Containers {
+							for _, imageName := range imageSelector {
+								if imageName == container.Image {
+									selectedPod = &currentPod
+									break Outer
+								}
+							}
+						}
+					} else {
+						selectedPod = &currentPod
+					}
 				}
 			}
 
 			if selectedPod != nil {
 				podStatus := GetPodStatus(selectedPod)
-
 				if podStatus == "Running" {
 					return selectedPod, nil
 				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
