@@ -151,5 +151,5 @@ kubectl get po -l name=tiller
 <summary>
 ### Can I use DevSpace without Helm?
 </summary>
-**Yes**. You can simply [add plain Kubernetes manifests as deployments](../../../deployment/kubernetes-manifests/add-manifests) and DevSpace will run `kubectl apply -f [FILE]` instead of using Helm.
+**Yes**. You can simply [add plain Kubernetes manifests as deployments](../../../cli/deployment/kubernetes-manifests/configuration/overview-specification#useful-commands) and DevSpace will run `kubectl apply -f [FILE]` instead of using Helm.
 </details>

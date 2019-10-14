@@ -154,7 +154,7 @@ The above example would define that this container can use a maximum of:
 </summary>
 Ephemeral storage is the non-persistent storage of a container, i.e. the storage used within the root partition `/` of a container. 
 
-If you save a file in a [(persistent) volume](../../../../../cli/deployment/components/configuration/volumes), it will not add to the epemeral storage but if you add it to a folder which does not belong to a volume, it will be count as ephemeral storage.
+If you save a file in a [(persistent) volume](../../../../cli/deployment/components/configuration/volumes), it will not add to the epemeral storage but if you add it to a folder which does not belong to a volume, it will be count as ephemeral storage.
 </details>
 
 
