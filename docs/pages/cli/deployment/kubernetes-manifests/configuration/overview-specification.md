@@ -155,7 +155,7 @@ Deploying the above example would roughly be equivalent to this command:
 ---
 ## Useful Commands
 
-### `devspace add deployment [NAME] --manifests="./my/manifests/"`
+### `devspace add deployment [NAME] --manifests=./my/manifests/`
 ```bash
 devspace add deployment [deployment-name] --manifests="./path/to/your/manifests"
 ```
