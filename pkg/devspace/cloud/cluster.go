@@ -55,6 +55,7 @@ type ConnectClusterOptions struct {
 	Key         string
 
 	OpenUI bool
+	Public bool
 
 	UseDomain bool
 	Domain    string
@@ -119,6 +120,9 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	if err != nil {
 		return errors.Wrap(err, "check cloud settings")
 	}
+	if options.Public {
+		needKey = false
+	}
 
 	// Encrypt token if needed
 	encryptedToken := token
@@ -141,9 +145,17 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	// Create cluster remotely
 	log.StartWait("Initialize cluster")
 	defer log.StopWait()
-	clusterID, err := p.CreateUserCluster(clusterName, client.RestConfig.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
-	if err != nil {
-		return errors.Wrap(err, "create cluster")
+	var clusterID int
+	if options.Public {
+		clusterID, err = p.CreatePublicCluster(clusterName, client.RestConfig.Host, caCert, string(encryptedToken))
+		if err != nil {
+			return errors.Wrap(err, "create cluster")
+		}
+	} else {
+		clusterID, err = p.CreateUserCluster(clusterName, client.RestConfig.Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
+		if err != nil {
+			return errors.Wrap(err, "create cluster")
+		}
 	}
 	log.StopWait()
 
