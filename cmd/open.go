@@ -240,7 +240,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 		domainHash := hash.String(domain)
 
-		ingressName := "devspace-ingress-" + domainHash
+		ingressName := "devspace-ingress-" + domainHash[:10]
 		_, err = client.Client.ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 			Spec: v1beta1.IngressSpec{
