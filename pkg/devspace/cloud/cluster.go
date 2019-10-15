@@ -43,6 +43,8 @@ const (
 // ConnectClusterOptions holds the options for connecting a cluster
 type ConnectClusterOptions struct {
 	DeployAdmissionController bool
+	DeployGatekeeper          bool
+	DeployGatekeeperRules     bool
 	DeployIngressController   bool
 	DeployCertManager         bool
 
@@ -372,8 +374,7 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 	})
 	if err != nil {
 		return errors.Wrap(err, "list configmaps")
-	}
-	if len(configmaps.Items) != 0 {
+	} else if len(configmaps.Items) != 0 {
 		options.DeployIngressController = false
 	}
 
@@ -443,6 +444,50 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			log.Warnf("Error deploying admission controller: %v", err)
 		} else {
 			log.Done("Deployed admission controller")
+		}
+	}
+
+	// Gatekeeper
+	if options.DeployGatekeeper {
+		log.StartWait("Deploying gatekeeper")
+
+		// Deploy gatekeeper
+		err := p.GrapqhlRequest(`
+			mutation ($clusterID:Int!, $key:String!) {
+				manager_deployGatekeeper(clusterID: $clusterID, key: $key)
+			}
+		`, map[string]interface{}{
+			"clusterID": clusterID,
+			"key":       options.Key,
+		}, &struct {
+			Deploy bool `json:"manager_deployGatekeeper"`
+		}{})
+		if err != nil {
+			log.Warnf("Error deploying gatekeeper: %v", err)
+		} else {
+			log.Done("Deployed gatekeeper")
+		}
+	}
+
+	// Gatekeeper rules
+	if options.DeployGatekeeperRules {
+		log.StartWait("Deploying gatekeeper rules")
+
+		// Deploy gatekeeper rules
+		err := p.GrapqhlRequest(`
+			mutation ($clusterID:Int!, $key:String!) {
+				manager_updateGatekeeperRules(clusterID: $clusterID, key: $key, enableAll: true)
+			}
+		`, map[string]interface{}{
+			"clusterID": clusterID,
+			"key":       options.Key,
+		}, &struct {
+			Deploy bool `json:"manager_updateGatekeeperRules"`
+		}{})
+		if err != nil {
+			log.Warnf("Error deploying gatekeeper rules: %v", err)
+		} else {
+			log.Done("Deployed gatekeeper rules")
 		}
 	}
 
