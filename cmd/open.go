@@ -22,6 +22,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -34,8 +35,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const openLocalHostOption = "via localhost (provides private access only on your computer via port-forwarding)"
-const openDomainOption = "via domain (makes your application publicly available via ingress)"
+const (
+	openLocalHostOption           = "via localhost (provides private access only on your computer via port-forwarding)"
+	openDomainOption              = "via domain (makes your application publicly available via ingress)"
+	allowedIngressHostsAnnotation = "devspace.cloud/allowed-hosts"
+)
 
 // OpenCmd holds the open cmd flags
 type OpenCmd struct {
@@ -177,17 +181,18 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 	// create ingress for public access via domain
 	if space != nil {
+		namespace, err := client.Client.CoreV1().Namespaces().Get(space.Namespace, metav1.GetOptions{})
+		if err != nil {
+			return errors.Wrap(err, "get space namespace")
+		}
+
 		// Check if domain there is a domain for the space
-		if len(space.Domains) == 0 {
-			return errors.Errorf("Space %s has no connected domain", space.Name)
+		if namespace.Annotations == nil || namespace.Annotations[allowedIngressHostsAnnotation] == "" {
+			return errors.Errorf("Space %s has no allowed domains", space.Name)
 		}
 
 		// Select domain
-		domains := make([]string, 0, len(space.Domains))
-		for _, domain := range space.Domains {
-			domains = append(domains, domain.URL)
-		}
-
+		domains := strings.Split(namespace.Annotations[allowedIngressHostsAnnotation], ",")
 		if len(domains) == 1 {
 			domain = domains[0]
 		} else {
@@ -198,6 +203,18 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
+		}
+
+		// Check if domain has wildcard
+		if strings.Index(domain, "*") != -1 {
+			replaceValue, err := survey.Question(&survey.QuestionOptions{
+				Question: fmt.Sprintf("Please enter a value for wildcard in domain '%s'", domain),
+			}, log.GetInstance())
+			if err != nil {
+				return err
+			}
+
+			domain = strings.Replace(domain, "*", replaceValue, -1)
 		}
 	} else {
 		domain, err = survey.Question(&survey.QuestionOptions{
@@ -318,9 +335,15 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	}
 
 	localPort := servicePort
-
 	if localPort < 1024 {
 		localPort = localPort + 8000
+	}
+
+	// Check if port is open
+	portOpen, _ := port.Check(localPort)
+	for portOpen == false {
+		localPort++
+		portOpen, _ = port.Check(localPort)
 	}
 
 	domain = "http://localhost:" + strconv.Itoa(localPort)

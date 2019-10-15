@@ -42,20 +42,13 @@ type SpaceCache struct {
 
 // Space holds the information about a space in the cloud
 type Space struct {
-	SpaceID      int            `yaml:"spaceID"`
-	Name         string         `yaml:"name"`
-	Namespace    string         `yaml:"namespace"`
-	Owner        *Owner         `yaml:"account"`
-	ProviderName string         `yaml:"providerName"`
-	Cluster      *Cluster       `yaml:"cluster"`
-	Created      string         `yaml:"created"`
-	Domains      []*SpaceDomain `yaml:"domains"`
-}
-
-// SpaceDomain holds the information about a space domain
-type SpaceDomain struct {
-	DomainID int    `yaml:"id" json:"id"`
-	URL      string `yaml:"url" json:"url"`
+	SpaceID      int      `yaml:"spaceID"`
+	Name         string   `yaml:"name"`
+	Namespace    string   `yaml:"namespace"`
+	Owner        *Owner   `yaml:"account"`
+	ProviderName string   `yaml:"providerName"`
+	Cluster      *Cluster `yaml:"cluster"`
+	Created      string   `yaml:"created"`
 }
 
 // ServiceAccount holds the information about a service account for a certain space
