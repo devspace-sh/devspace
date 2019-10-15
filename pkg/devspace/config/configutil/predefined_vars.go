@@ -198,48 +198,5 @@ func getPredefinedVar(name string, options *ConfigOptions) (bool, string, error)
 		return true, *variable.Value, nil
 	}
 
-	// Load space domain environment variable
-	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
-		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
-		if err != nil {
-			return false, "", errors.Errorf("Error parsing variable %s: %v", name, err)
-		}
-
-		kubeContext, err := kubeconfig.GetCurrentContext()
-		if err != nil {
-			return false, "", errors.Wrap(err, "get current context")
-		}
-		if options.KubeContext != "" {
-			kubeContext = options.KubeContext
-		}
-
-		spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
-		if err != nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-
-		cloudConfigData, err := cloudconfig.ParseProviderConfig()
-		if err != nil {
-			return false, "", errors.Wrap(err, "parse provider config")
-		}
-
-		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
-		if provider == nil {
-			return false, "", errors.Errorf("Couldn't find space provider: %s", providerName)
-		}
-		if provider.Spaces == nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-		if provider.Spaces[spaceID] == nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-
-		if len(provider.Spaces[spaceID].Space.Domains) <= idx-1 {
-			return false, "", errors.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(provider.Spaces[spaceID].Space.Domains), idx)
-		}
-
-		return true, provider.Spaces[spaceID].Space.Domains[idx-1].URL, nil
-	}
-
 	return false, "", nil
 }
