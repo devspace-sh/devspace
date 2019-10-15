@@ -476,7 +476,7 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 		// Deploy gatekeeper rules
 		err := p.GrapqhlRequest(`
 			mutation ($clusterID:Int!, $key:String!) {
-				manager_updateGatekeeperRules(clusterID: $clusterID, key: $key, enableAll: true)
+				manager_updateGatekeeperRules(clusterID: $clusterID, key: $key, enableAll: true, forceDeploy: true)
 			}
 		`, map[string]interface{}{
 			"clusterID": clusterID,
