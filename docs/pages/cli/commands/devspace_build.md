@@ -44,5 +44,3 @@ Builds all defined images and pushes them
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
-
-## See Also

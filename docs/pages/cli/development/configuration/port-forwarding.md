@@ -27,16 +27,19 @@ dev:
 ```
 
 Every port-forwarding configuration consists of two parts:
-- [Container Selection via `imageName` or `labelSelector`](#container-selection)
+- [Pod/Container Selection](#container-selection)
 - [Port Mapping via `port` and optionally via `remotePort`](#port-mapping-devports-forward)
 
 > The `port` option must be unique across your entire `ports` section, e.g. you can only use the value `8080` once for the `port` option in your `ports` section.
 
 
-## Container Selection
-The following config options are needed to determine the container to which the traffic should be forwarded.
+## Pod/Container Selection
+The following config options are needed to determine the pod to which the traffic should be forwarded:
+- [`imageName`](#devports-imagename)
+- [`labelSelector`](#devports-labelselector)
+- [`namespace`](#devports-namespace)
 
-> You can set **either** `labelSelector` **or** `imageName`. Both options can be combined with the optional `namespace` option if needed.
+> If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 
 
 ### `dev.ports[*].imageName`
@@ -44,9 +47,7 @@ The `imageName` option expects a string with the name of an image from the `imag
 
 > Using `imageName` is not possible if multiple deployments use the same image that belongs to this `imageName` referencing the `images` section of the `devspace.yaml`.
 
-> You cannot use the `imageName` option in combination with `labelSelector`.
-
-#### Example: Select Container by Image
+#### Example: Select Container by Image Name
 ```yaml
 images:
   backend:
@@ -84,8 +85,6 @@ In consequence, the following port-forwarding processes would be started when us
 
 ### `dev.ports[*].labelSelector`
 The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
-
-> You cannot use the `labelSelector` option in combination with `imageName`.
 
 #### Example: Select Container by Label
 ```yaml

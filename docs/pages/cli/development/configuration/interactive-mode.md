@@ -92,16 +92,14 @@ dev:
 
 
 ## `dev.interactive.terminal`
-The `terminal` option expects an objects having the following container selection properties:
-- `imageName` to select a container based on an image specified in `images` (cannot be used in combiation with `labelSelector`)
-- `labelSelector` to select a pod based a Kubernetes label selector (cannot be used in combiation with `imageName`)
-- `containerName` to select a container based on its name (optional when `labelSelector` is used)
+The `terminal` option expects an objects having the following properties:
+- `imageName` to select a container based on an image specified in `images`
+- `labelSelector` to select a pod based a Kubernetes label selector
+- `containerName` to select a container based on its name (optional, useful if pod has multiple containers)
 - `namespace` to select a container from a namespace different than the default namespace of the current kube-context
-
-> You can set **either** `labelSelector` (optionally in combiantion with `containerName`) **or** `imageName`. Both options can be combined with the optional `namespace` option if needed.
-
-Additionally, the object expected in `terminal` has the following non-selection property:
 - `command` defines a command to run when starting the terminal session (default: `/bin/bash` with fallback `/bin/sh`)
+
+> The first four options are used to select the appropriate pod / container. If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 
 > If `command` is a non-interactive command that terminates, DevSpace will run the command and exit after the command has terminated.
 

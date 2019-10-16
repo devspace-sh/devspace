@@ -29,7 +29,7 @@ dev:
 ```
 
 Every sync configuration consists of two essential parts:
-- [Container Selection via `imageName` or `labelSelector`](#container-selection)
+- [Pod/Container Selection](#container-selection)
 - [Sync Path Mapping via `localSubPath` and `containerPath`](#sync-path-mapping)
 
 Additionally, there are several advanced options:
@@ -37,20 +37,25 @@ Additionally, there are several advanced options:
 - [Configuring Initial Sync via `waitInitialSync`](#initial-sync)
 - [Configuring Network Bandwith Limits via `bandwidthLimits`](#network-bandwidth-limits)
 
-## Container Selection
-The following config options are needed to determine the container which the file synchronization should be established.
 
-> You can set **either** `labelSelector` (optionally in combination with `containerName`) **or** `imageName`. Both options can be combined with the optional `namespace` option if needed.
+## Pod/Container Selection
+The following config options are needed to determine the container which the file synchronization should be established:
+- [`imageName`](#devsync-imagename)
+- [`labelSelector`](#devsync-labelselector)
+- [`containerName`](#devsync-containername)
+- [`namespace`](#devsync-namespace)
+
+> If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 
 
 ### `dev.sync[*].imageName`
 The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.
 
-> Using `imageName` is not possible if multiple deployments use the same image that belongs to this `imageName` referencing the `images` section of the `devspace.yaml`.
+> If `imageName` is specified in any of the sync configurations, `devspace dev` will **not** rebuild this image because DevSpace assumes that instead of rebuilding the image, the user wants to use the much faster file synchronization. If you still want to force rebuilding all images, run `devspace dev -b`.
 
-> You cannot use the `imageName` option in combination with `labelSelector`.
+> When multiple `deployments` in your `devspace.yaml` use the same `image`, you generally want to select the right pod using the [`labelSelector`](#devsync-labelselector) but you should additionally define the `imageName` option if you want to enable faster image building (see note above).
 
-#### Example: Select Container by Image
+#### Example: Select Container by Image Name
 ```yaml
 images:
   backend:
@@ -92,7 +97,7 @@ In consequence, the following sync processes would be started when using the abo
 ### `dev.sync[*].labelSelector`
 The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
 
-> You cannot use the `labelSelector` option in combination with `imageName`.
+> If you are using the `labelSelector` option, you may want to additionally specify the [`imageName` option](#devsync-imagename) to speed up the image building process.
 
 #### Example: Select Container by Label
 ```yaml
@@ -123,10 +128,11 @@ dev:
 - The `labelSelector` would select the pod created for the component deployment `app-backend`.
 - Because the selected pod has two containers, we also need to specify the `containerName` option which defines the container that should be used for the file synchronization.
 
+
 ### `dev.sync[*].containerName`
 The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using `labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
 
-> The `containerName` option is not required when the pod you are selecting using `labelSelector` has only one container.
+> The `containerName` option is not required if the pod you are selecting using `imageName` or `labelSelector` has only one container.
 
 #### Example
 **See "[Example: Select Container by Label](#example-select-container-by-label)"**

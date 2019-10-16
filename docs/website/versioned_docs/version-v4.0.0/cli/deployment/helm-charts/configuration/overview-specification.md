@@ -309,7 +309,7 @@ helm install --name database stable/mysql --tiller-namespace=my-tiller-ns
 ---
 ## Useful Commands
 
-### `devspace add deployment [NAME] --chart="./path/to/my/chart"`
+### `devspace add deployment [NAME] --chart=./path/to/my/chart`
 If you built your own Helm chart and it is located inside your project directory, you can simply add it as a deployment using the following command:
 ```bash
 devspace add deployment [deployment-name] --chart="./path/to/my/chart"
@@ -317,7 +317,7 @@ devspace add deployment [deployment-name] --chart="./path/to/my/chart"
 
 > Running `devspace add deployment` only adds a deployment to `devspace.yaml` but does not actually deploy anything. To deploy the newly added deployment, run `devspace deploy` or `devspace dev`.
 
-### `devspace add deployment [deployment-name] --chart="stable/[CHART]"`
+### `devspace add deployment [deployment-name] --chart=stable/[CHART]`
 If you want to deploy a Helm chart from a chart repository, you can simply add it as shown in this example:
 ```bash
 devspace add deployment [deployment-name] --chart="stable/mysql"

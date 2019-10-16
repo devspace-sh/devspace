@@ -506,7 +506,7 @@ dependencies:           # Tells DevSpace which related projects should be deploy
   - {dependency-2}      # Could point to a path on the local filesystem
   ...
 
-env:                    # Make your config dynamic and easier to share (ask a question if env var is not defined)
+vars:                   # Make your config dynamic and easier to share (ask a question if env var is not defined)
   - name: DOMAIN_NAME   # Will be used as ${DOMAIN_NAME} in config
     question: Which hostname should we use for the ingress?
 

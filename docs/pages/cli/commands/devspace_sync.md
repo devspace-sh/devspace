@@ -30,15 +30,16 @@ devspace sync --container-path=/my-path
 ## Options
 
 ```
-  -c, --container string        Container name within pod where to execute command
-      --container-path string   Container path to use (Default is working directory)
-  -e, --exclude strings         Exclude directory from sync
-  -h, --help                    help for sync
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --local-path string       Local path to use (Default is current directory (default ".")
-      --pick                    Select a pod
-      --pod string              Pod to open a shell to
-      --verbose                 Shows every file that is synced
+  -c, --container string           Container name within pod where to execute command
+      --container-path string      Container path to use (Default is working directory)
+      --download-on-initial-sync   Downloads all locally non existing remote files in the beginning (default true)
+  -e, --exclude strings            Exclude directory from sync
+  -h, --help                       help for sync
+  -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
+      --local-path string          Local path to use (Default is current directory (default ".")
+      --pick                       Select a pod
+      --pod string                 Pod to open a shell to
+      --verbose                    Shows every file that is synced
 ```
 
 ### Options inherited from parent commands
@@ -53,5 +54,3 @@ devspace sync --container-path=/my-path
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
-
-## See Also
