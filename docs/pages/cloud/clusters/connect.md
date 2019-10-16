@@ -2,7 +2,7 @@
 title: Connect external clusters
 ---
 
-DevSpace Cloud provides the option to connect existing Kubernetes clusters for free. This will enable yout to create [spaces](../../cloud/spaces/what-are-spaces) in any kubernetes cluster. After connecting a cluster, you will be able to:
+DevSpace Cloud provides the option to connect existing Kubernetes clusters for free. This will enable you to create [spaces](../../cloud/spaces/what-are-spaces) in any kubernetes cluster. After connecting a cluster, you will be able to:
 - create [spaces](../../cloud/spaces/what-are-spaces) in that cluster
 - add other [users](../../cloud/clusters/users) to the cluster (by sending an invite link)
 - set [Space limits](../../cloud/spaces/resource-limits) for the cluster, users and spaces
