@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -15,11 +14,15 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -30,6 +33,7 @@ type purgeTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -106,6 +110,92 @@ func TestPurge(t *testing.T) {
 			},
 			expectedErr: "create kube client: RawConfigError",
 		},
+		purgeTestCase{
+			name:           "Cloud Space can't be resumed",
+			fakeConfig:     &latest.Config{},
+			fakeKubeClient: &kubectl.Client{},
+			fakeKubeConfig: &customKubeConfig{},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+		},
+		purgeTestCase{
+			name: "Cyclic dependency",
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+				Dependencies: []*latest.DependencyConfig{
+					&latest.DependencyConfig{
+						Source: &latest.SourceConfig{
+							Path: "dependency1",
+						},
+					},
+				},
+			},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			files: map[string]interface{}{
+				"devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "dependency1",
+							},
+						},
+					},
+				},
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "..",
+							},
+						},
+					},
+				},
+			},
+			deploymentsFlag:       " ",
+			purgeDependenciesFlag: true,
+			expectedOutput:        fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nInfo Start resolving dependencies\nError %s", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), fmt.Sprintf("Error purging dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b"))),
+		},
+		purgeTestCase{
+			name:       "generated.yaml is a dir",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"minikube": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			files: map[string]interface{}{
+				".devspace/generated.yaml/someFile": "",
+			},
+			globalFlags: flags.GlobalFlags{
+				Namespace:   "someNamespace",
+				KubeContext: "someKubeContext",
+			},
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nError Error saving generated.yaml: open %s: is a directory", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), filepath.Join(dir, ".devspace/generated.yaml")),
+		},
 	}
 
 	log.SetInstance(&testLogger{
@@ -120,16 +210,6 @@ func TestPurge(t *testing.T) {
 func testPurge(t *testing.T, testCase purgeTestCase) {
 	logOutput = ""
 
-	defer func() {
-		for path := range testCase.files {
-			removeTask := strings.Split(path, "/")[0]
-			err := os.RemoveAll(removeTask)
-			assert.NilError(t, err, "Error cleaning up folder in testCase %s", testCase.name)
-		}
-		err := os.RemoveAll(log.Logdir)
-		assert.NilError(t, err, "Error cleaning up folder in testCase %s", testCase.name)
-	}()
-
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
 	}
@@ -143,9 +223,9 @@ func testPurge(t *testing.T, testCase purgeTestCase) {
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
-	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -169,4 +249,10 @@ func testPurge(t *testing.T, testCase purgeTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
 	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+
+	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
+		os.RemoveAll(path)
+		return nil
+	})
+	assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)
 }

@@ -35,6 +35,7 @@ type runTestCase struct {
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
 	answers          []string
+	args             []string
 
 	globalFlags flags.GlobalFlags
 
@@ -126,6 +127,63 @@ func TestRun(t *testing.T) {
 			},
 			expectedErr: fmt.Sprintf("mkdir %s: %s", filepath.Join(dir, ".devspace"), parentDirIsFileErr),
 		},
+		runTestCase{
+			name: "empty command",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+				},
+			},
+			args:        []string{""},
+			expectedErr: "execute command: Couldn't find command '' in devspace.yaml",
+		},
+		runTestCase{
+			name: "shell error",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Commands: []*latest.CommandConfig{
+						&latest.CommandConfig{
+							Name:    "exit",
+							Command: "exit",
+						},
+					},
+				},
+			},
+			args:        []string{"exit", "1"},
+			expectedErr: "exit code 1",
+		},
+		runTestCase{
+			name: "command error",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Commands: []*latest.CommandConfig{
+						&latest.CommandConfig{
+							Name:    "fail",
+							Command: "ThisCommandDoesntExist",
+						},
+					},
+				},
+			},
+			args:        []string{"fail"},
+			expectedErr: "exit code 127",
+		},
+		runTestCase{
+			name: "successful run",
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Commands: []*latest.CommandConfig{
+						&latest.CommandConfig{
+							Name:    "exit",
+							Command: "exit",
+						},
+					},
+				},
+			},
+			args: []string{"exit", "0"},
+		},
 	}
 
 	log.SetInstance(&testLogger{
@@ -176,7 +234,7 @@ func testRun(t *testing.T, testCase runTestCase) {
 
 	err = (&RunCmd{
 		GlobalFlags: &testCase.globalFlags,
-	}).RunRun(nil, []string{})
+	}).RunRun(nil, testCase.args)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
