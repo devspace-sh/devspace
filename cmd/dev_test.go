@@ -83,8 +83,8 @@ func TestDev(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	_, err = os.Open("doesn'tExist")
-	fileNotFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
+	_, err = os.Stat("doesn'tExist")
+	fileNotFoundError := strings.ReplaceAll(err.Error(), "doesn'tExist", "%s")
 
 	defer func() {
 		//Delete temp folder
@@ -139,7 +139,7 @@ func TestDev(t *testing.T) {
 			name:           "No devspace.yaml",
 			fakeConfig:     &latest.Config{},
 			fakeKubeClient: &kubectl.Client{},
-			expectedErr:    fmt.Sprintf("Couldn't find 'devspace.yaml': CreateFile devspace.yaml: %s", fileNotFoundError),
+			expectedErr:    fmt.Sprintf("Couldn't find 'devspace.yaml': "+fileNotFoundError, "devspace.yaml"),
 			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
