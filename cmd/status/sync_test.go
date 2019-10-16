@@ -9,15 +9,12 @@ import (
 	"testing"
 	"time"
 
-	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var logOutput string
@@ -66,13 +63,7 @@ func (t testLogger) Write(msg []byte) (int, error) {
 type statusSyncTestCase struct {
 	name string
 
-	args             []string
-	answers          []string
-	graphQLResponses []interface{}
-	files            map[string]interface{}
-	providerList     []*cloudlatest.Provider
-	fakeKubeConfig   clientcmd.ClientConfig
-	fakeKubeClient   *kubectl.Client
+	files map[string]interface{}
 
 	expectedOutput string
 	expectedErr    string
@@ -220,10 +211,7 @@ func testRunStatusSync(t *testing.T, testCase statusSyncTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	if len(testCase.args) == 0 {
-		testCase.args = []string{""}
-	}
-	err := (&syncCmd{}).RunStatusSync(nil, testCase.args)
+	err := (&syncCmd{}).RunStatusSync(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
