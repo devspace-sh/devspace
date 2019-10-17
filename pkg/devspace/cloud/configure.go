@@ -78,7 +78,7 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 	}
 
 	// Return provider config
-	return &Provider{*provider}, nil
+	return &Provider{*provider, log}, nil
 }
 
 // GetKubeContextNameFromSpace returns the kube context name for a space

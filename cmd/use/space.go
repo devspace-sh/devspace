@@ -115,7 +115,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "parse space id")
 		}
 
-		return provider.PrintToken(spaceID, log.GetInstance())
+		return provider.PrintToken(spaceID)
 	}
 
 	log.StartWait("Retrieving Space details")
@@ -146,7 +146,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space, log.GetInstance())
+	serviceAccount, err := provider.GetServiceAccount(space)
 	if err != nil {
 		return errors.Errorf("Error retrieving space service account: %v", err)
 	}

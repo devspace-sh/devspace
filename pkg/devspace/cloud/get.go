@@ -6,7 +6,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -226,8 +225,8 @@ func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (p *Provider) GetServiceAccount(space *latest.Space, log log.Logger) (*latest.ServiceAccount, error) {
-	key, err := p.GetClusterKey(space.Cluster, log)
+func (p *Provider) GetServiceAccount(space *latest.Space) (*latest.ServiceAccount, error) {
+	key, err := p.GetClusterKey(space.Cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "get cluster key")
 	}

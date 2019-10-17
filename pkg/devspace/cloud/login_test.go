@@ -28,6 +28,7 @@ func TestGetToken(t *testing.T) {
 			Key:   "someKey",
 			Token: encodedToken,
 		},
+		log.Discard,
 	}
 	token, err := provider.GetToken()
 	assert.NilError(t, err, "Error getting predefined token")

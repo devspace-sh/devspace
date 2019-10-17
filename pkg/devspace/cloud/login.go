@@ -75,6 +75,7 @@ func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, l
 
 	provider := &Provider{
 		*p,
+		log,
 	}
 	if key != nil {
 		provider.Token = ""
@@ -89,7 +90,7 @@ func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, l
 		provider.Token = ""
 		provider.Key = ""
 
-		err := provider.Login(log)
+		err := provider.Login()
 		if err != nil {
 			return errors.Wrap(err, "Login")
 		}
@@ -98,7 +99,7 @@ func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, l
 	log.Donef("Successfully logged into %s", provider.Name)
 
 	// Login into registries
-	err := provider.LoginIntoRegistries(log)
+	err := provider.LoginIntoRegistries()
 	if err != nil {
 		log.Warnf("Error logging into docker registries: %v", err)
 	}
@@ -127,11 +128,12 @@ func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log
 
 	provider := &Provider{
 		*p,
+		log,
 	}
 	if provider.Key == "" {
 		provider.Token = ""
 
-		err := provider.Login(log)
+		err := provider.Login()
 		if err != nil {
 			return errors.Wrap(err, "ensure logged in")
 		}
@@ -139,7 +141,7 @@ func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log
 		log.Donef("Successfully logged into %s", provider.Name)
 
 		// Login into registries
-		err = provider.LoginIntoRegistries(log)
+		err = provider.LoginIntoRegistries()
 		if err != nil {
 			log.Warnf("Error logging into docker registries: %v", err)
 		}
@@ -154,7 +156,7 @@ func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log
 }
 
 // Login logs the user into DevSpace Cloud
-func (p *Provider) Login(log log.Logger) error {
+func (p *Provider) Login() error {
 	var (
 		url        = p.Host + LoginEndpoint
 		ctx        = context.Background()
@@ -162,36 +164,36 @@ func (p *Provider) Login(log log.Logger) error {
 	)
 	var key string
 
-	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel, log)
+	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel, p.Log)
 	err := open.Run(url)
 	if err != nil {
-		log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host+"/settings/access-keys")
+		p.Log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host+"/settings/access-keys")
 
 		key, err = survey.Question(&survey.QuestionOptions{
 			Question:   "5. Enter the access key here:",
 			IsPassword: true,
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return err
 		}
 
 		key = strings.TrimSpace(key)
 
-		log.WriteString("\n")
+		p.Log.WriteString("\n")
 
 		providerConfig, err := config.ParseProviderConfig()
 		if err != nil {
 			return err
 		}
 
-		err = ReLogin(providerConfig, p.Name, &key, log)
+		err = ReLogin(providerConfig, p.Name, &key, p.Log)
 		if err != nil {
 			return errors.Wrap(err, "login")
 		}
 	} else {
-		log.Infof("If the browser does not open automatically, please navigate to %s", url)
-		log.StartWait("Logging into cloud provider...")
-		defer log.StopWait()
+		p.Log.Infof("If the browser does not open automatically, please navigate to %s", url)
+		p.Log.StartWait("Logging into cloud provider...")
+		defer p.Log.StopWait()
 
 		key = <-keyChannel
 	}

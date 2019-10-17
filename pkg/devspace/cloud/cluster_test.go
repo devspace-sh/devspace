@@ -45,18 +45,18 @@ func (t testLogger) StopWait() {
 }
 
 func TestConnectCluster(t *testing.T) {
-	provider := &Provider{}
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	options := &ConnectClusterOptions{
 		ClusterName: "#",
 	}
-	err := provider.ConnectCluster(options, log.GetInstance())
+	err := provider.ConnectCluster(options)
 	assert.Error(t, err, "Cluster name # can only contain letters, numbers and dashes (-)", "Wrong or no error when connecting cluster with wrong clustername")
 
 	options.ClusterName = ""
 	survey.SetNextAnswer("aaa")
 	options.KubeContext = "invalidContext"
 
-	err = provider.ConnectCluster(options, log.GetInstance())
+	err = provider.ConnectCluster(options)
 	assert.Error(t, err, "new kubectl client: Error loading kube config, context 'invalidContext' doesn't exist", "Wrong or no error when connecting cluster with invalid context")
 }
 
@@ -67,11 +67,11 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}
-	err := defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
+	err := defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node in cluster", "Wrong or no error when trying to get the spacedomain of the default cluster from empty setting")
 
 	kubeClient.Client.CoreV1().Nodes().Create(&k8sv1.Node{})
-	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
+	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
 	assert.Error(t, err, "Couldn't find a node with a valid external ip in cluster, make sure your nodes are accessable from the outside", "Wrong or no error when trying to get the spacedomain of the default cluster without any ip")
 
 	kubeClient.Client.CoreV1().Nodes().Update(&k8sv1.Node{
@@ -84,11 +84,11 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 			},
 		},
 	})
-	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, true, 0, "")
+	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get the spacedomain of the default cluster without a token")
 
 	waitTimeout = time.Second * 8
-	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, false, 0, "")
+	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, false, 0, "")
 	assert.Error(t, err, "Loadbalancer didn't receive a valid ip in time. Skipping configuration of default cluster space url", "Wrong or no error when trying to get the spacedomain of the default cluster without services")
 
 	kubeClient.Client.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&k8sv1.Service{
@@ -106,25 +106,25 @@ func TestDefaultClusterSpaceDomain(t *testing.T) {
 			},
 		},
 	})
-	err = defaultClusterSpaceDomain(&Provider{}, kubeClient, false, 0, "")
+	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, false, 0, "")
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get the spacedomain of the default cluster without a token")
 }
 
 func TestDeleteClusterUnexported(t *testing.T) {
-	provider := &Provider{}
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	err := deleteCluster(provider, 0, "")
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a cluster without a token")
 }
 
 func TestSpecifyDomain(t *testing.T) {
-	provider := &Provider{}
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	survey.SetNextAnswer("some.Domain")
-	err := provider.specifyDomain(0, &ConnectClusterOptions{}, log.GetInstance())
+	err := provider.specifyDomain(0, &ConnectClusterOptions{})
 	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 
 func TestInitCore(t *testing.T) {
-	provider := &Provider{}
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	err := provider.initCore(0, "", true)
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to init the core without a token")
 }
@@ -144,7 +144,8 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 		},
 	})
 
-	_, _, err := getServiceAccountCredentials(kubeClient)
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
+	_, _, err := getServiceAccountCredentials(provider, kubeClient)
 	assert.Error(t, err, "secrets \"secret\" not found", "Wrong or no error when getting non-existent service account credentials")
 
 	flag := []byte("flag")
@@ -157,7 +158,7 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 			"ca.crt": flag,
 		},
 	})
-	returnedToken, cert, err := getServiceAccountCredentials(kubeClient)
+	returnedToken, cert, err := getServiceAccountCredentials(provider, kubeClient)
 	assert.NilError(t, err, "Error getting service account credentials")
 	assert.Equal(t, string(flag), string(returnedToken), "Wrong token returned")
 	decodedCert, err := base64.StdEncoding.DecodeString(cert)
@@ -201,7 +202,7 @@ func TestGetKey(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		returnedKey, err := getKey(provider, testCase.forceQuestionParam, log.GetInstance())
+		returnedKey, err := getKey(provider, testCase.forceQuestionParam)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
@@ -238,7 +239,8 @@ func TestCheckResources(t *testing.T) {
 			kubeClient.CoreV1().Nodes().Create(node)
 		}
 
-		_, err := checkResources(kubeClient)
+		provider := &Provider{latest.Provider{}, log.GetInstance()}
+		_, err := checkResources(provider, kubeClient)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error checking resources in testCase %s", testCase.name)
 		} else {
@@ -272,7 +274,8 @@ StopWait`,
 		logOutput = ""
 		log.SetInstance(&testLogger{})
 
-		err := initializeNamespace(kubeClient)
+		provider := &Provider{latest.Provider{}, log.GetInstance()}
+		err := initializeNamespace(provider, kubeClient)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error initializing namespace in testCase %s", testCase.name)

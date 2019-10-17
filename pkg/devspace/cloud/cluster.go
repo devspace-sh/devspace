@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -68,13 +67,13 @@ type clusterResources struct {
 }
 
 // ConnectCluster connects a new cluster to DevSpace Cloud
-func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger) error {
+func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	var (
 		client *kubectl.Client
 	)
 
 	// Get cluster name
-	clusterName, err := getClusterName(options.ClusterName, log)
+	clusterName, err := getClusterName(p, options.ClusterName)
 	if err != nil {
 		return err
 	}
@@ -87,7 +86,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 		}
 
 		// Get kube context to use
-		client, err = kubectl.NewClientBySelect(allowLocalClusters, true, log)
+		client, err = kubectl.NewClientBySelect(allowLocalClusters, true, p.Log)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
@@ -100,18 +99,18 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	}
 
 	// Check available cluster resources
-	availableResources, err := checkResources(client.Client)
+	availableResources, err := checkResources(p, client.Client)
 	if err != nil {
 		return errors.Wrap(err, "check resource availability")
 	}
 
 	// Initialize namespace
-	err = initializeNamespace(client.Client)
+	err = initializeNamespace(p, client.Client)
 	if err != nil {
 		return errors.Wrap(err, "init namespace")
 	}
 
-	token, caCert, err := getServiceAccountCredentials(client)
+	token, caCert, err := getServiceAccountCredentials(p, client)
 	if err != nil {
 		return errors.Wrap(err, "get service account credentials")
 	}
@@ -128,7 +127,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	encryptedToken := token
 	if needKey {
 		if options.Key == "" {
-			options.Key, err = getKey(p, false, log)
+			options.Key, err = getKey(p, false)
 			if err != nil {
 				return errors.Wrap(err, "get key")
 			}
@@ -143,8 +142,8 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	}
 
 	// Create cluster remotely
-	log.StartWait("Initialize cluster")
-	defer log.StopWait()
+	p.Log.StartWait("Initialize cluster")
+	defer p.Log.StopWait()
 	var clusterID int
 	if options.Public {
 		clusterID, err = p.CreatePublicCluster(clusterName, client.RestConfig.Host, caCert, string(encryptedToken))
@@ -157,7 +156,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 			return errors.Wrap(err, "create cluster")
 		}
 	}
-	log.StopWait()
+	p.Log.StopWait()
 
 	// Save key
 	if needKey {
@@ -178,7 +177,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	}
 
 	// Deploy admission controller, ingress controller and cert manager
-	err = p.deployServices(client, clusterID, availableResources, options, log)
+	err = p.deployServices(client, clusterID, availableResources, options)
 	if err != nil {
 		return err
 	}
@@ -186,14 +185,14 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 	// Set space domain
 	if options.UseDomain {
 		// Set cluster domain to use for spaces
-		err = p.specifyDomain(clusterID, options, log)
+		err = p.specifyDomain(clusterID, options)
 		if err != nil {
 			return err
 		}
 	} else if options.DeployIngressController {
 		err = defaultClusterSpaceDomain(p, client, *options.UseHostNetwork, clusterID, options.Key)
 		if err != nil {
-			log.Warnf("Couldn't configure default cluster space domain: %v", err)
+			p.Log.Warnf("Couldn't configure default cluster space domain: %v", err)
 		}
 	}
 
@@ -202,7 +201,7 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions, log log.Logger
 		url := fmt.Sprintf("%s/clusters/%d/overview", p.Host, clusterID)
 		err = open.Start(url)
 		if err != nil {
-			log.Warnf("Couldn't open the url '%s': %v", url, err)
+			p.Log.Warnf("Couldn't open the url '%s': %v", url, err)
 		}
 	}
 
@@ -213,8 +212,8 @@ var waitTimeout = time.Minute * 5
 
 func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwork bool, clusterID int, key string) error {
 	if useHostNetwork {
-		log.StartWait("Waiting for loadbalancer to get an IP address")
-		defer log.StopWait()
+		p.Log.StartWait("Waiting for loadbalancer to get an IP address")
+		defer p.Log.StopWait()
 
 		nodeList, err := client.Client.CoreV1().Nodes().List(metav1.ListOptions{})
 		if err != nil {
@@ -241,8 +240,8 @@ func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwo
 			return errors.New("Couldn't find a node with a valid external IP address in cluster, make sure your nodes are accessable from the outside")
 		}
 	} else {
-		log.StartWait("Waiting for loadbalancer to get an IP address. This may take several minutes")
-		defer log.StopWait()
+		p.Log.StartWait("Waiting for loadbalancer to get an IP address. This may take several minutes")
+		defer p.Log.StopWait()
 
 		now := time.Now()
 
@@ -277,8 +276,8 @@ func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwo
 	}
 
 	// Do the graphql request
-	log.StopWait()
-	log.StartWait("Configure cluster space domain")
+	p.Log.StopWait()
+	p.Log.StartWait("Configure cluster space domain")
 
 	output := struct {
 		UseDefaultClusterDomain string `json:"manager_useDefaultClusterDomain"`
@@ -296,7 +295,7 @@ func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwo
 		return err
 	}
 	if output.UseDefaultClusterDomain != "" {
-		log.Donef("The domain '%s' has been successfully configured for your clusters spaces and now points to your clusters ingress controller. The dns change however can take several minutes to take affect", ansi.Color("*."+output.UseDefaultClusterDomain, "white+b"))
+		p.Log.Donef("The domain '%s' has been successfully configured for your clusters spaces and now points to your clusters ingress controller. The dns change however can take several minutes to take affect", ansi.Color("*."+output.UseDefaultClusterDomain, "white+b"))
 	}
 
 	return nil
@@ -304,8 +303,8 @@ func defaultClusterSpaceDomain(p *Provider, client *kubectl.Client, useHostNetwo
 
 // DeleteCluster deletes an cluster
 func deleteCluster(p *Provider, clusterID int, key string) error {
-	log.StartWait("Rolling back")
-	defer log.StopWait()
+	p.Log.StartWait("Rolling back")
+	defer p.Log.StopWait()
 
 	err := p.GrapqhlRequest(`
 		mutation($key:String!,$clusterID:Int!,$deleteServices:Boolean!,$deleteKubeContexts:Boolean!){
@@ -331,7 +330,7 @@ func deleteCluster(p *Provider, clusterID int, key string) error {
 	return nil
 }
 
-func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions, log log.Logger) error {
+func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions) error {
 	if options.Domain == "" {
 		var err error
 
@@ -339,14 +338,14 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions, 
 			Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
 			ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
 			ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.StartWait("Updating domain name")
-	defer log.StopWait()
+	p.Log.StartWait("Updating domain name")
+	defer p.Log.StopWait()
 
 	// Update cluster domain
 	err := p.GrapqhlRequest(`
@@ -367,18 +366,18 @@ func (p *Provider) specifyDomain(clusterID int, options *ConnectClusterOptions, 
 		return errors.Wrap(err, "update cluster domain")
 	}
 
-	log.StopWait()
+	p.Log.StopWait()
 	if *options.UseHostNetwork == false {
-		log.Donef("Please create an A dns record for '*.%s' that points to external IP address of the loadbalancer service 'devspace-cloud/nginx-ingress-controller'.\n Run `%s` to view the service", options.Domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
+		p.Log.Donef("Please create an A dns record for '*.%s' that points to external IP address of the loadbalancer service 'devspace-cloud/nginx-ingress-controller'.\n Run `%s` to view the service", options.Domain, ansi.Color("kubectl get svc nginx-ingress-controller -n devspace-cloud", "white+b"))
 	} else {
-		log.Donef("Please create an A dns record for '*.%s' that points to the external IP address of one of your cluster nodes.\n Run `%s` to view your cluster nodes and their IP adresses. \n Please make also sure the ports 80 and 443 can be accessed on these nodes from the internet", options.Domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
+		p.Log.Donef("Please create an A dns record for '*.%s' that points to the external IP address of one of your cluster nodes.\n Run `%s` to view your cluster nodes and their IP adresses. \n Please make also sure the ports 80 and 443 can be accessed on these nodes from the internet", options.Domain, ansi.Color("kubectl get nodes -o wide", "white+b"))
 	}
 
 	return nil
 }
 
-func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions, log log.Logger) error {
-	defer log.StopWait()
+func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availableResources *clusterResources, options *ConnectClusterOptions) error {
+	defer p.Log.StopWait()
 
 	// Check if devspace-cloud is deployed in the namespace
 	configmaps, err := client.Client.CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
@@ -401,7 +400,7 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 					loadBalancerOption,
 					hostNetworkOption,
 				},
-			}, log)
+			}, p.Log)
 			if err != nil {
 				return err
 			}
@@ -409,7 +408,7 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			options.UseHostNetwork = ptr.Bool(useHostNetwork == hostNetworkOption)
 		}
 
-		log.StartWait("Deploying ingress controller")
+		p.Log.StartWait("Deploying ingress controller")
 
 		// Deploy ingress controller
 		err := p.GrapqhlRequest(`
@@ -431,12 +430,12 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			return errors.Wrap(err, "deploy ingress controller")
 		}
 
-		log.Done("Deployed ingress controller")
+		p.Log.Done("Deployed ingress controller")
 	}
 
 	// Admission controller
 	if options.DeployAdmissionController {
-		log.StartWait("Deploying admission controller")
+		p.Log.StartWait("Deploying admission controller")
 
 		// Deploy admission controller
 		err := p.GrapqhlRequest(`
@@ -453,15 +452,15 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_deployAdmissionController"`
 		}{})
 		if err != nil {
-			log.Warnf("Error deploying admission controller: %v", err)
+			p.Log.Warnf("Error deploying admission controller: %v", err)
 		} else {
-			log.Done("Deployed admission controller")
+			p.Log.Done("Deployed admission controller")
 		}
 	}
 
 	// Gatekeeper
 	if options.DeployGatekeeper {
-		log.StartWait("Deploying gatekeeper")
+		p.Log.StartWait("Deploying gatekeeper")
 
 		// Deploy gatekeeper
 		err := p.GrapqhlRequest(`
@@ -475,15 +474,15 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_deployGatekeeper"`
 		}{})
 		if err != nil {
-			log.Warnf("Error deploying gatekeeper: %v", err)
+			p.Log.Warnf("Error deploying gatekeeper: %v", err)
 		} else {
-			log.Done("Deployed gatekeeper")
+			p.Log.Done("Deployed gatekeeper")
 		}
 	}
 
 	// Gatekeeper rules
 	if options.DeployGatekeeperRules {
-		log.StartWait("Deploying gatekeeper rules")
+		p.Log.StartWait("Deploying gatekeeper rules")
 
 		// Deploy gatekeeper rules
 		err := p.GrapqhlRequest(`
@@ -497,15 +496,15 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_updateGatekeeperRules"`
 		}{})
 		if err != nil {
-			log.Warnf("Error deploying gatekeeper rules: %v", err)
+			p.Log.Warnf("Error deploying gatekeeper rules: %v", err)
 		} else {
-			log.Done("Deployed gatekeeper rules")
+			p.Log.Done("Deployed gatekeeper rules")
 		}
 	}
 
 	// Cert manager
 	if availableResources.CertManager == false && options.DeployCertManager {
-		log.StartWait("Deploying cert manager")
+		p.Log.StartWait("Deploying cert manager")
 
 		// Deploy cert manager
 		err := p.GrapqhlRequest(`
@@ -522,9 +521,9 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 			Deploy bool `json:"manager_deployCertManager"`
 		}{})
 		if err != nil {
-			log.Warnf("Error deploying cert manager: %v", err)
+			p.Log.Warnf("Error deploying cert manager: %v", err)
 		} else {
-			log.Done("Deployed cert manager")
+			p.Log.Done("Deployed cert manager")
 		}
 	}
 
@@ -532,8 +531,8 @@ func (p *Provider) deployServices(client *kubectl.Client, clusterID int, availab
 }
 
 func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) error {
-	log.StartWait("Initializing Cluster")
-	defer log.StopWait()
+	p.Log.StartWait("Initializing Cluster")
+	defer p.Log.StopWait()
 
 	// Do the request
 	err := p.GrapqhlRequest(`
@@ -555,7 +554,7 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 		return err
 	}
 
-	log.Done("Initialized cluster")
+	p.Log.Done("Initialized cluster")
 	return nil
 }
 
@@ -563,8 +562,8 @@ func (p *Provider) initCore(clusterID int, key string, enablePodPolicy bool) err
 const SettingDefaultClusterEncryptToken = "DEFAULT_CLUSTER_ENCRYPT_TOKEN"
 
 func (p *Provider) needKey() (bool, error) {
-	log.StartWait("Retrieving cloud settings")
-	defer log.StopWait()
+	p.Log.StartWait("Retrieving cloud settings")
+	defer p.Log.StopWait()
 
 	// Response struct
 	response := struct {
@@ -597,9 +596,9 @@ func (p *Provider) needKey() (bool, error) {
 	return response.Settings[0].ID == SettingDefaultClusterEncryptToken && response.Settings[0].Value == "true", nil
 }
 
-func getServiceAccountCredentials(client *kubectl.Client) ([]byte, string, error) {
-	log.StartWait("Retrieving service account credentials")
-	defer log.StopWait()
+func getServiceAccountCredentials(p *Provider, client *kubectl.Client) ([]byte, string, error) {
+	p.Log.StartWait("Retrieving service account credentials")
+	defer p.Log.StopWait()
 
 	// Create main service account
 	sa, err := client.Client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
@@ -632,12 +631,12 @@ func getServiceAccountCredentials(client *kubectl.Client) ([]byte, string, error
 	return secret.Data["token"], base64.StdEncoding.EncodeToString(secret.Data["ca.crt"]), nil
 }
 
-func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, error) {
-	if forceQuestion == false && len(provider.ClusterKey) > 0 {
+func getKey(p *Provider, forceQuestion bool) (string, error) {
+	if forceQuestion == false && len(p.ClusterKey) > 0 {
 		keyMap := make(map[string]bool)
 		useKey := ""
 
-		for _, key := range provider.ClusterKey {
+		for _, key := range p.ClusterKey {
 			keyMap[key] = true
 			useKey = key
 		}
@@ -653,7 +652,7 @@ func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, err
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return "", err
 		}
@@ -663,13 +662,13 @@ func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, err
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return "", err
 		}
 
 		if firstKey != secondKey {
-			log.Info("Keys do not match! Please reenter")
+			p.Log.Info("Keys do not match! Please reenter")
 			continue
 		}
 
@@ -685,7 +684,7 @@ func getKey(provider *Provider, forceQuestion bool, log log.Logger) (string, err
 	return "", nil
 }
 
-func getClusterName(clusterName string, log log.Logger) (string, error) {
+func getClusterName(p *Provider, clusterName string) (string, error) {
 	if clusterName != "" && ClusterNameValidationRegEx.MatchString(clusterName) == false {
 		return "", errors.Errorf("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
 	} else if clusterName != "" {
@@ -697,13 +696,13 @@ func getClusterName(clusterName string, log log.Logger) (string, error) {
 		clusterName, err := survey.Question(&survey.QuestionOptions{
 			Question:     "Please enter a cluster name (e.g. my-cluster)",
 			DefaultValue: "my-cluster",
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return "", err
 		}
 
 		if ClusterNameValidationRegEx.MatchString(clusterName) == false {
-			log.Infof("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
+			p.Log.Infof("Cluster name %s can only contain letters, numbers and dashes (-)", clusterName)
 			continue
 		}
 
@@ -720,9 +719,9 @@ func getClusterName(clusterName string, log log.Logger) (string, error) {
 // 	certmanager.k8s.io/v1alpha1
 // 	networking.k8s.io/v1 networkpolicies
 // 	extensions/v1beta1 podsecuritypolicies
-func checkResources(client kubernetes.Interface) (*clusterResources, error) {
-	log.StartWait("Checking cluster resources")
-	defer log.StopWait()
+func checkResources(p *Provider, client kubernetes.Interface) (*clusterResources, error) {
+	p.Log.StartWait("Checking cluster resources")
+	defer p.Log.StopWait()
 
 	// Check if cluster has active nodes
 	nodeList, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
@@ -750,9 +749,9 @@ func checkResources(client kubernetes.Interface) (*clusterResources, error) {
 	}, nil
 }
 
-func initializeNamespace(client kubernetes.Interface) error {
-	log.StartWait("Initializing namespace")
-	defer log.StopWait()
+func initializeNamespace(p *Provider, client kubernetes.Interface) error {
+	p.Log.StartWait("Initializing namespace")
+	defer p.Log.StopWait()
 
 	// Create devspace-cloud namespace
 	_, err := client.CoreV1().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
@@ -766,7 +765,7 @@ func initializeNamespace(client kubernetes.Interface) error {
 			return errors.Wrap(err, "create namespace")
 		}
 
-		log.Donef("Created namespace '%s'", DevSpaceCloudNamespace)
+		p.Log.Donef("Created namespace '%s'", DevSpaceCloudNamespace)
 	}
 
 	// Create serviceaccount
@@ -781,7 +780,7 @@ func initializeNamespace(client kubernetes.Interface) error {
 			return errors.Wrap(err, "create service account")
 		}
 
-		log.Donef("Created service account '%s'", DevSpaceServiceAccount)
+		p.Log.Donef("Created service account '%s'", DevSpaceServiceAccount)
 	}
 
 	// Create cluster-admin clusterrole binding
@@ -808,14 +807,14 @@ func initializeNamespace(client kubernetes.Interface) error {
 			return errors.Wrap(err, "create cluster role binding")
 		}
 
-		log.Infof("Created cluster role binding '%s'", DevSpaceClusterRoleBinding)
+		p.Log.Infof("Created cluster role binding '%s'", DevSpaceClusterRoleBinding)
 	}
 
 	return nil
 }
 
 // ResetKey resets a cluster key
-func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
+func (p *Provider) ResetKey(clusterName string) error {
 	cluster, err := p.GetClusterByName(clusterName)
 	if err != nil {
 		return errors.Wrap(err, "get cluster")
@@ -826,7 +825,7 @@ func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
 	}
 
 	// Get kube context to use
-	client, err := kubectl.NewClientBySelect(false, false, log)
+	client, err := kubectl.NewClientBySelect(false, false, p.Log)
 	if err != nil {
 		return err
 	}
@@ -834,12 +833,12 @@ func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
 		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig.Host, *cluster.Server)
 	}
 
-	key, err := getKey(p, true, log)
+	key, err := getKey(p, true)
 	if err != nil {
 		return errors.Wrap(err, "get key")
 	}
 
-	token, _, err := getServiceAccountCredentials(client)
+	token, _, err := getServiceAccountCredentials(p, client)
 	if err != nil {
 		return errors.Wrap(err, "get service account credentials")
 	}
@@ -850,8 +849,8 @@ func (p *Provider) ResetKey(clusterName string, log log.Logger) error {
 	}
 
 	// Update token
-	log.StartWait("Update token")
-	defer log.StopWait()
+	p.Log.StartWait("Update token")
+	defer p.Log.StopWait()
 
 	// Do the request
 	err = p.GrapqhlRequest(`

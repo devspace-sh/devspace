@@ -51,7 +51,7 @@ func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Reset the key
-	err = provider.ResetKey(args[0], log.GetInstance())
+	err = provider.ResetKey(args[0])
 	if err != nil {
 		return err
 	}

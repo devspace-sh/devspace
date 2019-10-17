@@ -6,7 +6,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 )
@@ -30,7 +29,7 @@ func (p *Provider) PruneCache() error {
 }
 
 // GetAndUpdateSpaceCache retrieves space information from the providers.yaml and updates the space if necessary
-func (p *Provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool, log log.Logger) (*latest.SpaceCache, bool, error) {
+func (p *Provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool) (*latest.SpaceCache, bool, error) {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 	now := time.Now()
@@ -49,7 +48,7 @@ func (p *Provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool, log log
 	}
 
 	// Get service account token
-	serviceAccount, err := p.GetServiceAccount(space, log)
+	serviceAccount, err := p.GetServiceAccount(space)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "get service account")
 	}

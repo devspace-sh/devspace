@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"gotest.tools/assert"
 )
 
@@ -16,7 +15,7 @@ func TestCreateUserCluster(t *testing.T) {
 
 func TestCreateSpace(t *testing.T) {
 	provider := &Provider{}
-	_, err := provider.CreateSpace("", 0, &latest.Cluster{}, log.GetInstance())
+	_, err := provider.CreateSpace("", 0, &latest.Cluster{})
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to create a space without a token")
 }
 

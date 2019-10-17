@@ -6,15 +6,14 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
 // PrintToken prints and resumes a space if necessary
-func (p *Provider) PrintToken(spaceID int, log log.Logger) error {
-	space, wasUpdated, err := p.GetAndUpdateSpaceCache(spaceID, false, log)
+func (p *Provider) PrintToken(spaceID int) error {
+	space, wasUpdated, err := p.GetAndUpdateSpaceCache(spaceID, false)
 	if err != nil {
 		return err
 	}
@@ -30,7 +29,7 @@ func (p *Provider) PrintToken(spaceID int, log log.Logger) error {
 	}
 
 	// Resume space
-	err = resume(p, space.ServiceAccount.Server, space.ServiceAccount.CaCert, space.ServiceAccount.Token, space.ServiceAccount.Namespace, spaceID, space.Space.Cluster, log)
+	err = resume(p, space.ServiceAccount.Server, space.ServiceAccount.CaCert, space.ServiceAccount.Token, space.ServiceAccount.Namespace, spaceID, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -45,9 +44,9 @@ func (p *Provider) PrintToken(spaceID int, log log.Logger) error {
 	return printToken(space.ServiceAccount.Token)
 }
 
-func resume(p *Provider, server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster, log log.Logger) error {
+func resume(p *Provider, server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster) error {
 	// Resume space
-	resumed, err := p.ResumeSpace(spaceID, cluster, log)
+	resumed, err := p.ResumeSpace(spaceID, cluster)
 	if err != nil {
 		// We ignore the error here, because we don't want kubectl or other commands to fail if we have an outage
 		// return err
