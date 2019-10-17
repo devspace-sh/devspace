@@ -27,7 +27,7 @@ type TargetSelector struct {
 	ContainerQuestion *string
 
 	AllowNonRunning bool
-	Wait            bool
+	SkipWait        bool
 
 	namespace string
 	pick      bool
@@ -75,7 +75,7 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	if t.pick == false {
 		timeout := time.Second * 120
-		if t.Wait == false {
+		if t.SkipWait == true {
 			timeout = 0
 		}
 
