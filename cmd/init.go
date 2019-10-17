@@ -27,7 +27,7 @@ import (
 const gitIgnoreFile = ".gitignore"
 const dockerIgnoreFile = ".dockerignore"
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
-const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml/\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n"
 
 const (
 	// Dockerfile not found options
