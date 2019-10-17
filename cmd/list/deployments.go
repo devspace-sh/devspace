@@ -6,7 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	deployComponent "github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -108,12 +107,6 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 				deployClient, err = deployHelm.New(config, client, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
-					continue
-				}
-			} else if deployConfig.Component != nil {
-				deployClient, err = deployComponent.New(config, client, deployConfig, log.GetInstance())
-				if err != nil {
-					log.Warnf("Unable to create component deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else {

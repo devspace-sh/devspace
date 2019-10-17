@@ -42,7 +42,6 @@ devspace:
 devspace enter
 devspace enter --pick # Select pod to enter
 devspace enter bash
-devspace enter -s my-selector
 devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test

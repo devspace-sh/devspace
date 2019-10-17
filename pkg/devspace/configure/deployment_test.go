@@ -226,7 +226,6 @@ func TestGetPredefinedComponentDeployment(t *testing.T) {
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 			assert.Equal(t, deploymentConfig.Name, testCase.expectedDeploymentName, "Returned deployment name is unexpected in testCase %s", testCase.name)
-			assert.Equal(t, *deploymentConfig.Component.Service.Ports[0].Port, testCase.expectedPort, "Returned port in deployment is unexpected in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
@@ -339,12 +338,12 @@ func TestRemoveDeployment(t *testing.T) {
 			allFlag: true,
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      "someDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "someDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      "otherDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "otherDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 			},
 			expectedFound: true,
@@ -360,12 +359,12 @@ func TestRemoveDeployment(t *testing.T) {
 			deploymentName: "someDeploy",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      "someDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "someDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      "otherDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "otherDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 			},
 			expectedFound:                true,
@@ -376,12 +375,12 @@ func TestRemoveDeployment(t *testing.T) {
 			deploymentName: "notExistent",
 			existingDeployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name:      "someDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "someDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 				&latest.DeploymentConfig{
-					Name:      "otherDeploy",
-					Component: &latest.ComponentConfig{},
+					Name: "otherDeploy",
+					Helm: &latest.HelmConfig{},
 				},
 			},
 			expectedFound:                false,

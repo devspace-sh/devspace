@@ -9,6 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DevSpaceChartConfig is the config that holds the devspace chart information
+var DevSpaceChartConfig = &latest.ChartConfig{
+	Name:    "component-chart",
+	Version: "v0.0.6",
+	RepoURL: "https://charts.devspace.cloud",
+}
+
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
@@ -27,6 +34,11 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 	tillerNamespace := kubeClient.Namespace
 	if deployConfig.Helm.TillerNamespace != "" {
 		tillerNamespace = deployConfig.Helm.TillerNamespace
+	}
+
+	// Exchange chart
+	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart == true {
+		deployConfig.Helm.Chart = DevSpaceChartConfig
 	}
 
 	return &DeployConfig{
@@ -56,12 +68,12 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
+	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Helm.Chart.Name, true)
 	if err != nil {
 		return err
 	}
 
 	// Delete from cache
-	delete(cache.Deployments, d.DeploymentConfig.Name)
+	delete(cache.Deployments, d.DeploymentConfig.Helm.Chart.Name)
 	return nil
 }

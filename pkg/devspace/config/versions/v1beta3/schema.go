@@ -1,11 +1,11 @@
-package latest
+package v1beta3
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version
-const Version string = "v1beta4"
+const Version string = "v1beta3"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -97,27 +97,29 @@ type BuildOptions struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name      string         `yaml:"name"`
-	Namespace string         `yaml:"namespace,omitempty"`
-	Helm      *HelmConfig    `yaml:"helm,omitempty"`
-	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty"`
+	Name      string           `yaml:"name"`
+	Namespace string           `yaml:"namespace,omitempty"`
+	Component *ComponentConfig `yaml:"component,omitempty"`
+	Helm      *HelmConfig      `yaml:"helm,omitempty"`
+	Kubectl   *KubectlConfig   `yaml:"kubectl,omitempty"`
 }
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	InitContainers      []*ContainerConfig   `yaml:"initContainers,omitempty"`
-	Containers          []*ContainerConfig   `yaml:"containers,omitempty"`
-	Labels              map[string]string    `yaml:"labels,omitempty"`
-	Annotations         map[string]string    `yaml:"annotations,omitempty"`
-	Volumes             []*VolumeConfig      `yaml:"volumes,omitempty"`
-	Service             *ServiceConfig       `yaml:"service,omitempty"`
-	ServiceName         string               `yaml:"serviceName,omitempty"`
-	Ingress             *IngressConfig       `yaml:"ingress,omitempty"`
-	Replicas            *int                 `yaml:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
-	PullSecrets         []*string            `yaml:"pullSecrets,omitempty"`
-	PodManagementPolicy string               `yaml:"podManagementPolicy,omitempty"`
+	InitContainers      []*ContainerConfig      `yaml:"initContainers,omitempty"`
+	Containers          []*ContainerConfig      `yaml:"containers,omitempty"`
+	Labels              map[string]string       `yaml:"labels,omitempty"`
+	Annotations         map[string]string       `yaml:"annotations,omitempty"`
+	Volumes             []*VolumeConfig         `yaml:"volumes,omitempty"`
+	Service             *ServiceConfig          `yaml:"service,omitempty"`
+	ServiceName         string                  `yaml:"serviceName,omitempty"`
+	Ingress             *IngressConfig          `yaml:"ingress,omitempty"`
+	Replicas            *int                    `yaml:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig      `yaml:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig    `yaml:"rollingUpdate,omitempty"`
+	PullSecrets         []*string               `yaml:"pullSecrets,omitempty"`
+	PodManagementPolicy string                  `yaml:"podManagementPolicy,omitempty"`
+	Options             *ComponentConfigOptions `yaml:"options,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
@@ -213,10 +215,19 @@ type RollingUpdateConfig struct {
 	Partition      *int   `yaml:"partition,omitempty"`
 }
 
+// ComponentConfigOptions defines the specific helm options used during deployment of a component
+type ComponentConfigOptions struct {
+	ReplaceImageTags *bool  `yaml:"replaceImageTags,omitempty"`
+	Wait             *bool  `yaml:"wait,omitempty"`
+	Timeout          *int64 `yaml:"timeout,omitempty"`
+	Rollback         *bool  `yaml:"rollback,omitempty"`
+	Force            *bool  `yaml:"force,omitempty"`
+	TillerNamespace  string `yaml:"tillerNamespace,omitempty"`
+}
+
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
 	Chart            *ChartConfig                `yaml:"chart,omitempty"`
-	ComponentChart   *bool                       `yaml:"componentChart,omitempty"`
 	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`

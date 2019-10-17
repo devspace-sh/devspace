@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -29,6 +30,7 @@ var versionLoader = map[string]*loader{
 	v1alpha4.Version: &loader{New: v1alpha4.New},
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
+	v1beta3.Version:  &loader{New: v1beta3.New, Variables: v1beta3.Variables, Commands: v1beta3.Commands, Profile: v1beta3.Profile},
 	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Profile: latest.Profile},
 }
 

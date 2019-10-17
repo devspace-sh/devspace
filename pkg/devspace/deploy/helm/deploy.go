@@ -8,6 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm/merge"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -142,13 +143,13 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 
-			Values(overwriteValues).MergeInto(overwriteValuesFromPath)
+			merge.Values(overwriteValues).MergeInto(overwriteValuesFromPath)
 		}
 	}
 
 	// Load override values from data and merge them
 	if d.DeploymentConfig.Helm.Values != nil {
-		Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
+		merge.Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
 	}
 
 	// Add devspace specific values
