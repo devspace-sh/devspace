@@ -30,6 +30,8 @@ type DeployConfig struct {
 
 	DeploymentConfig *latest.DeploymentConfig
 	Log              log.Logger
+
+	config *latest.Config
 }
 
 // New creates a new deploy config for kubectl
@@ -70,6 +72,7 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 		Manifests:  manifests,
 
 		DeploymentConfig: deployConfig,
+		config:           config,
 		Log:              log,
 	}, nil
 }
@@ -219,7 +222,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 
 		if len(cache.Images) > 0 {
 			if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
-				shouldRedeploy = replaceManifest(manifestYaml, cache, builtImages) || shouldRedeploy
+				shouldRedeploy = replaceManifest(manifestYaml, cache, d.config.Images, builtImages) || shouldRedeploy
 			}
 		}
 
@@ -287,7 +290,7 @@ func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
 	return output, nil
 }
 
-func replaceManifest(manifest map[interface{}]interface{}, cache *generated.CacheConfig, builtImages map[string]string) bool {
+func replaceManifest(manifest map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string) bool {
 	shouldRedeploy := false
 
 	match := func(path, key, value string) bool {
@@ -299,7 +302,15 @@ func replaceManifest(manifest map[interface{}]interface{}, cache *generated.Cach
 
 			// Search for image name
 			for _, imageCache := range cache.Images {
-				if imageCache.ImageName == image && imageCache.Tag != "" {
+				found := false
+				for _, imageConfig := range imagesConf {
+					if imageConfig.Image == image {
+						found = true
+						break
+					}
+				}
+
+				if found && imageCache.ImageName == image && imageCache.Tag != "" {
 					if builtImages != nil {
 						if _, ok := builtImages[image]; ok {
 							shouldRedeploy = true

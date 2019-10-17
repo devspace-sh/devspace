@@ -8,6 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm/merge"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
@@ -155,7 +156,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Add devspace specific values
 	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags == true {
 		// Replace image names
-		shouldRedeploy := replaceContainerNames(overwriteValues, cache, builtImages)
+		shouldRedeploy := replaceContainerNames(overwriteValues, cache, d.config.Images, builtImages)
 		if forceDeploy == false && shouldRedeploy {
 			forceDeploy = true
 		}
@@ -186,7 +187,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	return true, nil
 }
 
-func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *generated.CacheConfig, builtImages map[string]string) bool {
+func replaceContainerNames(overwriteValues map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string) bool {
 	shouldRedeploy := false
 
 	match := func(path, key, value string) bool {

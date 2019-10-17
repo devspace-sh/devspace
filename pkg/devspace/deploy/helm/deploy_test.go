@@ -49,7 +49,7 @@ func TestHelmDeployment(t *testing.T) {
 		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
 		Images: map[string]*latest.ImageConfig{
 			"default": &latest.ImageConfig{
-				Image: "nginx",
+				Image: "node",
 			},
 		},
 	}
@@ -387,6 +387,20 @@ spec:
 }
 
 func TestReplaceImageNames(t *testing.T) {
+	config := map[string]*latest.ImageConfig{
+		"test-2": &latest.ImageConfig{
+			Image: "simple-replace",
+		},
+		"test-3": &latest.ImageConfig{
+			Image: "prefix/simple-replace",
+		},
+		"test-4": &latest.ImageConfig{
+			Image: "test.com/prefix/simple-replace",
+		},
+		"test-5": &latest.ImageConfig{
+			Image: "test.com:5000/prefix/simple-replace",
+		},
+	}
 	cache := &generated.CacheConfig{
 		Images: map[string]*generated.ImageCache{
 			"test-1": &generated.ImageCache{
@@ -446,7 +460,7 @@ func TestReplaceImageNames(t *testing.T) {
 		},
 	}
 
-	shouldRedeploy := replaceContainerNames(input, cache, builtImages)
+	shouldRedeploy := replaceContainerNames(input, cache, config, builtImages)
 	if shouldRedeploy == false {
 		t.Fatal("Expected to redeploy")
 	}
@@ -459,7 +473,7 @@ func TestReplaceImageNames(t *testing.T) {
 		t.Fatalf("Replace failed: Got\n %s\n, but expected\n %s", gotYaml, expectedYaml)
 	}
 
-	shouldRedeploy = replaceContainerNames(input, cache, builtImages)
+	shouldRedeploy = replaceContainerNames(input, cache, config, builtImages)
 	if shouldRedeploy == false {
 		t.Fatal("Expected no redeploy")
 	}
