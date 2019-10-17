@@ -208,14 +208,14 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryDefaultOption = useDockerHub
 	}
 
-	authConfig, err = docker.GetAuthConfig(dockerClient, cloudRegistryHostname, true)
-	if err == nil && authConfig.Username != "" {
-		useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-		registryDefaultOption = useDevSpaceRegistry
-	}
-
 	registryOptions := []string{useDockerHub, useOtherRegistry}
 	if cloudRegistryHostname != "" {
+		authConfig, err = docker.GetAuthConfig(dockerClient, cloudRegistryHostname, true)
+		if err == nil && authConfig.Username != "" {
+			useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
+			registryDefaultOption = useDevSpaceRegistry
+		}
+
 		registryOptions = []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
 	}
 
