@@ -6,7 +6,7 @@ deployments:
     component:
       containers:
         - image: ${IMAGE}
-command:
+commands:
 # Use `devspace run auto` to automatically fill the variables
 - name: auto
   command: "devspace deploy --var SELECT=deployment-1 --var IMAGE=nginx"

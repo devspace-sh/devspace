@@ -59,12 +59,6 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// No variable found
-	if generatedConfig.Vars == nil || len(generatedConfig.Vars) == 0 {
-		log.Info("No variables found")
-		return nil
-	}
-
 	// Specify the table column names
 	headerColumnNames := []string{
 		"Variable",
@@ -72,12 +66,17 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	varRow := make([][]string, 0, len(generatedConfig.Vars))
-
 	for name, value := range generatedConfig.Vars {
 		varRow = append(varRow, []string{
 			name,
 			fmt.Sprintf("%v", value),
 		})
+	}
+
+	// No variable found
+	if len(varRow) == 0 {
+		log.Info("No variables found")
+		return nil
 	}
 
 	log.PrintTable(log.GetInstance(), headerColumnNames, varRow)
