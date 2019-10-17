@@ -83,7 +83,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 				go func() {
 					err := pf.ForwardPorts()
 					if err != nil {
-						log.Errorf("Error forwarding ports: %v", err)
+						log.Fatalf("Error forwarding ports: %v", err)
 					}
 				}()
 
