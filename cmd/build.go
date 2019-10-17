@@ -19,6 +19,8 @@ import (
 type BuildCmd struct {
 	*flags.GlobalFlags
 
+	Tag string
+
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
@@ -50,6 +52,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
+	buildCmd.Flags().StringVarP(&cmd.Tag, "tag", "t", "", "Use the given tag for all built images")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
@@ -81,6 +84,13 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	config, err := configutil.GetConfig(configOptions)
 	if err != nil {
 		return err
+	}
+
+	// Force tag
+	if cmd.Tag != "" {
+		for _, imageConfig := range config.Images {
+			imageConfig.Tag = cmd.Tag
+		}
 	}
 
 	// Dependencies

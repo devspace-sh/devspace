@@ -239,6 +239,11 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}
 
+	// Check if we should skip building
+	if dependency.SkipBuild != nil && *dependency.SkipBuild == true {
+		dConfig.Images = map[string]*latest.ImageConfig{}
+	}
+
 	// Load dependency generated config
 	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)), dependency.Profile)
 	if err != nil {
