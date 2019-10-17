@@ -109,7 +109,7 @@ func TestSaveLoadedConfig(t *testing.T) {
 					Dev: &latest.DevConfig{},
 				},
 			},
-			expectedContent: "version: v1beta3\ndev: {}\n",
+			expectedContent: "version: v1beta4\ndev: {}\n",
 		},
 	}
 
