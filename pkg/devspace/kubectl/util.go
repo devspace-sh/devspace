@@ -268,7 +268,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, errors.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
+	return nil, errors.Errorf("No pod with selector %s in namespace %s found", labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string
