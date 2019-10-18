@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	v1 "k8s.io/api/core/v1"
@@ -116,7 +118,7 @@ func TestCreateIngress(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		provider := Provider{}
+		provider := Provider{latest.Provider{}, log.GetInstance()}
 		kubeClient := &kubectl.Client{
 			Client: fake.NewSimpleClientset(),
 		}

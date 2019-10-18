@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetToken(t *testing.T) {
-	_, err := (&Provider{}).GetToken()
+	_, err := (&Provider{latest.Provider{}, log.GetInstance()}).GetToken()
 	assert.Error(t, err, "Provider has no key specified")
 
 	testClaim := token.ClaimSet{
