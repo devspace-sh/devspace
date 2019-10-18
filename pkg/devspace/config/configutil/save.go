@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -33,6 +34,11 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
+	// Restore old vars values
+	if len(LoadedVars) > 0 {
+		walk.Walk(configMap, matchVar, replaceVar)
+	}
+
 	// Check if config exists
 	_, err = os.Stat(constants.DefaultConfigPath)
 	if err == nil {
@@ -56,11 +62,6 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		}
 	}
 
-	// Restore old vars values
-	if len(LoadedVars) > 0 {
-		walk.Walk(configMap, matchVar, replaceVar)
-	}
-
 	// Cloned config
 	clonedConfig := &latest.Config{}
 
@@ -78,6 +79,8 @@ func SaveLoadedConfig() error {
 	if len(config.Profiles) != 0 {
 		return errors.Errorf("Cannot save when a profile is applied")
 	}
+
+	log.Infof("Loaded vars: %+#v", LoadedVars)
 
 	// RestoreVars restores the variables in the config
 	clonedConfig, err := RestoreVars(config)

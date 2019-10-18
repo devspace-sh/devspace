@@ -55,23 +55,23 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 // UpgradeVarPaths upgrades the config
 func (c *Config) UpgradeVarPaths(varPaths map[string]string) error {
-	optionsRegex, err := regexp.Compile("^deployments\\.(\\d+)\\.component\\.options")
+	optionsRegex, err := regexp.Compile("^\\.deployments\\[(\\d+)\\]\\.component\\.options")
 	if err != nil {
 		return err
 	}
 
-	componentRegex, err := regexp.Compile("^deployments\\.(\\d+)\\.component")
+	componentRegex, err := regexp.Compile("^\\.deployments\\[(\\d+)\\]\\.component")
 	if err != nil {
 		return err
 	}
 
 	for path, value := range varPaths {
 		if optionsRegex.MatchString(path) {
-			newPath := optionsRegex.ReplaceAllString(path, "deployments.$1.helm")
+			newPath := optionsRegex.ReplaceAllString(path, ".deployments[$1].helm")
 			delete(varPaths, path)
 			varPaths[newPath] = value
 		} else if componentRegex.MatchString(path) {
-			newPath := componentRegex.ReplaceAllString(path, "deployments.$1.helm.values")
+			newPath := componentRegex.ReplaceAllString(path, ".deployments[$1].helm.values")
 			delete(varPaths, path)
 			varPaths[newPath] = value
 		}

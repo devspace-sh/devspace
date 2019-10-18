@@ -161,18 +161,18 @@ func TestUpgradeVarPaths(t *testing.T) {
 	testCases := []*testCasePaths{
 		{
 			in: map[string]string{
-				"deployments.1.abc":                   "test1",
-				"deployments.1.component.abc":         "test2",
-				"deployments.1.component.options.abc": "test3",
-				"deployments.notReplace.bcd":          "test4",
-				"dev.notreplace":                      "test5",
+				".deployments[1].abc":                   "test1",
+				".deployments[1].component.abc":         "test2",
+				".deployments[1].component.options.abc": "test3",
+				".deployments.notReplace.bcd":           "test4",
+				".dev.notreplace":                       "test5",
 			},
 			expected: map[string]string{
-				"deployments.1.abc":             "test1",
-				"deployments.1.helm.values.abc": "test2",
-				"deployments.1.helm.abc":        "test3",
-				"deployments.notReplace.bcd":    "test4",
-				"dev.notreplace":                "test5",
+				".deployments[1].abc":             "test1",
+				".deployments[1].helm.values.abc": "test2",
+				".deployments[1].helm.abc":        "test3",
+				".deployments.notReplace.bcd":     "test4",
+				".dev.notreplace":                 "test5",
 			},
 		},
 	}
