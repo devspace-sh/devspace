@@ -108,7 +108,7 @@ func init() {
 	rootCmd.AddCommand(NewAnalyzeCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
 	rootCmd.AddCommand(NewOpenCmd(globalFlags))
-	rootCmd.AddCommand(NewUICmd())
+	rootCmd.AddCommand(NewUICmd(globalFlags))
 	rootCmd.AddCommand(NewRunCmd(globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(globalFlags))
 

@@ -35,6 +35,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
+	github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/go-version v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
