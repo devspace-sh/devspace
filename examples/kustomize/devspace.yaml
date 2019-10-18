@@ -1,4 +1,4 @@
-version: v1beta3
+version: v1beta4
 images:
   default:
     image: yourusername/devspace
@@ -9,10 +9,6 @@ deployments:
     - kube
     kustomize: true
 dev:
-  interactive:
-    defaultEnabled: true
-    images:
-    - name: default
   ports:
   - imageName: default
     forward:
@@ -21,3 +17,7 @@ dev:
   - imageName: default
     excludePaths:
     - node_modules
+  interactive:
+    defaultEnabled: true
+    images:
+    - name: default

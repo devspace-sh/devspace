@@ -1,46 +1,48 @@
-version: v1beta3
+version: v1beta4
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace
 deployments:
-  - name: my-deployment
-    component:
+- name: my-deployment
+  helm:
+    componentChart: true
+    values:
       containers:
-        - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+      - image: dscr.io/${DEVSPACE_USERNAME}/devspace
 hooks:
-  - command: echo
-    args:
-      - before image building
-    when:
-      before:
-        images: all
-  - command: echo
-    args:
-      - after image building
-    when:
-      after:
-        images: all
-  - command: echo
-    args:
-      - before deploying
-    when:
-      before:
-        deployments: all
-  - command: echo
-    args:
-      - after deploying
-    when:
-      after:
-        deployments: all
-  - command: echo
-    args:
-      - before deployment my-deployment
-    when:
-      before:
-        deployments: my-deployment
-  - command: echo
-    args:
-      - after deployment my-deployment
-    when:
-      after:
-        deployments: my-deployment
+- command: echo
+  args:
+  - before image building
+  when:
+    before:
+      images: all
+- command: echo
+  args:
+  - after image building
+  when:
+    after:
+      images: all
+- command: echo
+  args:
+  - before deploying
+  when:
+    before:
+      deployments: all
+- command: echo
+  args:
+  - after deploying
+  when:
+    after:
+      deployments: all
+- command: echo
+  args:
+  - before deployment my-deployment
+  when:
+    before:
+      deployments: my-deployment
+- command: echo
+  args:
+  - after deployment my-deployment
+  when:
+    after:
+      deployments: my-deployment

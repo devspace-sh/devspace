@@ -2,7 +2,7 @@
 # If you want to try this example in other
 # Clusters you have to exchange the image names
 # and enable image pushing
-version: v1beta3
+version: v1beta4
 images:
   node:
     image: node
@@ -22,10 +22,6 @@ deployments:
     chart:
       name: php/chart
 dev:
-  interactive:
-    defaultEnabled: true
-    images:
-    - name: node
   ports:
   - imageName: node
     forward:
@@ -37,3 +33,7 @@ dev:
     - node_modules
   - imageName: php
     localSubPath: ./php
+  interactive:
+    defaultEnabled: true
+    images:
+    - name: node

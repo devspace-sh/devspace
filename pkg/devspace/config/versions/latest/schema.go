@@ -337,7 +337,7 @@ type TerminalConfig struct {
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
 	Source             *SourceConfig `yaml:"source"`
-	Profile            string        `yaml:"profile"`
+	Profile            string        `yaml:"profile,omitempty"`
 	SkipBuild          *bool         `yaml:"skipBuild,omitempty"`
 	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty"`
 	Namespace          string        `yaml:"namespace,omitempty"`

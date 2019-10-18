@@ -1,4 +1,4 @@
-version: v1beta3
+version: v1beta4
 images:
   service-image-1:
     image: dscr.io/${DEVSPACE_USERNAME}/service-1
@@ -12,13 +12,17 @@ images:
     createPullSecret: true
 deployments:
   - name: service-1
-    component:
-      containers:
-        - image: dscr.io/${DEVSPACE_USERNAME}/service-1
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: dscr.io/${DEVSPACE_USERNAME}/service-1
   - name: service-2
-    component:
-      containers:
-        - image: dscr.io/${DEVSPACE_USERNAME}/service-2
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: dscr.io/${DEVSPACE_USERNAME}/service-2
 commands:
   - name: dev-service1
     command: "devspace dev --profile=dev-service1"

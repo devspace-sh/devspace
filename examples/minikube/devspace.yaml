@@ -1,4 +1,4 @@
-version: v1beta3
+version: v1beta4
 images:
   default:
     image: devspace
@@ -7,10 +7,6 @@ deployments:
   helm:
     chart:
       name: ./chart
-commands:
-# Optional command to force use the kube context minikube, start with `devspace run dev-minikube`
- - name: dev-minikube
-   command: "devspace dev --kube-context=minikube"
 dev:
   ports:
   - imageName: default
@@ -20,3 +16,6 @@ dev:
   - imageName: default
     excludePaths:
     - node_modules
+commands:
+- name: dev-minikube
+  command: devspace dev --kube-context=minikube

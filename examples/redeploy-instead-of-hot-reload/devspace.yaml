@@ -1,4 +1,4 @@
-version: v1beta3
+version: v1beta4
 images:
   default:
     image: yourusername/devspace
