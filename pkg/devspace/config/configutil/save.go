@@ -33,11 +33,6 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 		return nil, errors.Wrap(err, "convert cloned config")
 	}
 
-	// Restore old vars values
-	if len(LoadedVars) > 0 {
-		walk.Walk(configMap, matchVar, replaceVar)
-	}
-
 	// Check if config exists
 	_, err = os.Stat(constants.DefaultConfigPath)
 	if err == nil {
@@ -59,6 +54,11 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 				configMap[key] = originalConfig[key]
 			}
 		}
+	}
+
+	// Restore old vars values
+	if len(LoadedVars) > 0 {
+		walk.Walk(configMap, matchVar, replaceVar)
 	}
 
 	// Cloned config

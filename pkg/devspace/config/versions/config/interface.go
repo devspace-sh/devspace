@@ -4,6 +4,7 @@ package config
 type Config interface {
 	GetVersion() string
 	Upgrade() (Config, error)
+	UpgradeVarPaths(varPaths map[string]string) error
 }
 
 // New creates a new config

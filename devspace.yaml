@@ -1,0 +1,10 @@
+version: v1beta3
+deployments:
+  - name: swag
+    component:
+      containers: dscr.io/${DEVSPACE_USERNAME}/test
+      options:
+        tillerNamespace: ${tiller}
+commands:
+  - name: test
+    command: "echo ${test}"

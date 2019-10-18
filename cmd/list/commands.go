@@ -69,7 +69,7 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Parse commands
-	commands, err := configutil.ParseCommands(generatedConfig, rawMap, log.GetInstance())
+	commands, err := configutil.ParseCommands(generatedConfig, rawMap, nil, log.GetInstance())
 	if err != nil {
 		return err
 	}

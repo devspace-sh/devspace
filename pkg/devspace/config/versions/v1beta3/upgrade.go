@@ -1,6 +1,8 @@
 package v1beta3
 
 import (
+	"regexp"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
@@ -49,4 +51,31 @@ func (c *Config) Upgrade() (config.Config, error) {
 	}
 
 	return nextConfig, nil
+}
+
+// UpgradeVarPaths upgrades the config
+func (c *Config) UpgradeVarPaths(varPaths map[string]string) error {
+	optionsRegex, err := regexp.Compile("^deployments\\.(\\d+)\\.component\\.options")
+	if err != nil {
+		return err
+	}
+
+	componentRegex, err := regexp.Compile("^deployments\\.(\\d+)\\.component")
+	if err != nil {
+		return err
+	}
+
+	for path, value := range varPaths {
+		if optionsRegex.MatchString(path) {
+			newPath := optionsRegex.ReplaceAllString(path, "deployments.$1.helm")
+			delete(varPaths, path)
+			varPaths[newPath] = value
+		} else if componentRegex.MatchString(path) {
+			newPath := componentRegex.ReplaceAllString(path, "deployments.$1.helm.values")
+			delete(varPaths, path)
+			varPaths[newPath] = value
+		}
+	}
+
+	return nil
 }

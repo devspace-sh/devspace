@@ -80,7 +80,8 @@ type ConfigOptions struct {
 	Profile     string
 	KubeContext string
 
-	Vars []string
+	LoadedVars map[string]string
+	Vars       []string
 }
 
 // Clone clones the config options
@@ -193,6 +194,9 @@ func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, 
 		} else if !allowProfile {
 			options.Profile = ""
 		}
+
+		// Set loaded vars for this
+		options.LoadedVars = LoadedVars
 
 		// Load base config
 		config, err = GetConfigFromPath(generatedConfig, ".", options, log.GetInstance())

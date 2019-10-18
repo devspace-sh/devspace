@@ -34,14 +34,6 @@ var versionLoader = map[string]*loader{
 	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Profile: latest.Profile},
 }
 
-// ConfigOptions defines options to load the config
-type ConfigOptions struct {
-	Profile     string
-	KubeContext string
-
-	Vars []string
-}
-
 // ParseProfile loads the base config & a certain profile
 func ParseProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
 	version, ok := data["version"].(string)
@@ -69,7 +61,7 @@ func ParseProfile(data map[interface{}]interface{}, profile string) (map[interfa
 }
 
 // ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
+func ParseCommands(data map[interface{}]interface{}, loadedVars map[string]string) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -90,7 +82,7 @@ func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData)
+	config, err := Parse(strippedData, loadedVars)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
@@ -99,7 +91,7 @@ func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
 }
 
 // ParseVariables parses only the variables from the config
-func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error) {
+func ParseVariables(data map[interface{}]interface{}, loadedVars map[string]string) ([]*latest.Variable, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		// This is needed because overrides usually don't have versions
@@ -122,7 +114,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData)
+	config, err := Parse(strippedData, loadedVars)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
@@ -131,7 +123,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 }
 
 // Parse parses the data into the latest config
-func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
+func Parse(data map[interface{}]interface{}, loadedVars map[string]string) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -160,6 +152,13 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 		upgradedConfig, err := latestConfig.Upgrade()
 		if err != nil {
 			return nil, errors.Errorf("Error upgrading config from version %s: %v", latestConfig.GetVersion(), err)
+		}
+
+		if loadedVars != nil {
+			err = latestConfig.UpgradeVarPaths(loadedVars)
+			if err != nil {
+				return nil, errors.Errorf("Error upgrading config var paths from version %s: %v", latestConfig.GetVersion(), err)
+			}
 		}
 
 		latestConfig = upgradedConfig
