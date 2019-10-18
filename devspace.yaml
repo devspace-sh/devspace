@@ -2,7 +2,9 @@ version: v1beta3
 deployments:
   - name: swag
     component:
-      containers: dscr.io/${DEVSPACE_USERNAME}/test
+      containers:
+        - name: test
+          image: dscr.io/${DEVSPACE_USERNAME}/test
       options:
         tillerNamespace: ${tiller}
 commands:
