@@ -11,13 +11,15 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 func pipeReader(ws *websocket.Conn, r io.Reader) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		// ws.SetWriteDeadline(time.Now().Add(writeWait))
-		if err := ws.WriteMessage(websocket.TextMessage, s.Bytes()); err != nil {
+		if err := ws.WriteMessage(websocket.BinaryMessage, s.Bytes()); err != nil {
 			ws.Close()
 			break
 		}

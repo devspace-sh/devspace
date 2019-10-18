@@ -59,6 +59,8 @@
     "tslint-react": "^3.2.0",
     "uglifyjs-webpack-plugin": "2.2.0",
     "url-loader": "2.1.0",
+    "xterm": "4.1.0",
+    "xterm-addon-attach": "0.3.0",
     "webpack": "4.38.0",
     "webpack-dev-server": "3.7.2",
     "webpack-manifest-plugin": "2.0.4",
