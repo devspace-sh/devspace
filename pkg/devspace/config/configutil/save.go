@@ -7,7 +7,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -79,8 +78,6 @@ func SaveLoadedConfig() error {
 	if len(config.Profiles) != 0 {
 		return errors.Errorf("Cannot save when a profile is applied")
 	}
-
-	log.Infof("Loaded vars: %+#v", LoadedVars)
 
 	// RestoreVars restores the variables in the config
 	clonedConfig, err := RestoreVars(config)
