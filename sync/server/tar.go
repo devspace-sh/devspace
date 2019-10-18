@@ -138,7 +138,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 		hdr.Name = fileInformation.Name
 		hdr.ModTime = fileInformation.Mtime
 		if err := tw.WriteHeader(hdr); err != nil {
-			return errors.Wrap(err, "tw write header")
+			return errors.Wrapf(err, "tw write header %s", filepath)
 		}
 
 		writtenFiles[fileInformation.Name] = true
@@ -169,7 +169,7 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 
 	hdr, err := tar.FileInfoHeader(stat, filepath)
 	if err != nil {
-		return errors.Wrap(err, "tar file info header")
+		return errors.Wrapf(err, "tar file info header %s", filepath)
 	}
 
 	hdr.Name = fileInformation.Name
@@ -179,11 +179,11 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 	hdr.ModTime = time.Unix(fileInformation.Mtime.Unix(), 0)
 
 	if err := tw.WriteHeader(hdr); err != nil {
-		return errors.Wrap(err, "tw write header")
+		return errors.Wrapf(err, "tw write header %s", filepath)
 	}
 
 	if _, err := io.Copy(tw, f); err != nil {
-		return errors.Wrap(err, "io copy")
+		return errors.Wrapf(err, "io copy %s", filepath)
 	}
 
 	writtenFiles[fileInformation.Name] = true
