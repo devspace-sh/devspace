@@ -1,0 +1,11 @@
+{
+  "name": "ui",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "^4.16.4"
+  },
+  "scripts": {
+    "prod": "NODE_ENV=production node scripts/server.js"
+  }
+}

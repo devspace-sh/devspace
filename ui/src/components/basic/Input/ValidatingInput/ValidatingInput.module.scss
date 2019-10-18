@@ -1,0 +1,8 @@
+.validating-input {
+  &.valid {
+    background-image: url(../../../../images/green-check2.svg);
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 20px;
+  }
+}
