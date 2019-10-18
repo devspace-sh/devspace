@@ -106,7 +106,7 @@ func getPossibleVars(generatedConfig *generated.Config) (map[string]bool, error)
 	}
 
 	// Load defined variables
-	vars, err := versions.ParseVariables(rawMap, nil)
+	vars, err := versions.ParseVariables(rawMap)
 	if err != nil {
 		return nil, err
 	}

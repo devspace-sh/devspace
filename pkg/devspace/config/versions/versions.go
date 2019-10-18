@@ -61,7 +61,7 @@ func ParseProfile(data map[interface{}]interface{}, profile string) (map[interfa
 }
 
 // ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}, loadedVars map[string]string) (*latest.Config, error) {
+func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -82,7 +82,7 @@ func ParseCommands(data map[interface{}]interface{}, loadedVars map[string]strin
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData, loadedVars)
+	config, err := Parse(strippedData, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
@@ -91,7 +91,7 @@ func ParseCommands(data map[interface{}]interface{}, loadedVars map[string]strin
 }
 
 // ParseVariables parses only the variables from the config
-func ParseVariables(data map[interface{}]interface{}, loadedVars map[string]string) ([]*latest.Variable, error) {
+func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		// This is needed because overrides usually don't have versions
@@ -114,7 +114,7 @@ func ParseVariables(data map[interface{}]interface{}, loadedVars map[string]stri
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData, loadedVars)
+	config, err := Parse(strippedData, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
