@@ -153,6 +153,12 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Deprecated: Fill DEVSPACE_DOMAIN vars
+	err = fillDevSpaceDomainVars(client, generatedConfig)
+	if err != nil {
+		return err
+	}
+
 	// Get the config
 	config, err := cmd.loadConfig()
 	if err != nil {

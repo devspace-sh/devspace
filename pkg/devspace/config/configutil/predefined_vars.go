@@ -8,6 +8,7 @@ import (
 
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -189,13 +190,24 @@ func fillPredefinedVars(options *ConfigOptions) error {
 	return nil
 }
 
-func getPredefinedVar(name string, options *ConfigOptions) (bool, string, error) {
-	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
+func getPredefinedVar(name string, generatedConfig *generated.Config, options *ConfigOptions) (bool, string, error) {
+	name = strings.ToUpper(name)
+	if variable, ok := PredefinedVars[name]; ok {
 		if variable.Value == nil {
 			return false, "", errors.New(variable.ErrorMessage)
 		}
 
 		return true, *variable.Value, nil
+	}
+
+	// Load space domain environment variable
+	if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
+		// Check if its in generated config
+		if val, ok := generatedConfig.Vars[name]; ok {
+			return true, val, nil
+		}
+
+		return true, name, nil
 	}
 
 	return false, "", nil

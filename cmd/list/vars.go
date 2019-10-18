@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -67,6 +68,10 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 
 	varRow := make([][]string, 0, len(generatedConfig.Vars))
 	for name, value := range generatedConfig.Vars {
+		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
+			continue
+		}
+
 		varRow = append(varRow, []string{
 			name,
 			fmt.Sprintf("%v", value),

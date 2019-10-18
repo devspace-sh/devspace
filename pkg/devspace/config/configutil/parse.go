@@ -260,7 +260,7 @@ func resolveVar(varName string, generatedConfig *generated.Config, cmdVars map[s
 	}
 
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName, options)
+	found, value, err := getPredefinedVar(varName, generatedConfig, options)
 	if err != nil {
 		return "", err
 	} else if found {
