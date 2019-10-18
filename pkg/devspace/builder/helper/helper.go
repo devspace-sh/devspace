@@ -103,7 +103,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 		return errors.Errorf("Couldn't determine absolute path for %s", b.ContextPath)
 	}
 
-	log.Infof("Building image '%s' with engine '%s'", b.ImageName, b.EngineName)
+	log.Infof("Building image '%s:%s' with engine '%s'", b.ImageName, b.ImageTag, b.EngineName)
 
 	// Build Image
 	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)

@@ -17,6 +17,7 @@ func NewResetCmd() *cobra.Command {
 
 	resetCmd.AddCommand(newKeyCmd())
 	resetCmd.AddCommand(newVarsCmd())
+	resetCmd.AddCommand(newDependenciesCmd())
 
 	return resetCmd
 }

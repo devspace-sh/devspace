@@ -39,7 +39,7 @@ var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/rel
 const SyncHelperContainerPath = "/tmp/sync"
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose, downloadOnInitialSync bool, log log.Logger) error {
+func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdParameter targetselector.CmdParameter, localPath, containerPath string, exclude []string, verbose, downloadOnInitialSync, waitInitialSync bool, log log.Logger) error {
 	targetSelector, err := targetselector.NewTargetSelector(config, kubeClient, &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}, true, nil)
@@ -64,6 +64,7 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 		LocalSubPath:          localPath,
 		ContainerPath:         containerPath,
 		DownloadOnInitialSync: &downloadOnInitialSync,
+		WaitInitialSync:       &waitInitialSync,
 	}
 	if len(exclude) > 0 {
 		syncConfig.ExcludePaths = exclude
@@ -82,6 +83,15 @@ func StartSyncFromCmd(config *latest.Config, kubeClient *kubectl.Client, cmdPara
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
+
+	if waitInitialSync {
+		log.StartWait("Sync: waiting for intial sync to complete")
+		<-syncClient.Options.UpstreamInitialSyncDone
+		<-syncClient.Options.DownstreamInitialSyncDone
+		log.StopWait()
+
+		return nil
+	}
 
 	// Wait till sync is finished
 	<-syncDone

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -17,6 +18,7 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DeployCmd holds the required data for the down cmd
@@ -116,6 +118,12 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Deprecated: Fill DEVSPACE_DOMAIN vars
+	err = fillDevSpaceDomainVars(client, generatedConfig)
+	if err != nil {
+		return err
+	}
+
 	// Add current kube context to context
 	configOptions := cmd.ToConfigOptions()
 	config, err := configutil.GetConfig(configOptions)
@@ -209,6 +217,37 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 func (cmd *DeployCmd) validateFlags() error {
 	if cmd.SkipBuild && cmd.ForceBuild {
 		return errors.New("Flags --skip-build & --force-build cannot be used together")
+	}
+
+	return nil
+}
+
+func fillDevSpaceDomainVars(client *kubectl.Client, generatedConfig *generated.Config) error {
+	namespace, err := client.Client.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
+	if err != nil {
+		return nil
+	}
+
+	// Check if domain there is a domain for the space
+	if namespace.Annotations == nil || namespace.Annotations[allowedIngressHostsAnnotation] == "" {
+		return nil
+	}
+
+	// Remove old vars
+	for varName := range generatedConfig.Vars {
+		if strings.HasPrefix(varName, "DEVSPACE_SPACE_DOMAIN") {
+			delete(generatedConfig.Vars, varName)
+		}
+	}
+
+	// Select domain
+	domains := strings.Split(namespace.Annotations[allowedIngressHostsAnnotation], ",")
+	for idx, domain := range domains {
+		domain = strings.Replace(domain, "*.", "", -1)
+		domain = strings.Replace(domain, "*", "", -1)
+		domain = strings.TrimSpace(domain)
+
+		generatedConfig.Vars["DEVSPACE_SPACE_DOMAIN"+strconv.Itoa(idx+1)] = domain
 	}
 
 	return nil

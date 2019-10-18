@@ -63,7 +63,11 @@ func GetProfiles(basePath string) ([]string, error) {
 }
 
 // ParseCommands fills the variables in the data and parses the commands
-func ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}, log log.Logger) ([]*latest.CommandConfig, error) {
+func ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error) {
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
 	// Load defined variables
 	vars, err := versions.ParseVariables(data)
 	if err != nil {
@@ -83,13 +87,13 @@ func ParseCommands(generatedConfig *generated.Config, data map[interface{}]inter
 	}
 
 	// Fill in variables
-	err = FillVariables(generatedConfig, preparedConfig, vars, &ConfigOptions{}, log)
+	err = FillVariables(generatedConfig, preparedConfig, vars, options, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig)
+	parsedConfig, err := versions.Parse(preparedConfig, options.LoadedVars)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse config")
 	}
@@ -118,7 +122,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	}
 
 	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig)
+	parsedConfig, err := versions.Parse(preparedConfig, options.LoadedVars)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse config")
 	}
@@ -248,7 +252,9 @@ func askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, cm
 
 func varReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars map[string]string, options *ConfigOptions, log log.Logger) (interface{}, error) {
 	// Save old value
-	LoadedVars[path] = value
+	if options.LoadedVars != nil {
+		options.LoadedVars[path] = value
+	}
 
 	return varspkg.ParseString(value, func(v string) (string, error) { return resolveVar(v, generatedConfig, cmdVars, options, log) })
 }
@@ -260,7 +266,7 @@ func resolveVar(varName string, generatedConfig *generated.Config, cmdVars map[s
 	}
 
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName, options)
+	found, value, err := getPredefinedVar(varName, generatedConfig, options)
 	if err != nil {
 		return "", err
 	} else if found {

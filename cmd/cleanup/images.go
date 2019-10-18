@@ -49,16 +49,6 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
 	}
 
-	// Load config
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
-	if err != nil {
-		return err
-	}
-	if config.Images == nil || len(config.Images) == 0 {
-		log.Done("No images found in config to delete")
-		return nil
-	}
-
 	// Get active context
 	kubeContext, err := kubeconfig.GetCurrentContext()
 	if err != nil {
@@ -72,6 +62,16 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
 	if err != nil {
 		return err
+	}
+
+	// Load config
+	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	if err != nil {
+		return err
+	}
+	if config.Images == nil || len(config.Images) == 0 {
+		log.Done("No images found in config to delete")
+		return nil
 	}
 
 	_, err = client.Ping(context.Background())

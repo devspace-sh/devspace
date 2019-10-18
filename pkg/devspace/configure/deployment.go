@@ -9,10 +9,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
@@ -163,8 +163,8 @@ func generateComponentDeployment(name string, componentConfig *latest.ComponentC
 	retDeploymentConfig := &latest.DeploymentConfig{
 		Name: name,
 		Helm: &latest.HelmConfig{
-			Chart:  component.DevSpaceChartConfig,
-			Values: chartValues,
+			ComponentChart: ptr.Bool(true),
+			Values:         chartValues,
 		},
 	}
 	return retDeploymentConfig, nil

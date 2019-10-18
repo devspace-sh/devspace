@@ -114,7 +114,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 
 	// Delete cluster
 	log.StartWait("Deleting cluster " + cluster.Name)
-	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes", log.GetInstance())
+	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes")
 	if err != nil {
 		return err
 	}

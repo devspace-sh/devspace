@@ -138,7 +138,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 		hdr.Name = fileInformation.Name
 		hdr.ModTime = fileInformation.Mtime
 		if err := tw.WriteHeader(hdr); err != nil {
-			return errors.Wrap(err, "tw write header")
+			return errors.Wrapf(err, "tw write header %s", filepath)
 		}
 
 		writtenFiles[fileInformation.Name] = true
@@ -156,20 +156,25 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 }
 
 func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer) error {
+	var err error
 	filepath := path.Join(basePath, fileInformation.Name)
+	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		if filepath, err = os.Readlink(filepath); err != nil {
+			return nil
+		}
+	}
 
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
 		// We ignore this error here because it could happen that the file is suddenly not here anymore
 		return nil
-		// return errors.Wrap(err, "open path "+filepath)
 	}
 	defer f.Close()
 
 	hdr, err := tar.FileInfoHeader(stat, filepath)
 	if err != nil {
-		return errors.Wrap(err, "tar file info header")
+		return errors.Wrapf(err, "tar file info header %s", filepath)
 	}
 
 	hdr.Name = fileInformation.Name
@@ -179,11 +184,16 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 	hdr.ModTime = time.Unix(fileInformation.Mtime.Unix(), 0)
 
 	if err := tw.WriteHeader(hdr); err != nil {
-		return errors.Wrap(err, "tw write header")
+		return errors.Wrapf(err, "tw write header %s", filepath)
+	}
+
+	// nothing more to do for non-regular
+	if !stat.Mode().IsRegular() {
+		return nil
 	}
 
 	if _, err := io.Copy(tw, f); err != nil {
-		return errors.Wrap(err, "io copy")
+		return errors.Wrapf(err, "io copy %s", filepath)
 	}
 
 	writtenFiles[fileInformation.Name] = true

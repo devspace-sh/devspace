@@ -3,11 +3,13 @@ package cloud
 import (
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"gotest.tools/assert"
 )
 
 func TestPrintSpaces(t *testing.T) {
-	err := (&Provider{}).PrintSpaces("", "", true)
+	err := (&Provider{latest.Provider{}, log.GetInstance()}).PrintSpaces("", "", true)
 	assert.Error(t, err, "Error retrieving spaces: get token: Provider has no key specified", "Wrong or no error when trying print spaces without any token")
 }
 

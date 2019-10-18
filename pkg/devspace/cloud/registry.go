@@ -3,7 +3,6 @@ package cloud
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -24,14 +23,14 @@ func (p *Provider) GetFirstPublicRegistry() (string, error) {
 }
 
 // LoginIntoRegistries logs the user into the user docker registries
-func (p *Provider) LoginIntoRegistries(log log.Logger) error {
+func (p *Provider) LoginIntoRegistries() error {
 	registries, err := p.GetRegistries()
 	if err != nil {
 		return errors.Wrap(err, "get registries")
 	}
 
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(log)
+	client, err := docker.NewClient(p.Log)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}
@@ -55,17 +54,17 @@ func (p *Provider) LoginIntoRegistries(log log.Logger) error {
 			return errors.Wrap(err, "docker login")
 		}
 
-		log.Donef("Successfully logged into docker registry %s", registry.URL)
-		log.Infof("You can now use %s/%s/* to deploy private docker images", registry.URL, accountName)
+		p.Log.Donef("Successfully logged into docker registry %s", registry.URL)
+		p.Log.Infof("You can now use %s/%s/* to deploy private docker images", registry.URL, accountName)
 	}
 
 	return nil
 }
 
 // LoginIntoRegistry logs the user into the user docker registry
-func (p *Provider) LoginIntoRegistry(name string, log log.Logger) error {
+func (p *Provider) LoginIntoRegistry(name string) error {
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(log)
+	client, err := docker.NewClient(p.Log)
 	if err != nil {
 		return errors.Wrap(err, "new docker client")
 	}

@@ -1,7 +1,8 @@
-package helm
+package merge
 
 import (
 	"testing"
+
 	"gotest.tools/assert"
 )
 

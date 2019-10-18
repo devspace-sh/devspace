@@ -3,6 +3,7 @@ package cloud
 import (
 	"context"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/machinebox/graphql"
 	"github.com/pkg/errors"
 )
@@ -40,7 +41,17 @@ func (g *GraphqlClient) GrapqhlRequest(p *Provider, request string, vars map[str
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	// Run the graphql request
-	return graphQlClient.Run(context.Background(), req, response)
+	err = graphQlClient.Run(context.Background(), req, response)
+	if err != nil {
+		newerVersion := upgrade.NewerVersionAvailable()
+		if newerVersion != "" {
+			p.Log.Warnf("This error could be caused by your old DevSpace version. Please upgrade to version %s as soon as possible", newerVersion)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 // GrapqhlRequest does a new graphql request and stores the result in the response

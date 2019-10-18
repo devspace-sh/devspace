@@ -17,14 +17,14 @@ import (
 )
 
 func TestDeleteCluster(t *testing.T) {
-	provider := &Provider{}
-	err := provider.DeleteCluster(&latest.Cluster{}, true, true, log.GetInstance())
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
+	err := provider.DeleteCluster(&latest.Cluster{}, true, true)
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a cluster without a token")
 }
 
 func TestDeleteSpace(t *testing.T) {
-	provider := &Provider{}
-	err := provider.DeleteSpace(&latest.Space{Cluster: &latest.Cluster{}}, log.GetInstance())
+	provider := &Provider{latest.Provider{}, log.GetInstance()}
+	err := provider.DeleteSpace(&latest.Space{Cluster: &latest.Cluster{}})
 	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
 }
 

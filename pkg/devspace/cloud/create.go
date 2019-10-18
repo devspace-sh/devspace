@@ -2,9 +2,47 @@ package cloud
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
+
+// CreatePublicCluster creates a new public cluster
+func (p *Provider) CreatePublicCluster(name, server, caCert, adminToken string) (int, error) {
+	// Response struct
+	response := struct {
+		CreateCluster *struct {
+			ClusterID int
+		} `json:"manager_createCluster"`
+	}{}
+
+	// Do the request
+	err := p.GrapqhlRequest(`
+		mutation($name:String!,$caCert:String!,$server:String!,$adminToken:String!) {
+  			manager_createCluster(
+				name:$name,
+				caCert:$caCert,
+				server:$server,
+				adminToken:$adminToken
+			) {
+				ClusterID
+			}
+		}
+	`, map[string]interface{}{
+		"name":       name,
+		"caCert":     caCert,
+		"server":     server,
+		"adminToken": adminToken,
+	}, &response)
+	if err != nil {
+		return 0, err
+	}
+
+	// Check result
+	if response.CreateCluster == nil {
+		return 0, errors.New("Couldn't create cluster: returned answer is null")
+	}
+
+	return response.CreateCluster.ClusterID, nil
+}
 
 // CreateUserCluster creates a user cluster with the given name
 func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error) {
@@ -48,8 +86,8 @@ func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string
 }
 
 // CreateSpace creates a new space and returns the space id
-func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Cluster, log log.Logger) (int, error) {
-	key, err := p.GetClusterKey(cluster, log)
+func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Cluster) (int, error) {
+	key, err := p.GetClusterKey(cluster)
 	if err != nil {
 		return 0, errors.Wrap(err, "get cluster key")
 	}

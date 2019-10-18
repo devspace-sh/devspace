@@ -3,6 +3,7 @@ package cloud
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // DevSpaceKubeContextName is the name for the kube config context
@@ -14,6 +15,8 @@ const GraphqlEndpoint = "/graphql"
 // Provider describes the struct to hold the cloud configuration
 type Provider struct {
 	latest.Provider
+
+	Log log.Logger
 }
 
 // Save saves the provider config

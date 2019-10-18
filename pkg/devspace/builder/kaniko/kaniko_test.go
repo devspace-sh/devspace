@@ -51,7 +51,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	// 2. Create kubectl client
 	deployConfig := &latest.DeploymentConfig{
 		Name: "test-deployment",
-		Component: &latest.ComponentConfig{
+		/*Component: &latest.ComponentConfig{
 			Containers: []*latest.ContainerConfig{
 				{
 					Image: "nginx",
@@ -64,7 +64,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 					},
 				},
 			},
-		},
+		},*/
 	}
 
 	// Create fake devspace config

@@ -6,7 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/component"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
@@ -61,13 +60,6 @@ func All(config *latest.Config, cache *generated.CacheConfig, client *kubectlpkg
 				}
 
 				method = "helm"
-			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(config, client, deployConfig, log)
-				if err != nil {
-					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
-				}
-
-				method = "component"
 			} else {
 				return errors.Errorf("Error deploying devspace: deployment %s has no deployment method", deployConfig.Name)
 			}
@@ -148,12 +140,6 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 				deployClient, err = helm.New(config, client, deployConfig, log)
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config: %v", err)
-					continue
-				}
-			} else if deployConfig.Component != nil {
-				deployClient, err = component.New(config, client, deployConfig, log)
-				if err != nil {
-					log.Warnf("Unable to create component deploy config: %v", err)
 					continue
 				}
 			}

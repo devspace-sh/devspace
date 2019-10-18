@@ -6,7 +6,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -226,8 +225,8 @@ func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (p *Provider) GetServiceAccount(space *latest.Space, log log.Logger) (*latest.ServiceAccount, error) {
-	key, err := p.GetClusterKey(space.Cluster, log)
+func (p *Provider) GetServiceAccount(space *latest.Space) (*latest.ServiceAccount, error) {
+	key, err := p.GetClusterKey(space.Cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "get cluster key")
 	}
@@ -265,9 +264,8 @@ type spaceGraphql struct {
 	Owner *latest.Owner `json:"account"`
 
 	KubeContext *struct {
-		Namespace string                `json:"namespace"`
-		Cluster   *latest.Cluster       `json:"cluster"`
-		Domains   []*latest.SpaceDomain `json:"kube_context_domains"`
+		Namespace string          `json:"namespace"`
+		Cluster   *latest.Cluster `json:"cluster"`
 	} `json:"kube_context"`
 
 	CreatedAt string `json:"created_at"`
@@ -303,11 +301,6 @@ func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 						name
 					}
 				}
-				
-				kube_context_domains {
-					id
-					url
-				}
 			}
 			
 			created_at
@@ -336,7 +329,6 @@ func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 			Namespace:    spaceConfig.KubeContext.Namespace,
 			ProviderName: p.Name,
 			Cluster:      spaceConfig.KubeContext.Cluster,
-			Domains:      spaceConfig.KubeContext.Domains,
 			Created:      spaceConfig.CreatedAt,
 		}
 
@@ -381,11 +373,6 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 						name
 					}
 				}
-
-				kube_context_domains {
-					id
-					url
-				}
 			}
 			
 			created_at
@@ -415,7 +402,6 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 		Namespace:    spaceConfig.KubeContext.Namespace,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
-		Domains:      spaceConfig.KubeContext.Domains,
 		Created:      spaceConfig.CreatedAt,
 	}
 
@@ -482,11 +468,6 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 							name
 						}
 					}
-
-					kube_context_domains {
-						id
-						url
-					}
 				}
 				
 				created_at
@@ -517,7 +498,6 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 		Namespace:    spaceConfig.KubeContext.Namespace,
 		ProviderName: p.Name,
 		Cluster:      spaceConfig.KubeContext.Cluster,
-		Domains:      spaceConfig.KubeContext.Domains,
 		Created:      spaceConfig.CreatedAt,
 	}
 

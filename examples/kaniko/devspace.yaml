@@ -1,4 +1,4 @@
-version: v1beta3
+version: v1beta4
 images:
   default:
     image: devspacecloud/devspace
@@ -6,18 +6,18 @@ images:
       kaniko:
         cache: true
 deployments:
-  - name: devspace-default
-    helm:
-      chart:
-        name: ./chart
+- name: devspace-default
+  helm:
+    chart:
+      name: ./chart
 dev:
+  ports:
+  - imageName: default
+    forward:
+    - port: 8080
+  sync:
+  - imageName: default
   interactive:
     defaultEnabled: true
     images:
     - name: default
-  ports:
-    - imageName: default
-      forward:
-        - port: 8080
-  sync:
-    - imageName: default
