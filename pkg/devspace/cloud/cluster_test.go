@@ -197,6 +197,7 @@ func TestGetKey(t *testing.T) {
 			Provider: latest.Provider{
 				ClusterKey: testCase.givenKeys,
 			},
+			Log: log.GetInstance(),
 		}
 		for _, answer := range testCase.answers {
 			survey.SetNextAnswer(answer)
