@@ -63,7 +63,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
         podList,
       });
 
-      // this.timeout = setTimeout(this.componentDidMount, 1000);
+      this.timeout = setTimeout(this.componentDidMount, 1000);
     } catch (err) {
       if (err && err.message === 'Failed to fetch') {
         err = new Error('Failed to fetch pods. Is the UI server running?');
