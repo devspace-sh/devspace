@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -13,6 +14,19 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func pipeWriter(ws *websocket.Conn, w io.Writer) error {
+	for {
+		_, message, err := ws.ReadMessage()
+		if err != nil {
+			return err
+		}
+
+		if _, err := w.Write(message); err != nil {
+			return err
+		}
+	}
 }
 
 func pipeReader(ws *websocket.Conn, r io.Reader) error {
@@ -26,7 +40,6 @@ func pipeReader(ws *websocket.Conn, r io.Reader) error {
 		}
 
 		if err := ws.WriteMessage(websocket.BinaryMessage, b[:n]); err != nil {
-			ws.Close()
 			return err
 		}
 	}
@@ -34,17 +47,32 @@ func pipeReader(ws *websocket.Conn, r io.Reader) error {
 	return nil
 }
 
-type wsWriter struct {
+type wsStream struct {
 	WebSocket *websocket.Conn
+
+	writeMutex sync.Mutex
 }
 
-func (ws *wsWriter) Write(p []byte) (int, error) {
+func (ws *wsStream) Write(p []byte) (int, error) {
+	ws.writeMutex.Lock()
+	defer ws.writeMutex.Unlock()
+
 	err := ws.WebSocket.WriteMessage(websocket.BinaryMessage, p)
 	if err != nil {
 		return 0, err
 	}
 
 	return len(p), nil
+}
+
+func (ws *wsStream) Read(p []byte) (int, error) {
+	ws.WebSocket.SetReadLimit(len(p))
+
+	_, message, err := ws.WebSocket.ReadMessage()
+	if err != nil {
+		return err
+	}
+
 }
 
 func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +96,7 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 
 	defer ws.Close()
 
-	writer := &wsWriter{WebSocket: ws}
+	writer := &wsStream{WebSocket: ws}
 	err = h.client.LogMultiple(imageSelector, make(chan error), ptr.Int64(100), writer, log.Discard)
 	if err != nil {
 		ws.Close()
