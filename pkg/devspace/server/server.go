@@ -59,6 +59,7 @@ func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
+	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)
 	return handler
 }
 
@@ -95,6 +96,7 @@ type returnConfig struct {
 	Config          *latest.Config    `yaml:"config"`
 	GeneratedConfig *generated.Config `yaml:"generatedConfig"`
 
+	Profile       string `yaml:"profile"`
 	KubeContext   string `yaml:"kubeContext"`
 	KubeNamespace string `yaml:"kubeNamespace"`
 }
@@ -103,6 +105,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	s, err := yaml.Marshal(&returnConfig{
 		Config:          h.config,
 		GeneratedConfig: h.generatedConfig,
+		Profile:         h.generatedConfig.GetActiveProfile(),
 		KubeContext:     h.client.CurrentContext,
 		KubeNamespace:   h.client.Namespace,
 	})

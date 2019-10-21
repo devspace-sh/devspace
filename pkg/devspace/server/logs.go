@@ -33,11 +33,54 @@ func pipeReader(ws *websocket.Conn, r io.Reader) error {
 		}
 	}
 
+	return nil
+}
+
+type wsWriter struct {
+	WebSocket *websocket.Conn
+}
+
+func (ws *wsWriter) Write(p []byte) (int, error) {
+	err := ws.WebSocket.WriteMessage(websocket.BinaryMessage, p)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
+}
+
+func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
+	namespace, ok := r.URL.Query()["namespace"]
+	if !ok || len(namespace) != 1 {
+		http.Error(w, "namespace is missing", http.StatusBadRequest)
+		return
+	}
+	imageSelector, ok := r.URL.Query()["imageSelector"]
+	if !ok || len(imageSelector) == 0 {
+		http.Error(w, "imageSelector is missing", http.StatusBadRequest)
+		return
+	}
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.log.Errorf("Error upgrading connection: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer ws.Close()
+
+	writer := &wsWriter{WebSocket: ws}
+	err = h.client.LogMultiple(imageSelector, make(chan error), ptr.Int64(100), writer, log.Discard)
+	if err != nil {
+		ws.Close()
+		h.log.Errorf("Error in /api/logs-multiple logs: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
 	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	ws.Close()
-
-	return nil
 }
 
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
@@ -83,4 +126,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }

@@ -1,6 +1,26 @@
 import http, { IncomingMessage } from 'http';
 import https from 'https';
 import React from 'react';
+import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
+
+export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
+  const imageSelector = [];
+  const activeCache = devSpaceConfig.generatedConfig.profiles[devSpaceConfig.profile];
+
+  for (const generatedImageName in activeCache.images) {
+    if (
+      activeCache.images[generatedImageName].imageName &&
+      devSpaceConfig.config.images &&
+      devSpaceConfig.config.images[generatedImageName]
+    ) {
+      imageSelector.push(
+        activeCache.images[generatedImageName].imageName + ':' + activeCache.images[generatedImageName].tag
+      );
+    }
+  }
+
+  return imageSelector;
+};
 
 export const formatError = (error: any): any => {
   if (!error) {

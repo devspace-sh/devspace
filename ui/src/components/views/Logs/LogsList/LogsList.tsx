@@ -2,14 +2,19 @@ import React from 'react';
 import { V1PodList } from '@kubernetes/client-node';
 import Pod from '../Pod/Pod';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
+import LogsMultiple from '../LogsMultiple/LogsMultiple';
+import { getDeployedImageNames } from 'lib/utils';
+
+export interface SelectedLogs {
+  pod?: string;
+  container?: string;
+  multiple?: string[];
+}
 
 interface Props extends DevSpaceConfigContext {
   podList: V1PodList;
-  onSelect: (podName: string, containerName: string) => void;
-  selected?: {
-    pod: string;
-    container: string;
-  };
+  onSelect: (selected: SelectedLogs) => void;
+  selected?: SelectedLogs;
 }
 
 const renderPods = (props: Props) => {
@@ -21,12 +26,24 @@ const renderPods = (props: Props) => {
     <Pod
       key={pod.metadata.uid}
       pod={pod}
-      onClickContainer={(container) => props.onSelect(pod.metadata.name, container)}
+      onClickContainer={(container) =>
+        props.onSelect({
+          pod: pod.metadata.name,
+          container,
+        })
+      }
       selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
     />
   ));
 };
 
-const LogsList = (props: Props) => <div>{renderPods(props)}</div>;
+const LogsList = (props: Props) => (
+  <div>
+    {getDeployedImageNames(props.devSpaceConfig).length > 0 && (
+      <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
+    )}
+    {renderPods(props)}
+  </div>
+);
 
 export default withDevSpaceConfig(LogsList);

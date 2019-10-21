@@ -1,13 +1,9 @@
 import React from 'react';
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
-import { ApiHostname } from 'lib/rest';
 
 export interface LogsTerminalProps {
-  pod: string;
-  container: string;
-  namespace: string;
-
+  url: string;
   show: boolean;
   onClose?: () => void;
 }
@@ -30,11 +26,7 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
     });
 
     // Open the websocket
-    this.socket = new WebSocket(
-      `ws://${ApiHostname()}/api/logs?namespace=${this.props.namespace}&name=${this.props.pod}&container=${
-        this.props.container
-      }`
-    );
+    this.socket = new WebSocket(this.props.url);
     const attachAddon = new AttachAddon(this.socket, { bidirectional: false, onClose: this.props.onClose });
 
     // Attach the socket to term
