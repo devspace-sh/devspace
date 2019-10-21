@@ -68,7 +68,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Helm.Chart.Name, true)
+	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}
