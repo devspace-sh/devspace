@@ -22,7 +22,25 @@ interface State {
 
 class LogsContainers extends React.PureComponent<Props, State> {
   timeout: any;
-  cache: TerminalCache = new TerminalCache(this.props.devSpaceConfig.kubeNamespace);
+  cache: TerminalCache = new TerminalCache(this.props.devSpaceConfig.kubeNamespace, (selected: SelectedLogs) => {
+    if (
+      this.state.selected &&
+      selected.pod === this.state.selected.pod &&
+      selected.container === this.state.selected.container
+    ) {
+      this.setState({
+        selected: null,
+      });
+      return;
+    } else if (this.state.selected && selected.multiple && this.state.selected.multiple) {
+      this.setState({
+        selected: null,
+      });
+      return;
+    }
+
+    this.forceUpdate();
+  });
   state: State = {};
 
   componentDidMount = async () => {
@@ -45,7 +63,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
         podList,
       });
 
-      this.timeout = setTimeout(this.componentDidMount, 1000);
+      // this.timeout = setTimeout(this.componentDidMount, 1000);
     } catch (err) {
       if (err && err.message === 'Failed to fetch') {
         err = new Error('Failed to fetch pods. Is the UI server running?');

@@ -16,8 +16,6 @@ var upgrader = websocket.Upgrader{
 }
 
 func pipeReader(ws *websocket.Conn, r io.Reader) error {
-	defer log.Info("Done bois")
-
 	b := make([]byte, 1024)
 	for {
 		n, err := r.Read(b)

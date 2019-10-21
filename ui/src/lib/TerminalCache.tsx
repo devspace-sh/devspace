@@ -17,13 +17,16 @@ export interface TerminalCacheInterface {
 }
 
 class TerminalCache {
+  private closed: boolean = false;
   private namespace: string;
+  private onDelete: (selected: SelectedLogs) => void;
   private cache: TerminalCacheInterface = {
     terminals: [],
   };
 
-  constructor(namespace: string) {
+  constructor(namespace: string, onDelete: (selected: SelectedLogs) => void) {
     this.namespace = namespace;
+    this.onDelete = onDelete;
   }
 
   public updateCache(podList: V1PodList) {
@@ -82,16 +85,49 @@ class TerminalCache {
     }
   }
 
+  public delete(selected: SelectedLogs) {
+    if (this.closed || !selected) {
+      return;
+    }
+
+    if (selected.pod) {
+      const idx = this.cache.terminals.findIndex(
+        (terminal) => terminal.pod === selected.pod && terminal.container === selected.container
+      );
+      if (idx !== -1) {
+        this.cache.terminals.splice(idx, 1);
+        this.onDelete(selected);
+      }
+    } else if (selected.multiple) {
+      this.cache.multiLog = null;
+      this.onDelete(selected);
+    }
+  }
+
+  public close() {
+    this.closed = true;
+  }
+
   public renderTerminals() {
     const terminals = [];
 
     if (this.cache.multiLog) {
-      terminals.push(<LogsTerminal key="multi-logs" {...this.cache.multiLog.props} />);
+      terminals.push(
+        <LogsTerminal
+          key="multi-logs"
+          {...this.cache.multiLog.props}
+          onClose={() => this.delete({ multiple: this.cache.multiLog.multiple })}
+        />
+      );
     }
 
     terminals.push(
       ...this.cache.terminals.map((terminal) => (
-        <LogsTerminal key={terminal.pod + ':' + terminal.container} {...terminal.props} />
+        <LogsTerminal
+          key={terminal.pod + ':' + terminal.container}
+          {...terminal.props}
+          onClose={() => this.delete({ pod: terminal.pod, container: terminal.container })}
+        />
       ))
     );
 
