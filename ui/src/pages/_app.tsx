@@ -1,6 +1,7 @@
-import * as React from "react";
-import Routes from "routes/Routes";
-import PopupWrapper from "contexts/withPopup/PopupWrapper";
+import * as React from 'react';
+import Routes from 'routes/Routes';
+import PopupWrapper from 'contexts/withPopup/PopupWrapper';
+import DevSpaceConfigWrapper from 'contexts/withDevSpaceConfig/DevSpaceConfigWrapper';
 
 interface Props {}
 interface State {
@@ -9,7 +10,7 @@ interface State {
 
 export default class App extends React.PureComponent<Props, State> {
   state: State = {
-    redirect: false
+    redirect: false,
   };
 
   render() {
@@ -18,9 +19,11 @@ export default class App extends React.PureComponent<Props, State> {
     }
 
     return (
-      <PopupWrapper>
-        <Routes />
-      </PopupWrapper>
+      <DevSpaceConfigWrapper>
+        <PopupWrapper>
+          <Routes />
+        </PopupWrapper>
+      </DevSpaceConfigWrapper>
     );
   }
 }

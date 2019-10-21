@@ -17,6 +17,10 @@ type Server struct {
 	server *http.Server
 }
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
 // NewServer creates a new server from the given parameters
 func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, port int, log log.Logger) (*Server, error) {
 	return &Server{
@@ -59,6 +63,7 @@ func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -86,8 +91,21 @@ func convert(i interface{}) interface{} {
 	return i
 }
 
+type returnConfig struct {
+	Config          *latest.Config    `yaml:"config"`
+	GeneratedConfig *generated.Config `yaml:"generatedConfig"`
+
+	KubeContext   string `yaml:"kubeContext"`
+	KubeNamespace string `yaml:"kubeNamespace"`
+}
+
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
-	s, err := yaml.Marshal(h.config)
+	s, err := yaml.Marshal(&returnConfig{
+		Config:          h.config,
+		GeneratedConfig: h.generatedConfig,
+		KubeContext:     h.client.CurrentContext,
+		KubeNamespace:   h.client.Namespace,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -155,8 +173,4 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(out))
-}
-
-func (h *handler) index(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, world!"))
 }

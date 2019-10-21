@@ -2,21 +2,12 @@ import http, { IncomingMessage } from 'http';
 import https from 'https';
 import React from 'react';
 
-export const AsAdmin = {
-  headers: {
-    'x-hasura-role': 'admin',
-  },
-};
-
 export const formatError = (error: any): any => {
   if (!error) {
     return undefined;
   }
 
-  return (error && error.message ? error.message : '' + error)
-    .replace(/^Error: GraphQL error: /, '')
-    .replace(/^GraphQL error: /, '')
-    .replace(/graphql: /, '');
+  return error && error.message ? error.message : '' + error;
 };
 
 export function bindParameter(fnToBind: (...args: any[]) => any, ...args: any[]) {
@@ -105,26 +96,6 @@ export function copyToClipboard(text: string) {
       console.error('Async: Could not copy text: ', err);
     }
   );
-}
-
-// Cache the avatar urls
-const avatarCache: { [name: string]: string } = {};
-
-export async function getGithubPictureURL(username: string): Promise<string> {
-  if (!avatarCache[username]) {
-    avatarCache[username] = await fetch('https://api.github.com/users/' + username)
-      .then((response) => {
-        return response.json();
-      })
-      .then((jsonResponse) => {
-        if (jsonResponse.avatar_url) {
-          return jsonResponse.avatar_url;
-        } else {
-          return 'https://github.com/identicons/jasonlong.png';
-        }
-      });
-  }
-  return avatarCache[username];
 }
 
 export const deepCopy: <T>(obj: T) => T = (obj: any) => {
@@ -230,70 +201,3 @@ export const customSort = (prop: string | string[], direction: 'asc' | 'desc', a
     }
   });
 };
-
-export function cpuParser(input: string): number {
-  const nanoMatch = input.match(/^([0-9]+)n$/);
-  if (nanoMatch) {
-    return parseInt(nanoMatch[1]) / 1000 / 1000 / 1000;
-  }
-
-  const milliMatch = input.match(/^([0-9]+)m$/);
-  if (milliMatch) {
-    return parseInt(milliMatch[1]) / 1000;
-  }
-
-  return parseFloat(input);
-}
-
-const memoryMultipliers = {
-  k: 1000,
-  M: 1000 ** 2,
-  G: 1000 ** 3,
-  T: 1000 ** 4,
-  P: 1000 ** 5,
-  E: 1000 ** 6,
-  Ki: 1024,
-  Mi: 1024 ** 2,
-  Gi: 1024 ** 3,
-  Ti: 1024 ** 4,
-  Pi: 1024 ** 5,
-  Ei: 1024 ** 6,
-};
-
-export function memoryParser(input: string): number {
-  const unitMatch = input.match(/^([0-9]+)([A-Za-z]{1,2})$/);
-  if (unitMatch) {
-    return parseInt(unitMatch[1], 10) * memoryMultipliers[unitMatch[2]];
-  }
-
-  return parseInt(input, 10);
-}
-
-export const convertIngressHosts = (
-  hosts: string,
-  input: string,
-  spaceName: string,
-  spaceNamespace: string,
-  spaceOwnerName: string
-) => {
-  hosts = hosts
-    .replace(/\./g, '\\.')
-    .replace(/\*/g, '.*')
-    .replace(/\${DEVSPACE_SPACE}/g, spaceName)
-    .replace(/\${DEVSPACE_SPACE_NAMESPACE}/g, spaceNamespace)
-    .replace(/\${DEVSPACE_USERNAME}/g, spaceOwnerName);
-
-  const hostArr = hosts.split(',');
-  for (const h of hostArr) {
-    const regex = new RegExp('^' + h + '$');
-    if (input.match(regex)) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-// b.a.com,b.com
-
-// a.com

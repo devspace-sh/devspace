@@ -1,12 +1,12 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/gorilla/websocket"
 )
@@ -16,21 +16,27 @@ var upgrader = websocket.Upgrader{
 }
 
 func pipeReader(ws *websocket.Conn, r io.Reader) error {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		// ws.SetWriteDeadline(time.Now().Add(writeWait))
-		if err := ws.WriteMessage(websocket.BinaryMessage, s.Bytes()); err != nil {
-			ws.Close()
+	defer log.Info("Done bois")
+
+	b := make([]byte, 1024)
+	for {
+		n, err := r.Read(b)
+		if err == io.EOF {
 			break
+		} else if err != nil {
+			return err
 		}
-	}
-	if s.Err() != nil {
-		return s.Err()
+
+		if err := ws.WriteMessage(websocket.BinaryMessage, b[:n]); err != nil {
+			ws.Close()
+			return err
+		}
 	}
 
 	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
 	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	ws.Close()
+
 	return nil
 }
 

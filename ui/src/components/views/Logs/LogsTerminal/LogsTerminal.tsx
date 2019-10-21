@@ -1,29 +1,55 @@
 import React from 'react';
 import { Terminal } from 'xterm';
-import { AttachAddon } from 'xterm-addon-attach';
+import { AttachAddon } from 'lib/attach';
+import { ApiHostname } from 'lib/rest';
 
-interface Props {}
+export interface LogsTerminalProps {
+  pod: string;
+  container: string;
+  namespace: string;
+
+  show: boolean;
+  onClose?: () => void;
+}
+
 interface State {}
 
-class LogsTerminal extends React.PureComponent<Props, State> {
+class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
+  socket: WebSocket;
+  term: Terminal;
+
   attach(ref: HTMLDivElement) {
-    if (!ref) {
+    if (!ref || this.term) {
       return;
     }
 
-    const term = new Terminal();
-    const socket = new WebSocket(
-      'ws://localhost:8090/api/logs?namespace=test&name=quickstart-6c76fbc6f4-46nfd&container=container-0'
+    this.term = new Terminal({
+      // We need this setting to automatically convert \n -> \r\n
+      convertEol: true,
+      disableStdin: true,
+    });
+
+    // Open the websocket
+    this.socket = new WebSocket(
+      `ws://${ApiHostname()}/api/logs?namespace=${this.props.namespace}&name=${this.props.pod}&container=${
+        this.props.container
+      }`
     );
-    const attachAddon = new AttachAddon(socket, { bidirectional: false });
+    const attachAddon = new AttachAddon(this.socket, { bidirectional: false, onClose: this.props.onClose });
 
     // Attach the socket to term
-    term.open(ref);
-    term.loadAddon(attachAddon);
+    this.term.open(ref);
+    this.term.loadAddon(attachAddon);
+  }
+
+  componentWillUnmount() {
+    if (this.socket) {
+      this.socket.close();
+    }
   }
 
   render() {
-    return <div ref={(ref) => this.attach(ref)} />;
+    return <div style={{ display: this.props.show ? 'block' : 'none' }} ref={(ref) => this.attach(ref)} />;
   }
 }
 
