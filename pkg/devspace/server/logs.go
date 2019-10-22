@@ -16,19 +16,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-func pipeWriter(ws *websocket.Conn, w io.Writer) error {
-	for {
-		_, message, err := ws.ReadMessage()
-		if err != nil {
-			return err
-		}
-
-		if _, err := w.Write(message); err != nil {
-			return err
-		}
-	}
-}
-
 func pipeReader(ws *websocket.Conn, r io.Reader) error {
 	b := make([]byte, 1024)
 	for {
@@ -66,13 +53,15 @@ func (ws *wsStream) Write(p []byte) (int, error) {
 }
 
 func (ws *wsStream) Read(p []byte) (int, error) {
-	ws.WebSocket.SetReadLimit(len(p))
+	ws.WebSocket.SetReadLimit(int64(len(p)))
 
 	_, message, err := ws.WebSocket.ReadMessage()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
+	copy(p, message)
+	return len(message), nil
 }
 
 func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {

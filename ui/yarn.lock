@@ -9515,11 +9515,6 @@ xtend@^4.0.0, xtend@~4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/xtend/-/xtend-4.0.1.tgz#a5c6d532be656e23db820efb943a1f04998d63af"
 
-xterm-addon-attach@0.3.0:
-  version "0.3.0"
-  resolved "https://npm.devspace.cloud/xterm-addon-attach/-/xterm-addon-attach-0.3.0.tgz#bd037c2eb496c02760d1ef647b179732500ebe49"
-  integrity sha512-uX1fFtnmhreb9jmUtwfDzAIRD8yL5bWw3yJWkPSHQB85o+Ug3i0sQci7X9xTdZfnY4IDh//u1QR58EvtDTrCAA==
-
 xterm@4.1.0:
   version "4.1.0"
   resolved "https://npm.devspace.cloud/xterm/-/xterm-4.1.0.tgz#f6b6e127d1a1e31cef709b45fca845bf818602ce"
