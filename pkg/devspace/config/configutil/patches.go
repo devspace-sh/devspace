@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
 
 	yamlpatch "github.com/krishicks/yaml-patch"
@@ -13,56 +14,68 @@ import (
 )
 
 // ApplyPatches applies the patches to the config if defined
-func ApplyPatches(config *latest.Config) (*latest.Config, error) {
-	out, err := yaml.Marshal(config)
+func ApplyPatches(data map[interface{}]interface{}, profile map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	out, err := yaml.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if there are patches defined
-	if len(config.Profiles) == 1 && len(config.Profiles[0].Patches) > 0 {
-		var iface map[interface{}]interface{}
-		err := yaml.Unmarshal(out, &iface)
-		if err != nil {
-			return nil, err
-		}
-
-		var (
-			patches = yamlpatch.Patch{}
-		)
-
-		for _, patch := range config.Profiles[0].Patches {
-			newPatch := yamlpatch.Operation{
-				Op:   yamlpatch.Op(patch.Operation),
-				Path: yamlpatch.OpPath(transformPath(patch.Path)),
-				From: yamlpatch.OpPath(transformPath(patch.From)),
-			}
-
-			if patch.Value != nil {
-				newPatch.Value = yamlpatch.NewNode(&patch.Value)
-			}
-
-			if string(newPatch.Op) == "add" && patch.Path[0] != '/' {
-				// In yamlpath the user has to add a '/-' to append to an array which is often confusing
-				// if the '/-' is not added the operation is essentially an replace. So what we do here is check
-				// if the operation is add, the path points to an array and the specified path was not XPath -> then we will just append the /-
-				target, _ := findPath(&newPatch.Path, iface)
-				if _, ok := target.([]interface{}); ok {
-					newPatch.Path = yamlpatch.OpPath(strings.TrimSuffix(string(newPatch.Path), "/-") + "/-")
-				}
-			}
-
-			patches = append(patches, newPatch)
-		}
-
-		out, err = patches.Apply(out)
-		if err != nil {
-			return nil, errors.Wrap(err, "apply patches")
-		}
+	patchesRaw, ok := profile["patches"]
+	if !ok {
+		return data, nil
 	}
 
-	newConfig := &latest.Config{}
-	err = yaml.UnmarshalStrict(out, newConfig)
+	patchesArr, ok := patchesRaw.([]interface{})
+	if !ok {
+		return nil, errors.Errorf("profile.%v.patches is not an array", profile["name"])
+	} else if len(patchesArr) == 0 {
+		return data, nil
+	}
+
+	configPatches := []*latest.PatchConfig{}
+	err = util.Convert(patchesArr, &configPatches)
+	if err != nil {
+		return nil, errors.Wrap(err, "convert patches")
+	}
+
+	patches := yamlpatch.Patch{}
+	for idx, patch := range configPatches {
+		if patch.Operation == "" {
+			return nil, errors.Errorf("profiles.%v.patches.%d.op is missing", profile["name"], idx)
+		} else if patch.Path == "" {
+			return nil, errors.Errorf("profiles.%v.patches.%d.path is missing", profile["name"], idx)
+		}
+
+		newPatch := yamlpatch.Operation{
+			Op:   yamlpatch.Op(patch.Operation),
+			Path: yamlpatch.OpPath(transformPath(patch.Path)),
+			From: yamlpatch.OpPath(transformPath(patch.From)),
+		}
+
+		if patch.Value != nil {
+			newPatch.Value = yamlpatch.NewNode(&patch.Value)
+		}
+
+		if string(newPatch.Op) == "add" && patch.Path[0] != '/' {
+			// In yamlpath the user has to add a '/-' to append to an array which is often confusing
+			// if the '/-' is not added the operation is essentially an replace. So what we do here is check
+			// if the operation is add, the path points to an array and the specified path was not XPath -> then we will just append the /-
+			target, _ := findPath(&newPatch.Path, data)
+			if _, ok := target.([]interface{}); ok {
+				newPatch.Path = yamlpatch.OpPath(strings.TrimSuffix(string(newPatch.Path), "/-") + "/-")
+			}
+		}
+
+		patches = append(patches, newPatch)
+	}
+
+	out, err = patches.Apply(out)
+	if err != nil {
+		return nil, errors.Wrap(err, "apply patches")
+	}
+
+	newConfig := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(out, &newConfig)
 	if err != nil {
 		return nil, err
 	}

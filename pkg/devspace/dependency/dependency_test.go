@@ -76,8 +76,8 @@ func TestUpdateAll(t *testing.T) {
 		updateAllTestCase{
 			name: "Update one dependency",
 			files: map[string]string{
-				"devspace.yaml":         "",
-				"someDir/devspace.yaml": "",
+				"devspace.yaml":         "version: v1beta3",
+				"someDir/devspace.yaml": "version: v1beta3",
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{

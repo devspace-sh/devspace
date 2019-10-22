@@ -593,7 +593,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 		}
 
 		// Set image entrypoints if necessary
-		for imageConfName, imageConf := range config.Dev.Interactive.Images {
+		for _, imageConf := range config.Dev.Interactive.Images {
 			if cmd.Terminal {
 				imageConf.Entrypoint = nil
 				imageConf.Cmd = nil
@@ -603,11 +603,11 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			}
 
 			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {
-				log.Infof("Override image %s entrypoint with %+v and cmd with %+v", imageConfName, imageConf.Entrypoint, imageConf.Cmd)
+				log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
 			} else if imageConf.Entrypoint != nil {
-				log.Infof("Override image %s entrypoint with %+v", imageConfName, imageConf.Entrypoint)
+				log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
 			} else if imageConf.Cmd != nil {
-				log.Infof("Override image %s cmd with %+v", imageConfName, imageConf.Cmd)
+				log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
 			}
 		}
 

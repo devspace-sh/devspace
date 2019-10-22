@@ -128,7 +128,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	ctx := context.Background()
-	outStream := command.NewOutStream(writer)
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -212,24 +211,33 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Setup an upload progress bar
+	outStream := command.NewOutStream(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
-	response, err := b.client.ImageBuild(ctx, body, types.ImageBuildOptions{
+	buildOptions := types.ImageBuildOptions{
 		Tags:        []string{fullImageName},
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
 		Target:      options.Target,
 		NetworkMode: options.NetworkMode,
 		AuthConfigs: authConfigs,
-	})
-	if err != nil {
-		return err
 	}
-	defer response.Body.Close()
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true {
+		err = b.client.ImageBuildCLI(true, body, writer, buildOptions)
+		if err != nil {
+			return err
+		}
+	} else {
+		response, err := b.client.ImageBuild(ctx, body, buildOptions)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
 
-	err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
-	if err != nil {
-		return err
+		err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Check if we skip push

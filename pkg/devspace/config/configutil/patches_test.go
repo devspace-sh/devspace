@@ -4,63 +4,47 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type testCase struct {
-	in       *latest.Config
-	expected *latest.Config
+	in       map[interface{}]interface{}
+	expected map[interface{}]interface{}
+	profile  map[interface{}]interface{}
 }
 
 func TestPatches(t *testing.T) {
 	testCases := []*testCase{
 		{
-			in: &latest.Config{
-				Dev: &latest.DevConfig{
-					Ports: []*latest.PortForwardingConfig{
-						{
-							ImageName: "test",
-						},
-					},
-				},
-				Profiles: []*latest.ProfileConfig{
-					{
-						Name: "test",
-						Patches: []*latest.PatchConfig{
-							{
-								Operation: "add",
-								Path:      "dev.ports",
-								Value: map[interface{}]interface{}{
-									"imageName": "myImage",
-								},
-							},
+			profile: map[interface{}]interface{}{
+				"name": "test",
+				"patches": []interface{}{
+					map[interface{}]interface{}{
+						"op":   "add",
+						"path": "dev.ports",
+						"value": map[interface{}]interface{}{
+							"imageName": "myImage",
 						},
 					},
 				},
 			},
-			expected: &latest.Config{
-				Dev: &latest.DevConfig{
-					Ports: []*latest.PortForwardingConfig{
-						{
-							ImageName: "test",
-						},
-						{
-							ImageName: "myImage",
+			in: map[interface{}]interface{}{
+				"dev": map[interface{}]interface{}{
+					"ports": []interface{}{
+						map[interface{}]interface{}{
+							"imageName": "test",
 						},
 					},
 				},
-				Profiles: []*latest.ProfileConfig{
-					{
-						Name: "test",
-						Patches: []*latest.PatchConfig{
-							{
-								Operation: "add",
-								Path:      "dev.ports",
-								Value: map[interface{}]interface{}{
-									"imageName": "myImage",
-								},
-							},
+			},
+			expected: map[interface{}]interface{}{
+				"dev": map[interface{}]interface{}{
+					"ports": []interface{}{
+						map[interface{}]interface{}{
+							"imageName": "test",
+						},
+						map[interface{}]interface{}{
+							"imageName": "myImage",
 						},
 					},
 				},
@@ -70,7 +54,7 @@ func TestPatches(t *testing.T) {
 
 	// Run test cases
 	for index, testCase := range testCases {
-		newConfig, err := ApplyPatches(testCase.in)
+		newConfig, err := ApplyPatches(testCase.in, testCase.profile)
 		if err != nil {
 			t.Fatalf("Error: %v", err)
 		}
