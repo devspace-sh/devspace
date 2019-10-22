@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -75,13 +74,7 @@ func ParseCommands(generatedConfig *generated.Config, data map[interface{}]inter
 	}
 
 	// Parse commands
-	config, err := versions.ParseCommands(data)
-	if err != nil {
-		return nil, err
-	}
-
-	preparedConfig := map[interface{}]interface{}{}
-	err = util.Convert(config, &preparedConfig)
+	preparedConfig, err := versions.ParseCommands(data)
 	if err != nil {
 		return nil, err
 	}
@@ -109,25 +102,45 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 		return nil, err
 	}
 
-	// Prepare config for variable loading
-	preparedConfig, err := versions.ParseProfile(data, options.Profile)
+	// Get profile
+	profile, err := versions.ParseProfile(data, options.Profile)
 	if err != nil {
 		return nil, err
+	}
+
+	// Now delete not needed parts from config
+	delete(data, "vars")
+	delete(data, "profiles")
+	delete(data, "commands")
+
+	// Apply profile
+	if profile != nil {
+		// Apply replace
+		err = ApplyReplace(data, profile)
+		if err != nil {
+			return nil, err
+		}
+
+		// Apply patches
+		data, err = ApplyPatches(data, profile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Fill in variables
-	err = FillVariables(generatedConfig, preparedConfig, vars, options, log)
+	err = FillVariables(generatedConfig, data, vars, options, log)
 	if err != nil {
 		return nil, err
 	}
 
-	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig, options.LoadedVars)
+	// Now convert the whole config to latest
+	latestConfig, err := versions.Parse(data, options.LoadedVars)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse config")
+		return nil, errors.Wrap(err, "convert config")
 	}
 
-	return parsedConfig, nil
+	return latestConfig, nil
 }
 
 // FillVariables fills in the given vars into the prepared config
