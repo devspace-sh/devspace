@@ -16,11 +16,13 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -33,6 +35,7 @@ type initTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
+	fakeDockerClient docker.ClientInterface
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -77,6 +80,9 @@ func TestInit(t *testing.T) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
+
+	_, readDirErr := ioutil.ReadFile(".")
+	readDirError := strings.ReplaceAll(readDirErr.Error(), dir, "%s")
 
 	testCases := []initTestCase{
 		initTestCase{
@@ -175,7 +181,7 @@ func TestInit(t *testing.T) {
 				filepath.Join(gitIgnoreFile, "someFile"): "",
 			},
 			answers:        []string{enterManifestsOption, "myManifest"},
-			expectedOutput: fmt.Sprintf("\nWarn Error reading file .gitignore: read .gitignore: The handle is invalid.\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
+			expectedOutput: fmt.Sprintf("\nWarn Error reading file .gitignore: "+readDirError+"\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ".gitignore", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Deployments: []*latest.DeploymentConfig{
@@ -273,8 +279,44 @@ func TestInit(t *testing.T) {
 			files: map[string]interface{}{
 				"aDockerfile": "",
 			},
-			answers: []string{enterDockerfileOption, "aDockerfile"},
-			//expectedErr: "Couldn't find dockerfile at 'Doesn't Exist'. Please make sure you have a Dockerfile at the specified location",
+			fakeDockerClient: &docker.FakeClient{
+				AuthConfig: &dockertypes.AuthConfig{
+					Username: "user",
+					Password: "pass",
+				},
+			},
+			answers: []string{enterDockerfileOption, "aDockerfile", "Use hub.docker.com => you are logged in as user", "user", "pass", "myImage", ""},
+			expectedConfig: &latest.Config{
+				Version: latest.Version,
+				Images: map[string]*latest.ImageConfig{
+					"default": &latest.ImageConfig{
+						Image:      "",
+						Dockerfile: "aDockerfile",
+					},
+				},
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name: filepath.Base(dir),
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									struct{}{},
+								},
+							},
+						},
+					},
+				},
+				Dev: &latest.DevConfig{
+					Sync: []*latest.SyncConfig{
+						&latest.SyncConfig{
+							ImageName:    "default",
+							ExcludePaths: []string{"devspace.yaml"},
+						},
+					},
+				},
+			},
+			expectedOutput: fmt.Sprintf("\nWait Checking registry authentication\nWarn You are not logged in to Docker Hub\nWarn Please make sure you have a https://hub.docker.com account\nWarn Installing docker is NOT required. You simply need a Docker Hub account\n\nWait Checking Docker credentials\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 		},
 	}
 
@@ -321,6 +363,7 @@ func testInit(t *testing.T, testCase initTestCase) {
 	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	docker.SetFakeClient(testCase.fakeDockerClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
