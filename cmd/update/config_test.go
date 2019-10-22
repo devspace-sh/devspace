@@ -118,7 +118,7 @@ func TestRunUpdateConfig(t *testing.T) {
 			files: map[string]interface{}{
 				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
 			},
-			expectedErr: fmt.Sprintf("Error getting config: "+isDirError, constants.DefaultConfigPath),
+			expectedErr: fmt.Sprintf("load config: "+isDirError, constants.DefaultConfigPath),
 		},
 		updateConfigTestCase{
 			name: "Safe with profiles",
