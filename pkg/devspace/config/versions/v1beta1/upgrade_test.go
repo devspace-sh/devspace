@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -148,7 +149,7 @@ func TestSimple(t *testing.T) {
 
 	// Run test cases
 	for index, testCase := range testCases {
-		newConfig, err := testCase.in.Upgrade()
+		newConfig, err := testCase.in.Upgrade(log.Discard)
 		if err != nil {
 			t.Fatalf("Error: %v", err)
 		}

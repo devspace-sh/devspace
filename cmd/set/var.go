@@ -57,7 +57,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	allowedVars, err := getPossibleVars(generatedConfig)
+	allowedVars, err := getPossibleVars(generatedConfig, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "get possible vars")
 	}
@@ -93,7 +93,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func getPossibleVars(generatedConfig *generated.Config) (map[string]bool, error) {
+func getPossibleVars(generatedConfig *generated.Config, log log.Logger) (map[string]bool, error) {
 	// Load variables
 	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
 	if err != nil {
@@ -106,7 +106,7 @@ func getPossibleVars(generatedConfig *generated.Config) (map[string]bool, error)
 	}
 
 	// Load defined variables
-	vars, err := versions.ParseVariables(rawMap)
+	vars, err := versions.ParseVariables(rawMap, log)
 	if err != nil {
 		return nil, err
 	}

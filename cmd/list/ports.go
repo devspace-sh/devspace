@@ -56,6 +56,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	headerColumnNames := []string{
+		"Image",
 		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
@@ -65,7 +66,6 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	// Transform values into string arrays
 	for _, value := range config.Dev.Ports {
 		selector := ""
-
 		for k, v := range value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
@@ -81,11 +81,17 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 					portMappings += ", "
 				}
 
-				portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
+				remotePort := *v.LocalPort
+				if v.RemotePort != nil {
+					remotePort = *v.RemotePort
+				}
+
+				portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(remotePort)
 			}
 		}
 
 		portForwards = append(portForwards, []string{
+			value.ImageName,
 			selector,
 			portMappings,
 		})

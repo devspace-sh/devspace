@@ -122,7 +122,7 @@ func NewFromKeyring(keyringfile, id string) (*Signatory, error) {
 		return s, nil
 	}
 
-	// We're gonna go all GnuPG on this and look for a string that _contains_. If
+	// We're going to go all GnuPG on this and look for a string that _contains_. If
 	// two or more keys contain the string and none are a direct match, we error
 	// out.
 	var candidate *openpgp.Entity
@@ -405,7 +405,7 @@ func DigestFile(filename string) (string, error) {
 func Digest(in io.Reader) (string, error) {
 	hash := crypto.SHA256.New()
 	if _, err := io.Copy(hash, in); err != nil {
-		return "", nil
+		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
