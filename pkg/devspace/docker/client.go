@@ -42,6 +42,10 @@ func NewClient(log log.Logger) (ClientInterface, error) {
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
 func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (ClientInterface, error) {
+	if fakeClient != nil {
+		return fakeClient, nil
+	}
+	
 	var cli ClientInterface
 	var err error
 
