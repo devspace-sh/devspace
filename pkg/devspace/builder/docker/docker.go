@@ -22,7 +22,6 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 
@@ -46,12 +45,12 @@ type Builder struct {
 	helper *helper.BuildHelper
 
 	authConfig *types.AuthConfig
-	client     client.CommonAPIClient
+	client     dockerclient.ClientInterface
 	skipPush   bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.ClientInterface, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
 		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client:   client,
@@ -255,7 +254,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		return nil, err
 	}
 
-	b.authConfig, err = dockerclient.Login(b.client, registryURL, "", "", true, false, false)
+	b.authConfig, err = b.client.Login(registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}

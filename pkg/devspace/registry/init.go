@@ -2,7 +2,6 @@ package registry
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -13,7 +12,7 @@ import (
 )
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClient client.CommonAPIClient, log log.Logger) error {
+func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClient docker.ClientInterface, log log.Logger) error {
 	if config.Images != nil {
 		pullSecrets := []string{}
 		createPullSecrets := map[string]bool{}
@@ -93,10 +92,10 @@ func addPullSecretsToServiceAccount(client *kubectl.Client, pullSecrets []string
 	return nil
 }
 
-func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, dockerClient client.CommonAPIClient, registryURL string, log log.Logger) error {
+func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, dockerClient docker.ClientInterface, registryURL string, log log.Logger) error {
 	username, password := "", ""
 	if dockerClient != nil {
-		authConfig, _ := docker.GetAuthConfig(dockerClient, registryURL, true)
+		authConfig, _ := dockerClient.GetAuthConfig(registryURL, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password

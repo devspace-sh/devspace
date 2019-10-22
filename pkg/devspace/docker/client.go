@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"os/exec"
 	"path/filepath"
@@ -9,19 +10,39 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
+	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
 )
 
+//ClientInterface contains all functions required to interact with docker
+type ClientInterface interface {
+	Ping(ctx context.Context) (dockertypes.Ping, error)
+	NegotiateAPIVersion(ctx context.Context)
+	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
+	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
+
+	Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
+	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
+}
+
+//Client is a client for docker
+type Client struct {
+	client.Client
+}
+
 // NewClient retrieves a new docker client
-func NewClient(log log.Logger) (client.CommonAPIClient, error) {
+func NewClient(log log.Logger) (ClientInterface, error) {
 	return NewClientWithMinikube("", false, log)
 }
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
-func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (client.CommonAPIClient, error) {
-	var cli client.CommonAPIClient
+func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (ClientInterface, error) {
+	var cli ClientInterface
 	var err error
 
 	if preferMinikube {
@@ -44,25 +65,25 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 	return cli, nil
 }
 
-func newDockerClient() (client.CommonAPIClient, error) {
+func newDockerClient() (ClientInterface, error) {
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return cli, nil
+	return &Client{*cli}, nil
 }
 
-func newDockerClientFromEnvironment() (client.CommonAPIClient, error) {
+func newDockerClientFromEnvironment() (ClientInterface, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return cli, nil
+	return &Client{*cli}, nil
 }
 
-func newDockerClientFromMinikube(currentKubeContext string) (client.CommonAPIClient, error) {
+func newDockerClientFromMinikube(currentKubeContext string) (ClientInterface, error) {
 	if currentKubeContext != "minikube" {
 		return nil, errors.New("Cluster is not a minikube cluster")
 	}
@@ -98,7 +119,12 @@ func newDockerClientFromMinikube(currentKubeContext string) (client.CommonAPICli
 		host = client.DefaultDockerHost
 	}
 
-	return client.NewClient(host, env["DOCKER_API_VERSION"], httpclient, nil)
+	cli, err := client.NewClientWithOpts(client.WithHost(host), client.WithVersion(env["DOCKER_API_VERSION"]), client.WithHTTPClient(httpclient), client.WithHTTPHeaders(nil))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{*cli}, nil
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {
