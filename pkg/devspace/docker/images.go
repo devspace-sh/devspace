@@ -8,16 +8,15 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	dockerclient "github.com/docker/docker/client"
 )
 
 // DeleteImageByName deletes an image by name
-func DeleteImageByName(client dockerclient.CommonAPIClient, imageName string, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
-	return DeleteImageByFilter(client, filters.NewArgs(filters.Arg("reference", strings.TrimSpace(imageName))), log)
+func (client *Client) DeleteImageByName(imageName string, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
+	return client.DeleteImageByFilter(filters.NewArgs(filters.Arg("reference", strings.TrimSpace(imageName))), log)
 }
 
 // DeleteImageByFilter deletes an image by filter
-func DeleteImageByFilter(client dockerclient.CommonAPIClient, filter filters.Args, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
+func (client *Client) DeleteImageByFilter(filter filters.Args, log log.Logger) ([]types.ImageDeleteResponseItem, error) {
 	summary, err := client.ImageList(context.Background(), types.ImageListOptions{
 		Filters: filter,
 	})

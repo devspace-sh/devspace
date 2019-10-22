@@ -21,7 +21,6 @@ import (
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,14 +43,14 @@ type Builder struct {
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	dockerClient          client.CommonAPIClient
+	dockerClient          docker.ClientInterface
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+func NewBuilder(config *latest.Config, dockerClient docker.ClientInterface, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
 	buildNamespace := kubeClient.Namespace
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
@@ -111,7 +110,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 	}
 
 	email := "noreply@devspace.cloud"
-	authConfig, err := docker.GetAuthConfig(b.dockerClient, registryURL, true)
+	authConfig, err := b.dockerClient.GetAuthConfig(registryURL, true)
 	if err != nil {
 		return err
 	}
