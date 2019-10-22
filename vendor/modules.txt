@@ -151,7 +151,7 @@ github.com/evanphx/json-patch
 github.com/exponent-io/jsonpath
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
-# github.com/ghodss/yaml v1.0.0
+# github.com/ghodss/yaml v0.0.0-20180820084758-c7ce16629ff4
 github.com/ghodss/yaml
 # github.com/go-ole/go-ole v1.2.1
 github.com/go-ole/go-ole
@@ -909,7 +909,7 @@ k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 # k8s.io/component-base v0.0.0 => k8s.io/component-base v0.0.0-20190620085130-185d68e6e6ea
 k8s.io/component-base/featuregate
-# k8s.io/helm v2.14.2+incompatible
+# k8s.io/helm v2.15.0+incompatible
 k8s.io/helm/cmd/helm/installer
 k8s.io/helm/pkg/chartutil
 k8s.io/helm/pkg/downloader

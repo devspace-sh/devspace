@@ -26,11 +26,12 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	"github.com/evanphx/json-patch"
+	jsonpatch "github.com/evanphx/json-patch"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -41,6 +42,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,6 +53,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
+	cachetools "k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/kubernetes/pkg/apis/core"
@@ -215,6 +218,8 @@ func (c *Client) Get(namespace string, reader io.Reader) (string, error) {
 	// Since we don't know what order the objects come in, let's group them by the types and then sort them, so
 	// that when we print them, they come out looking good (headers apply to subgroups, etc.).
 	objs := make(map[string](map[string]runtime.Object))
+	mux := &sync.Mutex{}
+
 	infos, err := c.BuildUnstructured(namespace, reader)
 	if err != nil {
 		return "", err
@@ -224,6 +229,8 @@ func (c *Client) Get(namespace string, reader io.Reader) (string, error) {
 
 	missing := []string{}
 	err = perform(infos, func(info *resource.Info) error {
+		mux.Lock()
+		defer mux.Unlock()
 		c.Log("Doing get for %s: %q", info.Mapping.GroupVersionKind.Kind, info.Name)
 		if err := info.Get(); err != nil {
 			c.Log("WARNING: Failed Get for resource %q: %s", info.Name, err)
@@ -314,7 +321,14 @@ func (c *Client) Get(namespace string, reader io.Reader) (string, error) {
 	return buf.String(), nil
 }
 
-// Deprecated; use UpdateWithOptions instead
+// Update reads the current configuration and a target configuration from io.reader
+// and creates resources that don't already exist, updates resources that have been modified
+// in the target configuration and deletes resources from the current configuration that are
+// not present in the target configuration.
+//
+// Namespace will set the namespaces.
+//
+// Deprecated: use UpdateWithOptions instead.
 func (c *Client) Update(namespace string, originalReader, targetReader io.Reader, force bool, recreate bool, timeout int64, shouldWait bool) error {
 	return c.UpdateWithOptions(namespace, originalReader, targetReader, UpdateOptions{
 		Force:      force,
@@ -334,12 +348,13 @@ type UpdateOptions struct {
 	CleanupOnFail bool
 }
 
-// UpdateWithOptions reads in the current configuration and a target configuration from io.reader
-// and creates resources that don't already exists, updates resources that have been modified
+// UpdateWithOptions reads the current configuration and a target configuration from io.reader
+// and creates resources that don't already exist, updates resources that have been modified
 // in the target configuration and deletes resources from the current configuration that are
 // not present in the target configuration.
 //
-// Namespace will set the namespaces.
+// Namespace will set the namespaces. UpdateOptions provides additional parameters to control
+// update behavior.
 func (c *Client) UpdateWithOptions(namespace string, originalReader, targetReader io.Reader, opts UpdateOptions) error {
 	original, err := c.BuildUnstructured(namespace, originalReader)
 	if err != nil {
@@ -552,7 +567,7 @@ func (c *Client) WatchUntilReady(namespace string, reader io.Reader, timeout int
 	return perform(infos, c.watchTimeout(time.Duration(timeout)*time.Second))
 }
 
-// WatchUntilCRDEstablished polls the given CRD until it reaches the established
+// WaitUntilCRDEstablished polls the given CRD until it reaches the established
 // state. A CRD needs to reach the established state before CRs can be created.
 //
 // If a naming conflict condition is found, this function will return an error.
@@ -606,12 +621,33 @@ func perform(infos Result, fn ResourceActorFunc) error {
 		return ErrNoObjectsVisited
 	}
 
-	for _, info := range infos {
-		if err := fn(info); err != nil {
+	errs := make(chan error)
+	go batchPerform(infos, fn, errs)
+
+	for range infos {
+		err := <-errs
+		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func batchPerform(infos Result, fn ResourceActorFunc, errs chan<- error) {
+	var kind string
+	var wg sync.WaitGroup
+	for _, info := range infos {
+		currentKind := info.Object.GetObjectKind().GroupVersionKind().Kind
+		if kind != currentKind {
+			wg.Wait()
+			kind = currentKind
+		}
+		wg.Add(1)
+		go func(i *resource.Info) {
+			errs <- fn(i)
+			wg.Done()
+		}(info)
+	}
 }
 
 func createResource(info *resource.Info) error {
@@ -648,24 +684,33 @@ func createPatch(target *resource.Info, current runtime.Object) ([]byte, types.P
 	}
 
 	// Get a versioned object
-	versionedObject := asVersioned(target)
+	versionedObject, err := asVersioned(target)
 
-	// Unstructured objects, such as CRDs, may not have an not registered error
+	// Unstructured objects, such as CRDs, may not have a not registered error
 	// returned from ConvertToVersion. Anything that's unstructured should
 	// use the jsonpatch.CreateMergePatch. Strategic Merge Patch is not supported
 	// on objects like CRDs.
 	_, isUnstructured := versionedObject.(runtime.Unstructured)
 
+	// On newer K8s versions, CRDs aren't unstructured but has this dedicated type
+	_, isCRD := versionedObject.(*apiextv1beta1.CustomResourceDefinition)
+
 	switch {
-	case runtime.IsNotRegisteredError(err), isUnstructured:
+	case runtime.IsNotRegisteredError(err), isUnstructured, isCRD:
 		// fall back to generic JSON merge patch
 		patch, err := jsonpatch.CreateMergePatch(oldData, newData)
-		return patch, types.MergePatchType, err
+		if err != nil {
+			return nil, types.MergePatchType, fmt.Errorf("failed to create merge patch: %v", err)
+		}
+		return patch, types.MergePatchType, nil
 	case err != nil:
 		return nil, types.StrategicMergePatchType, fmt.Errorf("failed to get versionedObject: %s", err)
 	default:
 		patch, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, versionedObject)
-		return patch, types.StrategicMergePatchType, err
+		if err != nil {
+			return nil, types.StrategicMergePatchType, fmt.Errorf("failed to create two-way merge patch: %v", err)
+		}
+		return patch, types.StrategicMergePatchType, nil
 	}
 }
 
@@ -720,7 +765,7 @@ func updateResource(c *Client, target *resource.Info, currentObj runtime.Object,
 		return nil
 	}
 
-	versioned := asVersioned(target)
+	versioned := asVersionedOrUnstructured(target)
 	selector, ok := getSelectorFromObject(versioned)
 	if !ok {
 		return nil
@@ -793,10 +838,7 @@ func getSelectorFromObject(obj runtime.Object) (map[string]string, bool) {
 }
 
 func (c *Client) watchUntilReady(timeout time.Duration, info *resource.Info) error {
-	w, err := resource.NewHelper(info.Client, info.Mapping).WatchSingle(info.Namespace, info.Name, info.ResourceVersion)
-	if err != nil {
-		return err
-	}
+	lw := cachetools.NewListWatchFromClient(info.Client, info.Mapping.Resource.Resource, info.Namespace, fields.Everything())
 
 	kind := info.Mapping.GroupVersionKind.Kind
 	c.Log("Watching for changes to %s %s with timeout of %v", kind, info.Name, timeout)
@@ -809,7 +851,7 @@ func (c *Client) watchUntilReady(timeout time.Duration, info *resource.Info) err
 
 	ctx, cancel := watchtools.ContextWithOptionalTimeout(context.Background(), timeout)
 	defer cancel()
-	_, err = watchtools.UntilWithoutRetry(ctx, w, func(e watch.Event) (bool, error) {
+	_, err := watchtools.ListWatchUntil(ctx, lw, func(e watch.Event) (bool, error) {
 		switch e.Type {
 		case watch.Added, watch.Modified:
 			// For things like a secret or a config map, this is the best indicator
@@ -897,19 +939,30 @@ func (c *Client) WaitAndGetCompletedPodPhase(namespace string, reader io.Reader,
 }
 
 func (c *Client) watchPodUntilComplete(timeout time.Duration, info *resource.Info) error {
-	w, err := resource.NewHelper(info.Client, info.Mapping).WatchSingle(info.Namespace, info.Name, info.ResourceVersion)
-	if err != nil {
-		return err
-	}
+	lw := cachetools.NewListWatchFromClient(info.Client, info.Mapping.Resource.Resource, info.Namespace, fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", info.Name)))
 
 	c.Log("Watching pod %s for completion with timeout of %v", info.Name, timeout)
 	ctx, cancel := watchtools.ContextWithOptionalTimeout(context.Background(), timeout)
 	defer cancel()
-	_, err = watchtools.UntilWithoutRetry(ctx, w, func(e watch.Event) (bool, error) {
+	_, err := watchtools.ListWatchUntil(ctx, lw, func(e watch.Event) (bool, error) {
 		return isPodComplete(e)
 	})
 
 	return err
+}
+
+// GetPodLogs takes pod name and namespace and returns the current logs (streaming is NOT enabled).
+func (c *Client) GetPodLogs(name, ns string) (io.ReadCloser, error) {
+	client, err := c.KubernetesClientSet()
+	if err != nil {
+		return nil, err
+	}
+	req := client.CoreV1().Pods(ns).GetLogs(name, &v1.PodLogOptions{})
+	logReader, err := req.Stream()
+	if err != nil {
+		return nil, fmt.Errorf("error in opening log stream, got: %s", err)
+	}
+	return logReader, nil
 }
 
 func isPodComplete(event watch.Event) (bool, error) {
@@ -936,7 +989,7 @@ func (c *Client) getSelectRelationPod(info *resource.Info, objPods map[string][]
 
 	c.Log("get relation pod of object: %s/%s/%s", info.Namespace, info.Mapping.GroupVersionKind.Kind, info.Name)
 
-	versioned := asVersioned(info)
+	versioned := asVersionedOrUnstructured(info)
 	selector, ok := getSelectorFromObject(versioned)
 	if !ok {
 		return objPods, nil
@@ -969,17 +1022,23 @@ func isFoundPod(podItem []v1.Pod, pod v1.Pod) bool {
 	return false
 }
 
-func asVersioned(info *resource.Info) runtime.Object {
+func asVersionedOrUnstructured(info *resource.Info) runtime.Object {
+	obj, _ := asVersioned(info)
+	return obj
+}
+
+func asVersioned(info *resource.Info) (runtime.Object, error) {
 	converter := runtime.ObjectConvertor(scheme.Scheme)
 	groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
 	if info.Mapping != nil {
 		groupVersioner = info.Mapping.GroupVersionKind.GroupVersion()
 	}
 
-	if obj, err := converter.ConvertToVersion(info.Object, groupVersioner); err == nil {
-		return obj
+	obj, err := converter.ConvertToVersion(info.Object, groupVersioner)
+	if err != nil {
+		return info.Object, err
 	}
-	return info.Object
+	return obj, nil
 }
 
 func asInternal(info *resource.Info) (runtime.Object, error) {
