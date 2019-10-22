@@ -48,7 +48,6 @@ type initTestCase struct {
 }
 
 func TestInit(t *testing.T) {
-	t.Skip("This is currently changing")
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -230,16 +229,19 @@ func TestInit(t *testing.T) {
 				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
 						Name: filepath.Base(dir),
-						Component: &latest.ComponentConfig{
-							Containers: []*latest.ContainerConfig{
-								&latest.ContainerConfig{
-									Image: "someImage",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []*latest.ContainerConfig{
+									{
+										Image: "someImage",
+									},
 								},
-							},
-							Service: &latest.ServiceConfig{
-								Ports: []*latest.ServicePortConfig{
-									&latest.ServicePortConfig{
-										Port: ptr.Int(1000),
+								"service": &latest.ServiceConfig{
+									Ports: []*latest.ServicePortConfig{
+										{
+											Port: ptr.Int(1000),
+										},
 									},
 								},
 							},
@@ -265,6 +267,14 @@ func TestInit(t *testing.T) {
 					},
 				},
 			},
+		},
+		initTestCase{
+			name: "Entered existing Dockerfile",
+			files: map[string]interface{}{
+				"aDockerfile": "",
+			},
+			answers: []string{enterDockerfileOption, "aDockerfile"},
+			//expectedErr: "Couldn't find dockerfile at 'Doesn't Exist'. Please make sure you have a Dockerfile at the specified location",
 		},
 	}
 

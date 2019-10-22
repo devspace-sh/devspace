@@ -21,6 +21,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
@@ -136,16 +137,22 @@ func TestDev(t *testing.T) {
 			expectedErr: "Unable to create new kubectl client: RawConfigError",
 		},
 		devTestCase{
-			name:           "No devspace.yaml",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
+			name:       "No devspace.yaml",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
 			expectedErr:    fmt.Sprintf("Couldn't find 'devspace.yaml': "+fileNotFoundError, "devspace.yaml"),
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
-			name:           "interactive without images",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
+			name:       "interactive without images",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
 			files: map[string]interface{}{
 				constants.DefaultConfigPath: &latest.Config{
 					Version: latest.Version,
@@ -153,12 +160,15 @@ func TestDev(t *testing.T) {
 			},
 			interactiveFlag: true,
 			expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
-			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
-			name:           "image-question fails",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
+			name:       "image-question fails",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
 			files: map[string]interface{}{
 				constants.DefaultConfigPath: &latest.Config{
 					Version: latest.Version,
@@ -174,12 +184,15 @@ func TestDev(t *testing.T) {
 			},
 			interactiveFlag: true,
 			expectedErr:     "Cannot ask question 'Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?' because logger level is too low",
-			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
+			name:       "Cloud Space can't be resumed",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
 			files: map[string]interface{}{
 				constants.DefaultConfigPath: &latest.Config{
 					Version: latest.Version,
@@ -188,8 +201,8 @@ func TestDev(t *testing.T) {
 					},
 				},
 			},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 	}
 

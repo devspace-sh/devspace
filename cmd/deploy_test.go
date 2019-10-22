@@ -121,12 +121,15 @@ func TestDeploy(t *testing.T) {
 			expectedErr: "Unable to create new kubectl client: RawConfigError",
 		},
 		deployTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
+			name:       "Cloud Space can't be resumed",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
 			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
+			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
 			name: "Error in pull secret creation",
