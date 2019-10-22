@@ -118,9 +118,16 @@ func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}
 		return nil, err
 	}
 
+	vars, ok := retMap["vars"]
+	if !ok {
+		return map[interface{}]interface{}{
+			"version": retMap["version"],
+		}, nil
+	}
+
 	return map[interface{}]interface{}{
 		"version": retMap["version"],
-		"vars":    retMap["vars"],
+		"vars":    vars,
 	}, nil
 }
 
@@ -132,9 +139,16 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 		return nil, err
 	}
 
+	commands, ok := retMap["commands"]
+	if !ok {
+		return map[interface{}]interface{}{
+			"version": retMap["version"],
+		}, nil
+	}
+
 	return map[interface{}]interface{}{
 		"version":  retMap["version"],
-		"commands": retMap["commands"],
+		"commands": commands,
 	}, nil
 }
 
