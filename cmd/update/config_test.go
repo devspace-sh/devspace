@@ -71,6 +71,7 @@ type updateConfigTestCase struct {
 	files       map[string]interface{}
 
 	expectedOutput string
+	expectedConfig interface{}
 	expectedErr    string
 }
 
@@ -118,7 +119,7 @@ func TestRunUpdateConfig(t *testing.T) {
 			files: map[string]interface{}{
 				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
 			},
-			expectedErr: fmt.Sprintf("load config: "+isDirError, constants.DefaultConfigPath),
+			expectedErr: fmt.Sprintf(isDirError, constants.DefaultConfigPath),
 		},
 		updateConfigTestCase{
 			name: "Safe with profiles",
@@ -130,13 +131,33 @@ func TestRunUpdateConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\nInfo Successfully converted base config to current version",
+			expectedOutput: "\nWarn 'devspace update config' does NOT update profiles[*].replace or profiles[*].patches. Please manually update any profiles[*].replace and profiles[*].patches\nInfo Successfully converted base config to current version",
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+			},
 		},
 		updateConfigTestCase{
 			name: "Old version",
 			files: map[string]interface{}{
 				constants.DefaultConfigPath: v1alpha1.Config{
 					Version: ptr.String(v1alpha1.Version),
+					DevSpace: &v1alpha1.DevSpaceConfig{
+						Services: &[]*v1alpha1.ServiceConfig{
+							&v1alpha1.ServiceConfig{
+								Name: ptr.String("terminalService"),
+							},
+						},
+						Terminal: &v1alpha1.Terminal{
+							Disabled:      ptr.Bool(true),
+							Service:       ptr.String("terminalService"),
+							ResourceType:  ptr.String("terminalRT"),
+							LabelSelector: &map[string]*string{"hello": ptr.String("World")},
+							Namespace:     ptr.String("someNS"),
+							ContainerName: ptr.String("someContainer"),
+							Command:       &[]*string{ptr.String("myCommand")},
+						},
+					},
 				},
 			},
 			expectedOutput: "\nInfo Successfully converted base config to current version",
@@ -170,6 +191,14 @@ func testRunUpdateConfig(t *testing.T, testCase updateConfigTestCase) {
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
+		/*config, err := configutil.GetConfig(nil)
+		assert.NilError(t, err, "Error getting config after init call in testCase %s.", testCase.name)
+		configYaml, err := yaml.Marshal(config)
+		assert.NilError(t, err, "Error parsing config to yaml after init call in testCase %s.", testCase.name)
+		expectedConfigYaml, err := yaml.Marshal(testCase.expectedConfig)
+		assert.NilError(t, err, "Error parsing expected config to yaml after init call in testCase %s.", testCase.name)
+		assert.Equal(t, string(configYaml), string(expectedConfigYaml), "Initialized config is wrong in testCase %s.", testCase.name)*/
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
