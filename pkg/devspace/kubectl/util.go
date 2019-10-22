@@ -219,7 +219,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 	}
 
 	waitingInterval := 1 * time.Second
-	for maxWaiting > 0 {
+	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
 		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{

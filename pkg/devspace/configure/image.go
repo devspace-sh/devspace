@@ -109,7 +109,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
 		log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := docker.GetAuthConfig(client, "", true)
+		dockerAuthConfig, err := client.GetAuthConfig("", true)
 		log.StopWait()
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
@@ -202,7 +202,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		return "", errors.Errorf("Error creating docker client: %v", err)
 	}
 
-	authConfig, err := docker.GetAuthConfig(dockerClient, dockerHubHostname, true)
+	authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
 	if err == nil && authConfig.Username != "" {
 		useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 		registryDefaultOption = useDockerHub
@@ -210,7 +210,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 
 	registryOptions := []string{useDockerHub, useOtherRegistry}
 	if cloudRegistryHostname != "" {
-		authConfig, err = docker.GetAuthConfig(dockerClient, cloudRegistryHostname, true)
+		authConfig, err = dockerClient.GetAuthConfig(cloudRegistryHostname, true)
 		if err == nil && authConfig.Username != "" {
 			useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 			registryDefaultOption = useDevSpaceRegistry
@@ -248,7 +248,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 	}
 
 	log.StartWait("Checking registry authentication")
-	authConfig, err = docker.Login(dockerClient, registryURL, "", "", true, false, false)
+	authConfig, err = dockerClient.Login(registryURL, "", "", true, false, false)
 	log.StopWait()
 	if err != nil || authConfig.Username == "" {
 		if registryURL == dockerHubHostname {
@@ -276,7 +276,7 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 					return "", err
 				}
 
-				_, err = docker.Login(dockerClient, registryURL, dockerUsername, dockerPassword, false, true, true)
+				_, err = dockerClient.Login(registryURL, dockerUsername, dockerPassword, false, true, true)
 				if err != nil {
 					log.Warn(err)
 					continue

@@ -1,32 +1,20 @@
 package configutil
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+import "github.com/pkg/errors"
 
 // ApplyReplace applies the replaces
-func ApplyReplace(config *latest.Config) error {
-	if len(config.Profiles) != 1 {
+func ApplyReplace(config map[interface{}]interface{}, profile map[interface{}]interface{}) error {
+	if profile == nil || profile["replace"] == nil {
 		return nil
 	}
 
-	loadedProfile := config.Profiles[0]
-	if loadedProfile.Replace == nil {
-		return nil
+	replaceMap, ok := profile["replace"].(map[interface{}]interface{})
+	if !ok {
+		return errors.Errorf("profiles.%v.replace is not an object", profile["name"])
 	}
 
-	if loadedProfile.Replace.Images != nil {
-		config.Images = loadedProfile.Replace.Images
-	}
-	if loadedProfile.Replace.Deployments != nil {
-		config.Deployments = loadedProfile.Replace.Deployments
-	}
-	if loadedProfile.Replace.Dev != nil {
-		config.Dev = loadedProfile.Replace.Dev
-	}
-	if loadedProfile.Replace.Dependencies != nil {
-		config.Dependencies = loadedProfile.Replace.Dependencies
-	}
-	if loadedProfile.Replace.Hooks != nil {
-		config.Hooks = loadedProfile.Replace.Hooks
+	for k, v := range replaceMap {
+		config[k] = v
 	}
 
 	return nil

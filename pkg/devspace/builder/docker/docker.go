@@ -22,7 +22,6 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 
@@ -46,12 +45,12 @@ type Builder struct {
 	helper *helper.BuildHelper
 
 	authConfig *types.AuthConfig
-	client     client.CommonAPIClient
+	client     dockerclient.ClientInterface
 	skipPush   bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client client.CommonAPIClient, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.ClientInterface, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
 		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client:   client,
@@ -129,7 +128,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	ctx := context.Background()
-	outStream := command.NewOutStream(writer)
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -213,24 +211,33 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Setup an upload progress bar
+	outStream := command.NewOutStream(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
-	response, err := b.client.ImageBuild(ctx, body, types.ImageBuildOptions{
+	buildOptions := types.ImageBuildOptions{
 		Tags:        []string{fullImageName},
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
 		Target:      options.Target,
 		NetworkMode: options.NetworkMode,
 		AuthConfigs: authConfigs,
-	})
-	if err != nil {
-		return err
 	}
-	defer response.Body.Close()
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true {
+		err = b.client.ImageBuildCLI(true, body, writer, buildOptions)
+		if err != nil {
+			return err
+		}
+	} else {
+		response, err := b.client.ImageBuild(ctx, body, buildOptions)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
 
-	err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
-	if err != nil {
-		return err
+		err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Check if we skip push
@@ -255,7 +262,7 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 		return nil, err
 	}
 
-	b.authConfig, err = dockerclient.Login(b.client, registryURL, "", "", true, false, false)
+	b.authConfig, err = b.client.Login(registryURL, "", "", true, false, false)
 	if err != nil {
 		return nil, err
 	}

@@ -152,22 +152,6 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath string, optio
 		return nil, err
 	}
 
-	err = ApplyReplace(loadedConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// Apply patches
-	loadedConfig, err = ApplyPatches(loadedConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validate(loadedConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	return loadedConfig, nil
 }
 
@@ -325,23 +309,6 @@ func validate(config *latest.Config) error {
 				err = yaml.UnmarshalStrict(bytes, componentValues)
 				if err != nil {
 					return errors.Errorf("deployments[%d].helm.componentChart: component values are incorrect: %v", index, err)
-				}
-			}
-		}
-	}
-
-	if config.Profiles != nil {
-		for idx, profile := range config.Profiles {
-			if profile.Name == "" {
-				return errors.Errorf("profiles.%d.name is missing", idx)
-			}
-
-			for patchIdx, patch := range profile.Patches {
-				if patch.Operation == "" {
-					return errors.Errorf("profiles.%s.patches.%d.op is missing", profile.Name, patchIdx)
-				}
-				if patch.Path == "" {
-					return errors.Errorf("profiles.%s.patches.%d.path is missing", profile.Name, patchIdx)
 				}
 			}
 		}

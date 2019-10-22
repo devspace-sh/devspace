@@ -85,7 +85,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	for _, imageConfig := range config.Images {
 		log.StartWait("Deleting local image " + imageConfig.Image)
 
-		response, err := docker.DeleteImageByName(client, imageConfig.Image, log.GetInstance())
+		response, err := client.DeleteImageByName(imageConfig.Image, log.GetInstance())
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 
 	// Cleanup dangling images aswell
 	for {
-		response, err := docker.DeleteImageByFilter(client, filters.NewArgs(filters.Arg("dangling", "true")), log.GetInstance())
+		response, err := client.DeleteImageByFilter(filters.NewArgs(filters.Arg("dangling", "true")), log.GetInstance())
 		if err != nil {
 			return err
 		}
