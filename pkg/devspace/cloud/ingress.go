@@ -20,7 +20,7 @@ import (
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string, log log.Logger) error {
+func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string) error {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceList, err := client.Client.CoreV1().Services(client.Namespace).List(metav1.ListOptions{})
@@ -60,7 +60,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 		service, err := survey.Question(&survey.QuestionOptions{
 			Question: fmt.Sprintf("Please specify the service you want to connect '%s' to", ansi.Color(host, "white+b")),
 			Options:  serviceNameList,
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return nil
 		}
@@ -72,7 +72,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 	}
 
 	// Get the cluster key
-	key, err := p.GetClusterKey(space.Cluster, log)
+	key, err := p.GetClusterKey(space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
 	}

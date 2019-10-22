@@ -39,9 +39,12 @@ devspace connect cluster
 	clusterCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployAdmissionController, "admission-controller", true, "Deploy the admission controller")
+	clusterCmd.Flags().BoolVar(&cmd.Options.DeployGatekeeper, "gatekeeper", true, "Deploy the gatekeeper")
+	clusterCmd.Flags().BoolVar(&cmd.Options.DeployGatekeeperRules, "gatekeeper-rules", true, "Deploy the gatekeeper default rules")
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployIngressController, "ingress-controller", true, "Deploy an ingress controller")
 	clusterCmd.Flags().BoolVar(&cmd.UseHostNetwork, "use-hostnetwork", false, "Use the host network for the ingress controller instead of a loadbalancer")
 	clusterCmd.Flags().BoolVar(&cmd.Options.DeployCertManager, "cert-manager", true, "Deploy a cert manager")
+	clusterCmd.Flags().BoolVar(&cmd.Options.Public, "public", false, "Connects a new public cluster")
 	clusterCmd.Flags().StringVar(&cmd.Options.KubeContext, "context", "", "The kube context to use")
 	clusterCmd.Flags().StringVar(&cmd.Options.Key, "key", "", "The encryption key to use")
 	clusterCmd.Flags().StringVar(&cmd.Options.ClusterName, "name", "", "The cluster name to create")
@@ -73,7 +76,7 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 	}
 
 	// Connect cluster
-	err = provider.ConnectCluster(cmd.Options, log.GetInstance())
+	err = provider.ConnectCluster(cmd.Options)
 	if err != nil {
 		return err
 	}

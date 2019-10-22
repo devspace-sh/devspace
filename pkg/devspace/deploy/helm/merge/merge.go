@@ -1,4 +1,4 @@
-package helm
+package merge
 
 // Values is the type to go
 type Values map[interface{}]interface{}

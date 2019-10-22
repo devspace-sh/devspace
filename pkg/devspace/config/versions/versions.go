@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -29,15 +30,8 @@ var versionLoader = map[string]*loader{
 	v1alpha4.Version: &loader{New: v1alpha4.New},
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
+	v1beta3.Version:  &loader{New: v1beta3.New, Variables: v1beta3.Variables, Commands: v1beta3.Commands, Profile: v1beta3.Profile},
 	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Profile: latest.Profile},
-}
-
-// ConfigOptions defines options to load the config
-type ConfigOptions struct {
-	Profile     string
-	KubeContext string
-
-	Vars []string
 }
 
 // ParseProfile loads the base config & a certain profile
@@ -88,7 +82,7 @@ func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData)
+	config, err := Parse(strippedData, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
@@ -120,7 +114,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData)
+	config, err := Parse(strippedData, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading vars")
 	}
@@ -129,7 +123,7 @@ func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error
 }
 
 // Parse parses the data into the latest config
-func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
+func Parse(data map[interface{}]interface{}, loadedVars map[string]string) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -158,6 +152,13 @@ func Parse(data map[interface{}]interface{}) (*latest.Config, error) {
 		upgradedConfig, err := latestConfig.Upgrade()
 		if err != nil {
 			return nil, errors.Errorf("Error upgrading config from version %s: %v", latestConfig.GetVersion(), err)
+		}
+
+		if loadedVars != nil {
+			err = latestConfig.UpgradeVarPaths(loadedVars)
+			if err != nil {
+				return nil, errors.Errorf("Error upgrading config var paths from version %s: %v", latestConfig.GetVersion(), err)
+			}
 		}
 
 		latestConfig = upgradedConfig

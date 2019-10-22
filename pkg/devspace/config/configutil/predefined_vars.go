@@ -8,6 +8,7 @@ import (
 
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -189,8 +190,9 @@ func fillPredefinedVars(options *ConfigOptions) error {
 	return nil
 }
 
-func getPredefinedVar(name string, options *ConfigOptions) (bool, string, error) {
-	if variable, ok := PredefinedVars[strings.ToUpper(name)]; ok {
+func getPredefinedVar(name string, generatedConfig *generated.Config, options *ConfigOptions) (bool, string, error) {
+	name = strings.ToUpper(name)
+	if variable, ok := PredefinedVars[name]; ok {
 		if variable.Value == nil {
 			return false, "", errors.New(variable.ErrorMessage)
 		}
@@ -199,46 +201,13 @@ func getPredefinedVar(name string, options *ConfigOptions) (bool, string, error)
 	}
 
 	// Load space domain environment variable
-	if strings.HasPrefix(strings.ToUpper(name), "DEVSPACE_SPACE_DOMAIN") {
-		idx, err := strconv.Atoi(name[len("DEVSPACE_SPACE_DOMAIN"):])
-		if err != nil {
-			return false, "", errors.Errorf("Error parsing variable %s: %v", name, err)
+	if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
+		// Check if its in generated config
+		if val, ok := generatedConfig.Vars[name]; ok {
+			return true, val, nil
 		}
 
-		kubeContext, err := kubeconfig.GetCurrentContext()
-		if err != nil {
-			return false, "", errors.Wrap(err, "get current context")
-		}
-		if options.KubeContext != "" {
-			kubeContext = options.KubeContext
-		}
-
-		spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
-		if err != nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-
-		cloudConfigData, err := cloudconfig.ParseProviderConfig()
-		if err != nil {
-			return false, "", errors.Wrap(err, "parse provider config")
-		}
-
-		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
-		if provider == nil {
-			return false, "", errors.Errorf("Couldn't find space provider: %s", providerName)
-		}
-		if provider.Spaces == nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-		if provider.Spaces[spaceID] == nil {
-			return false, "", errors.Errorf("No space configured, but predefined var %s is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", name, ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		}
-
-		if len(provider.Spaces[spaceID].Space.Domains) <= idx-1 {
-			return false, "", errors.Errorf("Error loading %s: Space has %d domains but domain with number %d was requested", name, len(provider.Spaces[spaceID].Space.Domains), idx)
-		}
-
-		return true, provider.Spaces[spaceID].Space.Domains[idx-1].URL, nil
+		return true, name, nil
 	}
 
 	return false, "", nil

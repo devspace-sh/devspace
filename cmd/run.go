@@ -77,7 +77,7 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Parse commands
-	commands, err := configutil.ParseCommands(generatedConfig, rawMap, log.GetInstance())
+	commands, err := configutil.ParseCommands(generatedConfig, rawMap, nil, log.GetInstance())
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,6 @@ devspace:
 devspace enter
 devspace enter --pick # Select pod to enter
 devspace enter bash
-devspace enter -s my-selector
 devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
@@ -113,7 +112,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), log.GetInstance())
+	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), false, log.GetInstance())
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

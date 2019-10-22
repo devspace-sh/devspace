@@ -3,6 +3,7 @@ package upgrade
 import (
 	"errors"
 	"regexp"
+	"sync"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -57,19 +58,53 @@ func SetVersion(verText string) {
 	cloudanalytics.Start(version)
 }
 
+var (
+	latestVersion     string
+	latestVersionErr  error
+	latestVersionOnce sync.Once
+)
+
 // CheckForNewerVersion checks if there is a newer version on github and returns the newer version
 func CheckForNewerVersion() (string, error) {
-	latest, found, err := selfupdate.DetectLatest(githubSlug)
-	if err != nil {
-		return "", err
+	latestVersionOnce.Do(func() {
+		latest, found, err := selfupdate.DetectLatest(githubSlug)
+		if err != nil {
+			latestVersionErr = err
+			return
+		}
+
+		v := semver.MustParse(version)
+		if !found || latest.Version.Equals(v) {
+			return
+		}
+
+		latestVersion = latest.Version.String()
+	})
+
+	return latestVersion, latestVersionErr
+}
+
+// NewerVersionAvailable checks if there is a newer version of devspace
+func NewerVersionAvailable() string {
+	// Get version of current binary
+	version := GetVersion()
+	if version != "" {
+		latestStableVersion, err := CheckForNewerVersion()
+		if latestStableVersion != "" && err == nil { // Check versions only if newest version could be determined without errors
+			semverVersion, err := semver.Parse(version)
+			if err == nil { // Only compare version if version can be parsed
+				semverLatestStableVersion, err := semver.Parse(latestStableVersion)
+				if err == nil { // Only compare version if latestStableVersion can be parsed
+					// If latestStableVersion > version
+					if semverLatestStableVersion.Compare(semverVersion) == 1 {
+						return latestStableVersion
+					}
+				}
+			}
+		}
 	}
 
-	v := semver.MustParse(version)
-	if !found || latest.Version.Equals(v) {
-		return "", nil
-	}
-
-	return latest.Version.String(), nil
+	return ""
 }
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found

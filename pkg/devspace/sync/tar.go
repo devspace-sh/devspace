@@ -198,13 +198,18 @@ func tarFolder(basePath string, fileInformation *FileInformation, writtenFiles m
 }
 
 func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map[string]*FileInformation, stat os.FileInfo, tw *tar.Writer) error {
+	var err error
 	filepath := path.Join(basePath, fileInformation.Name)
+	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		if filepath, err = os.Readlink(filepath); err != nil {
+			return nil
+		}
+	}
 
 	// Case regular file
 	f, err := os.Open(filepath)
 	if err != nil {
 		// We ignore open file and just treat it as okay
-		// return errors.Wrap(err, "open file")
 		return nil
 	}
 
@@ -219,6 +224,11 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 
 	if err := tw.WriteHeader(hdr); err != nil {
 		return errors.Wrap(err, "tar write header")
+	}
+
+	// nothing more to do for non-regular
+	if !stat.Mode().IsRegular() {
+		return nil
 	}
 
 	if _, err := io.Copy(tw, f); err != nil {

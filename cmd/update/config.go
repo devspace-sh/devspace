@@ -51,7 +51,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	// Get config
 	_, err = configutil.GetBaseConfig(cmd.ToConfigOptions())
 	if err != nil {
-		return errors.Errorf("Error getting config: %v", err)
+		return errors.Wrap(err, "load config")
 	}
 
 	// Save it

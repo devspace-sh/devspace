@@ -28,6 +28,7 @@ type SyncCmd struct {
 	LocalPath     string
 	Verbose       bool
 
+	NoWatch               bool
 	DownloadOnInitialSync bool
 }
 
@@ -63,6 +64,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", ".", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "Downloads all locally non existing remote files in the beginning")
+	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
 	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
 	return syncCmd
@@ -123,7 +125,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start terminal
-	err = services.StartSyncFromCmd(config, client, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, cmd.DownloadOnInitialSync, log.GetInstance())
+	err = services.StartSyncFromCmd(config, client, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, cmd.DownloadOnInitialSync, cmd.NoWatch, log.GetInstance())
 	if err != nil {
 		return err
 	}

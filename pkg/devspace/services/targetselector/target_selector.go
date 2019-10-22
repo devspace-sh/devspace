@@ -27,6 +27,7 @@ type TargetSelector struct {
 	ContainerQuestion *string
 
 	AllowNonRunning bool
+	SkipWait        bool
 
 	namespace string
 	pick      bool
@@ -73,6 +74,11 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 // GetPod retrieves a pod
 func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	if t.pick == false {
+		timeout := time.Second * 120
+		if t.SkipWait == true {
+			timeout = 0
+		}
+
 		if t.podName != "" {
 			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
 			if err != nil {
@@ -86,7 +92,8 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			return pod, nil
 		} else if t.labelSelector != "" {
-			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.imageSelector, t.namespace, time.Second*120)
+
+			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.imageSelector, t.namespace, timeout)
 			if err != nil {
 				return nil, err
 			}
@@ -94,7 +101,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 			return pod, nil
 		} else if len(t.imageSelector) > 0 {
 			// Retrieve pods running with that image
-			pods, err := t.kubeClient.GetRunningPodsWithImage(t.imageSelector, t.namespace, time.Second*120)
+			pods, err := t.kubeClient.GetRunningPodsWithImage(t.imageSelector, t.namespace, timeout)
 			if err != nil {
 				return nil, err
 			}

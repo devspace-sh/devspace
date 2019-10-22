@@ -1,9 +1,11 @@
-version: v1beta2
+version: v1beta4
 deployments:
-  - name: dependency2
-    component:
+- name: dependency2
+  helm:
+    componentChart: true
+    values:
       containers:
-        - image: nginx
+      - image: nginx
 dependencies:
-  - source:
-      git: https://github.com/devspace-cloud/example-dependency.git
+- source:
+    git: https://github.com/devspace-cloud/example-dependency.git

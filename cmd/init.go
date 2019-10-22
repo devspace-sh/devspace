@@ -14,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -27,7 +28,7 @@ import (
 const gitIgnoreFile = ".gitignore"
 const dockerIgnoreFile = ".dockerignore"
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
-const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml/\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n"
 
 const (
 	// Dockerfile not found options
@@ -318,52 +319,55 @@ func (cmd *InitCmd) addDevConfig() error {
 	}
 
 	// Forward ports
-	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Component != nil && config.Deployments[0].Component.Service != nil && config.Deployments[0].Component.Service.Ports != nil && len(config.Deployments[0].Component.Service.Ports) > 0 {
-		servicePort := config.Deployments[0].Component.Service.Ports[0]
+	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Helm != nil && config.Deployments[0].Helm.ComponentChart != nil && *config.Deployments[0].Helm.ComponentChart == true {
+		componentValues := latest.ComponentConfig{}
+		err = util.Convert(config.Deployments[0].Helm.Values, &componentValues)
+		if err == nil && componentValues.Service != nil && componentValues.Service.Ports != nil && len(componentValues.Service.Ports) > 0 {
+			servicePort := componentValues.Service.Ports[0]
+			if servicePort.Port != nil {
+				localPortPtr := servicePort.Port
+				var remotePortPtr *int
 
-		if servicePort.Port != nil {
-			localPortPtr := servicePort.Port
-			var remotePortPtr *int
+				if *localPortPtr < 1024 {
+					log.WriteString("\n")
+					log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
-			if *localPortPtr < 1024 {
-				log.WriteString("\n")
-				log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+					portString, err := survey.Question(&survey.QuestionOptions{
+						Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+						DefaultValue: strconv.Itoa(*localPortPtr + 8000),
+					}, log.GetInstance())
+					if err != nil {
+						return err
+					}
 
-				portString, err := survey.Question(&survey.QuestionOptions{
-					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
-					DefaultValue: strconv.Itoa(*localPortPtr + 8000),
-				}, log.GetInstance())
-				if err != nil {
-					return err
+					remotePortPtr = localPortPtr
+
+					localPort, err := strconv.Atoi(portString)
+					if err != nil {
+						return errors.Errorf("Error parsing port '%s'", portString)
+					}
+					localPortPtr = &localPort
+				}
+				portMappings := []*latest.PortMapping{}
+				portMappings = append(portMappings, &latest.PortMapping{
+					LocalPort:  localPortPtr,
+					RemotePort: remotePortPtr,
+				})
+
+				// Add dev.ports config
+				config.Dev.Ports = []*latest.PortForwardingConfig{
+					{
+						ImageName:    defaultImageName,
+						PortMappings: portMappings,
+					},
 				}
 
-				remotePortPtr = localPortPtr
-
-				localPort, err := strconv.Atoi(portString)
-				if err != nil {
-					return errors.Errorf("Error parsing port '%s'", portString)
+				// Add dev.open config
+				config.Dev.Open = []*latest.OpenConfig{
+					&latest.OpenConfig{
+						URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
+					},
 				}
-				localPortPtr = &localPort
-			}
-			portMappings := []*latest.PortMapping{}
-			portMappings = append(portMappings, &latest.PortMapping{
-				LocalPort:  localPortPtr,
-				RemotePort: remotePortPtr,
-			})
-
-			// Add dev.ports config
-			config.Dev.Ports = []*latest.PortForwardingConfig{
-				{
-					ImageName:    defaultImageName,
-					PortMappings: portMappings,
-				},
-			}
-
-			// Add dev.open config
-			config.Dev.Open = []*latest.OpenConfig{
-				&latest.OpenConfig{
-					URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
-				},
 			}
 		}
 	}

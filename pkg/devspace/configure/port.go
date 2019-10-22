@@ -13,7 +13,7 @@ import (
 func GetNameOfFirstDeployment(config *latest.Config) string {
 	if config.Deployments != nil {
 		for _, deploymentConfig := range config.Deployments {
-			if deploymentConfig.Component != nil {
+			if deploymentConfig.Helm != nil && deploymentConfig.Helm.ComponentChart != nil && *deploymentConfig.Helm.ComponentChart == true {
 				return deploymentConfig.Name
 			}
 		}

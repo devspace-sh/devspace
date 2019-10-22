@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
@@ -208,4 +208,9 @@ func (c *Config) Upgrade() (config.Config, error) {
 	}
 
 	return nextConfig, nil
+}
+
+// UpgradeVarPaths upgrades the config
+func (c *Config) UpgradeVarPaths(varPaths map[string]string) error {
+	return nil
 }

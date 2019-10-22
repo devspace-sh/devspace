@@ -48,12 +48,13 @@ type DevCmd struct {
 	ForceDependencies bool
 
 	Sync            bool
-	Terminal        bool
 	ExitAfterDeploy bool
 	SkipPipeline    bool
 	Portforwarding  bool
 	VerboseSync     bool
-	Interactive     bool
+
+	Terminal    bool
+	Interactive bool
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -76,8 +77,9 @@ Starts your project in development mode:
 4. Starts the sync client
 5. Streams the logs of deployed containers
 
-Use Interactive Mode:
-- Use "devspace dev -i" for interactive mode (terminal)
+Open terminal instead of logs:
+- Use "devspace dev -t" for opening a terminal
+- Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################`,
 		RunE: cmd.Run,
 	}
@@ -103,6 +105,7 @@ Use Interactive Mode:
 
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
+	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
 	return devCmd
 }
 
@@ -146,6 +149,12 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	// Show a warning if necessary
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
+	if err != nil {
+		return err
+	}
+
+	// Deprecated: Fill DEVSPACE_DOMAIN vars
+	err = fillDevSpaceDomainVars(client, generatedConfig)
 	if err != nil {
 		return err
 	}
@@ -366,7 +375,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}
 	}
 
-	// Check if we should open a terminal
+	// Check if we should open a terminal or stream logs
 	if interactiveMode {
 		var imageSelector []string
 		if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
@@ -401,11 +410,8 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, log)
-	}
-
-	// Check if we should show logs
-	if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, true, log)
+	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}
 		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
@@ -541,7 +547,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
-	if cmd.Interactive || interactiveModeInConfigEnabled {
+	if cmd.Terminal || cmd.Interactive || interactiveModeInConfigEnabled {
 		if config.Dev == nil {
 			config.Dev = &latest.DevConfig{}
 		}
@@ -565,8 +571,13 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			if len(imageNames) == 1 {
 				imageName = imageNames[0]
 			} else {
+				question := "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?"
+				if cmd.Terminal {
+					question = "Which image do you want to open a terminal to?"
+				}
+
 				imageName, err = survey.Question(&survey.QuestionOptions{
-					Question: "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?",
+					Question: question,
 					Options:  imageNames,
 				}, log.GetInstance())
 				if err != nil {
@@ -582,10 +593,21 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 		}
 
 		// Set image entrypoints if necessary
-		for _, imageConf := range config.Dev.Interactive.Images {
-			if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
+		for imageConfName, imageConf := range config.Dev.Interactive.Images {
+			if cmd.Terminal {
+				imageConf.Entrypoint = nil
+				imageConf.Cmd = nil
+			} else if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
 				imageConf.Entrypoint = []string{"sleep"}
 				imageConf.Cmd = []string{"999999999"}
+			}
+
+			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {
+				log.Infof("Override image %s entrypoint with %+v and cmd with %+v", imageConfName, imageConf.Entrypoint, imageConf.Cmd)
+			} else if imageConf.Entrypoint != nil {
+				log.Infof("Override image %s entrypoint with %+v", imageConfName, imageConf.Entrypoint)
+			} else if imageConf.Cmd != nil {
+				log.Infof("Override image %s cmd with %+v", imageConfName, imageConf.Cmd)
 			}
 		}
 

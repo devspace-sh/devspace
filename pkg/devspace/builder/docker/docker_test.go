@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 
 	"k8s.io/client-go/kubernetes/fake"
@@ -56,20 +55,6 @@ func TestDockerBuild(t *testing.T) {
 
 	deployConfig := &latest.DeploymentConfig{
 		Name: "test-deployment",
-		Component: &latest.ComponentConfig{
-			Containers: []*latest.ContainerConfig{
-				{
-					Image: "nginx",
-				},
-			},
-			Service: &latest.ServiceConfig{
-				Ports: []*latest.ServicePortConfig{
-					{
-						Port: ptr.Int(3000),
-					},
-				},
-			},
-		},
 	}
 
 	// Create fake devspace config
@@ -166,20 +151,6 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 
 	deployConfig := &latest.DeploymentConfig{
 		Name: "test-deployment",
-		Component: &latest.ComponentConfig{
-			Containers: []*latest.ContainerConfig{
-				{
-					Image: "nginx",
-				},
-			},
-			Service: &latest.ServiceConfig{
-				Ports: []*latest.ServicePortConfig{
-					{
-						Port: ptr.Int(3000),
-					},
-				},
-			},
-		},
 	}
 
 	// Create fake devspace config

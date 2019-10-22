@@ -8,6 +8,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"gotest.tools/assert"
 )
@@ -50,6 +51,7 @@ func TestGrapqhlRequest(t *testing.T) {
 				Key:   testCase.providerKey,
 				Token: testCase.providerToken,
 			},
+			log.GetInstance(),
 		}
 		err := provider.GrapqhlRequest("", testCase.vars, nil)
 		if testCase.expectedErr == "" {

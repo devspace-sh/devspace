@@ -3,13 +3,12 @@ package cloud
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
 
 // GetClusterKey makes sure there is a correct key for the given cluster id
-func (p *Provider) GetClusterKey(cluster *latest.Cluster, log log.Logger) (string, error) {
+func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	if cluster.EncryptToken == false {
 		return "", nil
 	}
@@ -22,7 +21,7 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster, log log.Logger) (strin
 				break
 			}
 		} else {
-			return p.AskForEncryptionKey(cluster, log)
+			return p.AskForEncryptionKey(cluster)
 		}
 	}
 
@@ -32,7 +31,7 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster, log log.Logger) (strin
 		return "", errors.Wrap(err, "verify key")
 	}
 	if verified == false {
-		return p.AskForEncryptionKey(cluster, log)
+		return p.AskForEncryptionKey(cluster)
 	}
 
 	// Save the key if it was not there
@@ -53,8 +52,8 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster, log log.Logger) (strin
 }
 
 // AskForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
-func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster, log log.Logger) (string, error) {
-	log.StopWait()
+func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) {
+	p.Log.StopWait()
 
 	// Wait till user enters the correct key
 	for true {
@@ -63,7 +62,7 @@ func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster, log log.Logger) 
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, log)
+		}, p.Log)
 		if err != nil {
 			return "", err
 		}
@@ -78,7 +77,7 @@ func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster, log log.Logger) 
 			return "", errors.Wrap(err, "verify key")
 		}
 		if verified == false {
-			log.Errorf("Encryption key is incorrect. Please try again")
+			p.Log.Errorf("Encryption key is incorrect. Please try again")
 			continue
 		}
 

@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetToken(t *testing.T) {
-	_, err := (&Provider{}).GetToken()
+	_, err := (&Provider{latest.Provider{}, log.GetInstance()}).GetToken()
 	assert.Error(t, err, "Provider has no key specified")
 
 	testClaim := token.ClaimSet{
@@ -28,6 +28,7 @@ func TestGetToken(t *testing.T) {
 			Key:   "someKey",
 			Token: encodedToken,
 		},
+		log.Discard,
 	}
 	token, err := provider.GetToken()
 	assert.NilError(t, err, "Error getting predefined token")

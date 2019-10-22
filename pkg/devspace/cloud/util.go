@@ -38,7 +38,6 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 			"Name",
 			"Cluster",
 			"Active",
-			"Domains",
 			"Created",
 		}...)
 	} else {
@@ -46,7 +45,6 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 			"SpaceID",
 			"Name",
 			"Cluster",
-			"Domains",
 			"Created",
 		}...)
 	}
@@ -77,18 +75,12 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 				return err
 			}
 
-			domains := make([]string, 0, len(space.Domains))
-			for _, domain := range space.Domains {
-				domains = append(domains, domain.URL)
-			}
-
 			if activeSpaceID != 0 {
 				values = append(values, []string{
 					strconv.Itoa(space.SpaceID),
 					space.Name,
 					space.Cluster.Name,
 					strconv.FormatBool(space.SpaceID == activeSpaceID),
-					strings.Join(domains, ", "),
 					created.String(),
 				})
 			} else {
@@ -96,7 +88,6 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 					strconv.Itoa(space.SpaceID),
 					space.Name,
 					space.Cluster.Name,
-					strings.Join(domains, ", "),
 					created.String(),
 				})
 			}

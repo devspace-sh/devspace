@@ -219,7 +219,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 	}
 
 	waitingInterval := 1 * time.Second
-	for maxWaiting > 0 {
+	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
 		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
@@ -268,7 +268,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, errors.Errorf("Waiting for pod with selector %s in namespace %s timed out", labelSelector, namespace)
+	return nil, errors.Errorf("No pod with selector %s in namespace %s found", labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

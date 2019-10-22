@@ -18,6 +18,7 @@ func NewSetCmd() *cobra.Command {
 	}
 
 	setCmd.AddCommand(newAnalyticsCmd())
+	setCmd.AddCommand(newVarCmd())
 
 	return setCmd
 }

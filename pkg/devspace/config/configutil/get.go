@@ -16,6 +16,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm/merge"
+	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 )
 
 // Global config vars
@@ -79,7 +81,8 @@ type ConfigOptions struct {
 	Profile     string
 	KubeContext string
 
-	Vars []string
+	LoadedVars map[string]string
+	Vars       []string
 }
 
 // Clone clones the config options
@@ -193,6 +196,9 @@ func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, 
 			options.Profile = ""
 		}
 
+		// Set loaded vars for this
+		options.LoadedVars = LoadedVars
+
 		// Load base config
 		config, err = GetConfigFromPath(generatedConfig, ".", options, log.GetInstance())
 		if err != nil {
@@ -282,14 +288,48 @@ func validate(config *latest.Config) error {
 			if deployConfig.Name == "" {
 				return errors.Errorf("deployments[%d].name is required", index)
 			}
-			if deployConfig.Helm == nil && deployConfig.Kubectl == nil && deployConfig.Component == nil {
-				return errors.Errorf("Please specify either component, helm or kubectl as deployment type in deployment %s", deployConfig.Name)
+			if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
+				return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 			}
-			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") {
-				return errors.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name is required", index, index)
+			if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") && (deployConfig.Helm.ComponentChart == nil || *deployConfig.Helm.ComponentChart == false) {
+				return errors.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name or deployments[%d].helm.componentChart is required", index, index, index)
 			}
 			if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 				return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
+			}
+			if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart == true {
+				// Load override values from path
+				overwriteValues := map[interface{}]interface{}{}
+				if deployConfig.Helm.ValuesFiles != nil {
+					for _, overridePath := range deployConfig.Helm.ValuesFiles {
+						overwriteValuesPath, err := filepath.Abs(overridePath)
+						if err != nil {
+							return errors.Errorf("deployments[%d].helm.valuesFiles: Error retrieving absolute path from %s: %v", index, overridePath, err)
+						}
+
+						overwriteValuesFromPath := map[interface{}]interface{}{}
+						err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
+						if err == nil {
+							merge.Values(overwriteValues).MergeInto(overwriteValuesFromPath)
+						}
+					}
+				}
+
+				// Load override values from data and merge them
+				if deployConfig.Helm.Values != nil {
+					merge.Values(overwriteValues).MergeInto(deployConfig.Helm.Values)
+				}
+
+				bytes, err := yaml.Marshal(overwriteValues)
+				if err != nil {
+					return errors.Errorf("deployments[%d].helm: Error marshaling overwrite values: %v", index, err)
+				}
+
+				componentValues := &latest.ComponentConfig{}
+				err = yaml.UnmarshalStrict(bytes, componentValues)
+				if err != nil {
+					return errors.Errorf("deployments[%d].helm.componentChart: component values are incorrect: %v", index, err)
+				}
 			}
 		}
 	}

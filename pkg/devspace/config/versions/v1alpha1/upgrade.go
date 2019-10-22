@@ -235,3 +235,8 @@ func (c *Config) Upgrade() (config.Config, error) {
 
 	return nextConfig, nil
 }
+
+// UpgradeVarPaths upgrades the config
+func (c *Config) UpgradeVarPaths(varPaths map[string]string) error {
+	return nil
+}

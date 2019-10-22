@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
@@ -117,7 +118,7 @@ func TestCreateIngress(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		provider := Provider{}
+		provider := Provider{latest.Provider{}, log.GetInstance()}
 		kubeClient := &kubectl.Client{
 			Client: fake.NewSimpleClientset(),
 		}
@@ -139,7 +140,7 @@ func TestCreateIngress(t *testing.T) {
 			survey.SetNextAnswer(testCase.serviceAnswer)
 		}
 
-		err := provider.CreateIngress(kubeClient, &cloudlatest.Space{Cluster: &cloudlatest.Cluster{}}, "", log.GetInstance())
+		err := provider.CreateIngress(kubeClient, &cloudlatest.Space{Cluster: &cloudlatest.Cluster{}}, "")
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
 		} else {
