@@ -21,13 +21,17 @@ import (
 type ClientInterface interface {
 	Ping(ctx context.Context) (dockertypes.Ping, error)
 	NegotiateAPIVersion(ctx context.Context)
+
 	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
+	ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, options dockertypes.ImageBuildOptions) error
+
 	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
 
 	Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
+	GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
+
 	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
-	GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
 }
 
 //Client is a client for docker
@@ -45,7 +49,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 	if fakeClient != nil {
 		return fakeClient, nil
 	}
-	
+
 	var cli ClientInterface
 	var err error
 

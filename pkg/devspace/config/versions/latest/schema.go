@@ -63,6 +63,7 @@ type BuildConfig struct {
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
+	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty"`
 	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty"`
 	SkipPush        *bool         `yaml:"skipPush,omitempty"`
 	DisableFallback *bool         `yaml:"disableFallback,omitempty"`
