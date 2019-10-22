@@ -43,9 +43,14 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
-	}
-	if !configExists {
+	} else if !configExists {
 		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+	}
+
+	// Get profiles
+	profiles, err := configutil.GetProfiles(".")
+	if err != nil {
+		return err
 	}
 
 	// Get config
@@ -58,6 +63,11 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	err = configutil.SaveLoadedConfig()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
+	}
+
+	// Check if there are any profile patches
+	if len(profiles) > 0 {
+		log.Warnf("'devspace update config' does NOT update profiles[*].replace or profiles[*].patches. Please manually update any profiles[*].replace and profiles[*].patches")
 	}
 
 	log.Infof("Successfully converted base config to current version")
