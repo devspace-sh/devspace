@@ -49,7 +49,7 @@ func (p *Provider) LoginIntoRegistries() error {
 
 	for _, registry := range registries {
 		// Login
-		_, err = docker.Login(client, registry.URL, accountName, p.Key, true, true, true)
+		_, err = client.Login(registry.URL, accountName, p.Key, true, true, true)
 		if err != nil {
 			return errors.Wrap(err, "docker login")
 		}
@@ -82,7 +82,7 @@ func (p *Provider) LoginIntoRegistry(name string) error {
 	}
 
 	// Get account name
-	_, err = docker.Login(client, name, accountName, p.Key, true, true, true)
+	_, err = client.Login(name, accountName, p.Key, true, true, true)
 	if err != nil {
 		return errors.Wrap(err, "docker login")
 	}

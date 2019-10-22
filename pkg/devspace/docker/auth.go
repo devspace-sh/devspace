@@ -5,14 +5,13 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/registry"
 	"github.com/pkg/errors"
 )
 
 // GetRegistryEndpoint retrieves the correct registry url
-func GetRegistryEndpoint(client client.CommonAPIClient, registryURL string) (bool, string, error) {
-	authServer := getOfficialServer(context.Background(), client)
+func (client *Client) GetRegistryEndpoint(registryURL string) (bool, string, error) {
+	authServer := client.getOfficialServer(context.Background())
 	if registryURL == "" || registryURL == "hub.docker.com" {
 		registryURL = authServer
 	}
@@ -21,8 +20,8 @@ func GetRegistryEndpoint(client client.CommonAPIClient, registryURL string) (boo
 }
 
 // GetAuthConfig returns the AuthConfig for a Docker registry from the Docker credential helper
-func GetAuthConfig(client client.CommonAPIClient, registryURL string, checkCredentialsStore bool) (*types.AuthConfig, error) {
-	isDefaultRegistry, serverAddress, err := GetRegistryEndpoint(client, registryURL)
+func (client *Client) GetAuthConfig(registryURL string, checkCredentialsStore bool) (*types.AuthConfig, error) {
+	isDefaultRegistry, serverAddress, err := client.GetRegistryEndpoint(registryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -31,9 +30,9 @@ func GetAuthConfig(client client.CommonAPIClient, registryURL string, checkCrede
 }
 
 // Login logs the user into docker
-func Login(client client.CommonAPIClient, registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
+func (client *Client) Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*types.AuthConfig, error) {
 	ctx := context.Background()
-	isDefaultRegistry, serverAddress, err := GetRegistryEndpoint(client, registryURL)
+	isDefaultRegistry, serverAddress, err := client.GetRegistryEndpoint(registryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +95,7 @@ func Login(client client.CommonAPIClient, registryURL, user, password string, ch
 	return authConfig, nil
 }
 
-func getOfficialServer(ctx context.Context, client client.CommonAPIClient) string {
+func (client *Client) getOfficialServer(ctx context.Context) string {
 	// The daemon `/info` endpoint informs us of the default registry being
 	// used. This is essential in cross-platforms environment, where for
 	// example a Linux client might be interacting with a Windows daemon, hence
