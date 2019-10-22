@@ -17,10 +17,7 @@ import (
 )
 
 type loader struct {
-	New       config.New
-	Variables config.Variables
-	Commands  config.Commands
-	Profile   config.Profile
+	New config.New
 }
 
 var versionLoader = map[string]*loader{
@@ -30,93 +27,30 @@ var versionLoader = map[string]*loader{
 	v1alpha4.Version: &loader{New: v1alpha4.New},
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
-	v1beta3.Version:  &loader{New: v1beta3.New, Variables: v1beta3.Variables, Commands: v1beta3.Commands, Profile: v1beta3.Profile},
-	latest.Version:   &loader{New: latest.New, Variables: latest.Variables, Commands: latest.Commands, Profile: latest.Profile},
+	v1beta3.Version:  &loader{New: v1beta3.New},
+	latest.Version:   &loader{New: latest.New},
 }
 
 // ParseProfile loads the base config & a certain profile
 func ParseProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
-	version, ok := data["version"].(string)
-	if ok == false {
-		return nil, errors.Errorf("Version is missing in devspace.yaml")
-	}
-
-	loader, ok := versionLoader[version]
-	if ok == false {
-		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
-	}
-
-	prepareFunc := loader.Profile
-	if prepareFunc == nil {
-		cloned := map[interface{}]interface{}{}
-		err := util.Convert(data, &cloned)
-		if err != nil {
-			return nil, err
-		}
-
-		return cloned, nil
-	}
-
-	return prepareFunc(data, profile)
+	return getProfile(data, profile)
 }
 
 // ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}) (*latest.Config, error) {
-	version, ok := data["version"].(string)
-	if ok == false {
-		return nil, errors.Errorf("Version is missing in devspace.yaml")
-	}
-
-	loader, ok := versionLoader[version]
-	if ok == false {
-		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
-	}
-
-	loadFunc := loader.Commands
-	if loadFunc == nil {
-		return nil, nil
-	}
-
-	strippedData, err := loadFunc(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "loading variables")
-	}
-
-	config, err := Parse(strippedData, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "loading vars")
-	}
-
-	return config, nil
+func ParseCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	return getCommands(data)
 }
 
 // ParseVariables parses only the variables from the config
 func ParseVariables(data map[interface{}]interface{}) ([]*latest.Variable, error) {
-	version, ok := data["version"].(string)
-	if ok == false {
-		// This is needed because overrides usually don't have versions
-		data["version"] = latest.Version
-		version = latest.Version
-	}
-
-	loader, ok := versionLoader[version]
-	if ok == false {
-		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
-	}
-
-	variablesLoadFunc := loader.Variables
-	if variablesLoadFunc == nil {
-		return []*latest.Variable{}, nil
-	}
-
-	strippedData, err := variablesLoadFunc(data)
+	strippedData, err := getVariables(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
 	config, err := Parse(strippedData, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "loading vars")
+		return nil, errors.Wrap(err, "parse variables")
 	}
 
 	return config.Vars, nil
@@ -174,4 +108,64 @@ func Parse(data map[interface{}]interface{}, loadedVars map[string]string) (*lat
 	latestConfigConverted.Version = latest.Version
 
 	return latestConfigConverted, nil
+}
+
+// getVariables returns only the variables from the config
+func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	retMap := map[interface{}]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[interface{}]interface{}{
+		"version": retMap["version"],
+		"vars":    retMap["vars"],
+	}, nil
+}
+
+// getCommands returns only the commands from the config
+func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	retMap := map[interface{}]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[interface{}]interface{}{
+		"version":  retMap["version"],
+		"commands": retMap["commands"],
+	}, nil
+}
+
+// getProfile loads a certain profile
+func getProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
+	// Convert config
+	retMap := map[interface{}]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if a profile is defined
+	if profile == "" {
+		return nil, nil
+	}
+
+	// Convert to array
+	profiles, ok := retMap["profiles"].([]interface{})
+	if !ok {
+		return nil, errors.Errorf("Couldn't load profile '%s': no profiles found", profile)
+	}
+
+	// Search for config
+	for _, profileMap := range profiles {
+		configMap, ok := profileMap.(map[interface{}]interface{})
+		if ok && configMap["name"] == profile {
+			return configMap, nil
+		}
+	}
+
+	// Couldn't find config
+	return nil, errors.Errorf("Couldn't find profile '%s'", profile)
 }

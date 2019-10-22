@@ -75,10 +75,6 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 
 // SaveLoadedConfig writes the data of a config to its yaml file
 func SaveLoadedConfig() error {
-	if len(config.Profiles) != 0 {
-		return errors.Errorf("Cannot save when a profile is applied")
-	}
-
 	// RestoreVars restores the variables in the config
 	clonedConfig, err := RestoreVars(config)
 	if err != nil {
