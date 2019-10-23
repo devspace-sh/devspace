@@ -70,7 +70,7 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 			Stdin:     stdin != nil,
 			Stdout:    stdout != nil,
 			Stderr:    stderr != nil,
-			TTY:       t.Raw,
+			TTY:       tty,
 		}, legacyscheme.ParameterCodec)
 	} else if subResource == SubResourceAttach {
 		execRequest.VersionedParams(&k8sapi.PodAttachOptions{
@@ -78,7 +78,7 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 			Stdin:     stdin != nil,
 			Stdout:    stdout != nil,
 			Stderr:    stderr != nil,
-			TTY:       t.Raw,
+			TTY:       tty,
 		}, legacyscheme.ParameterCodec)
 	}
 

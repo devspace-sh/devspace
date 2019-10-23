@@ -58,6 +58,7 @@ func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *
 
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
+	handler.mux.HandleFunc("/api/enter", handler.enter)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
 	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)
 	return handler
@@ -70,9 +71,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL != nil {
-		h.log.Infof("Incoming request at %s", r.URL.String())
-	}
+	// if r.URL != nil {
+	//	h.log.Infof("Incoming request at %s", r.URL.String())
+	// }
 	h.mux.ServeHTTP(w, r)
 }
 

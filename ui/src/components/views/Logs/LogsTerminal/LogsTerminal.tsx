@@ -4,6 +4,7 @@ import { AttachAddon } from 'lib/attach';
 
 export interface LogsTerminalProps {
   url: string;
+  interactive: boolean;
   show: boolean;
   onClose?: () => void;
 }
@@ -22,12 +23,12 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
     this.term = new Terminal({
       // We need this setting to automatically convert \n -> \r\n
       convertEol: true,
-      disableStdin: true,
+      disableStdin: !this.props.interactive,
     });
 
     // Open the websocket
     this.socket = new WebSocket(this.props.url);
-    const attachAddon = new AttachAddon(this.socket, { bidirectional: false, onClose: this.props.onClose });
+    const attachAddon = new AttachAddon(this.socket, { bidirectional: this.props.interactive, onClose: this.props.onClose });
 
     // Attach the socket to term
     this.term.open(ref);

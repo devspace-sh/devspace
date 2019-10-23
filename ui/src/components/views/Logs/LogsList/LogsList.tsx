@@ -8,6 +8,7 @@ import { getDeployedImageNames } from 'lib/utils';
 export interface SelectedLogs {
   pod?: string;
   container?: string;
+  interactive?: boolean;
   multiple?: string[];
 }
 
@@ -26,12 +27,7 @@ const renderPods = (props: Props) => {
     <Pod
       key={pod.metadata.uid}
       pod={pod}
-      onClickContainer={(container) =>
-        props.onSelect({
-          pod: pod.metadata.name,
-          container,
-        })
-      }
+      onSelect={props.onSelect}
       selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
     />
   ));
