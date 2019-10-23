@@ -13,16 +13,18 @@ Example `chart/values.yaml`:
 ```yaml
 deployments:
 - name: default
-  component:
-  - containers:
-    - image: dscr.io/myuser/devspace
-      resources:
-        limits:
-          # Lower this
-          cpu: "300m"
-          # Lower this
-          memory: "300Mi"
-          ephemeralStorage: "1Gi"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/myuser/devspace
+        resources:
+          limits:
+            # Lower this
+            cpu: "300m"
+            # Lower this
+            memory: "300Mi"
+            ephemeralStorage: "1Gi"
 ...
 ```
 

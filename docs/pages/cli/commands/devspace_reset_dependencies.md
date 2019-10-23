@@ -1,36 +1,32 @@
 ---
-title: "Command - devspace build"
-sidebar_label: devspace build
+title: "Command - devspace reset dependencies"
+sidebar_label: dependencies
 ---
 
 
-Builds all defined images and pushes them
+Resets the dependencies cache
 
 ## Synopsis
 
 
 ```
-devspace build [flags]
+devspace reset dependencies [flags]
 ```
 
 ```
 #######################################################
-################## devspace build #####################
+############ devspace reset dependencies ##############
 #######################################################
-Builds all defined images and pushes them
+Deletes the complete dependency cache
+
+Examples:
+devspace reset dependencies
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --build-sequential       Builds the images one after another instead of in parallel
-  -b, --force-build            Forces to build every image
-      --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
-  -h, --help                   help for build
-      --skip-push              Skips image pushing, useful for minikube deployment
-  -t, --tag string             Use the given tag for all built images
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for dependencies
 ```
 
 ### Options inherited from parent commands
@@ -45,3 +41,7 @@ Builds all defined images and pushes them
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+
+## See Also
+
+* [devspace reset](../../cli/commands/devspace_reset)	 - Resets an cluster token

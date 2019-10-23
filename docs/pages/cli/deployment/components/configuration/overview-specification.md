@@ -7,26 +7,30 @@ To deploy components, you need to configure them within the `deployments` sectio
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    - image: mysql
-      volumeMounts:
-      - containerPath: /var/lib/mysql
-        volume:
-          name: mysql-data
-          subPath: /mysql
-          readOnly: false
-    volumes:
-    - name: mysql-data
-      size: "5Gi"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: mysql
+        volumeMounts:
+        - containerPath: /var/lib/mysql
+          volume:
+            name: mysql-data
+            subPath: /mysql
+            readOnly: false
+      volumes:
+      - name: mysql-data
+        size: "5Gi"
 ```
 
 [What are components?](../../../../cli/deployment/components/what-are-components)
@@ -63,12 +67,14 @@ labels: []
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    labels:
-      label1: label-value-1
-      label1: label-value-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      labels:
+        label1: label-value-1
+        label1: label-value-2
 ```
 
 
@@ -91,12 +97,14 @@ annotations: []
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    annotations:
-      annotation1: annotation-value-1
-      annotation1: annotation-value-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      annotations:
+        annotation1: annotation-value-1
+        annotation1: annotation-value-2
 ```
 
 
@@ -121,19 +129,21 @@ serviceName: "[COMPONENT_NAME]-headless"
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: mysql
-      volumeMounts:
-      - containerPath: /var/lib/mysql
-        volume:
-          name: mysql-data
-          subPath: /mysql
-          readOnly: false
-    volumes:
-    - name: mysql-data
-      size: "5Gi"
-    serviceName: "custom-name-for-headless-service"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql
+        volumeMounts:
+        - containerPath: /var/lib/mysql
+          volume:
+            name: mysql-data
+            subPath: /mysql
+            readOnly: false
+      volumes:
+      - name: mysql-data
+        size: "5Gi"
+      serviceName: "custom-name-for-headless-service"
 ```
 **Explanation:**  
 Instead of the default name `backend-headless`, the headless service for the ReplicaSet created by this component would be `custom-name-for-headless-service`.
@@ -180,12 +190,14 @@ rollingUpdate:
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    rollingUpdate:
-      enabled: true
-      maxUnavailable: "50%"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      rollingUpdate:
+        enabled: true
+        maxUnavailable: "50%"
 ```
 
 ### `deployments[*].component.pullSecrets`
@@ -204,12 +216,14 @@ pullSecrets: []
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    pullSecrets:
-    - pull-secret-1
-    - pull-secret-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      pullSecrets:
+      - pull-secret-1
+      - pull-secret-2
 ```
 
 
@@ -225,10 +239,12 @@ podManagementPolicy: OrderedReady
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: john/appbackend
-    podManagementPolicy: Parallel
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      podManagementPolicy: Parallel
 ```
 
 

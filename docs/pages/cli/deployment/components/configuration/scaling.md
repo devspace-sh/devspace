@@ -11,10 +11,12 @@ To set the number of replicas, simply set the `replicas` parameter for a compone
 ```yaml
 deployments:
 - name: my-backend
-  component:
-    replicas: 4
-    containers:
-    ...
+  helm:
+    componentChart: true
+    values:
+      replicas: 4
+      containers:
+      ...
 ```
 Instead of just running the containers defined in `my-backend` with one pod, the above example would run `4` pods with the specified containers. Each of these pods run isolated, i.e. altough the containers of one pod can communicate via `localhost`, the containers of different pods cannot.
 
@@ -24,12 +26,14 @@ To enable horizontal auto-scaling for a component, you just need to set `autoSca
 ```yaml
 deployments:
 - name: my-backend
-  component:
-    replicas: 4
-    autoScaling:
-      horizontal:
-        maxReplicas: 10
-        averageCPU: 800m
+  helm:
+    componentChart: true
+    values:
+      replicas: 4
+      autoScaling:
+        horizontal:
+          maxReplicas: 10
+          averageCPU: 800m
     ...
 ```
 The above example would create an [horizontal po auto-scaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) which is configured to:

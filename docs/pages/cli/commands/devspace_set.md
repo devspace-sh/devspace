@@ -35,3 +35,4 @@ Make global configuration changes
 
 ## See Also
 * [devspace set analytics](../../cli/commands/devspace_set_analytics)	 - Update analytics settings
+* [devspace set var](../../cli/commands/devspace_set_var)	 - Sets a variable

@@ -16,10 +16,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 profiles:
 - name: production
   patches:
@@ -50,10 +52,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 profiles:
 - name: staging
   patches:
@@ -101,10 +105,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 profiles:
 - name: production
   patches:
@@ -132,10 +138,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/prodbackend
-    - image: john/cache
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/prodbackend
+      - image: john/cache
 ```
 
 
@@ -158,10 +166,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 profiles:
 - name: production
   replace:
@@ -187,9 +197,11 @@ images:
     image: john/prodbackend
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/prodbackend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/prodbackend
 ```
 
 > As shown in this example, it is possible to use `replace` and `patch` options in combination when defining profiles.

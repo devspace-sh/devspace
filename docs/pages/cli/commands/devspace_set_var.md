@@ -1,36 +1,33 @@
 ---
-title: "Command - devspace build"
-sidebar_label: devspace build
+title: "Command - devspace set var"
+sidebar_label: var
 ---
 
 
-Builds all defined images and pushes them
+Sets a variable
 
 ## Synopsis
 
 
 ```
-devspace build [flags]
+devspace set var [flags]
 ```
 
 ```
 #######################################################
-################## devspace build #####################
+################# devspace set var ####################
 #######################################################
-Builds all defined images and pushes them
+Sets a specific variable 
+
+Examples:
+devspace set var key=value
+devspace set var key=value key2=value2
 #######################################################
 ```
 ## Options
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --build-sequential       Builds the images one after another instead of in parallel
-  -b, --force-build            Forces to build every image
-      --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
-  -h, --help                   help for build
-      --skip-push              Skips image pushing, useful for minikube deployment
-  -t, --tag string             Use the given tag for all built images
-      --verbose-dependencies   Builds the dependencies verbosely
+  -h, --help   help for var
 ```
 
 ### Options inherited from parent commands
@@ -45,3 +42,7 @@ Builds all defined images and pushes them
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+
+## See Also
+
+* [devspace set](../../cli/commands/devspace_set)	 - Make global configuration changes

@@ -38,22 +38,30 @@ images:
     image: john/database
 deployments:
 - name: app-frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
 - name: app-database
-  component:
-    containers:
-    - image: john/database
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/database
 - name: app-cache
-  component:
-    containers:
-    - image: redis:5.0.5
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: redis:5.0.5
 dev:
   logs:
     images:
@@ -87,14 +95,18 @@ images:
     image: john/appbackend
 deployments:
 - name: app-frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
 dev:
   logs:
     showLast: 200
@@ -122,10 +134,12 @@ images:
     image: john/appbackend
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
 dev:
   logs:
     disabled: true

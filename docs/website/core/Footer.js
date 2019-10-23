@@ -50,6 +50,7 @@ class Footer extends React.Component {
           "v3.5.18": "v3", 
           "v4.0.0": "v4", 
           "v4.0.3": "v4",
+          "v4.1.0": "v4",
         };
 
         if (versionMeta) {

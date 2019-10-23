@@ -7,10 +7,12 @@ Components deploy pods which are a set of containers. These containers are creat
 ```yaml
 deployments:
 - name: my-backend
-  component:
-    containers:
-    - image: dscr.io/username/my-backend-image
-    - image: nginx:1.15
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/username/my-backend-image
+      - image: nginx:1.15
 ```
 The example above would create a pod with two containers:
 1. The first container would be create from the image `dscr.io/username/my-backend-image`
@@ -27,13 +29,15 @@ Components allow you to use the Kubernetes feature of overriding the container s
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: dscr.io/username/api-server
-      command:
-      - sleep
-      args:
-      - 9999999
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/username/api-server
+        command:
+        - sleep
+        args:
+        - 9999999
 ```
 The above example would start the container effectively with the following command: `sleep 9999999`
 
@@ -47,14 +51,16 @@ You can define environment variables for your containers in the `env` section th
 ```yaml
 deployments:
 - name: database
-  component:
-    containers:
-    - image: "dscr.io/username/mysql"
-      env:
-      - name: MYSQL_USER
-        value: "my_user"
-      - name: MYSQL_PASSWORD
-        value: "my-secret-passwd"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: "dscr.io/username/mysql"
+        env:
+        - name: MYSQL_USER
+          value: "my_user"
+        - name: MYSQL_PASSWORD
+          value: "my-secret-passwd"
 ```
 The above example would set two environment variables, `MYSQL_USER="my_user"` and `MYSQL_PASSWORD="my-secret-passwd"` within the first container of the `database` component.
 
@@ -105,14 +111,16 @@ To limit the resources of a container, simply configure the `limits` within the 
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: dscr.io/username/api-server
-      resources:
-        limits:
-          cpu: 400m
-          memory: 500Mi
-          ephemeralStorage: 2Gi
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/username/api-server
+        resources:
+          limits:
+            cpu: 400m
+            memory: 500Mi
+            ephemeralStorage: 2Gi
 ```
 The above example would define that this container can use a maximum of:
 - 0.4 Cores
@@ -125,14 +133,16 @@ To allocate/reserve resources for a container, simply configure the `requests` w
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: dscr.io/username/api-server
-      resources:
-        requests:
-          cpu: 200m
-          memory: 300Mi
-          ephemeralStorage: 1Gi
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/username/api-server
+        resources:
+          requests:
+            cpu: 200m
+            memory: 300Mi
+            ephemeralStorage: 1Gi
 ```
 The above example would define that this container can use a maximum of:
 - 0.2 Cores
@@ -164,25 +174,27 @@ Components allow you to use the Kubernetes feature of defining health checks:
 ```yaml
 deployments:
 - name: backend
-  component:
-    containers:
-    - image: dscr.io/username/api-server
-      livenessProbe:
-        httpGet:
-          path: /healthz
-          port: 8080
-          httpHeaders:
-          - name: Custom-Header
-            value: Awesome
-        initialDelaySeconds: 3
-        periodSeconds: 3
-      readinessProbe:
-        exec:
-          command:
-          - cat
-          - /tmp/healthy
-        initialDelaySeconds: 5
-        periodSeconds: 5
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/username/api-server
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            httpHeaders:
+            - name: Custom-Header
+              value: Awesome
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/healthy
+          initialDelaySeconds: 5
+          periodSeconds: 5
 ```
 The above example would define an [HTTP livenessProbe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-a-liveness-http-request) and an [exec readinessProbe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-readiness-probes) for the container. Components allow you to use all capabilities for livenessProbes and readinessProbes that the Kubernetes specification provides.
 
