@@ -45,7 +45,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 		},
 	}, container[0], []string{"sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"}, true, stream, stream, stream)
 	if err != nil {
-		h.log.Errorf("Error in /api/logs logs: %v", err)
+		h.log.Errorf("Error in /api/enter: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

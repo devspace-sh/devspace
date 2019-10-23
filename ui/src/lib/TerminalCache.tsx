@@ -12,6 +12,7 @@ export interface TerminalCacheInterface {
   terminals: Array<{
     pod: string;
     container: string;
+    interactive: boolean;
     props: LogsTerminalProps;
   }>;
 }
@@ -53,7 +54,10 @@ class TerminalCache {
     let found = false;
     for (let i = 0; i < this.cache.terminals.length; i++) {
       this.cache.terminals[i].props.show =
-        selected && this.cache.terminals[i].pod === selected.pod && this.cache.terminals[i].container === selected.container;
+        selected &&
+        this.cache.terminals[i].pod === selected.pod &&
+        this.cache.terminals[i].container === selected.container &&
+        this.cache.terminals[i].interactive === selected.interactive;
       found = found || this.cache.terminals[i].props.show;
     }
 
@@ -68,6 +72,7 @@ class TerminalCache {
           url: `ws://${ApiHostname()}/api/logs-multiple?namespace=${this.namespace}&imageSelector=${selected.multiple.join(
             '&imageSelector='
           )}`,
+          interactive: false,
           show: true,
         },
       };
@@ -75,10 +80,12 @@ class TerminalCache {
       this.cache.terminals.push({
         pod: selected.pod,
         container: selected.container,
+        interactive: selected.interactive,
         props: {
-          url: `ws://${ApiHostname()}/api/logs?namespace=${this.namespace}&name=${selected.pod}&container=${
-            selected.container
-          }`,
+          url: `ws://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?namespace=${this.namespace}&name=${
+            selected.pod
+          }&container=${selected.container}`,
+          interactive: selected.interactive,
           show: true,
         },
       });
