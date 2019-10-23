@@ -28,6 +28,7 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
   term: Terminal;
 
   ref: HTMLDivElement;
+  needUpdate: boolean;
   initialWidth: number;
   initialHeight: number;
 
@@ -49,6 +50,11 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
 
   fit = () => {
     if (this.term) {
+      if (!this.props.show) {
+        this.needUpdate = true;
+        return;
+      }
+
       // Force a full render
       const core = (this.term as any)._core;
       const availableHeight = this.initialHeight;
@@ -61,6 +67,8 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
         core._renderService.clear();
         this.term.resize(Math.floor(dims.cols), Math.floor(dims.rows));
       }
+
+      this.needUpdate = false;
     }
   };
 
@@ -102,6 +110,12 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
     }
 
     window.removeEventListener('resize', this.updateDimensions);
+  }
+
+  componentDidUpdate() {
+    if (this.props.show && this.needUpdate) {
+      this.updateDimensions();
+    }
   }
 
   render() {
