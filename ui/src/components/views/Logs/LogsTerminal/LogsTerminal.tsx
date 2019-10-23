@@ -33,6 +33,11 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
   initialHeight: number;
 
   updateDimensions = () => {
+    if (!this.props.show) {
+      this.needUpdate = true;
+      return;
+    }
+
     if (this.ref.children && this.ref.children.length > 0) {
       (this.ref.children[0] as any).style.display = 'none';
     }
@@ -50,11 +55,6 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
 
   fit = () => {
     if (this.term) {
-      if (!this.props.show) {
-        this.needUpdate = true;
-        return;
-      }
-
       // Force a full render
       const core = (this.term as any)._core;
       const availableHeight = this.initialHeight;
@@ -90,7 +90,10 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
     this.socket = new WebSocket(this.props.url);
     const attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
-      onClose: this.props.onClose,
+      onClose: () => {
+        this.term.writeln('Stream closed, will close in 5 seconds');
+        setTimeout(this.props.onClose, 5000);
+      },
       onError: (err) => {
         this.term.writeln('\u001b[31m' + err.message);
       },

@@ -14,7 +14,6 @@ interface IAttachOptions {
 }
 
 export class AttachAddon implements ITerminalAddon {
-  private _terminal: Terminal;
   private _socket: WebSocket;
   private _bidirectional: boolean;
   private _disposables: IDisposable[] = [];
@@ -32,7 +31,6 @@ export class AttachAddon implements ITerminalAddon {
   }
 
   public activate(terminal: Terminal): void {
-    this._terminal = terminal;
     this._disposables.push(
       addSocketListener(this._socket, 'message', (ev) => {
         const data: ArrayBuffer | string = ev.data;
@@ -60,9 +58,7 @@ export class AttachAddon implements ITerminalAddon {
     this._disposables.forEach((d) => d.dispose());
 
     if (this._onClose) {
-      this._terminal.writeln('Stream closed, will close in 5 seconds');
-
-      setTimeout(() => this._onClose(), 5000);
+      this._onClose();
     }
   }
 
