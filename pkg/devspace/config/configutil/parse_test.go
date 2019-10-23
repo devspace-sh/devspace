@@ -28,6 +28,22 @@ func TestParseConfig(t *testing.T) {
 		{
 			in: &parseTestCaseInput{
 				config: `
+version: v1alpha1`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev: &latest.DevConfig{
+					Interactive: &latest.InteractiveConfig{
+						DefaultEnabled: ptr.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			in: &parseTestCaseInput{
+				config: `
 version: v1beta3
 deployments:
 - name: test

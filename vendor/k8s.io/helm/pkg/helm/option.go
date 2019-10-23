@@ -234,6 +234,20 @@ func ReleaseTestParallel(parallel bool) ReleaseTestOption {
 	}
 }
 
+// ReleaseTestMaxParallel specifies the maximum number of test pods to run in parallel
+func ReleaseTestMaxParallel(max uint32) ReleaseTestOption {
+	return func(opts *options) {
+		opts.testReq.MaxParallel = max
+	}
+}
+
+// ReleaseTestLogs is a boolean value representing whether to dump the logs from test pods
+func ReleaseTestLogs(logs bool) ReleaseTestOption {
+	return func(opts *options) {
+		opts.testReq.Logs = logs
+	}
+}
+
 // RollbackTimeout specifies the number of seconds before kubernetes calls timeout
 func RollbackTimeout(timeout int64) RollbackOption {
 	return func(opts *options) {
@@ -507,8 +521,13 @@ func WithMaxHistory(max int32) HistoryOption {
 
 // NewContext creates a versioned context.
 func NewContext() context.Context {
+	return FromContext(context.TODO())
+}
+
+// FromContext returns a versioned context from a parent context
+func FromContext(ctx context.Context) context.Context {
 	md := metadata.Pairs("x-helm-api-client", version.GetVersion())
-	return metadata.NewOutgoingContext(context.TODO(), md)
+	return metadata.NewOutgoingContext(ctx, md)
 }
 
 // ReleaseTestOption allows configuring optional request data for

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha2"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
@@ -11,7 +12,7 @@ func TestEmpty(t *testing.T) {
 	oldConfig := New()
 	oldConfigConverted := oldConfig.(*Config)
 
-	newConfig, err := oldConfigConverted.Upgrade()
+	newConfig, err := oldConfigConverted.Upgrade(log.Discard)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestSimple(t *testing.T) {
 		},
 	}
 
-	newConfig, err := oldConfig.Upgrade()
+	newConfig, err := oldConfig.Upgrade(log.Discard)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}

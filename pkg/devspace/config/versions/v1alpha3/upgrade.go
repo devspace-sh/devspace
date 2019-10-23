@@ -4,10 +4,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 // Upgrade upgrades the config
-func (c *Config) Upgrade() (config.Config, error) {
+func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	nextConfig := &next.Config{}
 	err := util.Convert(c, nextConfig)
 	if err != nil {
@@ -40,6 +41,6 @@ func (c *Config) Upgrade() (config.Config, error) {
 }
 
 // UpgradeVarPaths upgrades the config
-func (c *Config) UpgradeVarPaths(varPaths map[string]string) error {
+func (c *Config) UpgradeVarPaths(varPaths map[string]string, log log.Logger) error {
 	return nil
 }

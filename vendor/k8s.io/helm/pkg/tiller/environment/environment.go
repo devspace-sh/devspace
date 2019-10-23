@@ -160,7 +160,7 @@ type KubeClient interface {
 
 	// BuildUnstructured reads a stream of manifests from a reader and turns them into
 	// info objects. Manifests are not validated against the schema, but it will fail if
-	// any resoures types are not known by the apiserver.
+	// any resources types are not known by the apiserver.
 	//
 	// reader must contain a YAML stream (one or more YAML documents separated by "\n---\n").
 	BuildUnstructured(namespace string, reader io.Reader) (kube.Result, error)
@@ -174,6 +174,8 @@ type KubeClient interface {
 	// WaitAndGetCompletedPodPhase waits up to a timeout until a pod enters a completed phase
 	// and returns said phase (PodSucceeded or PodFailed qualify).
 	WaitAndGetCompletedPodPhase(namespace string, reader io.Reader, timeout time.Duration) (v1.PodPhase, error)
+
+	GetPodLogs(name, namespace string) (io.ReadCloser, error)
 
 	WaitUntilCRDEstablished(reader io.Reader, timeout time.Duration) error
 }
@@ -255,6 +257,12 @@ func (p *PrintingKubeClient) WaitAndGetCompletedPodPhase(namespace string, reade
 	return v1.PodUnknown, err
 }
 
+// GetPodLogs implements KubeClient GetPodLogs.
+func (p *PrintingKubeClient) GetPodLogs(name, ns string) (io.ReadCloser, error) {
+	return nil, nil
+}
+
+// WaitUntilCRDEstablished implements KubeClient WaitUntilCRDEstablished.
 func (p *PrintingKubeClient) WaitUntilCRDEstablished(reader io.Reader, timeout time.Duration) error {
 	_, err := io.Copy(p.Out, reader)
 	return err

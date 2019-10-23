@@ -25,7 +25,6 @@ require (
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
@@ -103,7 +102,7 @@ require (
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v0.0.0
-	k8s.io/helm v2.14.2+incompatible
+	k8s.io/helm v2.15.0+incompatible
 	k8s.io/klog v0.3.1
 	k8s.io/kubernetes v1.15.0
 	mvdan.cc/sh/v3 v3.0.0-alpha2

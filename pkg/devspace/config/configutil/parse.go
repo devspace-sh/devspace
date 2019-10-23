@@ -68,7 +68,7 @@ func ParseCommands(generatedConfig *generated.Config, data map[interface{}]inter
 	}
 
 	// Load defined variables
-	vars, err := versions.ParseVariables(data)
+	vars, err := versions.ParseVariables(data, log)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func ParseCommands(generatedConfig *generated.Config, data map[interface{}]inter
 	}
 
 	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig, options.LoadedVars)
+	parsedConfig, err := versions.Parse(preparedConfig, options.LoadedVars, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse config")
 	}
@@ -97,7 +97,7 @@ func ParseCommands(generatedConfig *generated.Config, data map[interface{}]inter
 // ParseConfig fills the variables in the data and parses the config
 func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// Load defined variables
-	vars, err := versions.ParseVariables(data)
+	vars, err := versions.ParseVariables(data, log)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func ParseConfig(generatedConfig *generated.Config, data map[interface{}]interfa
 	}
 
 	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(data, options.LoadedVars)
+	latestConfig, err := versions.Parse(data, options.LoadedVars, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "convert config")
 	}
