@@ -1,6 +1,6 @@
 import React from 'react';
 import { withRouter, RouteComponentProps } from 'react-router';
-import styles from 'pages/styles/logs.module.scss';
+import styles from './containers.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import LogsList, { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
@@ -80,12 +80,12 @@ class LogsContainers extends React.PureComponent<Props, State> {
   }
 
   renderTerminal() {
-    return <div>{this.cache.renderTerminals()}</div>;
+    return <div className={styles.terminal}>{this.cache.renderTerminals()}</div>;
   }
 
   render() {
     return (
-      <PageLayout className={styles['spaces-component']} heading={<LogsLinkTabSelector />}>
+      <PageLayout className={styles['logs-containers-component']} heading={<LogsLinkTabSelector />}>
         {this.state.error ? (
           <ErrorMessage>{this.state.error}</ErrorMessage>
         ) : this.state.podList ? (

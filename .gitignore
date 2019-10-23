@@ -25,3 +25,4 @@
 
 ui/node_modules
 ui/build
+/build

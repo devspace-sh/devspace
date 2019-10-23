@@ -1,4 +1,4 @@
-@import "../../../../styles/constants";
+@import '../../../../styles/constants';
 
 .menu-container-wrapper {
   position: relative;
@@ -9,7 +9,7 @@
 }
 
 .menu {
-  background-color: $blue-dark;
+  background-color: $blue;
   max-width: 180px;
   display: flex;
   flex-direction: column;
@@ -25,7 +25,7 @@
       min-height: 70px;
       max-width: 140px;
       margin: 0 auto;
-      background-image: url(../../../../images/header-logo.svg);
+      background-image: url(../../../../images/logo-devspace-white.svg);
       background-repeat: no-repeat;
       background-position: center;
       background-size: contain;
@@ -62,7 +62,7 @@
             font: $nav;
 
             &.selected {
-              background-color: $blue-dark-2;
+              background-color: $blue-highlight;
               opacity: 1;
 
               &:hover {
@@ -77,7 +77,7 @@
             }
 
             &::before {
-              content: "";
+              content: '';
               display: block;
               position: relative;
               width: 32px;
@@ -173,7 +173,7 @@
   }
   .hamburger-inner::before,
   .hamburger-inner::after {
-    content: "";
+    content: '';
     display: block;
   }
   .hamburger-inner::before {

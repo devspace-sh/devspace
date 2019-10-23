@@ -4,6 +4,7 @@ import Pod from '../Pod/Pod';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import LogsMultiple from '../LogsMultiple/LogsMultiple';
 import { getDeployedImageNames } from 'lib/utils';
+import styles from './LogsList.module.scss';
 
 export interface SelectedLogs {
   pod?: string;
@@ -38,7 +39,7 @@ const renderPods = (props: Props) => {
 };
 
 const LogsList = (props: Props) => (
-  <div>
+  <div className={styles['logs-list']}>
     {getDeployedImageNames(props.devSpaceConfig).length > 0 && (
       <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
     )}

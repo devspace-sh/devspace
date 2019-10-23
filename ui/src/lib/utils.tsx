@@ -2,6 +2,7 @@ import http, { IncomingMessage } from 'http';
 import https from 'https';
 import React from 'react';
 import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
+import { V1Pod } from '@kubernetes/client-node';
 
 export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
   const imageSelector = [];
@@ -220,4 +221,85 @@ export const customSort = (prop: string | string[], direction: 'asc' | 'desc', a
       return 0;
     }
   });
+};
+
+// GetPodStatus returns the pod status as a string
+// Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
+export const GetPodStatus = (pod: V1Pod) => {
+  let reason = pod.status.phase;
+
+  if (pod.status.reason !== '') {
+    reason = pod.status.reason;
+  }
+
+  let initializing = false;
+
+  if (pod.status.initContainerStatuses) {
+    for (let idx = 0; idx < pod.status.initContainerStatuses.length; idx++) {
+      const container = pod.status.initContainerStatuses[idx];
+
+      switch (true) {
+        case !!container.state.terminated && container.state.terminated.exitCode === 0:
+          continue;
+        case !!container.state.terminated:
+          // initialization is failed
+          if (container.state.terminated.reason.length === 0) {
+            if (container.state.terminated.signal !== 0) {
+              reason = 'Init:Signal:' + container.state.terminated.signal;
+            } else {
+              reason = 'Init:ExitCode:' + container.state.terminated.exitCode;
+            }
+          } else {
+            reason = 'Init:' + container.state.terminated.reason;
+          }
+          initializing = true;
+        case !!container.state.waiting &&
+          container.state.waiting.reason.length > 0 &&
+          container.state.waiting.reason !== 'PodInitializing':
+          reason = 'Init:' + container.state.waiting.reason;
+          initializing = true;
+        default:
+          reason = 'Init:' + idx + '/' + pod.spec.initContainers;
+          initializing = true;
+      }
+      break;
+    }
+  }
+
+  if (!initializing) {
+    let hasRunning = false;
+
+    if (pod.status.containerStatuses) {
+      for (let i = pod.status.containerStatuses.length - 1; i >= 0; i--) {
+        const container = pod.status.containerStatuses[i];
+
+        if (!!container.state.waiting && container.state.waiting.reason !== '') {
+          reason = container.state.waiting.reason;
+        } else if (!!container.state.terminated && container.state.terminated.reason !== '') {
+          reason = container.state.terminated.reason;
+        } else if (!!container.state.terminated && container.state.terminated.reason === '') {
+          if (container.state.terminated.signal !== 0) {
+            reason = 'Signal:' + container.state.terminated.signal;
+          } else {
+            reason = 'ExitCode:' + container.state.terminated.exitCode;
+          }
+        } else if (container.ready && !!container.state.running) {
+          hasRunning = true;
+        }
+      }
+    }
+
+    // change pod status back to "Running" if there is at least one container still reporting as "Running" status
+    if (reason === 'Completed' && hasRunning) {
+      reason = 'Running';
+    }
+  }
+
+  if (!!pod.metadata.deletionTimestamp && pod.status.reason === 'NodeLost') {
+    reason = 'Unknown';
+  } else if (!!pod.metadata.deletionTimestamp) {
+    reason = 'Terminating';
+  }
+
+  return reason;
 };
