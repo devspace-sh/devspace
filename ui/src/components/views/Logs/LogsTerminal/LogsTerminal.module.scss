@@ -1,0 +1,21 @@
+.terminal-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 20px;
+  background: black;
+
+  &.fullscreen {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+  }
+
+  .terminal {
+    flex: 1;
+    overflow: hidden;
+  }
+}
