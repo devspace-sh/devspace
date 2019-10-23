@@ -42,7 +42,7 @@ func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *g
 	// Find an open port
 	usePort := DefaultPort
 	for {
-		unused, _ := port.Check(usePort)
+		unused, _ := port.CheckHostPort("localhost", usePort)
 		if unused {
 			break
 		}
