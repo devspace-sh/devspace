@@ -1,6 +1,8 @@
 ---
 title: Configure Helm Chart Deployments
 sidebar_label: Helm Charts
+id: version-v4.1.0-overview-specification
+original_id: overview-specification
 ---
 
 To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`.
