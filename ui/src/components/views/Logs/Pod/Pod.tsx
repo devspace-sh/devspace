@@ -1,6 +1,8 @@
 import React from 'react';
 import { V1Pod } from '@kubernetes/client-node';
 import style from './Pod.module.scss';
+import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
+import { GetPodStatus } from 'lib/utils';
 import Button from 'components/basic/Button/Button';
 import { SelectedLogs } from '../LogsList/LogsList';
 
@@ -40,6 +42,8 @@ const renderContainers = (props: Props) => {
 
 const Pod = (props: Props) => {
   const singleContainer = props.pod.spec.containers && props.pod.spec.containers.length === 1;
+  const status = GetPodStatus(props.pod);
+  console.log(status);
 
   return (
     <div
@@ -50,7 +54,7 @@ const Pod = (props: Props) => {
           : null
       }
     >
-      {props.pod.metadata.name}
+      <StatusIconText status={status as any}>{props.pod.metadata.name}</StatusIconText>
       {!singleContainer && renderContainers(props)}
       {singleContainer && (
         <Button

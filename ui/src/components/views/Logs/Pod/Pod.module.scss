@@ -1,10 +1,22 @@
+@import '../../../../styles/constants.scss';
+
 .pod {
+  height: 60px;
+  padding-left: 20px;
+  width: 300px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  background-color: white;
+  margin-bottom: 10px;
+  cursor: pointer;
+  box-shadow: $shadow-portlet;
+
   &.selected {
-    background-color: black;
+    background-color: $blue-dark;
     color: white;
   }
 
   .container {
-    background: yellow;
   }
 }
