@@ -227,8 +227,7 @@ export const customSort = (prop: string | string[], direction: 'asc' | 'desc', a
 // Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
 export const GetPodStatus = (pod: V1Pod) => {
   let reason = pod.status.phase;
-
-  if (pod.status.reason !== '') {
+  if (pod.status.reason) {
     reason = pod.status.reason;
   }
 
@@ -273,12 +272,12 @@ export const GetPodStatus = (pod: V1Pod) => {
       for (let i = pod.status.containerStatuses.length - 1; i >= 0; i--) {
         const container = pod.status.containerStatuses[i];
 
-        if (!!container.state.waiting && container.state.waiting.reason !== '') {
+        if (!!container.state.waiting && container.state.waiting.reason) {
           reason = container.state.waiting.reason;
-        } else if (!!container.state.terminated && container.state.terminated.reason !== '') {
+        } else if (!!container.state.terminated && container.state.terminated.reason) {
           reason = container.state.terminated.reason;
-        } else if (!!container.state.terminated && container.state.terminated.reason === '') {
-          if (container.state.terminated.signal !== 0) {
+        } else if (!!container.state.terminated && !container.state.terminated.reason) {
+          if (container.state.terminated.signal) {
             reason = 'Signal:' + container.state.terminated.signal;
           } else {
             reason = 'ExitCode:' + container.state.terminated.exitCode;

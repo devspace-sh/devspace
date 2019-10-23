@@ -1,5 +1,14 @@
+@import '../../../../styles/constants.scss';
+
 .logs-multiple {
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 15px;
+  font-size: 14px;
+  text-align: center;
+
   &.selected {
-    background-color: black;
+    background-color: $blue-dark;
+    color: white;
   }
 }

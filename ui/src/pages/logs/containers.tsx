@@ -52,22 +52,23 @@ class LogsContainers extends React.PureComponent<Props, State> {
       }
 
       const podList = await response.json();
+      if (!this.state.podList || JSON.stringify(this.state.podList.items) !== JSON.stringify(podList.items)) {
+        if (
+          this.props.warning.getActive() &&
+          typeof this.props.warning.getActive().children === 'string' &&
+          this.props.warning
+            .getActive()
+            .children.toString()
+            .indexOf('Containers:') === 0
+        ) {
+          this.props.warning.close();
+        }
 
-      if (
-        this.props.warning.getActive() &&
-        typeof this.props.warning.getActive().children === 'string' &&
-        this.props.warning
-          .getActive()
-          .children.toString()
-          .indexOf('Containers:') === 0
-      ) {
-        this.props.warning.close();
+        this.cache.updateCache(podList);
+        this.setState({
+          podList,
+        });
       }
-
-      this.cache.updateCache(podList);
-      this.setState({
-        podList,
-      });
     } catch (err) {
       let message = err.message;
       if (message === 'Failed to fetch') {

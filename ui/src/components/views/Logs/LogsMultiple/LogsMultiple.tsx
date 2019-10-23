@@ -3,6 +3,7 @@ import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpace
 import { SelectedLogs } from '../LogsList/LogsList';
 import style from './LogsMultiple.module.scss';
 import { getDeployedImageNames } from 'lib/utils';
+import { Portlet } from 'components/basic/Portlet/Portlet';
 
 interface Props extends DevSpaceConfigContext {
   selected: SelectedLogs;
@@ -10,7 +11,7 @@ interface Props extends DevSpaceConfigContext {
 }
 
 const LogsMultiple = (props: Props) => (
-  <div
+  <Portlet
     className={
       props.selected && typeof props.selected.multiple === 'object'
         ? style['logs-multiple'] + ' ' + style.selected
@@ -23,7 +24,7 @@ const LogsMultiple = (props: Props) => (
     }
   >
     All deployed containers (Merged Logs)
-  </div>
+  </Portlet>
 );
 
 export default withDevSpaceConfig(LogsMultiple);

@@ -36,6 +36,7 @@ const StatusIconText = (props: Props) => {
 
   return (
     <IconText
+      tooltip={props.status}
       className={props.status ? styles['status-icon-text'] + ' ' + props.status : styles['status-icon-text']}
       icon={icon}
     >

@@ -99,7 +99,10 @@ class TerminalCache {
 
     if (selected.pod) {
       const idx = this.cache.terminals.findIndex(
-        (terminal) => terminal.pod === selected.pod && terminal.container === selected.container
+        (terminal) =>
+          terminal.pod === selected.pod &&
+          terminal.container === selected.container &&
+          terminal.interactive === selected.interactive
       );
       if (idx !== -1) {
         this.cache.terminals.splice(idx, 1);
@@ -131,9 +134,11 @@ class TerminalCache {
     terminals.push(
       ...this.cache.terminals.map((terminal) => (
         <LogsTerminal
-          key={terminal.pod + ':' + terminal.container}
+          key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
           {...terminal.props}
-          onClose={() => this.delete({ pod: terminal.pod, container: terminal.container })}
+          onClose={() =>
+            this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
+          }
         />
       ))
     );

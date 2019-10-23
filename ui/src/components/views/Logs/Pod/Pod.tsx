@@ -3,8 +3,11 @@ import { V1Pod } from '@kubernetes/client-node';
 import style from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
 import { GetPodStatus } from 'lib/utils';
-import Button from 'components/basic/Button/Button';
 import { SelectedLogs } from '../LogsList/LogsList';
+import { Portlet } from 'components/basic/Portlet/Portlet';
+import IconButton from 'components/basic/IconButton/IconButton';
+import TerminalIconWhite from 'images/icon-terminal-white.svg';
+import TerminalIcon from 'images/icon-terminal.svg';
 
 interface Props {
   pod: V1Pod;
@@ -22,7 +25,9 @@ const renderContainers = (props: Props) => {
           onClick={() => props.onSelect({ pod: props.pod.metadata.name, container: container.name })}
         >
           {container.name}
-          <Button
+          <IconButton
+            icon={props.selectedContainer === container.name ? TerminalIconWhite : TerminalIcon}
+            tooltipText={'Open terminal'}
             onClick={(e) => {
               e.stopPropagation();
               props.onSelect({
@@ -31,9 +36,7 @@ const renderContainers = (props: Props) => {
                 interactive: true,
               });
             }}
-          >
-            enter
-          </Button>
+          />
         </div>
       ))}
     </div>
@@ -43,11 +46,11 @@ const renderContainers = (props: Props) => {
 const Pod = (props: Props) => {
   const singleContainer = props.pod.spec.containers && props.pod.spec.containers.length === 1;
   const status = GetPodStatus(props.pod);
-  console.log(status);
+  const selected = singleContainer && props.selectedContainer;
 
   return (
-    <div
-      className={singleContainer && props.selectedContainer ? style.pod + ' ' + style.selected : style.pod}
+    <Portlet
+      className={selected ? style.pod + ' ' + style.selected : style.pod}
       onClick={
         singleContainer
           ? () => props.onSelect({ pod: props.pod.metadata.name, container: props.pod.spec.containers[0].name })
@@ -57,7 +60,9 @@ const Pod = (props: Props) => {
       <StatusIconText status={status as any}>{props.pod.metadata.name}</StatusIconText>
       {!singleContainer && renderContainers(props)}
       {singleContainer && (
-        <Button
+        <IconButton
+          icon={selected ? TerminalIconWhite : TerminalIcon}
+          tooltipText={'Open terminal'}
           onClick={(e) => {
             e.stopPropagation();
             props.onSelect({
@@ -66,11 +71,9 @@ const Pod = (props: Props) => {
               interactive: true,
             });
           }}
-        >
-          enter
-        </Button>
+        />
       )}
-    </div>
+    </Portlet>
   );
 };
 
