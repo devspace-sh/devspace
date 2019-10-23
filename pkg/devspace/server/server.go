@@ -3,59 +3,91 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/port"
+	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // Server is listens on a given port for the ui functionality
 type Server struct {
-	server *http.Server
+	Server *http.Server
+	log    log.Logger
 }
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
+// DefaultPort is the default port the ui server will listen to
+const DefaultPort = 8090
+
 // NewServer creates a new server from the given parameters
-func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, port int, log log.Logger) (*Server, error) {
+func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, log log.Logger) (*Server, error) {
+	path, err := downloadUI()
+	if err != nil {
+		return nil, errors.Wrap(err, "download ui")
+	}
+
+	// Find an open port
+	usePort := DefaultPort
+	for {
+		unused, _ := port.Check(usePort)
+		if unused {
+			break
+		}
+
+		usePort++
+	}
+
 	return &Server{
-		server: &http.Server{
-			Addr:    "localhost:" + strconv.Itoa(port),
-			Handler: newHandler(client, config, generatedConfig, log),
+		Server: &http.Server{
+			Addr:    "localhost:" + strconv.Itoa(usePort),
+			Handler: newHandler(client, config, generatedConfig, path, log),
 			// ReadTimeout:  5 * time.Second,
 			// WriteTimeout: 10 * time.Second,
 			// IdleTimeout:  60 * time.Second,
 		},
+		log: log,
 	}, nil
 }
 
 // ListenAndServe implements interface
 func (s *Server) ListenAndServe() error {
-	return s.server.ListenAndServe()
+	s.log.Infof("Start listening on %s", s.Server.Addr)
+
+	return s.Server.ListenAndServe()
 }
 
 type handler struct {
 	config          *latest.Config
+	path            string
 	generatedConfig *generated.Config
 	client          *kubectl.Client
 	log             log.Logger
 	mux             *http.ServeMux
 }
 
-func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, log log.Logger) *handler {
+func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, path string, log log.Logger) *handler {
 	handler := &handler{
 		mux:             http.NewServeMux(),
+		path:            path,
 		client:          client,
 		config:          config,
 		log:             log,
 		generatedConfig: generatedConfig,
 	}
 
+	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(path, "index.html"))
+	})
+	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
 	handler.mux.HandleFunc("/api/enter", handler.enter)

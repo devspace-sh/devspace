@@ -89,10 +89,8 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Infof("Start listening on localhost:%d", ClientUIPort)
-
 	// Create server
-	server, err := server.NewServer(client, config, generatedConfig, ClientUIPort, log.GetInstance())
+	server, err := server.NewServer(client, config, generatedConfig, log.GetInstance())
 	if err != nil {
 		return err
 	}
