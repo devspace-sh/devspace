@@ -37,6 +37,7 @@ devspace sync --container-path=/my-path
   -h, --help                       help for sync
   -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
       --local-path string          Local path to use (Default is current directory (default ".")
+      --no-watch                   Synchronizes local and remote and then stops
       --pick                       Select a pod
       --pod string                 Pod to open a shell to
       --verbose                    Shows every file that is synced

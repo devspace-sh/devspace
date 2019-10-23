@@ -25,12 +25,14 @@ In the `devspace.yaml`, you can define persistent volumes in the `volumes` secti
 ```yaml
 deployments:
 - name: my-component
-  component:
-    volumes:
-    - name: nginx
-      size: "2Gi"
-    - name: mysql-data
-      size: "5Gi"
+  helm:
+    componentChart: true
+    values:
+      volumes:
+      - name: nginx
+        size: "2Gi"
+      - name: mysql-data
+        size: "5Gi"
 ```
 The above example defines two volumes, one called `nginx` with size `2 Gigabyte` and one called `mysql-data` with size `5 Gigabyte`.
 
@@ -50,11 +52,13 @@ Using DevSpace components, you can define Kubernetes ConfigMaps as volumes accor
 ```yaml
 deployments:
 - name: my-component
-  component:
-    volumes:
-    - name: nginx-config
-      configMap:
-        name: my-configmap
+  helm:
+    componentChart: true
+    values:
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: my-configmap
 ```
 
 <details>
@@ -75,11 +79,13 @@ Using DevSpace components, you can define Kubernetes Secrets as volumes accordin
 ```yaml
 deployments:
 - name: my-component
-  component:
-  volumes:
-  - name: secret-token
-    secret:
-      secretName: my-secret
+  helm:
+    componentChart: true
+    values:
+      volumes:
+      - name: secret-token
+        secret:
+          secretName: my-secret
 ```
 
 <details>
@@ -100,18 +106,20 @@ After defining a volume for a component, you can mount it in the containers of t
 ```yaml
 deployments:
 - name: my-component
-  component:
-    containers:
-    - image: "dscr.io/username/mysql"
-      volumeMounts:
-      - containerPath: /var/lib/mysql
-        volume:
-          name: mysql-data
-          subPath: /mysql
-          readOnly: false
-    volumes:
-    - name: mysql-data
-      size: "5Gi"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: "dscr.io/username/mysql"
+        volumeMounts:
+        - containerPath: /var/lib/mysql
+          volume:
+            name: mysql-data
+            subPath: /mysql
+            readOnly: false
+      volumes:
+      - name: mysql-data
+        size: "5Gi"
 ```
 The example above would create a volume called `mysql-data` for the component `my-component` and mount the folder `/mysql` within this volume into the path `/var/lib/mysql` within a container of this component. By mounting this volume to `/var/lib/mysql`, you allow the container to edit the files and folder contained within `/var/lib/mysql` and restart without losing these changes.
 

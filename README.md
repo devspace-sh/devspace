@@ -559,6 +559,18 @@ deployments:
       service:                          # Expose this component with a Kubernetes service
         ports:                          # Array of container ports to expose through the service
         - port: 3000                    # Exposes container port 3000 on service port 3000
+- name: database                        # A second deployment for a postgresql database
+  helm:
+    chart:
+      name: stable/postgresql
+    values:
+      postgresqlDatabase: "db_website"
+      postgresqlUsername: "db_user"
+      postgresqlPassword: ${DB_PASSWORD}
+      resources:
+        requests:
+          memory: 0
+          cpu: 0
 
 dev:
   ports:
@@ -683,13 +695,15 @@ Deploy components
 # File: ./devspace.yaml
 deployments:
 - name: quickstart-nodejs
-  component:
-    containers:
-    - image: my-registry.tld/image1
-      resources:
-        limits:
-          cpu: "400m"
-          memory: "500Mi"
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: my-registry.tld/image1
+        resources:
+          limits:
+            cpu: "400m"
+            memory: "500Mi"
 ```
 DevSpace allows you to [add predefined components](https://devspace.cloud/docs/cli/deployment/components/configuration/overview-specification#devspace-add-deployment-name-component-mysql-redis) using the `devspace add component [component-name]` command. 
 

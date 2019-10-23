@@ -24,8 +24,9 @@ Starts your project in development mode:
 4. Starts the sync client
 5. Streams the logs of deployed containers
 
-Use Interactive Mode:
-- Use "devspace dev -i" for interactive mode (terminal)
+Open terminal instead of logs:
+- Use "devspace dev -t" for opening a terminal
+- Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################
 ```
 ## Options
@@ -45,6 +46,7 @@ Use Interactive Mode:
   -x, --skip-pipeline          Skips build & deployment and only starts sync, portforwarding & terminal
       --skip-push              Skips image pushing, useful for minikube deployment
       --sync                   Enable code synchronization (default true)
+  -t, --terminal               Open a terminal instead of showing logs
       --verbose-dependencies   Deploys the dependencies verbosely
       --verbose-sync           When enabled the sync will log every file change
 ```

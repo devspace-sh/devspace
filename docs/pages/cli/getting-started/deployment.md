@@ -70,10 +70,7 @@ images:
 deployments:
 - name: quickstart-nodejs                 # Name of this deployment
   helm:                                   # Deploy using Helm
-    chart:                                # Helm chart to be deployed
-      name: component-chart               # DevSpace component chart is a general-purpose Helm chart
-      version: v0.0.6
-      repo: https://charts.devspace.cloud
+    componentChart: true                  # Use the Component Helm Chart
     values:                               # Override Values for chart (van also be set using valuesFiles option)
       containers:                         # Defines an array of containers that run in the same pods started by this component
       - image: reg.tld/username/devspace  # Image of this container

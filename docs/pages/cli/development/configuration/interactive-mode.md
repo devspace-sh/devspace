@@ -16,15 +16,19 @@ images:
     image: john/database
 deployments:
 - name: app-frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-      name: some-container
-    - image: john/appbackend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+        name: some-container
+      - image: john/appbackend
 dev:
   interactive:
     images:
@@ -63,15 +67,19 @@ images:
     image: john/database
 deployments:
 - name: app-frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-      name: some-container
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+        name: some-container
+      - image: john/appbackend-sidecar
 dev:
   interactive:
     images:
@@ -114,15 +122,19 @@ images:
     image: john/database
 deployments:
 - name: app-frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-      name: some-container
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+        name: some-container
+      - image: john/appbackend-sidecar
 dev:
   interactive:
     terminal:
@@ -148,11 +160,13 @@ images:
     image: john/appbackend
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/appbackend
-      name: some-container
-    - image: john/appbackend-sidecar
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+        name: some-container
+      - image: john/appbackend-sidecar
 dev:
   interactive:
     defaultEnabled: true

@@ -17,13 +17,21 @@ Docusaurus allows you to use hot reloading when editing the docs pages, so you c
 ## [Contribution Guidelines](../CONTRIBUTING.md)
 For general information regarding contributions see: [Contribution Guidelines](../CONTRIBUTING.md)
 
-
 ## Creating New Versions
+
+### 1. Generate Command Docs 
+```bash
+cd ../ # main project directory
+go run -mod= ./hack/gen-docs.go
+```
+
+### 2. Create Version
 ```bash
 cd website
 npm run version v4.0.3
 ```
 
+### 3. Update Sidebars
 **If there is a new sidebar file in `website/versioned-sidebars/` that means the sidebar has changed and you need to:** 
 - (if needed:) create a new CSS style for the sidebar in `website/static/css/versions/SIDEBAR_VERSION/style.css`
 - APPEND the DevSpace version as key to the `sidebarVersions` objects inside `website/core/Footer.js` and define which sidebar version (value) should be used

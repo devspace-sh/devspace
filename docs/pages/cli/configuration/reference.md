@@ -5,14 +5,15 @@ sidebar_label: Config Reference
 
 ## `version`
 ```yaml
-version: v1beta3                   # string   | Version of the config
+version: v1beta4                   # string   | Version of the config
 ```
 
 <details>
 <summary>
 ### List of supported versions
 </summary>
-- v1beta3   ***latest***
+- v1beta4   ***latest***
+- v1beta3
 - v1beta2
 - v1beta1
 - v1alpha4
@@ -58,6 +59,7 @@ docker:                             # struct   | Options for building images wit
   preferMinikube: true              # bool     | If available, use minikube's in-built docker daemon instaed of local docker daemon (default: true)
   skipPush: false                   # bool     | Skip pushing image to registry, recommended for minikube (Default: false)
   disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
+  useBuildKit: true                 # bool     | Enable BuildKit for Docker build process (default: false)
   options: ...                      # struct   | Set build general build options
 ```
 
@@ -122,6 +124,8 @@ component:                          # struct   | Options for deploying a DevSpac
   podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
   options: ...                      # struct   | Options for deploying this component with helm
 ```
+> Instead of using `component` directly, the default way of deploying components is to use `helm` as deployment method with `componentChart: true` and with the component config options under `helm.values`. Both methods do exactly the same.
+
 [Learn more about configuring component deployments.](../../cli/deployment/components/what-are-components)
 
 ### `deployments[*].component.containers`
@@ -228,6 +232,7 @@ options: 	                          # struct   | Component service configuration
 ```yaml
 helm:                               # struct   | Options for deploying with Helm
   chart: ...                        # struct   | Relative path 
+  componentChart: ...               # bool     | Use the DevSpace component chart instead of a custom `chart` = deployment is a component (Default: false)
   values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
   valuesFiles:                      # string[] | Array of paths to values files
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
@@ -335,7 +340,7 @@ autoReload:                         # struct   | Options for auto-reloading (i.e
 ### `dev.interactive`
 ```yaml
 interactive:                        # struct   | Options for interactive mode
-- defaultEnabled: false             # bool     | Start interactive mode instead of log streaming by default, even without -i / --interactive flag (Default: false)
+  defaultEnabled: false             # bool     | Start interactive mode instead of log streaming by default, even without -i / --interactive flag (Default: false)
   images:                           # struct[] | Array of image override configurations for interactive mode
   - name: default                   # string   | Name of the image to apply this override rule to (key in `images`)
     entrypoint: []                  # string[] | Array defining with the ENTRYPOINT that should be used instead of the ENTRYPOINT defined in the Dockerfile
