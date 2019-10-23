@@ -1,0 +1,365 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Volumes · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Generally, containers are stateless. That means that whenever you write anything to the filesystem of the container, it will be removed when the container restarts."/><meta name="docsearch:version" content="next"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Volumes · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="Generally, containers are stateless. That means that whenever you write anything to the filesystem of the container, it will be removed when the container restarts."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>next</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Configuration (Components)</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cli/configuration/reference">Config Reference</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_reset_dependencies">dependencies</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_set_analytics">analytics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_set_var">var</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/networking">Networking (Domains)</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/next/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/deployment/components/configuration/volumes.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Volumes</h1></header><article><div><span><p>Generally, containers are stateless. That means that whenever you write anything to the filesystem of the container, it will be removed when the container restarts.</p>
+<p>Altough it is recommend to keep your applications as stateless as possible, sometimes you will need to store data in a directory that should &quot;survive&quot; a container restart, e.g. the data directory within a database container (e.g. <code>/var/lib/mysql</code> for mysql).</p>
+<p>Persistent volumes allow you to define a virtual device which is independent of your containers an can be mounted into the containers. An analogy would be a USB stick (persistent volume) that you plug into a computer (container) which always resets the in-build hard drive on every restart.</p>
+<p>When you want to persist a folder within a container of one of your components, you need to:</p>
+<ol>
+<li><a href="#define-persistent-volumes">Define a volume</a> within this component</li>
+<li><a href="#mount-persistent-volumes">Mount this volume into the container</a></li>
+</ol>
+<blockquote>
+<p>DevSpace components require you to specify separete volumes for each component, i.e. the volumes of a component can only be mounted by the containers of the same component.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="define-volumes"></a><a href="#define-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define volumes</h2>
+<p>DevSpace components allow you to define the following types of Kubernetes volumes:</p>
+<ul>
+<li><a href="#define-persistent-volumes">Persistent volumes</a></li>
+<li><a href="#define-configmap-volumes">ConfigMap volumes</a></li>
+<li><a href="#define-secret-volumes">Secret volumes</a></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="define-persistent-volumes"></a><a href="#define-persistent-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define Persistent Volumes</h3>
+<p>In the <code>devspace.yaml</code>, you can define persistent volumes in the <code>volumes</code> section of each component deployment:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">my-component</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      volumes:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">nginx</span>
+<span class="hljs-attr">        size:</span> <span class="hljs-string">"2Gi"</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">mysql-data</span>
+<span class="hljs-attr">        size:</span> <span class="hljs-string">"5Gi"</span>
+</code></pre>
+<p>The above example defines two volumes, one called <code>nginx</code> with size <code>2 Gigabyte</code> and one called <code>mysql-data</code> with size <code>5 Gigabyte</code>.</p>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="show-specification-for-persistent-volumes"></a><a href="#show-specification-for-persistent-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show specification for Persistent Volumes</h4>
+<p></summary></p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">volumes:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">[a-z0-9-]{1,253}</span>        <span class="hljs-comment"># Name of the volume (used to mount the volume)</span>
+<span class="hljs-attr">  size:</span> <span class="hljs-string">[number]</span> <span class="hljs-string">+</span> <span class="hljs-string">Gi|Mi|Ki</span>     <span class="hljs-comment"># Size of the volume in Gigabyte, Megabyte or Kilobyte</span>
+</code></pre>
+<p></details></p>
+<h3><a class="anchor" aria-hidden="true" id="define-configmap-volumes"></a><a href="#define-configmap-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define ConfigMap Volumes</h3>
+<p>Using DevSpace components, you can define Kubernetes ConfigMaps as volumes according to the <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#configmapvolumesource-v1-core">Kubernetes ConfigMapVolumeSource specification</a>:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">my-component</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      volumes:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">nginx-config</span>
+<span class="hljs-attr">        configMap:</span>
+<span class="hljs-attr">          name:</span> <span class="hljs-string">my-configmap</span>
+</code></pre>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="show-specification-for-configmap-volumes"></a><a href="#show-specification-for-configmap-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show specification for ConfigMap Volumes</h4>
+<p></summary></p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">volumes:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">[a-z0-9-]{1,253}</span>        <span class="hljs-comment"># Name of the volume (used to mount the volume)</span>
+<span class="hljs-attr">  configMap:</span>                    <span class="hljs-comment"># Kubernetes ConfigMapVolumeSource v1</span>
+<span class="hljs-attr">    name:</span> <span class="hljs-string">[a-z0-9-]{1,253}</span>      <span class="hljs-comment"># Name of the ConfigMap</span>
+    <span class="hljs-string">...</span>
+</code></pre>
+<p></details></p>
+<h3><a class="anchor" aria-hidden="true" id="define-secret-volumes"></a><a href="#define-secret-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define Secret Volumes</h3>
+<p>Using DevSpace components, you can define Kubernetes Secrets as volumes according to the <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#secretvolumesource-v1-core">Kubernetes SecretVolumeSource specification</a>:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">my-component</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      volumes:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">secret-token</span>
+<span class="hljs-attr">        secret:</span>
+<span class="hljs-attr">          secretName:</span> <span class="hljs-string">my-secret</span>
+</code></pre>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="show-specification-for-secret-volumes"></a><a href="#show-specification-for-secret-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show specification for Secret Volumes</h4>
+<p></summary></p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">volumes:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">[a-z0-9-]{1,253}</span>            <span class="hljs-comment"># Name of the volume (used to mount the volume)</span>
+<span class="hljs-attr">  secret:</span>                           <span class="hljs-comment"># Kubernetes SecretVolumeSource v1</span>
+<span class="hljs-attr">    secretName:</span> <span class="hljs-string">[a-z0-9-]{1,253}</span>    <span class="hljs-comment"># Name of the Secret</span>
+    <span class="hljs-string">...</span>
+</code></pre>
+<p></details></p>
+<h2><a class="anchor" aria-hidden="true" id="mount-volumes-into-containers"></a><a href="#mount-volumes-into-containers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mount volumes into containers</h2>
+<p>After defining a volume for a component, you can mount it in the containers of the same component within the <code>volumeMounts</code> section:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">my-component</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      containers:</span>
+<span class="hljs-attr">      - image:</span> <span class="hljs-string">"dscr.io/username/mysql"</span>
+<span class="hljs-attr">        volumeMounts:</span>
+<span class="hljs-attr">        - containerPath:</span> <span class="hljs-string">/var/lib/mysql</span>
+<span class="hljs-attr">          volume:</span>
+<span class="hljs-attr">            name:</span> <span class="hljs-string">mysql-data</span>
+<span class="hljs-attr">            subPath:</span> <span class="hljs-string">/mysql</span>
+<span class="hljs-attr">            readOnly:</span> <span class="hljs-literal">false</span>
+<span class="hljs-attr">      volumes:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">mysql-data</span>
+<span class="hljs-attr">        size:</span> <span class="hljs-string">"5Gi"</span>
+</code></pre>
+<p>The example above would create a volume called <code>mysql-data</code> for the component <code>my-component</code> and mount the folder <code>/mysql</code> within this volume into the path <code>/var/lib/mysql</code> within a container of this component. By mounting this volume to <code>/var/lib/mysql</code>, you allow the container to edit the files and folder contained within <code>/var/lib/mysql</code> and restart without losing these changes.</p>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="view-the-specification-for-volume-mounts"></a><a href="#view-the-specification-for-volume-mounts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>View the specification for volume mounts</h4>
+<p></summary></p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">containerPath:</span> <span class="hljs-string">[path]</span>       <span class="hljs-comment"># Path within the container</span>
+<span class="hljs-attr">volume:</span>                     <span class="hljs-comment"># Volume to mount</span>
+<span class="hljs-attr">  name:</span> <span class="hljs-string">[volume-name]</span>       <span class="hljs-comment"># Name of the volume as defined in `volumes` within `chart/values.yaml`</span>
+<span class="hljs-attr">  subPath:</span> <span class="hljs-string">[path]</span>           <span class="hljs-comment"># Path within the volume</span>
+<span class="hljs-attr">  readOnly:</span> <span class="hljs-literal">false</span><span class="hljs-string">|true</span>      <span class="hljs-comment"># Detault: false | set to true for read-only mounting</span>
+</code></pre>
+<p></details></p>
+<h2><a class="anchor" aria-hidden="true" id="delete-persistent-volumes"></a><a href="#delete-persistent-volumes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Delete persistent volumes</h2>
+<p>By default, persisent volumes will not be deleted automatically when you remove them from the <code>volumes</code> section of <code>chart/values.yaml</code>. This ensures that persistent data is not being deleted on accident.</p>
+<p>To remove a persistent volume, you have to remove it manually with the following commands:</p>
+<pre><code class="hljs css language-bash">devspace add space [SPACE_NAME]
+kubectl delete persistentvolumeclaim [VOLUME_NAME]
+</code></pre>
+<blockquote>
+<p><strong>Warning: Deleting persistent volumes cannot be undone. Your data will be lost forever and cannot be recovered.</strong></p>
+</blockquote>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="faq"></a><a href="#faq" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FAQ</h2>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="can-i-mount-one-persistent-volume-within-multiple-containers"></a><a href="#can-i-mount-one-persistent-volume-within-multiple-containers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Can I mount one persistent volume within multiple containers?</h3>
+<p></summary>
+<strong>Yes, but</strong> only if the containers are either in the same component or if at most one of the containers mounts the volume with the <code>readOnly: false</code> option (e.g. one container with <code>readOnly: false</code> and 3 other containers with <code>readOnly: true</code> would work).
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="will-my-persistent-volumes-be-deleted-when-i-re-deploy-my-application"></a><a href="#will-my-persistent-volumes-be-deleted-when-i-re-deploy-my-application" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Will my persistent volumes be deleted when I re-deploy my application?</h3>
+<p></summary>
+Generally: <strong>No.</strong></p>
+<p>The <a href="../../../../cli/deployment/components/what-are-components#devspace-component-helm-chart">DevSpace Component Chart</a> used to deploy DevSpace components will automatically deploy containers as part of a StatefulSet when you mount any persistent volumes. Kubernetes will not delete these persistent volumes when you delete or update the StatefulSet.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="how-can-i-delete-everything-including-persistent-volumes-within-a-space"></a><a href="#how-can-i-delete-everything-including-persistent-volumes-within-a-space" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How can I delete everything (including persistent volumes) within a Space?</h3>
+<p></summary>
+If you want to force-delete everything (including persistent volumes) within a Space, you can run the following commands:</p>
+<pre><code class="hljs css language-bash">devspace purge
+kubectl delete persistentvolumeclaims --all
+</code></pre>
+<blockquote>
+<p><strong>Warning: The commands listed above will delete everything within your Space. All your data will be lost forever and cannot be recovered.</strong>
+</details></p>
+</blockquote>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 10/23/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/cli/deployment/components/configuration/containers"><span class="arrow-prev">← </span><span>Containers</span></a><a class="docs-next button" href="/docs/next/cli/deployment/components/configuration/service"><span>Service</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#define-volumes">Define volumes</a><ul class="toc-headings"><li><a href="#define-persistent-volumes">Define Persistent Volumes</a></li><li><a href="#define-configmap-volumes">Define ConfigMap Volumes</a></li><li><a href="#define-secret-volumes">Define Secret Volumes</a></li></ul></li><li><a href="#mount-volumes-into-containers">Mount volumes into containers</a></li><li><a href="#delete-persistent-volumes">Delete persistent volumes</a></li><li><a href="#faq">FAQ</a><ul class="toc-headings"><li><a href="#can-i-mount-one-persistent-volume-within-multiple-containers">Can I mount one persistent volume within multiple containers?</a></li><li><a href="#will-my-persistent-volumes-be-deleted-when-i-re-deploy-my-application">Will my persistent volumes be deleted when I re-deploy my application?</a></li><li><a href="#how-can-i-delete-everything-including-persistent-volumes-within-a-space">How can I delete everything (including persistent volumes) within a Space?</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

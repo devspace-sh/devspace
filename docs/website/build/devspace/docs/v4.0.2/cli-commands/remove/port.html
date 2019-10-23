@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>devspace remove port · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="```bash"/><meta name="docsearch:version" content="v4.0.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="devspace remove port · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="```bash"/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli-commands/remove/port.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">devspace remove port</h1></header><article><div><span><pre><code class="hljs css language-bash"><span class="hljs-comment">#######################################################</span>
+<span class="hljs-comment">############### devspace remove port ##################</span>
+<span class="hljs-comment">#######################################################</span>
+Removes port mappings from the devspace configuration:
+devspace remove port 8080,3000
+devspace remove port --label-selector=release=<span class="hljs-built_in">test</span>
+devspace remove port --all
+<span class="hljs-comment">#######################################################</span>
+
+Usage:
+  devspace remove port [flags]
+
+Flags:
+      --all                     Remove all configured ports
+  -h, --<span class="hljs-built_in">help</span>                    <span class="hljs-built_in">help</span> <span class="hljs-keyword">for</span> port
+      --label-selector string   Comma separated key=value selector list (e.g. release=<span class="hljs-built_in">test</span>)
+</code></pre>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 4/8/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

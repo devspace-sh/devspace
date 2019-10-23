@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Use the terminal proxy · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="After running `devspace dev`, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers."/><meta name="docsearch:version" content="v4.0.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Use the terminal proxy · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="After running `devspace dev`, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/development/terminal.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Use the terminal proxy</h1></header><article><div><span><p>After running <code>devspace dev</code>, DevSpace CLI will open a terminal proxy, which lets you run commands within your deployed containers.</p>
+<h2><a class="anchor" aria-hidden="true" id="start-your-application-via-terminal-proxy"></a><a href="#start-your-application-via-terminal-proxy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start your application via terminal proxy</h2>
+<p>Starting your application with the terminal proxy works the same way as starting it with your local terminal. Common commands to start your applications in development mode would be:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-302-tab-303" class="nav-link active" data-group="group_302" data-tab="tab-group-302-content-303">Node.js</div></div><div class="tab-content"><div id="tab-group-302-content-303" class="tab-pane active" data-group="group_302" tabindex="-1"><div><span><pre><code class="hljs css language-powershell">npm run [start|dev|watch]<br /></code></pre>
+</span></div></div></div></div>
+<p>By default, <code>devspace dev</code> will deploy your containers but your application will not be started, because the entrypoint of your Docker image will be overridden with a <code>sleep</code> command. You can also define custom commands for overriding entrypoints. <a href="../development/overrides#configuring-entrypoint-overrides">Learn more about entrypoint overriding.</a></p>
+<h2><a class="anchor" aria-hidden="true" id="print-logs-instead-of-opening-a-terminal"></a><a href="#print-logs-instead-of-opening-a-terminal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Print logs instead of opening a terminal</h2>
+<p>If you rather want to print the container logs instead of opening a terminal to the container you can define this in the <code>devspace.yaml</code>:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  selectors:</span>
+<span class="hljs-attr">  - name:</span> <span class="hljs-string">default</span>
+    <span class="hljs-comment"># This tells devspace to select pods that have the following labels</span>
+<span class="hljs-attr">    labelSelector:</span>
+      <span class="hljs-string">app.kubernetes.io/component:</span> <span class="hljs-string">default</span>
+      <span class="hljs-string">app.kubernetes.io/name:</span> <span class="hljs-string">devspace-app</span>
+<span class="hljs-attr">  terminal:</span>
+<span class="hljs-attr">    selector:</span> <span class="hljs-string">default</span>
+<span class="hljs-attr">    containerName:</span> <span class="hljs-string">nodejs</span>
+    <span class="hljs-comment"># Next line tells devspace to show logs instead of terminal</span>
+<span class="hljs-attr">    disabled:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="open-additional-terminals"></a><a href="#open-additional-terminals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Open additional terminals</h2>
+<p>You can open additional terminals, simply run the following command:</p>
+<pre><code class="hljs css language-bash">devspace enter
+</code></pre>
+<blockquote>
+<p><strong>Do not run <code>devspace dev</code> to open additional terminals.</strong>  <br>
+It is highly discouraged to run <code>devspace dev</code> multiple times in parallel because the port-forwarding as well as the code synchronization processes will interfere with each other.</p>
+</blockquote>
+<p>Use the command <code>devspace enter [COMMAND]</code> to run a command direclty after opening the terminal.</p>
+<pre><code class="hljs css language-bash">devspace enter bash
+devspace enter npm start
+</code></pre>
+<p>The first command listed above would open an interactive terminal proxy and start a bash terminal within the existing terminal session. The second command would open an interactive terminal proxy and then run the command <code>npm start</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="open-terminals-for-other-containers"></a><a href="#open-terminals-for-other-containers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Open terminals for other containers</h2>
+<p>The <code>devspace enter</code> command supports a variety of flags to open terminals for containers other than the detault container specified in the configuration.</p>
+<pre><code class="hljs css language-bash">devspace enter -p                   <span class="hljs-comment"># --pick | Show a list of pods and containers to enter into</span>
+devspace enter -c my-container      <span class="hljs-comment"># --container | Select container "my-container" within the default terminal component</span>
+devspace enter -s mysql             <span class="hljs-comment"># --selector | Use the selector with name "mysql" to start the terminal proxy</span>
+devspace enter -l <span class="hljs-string">"release=test"</span>    <span class="hljs-comment"># --label-sector | Use the label selector "release=test" to start the terminal proxy</span>
+</code></pre>
+<p><a href="../cli-commands/enter">See the full specification for <code>devspace enter</code>.</a></p>
+<h2><a class="anchor" aria-hidden="true" id="configure-the-terminal-proxy"></a><a href="#configure-the-terminal-proxy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configure the terminal proxy</h2>
+<p>The configuration for the terminal proxy can be set within the <code>dev.terminal</code> section of <code>devspace.yaml</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  selectors:</span>
+<span class="hljs-attr">  - name:</span> <span class="hljs-string">default</span>
+    <span class="hljs-comment"># This tells devspace to select pods that have the following labels</span>
+<span class="hljs-attr">    labelSelector:</span>
+      <span class="hljs-string">app.kubernetes.io/component:</span> <span class="hljs-string">default</span>
+      <span class="hljs-string">app.kubernetes.io/name:</span> <span class="hljs-string">devspace-app</span>
+<span class="hljs-attr">  terminal:</span>
+<span class="hljs-attr">    selector:</span> <span class="hljs-string">default</span>
+<span class="hljs-attr">    containerName:</span> <span class="hljs-string">nodejs</span>
+</code></pre>
+<p>The above example defines that by default the terminal proxy should be opened for the container with name <code>nodejs</code> within the pod that will be selected through the selector with the name <code>default</code>.</p>
+<blockquote>
+<p>If <code>containerName</code> is not specified, the terminal proxy will be opened for the first container within the pod that has been selected with the given <code>selector</code>.</p>
+</blockquote>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="faq"></a><a href="#faq" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FAQ</h2>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="where-are-the-defaults-for-opening-the-terminal-proxy-defined"></a><a href="#where-are-the-defaults-for-opening-the-terminal-proxy-defined" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Where are the defaults for opening the terminal proxy defined?</h3>
+<p></summary>
+The defaults for opening the terminal proxy can be configured in the <code>dev.terminal</code> section within <code>../devspace.yaml</code>.
+</details></p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#start-your-application-via-terminal-proxy">Start your application via terminal proxy</a></li><li><a href="#print-logs-instead-of-opening-a-terminal">Print logs instead of opening a terminal</a></li><li><a href="#open-additional-terminals">Open additional terminals</a></li><li><a href="#open-terminals-for-other-containers">Open terminals for other containers</a></li><li><a href="#configure-the-terminal-proxy">Configure the terminal proxy</a></li><li><a href="#faq">FAQ</a><ul class="toc-headings"><li><a href="#where-are-the-defaults-for-opening-the-terminal-proxy-defined">Where are the defaults for opening the terminal proxy defined?</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

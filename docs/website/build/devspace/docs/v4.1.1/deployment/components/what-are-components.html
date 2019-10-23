@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>What are components? · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Components are a convenience deployment method of DevSpace to deploy common kubernetes resources without the hassle of defining complex kubernetes yamls. You can define components in the `deployment` section of your `devspace.yaml`. A basic component looks like this:"/><meta name="docsearch:version" content="v4.1.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="What are components? · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="Components are a convenience deployment method of DevSpace to deploy common kubernetes resources without the hassle of defining complex kubernetes yamls. You can define components in the `deployment` section of your `devspace.yaml`. A basic component looks like this:"/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.1.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/deployment/components/what-are-components.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">What are components?</h1></header><article><div><span><p>Components are a convenience deployment method of DevSpace to deploy common kubernetes resources without the hassle of defining complex kubernetes yamls. You can define components in the <code>deployment</code> section of your <code>devspace.yaml</code>. A basic component looks like this:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">quickstart-nodejs</span>
+<span class="hljs-attr">  component:</span>
+<span class="hljs-attr">    containers:</span>
+<span class="hljs-attr">    - image:</span> <span class="hljs-string">dscr.io/username/image</span>
+<span class="hljs-attr">      resources:</span>
+<span class="hljs-attr">        limits:</span>
+<span class="hljs-attr">          cpu:</span> <span class="hljs-string">"400m"</span>
+<span class="hljs-attr">          memory:</span> <span class="hljs-string">"500Mi"</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="types-of-components"></a><a href="#types-of-components" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Types of components</h2>
+<p>There are two types of components:</p>
+<ul>
+<li><a href="../../deployment/components/add-predefined-components">Predefined components</a></li>
+<li><a href="../../deployment/components/add-custom-components">Custom components</a></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="predefined-components"></a><a href="#predefined-components" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Predefined components</h3>
+<p>Predefined components allow you to add popular application components such as databases (e.g. mysql, mongodb) without having to manually define everything from scratch. DevSpace CLI will ask you a couple of questions when <a href="../../deployment/components/add-predefined-components">adding a predefined component</a> and automatically configure everything for you.</p>
+<h3><a class="anchor" aria-hidden="true" id="custom-components"></a><a href="#custom-components" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Custom components</h3>
+<p>Custom components allow you to define components for your own application components or for additional applications which are not available as predefined component, yet.</p>
+<h2><a class="anchor" aria-hidden="true" id="how-are-components-deployed"></a><a href="#how-are-components-deployed" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How are components deployed?</h2>
+<p>DevSpace CLI deploys components using Helm. The chart that will be deployed is the <a href="#devspace-component-helm-chart">DevSpace Component Helm Chart</a> and the values for the chart are specified directly under the <code>component</code> key in respective deployment within your <code>devspace.yaml</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="devspace-component-helm-chart"></a><a href="#devspace-component-helm-chart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>DevSpace Component Helm Chart</h3>
+<p>The DevSpace Component Helm Chart is a general purpose Helm chart. Unlike other Helm charts which are designed to deploy one specific application (e.g. a mysql database), the DevSpace Component Helm Chart is more like a base chart that allows you to deploy any application. The benefits of using the DevSpace Component Helm Chart are:</p>
+<ul>
+<li>Much easier configuration than plain Kubernetes manifests</li>
+<li>Smart defaults and best practices (e.g. pods with persistent volumes will automatically be deployed as StatefulSets instead of Deployments)</li>
+<li>Much easier configuration than writing your own Helm chart</li>
+<li>Better deployment lifecycle management through Helm in comparison to plain Kubernetes manifests, including:
+<ul>
+<li>Tracking of Kubernetes resources of a deployment</li>
+<li>Well-defined upgrade mechanism</li>
+<li>Rollbacks when upgrades fail</li>
+<li>Fast cleanup when removing deployments</li>
+</ul></li>
+</ul>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#types-of-components">Types of components</a><ul class="toc-headings"><li><a href="#predefined-components">Predefined components</a></li><li><a href="#custom-components">Custom components</a></li></ul></li><li><a href="#how-are-components-deployed">How are components deployed?</a><ul class="toc-headings"><li><a href="#devspace-component-helm-chart">DevSpace Component Helm Chart</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

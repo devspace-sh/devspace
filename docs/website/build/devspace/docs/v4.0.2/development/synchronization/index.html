@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Synchronize files · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="The code synchronization feature of DevSpace CLI allows you to use hot reloading during development. Especially for developers of programming languages that support hot reloading, such as nodejs, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace CLI uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding the container. This greatly accelerates development, debugging and testing directly in remote containers."/><meta name="docsearch:version" content="v4.0.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Synchronize files · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="The code synchronization feature of DevSpace CLI allows you to use hot reloading during development. Especially for developers of programming languages that support hot reloading, such as nodejs, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace CLI uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding the container. This greatly accelerates development, debugging and testing directly in remote containers."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/development/synchronization.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Synchronize files</h1></header><article><div><span><p>The code synchronization feature of DevSpace CLI allows you to use hot reloading during development. Especially for developers of programming languages that support hot reloading, such as nodejs, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace CLI uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding the container. This greatly accelerates development, debugging and testing directly in remote containers.</p>
+<h2><a class="anchor" aria-hidden="true" id="synchronizing-files-with-devspace"></a><a href="#synchronizing-files-with-devspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Synchronizing files with DevSpace</h2>
+<p>DevSpace CLI provides a convenient command <code>devspace sync</code>, which starts synchronizing files from the current directory with files in any chosen containers working directory.
+<code>devspace sync</code> does the following during synchronization:</p>
+<ol>
+<li>Inject a small helper binary via <code>kubectl cp</code> into the target container</li>
+<li>Download all files that are not found locally</li>
+<li>Upload all files that are not found remotely</li>
+<li>Watches locally and remotely for changes and uploads or downloads them</li>
+</ol>
+<p>There are many command parameters how you can modify the behaviour of <code>devspace sync</code>, e.g. excluding files or changing the remote or local path. If you want to start synchronization automatically during <code>devspace dev</code> you can add a sync configuration in your <code>devspace.yaml</code> like this:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  sync:</span>
+<span class="hljs-attr">  - localSubPath:</span> <span class="hljs-string">./src</span>
+    <span class="hljs-comment"># Select pods by following labels</span>
+<span class="hljs-attr">    labelSelector:</span>
+      <span class="hljs-string">app.kubernetes.io/component:</span> <span class="hljs-string">default</span>
+      <span class="hljs-string">app.kubernetes.io/name:</span> <span class="hljs-string">devspace-app</span>
+    <span class="hljs-comment"># Start syncing to the containers current working directory (You can also use absolute paths)</span>
+<span class="hljs-attr">    containerPath:</span> <span class="hljs-string">.</span>
+</code></pre>
+<p>This tells DevSpace to automtically start synchronzing files as soon as you run <code>devspace dev</code>. The <code>labelSelector</code> option tells DevSpace which pods to select for synchronization.</p>
+<h2><a class="anchor" aria-hidden="true" id="define-paths-to-be-excluded-from-sync"></a><a href="#define-paths-to-be-excluded-from-sync" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define paths to be excluded from sync</h2>
+<p>Sometimes, it is recommended to exclude certain paths from being synchronized, e.g.</p>
+<ul>
+<li>Files that change very frequently (e.g. log files)</li>
+<li>Files that are very large (e.g. database dumps)</li>
+<li>Directories containing temporary files</li>
+</ul>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  sync:</span>
+<span class="hljs-attr">  - containerPath:</span> <span class="hljs-string">.</span>
+<span class="hljs-attr">    localSubPath:</span> <span class="hljs-string">./src</span>
+    <span class="hljs-comment"># This tells devspace to select pods that have the following labels</span>
+<span class="hljs-attr">    labelSelector:</span>
+      <span class="hljs-string">app.kubernetes.io/component:</span> <span class="hljs-string">default</span>
+      <span class="hljs-string">app.kubernetes.io/name:</span> <span class="hljs-string">devspace-app</span>
+    <span class="hljs-comment"># Only download changes to these paths, but do not upload any changes (.gitignore syntax)</span>
+<span class="hljs-attr">    uploadExcludePaths:</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">node_modules/</span>
+    <span class="hljs-comment"># Only upload changes to these paths, but do not download any changes (.gitignore syntax)</span>
+<span class="hljs-attr">    downloadExcludePaths:</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">/app/tmp</span>
+    <span class="hljs-comment"># Ignore these paths completely during synchronization (.gitignore syntax)</span>
+<span class="hljs-attr">    excludePaths:</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">Dockerfile</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">logs/</span>
+</code></pre>
+<p>The above example would configure the sync, so that:</p>
+<ul>
+<li><code>./src/node_modules</code> would not be uploaded to the container</li>
+<li><code>/app/tmp</code> wiil not be downloaded from the container</li>
+<li><code>./src/Dockerfile</code> and <code>./src/logs/</code> would not be synchronized at all</li>
+</ul>
+<blockquote>
+<p>Generally, the config options for excluding paths use the same syntax as <code>.gitignore</code></p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="remove-sync-paths"></a><a href="#remove-sync-paths" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Remove sync paths</h2>
+<p>You can use the command <code>devspace remove sync --local=[LOCAL_PATH] --container=[CONTAINER_PATH]</code> to tell DevSpace CLI to remove the sync configurations where <code>localSubPath=[LOCAL_PATH]</code> and <code>containerPath=[CONTAINER_PATH]</code> from <code>dev.sync</code> in <code>devspace.yaml</code></p>
+<pre><code class="hljs css language-bash">devspace remove sync --<span class="hljs-built_in">local</span>=<span class="hljs-string">"./src"</span> --container=<span class="hljs-string">"/app"</span>
+</code></pre>
+<p>This examplary command would remove the sync config created by the example command for <code>devspace add sync</code> as shown above.</p>
+<h2><a class="anchor" aria-hidden="true" id="view-sync-status-and-logs"></a><a href="#view-sync-status-and-logs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>View sync status and logs</h2>
+<p>To get information about current synchronizationa activities, simply run:</p>
+<pre><code class="hljs css language-bash">devspace status sync
+</code></pre>
+<p>Additionally, you can ciew the sync log within <code>.devspace/logs/sync.log</code> to get more detailed information.</p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="faq"></a><a href="#faq" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FAQ</h2>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="how-does-the-sync-work"></a><a href="#how-does-the-sync-work" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How does the sync work?</h3>
+<p></summary>
+DevSpace CLI establishes a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background. It uses a small helper binary that is injected into the target container to accomplish this.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="are-there-any-requirements-for-the-sync-to-work"></a><a href="#are-there-any-requirements-for-the-sync-to-work" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Are there any requirements for the sync to work?</h3>
+<p></summary>
+The <code>tar</code> command has to be present in the container otherwise <code>kubectl cp</code> does not work and the helper binary cannot be injected into the container.</p>
+<p>Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace CLI. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="how-does-the-initial-sync-right-after-devspace-dev-work"></a><a href="#how-does-the-initial-sync-right-after-devspace-dev-work" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How does the initial sync right after <code>devspace dev</code> work?</h3>
+<p></summary>
+If synchronization is started, the sync initially compares the remote folder and the local folder and merges the contents with the following rules:</p>
+<ul>
+<li>If a file or folder exists remote, but not locally, then download file / folder</li>
+<li>If a file or folder exists locally, but not remote, then upload file / folder</li>
+<li>If a file is newer locally than remote then upload the file (The opposite case is not true, older local files are not overriden by newer remote files)
+</details></li>
+</ul>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="what-is-the-performance-impact-on-using-the-file-sync"></a><a href="#what-is-the-performance-impact-on-using-the-file-sync" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What is the performance impact on using the file sync?</h3>
+<p></summary>
+The sync mechanism is normally very reliable and fast. Syncing several thousand files is usually not a problem. Changes are packed together and compressed during synchronization, which improves performance especially for transferring text files. Transferring large compressed binary files is possible, however can affect performance negatively. Remote changes can sometimes have a delay of 1-2 seconds till they are downloaded, depending on how big the synchronized folder is. It should be generally avoided to sync the complete container filesystem.
+</details></p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/10/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#synchronizing-files-with-devspace">Synchronizing files with DevSpace</a></li><li><a href="#define-paths-to-be-excluded-from-sync">Define paths to be excluded from sync</a></li><li><a href="#remove-sync-paths">Remove sync paths</a></li><li><a href="#view-sync-status-and-logs">View sync status and logs</a></li><li><a href="#faq">FAQ</a><ul class="toc-headings"><li><a href="#how-does-the-sync-work">How does the sync work?</a></li><li><a href="#are-there-any-requirements-for-the-sync-to-work">Are there any requirements for the sync to work?</a></li><li><a href="#how-does-the-initial-sync-right-after-devspace-dev-work">How does the initial sync right after <code>devspace dev</code> work?</a></li><li><a href="#what-is-the-performance-impact-on-using-the-file-sync">What is the performance impact on using the file sync?</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

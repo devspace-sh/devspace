@@ -1,0 +1,292 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>2. Deploy with DevSpace · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="After installing DevSpace CLI, you are ready to deploy applications to Kubernetes with DevSpace CLI."/><meta name="docsearch:version" content="v4.0.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="2. Deploy with DevSpace · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="After installing DevSpace CLI, you are ready to deploy applications to Kubernetes with DevSpace CLI."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/getting-started/deployment.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">2. Deploy with DevSpace</h1></header><article><div><span><p>After installing DevSpace CLI, you are ready to deploy applications to Kubernetes with DevSpace CLI.</p>
+<h2><a class="anchor" aria-hidden="true" id="choose-a-project-to-deploy"></a><a href="#choose-a-project-to-deploy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Choose a project to deploy</h2>
+<p>You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-304-tab-305" class="nav-link active" data-group="group_304" data-tab="tab-group-304-content-305">Your Project</div><div id="tab-group-304-tab-306" class="nav-link" data-group="group_304" data-tab="tab-group-304-content-306">Node.js Demo</div><div id="tab-group-304-tab-307" class="nav-link" data-group="group_304" data-tab="tab-group-304-content-307">Python Demo</div><div id="tab-group-304-tab-308" class="nav-link" data-group="group_304" data-tab="tab-group-304-content-308">Golang Demo</div><div id="tab-group-304-tab-309" class="nav-link" data-group="group_304" data-tab="tab-group-304-content-309">Ruby Demo</div><div id="tab-group-304-tab-310" class="nav-link" data-group="group_304" data-tab="tab-group-304-content-310">PHP Demo</div></div><div class="tab-content"><div id="tab-group-304-content-305" class="tab-pane active" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-bash"><span class="hljs-comment"># Navigate to the root directory of your project</span><br /><span class="hljs-built_in">cd</span> /path/to/your/project<br /></code></pre>
+</span></div></div><div id="tab-group-304-content-306" class="tab-pane" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/devspace-cloud/quickstart-nodejs<br /><span class="hljs-built_in">cd</span> quickstart-nodejs<br /></code></pre>
+</span></div></div><div id="tab-group-304-content-307" class="tab-pane" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/devspace-cloud/quickstart-python<br /><span class="hljs-built_in">cd</span> quickstart-python<br /></code></pre>
+</span></div></div><div id="tab-group-304-content-308" class="tab-pane" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/devspace-cloud/quickstart-golang<br /><span class="hljs-built_in">cd</span> quickstart-golang<br /></code></pre>
+</span></div></div><div id="tab-group-304-content-309" class="tab-pane" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/devspace-cloud/quickstart-ruby<br /><span class="hljs-built_in">cd</span> quickstart-ruby<br /></code></pre>
+</span></div></div><div id="tab-group-304-content-310" class="tab-pane" data-group="group_304" tabindex="-1"><div><span><pre><code class="hljs css language-json">git clone https://github.com/devspace-cloud/quickstart-php<br />cd quickstart-php<br /></code></pre>
+</span></div></div></div></div>
+<h2><a class="anchor" aria-hidden="true" id="initialize-your-project"></a><a href="#initialize-your-project" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Initialize your project</h2>
+<p>Run this command in your project directory to initialize your application with DevSpace CLI:</p>
+<pre><code class="hljs css language-bash">devspace init
+</code></pre>
+<blockquote>
+<p>If your project does not have a Dockerfile yet, DevSpace CLI will automatically create a Dockerfile for your project. Learn more about <a href="../workflow-basics/containerization">containerizing your projects using DevSpace</a>.</p>
+</blockquote>
+<p>While initializing your project, DevSpace CLI will ask you a couple of questions and then create a <code>devspace.yaml</code> file within your project which contains a basic configuration for building and deploying your application.</p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="what-is-defined-in-the-basic-configuration-of-this-devspaceyaml"></a><a href="#what-is-defined-in-the-basic-configuration-of-this-devspaceyaml" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What is defined in the basic configuration of this <code>devspace.yaml</code>?</h3>
+<p></summary></p>
+<pre><code class="hljs css language-yaml"><span class="hljs-comment"># Config version</span>
+<span class="hljs-attr">version:</span> <span class="hljs-string">v1beta2</span>
+
+<span class="hljs-comment"># Development-specific configuration (will be explained later)</span>
+<span class="hljs-attr">dev:</span> <span class="hljs-string">...</span>
+
+<span class="hljs-comment"># Defines an array of everything (component, Helm chart, Kubernetes maninfests) </span>
+<span class="hljs-comment"># that will be deployed with DevSpace CLI in the specified order</span>
+<span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">quickstart-nodejs</span>               <span class="hljs-comment"># Name of this deployment</span>
+<span class="hljs-attr">  component:</span>                            <span class="hljs-comment"># Deploy a component (alternatives: helm, kubectl)</span>
+<span class="hljs-attr">    containers:</span>                         <span class="hljs-comment"># Defines an array of containers that run in the same pods started by this component</span>
+<span class="hljs-attr">    - image:</span> <span class="hljs-string">dscr.io/username/devspace</span>  <span class="hljs-comment"># Image of this container</span>
+<span class="hljs-attr">      resources:</span>
+<span class="hljs-attr">        limits:</span>
+<span class="hljs-attr">          cpu:</span> <span class="hljs-string">"400m"</span>                   <span class="hljs-comment"># CPU limit for this container</span>
+<span class="hljs-attr">          memory:</span> <span class="hljs-string">"500Mi"</span>               <span class="hljs-comment"># Memory/RAM limit for this container</span>
+<span class="hljs-attr">    service:</span>                            <span class="hljs-comment"># Expose this component with a Kubernetes service</span>
+<span class="hljs-attr">      ports:</span>                            <span class="hljs-comment"># Array of container ports to expose through the service</span>
+<span class="hljs-attr">      - port:</span> <span class="hljs-number">3000</span>                      <span class="hljs-comment"># Exposes container port 3000 on service port 3000</span>
+
+<span class="hljs-comment"># Defines all Dockerfiles that DevSpace CLI will build, tag and push</span>
+<span class="hljs-attr">images:</span>
+<span class="hljs-attr">  default:</span>                              <span class="hljs-comment"># Key 'default' = Name of this image</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/username/devspace</span>    <span class="hljs-comment"># Registry and image name for pushing the image (dscr.io is the private registry provided by DevSpace Cloud)</span>
+<span class="hljs-attr">    createPullSecret:</span> <span class="hljs-literal">true</span>              <span class="hljs-comment"># Let DevSpace CLI automatically create pull secrets in your Kubernetes namespace</span>
+</code></pre>
+<p></details></p>
+<h2><a class="anchor" aria-hidden="true" id="create-a-space-devspace-cloud"></a><a href="#create-a-space-devspace-cloud" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Space (DevSpace Cloud)</h2>
+<p><em>If you are <strong>not</strong> using DevSpace Cloud, you can skip this step.</em></p>
+<p>You can create an isolated Kubernetes namespace with the command:</p>
+<pre><code class="hljs css language-bash">devspace create space my-app
+</code></pre>
+<p>This command would create a Space called <code>my-app</code>. If you are using DevSpace Cloud with your own cluster (connected cluster), this namespace would be created within your own Kubernetes cluster but the Space would be isolated and managed by DevSpace Cloud.</p>
+<blockquote>
+<p>DevSpace CLI automatically uses the Space you just created for all following commands. Learn how to <a href="../cloud/spaces/create-spaces#switch-between-spaces">switch between different Spaces</a>.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="deploy-your-application"></a><a href="#deploy-your-application" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deploy your application</h2>
+<p>Now, you can deploy your application with the following command:</p>
+<pre><code class="hljs css language-bash">devspace deploy
+</code></pre>
+<p>This command will do the following:</p>
+<ol>
+<li>Build the Dockerfiles specified in the <code>images</code> section of your <code>devspace.yaml</code></li>
+<li>Push the resulting Docker images to the specified registries</li>
+<li>Create image pull secrets in your Kubernetes namespace</li>
+<li>Deploy everything that is defined unter <code>deployments</code> in your <code>devspace.yaml</code></li>
+</ol>
+<p><strong>Congrats you have successfully deployed an application to kubernetes!</strong></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="learn-more-about-image-building-with-devspace"></a><a href="#learn-more-about-image-building-with-devspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Learn more about image building with DevSpace</h3>
+<p></summary>
+DevSpace CLI builds and pushes your Docker images before deploying your projects. Follow these links to learn more about how to:</p>
+<ul>
+<li><a href="../image-building/overview">Configure image building</a></li>
+<li><a href="../image-building/add-images">Add images to be built</a></li>
+<li><a href="../image-building/registries/authentication">Authenticate with private Docker registries</a></li>
+</ul>
+<p>DevSpace CLI will also create image pull secrets, if you configure this. Learn more about <a href="../image-building/registries/pull-secrets">image pull secrets</a>.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="learn-more-about-deploying-with-devspace"></a><a href="#learn-more-about-deploying-with-devspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Learn more about deploying with DevSpace</h3>
+<p></summary>
+DevSpace CLI lets you define the following types of deployments:</p>
+<ul>
+<li>Components (<a href="../deployment/components/what-are-components">What are components?</a>)</li>
+<li>Helm charts (<a href="../deployment/helm-charts/what-are-helm-charts">What are Helm charts?</a>)</li>
+<li>Kubernetes manifests (<a href="../deployment/kubernetes-manifests/what-are-manifests">What are Kubernetes manifests?</a>)</li>
+</ul>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="deploy-components"></a><a href="#deploy-components" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deploy Components</h4>
+<p></summary>
+With DevSpace CLI, you can easily:</p>
+<ul>
+<li><a href="../deployment/components/add-predefined-components">Add predefined components (e.g. a database) to your deployments</a></li>
+<li><a href="../deployment/components/add-custom-components">Add custom components to your deployments</a></li>
+</ul>
+<p>You can fully customize your components (predefined and custom) within your <code>devspace.yaml</code>:</p>
+<ul>
+<li><a href="../deployment/components/configuration/volumes">Configure create and mount volumes</a></li>
+<li><a href="../deployment/components/containers/environment-variables">Configure environment variables</a></li>
+<li><a href="../deployment/components/containers/resource-limits">Configure resource limits</a></li>
+<li><a href="../deployment/components/configuration/scaling">Configure resource auto-scaling</a></li>
+<li><a href="../deployment/components/configuration/service">Expose components via services</a>
+</details></li>
+</ul>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="deploy-helm-charts"></a><a href="#deploy-helm-charts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deploy Helm Charts</h4>
+<p></summary>
+If you want to deploy Helm charts, you can easily <a href="../deployment/helm-charts/add-charts">add Helm charts to the deployment process</a>. This works for local Helm charts within your project or with Helm charts hosted on a registry.
+</details></p>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="deploy-kubernetes-manifests"></a><a href="#deploy-kubernetes-manifests" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deploy Kubernetes manifests</h4>
+<p></summary>
+If you want to deploy your existing Kubernetes manifests, you can easily <a href="../deployment/kubernetes-manifests/add-manifests">add these manifests to the deployment process</a>.
+</details></p>
+<p></details></p>
+<h2><a class="anchor" aria-hidden="true" id="open-your-app-in-the-browser-devspace-cloud"></a><a href="#open-your-app-in-the-browser-devspace-cloud" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Open your app in the browser (DevSpace Cloud)</h2>
+<p><em>If you are <strong>not</strong> using DevSpace Cloud, you will need to setup an ingress-controller, define an ingress and configure the DNS of your domain to point to your cluster in order to use <code>devspace open</code>.</em></p>
+<p>You can now view your application in the browser using the following command:</p>
+<pre><code class="hljs css language-bash">devspace open
+</code></pre>
+<p>If you are using DevSpace Cloud, your application will automatically be available on a <code>.devspace.host</code> subdomain.</p>
+<p>Learn how to <a href="../cloud/spaces/domains">connect custom domains</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="whats-next"></a><a href="#whats-next" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What's next?</h2>
+<p>DevSpace CLI does more than simplify and streamline the process of deploying applications to Kubernetes. It also lets you:</p>
+<ul>
+<li><a href="../getting-started/development">Develop applications directly inside a Kubernetes cluster</a></li>
+<li><a href="https://github.com/devspace-cloud/devspace/tree/master/examples">Example Configurations</a></li>
+</ul>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#choose-a-project-to-deploy">Choose a project to deploy</a></li><li><a href="#initialize-your-project">Initialize your project</a><ul class="toc-headings"><li><a href="#what-is-defined-in-the-basic-configuration-of-this-devspaceyaml">What is defined in the basic configuration of this <code>devspace.yaml</code>?</a></li></ul></li><li><a href="#create-a-space-devspace-cloud">Create a Space (DevSpace Cloud)</a></li><li><a href="#deploy-your-application">Deploy your application</a><ul class="toc-headings"><li><a href="#learn-more-about-image-building-with-devspace">Learn more about image building with DevSpace</a></li><li><a href="#learn-more-about-deploying-with-devspace">Learn more about deploying with DevSpace</a></li></ul></li><li><a href="#open-your-app-in-the-browser-devspace-cloud">Open your app in the browser (DevSpace Cloud)</a></li><li><a href="#whats-next">What's next?</a></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Dynamic config variables · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace CLI also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  "/><meta name="docsearch:version" content="v4.1.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Dynamic config variables · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace CLI also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.  "/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.1.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/configuration/variables.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Dynamic config variables</h1></header><article><div><span><p>DevSpace allows you to write dynamic configs by defining variables within your configuration. These variables will be filled with values that are stored outside of the config on the local machine of each developer or are entered by the developer. DevSpace CLI also provides some predefined variables that can be used and are filled automatically during deployment. This allows DevOps engineers and team leaders to define a single configuration which can be versioned and distributed among all team members while still being able to set different options for each developer.</p>
+<p>Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.</p>
+<blockquote>
+<p>To be able to define dynamic configs, you need to be familiar with the basics of <a href="../configuration/multiple-configs">using multiple configs</a>.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="define-config-variables"></a><a href="#define-config-variables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define config variables</h2>
+<p>Config variables are placeholders with the format <code>${VAR_NAME}</code> and can be used for ANY value within the devspace config. They have to be defined in the <code>vars</code> section of the <code>devspace-configs.yaml</code>. You can then refer to these variables from within your configuration. You can use config variables within config files, within configs defined with <code>config.data</code> and within your overrides specified as <code>path</code> or <code>data</code>.</p>
+<pre><code class="hljs"><span class="hljs-attr">config1:</span>
+<span class="hljs-attr">  config:</span>
+<span class="hljs-attr">    path:</span> <span class="hljs-string">../devspace.yaml</span>
+<span class="hljs-attr">  overrides:</span>
+<span class="hljs-attr">  - data:</span>
+<span class="hljs-attr">      images:</span>
+<span class="hljs-attr">        database:</span>
+<span class="hljs-attr">          image:</span> <span class="hljs-string">${ImageName}</span>
+<span class="hljs-attr">  vars:</span>
+<span class="hljs-attr">  - name:</span> <span class="hljs-string">ImageName</span>
+    <span class="hljs-comment"># source can be one of all|env|input</span>
+<span class="hljs-attr">    source:</span> <span class="hljs-string">all</span> 
+<span class="hljs-attr">    question:</span> <span class="hljs-string">Which</span> <span class="hljs-string">database</span> <span class="hljs-string">image</span> <span class="hljs-string">do</span> <span class="hljs-string">you</span> <span class="hljs-string">want</span> <span class="hljs-string">to</span> <span class="hljs-string">use?</span>
+</code></pre>
+<p>If a user runs <code>devspace deploy</code> for the first time after defining the config variable as shown above, the question <code>Which database image do you want to use?</code> will appear within the terminal and the user would be asked to enter a value for this config variable. Setting a value for the config variables would <strong>not</strong> alter the configuration in any way because values of config variables are stored separately from the configuration in the <code>.devspace/generated.yaml</code>. You can print all configured variables with <code>devspace list vars</code>.</p>
+<blockquote>
+<p>DevSpace CLI only asks the user once to provide the values for environment variables</p>
+</blockquote>
+<blockquote>
+<p>For a working example take a look at <a href="https://github.com/devspace-cloud/devspace/tree/master/examples/dynamic-config">dynamic-config</a></p>
+</blockquote>
+<p>Currently, there is no convenience command for deleting the values of config variables. You can, however, remove config values manually from <code>.devspace/generated.yaml</code> if necessary.</p>
+<h2><a class="anchor" aria-hidden="true" id="using-environment-variables-as-config-variables"></a><a href="#using-environment-variables-as-config-variables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using environment variables as config variables</h2>
+<p>The value for a config variable can also be set by defining an environment variable named <code>[VAR_NAME]</code>. Setting the value of a config variable with name <code>${IMAGE_NAME}</code> would be possible by setting an environment value <code>IMAGE_NAME</code>.</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-114-tab-115" class="nav-link active" data-group="group_114" data-tab="tab-group-114-content-115">Windows Powershell</div><div id="tab-group-114-tab-116" class="nav-link" data-group="group_114" data-tab="tab-group-114-content-116">Mac Terminal</div><div id="tab-group-114-tab-117" class="nav-link" data-group="group_114" data-tab="tab-group-114-content-117">Linux Bash</div></div><div class="tab-content"><div id="tab-group-114-content-115" class="tab-pane active" data-group="group_114" tabindex="-1"><div><span><pre><code class="hljs css language-powershell"><span class="hljs-variable">$env:IMAGE_NAME</span> = <span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div><div id="tab-group-114-content-116" class="tab-pane" data-group="group_114" tabindex="-1"><div><span><pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> IMAGE_NAME=<span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div><div id="tab-group-114-content-117" class="tab-pane" data-group="group_114" tabindex="-1"><div><span><pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> IMAGE_NAME=<span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div></div></div>
+<p>Using environment variables to set dynamic configs can be particularly useful when defining secrets as environment variables in automation scenarios, e.g. when using DevSpace within CI/CD pipelines.</p>
+<h2><a class="anchor" aria-hidden="true" id="predefined-variables"></a><a href="#predefined-variables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Predefined Variables</h2>
+<p>DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:</p>
+<ul>
+<li><strong>DEVSPACE_RANDOM</strong>: A random 6 character long string</li>
+<li><strong>DEVSPACE_TIMESTAMP</strong> A unix timestamp when the config was loaded</li>
+<li><strong>DEVSPACE_GIT_COMMIT</strong>: A short hash of the local repos current git commit</li>
+<li><strong>DEVSPACE_SPACE</strong>: The name of the <a href="../cloud/spaces/what-are-spaces">space</a> that is currently used</li>
+<li><strong>DEVSPACE_SPACE_NAMESPACE</strong>: The kubernetes namespace of the <a href="../cloud/spaces/what-are-spaces">space</a> in the cluster</li>
+<li><strong>DEVSPACE_SPACE_DOMAIN1</strong>, <strong>DEVSPACE_SPACE_DOMAIN2</strong>... : The connected domains of the <a href="../cloud/spaces/what-are-spaces">space</a>. E.g. if a space has a domain connected with test.devspace.host, <strong>DEVSPACE_SPACE_DOMAIN1</strong> will hold test.devspace.host</li>
+<li><strong>DEVSPACE_USERNAME</strong>: The username currently logged into devspace cloud</li>
+</ul>
+<p>For example these predefined variables can be used to dynamically tag images during deployment:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  default:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">myrepo/devspace</span>
+<span class="hljs-attr">    tag:</span> <span class="hljs-string">${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}</span>
+</code></pre>
+<p>This config will tag the image in the form of <code>myrepo/devspace:d9b4bcd-1559766514</code>. Many other combinations are possible with this method.</p>
+<h2><a class="anchor" aria-hidden="true" id="variable-reference"></a><a href="#variable-reference" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Variable Reference</h2>
+<h3><a class="anchor" aria-hidden="true" id="configvars"></a><a href="#configvars" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>config.vars[*]</h3>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">vars:</span>                               <span class="hljs-comment"># struct   | Options for variables</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">""</span>                          <span class="hljs-comment"># string   | The name of the variable (can be used within the config as ${name}) and can be defined via environment variable as DEVSPACE_VAR_NAME</span>
+<span class="hljs-attr">  question:</span> <span class="hljs-string">"How do you ..."</span>        <span class="hljs-comment"># string   | Question that will be presented to the user for filling the value</span>
+<span class="hljs-attr">  source:</span> <span class="hljs-string">all</span>                       <span class="hljs-comment"># string   | Can be one of all | env | input. Env is for environment variables only or input to force user input.</span>
+<span class="hljs-attr">  options:</span> <span class="hljs-string">[]</span>                       <span class="hljs-comment"># string[] | Array of possible answer options for the variable value</span>
+<span class="hljs-attr">  default:</span> <span class="hljs-string">""</span>                       <span class="hljs-comment"># string   | Default value of the variable if user skips question</span>
+<span class="hljs-attr">  validationPattern:</span> <span class="hljs-string">"^.*$"</span>         <span class="hljs-comment"># string   | Regex pattern to verify the variable input</span>
+<span class="hljs-attr">  validationMessage:</span> <span class="hljs-string">"Wrong ..."</span>    <span class="hljs-comment"># string   | The error message to print if the entered value does not match the pattern</span>
+</code></pre>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="faq"></a><a href="#faq" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FAQ</h2>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="what-is-the-difference-between-config-overrides-and-dynamic-configs"></a><a href="#what-is-the-difference-between-config-overrides-and-dynamic-configs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What is the difference between config overrides and dynamic configs?</h3>
+<p></summary>
+While config overriding is very useful for different deployment environments, it is not as suitable for managing configs that vary between different developers. Imaging having 80 people working on a project: Do you want to manage 80 different configurations and version them via git? Dynamic configs allow you to version one config file which uses variables that are saved outside the git repository on the local machine of the developer.</p>
+<p>Additionally, dynamic configs can be very useful when defining secrets as environment variables in automation scenarios, e.g. using DevSpace within CI/CD pipelines.
+</details></p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#define-config-variables">Define config variables</a></li><li><a href="#using-environment-variables-as-config-variables">Using environment variables as config variables</a></li><li><a href="#predefined-variables">Predefined Variables</a></li><li><a href="#variable-reference">Variable Reference</a><ul class="toc-headings"><li><a href="#configvars">config.vars[*]</a></li></ul></li><li><a href="#faq">FAQ</a><ul class="toc-headings"><li><a href="#what-is-the-difference-between-config-overrides-and-dynamic-configs">What is the difference between config overrides and dynamic configs?</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

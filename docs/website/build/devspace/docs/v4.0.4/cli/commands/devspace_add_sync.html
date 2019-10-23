@@ -1,0 +1,245 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Command - devspace add sync · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Add a sync path"/><meta name="docsearch:version" content="v4.0.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Command - devspace add sync · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="Add a sync path"/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>devspace add</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/reference">Config Reference</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_set_analytics">analytics</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/domains">Domains</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/commands/devspace_add_sync.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Command - devspace add sync</h1></header><article><div><span><p>Add a sync path</p>
+<h2><a class="anchor" aria-hidden="true" id="synopsis"></a><a href="#synopsis" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Synopsis</h2>
+<pre><code class="hljs">devspace <span class="hljs-keyword">add</span><span class="bash"> sync [flags]</span>
+</code></pre>
+<pre><code class="hljs">#######################################################
+################# devspace add sync ###################
+#######################################################
+Add a sync path to the DevSpace configuration
+
+How to use:
+devspace add sync --local=app --container=/app
+#######################################################
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="options"></a><a href="#options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Options</h2>
+<pre><code class="hljs">      --container <span class="hljs-built_in">string</span>        Absolute container path
+      --exclude <span class="hljs-built_in">string</span>          Comma separated <span class="hljs-keyword">list</span> of paths <span class="hljs-keyword">to</span> exclude (<span class="hljs-keyword">e</span>.g. node_modules/,bin,*.<span class="hljs-keyword">exe</span>)
+  -h, --<span class="hljs-keyword">help</span>                    <span class="hljs-keyword">help</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">sync</span>
+      --label-selector <span class="hljs-built_in">string</span>   Comma separated key=value selector <span class="hljs-keyword">list</span> (<span class="hljs-keyword">e</span>.g. release=test)
+      --local <span class="hljs-built_in">string</span>            Relative local path
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="options-inherited-from-parent-commands"></a><a href="#options-inherited-from-parent-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Options inherited from parent commands</h3>
+<pre><code class="hljs">      --<span class="hljs-builtin-name">debug</span>                 Prints the stack trace <span class="hljs-keyword">if</span> an <span class="hljs-builtin-name">error</span> occurs
+      --kube-context string   The kubernetes context <span class="hljs-keyword">to</span> use
+  -n, --namespace string      The kubernetes namespace <span class="hljs-keyword">to</span> use
+      --no-warn               <span class="hljs-keyword">If</span> <span class="hljs-literal">true</span> does <span class="hljs-keyword">not</span> show any <span class="hljs-builtin-name">warning</span> when deploying into a different namespace <span class="hljs-keyword">or</span> kube-context than before
+  -p, --profile string        The devspace<span class="hljs-built_in"> profile </span><span class="hljs-keyword">to</span> use (<span class="hljs-keyword">if</span> there is any)
+      --silent                <span class="hljs-builtin-name">Run</span> <span class="hljs-keyword">in</span> silent mode <span class="hljs-keyword">and</span> prevents any devspace log output except panics &amp; fatals
+  -s, --switch-context        Switches <span class="hljs-keyword">and</span> uses the last kube context <span class="hljs-keyword">and</span> namespace that was used <span class="hljs-keyword">to</span> deploy the DevSpace project
+      --var strings           Variables <span class="hljs-keyword">to</span> override during execution (e.g. <span class="hljs-attribute">--var</span>=MYVAR=MYVALUE)
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="see-also"></a><a href="#see-also" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>See Also</h2>
+<ul>
+<li><a href="../../cli/commands/devspace_add">devspace add</a>    - Change the DevSpace configuration</li>
+</ul>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/v4.0.4/cli/commands/devspace_add_provider"><span class="arrow-prev">← </span><span>provider</span></a><a class="docs-next button" href="/docs/v4.0.4/cli/commands/devspace_analyze"><span>devspace analyze</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#synopsis">Synopsis</a></li><li><a href="#options">Options</a><ul class="toc-headings"><li><a href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></li></ul></li><li><a href="#see-also">See Also</a></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

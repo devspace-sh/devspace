@@ -1,0 +1,370 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Configuring Port Forwarding · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Port-forwarding allows you to access your application on `localhost:[PORT]` by forwarding the network traffic from a localhost port to a specified port of a container."/><meta name="docsearch:version" content="v4.1.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Configuring Port Forwarding · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="Port-forwarding allows you to access your application on `localhost:[PORT]` by forwarding the network traffic from a localhost port to a specified port of a container."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.1.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Configuration</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/reference">Config Reference</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_dependencies">dependencies</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set_analytics">analytics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set_var">var</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/networking">Networking (Domains)</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/development/configuration/port-forwarding.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Configuring Port Forwarding</h1></header><article><div><span><p>Port-forwarding allows you to access your application on <code>localhost:[PORT]</code> by forwarding the network traffic from a localhost port to a specified port of a container.</p>
+<p>When starting the development mode, DevSpace starts port-forwarding as configured in the <code>dev.ports</code> section of the <code>devspace.yaml</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">  backend-debugger:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">app-backend</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      containers:</span>
+<span class="hljs-attr">      - image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">      - image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  ports:</span>
+<span class="hljs-attr">  - imageName:</span> <span class="hljs-string">backend</span>
+<span class="hljs-attr">    forward:</span>
+<span class="hljs-attr">    - port:</span> <span class="hljs-number">8080</span>
+<span class="hljs-attr">      remotePort:</span> <span class="hljs-number">80</span>
+</code></pre>
+<p>Every port-forwarding configuration consists of two parts:</p>
+<ul>
+<li><a href="#container-selection">Pod/Container Selection</a></li>
+<li><a href="#port-mapping-devports-forward">Port Mapping via <code>port</code> and optionally via <code>remotePort</code></a></li>
+</ul>
+<blockquote>
+<p>The <code>port</code> option must be unique across your entire <code>ports</code> section, e.g. you can only use the value <code>8080</code> once for the <code>port</code> option in your <code>ports</code> section.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="pod-container-selection"></a><a href="#pod-container-selection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Pod/Container Selection</h2>
+<p>The following config options are needed to determine the pod to which the traffic should be forwarded:</p>
+<ul>
+<li><a href="#devports-imagename"><code>imageName</code></a></li>
+<li><a href="#devports-labelselector"><code>labelSelector</code></a></li>
+<li><a href="#devports-namespace"><code>namespace</code></a></li>
+</ul>
+<blockquote>
+<p>If you specify multiple these config options, they will be jointly used to select the pod / container (think logical <code>AND / &amp;&amp;</code>).</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="devports-imagename"></a><a href="#devports-imagename" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].imageName</code></h3>
+<p>The <code>imageName</code> option expects a string with the name of an image from the <code>images</code> section of the <code>devspace.yaml</code>. Using <code>imageName</code> tells DevSpace to select the container based on the referenced image that was last built using DevSpace.</p>
+<blockquote>
+<p>Using <code>imageName</code> is not possible if multiple deployments use the same image that belongs to this <code>imageName</code> referencing the <code>images</code> section of the <code>devspace.yaml</code>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="example-select-container-by-image-name"></a><a href="#example-select-container-by-image-name" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Select Container by Image Name</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">  backend-debugger:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">app-backend</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      containers:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">container-0</span>
+<span class="hljs-attr">        image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">container-1</span>
+<span class="hljs-attr">        image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  ports:</span>
+<span class="hljs-attr">  - imageName:</span> <span class="hljs-string">backend</span>
+<span class="hljs-attr">    forward:</span>
+<span class="hljs-attr">    - port:</span> <span class="hljs-number">8080</span>
+<span class="hljs-attr">      remotePort:</span> <span class="hljs-number">80</span>
+<span class="hljs-attr">  - imageName:</span> <span class="hljs-string">backend-debugger</span>
+<span class="hljs-attr">    forward:</span>
+<span class="hljs-attr">    - port:</span> <span class="hljs-number">3000</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The above example defines two images that can be used as <code>imageName</code>: <code>backend</code> and <code>backend-debugger</code></li>
+<li>The deployment starts two containers and each of them uses an image from the <code>images</code> section.</li>
+<li>The <code>imageName</code> option of the first port-forwarding configuration in the <code>dev.ports</code> section references <code>backend</code>. That means DevSpace would select the first container for port-forwarding, as this container uses the <code>image: john/devbackend</code> which belongs to the <code>backend</code> image as defined in the <code>images</code> section.</li>
+<li>The <code>imageName</code> option of the second port-forwarding configuration in the <code>dev.ports</code> section references <code>backend-debugger</code>. That means DevSpace would select the second container for port-forwarding, as this container uses the <code>image: john/debugger</code> which belongs to the <code>backend-debugger</code> image as defined in the <code>images</code> section.</li>
+</ul>
+<p>In consequence, the following port-forwarding processes would be started when using the above config example:</p>
+<ul>
+<li><code>localhost:8080</code> forwards to <code>container-0:80</code></li>
+<li><code>localhost:3000</code> forwards to <code>container-1:3000</code></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="devports-labelselector"></a><a href="#devports-labelselector" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].labelSelector</code></h3>
+<p>The <code>labelSelector</code> option expects a key-value map of strings with Kubernetes labels.</p>
+<h4><a class="anchor" aria-hidden="true" id="example-select-container-by-label"></a><a href="#example-select-container-by-label" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Select Container by Label</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">  backend-debugger:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">app-backend</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    componentChart:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      containers:</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">container-0</span>
+<span class="hljs-attr">        image:</span> <span class="hljs-string">john/devbackend</span>
+<span class="hljs-attr">      - name:</span> <span class="hljs-string">container-1</span>
+<span class="hljs-attr">        image:</span> <span class="hljs-string">john/debugger</span>
+<span class="hljs-attr">dev:</span>
+<span class="hljs-attr">  ports:</span>
+<span class="hljs-attr">  - labelSelector:</span>
+      <span class="hljs-string">app.kubernetes.io/name:</span> <span class="hljs-string">devspace-app</span>
+      <span class="hljs-string">app.kubernetes.io/component:</span> <span class="hljs-string">app-backend</span>
+<span class="hljs-attr">      custom-label:</span> <span class="hljs-string">custom-label-value</span>
+<span class="hljs-attr">    forward:</span>
+<span class="hljs-attr">    - port:</span> <span class="hljs-number">8080</span>
+<span class="hljs-attr">      remotePort:</span> <span class="hljs-number">80</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The <code>labelSelector</code> would select the pod created for the component deployment <code>app-backend</code>.</li>
+<li>Because containers in the same pod share the same network stack, we do not need to specify which container should be selected.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="devports-namespace"></a><a href="#devports-namespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].namespace</code></h3>
+<p>The <code>namespace</code> option expects a string with a Kubernetes namespace used to select the container from.</p>
+<blockquote>
+<p>It is generally not needed to specify the <code>namespace</code> option because by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="port-mapping-devports-forward"></a><a href="#port-mapping-devports-forward" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Port Mapping <code>dev.ports[*].forward</code></h2>
+<p>The <code>forward</code> section defines which localhost <code>port</code> should be forwarded to the <code>remotePort</code> of the selected container.</p>
+<blockquote>
+<p>By default, <code>remotePort</code> will take the same value as <code>port</code> if <code>remotePort</code> is not explicitly defined.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="devports-forward-port"></a><a href="#devports-forward-port" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].forward[*].port</code></h3>
+<p>The <code>port</code> option expects an integer from the range of user ports [1024 - 49151].</p>
+<blockquote>
+<p>Using a <code>port</code> &lt; 1024 will likely to cause problems as these ports are reserved as system ports.</p>
+</blockquote>
+<blockquote>
+<p>The <code>port</code> option is mandatory.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="example"></a><a href="#example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h4>
+<p><strong>See &quot;<a href="#example-select-container-by-image">Example: Select Container by Image</a>&quot;</strong></p>
+<h3><a class="anchor" aria-hidden="true" id="devports-forward-remoteport"></a><a href="#devports-forward-remoteport" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].forward[*].remotePort</code></h3>
+<p>The <code>remotePort</code> option expects an integer from the range of valid ports [0 - 65535].</p>
+<blockquote>
+<p>By default, <code>remotePort</code> has the same value as <code>port</code> if <code>remotePort</code> is not explictly defined.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="example-1"></a><a href="#example-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h4>
+<p><strong>See &quot;<a href="#example-select-container-by-image">Example: Select Container by Image</a>&quot;</strong></p>
+<h3><a class="anchor" aria-hidden="true" id="devports-forward-bindaddress"></a><a href="#devports-forward-bindaddress" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>dev.ports[*].forward[*].bindAddress</code></h3>
+<p>The <code>bindAddress</code> option expects a valid IP address that the local port should be bound to.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-bindaddress"></a><a href="#default-value-for-bindaddress" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>bindAddress</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">bindAddress:</span> <span class="hljs-string">"0.0.0.0"</span> <span class="hljs-comment"># listen on all network interfaces</span>
+</code></pre>
+<p><br></p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="useful-commands"></a><a href="#useful-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Useful Commands</h2>
+<h3><a class="anchor" aria-hidden="true" id="devspace-add-port"></a><a href="#devspace-add-port" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace add port</code></h3>
+<p>Use the convenience command <code>devspace add port [LOCAL_PORT]:[REMOTE_PORT]</code> to tell DevSpace to forward traffic from your computer's <code>[LOCAL_PORT]</code> to the <code>[REMOTE_PORT]</code> of the default component of your application. If no <code>[REMOTE_PORT]</code> is specified, DevSpace will assume that <code>[REMOTE_PORT]=[LOCAL_PORT]</code>. Multiple port mappings can be specified as comma-separated list.</p>
+<pre><code class="hljs css language-bash">devspace add port 8080:80,3000
+</code></pre>
+<p>The example above would tell DevSpace to forward the local port <code>8080</code> to the container port <code>80</code> as well as to forward the local port <code>3000</code> to the remove container port <code>3000</code>.</p>
+<blockquote>
+<p>Local ports must be unique across all port forwarding configurations.</p>
+</blockquote>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 10/23/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/cli/development/configuration/overview-specification"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/cli/development/configuration/auto-open"><span>Auto-Open</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#pod-container-selection">Pod/Container Selection</a><ul class="toc-headings"><li><a href="#devports-imagename"><code>dev.ports[*].imageName</code></a></li><li><a href="#devports-labelselector"><code>dev.ports[*].labelSelector</code></a></li><li><a href="#devports-namespace"><code>dev.ports[*].namespace</code></a></li></ul></li><li><a href="#port-mapping-devports-forward">Port Mapping <code>dev.ports[*].forward</code></a><ul class="toc-headings"><li><a href="#devports-forward-port"><code>dev.ports[*].forward[*].port</code></a></li><li><a href="#devports-forward-remoteport"><code>dev.ports[*].forward[*].remotePort</code></a></li><li><a href="#devports-forward-bindaddress"><code>dev.ports[*].forward[*].bindAddress</code></a></li></ul></li><li><a href="#useful-commands">Useful Commands</a><ul class="toc-headings"><li><a href="#devspace-add-port"><code>devspace add port</code></a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

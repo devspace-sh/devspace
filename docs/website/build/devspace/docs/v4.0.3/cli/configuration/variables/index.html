@@ -1,0 +1,366 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Dynamic Configuration using Config Variables · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`."/><meta name="docsearch:version" content="v4.0.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Dynamic Configuration using Config Variables · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Advanced Configuration</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/configuration/reference">Config Reference</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/v4.0.3/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_set_analytics">analytics</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/domains">Domains</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.3/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/configuration/variables.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Dynamic Configuration using Config Variables</h1></header><article><div><span><p>DevSpace allows you to make your configuration dynamic by using variables in <code>devspace.yaml</code>.</p>
+<blockquote>
+<p>DevSpace allows you to use environment variables without explicitly defining them as varaiables. You can simply reference them via <code>${MY_ENV_VAR}</code> anywhere in your <code>devspace.yaml</code>.</p>
+</blockquote>
+<blockquote>
+<p>DevSpace provides a set of <a href="#predefined-variables">predefined variables</a> that are prefixed with <code>DEVSPACE_</code>.</p>
+</blockquote>
+<p>While there is no need to explicitly define a config variable, it allows you to customize the behavior of DevSpace when working with the variable. Variables are defined within the <code>vars</code> section of <code>devspace.yaml</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">vars:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">IMAGE_NAME</span>
+<span class="hljs-attr">  question:</span> <span class="hljs-string">Which</span> <span class="hljs-string">database</span> <span class="hljs-string">image</span> <span class="hljs-string">do</span> <span class="hljs-string">you</span> <span class="hljs-string">want</span> <span class="hljs-string">to</span> <span class="hljs-string">use?</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">HOME</span>
+<span class="hljs-attr">  source:</span> <span class="hljs-string">env</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">REGISTRY</span>
+<span class="hljs-attr">  question:</span> <span class="hljs-string">Which</span> <span class="hljs-string">registry</span> <span class="hljs-string">do</span> <span class="hljs-string">you</span> <span class="hljs-string">want</span> <span class="hljs-string">to</span> <span class="hljs-string">push</span> <span class="hljs-string">to?</span>
+<span class="hljs-attr">  source:</span> <span class="hljs-string">input</span>
+<span class="hljs-attr">  options:</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">hub.docker.com</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">my.private-registry.tld</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">dscr.io</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="define-config-variables"></a><a href="#define-config-variables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Define Config Variables</h2>
+<h3><a class="anchor" aria-hidden="true" id="name"></a><a href="#name" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>name</code></h3>
+<p>The <code>name</code> option expects a string stating the name of the config variable that will be used to reference it within the remainder of the configuration.</p>
+<blockquote>
+<p>The <code>name</code> of a config variable must be unique and is mandatory when defining a config variable.</p>
+</blockquote>
+<blockquote>
+<p>If the user will be asked to provide a value, the value will be cached in <code>.devspace/generated.yaml</code>.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="source"></a><a href="#source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>source</code></h3>
+<p>The <code>source</code> option expects either:</p>
+<ul>
+<li><code>all</code> means to check environment variables <strong>first</strong> and then check for cached values in <code>.devspace/generated.yaml</code> (<strong>default</strong>)</li>
+<li><code>env</code> means to check environment variables only</li>
+<li><code>input</code> means to check user-provided, cached values in <code>.devspace/generated.yaml</code></li>
+</ul>
+<blockquote>
+<p>If <code>source</code> is either <code>all</code> or <code>input</code> and the variable is not defined, the user will be asked to provide a value either using a generic question or the one provided via the <a href="#question"><code>question</code> option</a>. The user-provided value will be cached in <code>.devspace/generated.yaml</code>.</p>
+</blockquote>
+<blockquote>
+<p>If the <code>source</code> is <code>env</code>, DevSpace will always prefer to use the value of the environment variable, even if there is a cached value for the variable in <code>.devspace/generated.yaml</code>.</p>
+</blockquote>
+<blockquote>
+<p>Is the <code>source</code> is <code>env</code> and the environment variable is <strong>not</strong> defined, DevSpace will use the <a href="#default"><code>defalut</code> value</a> or terminate with a fatal error, if there is <strong>no</strong> <a href="#default"><code>defalut</code> value</a> configured.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-source"></a><a href="#default-value-for-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>source</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">source:</span> <span class="hljs-string">all</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="default"></a><a href="#default" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>default</code></h3>
+<p>The <code>default</code> option expects a string defining the default value for the variable.</p>
+<blockquote>
+<p>Is the <a href="#source"><code>source</code></a> is <code>env</code> and the environment variable is <strong>not</strong> defined, DevSpace will use the <code>defalut</code> value or terminate with a fatal error, if there is <strong>no</strong> <code>defalut</code> value configured.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="question"></a><a href="#question" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>question</code></h3>
+<p>The <code>question</code> option expects a string with a question that will be asked when the variable is not defined. DevSpace tries to resolve the variable according to the <a href="#source"><code>source</code> of the variable</a> and if it is not set via any of the accepted sources, DevSpace will prompt the user to define the value by entering a string.</p>
+<blockquote>
+<p>Defining the <code>question</code> is optional but often helpful to provide a better usability for other team members using the project.</p>
+</blockquote>
+<blockquote>
+<p>If <a href="#options">valid <code>options</code> for the variable value</a> are configured, DevSpace will show a picker/selector instead of a regular input field/prompt.</p>
+</blockquote>
+<blockquote>
+<p>If a <a href="#default"><code>defalut</code> value</a> is configured for the variable, DevSpace will use this <a href="#default"><code>defalut</code> value</a> as default answer for the question that can be easily selected by pressing enter.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-question"></a><a href="#default-value-for-question" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>question</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">question:</span> <span class="hljs-string">Please</span> <span class="hljs-string">enter</span> <span class="hljs-string">a</span> <span class="hljs-string">value</span> <span class="hljs-string">for</span> <span class="hljs-string">[VAR_NAME]</span> <span class="hljs-comment"># using the variable name</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="options"></a><a href="#options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>options</code></h3>
+<p>The <code>options</code> option expects an array of strings with each string stating a allowed value for the variable.</p>
+<h4><a class="anchor" aria-hidden="true" id="example-define-variable-options"></a><a href="#example-define-variable-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Define Variable Options</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">vars:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">REGISTRY</span>
+<span class="hljs-attr">  question:</span> <span class="hljs-string">Which</span> <span class="hljs-string">registry</span> <span class="hljs-string">do</span> <span class="hljs-string">you</span> <span class="hljs-string">want</span> <span class="hljs-string">to</span> <span class="hljs-string">push</span> <span class="hljs-string">to?</span>
+<span class="hljs-attr">  source:</span> <span class="hljs-string">input</span>
+<span class="hljs-attr">  options:</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">hub.docker.com</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">my.private-registry.tld</span>
+<span class="hljs-bullet">  -</span> <span class="hljs-string">dscr.io</span>
+<span class="hljs-attr">  default:</span> <span class="hljs-string">my.private-registry.tld</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+If the variable <code>REGISTRY</code> is used for the first time during <code>devspace deploy</code>, DevSpace will ask the user to select which value to use by showing this question:</p>
+<pre><code class="hljs css language-bash">Which registry <span class="hljs-keyword">do</span> you want to push to? (Default: my.private-registry.tld)
+Use the arrows UP/DOWN to select an option and ENTER to choose the selected option.
+  hub.docker.com
+&gt; my.private-registry.tld
+  dscr.io
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="password"></a><a href="#password" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>password</code></h3>
+<p>The <code>password</code> option expects a boolean that defines if DevSpace should hide the user input when the user provides the value for this variable by entering a response to the question asked in the command line.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-password"></a><a href="#default-value-for-password" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>password</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">password:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-hide-user-response"></a><a href="#example-hide-user-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Hide User Response</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">vars:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">REGISTRY_TOKEN</span>
+<span class="hljs-attr">  question:</span> <span class="hljs-string">"Please enter your registry token:"</span>
+<span class="hljs-attr">  source:</span> <span class="hljs-string">input</span>
+<span class="hljs-attr">  password:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+If the variable <code>REGISTRY_TOKEN</code> is used for the first time during <code>devspace deploy</code>, DevSpace will ask the user to provide a value by showing this question:</p>
+<pre><code class="hljs css language-bash">? Please enter your registry token: *******
+</code></pre>
+<p>The response the user enters will be hidden as <code>*******</code> to protect others from seeing the input while the user is typing.</p>
+<h3><a class="anchor" aria-hidden="true" id="validationpattern"></a><a href="#validationpattern" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>validationPattern</code></h3>
+<p>The <code>validationPattern</code> option expects a string stating a regular expression that validates if the value entered by the user is allowed as a value for this variable.</p>
+<blockquote>
+<p>If the provided value does not match the regex in <code>validationPattern</code>, DevSpace will either show a generic error message or the message provided in <a href="#validationmessage"><code>validationMessage</code></a>.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="validationmessage"></a><a href="#validationmessage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>validationMessage</code></h3>
+<p>The <code>validationMessage</code> option expects a string stating an error message that is shown to the user when providing a value for the variable that does not match the regex provided in <a href="#validationpattern"><code>validationPattern</code></a>.</p>
+<p><br></p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="predefined-variables"></a><a href="#predefined-variables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Predefined Variables</h2>
+<p>DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:</p>
+<ul>
+<li><strong>DEVSPACE_RANDOM</strong>: A random 6 character long string</li>
+<li><strong>DEVSPACE_TIMESTAMP</strong> A unix timestamp when the config was loaded</li>
+<li><strong>DEVSPACE_GIT_COMMIT</strong>: A short hash of the local repos current git commit</li>
+<li><strong>DEVSPACE_SPACE</strong>: The name of the <a href="../../cloud/spaces/what-are-spaces">space</a> that is currently used</li>
+<li><strong>DEVSPACE_SPACE_NAMESPACE</strong>: The kubernetes namespace of the <a href="../../cloud/spaces/what-are-spaces">space</a> in the cluster</li>
+<li><strong>DEVSPACE_SPACE_DOMAIN1</strong>, <strong>DEVSPACE_SPACE_DOMAIN2</strong>... : The connected domains of the <a href="../../cloud/spaces/what-are-spaces">space</a>. E.g. if a space has a domain connected with test.devspace.host, <strong>DEVSPACE_SPACE_DOMAIN1</strong> will hold test.devspace.host</li>
+<li><strong>DEVSPACE_USERNAME</strong>: The username currently logged into devspace cloud</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="example-using-devspace_git_commit"></a><a href="#example-using-devspace_git_commit" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Using <code>${DEVSPACE_GIT_COMMIT}</code></h3>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  default:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">myrepo/devspace</span>
+<span class="hljs-attr">    tag:</span> <span class="hljs-string">${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+This config will tag the image in the form of <code>myrepo/devspace:d9b4bcd-1559766514</code>. Many other combinations are possible with this method.</p>
+<p><br></p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="useful-commands"></a><a href="#useful-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Useful Commands</h2>
+<h3><a class="anchor" aria-hidden="true" id="devspace-list-vars"></a><a href="#devspace-list-vars" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace list vars</code></h3>
+<p>To get a list of all variables defined in the <code>devspace.yaml</code>, you can run this command:</p>
+<pre><code class="hljs css language-bash">devspace list vars
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="devspace-reset-vars"></a><a href="#devspace-reset-vars" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace reset vars</code></h3>
+<p>Once DevSpace asks you to provide a value for a variable, this value will be stored in the variables cache, so you will not asked about this variable again.</p>
+<p>To reset the variables cache:</p>
+<pre><code class="hljs css language-bash">devspace reset vars
+</code></pre>
+<blockquote>
+<p>DevSpace will fill the variables cache again, once you run the next build or deployment command.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="export-var_name-value"></a><a href="#export-var_name-value" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>export VAR_NAME=value</code></h3>
+<p>The value for a config variable can also be set by defining an environment variable named <code>[VAR_NAME]</code>. Setting the value of a config variable with name <code>${IMAGE_NAME}</code> would be possible by setting an environment value <code>IMAGE_NAME</code>.</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-277-tab-278" class="nav-link active" data-group="group_277" data-tab="tab-group-277-content-278">Windows Powershell</div><div id="tab-group-277-tab-279" class="nav-link" data-group="group_277" data-tab="tab-group-277-content-279">Mac Terminal</div><div id="tab-group-277-tab-280" class="nav-link" data-group="group_277" data-tab="tab-group-277-content-280">Linux Bash</div></div><div class="tab-content"><div id="tab-group-277-content-278" class="tab-pane active" data-group="group_277" tabindex="-1"><div><span><pre><code class="hljs css language-powershell"><span class="hljs-variable">$env:IMAGE_NAME</span> = <span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div><div id="tab-group-277-content-279" class="tab-pane" data-group="group_277" tabindex="-1"><div><span><pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> IMAGE_NAME=<span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div><div id="tab-group-277-content-280" class="tab-pane" data-group="group_277" tabindex="-1"><div><span><pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> IMAGE_NAME=<span class="hljs-string">"some-value"</span><br /></code></pre>
+</span></div></div></div></div>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/v4.0.3/cli/configuration/reference"><span class="arrow-prev">← </span><span>Config Reference</span></a><a class="docs-next button" href="/docs/v4.0.3/cli/configuration/profiles-patches"><span>Profiles &amp; Patches</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#define-config-variables">Define Config Variables</a><ul class="toc-headings"><li><a href="#name"><code>name</code></a></li><li><a href="#source"><code>source</code></a></li><li><a href="#default"><code>default</code></a></li><li><a href="#question"><code>question</code></a></li><li><a href="#options"><code>options</code></a></li><li><a href="#password"><code>password</code></a></li><li><a href="#validationpattern"><code>validationPattern</code></a></li><li><a href="#validationmessage"><code>validationMessage</code></a></li></ul></li><li><a href="#predefined-variables">Predefined Variables</a><ul class="toc-headings"><li><a href="#example-using-devspace_git_commit">Example: Using <code>${DEVSPACE_GIT_COMMIT}</code></a></li></ul></li><li><a href="#useful-commands">Useful Commands</a><ul class="toc-headings"><li><a href="#devspace-list-vars"><code>devspace list vars</code></a></li><li><a href="#devspace-reset-vars"><code>devspace reset vars</code></a></li><li><a href="#export-var_name-value"><code>export VAR_NAME=value</code></a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

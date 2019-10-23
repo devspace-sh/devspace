@@ -1,0 +1,282 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>What are Helm charts? · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts."/><meta name="docsearch:version" content="v4.0.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="What are Helm charts? · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/deployment/helm-charts/what-are-helm-charts.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">What are Helm charts?</h1></header><article><div><span><p><a href="https://helm.sh/">Helm</a> is the package manager for Kubernetes. Packages in Helm are called Helm charts.</p>
+<blockquote>
+<p>If you just want to add a kubernetes yaml to the chart take a look at <a href="../../deployment/kubernetes-manifests/add-manifests">add custom kubernetes files</a></p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="structure-of-an-helm-chart"></a><a href="#structure-of-an-helm-chart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Structure of an Helm chart</h2>
+<p>The following structure shows the most important parts of an Helm chart:</p>
+<pre><code class="hljs css language-bash">chart/              <span class="hljs-comment"># Helm chart (defines how to deploy your application)</span>
+|-Chart.yaml        <span class="hljs-comment"># chart definition (e.g. name, version)</span>
+|-requirements.yaml <span class="hljs-comment"># OPTIONAL: dependencies (other charts) that will be deployed together with your chart</span>
+|-values.yaml       <span class="hljs-comment"># values for the template variables</span>
+|-templates/        <span class="hljs-comment"># directory containing the template files (Kubernetes manifests)</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="chartyaml"></a><a href="#chartyaml" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Chart.yaml</h3>
+<p>The <code>Chart.yaml</code> describes basic information about your Chart, e.g. the name, description or version of your chart.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">name:</span> <span class="hljs-string">my-app</span>
+<span class="hljs-attr">version:</span> <span class="hljs-string">v0.0.1</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">A</span> <span class="hljs-string">Kubernetes-Native</span> <span class="hljs-string">Application</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="valuesyaml"></a><a href="#valuesyaml" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>values.yaml</h3>
+<p>The <code>values.yaml</code> defines the default values that are used for parsing the templates defined in <code>templates/</code> when deploying the Helm chart.</p>
+<p>The following code snippet shows how an exemplary <code>values.yaml</code> could look like:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">replicas:</span> <span class="hljs-number">3</span>
+<span class="hljs-attr">containers:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">container-1</span>
+<span class="hljs-attr">  image:</span> <span class="hljs-string">my-registry.tld/my-image:tag</span>
+<span class="hljs-attr">  env:</span>
+<span class="hljs-attr">  - name:</span> <span class="hljs-string">MY_ENV</span>
+<span class="hljs-attr">    value:</span> <span class="hljs-string">"some env var value"</span>
+<span class="hljs-attr">  resources:</span>
+<span class="hljs-attr">    limits:</span>
+<span class="hljs-attr">      cpu:</span> <span class="hljs-string">"200m"</span>
+<span class="hljs-attr">      memory:</span> <span class="hljs-string">"300Mi"</span>
+</code></pre>
+<p>The values defined in <code>values.yaml</code> are defaults which can be overridden during the deployment of an Helm chart. DevSpace CLI uses value-overriding to update the image tags to the most recently build and pushed tags.</p>
+<h3><a class="anchor" aria-hidden="true" id="templates"></a><a href="#templates" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>templates/</h3>
+<p>The <code>templates/</code> folder contains all templates for your chart. Tiller will parse all the <code>.yaml</code> files defined in this folder and parse them as templates together with the values defined in the <code>values.yaml</code>.</p>
+<p>The following code snippet shows a simplified version of a template file within a Helm chart:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-comment"># deployment.yaml</span>
+<span class="hljs-attr">apiVersion:</span> <span class="hljs-string">apps/v1</span>
+<span class="hljs-attr">kind:</span> <span class="hljs-string">Deployment</span>
+<span class="hljs-attr">metadata:</span>
+<span class="hljs-attr">  name:</span> <span class="hljs-string">my-deployment</span>
+<span class="hljs-attr">spec:</span>
+<span class="hljs-attr">  replicas:</span> <span class="hljs-string">{{</span> <span class="hljs-string">.Values.replicas</span> <span class="hljs-string">| default 1 }}
+</span><span class="hljs-attr">  selector:</span> <span class="hljs-string">...</span>
+<span class="hljs-attr">  template:</span>
+<span class="hljs-attr">    metadata:</span> <span class="hljs-string">...</span>
+<span class="hljs-attr">    spec:</span>
+<span class="hljs-attr">      containers:</span>
+        <span class="hljs-string">{{-</span> <span class="hljs-string">range</span> <span class="hljs-string">$containerIndex,</span> <span class="hljs-string">$container</span> <span class="hljs-string">:=</span> <span class="hljs-string">Values.containers</span> <span class="hljs-string">}}</span>
+<span class="hljs-attr">        - name:</span> <span class="hljs-string">{{</span> <span class="hljs-string">$container.name</span> <span class="hljs-string">| default "container" | quote }}
+</span><span class="hljs-attr">          image:</span> <span class="hljs-string">{{</span> <span class="hljs-string">$container.image</span> <span class="hljs-string">| quote }}
+</span><span class="hljs-attr">          env:</span>
+<span class="hljs-string">{{</span> <span class="hljs-string">toYaml</span> <span class="hljs-string">$container.env</span> <span class="hljs-string">| indent 12 }}
+          <span class="hljs-template-variable">{{- if $container.resources }}</span>
+</span><span class="hljs-attr">          resources:</span>
+            <span class="hljs-string">{{-</span> <span class="hljs-string">with</span> <span class="hljs-string">$container.resources.limits</span> <span class="hljs-string">}}</span>
+<span class="hljs-attr">            limits:</span>
+<span class="hljs-attr">              cpu:</span> <span class="hljs-string">{{</span> <span class="hljs-string">.cpu</span> <span class="hljs-string">| quote }}
+</span><span class="hljs-attr">              memory:</span> <span class="hljs-string">{{</span> <span class="hljs-string">.memory</span> <span class="hljs-string">| quote }}
+            <span class="hljs-template-variable">{{- end }}</span>
+          <span class="hljs-template-variable">{{- end }}</span>
+        <span class="hljs-template-variable">{{- end }}</span>
+</span></code></pre>
+<p><a href="https://docs.helm.sh/chart_template_guide/">Learn more about templating in Helm</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="requirementsyaml"></a><a href="#requirementsyaml" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>requirements.yaml</h3>
+<p>The <code>requirements.yaml</code> defines the dependencies of your Helm chart. If your application needs a mysql database for example, you could add the mysql chart as dependency. Defining such a dependency in the <code>requirements.yaml</code> could look like this:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">dependencies:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">mysql</span>
+<span class="hljs-attr">  version:</span> <span class="hljs-number">3.2</span><span class="hljs-number">.1</span>
+</code></pre>
+<p>DevSpace CLI provides the convenience command <code>devspace add package [chart-name]</code> to add dependencies to your Helm chart. This command will not only add a dependency to your chart but also add the most important values of this chart to your <code>values.yaml</code> and show you the <code>README</code> of the newly added chart, so you can easily customize the dependency.</p>
+<p><a href="../../deployment/components/add-predefined-components">Learn more about adding predefined components.</a></p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="faq"></a><a href="#faq" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FAQ</h2>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="do-i-need-to-install-helm-to-use-devspace-cli"></a><a href="#do-i-need-to-install-helm-to-use-devspace-cli" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Do I need to install Helm to use DevSpace CLI?</h3>
+<p></summary>
+<strong>No.</strong> DevSpace CLI comes with an in-built Helm client and it will automatically install <a href="#what-is-tiller">Tiller</a>, the server-side Helm component, within your Spaces.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="how-does-devspace-cli-deploy-charts"></a><a href="#how-does-devspace-cli-deploy-charts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How does DevSpace CLI deploy charts?</h3>
+<p></summary>
+When you run <code>devspace deploy</code> or <code>devspace dev</code>, DevSpace CLI will deploy your chart. This deployment process involves the following steps:</p>
+<ol>
+<li>Installing or upgrading <a href="#what-is-tiller">Tiller</a> in your Space</li>
+<li>Loading the template values from <code>values.yaml</code></li>
+<li>Updating the image tags in the template values to the most recently image that has been built and pushed by DevSpace CLI (happens in-memory)</li>
+<li>Opening a connection to the <a href="#what-is-tiller">Tiller</a> server in your Space (via port-forwarding)</li>
+<li>Deploying the chart with <a href="#what-is-tiller">Tiller</a> as new release OR upgrading an existing release</li>
+<li>[ON ERROR: rollback release to the latest working version (revision)]
+</details></li>
+</ol>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="how-do-i-update-a-deployed-helm-chart-with-devspace"></a><a href="#how-do-i-update-a-deployed-helm-chart-with-devspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>How do I update a deployed Helm chart with DevSpace?</h3>
+<p></summary>
+If you changed your chart (e.g. edited the values.yaml), you can simply run <code>devspace deploy</code> again and DevSpace CLI will update your existing Helm release (i.e. deployed application).
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="should-i-add-an-ingress-template-to-templates"></a><a href="#should-i-add-an-ingress-template-to-templates" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Should I add an ingress template to <code>templates/</code>?</h3>
+<p></summary>
+Generally: <strong>No.</strong></p>
+<p>The problem with adding an ingress to your Helm chart is that you cannot share your code with other developers because the same hostname (domain) can only be used by one person, otherwise there would be two ingresses using the same domain which will cause problems with the Kubernetes-internal traffic routing.</p>
+<p>You can, however, manually create ingresses or manually edit any ingress that has been automatically created. Use the following command to edit an ingress manually:</p>
+<pre><code class="hljs css language-bash">kubectl edit ingress [INGRESS_NAME]
+</code></pre>
+<p>Use <code>kubectl get ingress</code> to list all ingresses in a Space.
+</details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="what-is-tiller"></a><a href="#what-is-tiller" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>What is Tiller?</h3>
+<p></summary>
+Tiller is the server-side component of Helm which is responsible for instantiating releases within your Kubernetes namespace and for keeping track of different revisions of a release that you deploy over time. Tiller will likely be removed in the future because a lot of Helm users want Helm to become a client-only tool.</p>
+<p>Before deploying your application, DevSpace CLI will start a Tiller deployment within your Space which then deploys your application as defined in your Helm chart. You can actually see the tiller pod by running this kubectl command:</p>
+<pre><code class="hljs css language-bash">kubectl get po -l name=tiller 
+</code></pre>
+<p></details></p>
+<p><details>
+<summary></p>
+<h3><a class="anchor" aria-hidden="true" id="can-i-use-devspace-without-helm"></a><a href="#can-i-use-devspace-without-helm" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Can I use DevSpace without Helm?</h3>
+<p></summary>
+<strong>Yes</strong>. You can simply <a href="../../deployment/kubernetes-manifests/add-manifests">add plain Kubernetes manifests as deployments</a> and DevSpace CLI will run <code>kubectl apply -f [FILE]</code> instead of using Helm.
+</details></p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#structure-of-an-helm-chart">Structure of an Helm chart</a><ul class="toc-headings"><li><a href="#chartyaml">Chart.yaml</a></li><li><a href="#valuesyaml">values.yaml</a></li><li><a href="#templates">templates/</a></li><li><a href="#requirementsyaml">requirements.yaml</a></li></ul></li><li><a href="#faq">FAQ</a><ul class="toc-headings"><li><a href="#do-i-need-to-install-helm-to-use-devspace-cli">Do I need to install Helm to use DevSpace CLI?</a></li><li><a href="#how-does-devspace-cli-deploy-charts">How does DevSpace CLI deploy charts?</a></li><li><a href="#how-do-i-update-a-deployed-helm-chart-with-devspace">How do I update a deployed Helm chart with DevSpace?</a></li><li><a href="#should-i-add-an-ingress-template-to-templates">Should I add an ingress template to <code>templates/</code>?</a></li><li><a href="#what-is-tiller">What is Tiller?</a></li><li><a href="#can-i-use-devspace-without-helm">Can I use DevSpace without Helm?</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

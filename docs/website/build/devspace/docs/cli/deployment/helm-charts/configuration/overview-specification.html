@@ -1,0 +1,484 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Configure Helm Chart Deployments · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`."/><meta name="docsearch:version" content="v4.1.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Configure Helm Chart Deployments · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.1.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Configuration (Helm Charts)</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem navListItemActive"><a class="navItem" href="/docs/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/reference">Config Reference</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_dependencies">dependencies</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set_analytics">analytics</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_set_var">var</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/networking">Networking (Domains)</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/deployment/helm-charts/configuration/overview-specification.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Configure Helm Chart Deployments</h1></header><article><div><span><p>To deploy Helm charts, you need to configure them within the <code>deployments</code> section of the <code>devspace.yaml</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      mysqlRootPassword:</span> <span class="hljs-string">${MYSQL_ROOT_PASSWORD}</span>
+<span class="hljs-attr">      mysqlUser:</span> <span class="hljs-string">db_user</span>
+<span class="hljs-attr">      mysqlDatabase:</span> <span class="hljs-string">app_database</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">backend</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">backend-chart</span>
+<span class="hljs-attr">      repository:</span> <span class="hljs-attr">https://my-repo.tld/</span>
+</code></pre>
+<p><a href="../../../../cli/deployment/helm-charts/what-are-helm-charts">What are Helm charts?</a></p>
+<h2><a class="anchor" aria-hidden="true" id="chart"></a><a href="#chart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Chart</h2>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmcomponentchart"></a><a href="#deployments-helmcomponentchart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.componentChart</code></h3>
+<p>The <code>componentChart</code> option expects a boolean which states if the Component Helm Chart should be used for deployment. Learn more about <a href="/docs/cli/deployment/components/configuration/overview-specification">configuring component deployments</a>.</p>
+<blockquote>
+<p>If <code>componentChart: true</code> is configured, all options under <code>chart</code> will be ignored.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-componentchart"></a><a href="#default-value-for-componentchart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>componentChart</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">componentChart:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmchartname"></a><a href="#deployments-helmchartname" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.chart.name</code></h3>
+<p>The <code>name</code> option expects a string stating either:</p>
+<ul>
+<li>a path to a chart that is stored on the filesystem</li>
+<li>the name of a chart that is located in a repository (either the default repository or one specified via <a href="#deployments-helmchartrepo"><code>repo</code> option</a>)</li>
+</ul>
+<p>DevSpace follows the same behavior as <code>helm install</code> and first checks if the path specified in <code>name</code> exists on the file system and is a valid chart. If not, DevSpace will assume that the <code>name</code> is not a path but the name of a remote chart located in a chart repository.</p>
+<blockquote>
+<p>Specifying the <code>name</code> option for Helm deployments is mandatory.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="example-simple-helm-deployment"></a><a href="#example-simple-helm-deployment" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Simple Helm Deployment</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmchartversion"></a><a href="#deployments-helmchartversion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.chart.version</code></h3>
+<p>The <code>version</code> option expects a string stating the version of the chart that should be used.</p>
+<blockquote>
+<p>If no version is specified, Helm would try to get the latest version of this chart.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-version"></a><a href="#default-value-for-version" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>version</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">version:</span> <span class="hljs-string">""</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-custom-chart-version"></a><a href="#example-custom-chart-version" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Custom Chart Version</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">      version:</span> <span class="hljs-string">"1.3.1"</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --version=<span class="hljs-string">"1.3.1"</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmchartrepo"></a><a href="#deployments-helmchartrepo" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.chart.repo</code></h3>
+<p>The <code>repo</code> option expects a string with an URL to a <a href="https://helm.sh/docs/chart_repository/">Helm Chart Repository</a>.</p>
+<blockquote>
+<p>The <a href="https://github.com/helm/charts">official Helm Chart Repository <code>stable</code></a> does not need to be specified as serves as default value.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-repo"></a><a href="#default-value-for-repo" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>repo</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">repo:</span> <span class="hljs-string">stable</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-custom-chart-repository"></a><a href="#example-custom-chart-repository" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Custom Chart Repository</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">custom-chart</span>
+<span class="hljs-attr">      repository:</span> <span class="hljs-attr">https://my-repo.tld/</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database custom-chart --repo <span class="hljs-string">"https://my-repo.tld/"</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="values-overriding"></a><a href="#values-overriding" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Values Overriding</h2>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmvalues"></a><a href="#deployments-helmvalues" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.values</code></h3>
+<p>The <code>values</code> option expects an object with values that should be overriding the default values of this Helm chart.</p>
+<p>Compared to the <code>valuesFiles</code> option, using <code>values</code> has the following advantages:</p>
+<ul>
+<li>It is easier to comprehend and faster to find (no references)</li>
+<li>It allows you to use <a href="../../../../cli/configuration/variables">dynamic config variables</a></li>
+</ul>
+<blockquote>
+<p>Because both, <code>values</code> and <code>valuesFiles</code>, have advantages and disadvantages, it if often useful to combine them. When setting both, values defined in <code>values</code> have precedence over values defined in <code>valuesFiles</code>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-values"></a><a href="#default-value-for-values" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>values</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">values:</span> <span class="hljs-string">{}</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-using-values-in-devspaceyaml"></a><a href="#example-using-values-in-devspaceyaml" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Using Values in devspace.yaml</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    values:</span>
+<span class="hljs-attr">      mysqlRootPassword:</span> <span class="hljs-string">${MYSQL_ROOT_PASSWORD}</span>
+<span class="hljs-attr">      mysqlUser:</span> <span class="hljs-string">db_user</span>
+<span class="hljs-attr">      mysqlDatabase:</span> <span class="hljs-string">app_database</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --<span class="hljs-built_in">set</span> mysqlRootPassword=<span class="hljs-string">"<span class="hljs-variable">$MYSQL_ROOT_PASSWORD</span>"</span> --<span class="hljs-built_in">set</span> mysqlUser=<span class="hljs-string">"db_user"</span> --<span class="hljs-built_in">set</span> mysqlDatabase=<span class="hljs-string">"app_database"</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmvaluesfiles"></a><a href="#deployments-helmvaluesfiles" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.valuesFiles</code></h3>
+<p>The <code>valuesFiles</code> option expects an array of paths to yaml files which specify values for overriding the values.yaml of the Helm chart.</p>
+<p>Compared to the <code>values</code> option, using <code>valuesFiles</code> has the following advantages:</p>
+<ul>
+<li>It reduces the size of your <code>devspace.yaml</code> especially when setting many values for a chart</li>
+<li>It allows you to run Helm commands directly without DevSpace, e.g. <code>helm upgrade [NAME] -f mysql/values.yaml</code></li>
+</ul>
+<blockquote>
+<p>Because both, <code>values</code> and <code>valuesFiles</code>, have advantages and disadvantages, it if often useful to combine them. When setting both, values defined in <code>values</code> have precedence over values defined in <code>valuesFiles</code>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-valuesfiles"></a><a href="#default-value-for-valuesfiles" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>valuesFiles</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">valuesFiles:</span> <span class="hljs-string">[]</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-using-values-files"></a><a href="#example-using-values-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Using Values Files</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    valuesFiles:</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">mysql/values.yaml</span>
+<span class="hljs-bullet">    -</span> <span class="hljs-string">mysql/values.production.yaml</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql -f mysql/values.yaml -f mysql/values.production.yaml
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmreplaceimagetags"></a><a href="#deployments-helmreplaceimagetags" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.replaceImageTags</code></h3>
+<p>The <code>replaceImageTags</code> option expects a boolean stating if DevSpace should do <a href="../../../../cli/deployment/workflow-basics#3-tag-replacement">Image Tag Replacement</a>.</p>
+<p>By default, DevSpace searches all your values (specified via <code>values</code> or <code>valuesFiles</code>) for images that are defined in the <code>images</code> section of the <code>devspace.yaml</code>. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the <a href="../../../../cli/image-building/workflow-basics">image building process</a>. Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.</p>
+<blockquote>
+<p>Tag replacement takes place <strong>in-memory</strong> and is <strong>not</strong> writing anything to the filesystem, i.e. it will <strong>never</strong> change any of your configuration files.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-replaceimagetags"></a><a href="#default-value-for-replaceimagetags" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>replaceImageTags</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">replaceImageTags:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-disable-tag-replacement"></a><a href="#example-disable-tag-replacement" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Disable Tag Replacement</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    replaceImageTags:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="helm-options"></a><a href="#helm-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Helm Options</h2>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmwait"></a><a href="#deployments-helmwait" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.wait</code></h3>
+<p>The <code>wait</code> option expects a boolean that will be used for the <a href="https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback">helm flag <code>--wait</code></a>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-wait"></a><a href="#default-value-for-wait" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>wait</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">wait:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-helm-flag-wait"></a><a href="#example-helm-flag-wait" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Helm Flag Wait</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    wait:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --<span class="hljs-built_in">wait</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmtimeout"></a><a href="#deployments-helmtimeout" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.timeout</code></h3>
+<p>The <code>timeout</code> option expects an integer representing a number of seconds that will be used for the <a href="https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback">helm flag <code>--timeout</code></a>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-timeout"></a><a href="#default-value-for-timeout" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>timeout</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">timeout:</span> <span class="hljs-number">180</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-helm-flag-timeout"></a><a href="#example-helm-flag-timeout" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Helm Flag Timeout</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    timeout:</span> <span class="hljs-number">300</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --timeout=300
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmforce"></a><a href="#deployments-helmforce" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.force</code></h3>
+<p>The <code>force</code> option expects a boolean that will be used for the <a href="https://helm.sh/docs/helm/#helm-upgrade">helm flag <code>--force</code></a>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-force"></a><a href="#default-value-for-force" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>force</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">force:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-helm-flag-force"></a><a href="#example-helm-flag-force" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Helm Flag Force</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    force:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --force
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmrollback"></a><a href="#deployments-helmrollback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.rollback</code></h3>
+<p>The <code>rollback</code> option expects a boolean that states if DevSpace should automatically rollback deployments that fail.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-rollback"></a><a href="#default-value-for-rollback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>rollback</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">rollback:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-enabling-automatic-rollback"></a><a href="#example-enabling-automatic-rollback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Enabling Automatic Rollback</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    rollback:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="deployments-helmtillernamespace"></a><a href="#deployments-helmtillernamespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>deployments[*].helm.tillerNamespace</code></h3>
+<p>The <code>tillerNamespace</code> option expects a string that will be used for the <a href="https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback">helm flag <code>--tiller-namespace</code></a>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-tillernamespace"></a><a href="#default-value-for-tillernamespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value for <code>tillerNamespace</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">tillerNamespace:</span> <span class="hljs-string">""</span> <span class="hljs-comment"># defaults to default namespace of current context</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-helm-flag-force-1"></a><a href="#example-helm-flag-force-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Helm Flag Force</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">deployments:</span>
+<span class="hljs-attr">- name:</span> <span class="hljs-string">database</span>
+<span class="hljs-attr">  helm:</span>
+<span class="hljs-attr">    chart:</span>
+<span class="hljs-attr">      name:</span> <span class="hljs-string">stable/mysql</span>
+<span class="hljs-attr">    tillerNamespace:</span> <span class="hljs-string">my-tiller-ns</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+Deploying the above example would roughly be equivalent to this command:</p>
+<pre><code class="hljs css language-bash">helm install --name database stable/mysql --tiller-namespace=my-tiller-ns
+</code></pre>
+<p><br></p>
+<hr>
+<h2><a class="anchor" aria-hidden="true" id="useful-commands"></a><a href="#useful-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Useful Commands</h2>
+<h3><a class="anchor" aria-hidden="true" id="devspace-add-deployment-name-chart-path-to-my-chart"></a><a href="#devspace-add-deployment-name-chart-path-to-my-chart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace add deployment [NAME] --chart=./path/to/my/chart</code></h3>
+<p>If you built your own Helm chart and it is located inside your project directory, you can simply add it as a deployment using the following command:</p>
+<pre><code class="hljs css language-bash">devspace add deployment [deployment-name] --chart=<span class="hljs-string">"./path/to/my/chart"</span>
+</code></pre>
+<blockquote>
+<p>Running <code>devspace add deployment</code> only adds a deployment to <code>devspace.yaml</code> but does not actually deploy anything. To deploy the newly added deployment, run <code>devspace deploy</code> or <code>devspace dev</code>.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="devspace-add-deployment-deployment-name-chart-stable-chart"></a><a href="#devspace-add-deployment-deployment-name-chart-stable-chart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace add deployment [deployment-name] --chart=stable/[CHART]</code></h3>
+<p>If you want to deploy a Helm chart from a chart repository, you can simply add it as shown in this example:</p>
+<pre><code class="hljs css language-bash">devspace add deployment [deployment-name] --chart=<span class="hljs-string">"stable/mysql"</span>
+</code></pre>
+<p>You can replace <code>stable</code> with the name of your Helm chart repository, if it already exists on your local computer. If you want to use a chart from a chart repository that you have not used yet, you can also specify the repository URL:</p>
+<pre><code class="hljs css language-bash">devspace add deployment [deployment-name] --chart=<span class="hljs-string">"chart-name"</span> --chart-repo=<span class="hljs-string">"https://my-chart-repository.tld"</span>
+</code></pre>
+<p>Use the <code>--chart-version</code> flag to specifiy the char version that you want to deploy.</p>
+<blockquote>
+<p>Running <code>devspace add deployment</code> only adds a deployment to <code>devspace.yaml</code> but does not actually deploy anything. To deploy the newly added deployment, run <code>devspace deploy</code> or <code>devspace dev</code>.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="devspace-remove-deployment-name"></a><a href="#devspace-remove-deployment-name" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>devspace remove deployment [NAME]</code></h3>
+<p>Instead of manually removing a deployment from your <code>devspace.yaml</code>, it is recommended to run this command instead:</p>
+<pre><code class="hljs css language-bash">devspace remove deployment [deployment-name]
+</code></pre>
+<p>The benefit of running <code>devspace remove deployment</code> is that DevSpace will ask you this question:</p>
+<pre><code class="hljs css language-bash">? Do you want to delete all deployment resources deployed?  [Use arrows to move, <span class="hljs-built_in">type</span> to filter]
+&gt; yes
+  no
+</code></pre>
+<p>If you select yes, DevSpace  will remove your deployment from your Kubernetes cluster before deleting it in your <code>devspace.yaml</code>. This is great to keep your Kubernetes namespaces clean from zombie deployments that cannot be easily tracked, removed and updated anymore.</p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 10/14/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/cli/deployment/components/configuration/scaling"><span class="arrow-prev">← </span><span>Scaling</span></a><a class="docs-next button" href="/docs/cli/deployment/kubernetes-manifests/configuration/overview-specification"><span>Manifests (kubectl)</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#chart">Chart</a><ul class="toc-headings"><li><a href="#deployments-helmcomponentchart"><code>deployments[*].helm.componentChart</code></a></li><li><a href="#deployments-helmchartname"><code>deployments[*].helm.chart.name</code></a></li><li><a href="#deployments-helmchartversion"><code>deployments[*].helm.chart.version</code></a></li><li><a href="#deployments-helmchartrepo"><code>deployments[*].helm.chart.repo</code></a></li></ul></li><li><a href="#values-overriding">Values Overriding</a><ul class="toc-headings"><li><a href="#deployments-helmvalues"><code>deployments[*].helm.values</code></a></li><li><a href="#deployments-helmvaluesfiles"><code>deployments[*].helm.valuesFiles</code></a></li><li><a href="#deployments-helmreplaceimagetags"><code>deployments[*].helm.replaceImageTags</code></a></li></ul></li><li><a href="#helm-options">Helm Options</a><ul class="toc-headings"><li><a href="#deployments-helmwait"><code>deployments[*].helm.wait</code></a></li><li><a href="#deployments-helmtimeout"><code>deployments[*].helm.timeout</code></a></li><li><a href="#deployments-helmforce"><code>deployments[*].helm.force</code></a></li><li><a href="#deployments-helmrollback"><code>deployments[*].helm.rollback</code></a></li><li><a href="#deployments-helmtillernamespace"><code>deployments[*].helm.tillerNamespace</code></a></li></ul></li><li><a href="#useful-commands">Useful Commands</a><ul class="toc-headings"><li><a href="#devspace-add-deployment-name-chart-path-to-my-chart"><code>devspace add deployment [NAME] --chart=./path/to/my/chart</code></a></li><li><a href="#devspace-add-deployment-deployment-name-chart-stable-chart"><code>devspace add deployment [deployment-name] --chart=stable/[CHART]</code></a></li><li><a href="#devspace-remove-deployment-name"><code>devspace remove deployment [NAME]</code></a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

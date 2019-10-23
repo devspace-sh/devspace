@@ -1,0 +1,281 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Containerize a project · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes."/><meta name="docsearch:version" content="v4.1.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Containerize a project · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes."/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.1.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/workflow-basics/containerization.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Containerize a project</h1></header><article><div><span><p>If you want to deploy applications to Kubernetes, you need to package them in Docker images and define appropriate deployment configurations (e.g. Helm charts, Kubernetes manifests). DevSpace CLI can help you containerize your projects and prepare them to be deployed to Kubernetes.</p>
+<h2><a class="anchor" aria-hidden="true" id="containerize-a-project"></a><a href="#containerize-a-project" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Containerize a project</h2>
+<p>The easiest way to containerize an existing project is to run this command:</p>
+<pre><code class="hljs css language-bash">devspace init
+</code></pre>
+<p>During the initialization process, DevSpace CLI will ask you the following question:</p>
+<pre><code class="hljs css language-bash">? Seems like you <span class="hljs-keyword">do</span> not have a Dockerfile. What <span class="hljs-keyword">do</span> you want to <span class="hljs-keyword">do</span>?  [Use arrows to move, <span class="hljs-built_in">type</span> to filter]
+&gt; Create a Dockerfile <span class="hljs-keyword">for</span> me                            
+  Enter path to your Dockerfile
+  Enter path to your Kubernetes manifests
+  Enter path to your Helm chart
+  Use existing image (e.g. from Docker Hub)
+</code></pre>
+<p>If you already have a Dockerfile, let DevSpace CLI use this Dockerfile for packaging your application. If you do not have a Dockerfile yet, you can choose the first option and let DevSpace CLI create a Dockerfile for you.</p>
+<p>In order to create a Dockerfile for your project, DevSpace CLI will ask for the programming language of your application:</p>
+<pre><code class="hljs css language-bash">? Select programming language of project  [Use arrows to move, <span class="hljs-built_in">type</span> to filter]
+  csharp                       
+  go                                     
+  java                         
+&gt; javascript                               
+  none
+  php
+  python
+</code></pre>
+<p>Additionally, DevSpace CLI will ask about the port your application is running on:</p>
+<pre><code class="hljs css language-bash">? Which port is the container listening on? (Enter to skip)
+</code></pre>
+<p>With the answers to the above questions, DevSpace CLI will not only generate a Dockerfile for you but also add the configuration file <code>devspace.yaml</code>. You can freely edit your Dockerfile as well as the DevSpace configuration using any text editor or IDE.</p>
+<h2><a class="anchor" aria-hidden="true" id="containerize-a-project-containing-multiple-microservices"></a><a href="#containerize-a-project-containing-multiple-microservices" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Containerize a project containing multiple microservices</h2>
+<p>If you have multiple applications inside a single project directory (i.e. monorepo) and you want to deploy these applications together as a set of microservices, the following procedure is recommended to initialize your project:</p>
+<ol>
+<li>Make sure each of your services has a Dockerfile. You can run <code>devspace containerize</code> in the sub-folder of each of the services to create a Dockerfile. <a href="#creating-a-dockerfile">Learn more below.</a></li>
+<li>Run <code>devspace init</code> in the top-level root directory of your project</li>
+<li>During the init process, choose the option <code>Enter path to your Dockerfile</code> and enter the relative path to the Dockerfile of one of your microservices.</li>
+<li>To add each of the remaining services as deployments, run <code>devspace add deployment [service-name] --dockerfile=&quot;./path/to/your/service/Dockerfile&quot;</code></li>
+</ol>
+<p>If you already have Helm charts or Kubernetes manifests, you can also add them as a deployment using the following commands:</p>
+<pre><code class="hljs css language-bash">devspace add deployment [service-name] --chart=<span class="hljs-string">"./path/to/your/service/chart"</span>
+devspace add deployment [service-name] --manifests=<span class="hljs-string">"./path/to/your/service/manifests/**"</span>
+devspace add deployment [service-name] --image=<span class="hljs-string">"hub.docker.com/[docker-username]/[my-image]"</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="creating-a-dockerfile"></a><a href="#creating-a-dockerfile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating a Dockerfile</h2>
+<p>DevSpace CLI lets you create a Dockerfile for a project without fully initializing your project. In order to generate a Dockerfile for a project run this command inside the root directory of your project:</p>
+<pre><code class="hljs css language-bash">devspace containerize
+</code></pre>
+<p>DevSpace will ask you which programming language your project uses to create a basic Dockerfile for your project. On command completion, you should see the created Dockerfile inside your project directory.</p>
+<h3><a class="anchor" aria-hidden="true" id="customizing-your-dockerfile"></a><a href="#customizing-your-dockerfile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Customizing your Dockerfile</h3>
+<p><details>
+<summary></p>
+<h4><a class="anchor" aria-hidden="true" id="changing-the-entrypoint-start-script-in-your-dockerfile"></a><a href="#changing-the-entrypoint-start-script-in-your-dockerfile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Changing the entrypoint (start script) in your Dockerfile</h4>
+<p></summary></p>
+<p>A common issue why a container cannot be executed and this problem is usually discovered only later is because of a wrongly defined entrypoint that is not existent. In the nodejs Dockerfile example:</p>
+<pre><code class="hljs css language-Dockerfile"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">8.11</span>.<span class="hljs-number">4</span>
+
+<span class="hljs-keyword">RUN</span><span class="bash"> mkdir /app</span>
+<span class="hljs-keyword">WORKDIR</span><span class="bash"> /app</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> package.json .</span>
+<span class="hljs-keyword">RUN</span><span class="bash"> npm install</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> . .</span>
+
+<span class="hljs-comment"># This is the command that will be executed </span>
+<span class="hljs-keyword">CMD</span><span class="bash"> [<span class="hljs-string">"npm"</span>, <span class="hljs-string">"start"</span>]</span>
+</code></pre>
+<p>the line <code>CMD [&quot;npm&quot;, &quot;start&quot;]</code> specifies the executed command on container start. If your <code>package.json</code> has no start script defined, the container will fail to execute. Let's say you want to change the start command to <code>node index.js</code>, you would rewrite the Dockerfile like this:</p>
+<pre><code class="hljs css language-Dockerfile"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">8.11</span>.<span class="hljs-number">4</span>
+
+<span class="hljs-keyword">RUN</span><span class="bash"> mkdir /app</span>
+<span class="hljs-keyword">WORKDIR</span><span class="bash"> /app</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> package.json .</span>
+<span class="hljs-keyword">RUN</span><span class="bash"> npm install</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> . .</span>
+
+<span class="hljs-comment"># This is the command that will be executed </span>
+<span class="hljs-keyword">CMD</span><span class="bash"> [<span class="hljs-string">"node"</span>, <span class="hljs-string">"index.js"</span>]</span>
+</code></pre>
+<p></details></p>
+<h3><a class="anchor" aria-hidden="true" id="troubleshooting-your-dockerfile"></a><a href="#troubleshooting-your-dockerfile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Troubleshooting your Dockerfile</h3>
+<p>In order to verify that your Dockerfile is working corretly, you can simply build it with this command:</p>
+<pre><code class="hljs css language-bash">docker build .
+</code></pre>
+<p><em>Running the above command requires Docker to be installed on your computer.</em></p>
+<blockquote>
+<p>In general it is a good idea to look at the official <a href="https://docs.docker.com/develop/">Docker documentation</a> and the <a href="https://docs.docker.com/develop/develop-images/dockerfile_best-practices/">best practices how to write a Dockerfile</a>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="common-issues-with-your-dockerfile"></a><a href="#common-issues-with-your-dockerfile" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Common issues with your Dockerfile</h4>
+<p><details>
+<summary></p>
+<h5><a class="anchor" aria-hidden="true" id="error-no-such-file-or-directory"></a><a href="#error-no-such-file-or-directory" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Error: No such file or directory</h5>
+<p></summary></p>
+<p>A common issue why a docker build with the predefined docker files is because some files are missing in the project we assume you habe. Take a look a the nodejs example Dockerfile:</p>
+<pre><code class="hljs css language-Dockerfile"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">8.11</span>.<span class="hljs-number">4</span>
+
+<span class="hljs-keyword">RUN</span><span class="bash"> mkdir /app</span>
+<span class="hljs-keyword">WORKDIR</span><span class="bash"> /app</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> package.json .</span>
+<span class="hljs-keyword">RUN</span><span class="bash"> npm install</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> . .</span>
+
+<span class="hljs-keyword">CMD</span><span class="bash"> [<span class="hljs-string">"npm"</span>, <span class="hljs-string">"start"</span>]</span>
+</code></pre>
+<p>In this Dockerfile it is assumed your project has a <code>package.json</code>, however not all nodejs projects have such a file. Running <code>docker build .</code> without a <code>package.json</code> can yield the following result:</p>
+<pre><code class="hljs css language-Bash">Sending build context to Docker daemon  283.6kB
+Step 1/10 : FROM node:8.11.4
+ ---&gt; 8198006b2b57
+[...]
+Step 4/10 : COPY package.json .
+COPY failed: <span class="hljs-built_in">stat</span> /var/lib/docker/tmp/docker-builder846046622/package.json: no such file or directory
+</code></pre>
+<p>This error indicates that docker cannot find the file <code>package.json</code> in your project, but it is required in Step 4, hence docker build fails. You can adjust the Dockerfile like this:</p>
+<pre><code class="hljs"><span class="hljs-keyword">FROM</span> node:<span class="hljs-number">8.11</span>.<span class="hljs-number">4</span>
+
+<span class="hljs-keyword">RUN</span><span class="bash"> mkdir /app</span>
+<span class="hljs-keyword">WORKDIR</span><span class="bash"> /app</span>
+
+<span class="hljs-keyword">COPY</span><span class="bash"> . .</span>
+
+<span class="hljs-keyword">CMD</span><span class="bash"> [<span class="hljs-string">"node"</span>, <span class="hljs-string">"index.js"</span>]</span>
+</code></pre>
+<p>and skip the dependency installation. Bear in mind that you also have to change the entrypoint of the container, since <code>npm start</code> will not work without a <code>package.json</code>.
+</details></p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/13/2019</em></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#containerize-a-project">Containerize a project</a></li><li><a href="#containerize-a-project-containing-multiple-microservices">Containerize a project containing multiple microservices</a></li><li><a href="#creating-a-dockerfile">Creating a Dockerfile</a><ul class="toc-headings"><li><a href="#customizing-your-dockerfile">Customizing your Dockerfile</a></li><li><a href="#troubleshooting-your-dockerfile">Troubleshooting your Dockerfile</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>

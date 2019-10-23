@@ -1,0 +1,525 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Configuring Build Tools · DevSpace Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="The `build` option of each image (under `images`) defines which build tool DevSpace uses to build the image. The following build tools are currently supported:"/><meta name="docsearch:version" content="v4.0.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Configuring Build Tools · DevSpace Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://devspace.cloud/"/><meta property="og:description" content="The `build` option of each image (under `images`) defines which build tool DevSpace uses to build the image. The following build tools are currently supported:"/><meta property="og:image" content="https://devspace.cloud/img/devspace-logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://devspace.cloud/img/devspace-logo.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-dark.min.css"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Play|Kanit:400"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="/js/code-block-line-numbers.js"></script><script type="text/javascript" src="/js/responsive-menu.js"></script><script type="text/javascript" src="/js/tag-manager.js"></script><script type="text/javascript" src="/js/onpage-nav.js"></script><script type="text/javascript" src="/js/star-button.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/devspace-logo.svg" alt="DevSpace Documentation"/></a><a href="/versions"><h3>v4.0.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/introduction" target="_self">Docs</a></li><li class=""><a href="https://github.com/devspace-cloud/devspace" target="_self">GitHub</a></li><li class=""><a href="https://devspace.cloud/blog" target="_self">Blog</a></li><li class=""><a href="https://devspace.cloud/help/" target="_self"></a></li><li class=""><a href="https://app.devspace.cloud/" target="_self">Login</a></li><li class=""><a href="#" target="_self"></a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search..." title="Search..."/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Configuration</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Introduction<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/introduction">Introduction to DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/what-is-devspace-cli">DevSpace</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Getting Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/installation">1. Install DevSpace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/deployment">2. Deploy to Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/getting-started/development">3. Develop inside Kubernetes</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Image Building<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/overview-specification">Configuration</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/build-tools">Build Tools</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/configuration/build-options">Build Options</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/best-practices">Best Practices</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/image-building/advanced/cleanup">Cleanup Images</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Deployment<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Deployment Types</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/deployment-types">Types of Deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/what-are-components">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/helm-charts/what-are-helm-charts">Helm Charts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/what-are-manifests">Manifests (kubectl)</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/configuration">Configuration</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Components)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/overview-specification">Components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/containers">Containers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/volumes">Volumes</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/service">Service</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/ingress">Ingress (Domain)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/components/configuration/scaling">Scaling</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Helm Charts)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/helm-charts/configuration/overview-specification">Helm Charts</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration (Manifests)</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/configuration/overview-specification">Manifests (kubectl)</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/kubernetes-manifests/configuration/kustomize">kustomize</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/deployment/advanced/dependencies">Dependencies</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Development<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/workflow-basics">Workflow &amp; Basics</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Configuration</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/overview-specification">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/port-forwarding">Port Forwarding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/auto-open">Auto-Open</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/file-synchronization">File Sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/logs-streaming">Log Streaming</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/auto-reloading">Auto-Realoding</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/configuration/interactive-mode">Interactive Mode</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Advanced Topics</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/advanced/advanced-topics">Advanced Topics</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/development/advanced/remote-debuggers">Remote Debugging</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Advanced Configuration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/reference">Config Reference</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/variables">Config Variables</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/profiles-patches">Profiles &amp; Patches</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/custom-commands">Custom Commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/configuration/hooks">Hooks</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">CLI Reference<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace add</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add">devspace add</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_add_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace analyze</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_analyze">devspace analyze</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace attach</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_attach">devspace attach</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace build</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_build">devspace build</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace cleanup</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_cleanup">devspace cleanup</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_cleanup_images">images</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace connect</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_connect">devspace connect</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_connect_cluster">cluster</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace create</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_create">devspace create</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_create_space">space</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace deploy</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_deploy">devspace deploy</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace dev</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_dev">devspace dev</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace enter</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_enter">devspace enter</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace init</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_init">devspace init</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace list</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list">devspace list</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_available-components">available-components</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_clusters">clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_commands">commands</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_contexts">contexts</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_deployments">deployments</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_namespaces">namespaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_ports">ports</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_profiles">profiles</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_providers">providers</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_spaces">spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_sync">sync</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_list_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace login</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_login">devspace login</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace logs</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_logs">devspace logs</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace open</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_open">devspace open</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace purge</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_purge">devspace purge</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace remove</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove">devspace remove</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_cluster">cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_deployment">deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_image">image</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_port">port</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_space">space</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_remove_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace reset</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset">devspace reset</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset_key">key</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_reset_vars">vars</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace set</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_set">devspace set</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_set_analytics">analytics</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace status</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_status">devspace status</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_status_sync">sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace sync</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_sync">devspace sync</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace ui</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_ui">devspace ui</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace update</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update">devspace update</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update_config">config</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_update_dependencies">dependencies</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace upgrade</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_upgrade">devspace upgrade</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">devspace use</h4><ul><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use">devspace use</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_context">context</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_namespace">namespace</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_profile">profile</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_provider">provider</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cli/commands/devspace_use_space">space</a></li></ul></div></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">DevSpace Cloud<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/what-is-devspace-cloud">DevSpace Cloud</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Spaces<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/what-are-spaces">What is a Space?</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/create-spaces">Create Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/delete-spaces">Delete Spaces</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/domains">Domains</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/resource-limits">Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/spaces/pause-spaces">Pause Spaces</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Domains<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/domains/workflow">Workflow</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/domains/certificates">SSL certificates (TLS)</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Images<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/images/dscr-io">dscr.io</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Clusters<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/connect">Connect external clusters</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/users">Manage cluster users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/limits">Configure Space Limits</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/clusters/access">Encryption keys</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Teams<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/teams/teams">Teams</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Administration<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/users">Users</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/authentication">Authentication</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/registry">Private docker registry</a></li><li class="navListItem"><a class="navItem" href="/docs/v4.0.4/cloud/admin/settings">Settings</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/devspace-cloud/devspace/edit/master/docs/pages/cli/image-building/configuration/build-tools.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Configuring Build Tools</h1></header><article><div><span><p>The <code>build</code> option of each image (under <code>images</code>) defines which build tool DevSpace uses to build the image. The following build tools are currently supported:</p>
+<ul>
+<li><a href="#docker"><code>docker</code></a> for building images using a Docker daemon (<strong>default build tool</strong>, <a href="../../../cli/image-building/workflow-basics#docker-daemon-of-local-kubernetes-clusters">prefers Docker daemon of local Kubernetes clusters</a>)</li>
+<li><a href="#kaniko"><code>kaniko</code></a> for building images directly inside Kubernetes (<a href="#dockerdisablefallback-kaniko-as-fallback-for-docker">fallback for <code>docker</code></a>)</li>
+<li><a href="#custom"><code>custom</code></a> for building images with a custom build command (e.g. for using Google Cloud Build)</li>
+<li><a href="#disabled"><code>disabled</code></a> for disabling image building for this image</li>
+</ul>
+<blockquote>
+<p>Different images can be built using different build tools.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="docker-default"></a><a href="#docker-default" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>docker</code> (default)</h2>
+<p>If nothing is specified, DevSpace always tries to build the image using <code>docker</code> as build tool.</p>
+<h3><a class="anchor" aria-hidden="true" id="dockerdisablefallback-kaniko-as-fallback-for-docker"></a><a href="#dockerdisablefallback-kaniko-as-fallback-for-docker" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>docker.disableFallback</code> <em>Kaniko as Fallback for Docker</em></h3>
+<p>When using <code>docker</code> as build tool, DevSpace checks if Docker is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image unless the option <a href="#dockerdisablefallback-kaniko-as-fallback-for-docker"><code>disableFallback</code></a> is set to <code>false</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-disablefallback"></a><a href="#default-value-for-disablefallback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>disableFallback</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">disableFallback:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-disabling-kaniko-fallback"></a><a href="#example-disabling-kaniko-fallback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Disabling kaniko Fallback</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">  frontend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/${DEVSPACE_USERNAME}/appfrontend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      docker:</span>
+<span class="hljs-attr">        disableFallback:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The first image <code>backend</code> would be built using Docker and if Docker is not available, the image would be built using kaniko as a fallback.</li>
+<li>The second image <code>frontend</code> would be built using Docker and if Docker is not available, DevSpace would exit with a fatal error instead of using the kaniko fallback.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="dockerpreferminikube-building-images-in-minikube"></a><a href="#dockerpreferminikube-building-images-in-minikube" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>docker.preferMinikube</code> <em>Building Images in Minikube</em></h3>
+<p>DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named <code>minikube</code>, <code>docker-desktop</code> or <code>docker-for-desktop</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-preferminikube"></a><a href="#default-value-for-preferminikube" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>preferMinikube</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">preferMinikube:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-building-images-in-minikube"></a><a href="#example-building-images-in-minikube" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Building Images in Minikube</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      docker:</span>
+<span class="hljs-attr">        preferMinikube:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">        skipPush:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">  frontend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/${DEVSPACE_USERNAME}/appfrontend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      docker:</span>
+<span class="hljs-attr">        preferMinikube:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The first image <code>backend</code> would be preferably built with Minikube's Docker daemon and the image would <strong>not</strong> be pushed to a registry.</li>
+<li>The second image <code>frontend</code> would <strong>not</strong> be built with the Docker daemon of Minikube and it would be pushed to a registry after building and tagging the image using Docker (or kaniko as fallback).</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="dockerskippush"></a><a href="#dockerskippush" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>docker.skipPush</code></h3>
+<p>The <code>skipPush</code> option expects a boolean value stating if pushing the image to a registry should be skipped during the build process.</p>
+<p>If DevSpace is using a local Kubernetes cluster (e.g. minikube or Docker Kubernetes), pushing images might not be necessary because the image might already be accessible by Kubernetes via a local Docker daemon. In this case, it can make sense to speed up the process by setting <code>skipPush</code> to <code>true</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-skippush"></a><a href="#default-value-for-skippush" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>skipPush</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">skipPush:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example"></a><a href="#example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h4>
+<p><strong>See &quot;<a href="#example-building-images-in-minikube">Example: Building Images in Minikube</a>&quot;</strong></p>
+<h3><a class="anchor" aria-hidden="true" id="dockeroptions"></a><a href="#dockeroptions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>docker.options</code></h3>
+<p>The build tool <code>docker</code> allow you to define an <code>options</code> section for the following settings:</p>
+<ul>
+<li><a href="../../../cli/image-building/configuration/build-options#target"><code>target</code></a> defining the build target for multi-stage builds</li>
+<li><a href="../../../cli/image-building/configuration/build-options#network"><code>network</code></a> to define which network to use during building (e.g. <code>docker build --network=host</code>)</li>
+<li><a href="../../../cli/image-building/configuration/build-options#buildargs"><code>buildArgs</code></a> to pass arguments to the Dockerfile during the build process</li>
+</ul>
+<p>See <a href="../../../cli/image-building/configuration/build-options">Build Options</a> for details.</p>
+<h2><a class="anchor" aria-hidden="true" id="kaniko"></a><a href="#kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko</code></h2>
+<p>Using <code>kaniko</code> as build tool allows you to build images direclty inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using <code>kaniko</code>.</p>
+<blockquote>
+<p>After the build process completes, the build pod started for the kaniko build process will be deleted again.</p>
+</blockquote>
+<p>To set <code>kaniko</code> as default build tool use the following configuration:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        cache:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="kanikocache"></a><a href="#kanikocache" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.cache</code></h3>
+<p>The <code>cache</code> option expects a boolean that states if kaniko should make use of layer caching by pulling the previously build image and using the layers of this image as cache.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-cache"></a><a href="#default-value-for-cache" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>cache</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">cache:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-building-images-with-kaniko"></a><a href="#example-building-images-with-kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Building Images with kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        cache:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">  frontend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/${DEVSPACE_USERNAME}/appfrontend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        cache:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The first image <code>backend</code> would be built using kaniko and make use of the build cache.</li>
+<li>The second image <code>frontend</code> would be built using kaniko and <strong>not</strong> use the build cache.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="kanikosnapshotmode"></a><a href="#kanikosnapshotmode" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.snapshotMode</code></h3>
+<p>The <code>snapshotMode</code> option expects a string that can have the following values:</p>
+<ul>
+<li><code>full</code> tells kaniko to do a full filesystem snapshot (default)</li>
+<li><code>time</code> tells kaniko to do a filesystem snapshot based on <code>mtime</code></li>
+</ul>
+<blockquote>
+<p>See <a href="https://github.com/GoogleContainerTools/kaniko#mtime-and-snapshotting">limitations related to kaniko snapshots using <code>mtime</code></a>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-snapshotmode"></a><a href="#default-value-for-snapshotmode" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>snapshotMode</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">snapshotMode:</span> <span class="hljs-string">full</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-building-images-with-kaniko-1"></a><a href="#example-building-images-with-kaniko-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Building Images with kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        cache:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">  frontend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/${DEVSPACE_USERNAME}/appfrontend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        snapshotMode:</span> <span class="hljs-string">time</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The first image <code>backend</code> would be built using kaniko and creating full filesystem snapshots.</li>
+<li>The second image <code>frontend</code> would be built using kaniko and calculate filesystem snapthots only based on <code>mtime</code>.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="kanikoflags"></a><a href="#kanikoflags" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.flags</code></h3>
+<p>The <code>flags</code> option expects an array of strings that will be passed as flags and values for these flags when running the kaniko build command.</p>
+<blockquote>
+<p>Take a look at the kaniko documentation for a full <a href="https://github.com/GoogleContainerTools/kaniko#additional-flags">list of available flags</a>.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-flags"></a><a href="#default-value-for-flags" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>flags</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">flags:</span> <span class="hljs-string">[]</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-passing-flags-to-kaniko"></a><a href="#example-passing-flags-to-kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Passing Flags to kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        flags:</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-bullet">--cache-dir</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">/tmp</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-bullet">--verbosity</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">debug</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using kaniko and the flags <code>--cache-dir=/tmp --verbosity=debug</code> would be set when running the build command within the kaniko pod used for image building.</p>
+<h3><a class="anchor" aria-hidden="true" id="kanikonamespace"></a><a href="#kanikonamespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.namespace</code></h3>
+<p>The <code>namespace</code> option expects a string stating a namespace that should be used to start the kaniko build pod in.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-flags-1"></a><a href="#default-value-for-flags-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>flags</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">namespace:</span> <span class="hljs-string">""</span> <span class="hljs-comment"># defaults to the default namespace of the current kube-context</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-different-namespace-for-kaniko"></a><a href="#example-different-namespace-for-kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Different Namespace For kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        namespace:</span> <span class="hljs-string">build-namespace</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using kaniko and the build pod started to run the kaniko build process would be created within the namespace <code>build-namespace</code> within the cluster that the current kube-context points to.</p>
+<h3><a class="anchor" aria-hidden="true" id="kanikoinsecure"></a><a href="#kanikoinsecure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.insecure</code></h3>
+<p>The <code>insecure</code> option expects a boolean stating if kaniko should allow to push to an insecure (plain HTTP instead of HTTPS) registry.</p>
+<blockquote>
+<p>This option should only be set to <code>true</code> for testing purposes.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-insecure"></a><a href="#default-value-for-insecure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>insecure</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">insecure:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-push-to-insecure-registry-with-kaniko"></a><a href="#example-push-to-insecure-registry-with-kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Push to Insecure Registry With kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-number">123.456</span><span class="hljs-number">.789</span><span class="hljs-number">.0</span><span class="hljs-string">:5000/john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        namespace:</span> <span class="hljs-string">build-namespace</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using kaniko and pushing to the insecure registry <code>123.456.789.0:5000</code> would be allowed.</p>
+<h3><a class="anchor" aria-hidden="true" id="kanikopullsecret"></a><a href="#kanikopullsecret" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.pullSecret</code></h3>
+<p>The <code>pullSecret</code> option expects a string with the name of a Kubernetes secret which is used by kaniko as pull secret (e.g. for pulling the base image defined in the <code>FROM</code> statement of the Dockerfile).</p>
+<blockquote>
+<p>In most cases, DevSpace already makes sure that kaniko gets the correct pull secrets to push and pull to registries.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-pullsecret"></a><a href="#default-value-for-pullsecret" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>pullSecret</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">pullSecret:</span> <span class="hljs-string">""</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-pull-secret-for-kaniko"></a><a href="#example-pull-secret-for-kaniko" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Pull Secret For kaniko</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      kaniko:</span>
+<span class="hljs-attr">        pullSecret:</span> <span class="hljs-string">custom-pull-secret</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using kaniko and kaniko would use the Kubernete secret <code>custom-pull-secret</code> to pull images from registries that require authentication.</p>
+<h3><a class="anchor" aria-hidden="true" id="kanikooptions"></a><a href="#kanikooptions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>kaniko.options</code></h3>
+<p>The build tool <code>kaniko</code> allow you to define an <code>options</code> section for the following settings:</p>
+<ul>
+<li><a href="../../../cli/image-building/configuration/build-options#target"><code>target</code></a> defining the build target for multi-stage builds</li>
+<li><a href="../../../cli/image-building/configuration/build-options#network"><code>network</code></a> to define which network to use during building (similar to <code>docker build --network=host</code>)</li>
+<li><a href="../../../cli/image-building/configuration/build-options#buildargs"><code>buildArgs</code></a> to pass arguments to the Dockerfile during the build process</li>
+</ul>
+<p>See <a href="../../../cli/image-building/configuration/build-options">Build Options</a> for details.</p>
+<h2><a class="anchor" aria-hidden="true" id="custom"></a><a href="#custom" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>custom</code></h2>
+<p>Using <code>custom</code> as build tool allows you to define a custom command for building images. This is particularly useful if you want to use a remote build system such as Google Cloud Build.</p>
+<blockquote>
+<p>Make sure your <code>custom</code> build command terminates with exit code 0 when the build process was successful.</p>
+</blockquote>
+<h3><a class="anchor" aria-hidden="true" id="customcommand"></a><a href="#customcommand" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>custom.command</code></h3>
+<p>The <code>onChange</code> option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.</p>
+<blockquote>
+<p>It is highly recommended to specify this option when using <code>custom</code> as build tool in order to speed up the build process.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="example-building-images-with-custom-build-command"></a><a href="#example-building-images-with-custom-build-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Building Images With <code>custom</code> Build Command</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      custom:</span>
+<span class="hljs-attr">        command:</span> <span class="hljs-string">./build</span>
+<span class="hljs-attr">        args:</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"--arg1"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"arg-value-1"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"--arg2"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"arg-value-2"</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using the command <code>./build --arg1=arg-value-1 --arg2=arg-value-2 &quot;[IMAGE]:[TAG]&quot;</code> while <code>[IMAGE]</code> would be replaced with the <code>image</code> option (in this case: <code>john/appbackend</code>) and <code>[TAG]</code> would be replaced with the tag generated according to the <a href="../../../cli/image-building/configuration/overview-specification#images-tag-tagging-schema">tagging schema</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="customargs"></a><a href="#customargs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>custom.args</code></h3>
+<p>The <code>onChange</code> option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-args"></a><a href="#default-value-for-args" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>args</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">onChange:</span> <span class="hljs-string">[]</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-1"></a><a href="#example-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h4>
+<p><strong>See &quot;<a href="#example-building-images-with-custom-build-command">Example: Building Images With <code>custom</code> Build Command</a>&quot;</strong></p>
+<h3><a class="anchor" aria-hidden="true" id="customimageflag"></a><a href="#customimageflag" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>custom.imageFlag</code></h3>
+<p>The <code>onChange</code> option expects a string which states the name of the flag that is used to pass the image name (including auto-generated tag) to the custom build script defined in <code>command</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-imageflag"></a><a href="#default-value-for-imageflag" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>imageFlag</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">imageFlag:</span> <span class="hljs-string">""</span> <span class="hljs-comment"># Defaults to passing image and tag as an argument instead of using a flag</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-defining-imageflag-for-custom-build-command"></a><a href="#example-defining-imageflag-for-custom-build-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Defining <code>imageFlag</code> For <code>custom</code> Build Command</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      custom:</span>
+<span class="hljs-attr">        command:</span> <span class="hljs-string">./build</span>
+<span class="hljs-attr">        imageFlag:</span> <span class="hljs-string">image</span>
+<span class="hljs-attr">        args:</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"--arg1"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"arg-value-1"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"--arg2"</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">"arg-value-2"</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using the command <code>./build --arg1=arg-value-1 --arg2=arg-value-2 --image=&quot;[IMAGE]:[TAG]&quot;</code> while <code>[IMAGE]</code> would be replaced with the <code>image</code> option (in this case: <code>john/appbackend</code>) and <code>[TAG]</code> would be replaced with the tag generated according to the <a href="../../../cli/image-building/configuration/overview-specification#images-tag-tagging-schema">tagging schema</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="customonchange"></a><a href="#customonchange" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>custom.onChange</code></h3>
+<p>The <code>onChange</code> option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.</p>
+<blockquote>
+<p>It is highly recommended to specify this option when using <code>custom</code> as build tool in order to speed up the build process.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-onchange"></a><a href="#default-value-for-onchange" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>onChange</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">onChange:</span> <span class="hljs-string">[]</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-onchange-option-for-custom-build-command"></a><a href="#example-onchange-option-for-custom-build-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: OnChange Option For custom Build Command</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      custom:</span>
+<span class="hljs-attr">        command:</span> <span class="hljs-string">./build</span>
+<span class="hljs-attr">        imageFlag:</span> <span class="hljs-string">image</span>
+<span class="hljs-attr">        onChange:</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">some/path/</span>
+<span class="hljs-bullet">        -</span> <span class="hljs-string">another/path/file.txt</span>
+</code></pre>
+<p><strong>Explanation:</strong>  <br>
+The image <code>backend</code> would be built using the command <code>./build --image=&quot;[IMAGE]:[TAG]&quot;</code> and DevSpace would skip the build if none of the files within <code>some/path/</code> nor the file <code>another/path/file.txt</code> has changed since the last build.</p>
+<h2><a class="anchor" aria-hidden="true" id="disabled"></a><a href="#disabled" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>disabled</code></h2>
+<p>The <code>disabled</code> option expects a boolean and allows you to disable image building for an image.</p>
+<p>This config option may be useful when developing an application that takes long to build and does not need to be rebuild very frequently because the <a href="../../../cli/development/configuration/file-synchronization">file synchronization</a> in development mode is much quicker to update the development container than rebuilding the image. In this case, you could set <code>disabled: true</code> and manually rebuild if needed using <code>devspace build</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="default-value-for-disabled"></a><a href="#default-value-for-disabled" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Default Value For <code>disabled</code></h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">disabled:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-disabling-image-building"></a><a href="#example-disabling-image-building" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example: Disabling Image Building</h4>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">images:</span>
+<span class="hljs-attr">  backend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">john/appbackend</span>
+<span class="hljs-attr">  frontend:</span>
+<span class="hljs-attr">    image:</span> <span class="hljs-string">dscr.io/${DEVSPACE_USERNAME}/appfrontend</span>
+<span class="hljs-attr">    build:</span>
+<span class="hljs-attr">      disabled:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>The first image <code>backend</code> would be built using <a href="#docker-default"><code>docker</code></a> which is the default build tool.</li>
+<li>The second image <code>frontend</code> would not be built at all.</li>
+</ul>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 9/24/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/v4.0.4/cli/image-building/configuration/overview-specification"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/v4.0.4/cli/image-building/configuration/build-options"><span>Build Options</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#docker-default"><code>docker</code> (default)</a><ul class="toc-headings"><li><a href="#dockerdisablefallback-kaniko-as-fallback-for-docker"><code>docker.disableFallback</code> <em>Kaniko as Fallback for Docker</em></a></li><li><a href="#dockerpreferminikube-building-images-in-minikube"><code>docker.preferMinikube</code> <em>Building Images in Minikube</em></a></li><li><a href="#dockerskippush"><code>docker.skipPush</code></a></li><li><a href="#dockeroptions"><code>docker.options</code></a></li></ul></li><li><a href="#kaniko"><code>kaniko</code></a><ul class="toc-headings"><li><a href="#kanikocache"><code>kaniko.cache</code></a></li><li><a href="#kanikosnapshotmode"><code>kaniko.snapshotMode</code></a></li><li><a href="#kanikoflags"><code>kaniko.flags</code></a></li><li><a href="#kanikonamespace"><code>kaniko.namespace</code></a></li><li><a href="#kanikoinsecure"><code>kaniko.insecure</code></a></li><li><a href="#kanikopullsecret"><code>kaniko.pullSecret</code></a></li><li><a href="#kanikooptions"><code>kaniko.options</code></a></li></ul></li><li><a href="#custom"><code>custom</code></a><ul class="toc-headings"><li><a href="#customcommand"><code>custom.command</code></a></li><li><a href="#customargs"><code>custom.args</code></a></li><li><a href="#customimageflag"><code>custom.imageFlag</code></a></li><li><a href="#customonchange"><code>custom.onChange</code></a></li></ul></li><li><a href="#disabled"><code>disabled</code></a></li></ul></nav></div><footer class="nav-footer" id="footer"><div class="star-button"><script async="" defer="" src="https://buttons.github.io/buttons.js"></script><a class="github-button" href="https://github.com/devspace-cloud/devspace" data-size="large" data-show-count="true" aria-label="Star devspace-cloud/devspace on GitHub">Star</a></div><script type="text/javascript">
+        var versionMeta = document.querySelector("head > meta[name='docsearch:version']");
+        var sidebarVersions = {
+          "v3.5.18": "v3", 
+          "v4.0.0": "v4", 
+          "v4.0.3": "v4",
+          "v4.1.0": "v4",
+        };
+
+        if (versionMeta) {
+          let version = versionMeta.getAttribute("content");
+          let sidebarVersionsArray = Object.keys(sidebarVersions);
+          let sidebarVersion = sidebarVersions[sidebarVersionsArray[sidebarVersionsArray.length - 1]];
+          
+          if (version != "next") {
+            let versionSplit = version.split(".");
+            let major = versionSplit[0].substr(1);
+            let minor = versionSplit[1];
+            let revision = versionSplit[2];
+
+            for (let versionKey in sidebarVersions) {
+              let sidebarVersionSplit = versionKey.split(".");
+              let sidebarMajor = sidebarVersionSplit[0].substr(1);
+              let sidebarMinor = sidebarVersionSplit[1];
+              let sidebarRevision = sidebarVersionSplit[2];
+
+              if (major > sidebarMajor || (major == sidebarMajor && minor > sidebarMinor) || (major == sidebarMajor && minor == sidebarMinor && revision >= sidebarRevision)) {
+                sidebarVersion = sidebarVersions[versionKey];
+              } else {
+                break;
+              }
+            }
+          }
+
+          document.querySelector("body").setAttribute("data-version", version);
+          document.querySelector("body").setAttribute("data-sidebar-version", sidebarVersion);
+        }
+
+        if (location.hostname == "devspace.cloud") {
+          document.querySelector(".headerWrapper > header > a:nth-child(2)").setAttribute("href", "/docs/versions");
+        }
+        </script><div><script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="08987a04-b098-439a-b8ab-fe3be234f153";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script type="text/javascript">const dsAnalytics = {
+    nonAdParams: {},
+    adParams: {
+        utm_source: null,
+        utm_term: null,
+        utm_campaign: null,
+        utm_medium: null,
+        utm_content: null,
+        adgroupid: null,
+        ad_position: null,
+        extension: null,
+        target: null,
+        placement: null,
+        gclid: null
+    },
+    accountId: undefined,
+    start: function () {
+        var accountId = document.cookie.replace(/^(.*;)?\s*account_id=([^;]*).*$/gi, "$2");
+        if (accountId != document.cookie) {
+            dsAnalytics.accountId = accountId;
+        }
+        dsAnalytics.removeAdUrlParams();
+        const interval1 = setInterval(() => {
+            if (dsAnalytics.analyticsView()) {
+                clearInterval(interval1);
+            }
+        }, 1000);
+    },
+    removeAdUrlParams: function () {
+        const params = location.search.replace(/^\?/, "").split("&");
+        let targetQueryString = "";
+        for (const param of params) {
+            const paramSplit = param.split("=");
+            const paramName = paramSplit[0];
+            const paramValue = paramSplit[1];
+            if (paramName) {
+                if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                    dsAnalytics.adParams[paramName] = paramValue;
+                    localStorage.setItem(localStoragePrefix + paramName, paramValue);
+                }
+                else {
+                    dsAnalytics.nonAdParams[paramName] = paramValue;
+                    if (targetQueryString.length === 0) {
+                        targetQueryString += "?";
+                    }
+                    else {
+                        targetQueryString += "&";
+                    }
+                    targetQueryString += paramName;
+                    if (paramValue) {
+                        targetQueryString += "=" + paramValue;
+                    }
+                }
+            }
+        }
+        if (targetQueryString !== location.search) {
+            const history = window.history;
+            const targetURL = location.protocol +
+                "//" +
+                location.host +
+                location.pathname +
+                targetQueryString +
+                location.hash;
+            history.pushState({}, document.title, targetURL);
+        }
+    },
+    analyticsView: function () {
+        const dataLayer = window.dataLayer;
+        if (dataLayer) {
+            const data = {
+                event: "user_identified"
+            };
+            if (dsAnalytics.accountId) {
+                data.account_id = dsAnalytics.accountId;
+            }
+            dataLayer.push(data);
+            return true;
+        }
+    },
+    getAdParams: function () {
+        dsAnalytics.removeAdUrlParams();
+        const params = {};
+        for (const paramName in dsAnalytics.adParams) {
+            if (dsAnalytics.adParams.hasOwnProperty(paramName)) {
+                let paramValue = localStorage.getItem(localStoragePrefix + paramName);
+                if (paramValue) {
+                    paramValue = decodeURIComponent(paramValue);
+                }
+                params[paramName] = paramValue;
+            }
+        }
+        return params;
+    }
+};
+        dsAnalytics.start();</script></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KM6KSWG" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '4339e8c4d6313d53209b996a35e7c0d5',
+                indexName: 'devspace',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script><script src="http://localhost:undefined/livereload.js"></script></body></html>
