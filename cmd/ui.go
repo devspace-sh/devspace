@@ -14,6 +14,8 @@ import (
 // UICmd holds the open cmd flags
 type UICmd struct {
 	*flags.GlobalFlags
+
+	Dev bool
 }
 
 // NewUICmd creates a new ui command
@@ -34,6 +36,7 @@ Opens the client ui in the browser
 		RunE: cmd.RunUI,
 	}
 
+	uiCmd.Flags().BoolVar(&cmd.Dev, "dev", false, "Will ignore download ui errors")
 	return uiCmd
 }
 
@@ -90,7 +93,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(client, config, generatedConfig, log.GetInstance())
+	server, err := server.NewServer(client, config, generatedConfig, cmd.Dev, log.GetInstance())
 	if err != nil {
 		return err
 	}

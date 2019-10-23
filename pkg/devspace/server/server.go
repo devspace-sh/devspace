@@ -29,10 +29,14 @@ func enableCors(w *http.ResponseWriter) {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, log log.Logger) (*Server, error) {
+func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
-		return nil, errors.Wrap(err, "download ui")
+		if !ignoreDownloadError {
+			return nil, errors.Wrap(err, "download ui")
+		}
+
+		log.Warnf("Couldn't download ui: %v", err)
 	}
 
 	// Find an open port
