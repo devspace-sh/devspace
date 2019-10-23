@@ -7,17 +7,16 @@ import LogsList, { SelectedLogs } from 'components/views/Logs/LogsList/LogsList'
 import { V1PodList } from '@kubernetes/client-node';
 import Loading from 'components/basic/Loading/Loading';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
-import ErrorMessage from 'components/basic/ErrorMessage/ErrorMessage';
 import { ApiHostname } from 'lib/rest';
 import LogsLinkTabSelector from 'components/basic/LinkTabSelector/LogsLinkTabSelector/LogsLinkTabSelector';
 import TerminalCache from 'lib/TerminalCache';
+import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 
-interface Props extends DevSpaceConfigContext, PopupContext, RouteComponentProps {}
+interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
 interface State {
   podList?: V1PodList;
   selected?: SelectedLogs;
-  error?: Error;
 }
 
 class LogsContainers extends React.PureComponent<Props, State> {
@@ -49,30 +48,40 @@ class LogsContainers extends React.PureComponent<Props, State> {
         `http://${ApiHostname()}/api/resource?resource=pods&namespace=${this.props.devSpaceConfig.kubeNamespace}`
       );
       if (response.status !== 200) {
-        this.setState({
-          error: new Error(await response.text()),
-        });
-        return;
+        throw new Error(await response.text());
       }
 
       const podList = await response.json();
 
-      this.cache.updateCache(podList);
-      this.setState({
-        error: null,
-        podList,
-      });
-
-      this.timeout = setTimeout(this.componentDidMount, 1000);
-    } catch (err) {
-      if (err && err.message === 'Failed to fetch') {
-        err = new Error('Failed to fetch pods. Is the UI server running?');
+      if (
+        this.props.warning.getActive() &&
+        typeof this.props.warning.getActive().children === 'string' &&
+        this.props.warning
+          .getActive()
+          .children.toString()
+          .indexOf('Containers:') === 0
+      ) {
+        this.props.warning.close();
       }
 
+      this.cache.updateCache(podList);
       this.setState({
-        error: err,
+        podList,
       });
+    } catch (err) {
+      let message = err.message;
+      if (message === 'Failed to fetch') {
+        message = 'Containers: Failed to fetch pods. Is the UI server running?';
+      } else {
+        message = 'Containers: Error retrieving pods: ' + message;
+      }
+
+      if (!this.props.warning.getActive()) {
+        this.props.warning.show(message);
+      }
     }
+
+    this.timeout = setTimeout(this.componentDidMount, 1000);
   };
 
   componentWillUnmount() {
@@ -86,9 +95,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
   render() {
     return (
       <PageLayout className={styles['spaces-component']} heading={<LogsLinkTabSelector />}>
-        {this.state.error ? (
-          <ErrorMessage>{this.state.error}</ErrorMessage>
-        ) : this.state.podList ? (
+        {this.state.podList ? (
           <LogsList
             podList={this.state.podList}
             onSelect={(selected: SelectedLogs) => {
@@ -110,4 +117,4 @@ class LogsContainers extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(withPopup(withDevSpaceConfig(LogsContainers)));
+export default withRouter(withPopup(withDevSpaceConfig(withWarning(LogsContainers))));

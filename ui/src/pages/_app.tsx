@@ -2,26 +2,21 @@ import * as React from 'react';
 import Routes from 'routes/Routes';
 import PopupWrapper from 'contexts/withPopup/PopupWrapper';
 import DevSpaceConfigWrapper from 'contexts/withDevSpaceConfig/DevSpaceConfigWrapper';
+import WarningWrapper from 'contexts/withWarning/WarningWrapper';
 
 interface Props {}
-interface State {
-  redirect: boolean;
-}
+interface State {}
 
 export default class App extends React.PureComponent<Props, State> {
-  state: State = {
-    redirect: false,
-  };
+  state: State = {};
 
   render() {
-    if (this.state.redirect) {
-      return null;
-    }
-
     return (
       <DevSpaceConfigWrapper>
         <PopupWrapper>
-          <Routes />
+          <WarningWrapper>
+            <Routes />
+          </WarningWrapper>
         </PopupWrapper>
       </DevSpaceConfigWrapper>
     );
