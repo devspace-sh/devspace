@@ -86,9 +86,11 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	writer := &wsStream{WebSocket: ws}
-	err = h.client.LogMultiple(imageSelector, make(chan error), ptr.Int64(100), writer, log.Discard)
+	err = h.client.LogMultipleTimeout(imageSelector, make(chan error), ptr.Int64(100), writer, 0, log.Discard)
 	if err != nil {
-		ws.Close()
+		ws.SetWriteDeadline(time.Now().Add(time.Second))
+		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
+
 		h.log.Errorf("Error in /api/logs-multiple logs: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -127,6 +129,9 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Open logs connection
 	reader, err := h.client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
 	if err != nil {
+		ws.SetWriteDeadline(time.Now().Add(time.Second))
+		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
+
 		h.log.Errorf("Error in /api/logs logs: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

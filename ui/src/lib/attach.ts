@@ -9,14 +9,17 @@ import { Terminal, IDisposable, ITerminalAddon } from 'xterm';
 
 interface IAttachOptions {
   bidirectional?: boolean;
+  onError?: (err: Error) => void;
   onClose?: () => void;
 }
 
 export class AttachAddon implements ITerminalAddon {
+  private _terminal: Terminal;
   private _socket: WebSocket;
   private _bidirectional: boolean;
   private _disposables: IDisposable[] = [];
   private _onClose: () => void;
+  private _onError: (err: Error) => void;
 
   constructor(socket: WebSocket, options?: IAttachOptions) {
     this._socket = socket;
@@ -25,9 +28,11 @@ export class AttachAddon implements ITerminalAddon {
     this._bidirectional = options && options.bidirectional === false ? false : true;
 
     this._onClose = options ? options.onClose : undefined;
+    this._onError = options ? options.onError : undefined;
   }
 
   public activate(terminal: Terminal): void {
+    this._terminal = terminal;
     this._disposables.push(
       addSocketListener(this._socket, 'message', (ev) => {
         const data: ArrayBuffer | string = ev.data;
@@ -39,15 +44,25 @@ export class AttachAddon implements ITerminalAddon {
       this._disposables.push(terminal.onData((data) => this._sendData(data)));
     }
 
-    this._disposables.push(addSocketListener(this._socket, 'close', () => this.dispose()));
+    this._disposables.push(
+      addSocketListener(this._socket, 'close', (e) => {
+        if (this._onError && e.code === 1011 && e.reason) {
+          this._onError(new Error(e.reason));
+        }
+
+        this.dispose();
+      })
+    );
     this._disposables.push(addSocketListener(this._socket, 'error', () => this.dispose()));
   }
 
-  public dispose(): void {
+  public dispose() {
     this._disposables.forEach((d) => d.dispose());
 
     if (this._onClose) {
-      this._onClose();
+      this._terminal.writeln('Stream closed, will close in 5 seconds');
+
+      setTimeout(() => this._onClose(), 5000);
     }
   }
 

@@ -80,7 +80,13 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
 
     // Open the websocket
     this.socket = new WebSocket(this.props.url);
-    const attachAddon = new AttachAddon(this.socket, { bidirectional: this.props.interactive, onClose: this.props.onClose });
+    const attachAddon = new AttachAddon(this.socket, {
+      bidirectional: this.props.interactive,
+      onClose: this.props.onClose,
+      onError: (err) => {
+        this.term.writeln('\u001b[31m' + err.message);
+      },
+    });
 
     // Attach the socket to term
     this.term.open(ref);

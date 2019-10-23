@@ -50,11 +50,11 @@ var colors = []string{
 	"white+b",
 }
 
-// LogMultiple will log multiple
-func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
+// LogMultipleTimeout will log multiple and wait for a specific time for ready pods until timeout
+func (client *Client) LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error {
 	// Get pods
 	log.StartWait("Find running pods...")
-	pods, err := client.GetRunningPodsWithImage(imageSelector, client.Namespace, time.Minute*2)
+	pods, err := client.GetRunningPodsWithImage(imageSelector, client.Namespace, timeout)
 	log.StopWait()
 	if err != nil {
 		return errors.Errorf("Error finding images: %v", err)
@@ -134,6 +134,11 @@ func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, 
 			writer.Write([]byte(ansi.Color(fmt.Sprintf("[%s]", line.name), line.color) + " " + line.line + "\n"))
 		}
 	}
+}
+
+// LogMultiple will log multiple
+func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
+	return client.LogMultipleTimeout(imageSelector, interrupt, tail, writer, time.Minute*2, log)
 }
 
 // Logs prints the container logs
