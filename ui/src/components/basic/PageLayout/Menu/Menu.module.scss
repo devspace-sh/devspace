@@ -90,6 +90,9 @@
             &.logs::before {
               background-image: url(../../../../images/logs-logo.svg);
             }
+            &.stack::before {
+              background-image: url(../../../../images/stack-logo.svg);
+            }
           }
         }
       }
