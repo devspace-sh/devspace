@@ -26,7 +26,7 @@ class StackConfiguration extends React.PureComponent<Props, State> {
   renderConfig = () => {
     return (
       <CodeSnippet lineNumbers={true} className={styles.codesnippet}>
-        {configToYAML(this.props.devSpaceConfig.config)}
+        {configToYAML(this.props.devSpaceConfig.config, true)}
       </CodeSnippet>
     );
   };
