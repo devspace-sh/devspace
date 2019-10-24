@@ -4,7 +4,6 @@ import Arrow from 'images/breadcrumb-arrow.svg';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Link } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
-import { formatURL } from 'lib/utils';
 
 const capitalize = (s: string) => {
   if (typeof s !== 'string') return '';
@@ -68,10 +67,6 @@ class Breadcrumb extends React.Component<Props, State> {
   };
 
   renderRoute() {
-    if (formatURL(this.props.location.pathname) === '/guides/start') {
-      return <span className={styles.welcome}>Welcome to DevSpace Cloud</span>;
-    }
-
     return (
       <React.Fragment>
         <div className={styles['account-selector']}>DevSpace</div>
