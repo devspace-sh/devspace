@@ -1,0 +1,34 @@
+@import '../../../../../styles/constants';
+
+.user-menu {
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: inherit;
+
+  .tooltipcontainer {
+    margin-right: 15px;
+  }
+
+  .link {
+    display: block;
+    height: 24px;
+    width: 32px;
+    background-repeat: no-repeat;
+
+    &.docs {
+      background-image: url(../../../../../images/book-icon.svg);
+      background-position: center;
+      border-radius: 5px;
+      padding: 20px 20px;
+      transition: background-color 0.5s, background-image 0.5s;
+
+      &.selected,
+      &:hover {
+        background-image: url(../../../../../images/book-selected-icon.svg);
+        background-color: $blue-kubernetes;
+      }
+    }
+  }
+}

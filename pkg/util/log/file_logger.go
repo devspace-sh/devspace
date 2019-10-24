@@ -49,18 +49,28 @@ func GetFileLogger(filename string) Logger {
 
 // OverrideRuntimeErrorHandler overrides the standard runtime error handler that logs to stdout
 // with a file logger that logs all runtime.HandleErrors to errors.log
-func OverrideRuntimeErrorHandler() {
+func OverrideRuntimeErrorHandler(discard bool) {
 	overrideOnce.Do(func() {
-		errorLog := GetFileLogger("errors")
-		if len(runtime.ErrorHandlers) > 0 {
-			runtime.ErrorHandlers[0] = func(err error) {
-				errorLog.Errorf("Runtime error occurred: %s", err)
+		if discard {
+			if len(runtime.ErrorHandlers) > 0 {
+				runtime.ErrorHandlers[0] = func(err error) {}
+			} else {
+				runtime.ErrorHandlers = []func(err error){
+					func(err error) {},
+				}
 			}
 		} else {
-			runtime.ErrorHandlers = []func(err error){
-				func(err error) {
+			errorLog := GetFileLogger("errors")
+			if len(runtime.ErrorHandlers) > 0 {
+				runtime.ErrorHandlers[0] = func(err error) {
 					errorLog.Errorf("Runtime error occurred: %s", err)
-				},
+				}
+			} else {
+				runtime.ErrorHandlers = []func(err error){
+					func(err error) {
+						errorLog.Errorf("Runtime error occurred: %s", err)
+					},
+				}
 			}
 		}
 	})

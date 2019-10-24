@@ -11,9 +11,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
+	"github.com/skratchdot/open-golang/open"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -53,6 +55,7 @@ type DevCmd struct {
 	Portforwarding  bool
 	VerboseSync     bool
 
+	UI          bool
 	Terminal    bool
 	Interactive bool
 }
@@ -98,6 +101,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
+	devCmd.Flags().BoolVar(&cmd.UI, "ui", false, "Open the cli ui")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
 
@@ -354,9 +358,6 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 	// Run dev.open configs
 	if config.Dev.Open != nil && cmd.SkipOpen == false {
-		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
-		cmd.SkipOpen = true
-
 		for _, openConfig := range config.Dev.Open {
 			if openConfig.URL != "" {
 				maxWait := 4 * time.Minute
@@ -374,6 +375,28 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 	}
+
+	// Open UI if configured
+	if cmd.UI && cmd.SkipOpen == false {
+		log.StartWait("Starting the ui server...")
+		defer log.StopWait()
+
+		// Create server
+		server, err := server.NewServer(client, config, generatedConfig, false, log)
+		if err != nil {
+			return 0, err
+		}
+
+		// Start server
+		go func() { server.ListenAndServe() }()
+
+		time.Sleep(time.Second * 2)
+		log.StopWait()
+		open.Start("http://" + server.Server.Addr)
+	}
+
+	// Skip executing open config next time (e.g. when automatic redeployment is enabled)
+	cmd.SkipOpen = true
 
 	// Check if we should open a terminal or stream logs
 	if interactiveMode {

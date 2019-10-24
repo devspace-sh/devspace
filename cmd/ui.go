@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -8,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
@@ -92,10 +95,21 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Override error runtime handler
+	log.OverrideRuntimeErrorHandler(true)
+
 	// Create server
 	server, err := server.NewServer(client, config, generatedConfig, cmd.Dev, log.GetInstance())
 	if err != nil {
 		return err
+	}
+
+	// Open the browser
+	if cmd.Dev == false {
+		go func(domain string) {
+			time.Sleep(time.Second * 2)
+			open.Start("http://" + domain)
+		}(server.Server.Addr)
 	}
 
 	// Start server

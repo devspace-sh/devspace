@@ -90,7 +90,14 @@ class LogsContainers extends React.PureComponent<Props, State> {
   }
 
   renderTerminal() {
-    return this.cache.renderTerminals();
+    return (
+      <React.Fragment>
+        {!this.state.selected && (
+          <div className={styles['nothing-selected']}>Please select container on the left side to display a terminal</div>
+        )}
+        {this.cache.renderTerminals()}
+      </React.Fragment>
+    );
   }
 
   render() {
