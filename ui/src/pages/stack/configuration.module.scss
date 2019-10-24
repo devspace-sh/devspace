@@ -1,4 +1,21 @@
+@import '../../styles/constants.scss';
+
 .stack-configuration-component {
   display: flex;
   flex-direction: row !important;
+  justify-content: center;
+
+  .codesnippet {
+    width: 100%;
+  }
+
+  .info-part {
+    width: 100%;
+    max-width: 570px;
+    margin-left: 30px;
+
+    > div {
+      margin-bottom: 20px;
+    }
+  }
 }

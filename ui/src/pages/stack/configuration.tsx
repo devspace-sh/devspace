@@ -9,6 +9,9 @@ import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpace
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import StackLinkTabSelector from 'components/basic/LinkTabSelector/StackLinkTabSelector/StackLinkTabSelector';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
+import ProfilePortlet from 'components/views/Stack/Configuration/ProfilePortlet/ProfilePortlet';
+import ConfigVariablesPortlet from 'components/views/Stack/Configuration/ConfigVariablesPortlet/ConfigVariablesPortlet';
+import yaml from 'js-yaml';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
@@ -20,14 +23,31 @@ interface State {
 class StackConfiguration extends React.PureComponent<Props, State> {
   state: State = {};
 
-  renderTerminal = () => {
-    return <CodeSnippet>d</CodeSnippet>;
+  renderConfig = () => {
+    const yamlString = yaml.safeDump(this.props.devSpaceConfig.config, {
+      sortKeys: (a, b) => (a < b ? 1 : a > b ? -1 : 0),
+    });
+    return (
+      <CodeSnippet lineNumbers={true} className={styles.codesnippet}>
+        {yamlString}
+      </CodeSnippet>
+    );
   };
 
   render() {
     return (
       <PageLayout className={styles['stack-configuration-component']} heading={<StackLinkTabSelector />}>
-        {this.renderTerminal()}
+        {!this.props.devSpaceConfig.config || !this.props.devSpaceConfig.generatedConfig ? (
+          <div>There is no DevSpace configuration loaded.</div>
+        ) : (
+          <React.Fragment>
+            {this.renderConfig()}
+            <div className={styles['info-part']}>
+              <ProfilePortlet profile={this.props.devSpaceConfig.profile} />
+              <ConfigVariablesPortlet vars={this.props.devSpaceConfig.generatedConfig.vars} />
+            </div>
+          </React.Fragment>
+        )}
       </PageLayout>
     );
   }

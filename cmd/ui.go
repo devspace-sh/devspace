@@ -86,13 +86,13 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Deprecated: Fill DEVSPACE_DOMAIN vars
-	err = fillDevSpaceDomainVars(client, generatedConfig)
-	if err != nil {
-		return err
-	}
-
 	if configExists {
+		// Deprecated: Fill DEVSPACE_DOMAIN vars
+		err = fillDevSpaceDomainVars(client, generatedConfig)
+		if err != nil {
+			return err
+		}
+
 		// Add current kube context to context
 		configOptions := cmd.ToConfigOptions()
 		config, err = configutil.GetConfig(configOptions)

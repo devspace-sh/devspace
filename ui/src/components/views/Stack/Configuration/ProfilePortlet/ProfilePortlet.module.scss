@@ -1,0 +1,14 @@
+@import '../../../../../styles/constants.scss';
+
+.profile-portlet {
+  .label-value-title {
+    display: flex;
+    flex-direction: column;
+    margin-left: 10px;
+
+    .label {
+      font: $list-label;
+      color: $gray-4;
+    }
+  }
+}
