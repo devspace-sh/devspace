@@ -69,3 +69,8 @@ done
 echo "Building sync helper"
 GOARCH=386 GOOS=linux go build -ldflags "-s -w -X main.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/sync" sync/stub/main.go
 shasum -a 256 "${DEVSPACE_ROOT}/release/sync" > "${DEVSPACE_ROOT}/release/sync".sha256
+
+# Pack ui
+echo "Packing ui"
+tar -C "${DEVSPACE_ROOT}/ui/build" -czf "${DEVSPACE_ROOT}/release/ui.tar.gz" .
+shasum -a 256 "${DEVSPACE_ROOT}/release/ui.tar.gz" > "${DEVSPACE_ROOT}/release/ui.tar.gz".sha256
