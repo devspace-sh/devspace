@@ -2,13 +2,15 @@ import React from 'react';
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
 import style from './LogsTerminal.module.scss';
-import Button from 'components/basic/Button/Button';
+import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
 
 export interface LogsTerminalProps {
   className?: string;
   url: string;
   interactive: boolean;
   show: boolean;
+
+  firstLine?: React.ReactNode;
   onClose?: () => void;
 }
 
@@ -84,6 +86,10 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
       // We need this setting to automatically convert \n -> \r\n
       convertEol: true,
       disableStdin: !this.props.interactive,
+      theme: {
+        background: '#263544',
+        foreground: '#AFC6D2',
+      },
     });
 
     // Open the websocket
@@ -132,9 +138,16 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
 
     return (
       <div className={classnames.join(' ')} style={{ display: this.props.show ? 'flex' : 'none' }}>
-        <Button onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}>
-          Fullscreen
-        </Button>
+        <div className={style.header}>
+          {this.props.firstLine || <div />}
+          <MaximizeButton
+            maximized={this.state.fullscreen}
+            className={style.maximize}
+            filter={false}
+            tooltipPosition={'bottom'}
+            onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
+          />
+        </div>
         <div className={style['terminal']} ref={(ref) => this.attach(ref)} />
       </div>
     );

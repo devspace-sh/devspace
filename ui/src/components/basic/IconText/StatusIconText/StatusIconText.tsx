@@ -7,6 +7,7 @@ import IconText from 'components/basic/IconText/IconText';
 
 interface Props {
   children: ReactNode;
+  className?: string;
   status?: string;
 }
 
@@ -34,12 +35,16 @@ const StatusIconText = (props: Props) => {
   if (CriticalStatus[props.status]) icon = RedCircle;
   if (OkayStatus[props.status]) icon = GreenCircle;
 
+  const classNames = [styles['status-icon-text']];
+  if (props.status) {
+    classNames.push(props.status);
+  }
+  if (props.className) {
+    classNames.push(props.className);
+  }
+
   return (
-    <IconText
-      tooltip={props.status}
-      className={props.status ? styles['status-icon-text'] + ' ' + props.status : styles['status-icon-text']}
-      icon={icon}
-    >
+    <IconText tooltip={props.status} className={classNames.join(' ')} icon={icon}>
       {props.children}
     </IconText>
   );

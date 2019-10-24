@@ -29,7 +29,11 @@ export default function IconButton(props: IconButtonProps) {
   const button = <ButtonBase {...props} className={className.join(' ')} />;
 
   return props.tooltipText ? (
-    <Tooltip className={styles['icon-button-tooltip']} text={props.tooltipText} position={props.tooltipPosition || 'top'}>
+    <Tooltip
+      className={props.className ? props.className + ' ' + styles['icon-button-tooltip'] : styles['icon-button-tooltip']}
+      text={props.tooltipText}
+      position={props.tooltipPosition || 'top'}
+    >
       {button}
     </Tooltip>
   ) : (

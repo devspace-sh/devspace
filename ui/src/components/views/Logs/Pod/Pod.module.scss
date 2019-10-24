@@ -1,20 +1,57 @@
 @import '../../../../styles/constants.scss';
 
 .pod {
-  cursor: pointer;
   display: flex;
+  flex-direction: column;
+  position: relative;
   padding: 15px;
   justify-content: space-between;
   width: 350px;
   margin-bottom: 20px;
+
+  &.single-container {
+    cursor: pointer;
+    flex-direction: row;
+  }
 
   &.selected {
     background-color: $blue-dark;
     color: white;
   }
 
+  .status {
+    padding-left: 11px;
+  }
+
   .pod-name {
     white-space: nowrap;
     overflow: hidden;
+  }
+
+  .container-wrapper {
+    margin-top: 15px;
+
+    &::before {
+      position: absolute;
+      left: 0;
+      right: 0;
+      content: ' ';
+      height: 1px;
+      background-color: $gray-2;
+    }
+
+    .container {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      cursor: pointer;
+      border: 1px solid $gray-2;
+      margin-top: 15px;
+
+      &.selected {
+        background-color: $blue-dark;
+        color: white;
+      }
+    }
   }
 }

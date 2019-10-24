@@ -9,7 +9,7 @@ import Loading from 'components/basic/Loading/Loading';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { ApiHostname } from 'lib/rest';
 import LogsLinkTabSelector from 'components/basic/LinkTabSelector/LogsLinkTabSelector/LogsLinkTabSelector';
-import TerminalCache from 'lib/TerminalCache';
+import TerminalCache from 'components/views/Logs/TerminalCache/TerminalCache';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}

@@ -2,7 +2,9 @@ import LogsTerminal, { LogsTerminalProps } from 'components/views/Logs/LogsTermi
 import { V1PodList } from '@kubernetes/client-node';
 import React from 'react';
 import { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
-import { ApiHostname } from './rest';
+import { ApiHostname } from '../../../../lib/rest';
+import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
+import style from './TerminalCache.module.scss';
 
 export interface TerminalCacheInterface {
   multiLog?: {
@@ -136,6 +138,12 @@ class TerminalCache {
         <LogsTerminal
           key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
           {...terminal.props}
+          firstLine={
+            <AdvancedCodeLine className={style['first-line']}>
+              devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.namespace} --pod {terminal.pod} -c{' '}
+              {terminal.container}
+            </AdvancedCodeLine>
+          }
           onClose={() =>
             this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
           }

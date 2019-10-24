@@ -2,7 +2,7 @@ import http, { IncomingMessage } from 'http';
 import https from 'https';
 import React from 'react';
 import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
-import { V1Pod } from '@kubernetes/client-node';
+import { V1Pod, V1ContainerStatus } from '@kubernetes/client-node';
 
 export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
   const imageSelector = [];
@@ -298,6 +298,29 @@ export const GetPodStatus = (pod: V1Pod) => {
     reason = 'Unknown';
   } else if (!!pod.metadata.deletionTimestamp) {
     reason = 'Terminating';
+  }
+
+  return reason;
+};
+
+export const GetContainerStatus = (container: V1ContainerStatus) => {
+  if (!container) {
+    return 'Unknown';
+  }
+
+  let reason = '';
+  if (!!container.state.waiting && container.state.waiting.reason) {
+    reason = container.state.waiting.reason;
+  } else if (!!container.state.terminated && container.state.terminated.reason) {
+    reason = container.state.terminated.reason;
+  } else if (!!container.state.terminated && !container.state.terminated.reason) {
+    if (container.state.terminated.signal) {
+      reason = 'Signal:' + container.state.terminated.signal;
+    } else {
+      reason = 'ExitCode:' + container.state.terminated.exitCode;
+    }
+  } else if (container.ready && !!container.state.running) {
+    reason = 'Running';
   }
 
   return reason;

@@ -23,7 +23,7 @@ const LogsMultiple = (props: Props) => (
       })
     }
   >
-    All deployed containers (Merged Logs)
+    All deployed containers (merged logs)
   </Portlet>
 );
 
