@@ -21,7 +21,7 @@ interface Props extends DevSpaceConfigContext {
 
 const renderPods = (props: Props) => {
   if (props.podList.items.length === 0) {
-    return `No pods found in namespace ${props.devSpaceConfig.kubeNamespace}`;
+    return <div className={styles['nothing-found']}>No pods found in namespace {props.devSpaceConfig.kubeNamespace}</div>;
   }
 
   return props.podList.items.map((pod) => (

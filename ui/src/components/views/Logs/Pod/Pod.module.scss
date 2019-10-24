@@ -21,6 +21,19 @@
 
   .status {
     padding-left: 11px;
+
+    span {
+      display: flex;
+      align-items: center;
+
+      .warning {
+        margin-left: 8px;
+        img {
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
   }
 
   .pod-name {

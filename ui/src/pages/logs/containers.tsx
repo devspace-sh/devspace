@@ -11,6 +11,7 @@ import { ApiHostname } from 'lib/rest';
 import LogsLinkTabSelector from 'components/basic/LinkTabSelector/LogsLinkTabSelector/LogsLinkTabSelector';
 import TerminalCache from 'components/views/Logs/TerminalCache/TerminalCache';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
+import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeNamespace';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
@@ -89,11 +90,17 @@ class LogsContainers extends React.PureComponent<Props, State> {
     clearTimeout(this.timeout);
   }
 
+  componentDidUpdate() {
+    if (this.cache.updateNamespace(this.props.devSpaceConfig.kubeNamespace)) {
+      this.forceUpdate();
+    }
+  }
+
   renderTerminal() {
     return (
       <React.Fragment>
         {!this.state.selected && (
-          <div className={styles['nothing-selected']}>Please select container on the left side to display a terminal</div>
+          <div className={styles['nothing-selected']}>Please select a container on the left side to display a terminal</div>
         )}
         {this.cache.renderTerminals()}
       </React.Fragment>
@@ -103,22 +110,26 @@ class LogsContainers extends React.PureComponent<Props, State> {
   render() {
     return (
       <PageLayout className={styles['logs-containers-component']} heading={<LogsLinkTabSelector />}>
-        {this.state.podList ? (
-          <LogsList
-            podList={this.state.podList}
-            onSelect={(selected: SelectedLogs) => {
-              if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {
-                selected = null;
-              }
+        <div>
+          <ChangeNamespace />
+          {this.state.podList ? (
+            <LogsList
+              podList={this.state.podList}
+              onSelect={(selected: SelectedLogs) => {
+                if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {
+                  selected = null;
+                }
 
-              this.cache.select(selected);
-              this.setState({ selected });
-            }}
-            selected={this.state.selected}
-          />
-        ) : (
-          <Loading />
-        )}
+                this.cache.select(selected);
+                this.setState({ selected });
+              }}
+              selected={this.state.selected}
+            />
+          ) : (
+            <Loading />
+          )}
+        </div>
+
         {this.renderTerminal()}
       </PageLayout>
     );

@@ -28,9 +28,12 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
         return;
       }
 
+      const devSpaceConfig: DevSpaceConfig = await response.json();
+      devSpaceConfig.changeNamespace = this.changeNamespace;
+
       this.setState({
         error: null,
-        devSpaceConfig: await response.json(),
+        devSpaceConfig,
       });
     } catch (err) {
       if (err && err.message === 'Failed to fetch') {
@@ -42,6 +45,15 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
       });
     }
   }
+
+  changeNamespace = (newNamespace: string) => {
+    this.setState({
+      devSpaceConfig: {
+        ...this.state.devSpaceConfig,
+        kubeNamespace: newNamespace,
+      },
+    });
+  };
 
   render() {
     if (this.state.error) {

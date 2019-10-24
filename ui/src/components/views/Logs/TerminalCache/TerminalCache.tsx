@@ -32,6 +32,17 @@ class TerminalCache {
     this.onDelete = onDelete;
   }
 
+  public updateNamespace(namespace: string): boolean {
+    if (namespace !== this.namespace) {
+      this.namespace = namespace;
+      this.cache.terminals = [];
+      this.cache.multiLog = null;
+      return true;
+    }
+
+    return false;
+  }
+
   public updateCache(podList: V1PodList) {
     for (let i = 0; i < this.cache.terminals.length; i++) {
       const selectedPod = podList && podList.items.find((pod) => this.cache.terminals[i].pod === pod.metadata.name);

@@ -1,6 +1,7 @@
 import React from 'react';
 
 const reactDevSpaceConfigContext = React.createContext({
+  changeNamespace: (_: string) => null,
   config: null,
   generatedConfig: null,
   profile: null,
@@ -12,6 +13,8 @@ const DevSpaceConfigConsumer: React.ExoticComponent<React.ConsumerProps<DevSpace
   reactDevSpaceConfigContext.Consumer;
 
 export interface DevSpaceConfig {
+  changeNamespace: (newNamespace: string) => void;
+
   config: Config;
   generatedConfig: GeneratedConfig;
 

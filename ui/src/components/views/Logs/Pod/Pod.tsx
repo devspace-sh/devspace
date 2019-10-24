@@ -8,6 +8,7 @@ import { Portlet } from 'components/basic/Portlet/Portlet';
 import IconButton from 'components/basic/IconButton/IconButton';
 import TerminalIconWhite from 'images/icon-terminal-white.svg';
 import TerminalIcon from 'images/icon-terminal.svg';
+import WarningIcon from 'components/basic/Icon/WarningIcon/WarningIcon';
 
 interface Props {
   pod: V1Pod;
@@ -15,6 +16,20 @@ interface Props {
   selectedContainer?: string;
   onSelect: (selected: SelectedLogs) => void;
 }
+
+const getRestarts = (pod: V1Pod) => {
+  let restarts = 0;
+
+  if (pod.status && pod.status.containerStatuses) {
+    pod.status.containerStatuses.forEach((status) => {
+      if (status.restartCount > restarts) {
+        restarts = status.restartCount;
+      }
+    });
+  }
+
+  return restarts;
+};
 
 const renderContainers = (props: Props) => {
   return (
@@ -52,6 +67,7 @@ const renderContainers = (props: Props) => {
 const Pod = (props: Props) => {
   const singleContainer = props.pod.spec.containers && props.pod.spec.containers.length === 1;
   const status = GetPodStatus(props.pod);
+  const restarts = getRestarts(props.pod);
   const selected = singleContainer && props.selectedContainer;
   const classNames = [style.pod];
   if (selected) {
@@ -72,6 +88,7 @@ const Pod = (props: Props) => {
     >
       <StatusIconText className={style.status} status={status}>
         {props.pod.metadata.name}
+        {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
       </StatusIconText>
       {!singleContainer && renderContainers(props)}
       {singleContainer && (
