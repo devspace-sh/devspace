@@ -4,7 +4,6 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 15px;
   justify-content: space-between;
   width: 420px;
   margin-bottom: 20px;
@@ -48,17 +47,6 @@
   }
 
   .container-wrapper {
-    margin-top: 15px;
-
-    &::before {
-      position: absolute;
-      left: 0;
-      right: 0;
-      content: ' ';
-      height: 1px;
-      background-color: $gray-2;
-    }
-
     .container {
       display: flex;
       justify-content: space-between;
@@ -66,6 +54,10 @@
       cursor: pointer;
       border: 1px solid $gray-2;
       margin-top: 15px;
+
+      &:first-of-type {
+        margin-top: 0;
+      }
 
       &.selected {
         background-color: $blue-dark;

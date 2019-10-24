@@ -4,7 +4,6 @@ import style from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
 import { GetPodStatus, GetContainerStatus, configToYAML } from 'lib/utils';
 import { SelectedLogs } from '../LogsList/LogsList';
-import { Portlet } from 'components/basic/Portlet/Portlet';
 import IconButton from 'components/basic/IconButton/IconButton';
 import TerminalIconExists from 'images/icon-terminal-exists.svg';
 import TerminalIconWhite from 'images/icon-terminal-white.svg';
@@ -16,6 +15,7 @@ import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpace
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import AlertPopupContent from 'components/basic/Popup/AlertPopupContent/AlertPopupContent';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
+import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 
 interface Props extends DevSpaceConfigContext, PopupContext {
   pod: V1Pod;
@@ -107,7 +107,7 @@ const Pod = (props: Props) => {
   }
 
   return (
-    <Portlet
+    <PortletSimple
       className={classNames.join(' ')}
       onClick={
         singleContainer
@@ -115,49 +115,57 @@ const Pod = (props: Props) => {
           : null
       }
     >
-      <StatusIconText className={style.status + ' ' + style['status-padding']} status={status}>
-        {props.pod.metadata.name}
-        {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
-      </StatusIconText>
-      {!singleContainer && renderContainers(props)}
-      <div className={style.buttons}>
-        <IconButton
-          filter={false}
-          icon={LeftAlignIcon}
-          tooltipText="Show YAML"
-          onClick={(e) => {
-            e.stopPropagation();
-            openYAMLPopup(props);
-          }}
-        />
-        {singleContainer && (
-          <IconButton
-            filter={false}
-            icon={
-              singleContainer &&
-              props.cache.exists({
-                pod: props.pod.metadata.name,
-                container: props.pod.spec.containers[0].name,
-                interactive: true,
-              })
-                ? TerminalIconExists
-                : selected
-                ? TerminalIconWhite
-                : TerminalIcon
-            }
-            tooltipText={'Open terminal'}
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onSelect({
-                pod: props.pod.metadata.name,
-                container: props.pod.spec.containers[0].name,
-                interactive: true,
-              });
-            }}
-          />
-        )}
-      </div>
-    </Portlet>
+      {{
+        top: {
+          left: (
+            <StatusIconText className={style.status + ' ' + style['status-padding']} status={status}>
+              {props.pod.metadata.name}
+              {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
+            </StatusIconText>
+          ),
+          right: (
+            <div className={style.buttons}>
+              <IconButton
+                filter={false}
+                icon={LeftAlignIcon}
+                tooltipText="Show YAML"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openYAMLPopup(props);
+                }}
+              />
+              {singleContainer && (
+                <IconButton
+                  filter={false}
+                  icon={
+                    singleContainer &&
+                    props.cache.exists({
+                      pod: props.pod.metadata.name,
+                      container: props.pod.spec.containers[0].name,
+                      interactive: true,
+                    })
+                      ? TerminalIconExists
+                      : selected
+                      ? TerminalIconWhite
+                      : TerminalIcon
+                  }
+                  tooltipText={'Open terminal'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onSelect({
+                      pod: props.pod.metadata.name,
+                      container: props.pod.spec.containers[0].name,
+                      interactive: true,
+                    });
+                  }}
+                />
+              )}
+            </div>
+          ),
+        },
+        content: !singleContainer && renderContainers(props),
+      }}
+    </PortletSimple>
   );
 };
 

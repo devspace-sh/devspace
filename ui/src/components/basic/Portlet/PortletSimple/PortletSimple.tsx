@@ -5,6 +5,7 @@ import { Portlet } from 'components/basic/Portlet/Portlet';
 interface Props {
   className?: string;
   smallPadding?: boolean;
+  onClick?: () => void;
 
   children: {
     top?: {
@@ -50,7 +51,7 @@ export const PortletSimple = (props: Props) => {
   }
 
   return (
-    <Portlet className={classNames.join(' ')}>
+    <Portlet onClick={props.onClick} className={classNames.join(' ')}>
       {renderTop(props)}
       {renderContent(props)}
     </Portlet>
